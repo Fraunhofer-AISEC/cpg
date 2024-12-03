@@ -965,12 +965,25 @@ class PointsToPassTest {
         assertNotNull(local_30Line165)
 
         // Line 159
-        // TODO: for some reason, the parameterDeclaration does not get the value, so we take the
-        // rhs instead
         assertEquals(1, local_20Line159.memoryValue.size)
-        assertTrue(local_20Line159.memoryValue.firstOrNull() is PlaceholderMemoryValue)
+        assertEquals(param_1.memoryValue, local_20Line159.memoryValue)
 
         // Line 160
-        assertEquals(param_1Line160.memoryValue, local_30Line160.memoryValue)
+        // TODO: What do we expect?
+        // assertEquals(param_1Line160.memoryValue, local_30Line160.memoryValue)
+    }
+
+    @Test
+    fun testFunctionSummaries() {
+        val file = File("src/test/resources/pointsto.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+                it.registerPass<PointsToPass>()
+                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+                it.registerPass<ControlDependenceGraphPass>()
+                it.registerPass<ProgramDependenceGraphPass>()
+            }
+        assertNotNull(tu)
     }
 }

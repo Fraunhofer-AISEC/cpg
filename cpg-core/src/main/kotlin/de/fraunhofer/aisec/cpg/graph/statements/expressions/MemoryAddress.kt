@@ -61,15 +61,15 @@ class MemoryAddress(override var name: Name) : Declaration() {
  * function's context. This is used for a [ParameterDeclaration] and serves as some sort of stepping
  * stone.
  */
-class PlaceholderMemoryValue() : Node() {
+class ParameterMemoryValue(override var name: Name) : Node() {
     override fun equals(other: Any?): Boolean {
         if (this === other) {
             return true
         }
-        if (other !is UnknownMemoryValue) {
+        if (other !is ParameterMemoryValue) {
             return false
         }
-        return true
+        return this.name == other.name
     }
 
     override fun hashCode(): Int {

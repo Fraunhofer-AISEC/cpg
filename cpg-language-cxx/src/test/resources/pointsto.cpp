@@ -202,3 +202,40 @@ void ecall_key_to_out(undefined8 *param_1)
   return;
 }
 
+int inc(int i) {                                                                  
+  i=i+1;
+  return i;       
+}  
+
+void incp(int* p) {
+  *p=*p+1;//(*p)++;
+}
+
+void changep(int* p1, int* p2) {
+  *p1=*p2;
+}
+
+void changep2(int* p1, int* p2) {
+  *p1=p2;
+}
+
+int testFunctionSummaries() {                                                      
+  int i=0;                                                                                                                                                
+  int j=3; 
+  int* p=&i;                                                                                                                                             
+
+  printf("i: %d j: %d *p: %d p: %p\n", i, j, *p, p);
+
+  i=inc(i);
+  printf("i: %d j: %d *p: %d p: %p\n", i, j, *p, p);
+
+  incp(p);
+  printf("i: %d j: %d *p: %d p: %p\n", i, j, *p, p);
+
+  changep(p, &j);
+  printf("i: %d j: %d *p: %d p: %p\n", i, j, *p, p);
+
+  incp(p);
+  printf("i: %d j: %d *p: %d p: %p\n", i, j, *p, p);
+
+} 

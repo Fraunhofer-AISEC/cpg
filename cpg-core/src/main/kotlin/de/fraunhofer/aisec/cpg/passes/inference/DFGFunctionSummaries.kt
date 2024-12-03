@@ -66,12 +66,12 @@ class DFGFunctionSummaries {
      * [FunctionDeclaration], we store all previous DFG nodes.
      */
     val functionToChangedParameters =
-        mutableMapOf<FunctionDeclaration, MutableMap<ValueDeclaration, MutableSet<Node>>>()
+        mutableMapOf<FunctionDeclaration, MutableMap<Node, MutableSet<Node>>>()
 
     fun hasSummary(functionDeclaration: FunctionDeclaration) =
         functionDeclaration in functionToChangedParameters
 
-    fun getLastWrites(functionDeclaration: FunctionDeclaration): Map<ValueDeclaration, Set<Node>> =
+    fun getLastWrites(functionDeclaration: FunctionDeclaration): Map<Node, Set<Node>> =
         functionToChangedParameters[functionDeclaration] ?: mapOf()
 
     /** This function returns a list of [DataflowEntry] from the specified file. */

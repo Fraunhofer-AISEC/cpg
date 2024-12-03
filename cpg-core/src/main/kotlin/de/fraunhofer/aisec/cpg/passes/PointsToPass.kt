@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
+import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.functional.*
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
@@ -40,6 +41,7 @@ import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 @DependsOn(EvaluationOrderGraphPass::class)
 @ExecuteBefore(ControlFlowSensitiveDFGPass::class)
 class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependencies = true) {
+
     override fun cleanup() {
         // Nothing to do
     }
@@ -50,8 +52,11 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
         if (node !is FunctionDeclaration) {
             return
         }
-        // TODO: If node already has a function summary, we have visited it before and can return
-        // here.
+        // If the node already has a function summary, we have visited it before and can
+        // return here.
+                if (config.functionSummaries.hasSummary(node)) {
+            return
+        }
 
         // Skip empty functions
         if (node.body == null) {
@@ -94,22 +99,76 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
             )
         node.parameters.forEach { param ->
             val addresses = startState.getAddresses(param)
+            // val values = startState.getValues(param)
+            val parameterMemoryValue = ParameterMemoryValue(Name("value", param.name))
             val paramState: LatticeElement<Pair<PowersetLatticeT<Node>, PowersetLatticeT<Node>>> =
                 TupleLattice(
+                    Pair(PowersetLattice(addresses), PowersetLattice(setOf(parameterMemoryValue)))
+                )
+            // We also need to track the MemoryValue of the dereference of the parameter, since that
+            // is what would have an influence outside the function
+            val paramDerefState:
+                LatticeElement<Pair<PowersetLatticeT<Node>, PowersetLatticeT<Node>>> =
+                TupleLattice(
                     Pair(
-                        PowersetLattice(addresses),
-                        PowersetLattice(setOf(PlaceholderMemoryValue()))
+                        PowersetLattice(identitySetOf(parameterMemoryValue)),
+                        PowersetLattice(setOf(ParameterMemoryValue(Name("derefvalue", param.name))))
                     )
                 )
-            startState.push(param, paramState)
             addresses.forEach { addr ->
                 startState = startState.pushToDeclarationsState(addr, paramState)
             }
+            startState = startState.pushToDeclarationsState(parameterMemoryValue, paramDerefState)
+
+            startState = startState.push(param, paramState)
         }
         val finalState = iterateEOGClean(node.nextEOGEdges, startState, ::transfer)
         if (finalState !is PointsToState2) return
 
-        // TODO: Store function summary for this f´FunctionDeclaration.
+        /* Store function summary for this FunctionDeclaration.
+        Let's start with the parameters
+         */
+        node.parameters.forEach { param ->
+            val indexes = mutableSetOf<Node>()
+            startState.getAddresses(param).forEach { indexes.addAll(startState.getValues(it)) }
+            indexes.forEach { index ->
+                val finalValue =
+                    finalState.declarationsState.elements
+                        .filter { it.key == index }
+                        .entries
+                        .firstOrNull()
+                        ?.value
+                        ?.elements
+                        ?.second
+                        ?.elements
+                finalValue
+                    // See if we can find something that is different from the initial value
+                    ?.filter {
+                        !(it is ParameterMemoryValue &&
+                            it.name.localName == "derefvalue" &&
+                            it.name.parent == param.name)
+                    }
+                    // If so, store the last write for the parameter in the FunctionSummary
+                    ?.forEach { value ->
+                        println("Parameter $param's last write: $value")
+                        config.functionSummaries.functionToChangedParameters
+                            .computeIfAbsent(node) { mutableMapOf() }
+                            .computeIfAbsent(param) { mutableSetOf() }
+                            .add(value)
+                    }
+            }
+        }
+        // TODO: Check if the return value contains any parameter values
+        /* Now the return values */
+        val retValues =
+            finalState.declarationsState.elements
+                .filter { it.key is ReturnStatement }
+                .entries
+                .firstOrNull()
+                ?.value
+                ?.elements
+                ?.second
+                ?.elements
 
         for ((key, value) in finalState.generalState.elements) {
             when (key) {
@@ -157,9 +216,35 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                 is UnaryOperator -> handleUnaryOperator(currentNode, doubleState)
                 is CallExpression -> handleCallExpression(currentNode, doubleState)
                 is Expression -> handleExpression(currentNode, doubleState)
+                is ReturnStatement -> handleReturnStatement(currentNode, doubleState)
                 else -> doubleState
             }
 
+        return doubleState
+    }
+
+    private fun handleReturnStatement(
+        currentNode: ReturnStatement,
+        doubleState: PointsToPass.PointsToState2
+    ): PointsToPass.PointsToState2 {
+        /* For Return Statements, all we really want to do is to collect the values they return to later create the FunctionSummary */
+        var doubleState = doubleState
+        if (currentNode.returnValues.isNotEmpty()) {
+            // val newDeclState = doubleState.declarationsState.elements.toMutableMap()
+            val newGenState = doubleState.generalState.elements.toMutableMap()
+            /* Add the values to the declarationState */
+            // TODO: use DeclState
+            newGenState[currentNode] =
+                TupleLattice(
+                    Pair(
+                        PowersetLattice(setOf(currentNode)),
+                        PowersetLattice(currentNode.returnValues.toSet())
+                    )
+                )
+            doubleState = PointsToState2(MapLattice(newGenState), doubleState.declarationsState)
+            //            doubleState = PointsToState2(doubleState.generalState,
+            // MapLattice(newDeclState))
+        }
         return doubleState
     }
 
@@ -403,8 +488,9 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
 
         fun getValues(node: Node): Set<Node> {
             return when (node) {
-                is MemoryAddress ->
-                    /* In this case, we simply have to fetch the current value for the MemoryAddress from the DeclarationState */
+                is MemoryAddress,
+                is ParameterMemoryValue ->
+                    /* In these cases, we simply have to fetch the current value for the MemoryAddress from the DeclarationState */
                     this.declarationsState.elements[node]?.elements?.second?.elements
                         ?: setOf(UnknownMemoryValue())
                 is PointerReference -> {
@@ -424,10 +510,6 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                             setOf(UnknownMemoryValue())
                         }
                     inputVal.flatMap { this.getValues(it) }.toSet()
-                }
-                is ParameterDeclaration -> {
-                    this.declarationsState.elements[node.memoryAddress]?.elements?.second?.elements
-                        ?: setOf(UnknownMemoryValue())
                 }
                 is Declaration -> {
                     /* For Declarations, we have to look up the last value written to it.
@@ -567,7 +649,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                 newDeclState[addr] =
                     TupleLattice(Pair(PowersetLattice(addresses), PowersetLattice(values)))
             }
-            /* Also update the generalState for the ref */
+            /* Also update the generalState for dst */
             newGenState[dst] =
                 TupleLattice(Pair(PowersetLattice(addresses), PowersetLattice(values)))
             var doubleState = PointsToState2(MapLattice(newGenState), MapLattice(newDeclState))
