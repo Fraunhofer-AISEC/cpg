@@ -124,8 +124,36 @@ collaborate and push the boundaries of static code analysis.
 
 
 ## Publications
-### 2023
 
+### 2024
+
+<div class="papers">
+
+<div class="admonition paper">
+    <p class="admonition-title">Analyzing the Impact of Copying-and-Pasting Vulnerable Solidity Code Snippets from Question-and-Answer Websites</p>
+    <div class="left">
+    <p class="authors">Konrad Weiss, Christof Ferreira Torres, Florian Wendland</p>
+    <p class="conference">In: ACM Internet Measurement Conference (IMC). Madrid, Spain.</p>
+    <details><summary>bibtex</summary>
+    <pre><code>@inproceedings{weiss2024solidity,
+  author={Weiss, Konrad and Ferreira Torres, Christof and Wendland, Florian},
+  title={Analyzing the Impact of Copying-and-Pasting Vulnerable Solidity Code Snippets from Question-and-Answer Websites},
+  year={2024},
+  booktitle={Proceedings of the 2024 ACM on Internet Measurement Conference},
+  series={IMC '24},
+  doi = {10.1145/3646547.3688437},
+  location = {Madrid, Spain},
+  publisher={ACM}
+}</code></pre>
+</details>
+    <div class="right">
+    <a class="green-button" href="https://doi.org/10.1145/3646547.3688437">paper</a>
+    </div>
+</div>
+
+</div>
+
+### 2023
 <div class="papers">
 
 <div class="admonition paper">
