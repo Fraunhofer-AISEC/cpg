@@ -99,7 +99,6 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
             )
         node.parameters.forEach { param ->
             val addresses = startState.getAddresses(param)
-            // val values = startState.getValues(param)
             val parameterMemoryValue = ParameterMemoryValue(Name("value", param.name))
             val paramState: LatticeElement<Pair<PowersetLatticeT<Node>, PowersetLatticeT<Node>>> =
                 TupleLattice(
@@ -244,6 +243,15 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
             doubleState = PointsToState2(MapLattice(newGenState), doubleState.declarationsState)
             //            doubleState = PointsToState2(doubleState.generalState,
             // MapLattice(newDeclState))
+            val parentFD = currentNode.scope?.parent?.astNode as? FunctionDeclaration
+            if (parentFD != null) {
+                currentNode.returnValues.forEach { retval ->
+                    config.functionSummaries.functionToChangedParameters
+                        .computeIfAbsent(parentFD) { mutableMapOf() }
+                        .computeIfAbsent(currentNode) { mutableSetOf() }
+                        .add(retval)
+                }
+            }
         }
         return doubleState
     }
@@ -263,24 +271,26 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
             val changedParams =
                 ctx.config.functionSummaries.getLastWrites(currentNode.invokes.first())
             for ((param, newValue) in changedParams) {
-                val arg =
-                    when (param) {
-                        (currentNode.invokes.first() as? MethodDeclaration)?.receiver ->
-                            (currentNode as? MemberCallExpression)?.base.unwrapReference()
-                        is ParameterDeclaration ->
-                            currentNode.arguments[param.argumentIndex].unwrapReference()
-                        else -> null
-                    }
-                if (arg != null) {
-                    // Since arg is a pointer (otherwise it couldn't change in the function), we
-                    // have to work with the value of the pointer
-                    doubleState.getValues(arg).forEach { a ->
-                        newValue.forEach { value ->
-                            doubleState = doubleState.updateValues(value, a)
+                // Ignore the ReturnStatements here, we use them when handling AssignExpressions
+                if (param !is ReturnStatement) {
+                    val arg =
+                        when (param) {
+                            (currentNode.invokes.first() as? MethodDeclaration)?.receiver ->
+                                (currentNode as? MemberCallExpression)?.base.unwrapReference()
+                            is ParameterDeclaration ->
+                                currentNode.arguments[param.argumentIndex].unwrapReference()
+                            else -> null
+                        }
+                    if (arg != null) {
+                        // Since arg is a pointer (otherwise it couldn't change in the function), we
+                        // have to work with the value of the pointer
+                        doubleState.getValues(arg).forEach { a ->
+                            newValue.forEach { value ->
+                                doubleState = doubleState.updateValues(value, a)
+                            }
                         }
                     }
                 }
-                println(arg)
             }
         } else if (currentNode.invokes.all { it.hasBody() }) {
             // Process the missing FunctionDeclarations
@@ -570,11 +580,26 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                                 ?: setOf(UnknownMemoryValue())
                         }
                         .toSet()
+                is CallExpression -> {
+                    // Let's see if we have a functionSummary for the CallExpression
+                    val functionDeclaration = node.invokes.first()
+                    val functionSummaries = node.ctx?.config?.functionSummaries
+                    if (functionSummaries?.hasSummary(functionDeclaration) == true) {
+                        // Get all the ReturnValues from the Summary and return their values
+                        val retVals =
+                            node.ctx?.config?.functionSummaries?.getLastWrites(functionDeclaration)
+                        if (retVals != null) {
+                            val r = mutableSetOf<Node>()
+                            for ((param, value) in retVals) {
+                                if (param is ReturnStatement) r.addAll(value)
+                            }
+                            r
+                        } else setOf(UnknownMemoryValue(node.name))
+                    } else setOf(UnknownMemoryValue(node.name))
+                }
                 is Literal<*>,
                 is BinaryOperator -> setOf(node)
-                // TODO: This may no longer be necessary with function summaries
-                is CallExpression -> setOf(UnknownMemoryValue(node.name))
-                else -> setOf(UnknownMemoryValue()) /*setOf(node)*/
+                else -> setOf(UnknownMemoryValue())
             }
         }
 

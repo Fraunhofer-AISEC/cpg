@@ -1078,6 +1078,13 @@ class PointsToPassTest {
         assertNotNull(jDecl)
 
         // References
+        val iRefLine207 =
+            tu.allChildren<Reference> {
+                    it.location?.region?.startLine == 207 && it.name.localName == "i"
+                }
+                .firstOrNull()
+        assertNotNull(iRefLine207)
+
         val iRefLine230 =
             tu.allChildren<Reference> {
                     it.location?.region?.startLine == 230 && it.name.localName == "i"
@@ -1120,6 +1127,8 @@ class PointsToPassTest {
         assertNotNull(binOpLine211)
 
         // TODO: Line 230
+        assertEquals(1, iRefLine230.memoryValue.size)
+        assertEquals(iRefLine207, iRefLine230.memoryValue.first())
 
         // Line 233
         assertEquals(1, pDerefLine233.memoryAddress.size)
