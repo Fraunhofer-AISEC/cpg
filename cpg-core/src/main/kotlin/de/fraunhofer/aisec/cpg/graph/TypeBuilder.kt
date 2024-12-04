@@ -45,6 +45,10 @@ fun LanguageProvider.autoType(): Type {
     return AutoType(this.language)
 }
 
+fun LanguageProvider.dynamicType(): Type {
+    return DynamicType(this.language)
+}
+
 fun MetadataProvider?.incompleteType(): Type {
     return IncompleteType()
 }
