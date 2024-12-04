@@ -1122,13 +1122,20 @@ class PointsToPassTest {
         assertNotNull(pDerefLine236)
 
         // BinaryOperators
+        val binOpLine206 =
+            tu.allChildren<BinaryOperator> { it.location?.region?.startLine == 206 }.firstOrNull()
+        assertNotNull(binOpLine206)
+
         val binOpLine211 =
             tu.allChildren<BinaryOperator> { it.location?.region?.startLine == 211 }.firstOrNull()
         assertNotNull(binOpLine211)
 
-        // TODO: Line 230
         assertEquals(1, iRefLine230.memoryValue.size)
-        assertEquals(iRefLine207, iRefLine230.memoryValue.first())
+        assertEquals(binOpLine206, iRefLine230.memoryValue.first())
+        assertEquals(1, pDerefLine230.memoryValue.size)
+        assertEquals(binOpLine206, pDerefLine230.memoryValue.first())
+        assertEquals(1, pDerefLine230.memoryAddress.size)
+        assertEquals(iDecl.memoryAddress, pDerefLine230.memoryAddress.first())
 
         // Line 233
         assertEquals(1, pDerefLine233.memoryAddress.size)
@@ -1137,6 +1144,8 @@ class PointsToPassTest {
         assertEquals(binOpLine211, iRefLine233.memoryValue.firstOrNull())
         assertEquals(1, pDerefLine233.memoryValue.size)
         assertEquals(binOpLine211, pDerefLine233.memoryValue.firstOrNull())
+        assertEquals(1, pDerefLine233.memoryAddress.size)
+        assertEquals(iDecl.memoryAddress, pDerefLine233.memoryAddress.first())
 
         // Line 236
         assertEquals(1, pDerefLine236.memoryAddress.size)

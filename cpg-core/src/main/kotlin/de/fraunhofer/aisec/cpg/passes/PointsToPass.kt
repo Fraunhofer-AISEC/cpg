@@ -97,78 +97,15 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                     Pair(PowersetLattice(identitySetOf()), PowersetLattice(identitySetOf()))
                 )
             )
-        node.parameters.forEach { param ->
-            val addresses = startState.getAddresses(param)
-            val parameterMemoryValue = ParameterMemoryValue(Name("value", param.name))
-            val paramState: LatticeElement<Pair<PowersetLatticeT<Node>, PowersetLatticeT<Node>>> =
-                TupleLattice(
-                    Pair(PowersetLattice(addresses), PowersetLattice(setOf(parameterMemoryValue)))
-                )
-            // We also need to track the MemoryValue of the dereference of the parameter, since that
-            // is what would have an influence outside the function
-            val paramDerefState:
-                LatticeElement<Pair<PowersetLatticeT<Node>, PowersetLatticeT<Node>>> =
-                TupleLattice(
-                    Pair(
-                        PowersetLattice(identitySetOf(parameterMemoryValue)),
-                        PowersetLattice(setOf(ParameterMemoryValue(Name("derefvalue", param.name))))
-                    )
-                )
-            addresses.forEach { addr ->
-                startState = startState.pushToDeclarationsState(addr, paramState)
-            }
-            startState = startState.pushToDeclarationsState(parameterMemoryValue, paramDerefState)
 
-            startState = startState.push(param, paramState)
-        }
+        startState = initializeParameters(node.parameters, startState)
+
         val finalState = iterateEOGClean(node.nextEOGEdges, startState, ::transfer)
         if (finalState !is PointsToState2) return
 
-        /* Store function summary for this FunctionDeclaration.
-        Let's start with the parameters
-         */
-        node.parameters.forEach { param ->
-            val indexes = mutableSetOf<Node>()
-            startState.getAddresses(param).forEach { indexes.addAll(startState.getValues(it)) }
-            indexes.forEach { index ->
-                val finalValue =
-                    finalState.declarationsState.elements
-                        .filter { it.key == index }
-                        .entries
-                        .firstOrNull()
-                        ?.value
-                        ?.elements
-                        ?.second
-                        ?.elements
-                finalValue
-                    // See if we can find something that is different from the initial value
-                    ?.filter {
-                        !(it is ParameterMemoryValue &&
-                            it.name.localName == "derefvalue" &&
-                            it.name.parent == param.name)
-                    }
-                    // If so, store the last write for the parameter in the FunctionSummary
-                    ?.forEach { value ->
-                        println("Parameter $param's last write: $value")
-                        config.functionSummaries.functionToChangedParameters
-                            .computeIfAbsent(node) { mutableMapOf() }
-                            .computeIfAbsent(param) { mutableSetOf() }
-                            .add(value)
-                    }
-            }
-        }
-        // TODO: Check if the return value contains any parameter values
-        /* Now the return values */
-        val retValues =
-            finalState.declarationsState.elements
-                .filter { it.key is ReturnStatement }
-                .entries
-                .firstOrNull()
-                ?.value
-                ?.elements
-                ?.second
-                ?.elements
-
+        /* Store function summary for this FunctionDeclaration. */
+        storeFunctionSummary(node, finalState)
+        
         for ((key, value) in finalState.generalState.elements) {
             when (key) {
                 is Expression -> {
@@ -191,6 +128,40 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                         key.memoryValue.addAll(newMemoryValues)
                     }
                 }
+            }
+        }
+    }
+
+    private fun storeFunctionSummary(node: FunctionDeclaration, doubleState: PointsToState2) {
+        node.parameters.forEach { param ->
+            val indexes = mutableSetOf<Node>()
+            //            startState.getAddresses(param).forEach {
+            // indexes.addAll(startState.getValues(it)) }
+            doubleState.getAddresses(param).forEach { indexes.addAll(doubleState.getValues(it)) }
+            indexes.forEach { index ->
+                val finalValue =
+                    doubleState.declarationsState.elements
+                        .filter { it.key == index }
+                        .entries
+                        .firstOrNull()
+                        ?.value
+                        ?.elements
+                        ?.second
+                        ?.elements
+                finalValue
+                    // See if we can find something that is different from the initial value
+                    ?.filter {
+                        !(it is ParameterMemoryValue &&
+                            it.name.localName == "derefvalue" &&
+                            it.name.parent == param.name)
+                    }
+                    // If so, store the last write for the parameter in the FunctionSummary
+                    ?.forEach { value ->
+                        config.functionSummaries.functionToChangedParameters
+                            .computeIfAbsent(node) { mutableMapOf() }
+                            .computeIfAbsent(param) { mutableSetOf() }
+                            .add(value)
+                    }
             }
         }
     }
@@ -229,27 +200,13 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
         /* For Return Statements, all we really want to do is to collect the values they return to later create the FunctionSummary */
         var doubleState = doubleState
         if (currentNode.returnValues.isNotEmpty()) {
-            // val newDeclState = doubleState.declarationsState.elements.toMutableMap()
-            val newGenState = doubleState.generalState.elements.toMutableMap()
-            /* Add the values to the declarationState */
-            // TODO: use DeclState
-            newGenState[currentNode] =
-                TupleLattice(
-                    Pair(
-                        PowersetLattice(setOf(currentNode)),
-                        PowersetLattice(currentNode.returnValues.toSet())
-                    )
-                )
-            doubleState = PointsToState2(MapLattice(newGenState), doubleState.declarationsState)
-            //            doubleState = PointsToState2(doubleState.generalState,
-            // MapLattice(newDeclState))
             val parentFD = currentNode.scope?.parent?.astNode as? FunctionDeclaration
             if (parentFD != null) {
                 currentNode.returnValues.forEach { retval ->
                     config.functionSummaries.functionToChangedParameters
                         .computeIfAbsent(parentFD) { mutableMapOf() }
                         .computeIfAbsent(currentNode) { mutableSetOf() }
-                        .add(retval)
+                        .addAll(doubleState.getValues(retval))
                 }
             }
         }
@@ -267,10 +224,14 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
             // We already have a FunctionSummary. Set the arguments. Push the
             // values of the arguments and return value after executing the function call to our
             // doubleState.
-            // TODO: Use all invokes elements
-            val changedParams =
-                ctx.config.functionSummaries.getLastWrites(currentNode.invokes.first())
-            for ((param, newValue) in changedParams) {
+
+            // First, collect all writes to all parameters
+            var changedParams = mutableMapOf<Node, MutableSet<Node>>()
+            currentNode.invokes.forEach { fd ->
+                val tmp = ctx.config.functionSummaries.getLastWrites(fd)
+                for ((k, v) in tmp) changedParams.computeIfAbsent(k) { mutableSetOf() }.addAll(v)
+            }
+            for ((param, newValues) in changedParams) {
                 // Ignore the ReturnStatements here, we use them when handling AssignExpressions
                 if (param !is ReturnStatement) {
                     val arg =
@@ -278,17 +239,14 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                             (currentNode.invokes.first() as? MethodDeclaration)?.receiver ->
                                 (currentNode as? MemberCallExpression)?.base.unwrapReference()
                             is ParameterDeclaration ->
-                                currentNode.arguments[param.argumentIndex].unwrapReference()
+                                currentNode.arguments[param.argumentIndex] /*.unwrapReference()*/
                             else -> null
                         }
                     if (arg != null) {
                         // Since arg is a pointer (otherwise it couldn't change in the function), we
                         // have to work with the value of the pointer
-                        doubleState.getValues(arg).forEach { a ->
-                            newValue.forEach { value ->
-                                doubleState = doubleState.updateValues(value, a)
-                            }
-                        }
+                        doubleState =
+                            doubleState.updateValues(newValues, doubleState.getValues(arg))
                     }
                 }
             }
@@ -324,11 +282,8 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
         if (src != null && dst != null) {
             // Since memcpy takes pointers as arguments, we need to resolve them here to determine
             // the values we need to read/write
-            doubleState.getValues(src).forEach { s ->
-                doubleState.getValues(dst).forEach { d ->
-                    doubleState = doubleState.updateValues(s, d)
-                }
-            }
+            doubleState =
+                doubleState.updateValues(doubleState.getValues(src), doubleState.getValues(dst))
         }
         return doubleState
     }
@@ -369,7 +324,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
          * In C(++), both the lhs and the rhs should only have one element
          * */
         if (currentNode.lhs.size == 1 && currentNode.rhs.size == 1) {
-            doubleState = doubleState.updateValues(currentNode.rhs.first(), currentNode.lhs.first())
+            doubleState = doubleState.updateValues(currentNode.rhs.toSet(), currentNode.lhs.toSet())
         }
 
         return doubleState
@@ -424,6 +379,38 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                     addr,
                     TupleLattice(Pair(PowersetLattice(addresses), PowersetLattice(values)))
                 )
+        }
+        return doubleState
+    }
+
+    private fun initializeParameters(
+        parameters: MutableList<ParameterDeclaration>,
+        doubleState: PointsToState2
+    ): PointsToState2 {
+        var doubleState = doubleState
+        parameters.forEach { param ->
+            val addresses = doubleState.getAddresses(param)
+            val parameterMemoryValue = ParameterMemoryValue(Name("value", param.name))
+            val paramState: LatticeElement<Pair<PowersetLatticeT<Node>, PowersetLatticeT<Node>>> =
+                TupleLattice(
+                    Pair(PowersetLattice(addresses), PowersetLattice(setOf(parameterMemoryValue)))
+                )
+            // We also need to track the MemoryValue of the dereference of the parameter, since that
+            // is what would have an influence outside the function
+            val paramDerefState:
+                LatticeElement<Pair<PowersetLatticeT<Node>, PowersetLatticeT<Node>>> =
+                TupleLattice(
+                    Pair(
+                        PowersetLattice(identitySetOf(parameterMemoryValue)),
+                        PowersetLattice(setOf(ParameterMemoryValue(Name("derefvalue", param.name))))
+                    )
+                )
+            addresses.forEach { addr ->
+                doubleState = doubleState.pushToDeclarationsState(addr, paramState)
+            }
+            doubleState = doubleState.pushToDeclarationsState(parameterMemoryValue, paramDerefState)
+
+            doubleState = doubleState.push(param, paramState)
         }
         return doubleState
     }
@@ -698,41 +685,38 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
          * Update the node `dst` to the values of `src`. Updates the declarationState and the
          * generalState for `dst`
          */
-        fun updateValues(src: Node, dst: Node): PointsToState2 {
-            val addresses = this.getAddresses(dst)
-            val values: Set<Node> = this.getValues(src)
+        fun updateValues(sources: Set<Node>, destinations: Set<Node>): PointsToState2 {
+            val addresses = mutableSetOf<Node>()
+            destinations.forEach { d -> this.getAddresses(d).forEach { addresses.add(it) } }
+            val values = mutableSetOf<Node>()
+            sources.forEach { s -> this.getValues(s).forEach { values.add(it) } }
             val newDeclState = this.declarationsState.elements.toMutableMap()
             val newGenState = this.generalState.elements.toMutableMap()
-            /* Update the declarationState for the refersTo */
+            /* Update the declarationState for the address */
             addresses.forEach { addr ->
                 newDeclState[addr] =
                     TupleLattice(Pair(PowersetLattice(addresses), PowersetLattice(values)))
             }
             /* Also update the generalState for dst */
-            newGenState[dst] =
-                TupleLattice(Pair(PowersetLattice(addresses), PowersetLattice(values)))
+            destinations.forEach { d ->
+                newGenState[d] =
+                    TupleLattice(Pair(PowersetLattice(addresses), PowersetLattice(values)))
+            }
             var doubleState = PointsToState2(MapLattice(newGenState), MapLattice(newDeclState))
 
-            /* When we are dealing with SubscriptExpression, we also have to initialise the arrayExpression, since that hasn't been done yet
-             */
-            if (dst is SubscriptExpression) {
-                val AEaddresses = this.getAddresses(dst.arrayExpression)
-                val AEvalues = this.getValues(dst.arrayExpression)
+            /* When we are dealing with SubscriptExpression, we also have to initialise the arrayExpression
+            , since that hasn't been done yet */
+            destinations.filterIsInstance<SubscriptExpression>().forEach { d ->
+                val AEaddresses = this.getAddresses(d.arrayExpression)
+                val AEvalues = this.getValues(d.arrayExpression)
 
                 doubleState =
                     doubleState.push(
-                        dst.arrayExpression,
+                        d.arrayExpression,
                         TupleLattice(Pair(PowersetLattice(AEaddresses), PowersetLattice(AEvalues)))
                     )
             }
 
-            //            var doubleState = PointsToState2(this.generalState,
-            // MapLattice(newDeclState))
-            /*            doubleState =
-            doubleState.push(
-                dst,
-                TupleLattice(Pair(PowersetLattice(addresses), PowersetLattice(values)))
-            )*/
             return doubleState
         }
     }
