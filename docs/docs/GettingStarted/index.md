@@ -16,6 +16,8 @@ After [installing the library](./installation), it can be used in different ways
 * [As a library for Kotlin/Java](./library)
 * [Via an interactive command line interface](./cli)
 * [With custom automated analyses using the Query API](./query)
+* [Via neo4j](./neo4j)
 
-In all these cases, the [Shortcuts](./shortcuts) provide you a convenient way to
+
+In the first three cases, the [Shortcuts](./shortcuts) provide you a convenient way to
 quickly explore some of the most relevant information.
