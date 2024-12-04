@@ -49,10 +49,10 @@ publishing {
 
 dependencies {
     // neo4j
-    api(libs.bundles.neo4j)
+    implementation(libs.bundles.neo4j)
 
     // Command line interface support
-    api(libs.picocli)
+    implementation(libs.picocli)
     annotationProcessor(libs.picocli.codegen)
 
     testImplementation(testFixtures(projects.cpgCore))

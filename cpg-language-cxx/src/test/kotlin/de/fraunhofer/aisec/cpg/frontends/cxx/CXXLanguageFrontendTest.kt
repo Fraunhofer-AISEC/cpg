@@ -61,10 +61,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             val decl = main
             val ls = decl.variables["ls"]
             assertNotNull(ls)
-            assertEquals(
-                assertResolvedType("std::vector", listOf(assertResolvedType("int"))),
-                ls.type
-            )
+            assertEquals(assertResolvedType("std::vector"), ls.type)
             assertLocalName("ls", ls)
 
             val forEachStatement = decl.forEachLoops.firstOrNull()

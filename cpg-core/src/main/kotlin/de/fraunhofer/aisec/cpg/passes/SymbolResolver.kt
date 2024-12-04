@@ -204,7 +204,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
         // Find a list of candidate symbols. Currently, this is only used the in the "next-gen" call
         // resolution, but in future this will also be used in resolving regular references.
-        ref.candidates = scopeManager.lookupSymbolByName(ref.name, ref.location).toSet()
+        ref.candidates = scopeManager.lookupSymbolByNameOfNode(ref).toSet()
 
         // Preparation for a future without legacy call resolving. Taking the first candidate is not
         // ideal since we are running into an issue with function pointers here (see workaround
@@ -322,6 +322,35 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         }
     }
 
+    /**
+     * This function resolves a possible overloaded -> (arrow) operator, for languages which support
+     * operator overloading. The implicit call to the overloaded operator function is inserted as
+     * base for the MemberExpression. This can be the case for a [MemberExpression] or
+     * [MemberCallExpression]
+     */
+    private fun resolveOverloadedArrowOperator(ex: Expression): Type? {
+        var type: Type? = null
+        if (
+            ex.language is HasOperatorOverloading &&
+                ex is MemberExpression &&
+                ex.operatorCode == "->" &&
+                ex.base.type !is PointerType
+        ) {
+            val result = resolveOperator(ex)
+            val op = result?.bestViable?.singleOrNull()
+            if (result?.success == SUCCESSFUL && op is OperatorDeclaration) {
+                type = op.returnTypes.singleOrNull()?.root ?: unknownType()
+
+                // We need to insert a new operator call expression in between
+                val call = operatorCallFromDeclaration(op, ex)
+
+                // Make the call our new base
+                ex.base = call
+            }
+        }
+        return type
+    }
+
     protected fun resolveMember(
         containingClass: ObjectType,
         reference: Reference
@@ -334,25 +363,8 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         var member: ValueDeclaration? = null
         var type: Type = containingClass
 
-        // Check for a possible overloaded operator->
-        if (
-            reference.language is HasOperatorOverloading &&
-                reference is MemberExpression &&
-                reference.operatorCode == "->" &&
-                reference.base.type !is PointerType
-        ) {
-            val result = resolveOperator(reference)
-            val op = result?.bestViable?.singleOrNull()
-            if (result?.success == SUCCESSFUL && op is OperatorDeclaration) {
-                type = op.returnTypes.singleOrNull()?.root ?: unknownType()
-
-                // We need to insert a new operator call expression in between
-                val call = operatorCallFromDeclaration(op, reference)
-
-                // Make the call our new base
-                reference.base = call
-            }
-        }
+        // Handle a possible overloaded operator->
+        type = resolveOverloadedArrowOperator(reference) ?: type
 
         val record = type.recordDeclaration
         if (record != null) {
@@ -397,6 +409,9 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         // Some local variables for easier smart casting
         val callee = call.callee
         val language = call.language
+
+        // Handle a possible overloaded operator->
+        resolveOverloadedArrowOperator(callee)
 
         // Dynamic function invokes (such as function pointers) are handled by extra pass, so we are
         // not resolving them here.
@@ -575,7 +590,9 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         var candidates = mutableSetOf<Declaration>()
         val records = possibleContainingTypes.mapNotNull { it.root.recordDeclaration }.toSet()
         for (record in records) {
-            candidates.addAll(ctx.scopeManager.lookupSymbolByName(record.name.fqn(symbol)))
+            candidates.addAll(
+                ctx.scopeManager.lookupSymbolByName(record.name.fqn(symbol), record.language)
+            )
         }
 
         // Find invokes by supertypes
@@ -685,7 +702,11 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             listOf()
         } else {
             val firstLevelCandidates =
-                possibleTypes.map { scopeManager.lookupSymbolByName(it.name.fqn(name)) }.flatten()
+                possibleTypes
+                    .map { record ->
+                        scopeManager.lookupSymbolByName(record.name.fqn(name), record.language)
+                    }
+                    .flatten()
 
             // C++ does not allow overloading at different hierarchy levels. If we find a
             // FunctionDeclaration with the same name as the function in the CallExpression we have

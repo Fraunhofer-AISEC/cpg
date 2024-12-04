@@ -40,9 +40,10 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.types.HasType
+import de.fraunhofer.aisec.cpg.helpers.neo4j.DataflowGranularityConverter
 import kotlin.reflect.KProperty
 import org.neo4j.ogm.annotation.*
-import org.neo4j.ogm.annotation.RelationshipEntity
+import org.neo4j.ogm.annotation.typeconversion.Convert
 
 /**
  * The granularity of the data-flow, e.g., whether the flow contains the whole object, or just a
@@ -112,7 +113,9 @@ open class Dataflow(
     start: Node,
     end: Node,
     /** The granularity of this dataflow. */
-    @Transient @JsonIgnore var granularity: Granularity = default()
+    @Convert(DataflowGranularityConverter::class)
+    @JsonIgnore
+    var granularity: Granularity = default()
 ) : Edge<Node>(start, end) {
     override val label: String = "DFG"
 

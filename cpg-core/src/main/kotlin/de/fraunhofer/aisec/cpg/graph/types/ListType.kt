@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2023, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,19 +23,10 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.scopes
+package de.fraunhofer.aisec.cpg.graph.types
 
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.statements.BreakStatement
+import de.fraunhofer.aisec.cpg.frontends.Language
 
-class TryScope(astNode: Node?) : ValueDeclarationScope(astNode), Breakable {
-
-    private val breaks = mutableListOf<BreakStatement>()
-
-    override fun addBreakStatement(breakStatement: BreakStatement) {
-        breaks.add(breakStatement)
-    }
-
-    override val breakStatements: List<BreakStatement>
-        get() = breaks
-}
+/** Represents a [List] type that contains multiple elements. */
+class ListType(typeName: CharSequence, override var elementType: Type, language: Language<*>) :
+    ObjectType(typeName, listOf(elementType), false, language), SecondOrderType

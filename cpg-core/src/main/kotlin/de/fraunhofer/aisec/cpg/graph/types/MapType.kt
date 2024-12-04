@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2023, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,32 +23,10 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.scopes
+package de.fraunhofer.aisec.cpg.graph.types
 
-import de.fraunhofer.aisec.cpg.graph.statements.*
-import org.slf4j.LoggerFactory
+import de.fraunhofer.aisec.cpg.frontends.Language
 
-class LoopScope(loopStatement: Statement) :
-    ValueDeclarationScope(loopStatement), Breakable, Continuable {
-
-    private val breaks = mutableListOf<BreakStatement>()
-    private val continues = mutableListOf<ContinueStatement>()
-
-    override fun addBreakStatement(breakStatement: BreakStatement) {
-        breaks.add(breakStatement)
-    }
-
-    override fun addContinueStatement(continueStatement: ContinueStatement) {
-        continues.add(continueStatement)
-    }
-
-    override val breakStatements: List<BreakStatement>
-        get() = breaks
-
-    override val continueStatements: List<ContinueStatement>
-        get() = continues
-
-    companion object {
-        private val LOGGER = LoggerFactory.getLogger(LoopScope::class.java)
-    }
-}
+/** Represents a [Map] type with key-value pairs. */
+class MapType(typeName: CharSequence, override var elementType: Type, language: Language<*>) :
+    ObjectType(typeName, listOf(elementType), false, language), SecondOrderType

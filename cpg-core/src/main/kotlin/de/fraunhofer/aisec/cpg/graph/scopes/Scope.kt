@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.scopes
 
 import com.fasterxml.jackson.annotation.JsonBackReference
+import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.Node.Companion.TO_STRING_STYLE
@@ -55,7 +56,7 @@ typealias SymbolMap = MutableMap<Symbol, MutableList<Declaration>>
  * restriction and can act as namespaces to avoid name collisions.
  */
 @NodeEntity
-abstract class Scope(
+sealed class Scope(
     @Relationship(value = "SCOPE", direction = Relationship.Direction.INCOMING)
     @JsonBackReference
     open var astNode: Node?
@@ -131,6 +132,7 @@ abstract class Scope(
      */
     fun lookupSymbol(
         symbol: Symbol,
+        languageOnly: Language<*>? = null,
         thisScopeOnly: Boolean = false,
         replaceImports: Boolean = true,
         predicate: ((Declaration) -> Boolean)? = null
@@ -138,12 +140,7 @@ abstract class Scope(
         // First, try to look for the symbol in the current scope (unless we have a predefined
         // search scope). In the latter case we also need to restrict the lookup to the search scope
         var modifiedScoped = this.predefinedLookupScopes[symbol]?.targetScope
-        var scope: Scope? =
-            if (modifiedScoped != null) {
-                modifiedScoped
-            } else {
-                this
-            }
+        var scope: Scope? = modifiedScoped ?: this
 
         var list: MutableList<Declaration>? = null
 
@@ -163,9 +160,14 @@ abstract class Scope(
                 list.replaceImports(symbol)
             }
 
+            // Filter according to the language
+            if (languageOnly != null) {
+                list.removeIf { it.language != languageOnly }
+            }
+
             // Filter the list according to the predicate, if we have any
             if (predicate != null) {
-                list = list.filter(predicate).toMutableList()
+                list.removeIf { !predicate.invoke(it) }
             }
 
             // If we have a hit, we can break the loop
@@ -187,14 +189,6 @@ abstract class Scope(
 
     fun addLabelStatement(labelStatement: LabelStatement) {
         labelStatement.label?.let { labelStatements[it] = labelStatement }
-    }
-
-    fun isBreakable(): Boolean {
-        return this is LoopScope || this is SwitchScope
-    }
-
-    fun isContinuable(): Boolean {
-        return this is LoopScope
     }
 
     override fun equals(other: Any?): Boolean {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2024, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,20 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.graph.scopes
 
-import de.fraunhofer.aisec.cpg.graph.statements.BreakStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 
 /**
- * Scope of validity associated to a block of statements. Variables declared inside a block are not
- * visible outside.
+ * This scope is opened up by a [NamespaceDeclaration] and represents the scope of the whole
+ * namespace. This scope is special in a way that it will only exist once (per [GlobalScope]) and
+ * contains all symbols declared in this namespace, even if they are spread across multiple files.
  */
-class BlockScope(blockStatement: Block) : ValueDeclarationScope(blockStatement), Breakable {
-    private val breaks: MutableList<BreakStatement> = ArrayList()
-
-    override fun addBreakStatement(breakStatement: BreakStatement) {
-        breaks.add(breakStatement)
-    }
-
-    override val breakStatements: List<BreakStatement>
-        get() = breaks
-}
+class NamespaceScope(astNode: NamespaceDeclaration) : NameScope(astNode)

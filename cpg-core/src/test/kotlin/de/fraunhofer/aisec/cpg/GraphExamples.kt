@@ -339,6 +339,106 @@ class GraphExamples {
                 }
             }
 
+        fun getInferenceBinaryOperatorReturnType(
+            config: TranslationConfiguration =
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerLanguage(StructTestLanguage("."))
+                    .inferenceConfiguration(
+                        InferenceConfiguration.builder()
+                            .inferRecords(true)
+                            .inferReturnTypes(true)
+                            .build()
+                    )
+                    .build()
+        ) =
+            testFrontend(config).build {
+                translationResult {
+                    translationUnit("test.python") {
+                        function("foo", t("int")) {
+                            body {
+                                declare { variable("a") }
+                                declare { variable("b") }
+                                ref("a") assign { call("bar") + literal(2, t("int")) }
+                                ref("b") assign { literal(2L, t("long")) + call("baz") }
+                            }
+                        }
+                    }
+                }
+            }
+
+        fun getInferenceTupleReturnType(
+            config: TranslationConfiguration =
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerLanguage(StructTestLanguage("."))
+                    .inferenceConfiguration(
+                        InferenceConfiguration.builder()
+                            .inferRecords(true)
+                            .inferReturnTypes(true)
+                            .build()
+                    )
+                    .build()
+        ) =
+            testFrontend(config).build {
+                translationResult {
+                    translationUnit("test.python") {
+                        function("foo", returnTypes = listOf(t("Foo"), t("Bar"))) {
+                            body { returnStmt { call("bar") } }
+                        }
+                    }
+                }
+            }
+
+        fun getInferenceUnaryOperatorReturnType(
+            config: TranslationConfiguration =
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerLanguage(StructTestLanguage("."))
+                    .inferenceConfiguration(
+                        InferenceConfiguration.builder()
+                            .inferRecords(true)
+                            .inferReturnTypes(true)
+                            .build()
+                    )
+                    .build()
+        ) =
+            testFrontend(config).build {
+                translationResult {
+                    translationUnit("Test.java") {
+                        record("Test") { method("foo") { body { returnStmt { -call("bar") } } } }
+                    }
+                }
+            }
+
+        fun getInferenceNestedNamespace(
+            config: TranslationConfiguration =
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerLanguage(StructTestLanguage("."))
+                    .inferenceConfiguration(
+                        InferenceConfiguration.builder()
+                            .inferRecords(true)
+                            .inferNamespaces(true)
+                            .build()
+                    )
+                    .build()
+        ) =
+            testFrontend(config).build {
+                translationResult {
+                    translationUnit("Test.java") {
+                        record("Test") {
+                            method("foo") {
+                                body {
+                                    declare { variable("node", t("java.lang.String")) }
+                                    returnStmt { isImplicit = true }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
         fun getVariables(
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
