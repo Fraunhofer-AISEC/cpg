@@ -167,6 +167,7 @@ nav:
       - "Evaluation Order Graph (EOG)": CPG/specs/eog.md
   - "Implementation":
       - CPG/impl/index.md
+      - "Design Principles": CPG/impl/design_principles.md
       - "Language Frontends": CPG/impl/language.md
       - "Scopes and Symbols": CPG/impl/scopes.md
       - "Passes": CPG/impl/passes.md

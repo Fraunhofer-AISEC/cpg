@@ -117,6 +117,10 @@ private constructor(
     matchCommentsToNodes: Boolean,
     addIncludesToGraph: Boolean,
     passConfigurations: Map<KClass<out Pass<*>>, PassConfiguration>,
+    /** A list of exclusion patterns used to filter files and directories. */
+    val exclusionPatternsByString: List<String>,
+    /** A list of exclusion patterns using regular expressions to filter files and directories. */
+    val exclusionPatternsByRegex: List<Regex>
 ) {
     /** This list contains all languages which we want to translate. */
     val languages: List<Language<*>>
@@ -257,6 +261,8 @@ private constructor(
         private var useDefaultPasses = false
         private var passConfigurations: MutableMap<KClass<out Pass<*>>, PassConfiguration> =
             mutableMapOf()
+        private val exclusionPatternsByRegex = mutableListOf<Regex>()
+        private val exclusionPatternsByString = mutableListOf<String>()
 
         fun symbols(symbols: Map<String, String>): Builder {
             this.symbols = symbols
@@ -454,6 +460,32 @@ private constructor(
         }
 
         /**
+         * Adds exclusion patterns using regular expressions for filtering files and directories.
+         *
+         * @param patterns Exclusion patterns. Example:
+         * ```
+         * exclusionPatterns(Regex(".*test(s)?"))
+         * ```
+         */
+        fun exclusionPatterns(vararg patterns: Regex): Builder {
+            exclusionPatternsByRegex.addAll(patterns)
+            return this
+        }
+
+        /**
+         * Adds exclusion patterns for filtering files and directories.
+         *
+         * @param patterns Exclusion patterns. Example:
+         * ```
+         * exclusionPatterns("tests")
+         * ```
+         */
+        fun exclusionPatterns(vararg patterns: String): Builder {
+            exclusionPatternsByString.addAll(patterns)
+            return this
+        }
+
+        /**
          * Loads and registers an additional [Language] based on a fully qualified class name (FQN).
          */
         @Throws(ConfigurationException::class)
@@ -647,7 +679,9 @@ private constructor(
                 compilationDatabase,
                 matchCommentsToNodes,
                 addIncludesToGraph,
-                passConfigurations
+                passConfigurations,
+                exclusionPatternsByString,
+                exclusionPatternsByRegex
             )
         }
 

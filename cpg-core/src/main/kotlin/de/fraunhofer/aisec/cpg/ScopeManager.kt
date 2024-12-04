@@ -79,9 +79,6 @@ class ScopeManager : ScopeProvider {
      */
     private val symbolTable = mutableMapOf<ReferenceTag, Pair<Reference, ValueDeclaration>>()
 
-    /** True, if the scope manager is currently in a [BlockScope]. */
-    val isInBlock: Boolean
-        get() = this.firstScopeOrNull { it is BlockScope } != null
     /** True, if the scope manager is currently in a [FunctionScope]. */
     val isInFunction: Boolean
         get() = this.firstScopeOrNull { it is FunctionScope } != null
@@ -92,12 +89,15 @@ class ScopeManager : ScopeProvider {
     val globalScope: GlobalScope?
         get() = scopeMap[null] as? GlobalScope
 
-    /** The current block, according to the scope that is currently active. */
-    val currentBlock: Block?
-        get() = this.firstScopeIsInstanceOrNull<BlockScope>()?.astNode as? Block
     /** The current function, according to the scope that is currently active. */
     val currentFunction: FunctionDeclaration?
         get() = this.firstScopeIsInstanceOrNull<FunctionScope>()?.astNode as? FunctionDeclaration
+
+    /** The current block, according to the scope that is currently active. */
+    val currentBlock: Block?
+        get() =
+            currentScope?.astNode as? Block
+                ?: currentScope?.astNode?.firstParentOrNull { it is Block } as? Block
 
     /**
      * The current method in the active scope tree, this ensures that 'this' keywords are mapped
@@ -218,11 +218,11 @@ class ScopeManager : ScopeProvider {
      * new scope, this function needs to be called. Appropriate scopes will then be created
      * on-the-fly, if they do not exist.
      *
-     * The scope manager has an internal association between the type of scope, e.g. a [BlockScope]
+     * The scope manager has an internal association between the type of scope, e.g. a [LocalScope]
      * and the CPG node it represents, e.g. a [Block].
      *
-     * Afterwards, all calls to [addDeclaration] will be distributed to the
-     * [de.fraunhofer.aisec.cpg.graph.DeclarationHolder] that is currently in-scope.
+     * Afterward, all calls to [addDeclaration] will be distributed to the [DeclarationHolder] that
+     * is currently in-scope.
      */
     fun enterScope(nodeToScope: Node) {
         var newScope: Scope? = null
@@ -231,21 +231,21 @@ class ScopeManager : ScopeProvider {
         if (!scopeMap.containsKey(nodeToScope)) {
             newScope =
                 when (nodeToScope) {
-                    is Block -> BlockScope(nodeToScope)
                     is WhileStatement,
                     is DoStatement,
-                    is AssertStatement -> LoopScope(nodeToScope)
+                    is AssertStatement,
                     is ForStatement,
-                    is ForEachStatement -> LoopScope(nodeToScope as Statement)
-                    is SwitchStatement -> SwitchScope(nodeToScope)
+                    is ForEachStatement,
+                    is SwitchStatement,
+                    is TryStatement,
+                    is IfStatement,
+                    is CatchClause,
+                    is Block -> LocalScope(nodeToScope)
                     is FunctionDeclaration -> FunctionScope(nodeToScope)
-                    is IfStatement -> ValueDeclarationScope(nodeToScope)
-                    is CatchClause -> ValueDeclarationScope(nodeToScope)
                     is RecordDeclaration -> RecordScope(nodeToScope)
                     is TemplateDeclaration -> TemplateScope(nodeToScope)
-                    is TryStatement -> TryScope(nodeToScope)
                     is TranslationUnitDeclaration -> FileScope(nodeToScope)
-                    is NamespaceDeclaration -> newNameScopeIfNecessary(nodeToScope)
+                    is NamespaceDeclaration -> newNamespaceIfNecessary(nodeToScope)
                     else -> {
                         LOGGER.error(
                             "No known scope for AST node of type {}",
@@ -266,7 +266,7 @@ class ScopeManager : ScopeProvider {
     }
 
     /**
-     * A small internal helper function used by [enterScope] to create a [NameScope].
+     * A small internal helper function used by [enterScope] to create a [NamespaceScope].
      *
      * The issue with name scopes, such as a namespace, is that it can exist across several files,
      * i.e. translation units, represented by different [NamespaceDeclaration] nodes. But, in order
@@ -274,15 +274,15 @@ class ScopeManager : ScopeProvider {
      * all declarations, such as classes, independently of the translation units. Therefore, we need
      * to check, whether such as node already exists. If it does already exist:
      * - we update the scope map so that the current [NamespaceDeclaration] points to the existing
-     *   [NameScope]
+     *   [NamespaceScope]
      * - we return null, indicating to [enterScope], that no new scope needs to be pushed by
      *   [enterScope].
      *
-     * Otherwise, we return a new name scope.
+     * Otherwise, we return a new namespace scope.
      */
-    private fun newNameScopeIfNecessary(nodeToScope: NamespaceDeclaration): NameScope? {
+    private fun newNamespaceIfNecessary(nodeToScope: NamespaceDeclaration): NamespaceScope? {
         val existingScope =
-            filterScopes { it is NameScope && it.name == nodeToScope.name }.firstOrNull()
+            filterScopes { it is NamespaceScope && it.name == nodeToScope.name }.firstOrNull()
 
         return if (existingScope != null) {
             // update the AST node to this namespace declaration
@@ -296,25 +296,7 @@ class ScopeManager : ScopeProvider {
             // does not need to push a new scope
             null
         } else {
-            NameScope(nodeToScope)
-        }
-    }
-
-    /**
-     * Similar to [enterScope], but does so in a "read-only" mode, e.g. it does not modify the scope
-     * tree and does not create new scopes on the fly, as [enterScope] does.
-     */
-    fun enterScopeIfExists(nodeToScope: Node?) {
-        if (scopeMap.containsKey(nodeToScope)) {
-            val scope = scopeMap[nodeToScope]
-
-            // we need a special handling of name spaces, because
-            // they are associated to more than one AST node
-            if (scope is NameScope) {
-                // update AST (see enterScope for an explanation)
-                scope.astNode = nodeToScope
-            }
-            currentScope = scope
+            NamespaceScope(nodeToScope)
         }
     }
 
@@ -813,8 +795,10 @@ class ScopeManager : ScopeProvider {
      *
      * @return the declaration, or null if it does not exist
      */
-    fun getRecordForName(name: Name): RecordDeclaration? {
-        return lookupSymbolByName(name).filterIsInstance<RecordDeclaration>().singleOrNull()
+    fun getRecordForName(name: Name, language: Language<*>?): RecordDeclaration? {
+        return lookupSymbolByName(name, language)
+            .filterIsInstance<RecordDeclaration>()
+            .singleOrNull()
     }
 
     fun typedefFor(alias: Name, scope: Scope? = currentScope): Type? {
@@ -875,6 +859,18 @@ class ScopeManager : ScopeProvider {
         get() = currentScope
 
     /**
+     * A convenience function to call [lookupSymbolByName] with the properties of [node]. The
+     * arguments [scope] and [predicate] are forwarded.
+     */
+    fun lookupSymbolByNameOfNode(
+        node: Node,
+        scope: Scope? = node.scope,
+        predicate: ((Declaration) -> Boolean)? = null,
+    ): List<Declaration> {
+        return lookupSymbolByName(node.name, node.language, node.location, scope, predicate)
+    }
+
+    /**
      * This function tries to convert a [Node.name] into a [Symbol] and then performs a lookup of
      * this symbol. This can either be an "unqualified lookup" if [name] is not qualified or a
      * "qualified lookup" if [Name.isQualified] is true. In the unqualified case the lookup starts
@@ -885,12 +881,13 @@ class ScopeManager : ScopeProvider {
      * function overloading. But it will only return list of declarations within the same scope; the
      * list cannot be spread across different scopes.
      *
-     * This means that as soon one or more declarations for the symbol are found in a "local" scope,
-     * these shadow all other occurrences of the same / symbol in a "higher" scope and only the ones
-     * from the lower ones will be returned.
+     * This means that as soon one or more declarations (of the matching [language]) for the symbol
+     * are found in a "local" scope, these shadow all other occurrences of the same / symbol in a
+     * "higher" scope and only the ones from the lower ones will be returned.
      */
     fun lookupSymbolByName(
         name: Name,
+        language: Language<*>?,
         location: PhysicalLocation? = null,
         startScope: Scope? = currentScope,
         predicate: ((Declaration) -> Boolean)? = null,
@@ -900,14 +897,25 @@ class ScopeManager : ScopeProvider {
         // We need to differentiate between a qualified and unqualified lookup. We have a qualified
         // lookup, if the scope is not null. In this case we need to stay within the specified scope
         val list =
-            if (scope != null) {
-                    scope.lookupSymbol(n.localName, thisScopeOnly = true, predicate = predicate)
-                } else {
+            when {
+                scope != null -> {
+                    scope
+                        .lookupSymbol(
+                            n.localName,
+                            languageOnly = language,
+                            thisScopeOnly = true,
+                            predicate = predicate
+                        )
+                        .toMutableList()
+                }
+                else -> {
                     // Otherwise, we can look up the symbol alone (without any FQN) starting from
                     // the startScope
-                    startScope?.lookupSymbol(n.localName, predicate = predicate)
+                    startScope
+                        ?.lookupSymbol(n.localName, languageOnly = language, predicate = predicate)
+                        ?.toMutableList() ?: mutableListOf()
                 }
-                ?.toMutableList() ?: return listOf()
+            }
 
         // If we have both the definition and the declaration of a function declaration in our list,
         // we chose only the definition
@@ -932,9 +940,15 @@ class ScopeManager : ScopeProvider {
      * It is important to know that the lookup needs to be unique, so if multiple declarations match
      * this symbol, a warning is triggered and null is returned.
      */
-    fun lookupUniqueTypeSymbolByName(name: Name, startScope: Scope?): DeclaresType? {
+    fun lookupUniqueTypeSymbolByName(
+        name: Name,
+        language: Language<*>?,
+        startScope: Scope?
+    ): DeclaresType? {
         var symbols =
-            lookupSymbolByName(name = name, startScope = startScope) { it is DeclaresType }
+            lookupSymbolByName(name = name, language = language, startScope = startScope) {
+                    it is DeclaresType
+                }
                 .filterIsInstance<DeclaresType>()
 
         // We need to have a single match, otherwise we have an ambiguous type, and we cannot

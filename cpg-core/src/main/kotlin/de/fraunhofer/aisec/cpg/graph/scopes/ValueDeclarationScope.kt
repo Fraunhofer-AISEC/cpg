@@ -39,7 +39,7 @@ import org.slf4j.LoggerFactory
  * Is a scope where local variables can be declared and independent of specific language constructs.
  * Works for if, for, and extends to the block scope
  */
-open class ValueDeclarationScope(override var astNode: Node?) : Scope(astNode) {
+sealed class ValueDeclarationScope(astNode: Node?) : Scope(astNode) {
     val valueDeclarations: List<ValueDeclaration>
         get() {
             return symbols.flatMap { it.value }.filterIsInstance<ValueDeclaration>()
