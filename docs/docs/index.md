@@ -36,7 +36,7 @@ programming language.
 
   The library supports the following programming languages out of the box:
 
-  * Java
+  * Java (Source code, JVM bytecode and Jimple)
   * C/C++
   * Go
   * Python
