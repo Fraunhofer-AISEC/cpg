@@ -33,8 +33,9 @@ import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage.Companion.MODIFIE
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.scopes.BlockScope
+import de.fraunhofer.aisec.cpg.graph.scopes.LocalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
+import de.fraunhofer.aisec.cpg.graph.scopes.NamespaceScope
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.AssertStatement
 import de.fraunhofer.aisec.cpg.graph.statements.CatchClause
@@ -906,7 +907,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         // behind that is that we wrap each file in a namespace (as defined in the python spec). So
         // the "global" scope is actually our current namespace scope.
         var pythonGlobalScope =
-            frontend.scopeManager.globalScope?.children?.firstOrNull { it is NameScope }
+            frontend.scopeManager.globalScope?.children?.firstOrNull { it is NamespaceScope }
 
         return newLookupScopeStatement(
             global.names.map { parseName(it).localName },
@@ -924,7 +925,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         // the function
         var outerFunctionScope =
             frontend.scopeManager.firstScopeOrNull {
-                it is BlockScope && it != frontend.scopeManager.currentScope
+                it is LocalScope && it != frontend.scopeManager.currentScope
             }
 
         return newLookupScopeStatement(
