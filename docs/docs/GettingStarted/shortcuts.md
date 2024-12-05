@@ -100,17 +100,30 @@ stable than the information from above!
   this function.
 * `TranslationResult.callersOf(function: FunctionDeclaration)` determines which
   functions call the specified function.
-* `Node.followPrevDFG(predicate: (Node) -> Boolean)` returns a list of nodes
-  which form a path between this node and the first node (as a start of the
-  dataflow) matching the predicate. Note that this flow might not occur on
-  runtime!.
-* `Node.followPrevEOG(predicate: (Node) -> Boolean)`
-  and `Node.followNextEOG(predicate: (Node) -> Boolean)` return a list of edges
-  which form an EOG path between this node and the first node matching the
-  predicate. Note that this flow might not happen on runtime!
-* The methods `Node.followPrevDFGEdgesUntilHit(predicate: (Node) -> Boolean)`,
- `Node.followNextDFGEdgesUntilHit(predicate: (Node) -> Boolean)`,
- `Node.followPrevEOGEdgesUntilHit(predicate: (Node) -> Boolean)`, and
- `Node.followNextGEdgesUntilHit(predicate: (Node) -> Boolean)` work in a similar
-  way but return all failed and all fulfilled paths. This allows reasoning more
-  precisely about the program's behavior.
+* The methods
+ `Node.followPrevFullDFGEdgesUntilHit(collectFailedPaths: Boolean, findAllPossiblePaths: Boolean, predicate: (Node) -> Boolean)`,
+ `Node.followNextFullDFGEdgesUntilHit(predicate: (collectFailedPaths: Boolean, findAllPossiblePaths: Boolean, Node) -> Boolean)`,
+ `Node.followPrevEOGEdgesUntilHit(collectFailedPaths: Boolean, findAllPossiblePaths: Boolean, predicate: (Node) -> Boolean)`,
+ `Node.followNextEOGEdgesUntilHit(collectFailedPaths: Boolean, findAllPossiblePaths: Boolean, predicate: (Node) -> Boolean)`,
+ `Node.followPrevCDGEdgesUntilHit(collectFailedPaths: Boolean, findAllPossiblePaths: Boolean, interproceduralAnalysis: Boolean, predicate: (Node) -> Boolean)`,
+ `Node.followNextCDGEdgesUntilHit(collectFailedPaths: Boolean, findAllPossiblePaths: Boolean, interproceduralAnalysis: Boolean, predicate: (Node) -> Boolean)`,
+ `Node.followPrevPDGEdgesUntilHit(collectFailedPaths: Boolean, findAllPossiblePaths: Boolean, interproceduralAnalysis: Boolean, predicate: (Node) -> Boolean)`,
+ `Node.followNextPDGEdgesUntilHit(collectFailedPaths: Boolean, findAllPossiblePaths: Boolean, interproceduralAnalysis: Boolean, predicate: (Node) -> Boolean)`,
+  collect the DFG/EOG/CDG/PDG path between the node and the first node
+  matching the predicate. The methods can be configured to collect failed
+  paths (to see if a path exists which does not fulfill a dataflow
+  requirement), to identify all possible paths reaching a predicate and
+  partially follow calls as well. They return all failed and all fulfilled
+  paths. This allows reasoning more precisely about the program's behavior.
+* If you're interested in all nodes reachable via one of the subgraphs from
+  a certain node, the methods
+  `Node.collectAllPrevFullDFGPaths()`,
+  `Node.collectAllNextFullDFGPaths()`,
+  `Node.collectAllPrevEOGPaths()`,
+  `Node.collectAllNextEOGPaths()`,
+  `Node.collectAllPrevCDGPaths(interproceduralAnalysis: Boolean)`,
+  `Node.collectAllNextCDGPaths(interproceduralAnalysis: Boolean)`,
+  `Node.collectAllPrevPDGPaths(interproceduralAnalysis: Boolean)`,
+  `Node.collectAllNextPDGPaths(interproceduralAnalysis: Boolean)`
+  can be used.
+
