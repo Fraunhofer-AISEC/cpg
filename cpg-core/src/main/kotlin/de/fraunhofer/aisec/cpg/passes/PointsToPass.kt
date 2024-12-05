@@ -105,7 +105,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
 
         /* Store function summary for this FunctionDeclaration. */
         storeFunctionSummary(node, finalState)
-
+        
         for ((key, value) in finalState.generalState.elements) {
             when (key) {
                 is Expression -> {
