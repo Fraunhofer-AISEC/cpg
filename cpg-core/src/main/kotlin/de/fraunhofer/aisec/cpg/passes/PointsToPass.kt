@@ -42,6 +42,11 @@ import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 @ExecuteBefore(ControlFlowSensitiveDFGPass::class)
 class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependencies = true) {
 
+    // For recursive creation of FunctionSummaries, we have to make sure that we don't run in
+    // circles.
+    // Therefore, we store the chain of FunctionDeclarations we currently analyse
+    val functionSummaryAnalysisChain = mutableSetOf<FunctionDeclaration>()
+
     override fun cleanup() {
         // Nothing to do
     }
@@ -105,7 +110,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
 
         /* Store function summary for this FunctionDeclaration. */
         storeFunctionSummary(node, finalState)
-        
+
         for ((key, value) in finalState.generalState.elements) {
             when (key) {
                 is Expression -> {
@@ -197,7 +202,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
         currentNode: ReturnStatement,
         doubleState: PointsToPass.PointsToState2
     ): PointsToPass.PointsToState2 {
-        /* For Return Statements, all we really want to do is to collect the values they return to later create the FunctionSummary */
+        /* For Return Statements, all we really want to do is to collect their return values to add them to the FunctionSummary */
         var doubleState = doubleState
         if (currentNode.returnValues.isNotEmpty()) {
             val parentFD = currentNode.scope?.parent?.astNode as? FunctionDeclaration
@@ -219,9 +224,29 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
     ): PointsToPass.PointsToState2 {
         var doubleState = doubleState
 
-        // TODO: Check if we have a function summary for everything in currentNode.invokes
+        // First, check if there are missing FunctionSummaries
+        currentNode.invokes.forEach { invoke ->
+            if (!ctx.config.functionSummaries.hasSummary(invoke)) {
+                if (invoke.hasBody()) {
+                    if (invoke !in functionSummaryAnalysisChain) {
+                        functionSummaryAnalysisChain.add(invoke)
+                        accept(invoke)
+                    } else {
+                        log.error(
+                            "Cannot calculate functionSummary for $invoke as it's recursively called. callChain: $functionSummaryAnalysisChain"
+                        )
+                    }
+                } else
+                // Add an empty function Summary so that we don't try this every time
+                config.functionSummaries.functionToChangedParameters.computeIfAbsent(invoke) {
+                        mutableMapOf()
+                    }
+            }
+        }
+        functionSummaryAnalysisChain.clear()
+
         if (currentNode.invokes.all { ctx.config.functionSummaries.hasSummary(it) }) {
-            // We already have a FunctionSummary. Set the arguments. Push the
+            // We have a FunctionSummary. Set the new values for the arguments. Push the
             // values of the arguments and return value after executing the function call to our
             // doubleState.
 
@@ -234,32 +259,38 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
             for ((param, newValues) in changedParams) {
                 // Ignore the ReturnStatements here, we use them when handling AssignExpressions
                 if (param !is ReturnStatement) {
-                    val arg =
+                    val destinations =
                         when (param) {
-                            (currentNode.invokes.first() as? MethodDeclaration)?.receiver ->
-                                (currentNode as? MemberCallExpression)?.base.unwrapReference()
-                            is ParameterDeclaration ->
-                                currentNode.arguments[param.argumentIndex] /*.unwrapReference()*/
+                            is ParameterDeclaration -> currentNode.arguments[param.argumentIndex]
                             else -> null
                         }
-                    if (arg != null) {
+                    currentNode.arguments[newValues.first().argumentIndex]
+                    val sources = mutableSetOf<Node>()
+                    newValues.forEach { value ->
+                        when (value) {
+                            is ParameterDeclaration ->
+                                // Add the value of the respective argument in the CallExpression
+                                doubleState
+                                    .getValues(currentNode.arguments[value.argumentIndex])
+                                    .forEach { sources.add(it) }
+                        //                            else -> null
+                        }
+                    }
+                    if (destinations != null && sources.isNotEmpty()) {
                         // Since arg is a pointer (otherwise it couldn't change in the function), we
                         // have to work with the value of the pointer
                         doubleState =
-                            doubleState.updateValues(newValues, doubleState.getValues(arg))
+                            doubleState.updateValues(sources, doubleState.getValues(destinations))
                     }
                 }
             }
-        } else if (currentNode.invokes.all { it.hasBody() }) {
-            // Process the missing FunctionDeclarations
-
-        } else {
-            // We don't have a body or a FunctionSummary
         }
 
+        /*        */
         /*
         For now, we only care about memcpy* and memset, which can influence memoryAddresses or memoryValues
          */
+        /*
         var src: Expression? = null
         var dst: Expression? = null
         if (
@@ -276,15 +307,17 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
             src = currentNode.arguments[1]
         }
 
+        */
         /*
         Something is getting copied here, so we need to update the state
          */
+        /*
         if (src != null && dst != null) {
             // Since memcpy takes pointers as arguments, we need to resolve them here to determine
             // the values we need to read/write
             doubleState =
                 doubleState.updateValues(doubleState.getValues(src), doubleState.getValues(dst))
-        }
+        }*/
         return doubleState
     }
 

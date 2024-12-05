@@ -51,6 +51,7 @@ class PointsToPassTest {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
                 it.registerPass<PointsToPass>()
+                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
             }
         assertNotNull(tu)
 
@@ -197,6 +198,7 @@ class PointsToPassTest {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
                 it.registerPass<PointsToPass>()
+                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
             }
         assertNotNull(tu)
 
@@ -274,6 +276,7 @@ class PointsToPassTest {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
                 it.registerPass<PointsToPass>()
+                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
             }
         assertNotNull(tu)
 
@@ -432,6 +435,7 @@ class PointsToPassTest {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
                 it.registerPass<PointsToPass>()
+                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
             }
         assertNotNull(tu)
 
@@ -511,6 +515,7 @@ class PointsToPassTest {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
                 it.registerPass<PointsToPass>()
+                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
             }
         assertNotNull(tu)
 
@@ -804,6 +809,7 @@ class PointsToPassTest {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
                 it.registerPass<PointsToPass>()
+                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
             }
         assertNotNull(tu)
 
@@ -922,6 +928,7 @@ class PointsToPassTest {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
                 it.registerPass<PointsToPass>()
+                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
             }
         assertNotNull(tu)
 
@@ -1057,8 +1064,6 @@ class PointsToPassTest {
                 it.registerLanguage<CPPLanguage>()
                 it.registerPass<PointsToPass>()
                 it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
-                it.registerPass<ControlDependenceGraphPass>()
-                it.registerPass<ProgramDependenceGraphPass>()
             }
         assertNotNull(tu)
 
