@@ -289,7 +289,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                                     base = newReference(name = managerName).implicit()
                                 )
                                 .implicit(),
-                        rawNode = withItem
+                        rawNode = node
                     )
                     .implicit()
             exitCallWithNone.addArgument(newLiteral(null).implicit())
@@ -314,7 +314,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                                     base = newReference(name = managerName).implicit()
                                 )
                                 .implicit(),
-                        rawNode = withItem
+                        rawNode = node
                     )
                     .implicit()
             val starOp = newUnaryOperator("*", false, false)
@@ -352,7 +352,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                                     base = newReference(name = managerName).implicit()
                                 )
                                 .implicit(),
-                        rawNode = withItem
+                        rawNode = node
                     )
                     .implicit()
 

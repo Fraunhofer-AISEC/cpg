@@ -76,8 +76,11 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
      *
      * Connects multiple predicates by `and`.
      */
-    private fun handleComprehension(node: Python.AST.comprehension): ComprehensionExpression {
-        return newComprehensionExpression(rawNode = node).apply {
+    private fun handleComprehension(
+        node: Python.AST.comprehension,
+        parent: Python.AST.BaseExpr
+    ): ComprehensionExpression {
+        return newComprehensionExpression(rawNode = parent).apply {
             variable = handle(node.target)
             iterable = handle(node.iter)
             val predicates = node.ifs.map { handle(it) }
@@ -85,7 +88,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                 predicate = predicates.single()
             } else if (predicates.size > 1) {
                 predicate =
-                    joinListWithBinOp(operatorCode = "and", nodes = predicates, rawNode = node)
+                    joinListWithBinOp(operatorCode = "and", nodes = predicates, rawNode = parent)
             }
             if (node.is_async != 0L)
                 additionalProblems +=
@@ -104,7 +107,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     private fun handleGeneratorExp(node: Python.AST.GeneratorExp): CollectionComprehension {
         return newCollectionComprehension(rawNode = node).apply {
             statement = handle(node.elt)
-            comprehensionExpressions += node.generators.map { handleComprehension(it) }
+            comprehensionExpressions += node.generators.map { handleComprehension(it, node) }
             type = objectType("Generator")
         }
     }
@@ -116,7 +119,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     private fun handleListComprehension(node: Python.AST.ListComp): CollectionComprehension {
         return newCollectionComprehension(rawNode = node).apply {
             statement = handle(node.elt)
-            comprehensionExpressions += node.generators.map { handleComprehension(it) }
+            comprehensionExpressions += node.generators.map { handleComprehension(it, node) }
             type = objectType("list") // TODO: Replace this once we have dedicated types
         }
     }
@@ -128,7 +131,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     private fun handleSetComprehension(node: Python.AST.SetComp): CollectionComprehension {
         return newCollectionComprehension(rawNode = node).apply {
             this.statement = handle(node.elt)
-            this.comprehensionExpressions += node.generators.map { handleComprehension(it) }
+            this.comprehensionExpressions += node.generators.map { handleComprehension(it, node) }
             this.type = objectType("set") // TODO: Replace this once we have dedicated types
         }
     }
@@ -145,7 +148,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                     value = handle(node.value),
                     rawNode = node
                 )
-            this.comprehensionExpressions += node.generators.map { handleComprehension(it) }
+            this.comprehensionExpressions += node.generators.map { handleComprehension(it, node) }
             this.type = objectType("dict") // TODO: Replace this once we have dedicated types
         }
     }
