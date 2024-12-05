@@ -532,6 +532,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 source.scope,
             )
         val language = source.language
+        val sourceCall = source as? CallExpression
 
         if (language == null) {
             result.success = CallResolutionResult.SuccessKind.PROBLEMATIC
@@ -542,29 +543,43 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         val (scope, _) = ctx.scopeManager.extractScope(source, source.scope)
         result.actualStartScope = scope ?: source.scope
 
-        // If the function does not allow function overloading, and we have multiple candidate
-        // symbols, the result is "problematic"
-        if (source.language !is HasFunctionOverloading && result.candidateFunctions.size > 1) {
-            result.success = PROBLEMATIC
-        }
-
-        // Filter functions that match the signature of our call, either directly or with casts;
-        // those functions are "viable". Take default arguments into account if the language has
-        // them.
-        result.signatureResults =
-            result.candidateFunctions
-                .map {
-                    Pair(
-                        it,
-                        it.matchesSignature(
-                            arguments.map(Expression::type),
-                            arguments,
-                            source.language is HasDefaultArguments,
+        // Resolution depends on language features
+        if (source.language !is HasFunctionOverloading) {
+            // If the function does not allow function overloading, and we have multiple candidate
+            // symbols, the result is "problematic"
+            if (result.candidateFunctions.size > 1) {
+                result.success = CallResolutionResult.SuccessKind.PROBLEMATIC
+            } else
+            // If we have only one candidate function and the number of arguments match, we can take
+            // a shortcut and stop here
+            if (
+                result.candidateFunctions.size == 1 &&
+                    result.candidateFunctions.first().parameters.size == sourceCall?.arguments?.size
+            ) {
+                result.signatureResults =
+                    result.candidateFunctions.associateWith {
+                        SignatureMatches(mutableListOf(DirectMatch))
+                    }
+            }
+        } else {
+            // Filter functions that match the signature of our call, either directly or with
+            // casts; those functions are "viable". Take default arguments into account if the
+            // language has them.
+            result.signatureResults =
+                result.candidateFunctions
+                    .map {
+                        Pair(
+                            it,
+                            it.matchesSignature(
+                                arguments.map(Expression::type),
+                                arguments,
+                                source.language is HasDefaultArguments,
+                            )
                         )
-                    )
-                }
-                .filter { it.second is SignatureMatches }
-                .associate { it }
+                    }
+                    .filter { it.second is SignatureMatches }
+                    .associate { it }
+        }
         result.viableFunctions = result.signatureResults.keys
 
         // If we have a "problematic" result, we can stop here. In this case we cannot really

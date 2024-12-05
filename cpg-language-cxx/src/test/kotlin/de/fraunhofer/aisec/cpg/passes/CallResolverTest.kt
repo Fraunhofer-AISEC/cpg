@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.*
+import de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
 import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
@@ -747,6 +748,26 @@ class CallResolverTest : BaseTest() {
         val declarations = tu.declarations.filterIsInstance<FunctionDeclaration>()
         assertNotNull(declarations)
         assertEquals(2, declarations.size)
+    }
+
+    @Test
+    @Throws(Exception::class)
+    fun testCFunctionResolution() {
+        val file = File("src/test/resources/calls/c-function-resolution.c")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CLanguage>()
+            }
+
+        val funcFoo = tu.functions["foo"]
+        assertNotNull(funcFoo)
+        assertFalse(funcFoo.isInferred)
+
+        val fooCalls = tu.calls("foo")
+        fooCalls.forEach { assertContains(it.invokes, funcFoo) }
+
+        val barCalls = tu.calls("bar")
+        barCalls.forEach { assertTrue { it.invokes.first().isInferred } }
     }
 
     companion object {

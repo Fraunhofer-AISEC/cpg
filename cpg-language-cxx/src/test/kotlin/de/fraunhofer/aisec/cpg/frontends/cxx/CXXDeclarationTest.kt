@@ -104,12 +104,12 @@ class CXXDeclarationTest {
 
         declarations.forEach { assertEquals(definition, it.definition) }
 
-        // without the "std" lib, int will not match with size_t and we will infer a new function;
-        // and this will actually result in a problematic resolution, since C does not allow
-        // function overloading.
+        // As C does not support function overload, we can resolve the call to foo even if we do not
+        // know the argument type (due to missing includes), only by the name of the function and
+        // the number of arguments.
         val inferredDefinition =
             result.functions[{ it.name.localName == "foo" && !it.isDefinition && it.isInferred }]
-        assertNotNull(inferredDefinition)
+        assertNull(inferredDefinition)
     }
 
     @Test
