@@ -25,10 +25,17 @@
  */
 package de.fraunhofer.aisec.cpg
 
-import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.types.Type
 
-interface LanguageBackend<L : Language<*>> {
+abstract class LanguageBackend {
 
-    fun translate(tu: TranslationUnitDeclaration): String
+    abstract fun translate(
+        decl: Declaration,
+        indent: Int = 0,
+        predicate: ((Node) -> Boolean)? = null
+    ): String?
+
+    abstract fun translate(type: Type?): String?
 }

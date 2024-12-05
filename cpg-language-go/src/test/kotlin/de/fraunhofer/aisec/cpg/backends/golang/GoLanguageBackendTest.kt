@@ -25,8 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.backends.golang
 
-import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguage
+import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
 import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertNotNull
@@ -36,11 +36,7 @@ class GoLanguageBackendTest {
     fun testTranslate() {
         val topLevel = Path.of("src", "test", "resources", "golang")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("function.go").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("function.go").toFile()), topLevel, true) {
                 it.registerLanguage<GoLanguage>()
             }
         assertNotNull(tu)

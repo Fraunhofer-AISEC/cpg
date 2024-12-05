@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.backends.golang
 
 import de.fraunhofer.aisec.cpg.LanguageBackend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
-import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguage
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
@@ -39,12 +39,40 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
 
 private const val COMMA = ", "
 
-class GoLanguageBackend : LanguageBackend<GoLanguage> {
-    override fun translate(tu: TranslationUnitDeclaration): String {
-        val builder = StringBuilder()
+class GoLanguageBackend : LanguageBackend() {
 
-        // We need to hack imports later
-        val declarations = tu.declarations.filter { it !is IncludeDeclaration }
+    override fun translate(
+        decl: Declaration,
+        indent: Int,
+        predicate: ((Node) -> Boolean)?
+    ): String? {
+        if (decl is TranslationUnitDeclaration) {
+            val builder = StringBuilder()
+
+            writeTranslationDeclaration(builder, decl)
+
+            return builder.toString()
+        }
+
+        return null
+    }
+
+    override fun translate(type: Type?): String? {
+        return if (type is PointerType) {
+            if (type.isArray) {
+                "[]${translate(type.elementType)}"
+            } else {
+                "*${translate(type.elementType)}"
+            }
+        } else {
+            type?.name.toString()
+        }
+    }
+
+    fun writeTranslationDeclaration(builder: StringBuilder, tu: TranslationUnitDeclaration) {
+        // We need to hack imports later (also ignore any std inferred namespaces)
+        val declarations =
+            tu.declarations.filter { it is NamespaceDeclaration && it.name.localName != "unsafe" }
         val imports = tu.declarations.filterIsInstance<IncludeDeclaration>()
 
         // The tu MUST only have a single namespace declaration
@@ -54,8 +82,6 @@ class GoLanguageBackend : LanguageBackend<GoLanguage> {
                     "top-level TU must only consist of one namespace declaration"
                 )
         writeNamespaceDeclaration(builder, pkg, imports)
-
-        return builder.toString()
     }
 
     fun writeNamespaceDeclaration(
@@ -77,7 +103,7 @@ class GoLanguageBackend : LanguageBackend<GoLanguage> {
                 writeFunctionDeclaration(decl)
             }
             is VariableDeclaration -> {
-                "${decl.name} ${writeType(decl.type)}"
+                "${decl.name} ${translate(decl.type)}"
             }
             else -> {
                 ""
@@ -86,19 +112,7 @@ class GoLanguageBackend : LanguageBackend<GoLanguage> {
     }
 
     private fun writeParameter(it: ParameterDeclaration): String {
-        return "${it.name.localName.ifEmpty { "_" }} ${writeType(it.type)}"
-    }
-
-    private fun writeType(type: Type): String {
-        return if (type is PointerType) {
-            if (type.isArray) {
-                "[]${writeType(type.elementType)}"
-            } else {
-                "*${writeType(type.elementType)}"
-            }
-        } else {
-            type.name.toString()
-        }
+        return "${it.name.localName.ifEmpty { "_" }} ${translate(it.type)}"
     }
 
     private fun writeFunctionDeclaration(decl: FunctionDeclaration): String {
