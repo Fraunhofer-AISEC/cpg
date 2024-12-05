@@ -626,9 +626,9 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                     /*
                     For references, the address is the same as for the declaration, AKA the refersTo
                     */
-                    node.refersTo.let { refersTo ->
+                    node.refersTo?.let { refersTo ->
                         /* In some cases, the refersTo might not yet have an initialized MemoryAddress, for example if it's a FunctionDeclaration. So let's to this here */
-                        if (!refersTo!!.memoryAddressIsInitialized())
+                        if (!refersTo.memoryAddressIsInitialized())
                             refersTo.memoryAddress = MemoryAddress(node.name)
 
                         setOf(refersTo.memoryAddress)
