@@ -514,9 +514,6 @@ fun Node.followXUntilHit(
                 // We ended up in the node fulfilling "predicate", so we're done for this path. Add
                 // the path to the results.
                 fulfilledPaths.add(nextPath)
-
-                if (!continueAfterHit) return FulfilledAndFailedPaths(fulfilledPaths, failedPaths)
-
                 continue // Don't add this path anymore. The requirement is satisfied.
             }
             // The next node is new in the current path (i.e., there's no loop), so we add the path
@@ -555,14 +552,12 @@ fun Node.followXUntilHit(
 fun Node.followNextFullDFGEdgesUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
-    continueAfterHit: Boolean = true,
     predicate: (Node) -> Boolean
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
         x = { currentNode -> currentNode.nextFullDFG },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
-        continueAfterHit = continueAfterHit,
         predicate = predicate
     )
 }
