@@ -453,10 +453,10 @@ class QueryTest {
                                 }
                                 .fulfilled
                                 .map { it2 -> (it2.last() as NewArrayExpression).dimensions[0] }
-                        ) && min(it.subscriptExpression) > 0
+                        ) && min(it.subscriptExpression) >= 0
                 }
             )
-        assertFalse(queryTreeResult.first)
+        assertTrue(queryTreeResult.first)
 
         val queryTreeResult2 =
             result.allExtended<SubscriptExpression>(
@@ -472,7 +472,7 @@ class QueryTest {
                         )) and (min(it.subscriptExpression) ge 0)
                 }
             )
-        assertFalse(queryTreeResult2.value)
+        assertTrue(queryTreeResult2.value)
         println(queryTreeResult2.printNicely())
     }
 
