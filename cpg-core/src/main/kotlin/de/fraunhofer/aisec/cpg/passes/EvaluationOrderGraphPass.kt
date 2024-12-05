@@ -404,6 +404,18 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         }
     }
 
+    protected fun handlePointerReference(node: PointerReference) {
+        handleEOG(node.input)
+
+        attachToEOG(node)
+    }
+
+    protected fun handlePointerDereference(node: PointerDereference) {
+        handleEOG(node.input)
+
+        attachToEOG(node)
+    }
+
     /**
      * Default handler for nodes. The node is simply attached to the EOG and the ast subtree is
      * ignored.
@@ -613,7 +625,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         // Handle left hand side(s) first
         node.lhs.forEach { handleEOG(it) }
 
-        // Then the right side(s). Avoid creating the EOG twice if it's already part of the
+        // Then, handle the right side(s). Avoid creating the EOG twice if it's already part of the
         // initializer of a declaration
         node.rhs.forEach {
             if (it !in node.declarations.map { decl -> decl.initializer }) {

@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemoryAddress
 import org.neo4j.ogm.annotation.NodeEntity
 
 /**
@@ -44,4 +45,15 @@ abstract class Declaration : Node() {
         get() {
             return this.name.localName
         }
+
+    /**
+     * Each Declaration allocates new memory, AKA a new address, so we create a new MemoryAddress
+     * node
+     */
+    lateinit var memoryAddress: MemoryAddress
+
+    fun memoryAddressIsInitialized() = ::memoryAddress.isInitialized
+
+    /** The Declaration also has a value. This will be the value of the rhs (if any). */
+    val memoryValue: MutableSet<Node?> = mutableSetOf<Node?>(null)
 }

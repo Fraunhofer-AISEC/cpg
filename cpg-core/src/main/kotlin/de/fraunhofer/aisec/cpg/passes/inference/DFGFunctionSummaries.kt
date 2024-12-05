@@ -63,12 +63,12 @@ class DFGFunctionSummaries {
      * [FunctionDeclaration], we store all previous DFG nodes.
      */
     val functionToChangedParameters =
-        mutableMapOf<FunctionDeclaration, MutableMap<ValueDeclaration, MutableSet<Node>>>()
+        mutableMapOf<FunctionDeclaration, MutableMap<Node, MutableSet<Node>>>()
 
     fun hasSummary(functionDeclaration: FunctionDeclaration) =
         functionDeclaration in functionToChangedParameters
 
-    fun getLastWrites(functionDeclaration: FunctionDeclaration): Map<ValueDeclaration, Set<Node>> =
+    fun getLastWrites(functionDeclaration: FunctionDeclaration): Map<Node, Set<Node>> =
         functionToChangedParameters[functionDeclaration] ?: mapOf()
 
     /** This function returns a list of [DataflowEntry] from the specified file. */
@@ -251,7 +251,7 @@ class DFGFunctionSummaries {
                 if (entry.from.startsWith("param")) {
                     try {
                         val paramIndex = entry.from.removePrefix("param").toInt()
-                        functionDeclaration.parameters[paramIndex]
+                        functionDeclaration.parameters.getOrNull(paramIndex)
                     } catch (e: NumberFormatException) {
                         null
                     }
@@ -264,8 +264,8 @@ class DFGFunctionSummaries {
                 if (entry.to.startsWith("param")) {
                     try {
                         val paramIndex = entry.to.removePrefix("param").toInt()
-                        val paramTo = functionDeclaration.parameters[paramIndex]
-                        if (from != null) {
+                        val paramTo = functionDeclaration.parameters.getOrNull(paramIndex)
+                        if (from != null && paramTo != null) {
                             functionToChangedParameters
                                 .computeIfAbsent(functionDeclaration) { mutableMapOf() }
                                 .computeIfAbsent(paramTo) { mutableSetOf() }
