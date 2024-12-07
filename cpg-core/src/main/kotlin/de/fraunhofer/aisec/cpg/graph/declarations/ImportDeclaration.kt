@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.scopes.SymbolMap
 import de.fraunhofer.aisec.cpg.helpers.neo4j.SimpleNameConverter
 import de.fraunhofer.aisec.cpg.passes.ImportResolver
+import de.fraunhofer.aisec.cpg.passes.Pass
 import org.neo4j.ogm.annotation.typeconversion.Convert
 
 /**
@@ -162,4 +163,15 @@ class ImportDeclaration : Declaration() {
     @Transient
     @PopulatedByPass(ImportResolver::class)
     var importedSymbols: SymbolMap = mutableMapOf()
+}
+
+context(Pass<*>)
+fun Name.isImport(imports: List<ImportDeclaration>): Boolean {
+    return imports.any {
+        if (it.alias != null) {
+            it.alias == this
+        } else {
+            it.name == this
+        }
+    }
 }

@@ -106,6 +106,6 @@ class MemberExpression : Reference(), HasOverloadedOperation, ArgumentHolder, Ha
     }
 
     private fun updateName() {
-        this.name = base.type.root.name.fqn(name.localName)
+        this.name = this.base.name.fqn(this.name.localName, delimiter = operatorCode ?: ".")
     }
 }
