@@ -1611,6 +1611,23 @@ class PythonFrontendTest : BaseTest() {
         )
     }
 
+    @Test
+    fun testImportVsMember() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("import_vs_member.py").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(tu)
+
+        val refs = tu.refs
+        refs.forEach { assertIsNot<MemberExpression>(it) }
+    }
+
     class PythonValueEvaluator : ValueEvaluator() {
         override fun computeBinaryOpEffect(
             lhsValue: Any?,
