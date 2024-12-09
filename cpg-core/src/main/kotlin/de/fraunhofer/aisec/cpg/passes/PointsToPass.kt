@@ -38,6 +38,7 @@ import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 
 @DependsOn(SymbolResolver::class)
 @DependsOn(EvaluationOrderGraphPass::class)
+@DependsOn(DFGPass::class)
 class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependencies = true) {
 
     // For recursive creation of FunctionSummaries, we have to make sure that we don't run in
@@ -657,13 +658,13 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                     /*
                     For references, the address is the same as for the declaration, AKA the refersTo
                     */
-                    node.refersTo.let { refersTo ->
+                    node.refersTo?.let { refersTo ->
                         /* In some cases, the refersTo might not yet have an initialized MemoryAddress, for example if it's a FunctionDeclaration. So let's to this here */
-                        if (!refersTo!!.memoryAddressIsInitialized())
+                        if (!refersTo.memoryAddressIsInitialized())
                             refersTo.memoryAddress = MemoryAddress(node.name)
 
                         setOf(refersTo.memoryAddress)
-                    }
+                    } ?: setOf()
                 }
                 is CastExpression -> {
                     /*

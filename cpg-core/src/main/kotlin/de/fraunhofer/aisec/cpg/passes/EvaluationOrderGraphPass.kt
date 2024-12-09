@@ -397,6 +397,8 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             is Literal<*> -> handleDefault(node)
             is DefaultStatement -> handleDefault(node)
             is TypeIdExpression -> handleDefault(node)
+            is PointerDereference -> handlePointerDereference(node)
+            is PointerReference -> handlePointerReference(node)
             is Reference -> handleDefault(node)
             // These nodes are not added to the EOG
             is IncludeDeclaration -> doNothing()

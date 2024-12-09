@@ -552,12 +552,14 @@ fun Node.followXUntilHit(
 fun Node.followNextFullDFGEdgesUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
+    continueAfterHit: Boolean = true,
     predicate: (Node) -> Boolean
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
         x = { currentNode -> currentNode.nextFullDFG },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
+        continueAfterHit = continueAfterHit,
         predicate = predicate
     )
 }

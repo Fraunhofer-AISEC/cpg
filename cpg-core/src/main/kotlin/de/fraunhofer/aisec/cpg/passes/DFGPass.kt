@@ -235,7 +235,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * variable.
      */
     protected fun handleVariableDeclaration(node: VariableDeclaration) {
-        /*node.initializer?.let { node.prevDFGEdges += it }*/
+        node.initializer?.let { node.prevDFGEdges += it }
     }
 
     /**
