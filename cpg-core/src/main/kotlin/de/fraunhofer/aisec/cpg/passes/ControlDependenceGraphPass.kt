@@ -38,8 +38,10 @@ import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConditionalExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ShortCircuitOperator
 import de.fraunhofer.aisec.cpg.helpers.*
+import de.fraunhofer.aisec.cpg.helpers.LatticeElement
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import java.util.*
+import kotlin.system.measureTimeMillis
 
 /** This pass builds the Control Dependence Graph (CDG) by iterating through the EOG. */
 @DependsOn(EvaluationOrderGraphPass::class)
@@ -83,6 +85,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
             )
             return
         }
+        log.info("[CDG] Analyzing function ${startNode.name}. Complexity: $c")
 
         // Maps nodes to their "cdg parent" (i.e. the dominator) and also has the information
         // through which path it is reached. If all outgoing paths of the node's dominator result in
@@ -91,8 +94,11 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
         val identityMap = IdentityHashMap<Node, IdentitySet<Node>>()
         identityMap[startNode] = identitySetOf(startNode)
         startState.push(startNode, PrevEOGLattice(identityMap))
-        val finalState = iterateEOG(startNode.nextEOGEdges, startState, ::handleEdge) ?: return
-
+        var finalState: State<Node, IdentityHashMap<Node, IdentitySet<Node>>>
+        val executionTime = measureTimeMillis {
+            finalState = iterateEOG(startNode.nextEOGEdges, startState, ::handleEdge) ?: return
+        }
+        log.info("[CDG] iterated EOG for ${startNode.name}. Time: $executionTime")
         val branchingNodeConditionals = getBranchingNodeConditions(startNode)
 
         // Collect the information, identify merge points, etc. This is not really efficient yet :(
@@ -126,11 +132,13 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
                     }
                 }
             }
-            val alreadySeen = mutableSetOf<Pair<Node, Set<Node>>>()
+            val alreadySeen = mutableSetOf<Int>()
 
             while (dominatorsList.isNotEmpty()) {
                 val (k, v) = dominatorsList.removeFirst()
-                alreadySeen.add(Pair(k, v))
+                if (!alreadySeen.add(Pair(k, v).hashCode())) {
+                    continue
+                }
                 if (k != startNode && v.containsAll(branchingNodeConditionals[k] ?: setOf())) {
                     // We are reachable from all the branches of a branching node. Add this parent
                     // to the worklist or update an existing entry. Also consider already existing
@@ -150,16 +158,14 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
                                 val update = entry.second.addAll(newV)
                                 if (
                                     update &&
-                                        alreadySeen.none {
-                                            it.first == entry.first &&
-                                                it.second.containsAll(entry.second)
-                                        }
-                                )
+                                        Pair(entry.first, entry.second).hashCode() !in alreadySeen
+                                ) {
                                     dominatorsList.add(entry)
-                                else finalDominators.add(entry)
+                                } else finalDominators.add(entry)
                             }
                             alreadySeen.none {
-                                it.first == newK && it.second.containsAll(newV)
+                                // it.first == newK && it.second == newV
+                                it == Pair(newK, newV.toMutableSet()).hashCode()
                             } -> {
                                 // We don't have an entry yet => add a new one
                                 val newEntry = Pair(newK, newV.toMutableSet())
@@ -182,6 +188,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
 
             // We have all the dominators of this node and potentially traversed the graph
             // "upwards". Add the CDG edges
+            // log.info("[CDG] iterating through the finalDomniators")
             finalDominators
                 .filter { (k, _) -> k != node }
                 .forEach { (k, v) ->
