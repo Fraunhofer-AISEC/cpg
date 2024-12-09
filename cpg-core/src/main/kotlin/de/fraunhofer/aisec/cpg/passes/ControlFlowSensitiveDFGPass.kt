@@ -29,11 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
-import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContext
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
-import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
-import de.fraunhofer.aisec.cpg.graph.edges.flows.PointerDataflowGranularity
-import de.fraunhofer.aisec.cpg.graph.edges.flows.partial
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.*
@@ -70,7 +66,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
 
     /** We perform the actions for each [FunctionDeclaration]. */
     override fun accept(node: Node) {
-        // For now, we only execute this for function declarations, we will support all EOG starters
+        /*        // For now, we only execute this for function declarations, we will support all EOG starters
         // in the future.
         if (node !is FunctionDeclaration) {
             return
@@ -147,7 +143,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                     }
                 }
             }
-        }
+        }*/
     }
 
     /**

@@ -176,7 +176,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     protected fun handleAssignExpression(node: AssignExpression) {
-        // If this is a compound assign, we also need to model a dataflow to the node itself
+        /*        // If this is a compound assign, we also need to model a dataflow to the node itself
         if (node.isCompoundAssignment) {
             node.lhs.firstOrNull()?.let {
                 node.prevDFGEdges += it
@@ -195,7 +195,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         // rhs to the node itself
         if (node.usedAsExpression) {
             node.expressionValue?.nextDFGEdges += node
-        }
+        }*/
     }
 
     /**
@@ -235,7 +235,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * variable.
      */
     protected fun handleVariableDeclaration(node: VariableDeclaration) {
-        node.initializer?.let { node.prevDFGEdges += it }
+        /*node.initializer?.let { node.prevDFGEdges += it }*/
     }
 
     /**

@@ -35,11 +35,9 @@ import de.fraunhofer.aisec.cpg.helpers.functional.*
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass.Configuration
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
-import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 
 @DependsOn(SymbolResolver::class)
 @DependsOn(EvaluationOrderGraphPass::class)
-@ExecuteBefore(ControlFlowSensitiveDFGPass::class)
 class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependencies = true) {
 
     // For recursive creation of FunctionSummaries, we have to make sure that we don't run in
@@ -118,8 +116,8 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                     val newMemoryAddresses =
                         value.elements.first.elements.filterIsInstance<MemoryAddress>()
                     if (newMemoryValues.isNotEmpty()) {
-                        key.memoryValue.clear()
-                        key.memoryValue.addAll(newMemoryValues)
+                        key.prevDFG.clear()
+                        key.prevDFG.addAll(newMemoryValues)
                     }
                     if (newMemoryAddresses.isNotEmpty()) {
                         key.memoryAddress.clear()
@@ -129,8 +127,8 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                 is ValueDeclaration -> {
                     val newMemoryValues = value.elements.second.elements
                     if (newMemoryValues.isNotEmpty()) {
-                        key.memoryValue.clear()
-                        key.memoryValue.addAll(newMemoryValues)
+                        key.prevDFG.clear()
+                        key.prevDFG.addAll(newMemoryValues)
                     }
                 }
             }
