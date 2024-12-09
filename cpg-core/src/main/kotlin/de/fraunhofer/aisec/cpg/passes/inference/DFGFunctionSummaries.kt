@@ -63,12 +63,14 @@ class DFGFunctionSummaries {
      * [FunctionDeclaration], we store all previous DFG nodes.
      */
     val functionToChangedParameters =
-        mutableMapOf<FunctionDeclaration, MutableMap<Node, MutableSet<Node>>>()
+        mutableMapOf<FunctionDeclaration, MutableMap<Node, MutableSet<Pair<Node, Boolean>>>>()
 
     fun hasSummary(functionDeclaration: FunctionDeclaration) =
         functionDeclaration in functionToChangedParameters
 
-    fun getLastWrites(functionDeclaration: FunctionDeclaration): Map<Node, Set<Node>> =
+    fun getLastWrites(
+        functionDeclaration: FunctionDeclaration
+    ): Map<Node, Set<Pair<Node, Boolean>>> =
         functionToChangedParameters[functionDeclaration] ?: mapOf()
 
     /** This function returns a list of [DataflowEntry] from the specified file. */
@@ -247,11 +249,17 @@ class DFGFunctionSummaries {
         dfgEntries: List<DFGEntry>
     ) {
         for (entry in dfgEntries) {
+            var derefSource = false
             val from =
                 if (entry.from.startsWith("param")) {
                     try {
-                        val paramIndex = entry.from.removePrefix("param").toInt()
-                        functionDeclaration.parameters.getOrNull(paramIndex)
+                        val e = entry.from.split(".")
+                        val paramIndex = e.getOrNull(0)?.removePrefix("param")?.toInt()
+                        if (paramIndex != null) {
+                            val foo = functionDeclaration.parameters.getOrNull(paramIndex)
+                            if (e.getOrNull(1) == "address") derefSource = true
+                            foo
+                        } else null
                     } catch (e: NumberFormatException) {
                         null
                     }
@@ -263,13 +271,15 @@ class DFGFunctionSummaries {
             val to =
                 if (entry.to.startsWith("param")) {
                     try {
-                        val paramIndex = entry.to.removePrefix("param").toInt()
-                        val paramTo = functionDeclaration.parameters.getOrNull(paramIndex)
+                        val e = entry.to.split(".")
+                        val paramIndex = e.getOrNull(0)?.removePrefix("param")?.toInt()
+                        val paramTo =
+                            paramIndex?.let { functionDeclaration.parameters.getOrNull(it) }
                         if (from != null && paramTo != null) {
                             functionToChangedParameters
                                 .computeIfAbsent(functionDeclaration) { mutableMapOf() }
                                 .computeIfAbsent(paramTo) { mutableSetOf() }
-                                .add(from)
+                                .add(Pair(from, derefSource))
                         }
                         paramTo
                     } catch (e: NumberFormatException) {
@@ -279,10 +289,11 @@ class DFGFunctionSummaries {
                     val receiver = (functionDeclaration as? MethodDeclaration)?.receiver
                     if (from != null) {
                         if (receiver != null) {
-                            functionToChangedParameters
-                                .computeIfAbsent(functionDeclaration) { mutableMapOf() }
-                                .computeIfAbsent(receiver, ::mutableSetOf)
-                                .add(from)
+                            // TODO: fix me
+                            /*functionToChangedParameters
+                            .computeIfAbsent(functionDeclaration) { mutableMapOf() }
+                            .computeIfAbsent(receiver, ::mutableSetOf<Pair<Node, Boolean>>)
+                            .add(Pair(from, derefSource))*/
                         }
                     }
                     receiver

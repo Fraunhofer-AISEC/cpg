@@ -53,7 +53,4 @@ abstract class Declaration : Node() {
     lateinit var memoryAddress: MemoryAddress
 
     fun memoryAddressIsInitialized() = ::memoryAddress.isInitialized
-
-    /** The Declaration also has a value. This will be the value of the rhs (if any). */
-    val memoryValue: MutableSet<Node?> = mutableSetOf<Node?>(null)
 }

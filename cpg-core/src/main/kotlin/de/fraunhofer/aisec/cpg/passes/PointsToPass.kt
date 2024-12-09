@@ -164,7 +164,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                         config.functionSummaries.functionToChangedParameters
                             .computeIfAbsent(node) { mutableMapOf() }
                             .computeIfAbsent(param) { mutableSetOf() }
-                            .add(value)
+                            .add(Pair(value, false))
                     }
             }
         }
@@ -210,7 +210,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                     config.functionSummaries.functionToChangedParameters
                         .computeIfAbsent(parentFD) { mutableMapOf() }
                         .computeIfAbsent(currentNode) { mutableSetOf() }
-                        .addAll(doubleState.getValues(retval))
+                        .addAll(doubleState.getValues(retval).map { Pair(it, false) })
                 }
             }
         }
@@ -250,10 +250,12 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
             // doubleState.
 
             // First, collect all writes to all parameters
-            var changedParams = mutableMapOf<Node, MutableSet<Node>>()
+            var changedParams = mutableMapOf<Node, MutableSet<Pair<Node, Boolean>>>()
             currentNode.invokes.forEach { fd ->
                 val tmp = ctx.config.functionSummaries.getLastWrites(fd)
-                for ((k, v) in tmp) changedParams.computeIfAbsent(k) { mutableSetOf() }.addAll(v)
+                for ((k, v) in tmp) {
+                    changedParams.computeIfAbsent(k) { mutableSetOf() }.addAll(v)
+                }
             }
             for ((param, newValues) in changedParams) {
                 // Ignore the ReturnStatements here, we use them when handling AssignExpressions
@@ -263,15 +265,18 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                             is ParameterDeclaration -> currentNode.arguments[param.argumentIndex]
                             else -> null
                         }
-                    currentNode.arguments[newValues.first().argumentIndex]
                     val sources = mutableSetOf<Node>()
-                    newValues.forEach { value ->
+                    newValues.forEach { (value, derefSource) ->
                         when (value) {
                             is ParameterDeclaration ->
                                 // Add the value of the respective argument in the CallExpression
-                                doubleState
-                                    .getValues(currentNode.arguments[value.argumentIndex])
-                                    .forEach { sources.add(it) }
+                                if (derefSource) {
+                                    doubleState
+                                        .getValues(currentNode.arguments[value.argumentIndex])
+                                        .forEach { sources.add(it) }
+                                } else {
+                                    sources.add(currentNode.arguments[value.argumentIndex])
+                                }
                         //                            else -> null
                         }
                     }
@@ -285,38 +290,6 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
             }
         }
 
-        /*        */
-        /*
-        For now, we only care about memcpy* and memset, which can influence memoryAddresses or memoryValues
-         */
-        /*
-        var src: Expression? = null
-        var dst: Expression? = null
-        if (
-            (currentNode.name.localName in listOf("memcpy_s", "memcpy_verw_s", "memset_s")) &&
-                currentNode.arguments.size == 4
-        ) {
-            dst = currentNode.arguments[0]
-            src = currentNode.arguments[2]
-        } else if (
-            (currentNode.name.localName in listOf("memcpy", "memcpy_verw", "memset")) &&
-                currentNode.arguments.size == 3
-        ) {
-            dst = currentNode.arguments[0]
-            src = currentNode.arguments[1]
-        }
-
-        */
-        /*
-        Something is getting copied here, so we need to update the state
-         */
-        /*
-        if (src != null && dst != null) {
-            // Since memcpy takes pointers as arguments, we need to resolve them here to determine
-            // the values we need to read/write
-            doubleState =
-                doubleState.updateValues(doubleState.getValues(src), doubleState.getValues(dst))
-        }*/
         return doubleState
     }
 
@@ -356,7 +329,9 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
          * In C(++), both the lhs and the rhs should only have one element
          * */
         if (currentNode.lhs.size == 1 && currentNode.rhs.size == 1) {
-            doubleState = doubleState.updateValues(currentNode.rhs.toSet(), currentNode.lhs.toSet())
+            val sources = mutableSetOf<Node>()
+            currentNode.rhs.forEach { sources.addAll(doubleState.getValues(it)) }
+            doubleState = doubleState.updateValues(sources, currentNode.lhs.toSet())
         }
 
         return doubleState
@@ -547,8 +522,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
 
         fun getValues(node: Node): Set<Node> {
             return when (node) {
-                is MemoryAddress,
-                is ParameterMemoryValue ->
+                is MemoryAddress ->
                     /* In these cases, we simply have to fetch the current value for the MemoryAddress from the DeclarationState */
                     this.declarationsState.elements[node]?.elements?.second?.elements
                         ?: setOf(UnknownMemoryValue())
@@ -603,20 +577,29 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                     // Let's see if we have a functionSummary for the CallExpression
                     val functionDeclaration = node.invokes.first()
                     val functionSummaries = node.ctx?.config?.functionSummaries
-                    if (functionSummaries?.hasSummary(functionDeclaration) == true) {
+                    if (
+                        functionSummaries?.hasSummary(functionDeclaration) == true &&
+                            // Also check that we don't just have a dummy Summary
+                            node.ctx
+                                ?.config
+                                ?.functionSummaries
+                                ?.getLastWrites(functionDeclaration)
+                                ?.isNotEmpty() == true
+                    ) {
                         // Get all the ReturnValues from the Summary and return their values
                         val retVals =
                             node.ctx?.config?.functionSummaries?.getLastWrites(functionDeclaration)
                         if (retVals != null) {
                             val r = mutableSetOf<Node>()
                             for ((param, value) in retVals) {
-                                if (param is ReturnStatement) r.addAll(value)
+                                if (param is ReturnStatement) println(value)
+                                // r.addAll(value.fi)
                             }
                             r
                         } else setOf(UnknownMemoryValue(node.name))
                     } else setOf(UnknownMemoryValue(node.name))
                 }
-                is Literal<*>,
+                is Literal<*> -> setOf(UnknownMemoryValue(Name(node.value.toString())))
                 is BinaryOperator -> setOf(node)
                 else -> setOf(UnknownMemoryValue())
             }
@@ -720,8 +703,8 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
         fun updateValues(sources: Set<Node>, destinations: Set<Node>): PointsToState2 {
             val addresses = mutableSetOf<Node>()
             destinations.forEach { d -> this.getAddresses(d).forEach { addresses.add(it) } }
-            val values = mutableSetOf<Node>()
-            sources.forEach { s -> this.getValues(s).forEach { values.add(it) } }
+            val values = sources // mutableSetOf<Node>()
+            // sources.forEach { s -> this.getValues(s).forEach { values.add(it) } }
             val newDeclState = this.declarationsState.elements.toMutableMap()
             val newGenState = this.generalState.elements.toMutableMap()
             /* Update the declarationState for the address */

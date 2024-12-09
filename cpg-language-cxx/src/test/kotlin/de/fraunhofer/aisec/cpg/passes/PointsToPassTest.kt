@@ -989,26 +989,34 @@ class PointsToPassTest {
                 .first()
         assertNotNull(local_28Line177)
 
-        val local_28Line179 =
+        val local_28Line180 =
             tu.allChildren<Reference> {
+                    it.location?.region?.startLine == 180 && it.name.localName == "local_28"
+                }
+                .first()
+        assertNotNull(local_28Line180)
+
+        val local_10Line182 =
+            tu.allChildren<Reference> {
+                    it.location?.region?.startLine == 182 && it.name.localName == "local_10"
+                }
+                .first()
+        assertNotNull(local_10Line182)
+
+        val local_28Line182 =
+            tu.allChildren<Reference> {
+                    it.location?.region?.startLine == 182 && it.name.localName == "local_28"
+                }
+                .first()
+        assertNotNull(local_28Line182)
+
+        // PointerDereferences
+        val local_28DerefLine179 =
+            tu.allChildren<PointerDereference> {
                     it.location?.region?.startLine == 179 && it.name.localName == "local_28"
                 }
                 .first()
-        assertNotNull(local_28Line179)
-
-        val local_10Line181 =
-            tu.allChildren<Reference> {
-                    it.location?.region?.startLine == 181 && it.name.localName == "local_10"
-                }
-                .first()
-        assertNotNull(local_10Line181)
-
-        val local_28Line181 =
-            tu.allChildren<Reference> {
-                    it.location?.region?.startLine == 181 && it.name.localName == "local_28"
-                }
-                .first()
-        assertNotNull(local_28Line181)
+        assertNotNull(local_28DerefLine179)
 
         // Literals
         val literal0Line167 =
@@ -1028,12 +1036,12 @@ class PointsToPassTest {
         // Effect from Line 160
         assertEquals(1, local_30Line165.prevDFG.size)
         assertTrue(local_30Line165.prevDFG.first() is ParameterMemoryValue)
-        assertEquals("param_1.derefvalue", local_30Line165.prevDFG.firstOrNull()?.name.toString())
+        assertEquals("param_1.value", local_30Line165.prevDFG.firstOrNull()?.name.toString())
 
         // Line 165
         assertEquals(1, local_18Line165.prevDFG.size)
         assertTrue(local_18Line165.prevDFG.first() is ParameterMemoryValue)
-        assertEquals("param_1.derefvalue", local_18Line165.prevDFG.firstOrNull()?.name.toString())
+        assertEquals("param_1.value", local_18Line165.prevDFG.firstOrNull()?.name.toString())
 
         // Line 172
         assertEquals(1, local_28Line172.prevDFG.size)
@@ -1042,11 +1050,18 @@ class PointsToPassTest {
 
         // Line 177
         assertEquals(1, local_28Line177.prevDFG.size)
-        assertEquals(literal0Line177, local_28Line177.prevDFG.firstOrNull())
+        assertTrue(local_28Line177.prevDFG.firstOrNull() is UnknownMemoryValue)
+        assertTrue(local_28Line177.prevDFG.firstOrNull()?.name?.localName == "dlmalloc")
 
         // Line 179
-        assertEquals(2, local_28Line179.prevDFG.size)
-        assertTrue(literal0Line167 in local_28Line179.prevDFG)
+        assertEquals(2, local_28DerefLine179.prevDFG.size)
+        assertTrue(local_28DerefLine179.prevDFG.contains(literal0Line167))
+        assertTrue(local_28DerefLine179.prevDFG.contains(literal0Line177))
+        assertEquals(2, local_28DerefLine179.memoryAddress.size)
+
+        // Line 180
+        assertEquals(2, local_28Line180.prevDFG.size)
+        assertTrue(literal0Line167 in local_28Line180.prevDFG)
     }
 
     @Test
@@ -1063,92 +1078,92 @@ class PointsToPassTest {
         // Declarations
         val iDecl =
             tu.allChildren<VariableDeclaration> {
-                    it.location?.region?.startLine == 223 && it.name.localName == "i"
+                    it.location?.region?.startLine == 224 && it.name.localName == "i"
                 }
                 .firstOrNull()
         assertNotNull(iDecl)
 
         val jDecl =
             tu.allChildren<VariableDeclaration> {
-                    it.location?.region?.startLine == 224 && it.name.localName == "j"
+                    it.location?.region?.startLine == 225 && it.name.localName == "j"
                 }
                 .firstOrNull()
         assertNotNull(jDecl)
 
         // References
-        val iRefLine207 =
+        val iRefLine208 =
             tu.allChildren<Reference> {
-                    it.location?.region?.startLine == 207 && it.name.localName == "i"
+                    it.location?.region?.startLine == 208 && it.name.localName == "i"
                 }
                 .firstOrNull()
-        assertNotNull(iRefLine207)
+        assertNotNull(iRefLine208)
 
-        val iRefLine230 =
+        val iRefLine231 =
             tu.allChildren<Reference> {
-                    it.location?.region?.startLine == 230 && it.name.localName == "i"
+                    it.location?.region?.startLine == 231 && it.name.localName == "i"
                 }
                 .firstOrNull()
-        assertNotNull(iRefLine230)
+        assertNotNull(iRefLine231)
 
-        val iRefLine233 =
+        val iRefLine234 =
             tu.allChildren<Reference> {
-                    it.location?.region?.startLine == 233 && it.name.localName == "i"
+                    it.location?.region?.startLine == 234 && it.name.localName == "i"
                 }
                 .firstOrNull()
-        assertNotNull(iRefLine233)
+        assertNotNull(iRefLine234)
 
         // Dereferences
-        val pDerefLine230 =
+        val pDerefLine231 =
             tu.allChildren<PointerDereference> {
-                    it.location?.region?.startLine == 230 && it.name.localName == "p"
+                    it.location?.region?.startLine == 231 && it.name.localName == "p"
                 }
                 .firstOrNull()
-        assertNotNull(pDerefLine230)
+        assertNotNull(pDerefLine231)
 
-        val pDerefLine233 =
+        val pDerefLine234 =
             tu.allChildren<PointerDereference> {
-                    it.location?.region?.startLine == 233 && it.name.localName == "p"
+                    it.location?.region?.startLine == 234 && it.name.localName == "p"
                 }
                 .firstOrNull()
-        assertNotNull(pDerefLine233)
+        assertNotNull(pDerefLine234)
 
-        val pDerefLine236 =
+        val pDerefLine237 =
             tu.allChildren<PointerDereference> {
-                    it.location?.region?.startLine == 236 && it.name.localName == "p"
+                    it.location?.region?.startLine == 237 && it.name.localName == "p"
                 }
                 .firstOrNull()
-        assertNotNull(pDerefLine236)
+        assertNotNull(pDerefLine237)
 
         // BinaryOperators
-        val binOpLine206 =
-            tu.allChildren<BinaryOperator> { it.location?.region?.startLine == 206 }.firstOrNull()
-        assertNotNull(binOpLine206)
+        val binOpLine207 =
+            tu.allChildren<BinaryOperator> { it.location?.region?.startLine == 207 }.firstOrNull()
+        assertNotNull(binOpLine207)
 
-        val binOpLine211 =
-            tu.allChildren<BinaryOperator> { it.location?.region?.startLine == 211 }.firstOrNull()
-        assertNotNull(binOpLine211)
+        val binOpLine212 =
+            tu.allChildren<BinaryOperator> { it.location?.region?.startLine == 212 }.firstOrNull()
+        assertNotNull(binOpLine212)
 
-        assertEquals(1, iRefLine230.prevDFG.size)
-        assertEquals(binOpLine206, iRefLine230.prevDFG.first())
-        assertEquals(1, pDerefLine230.prevDFG.size)
-        assertEquals(binOpLine206, pDerefLine230.prevDFG.first())
-        assertEquals(1, pDerefLine230.memoryAddress.size)
-        assertEquals(iDecl.memoryAddress, pDerefLine230.memoryAddress.first())
+        assertEquals(1, iRefLine231.prevDFG.size)
+        assertEquals(binOpLine207, iRefLine231.prevDFG.first())
+        assertEquals(1, pDerefLine231.prevDFG.size)
+        assertEquals(binOpLine207, pDerefLine231.prevDFG.first())
+        assertEquals(1, pDerefLine231.memoryAddress.size)
+        assertEquals(iDecl.memoryAddress, pDerefLine231.memoryAddress.first())
 
-        // Line 233
-        assertEquals(1, pDerefLine233.memoryAddress.size)
-        assertEquals(iDecl.memoryAddress, pDerefLine233.memoryAddress.firstOrNull())
-        assertEquals(1, iRefLine233.prevDFG.size)
-        assertEquals(binOpLine211, iRefLine233.prevDFG.firstOrNull())
-        assertEquals(1, pDerefLine233.prevDFG.size)
-        assertEquals(binOpLine211, pDerefLine233.prevDFG.firstOrNull())
-        assertEquals(1, pDerefLine233.memoryAddress.size)
-        assertEquals(iDecl.memoryAddress, pDerefLine233.memoryAddress.first())
+        // Line 234
+        assertEquals(1, pDerefLine234.memoryAddress.size)
+        assertEquals(iDecl.memoryAddress, pDerefLine234.memoryAddress.firstOrNull())
+        assertEquals(1, iRefLine234.prevDFG.size)
+        assertEquals(binOpLine212, iRefLine234.prevDFG.firstOrNull())
+        assertEquals(1, pDerefLine234.prevDFG.size)
+        assertEquals(binOpLine212, pDerefLine234.prevDFG.firstOrNull())
+        assertEquals(1, pDerefLine234.memoryAddress.size)
+        assertEquals(iDecl.memoryAddress, pDerefLine234.memoryAddress.first())
 
-        // Line 236
-        assertEquals(1, pDerefLine236.memoryAddress.size)
-        assertEquals(jDecl.memoryAddress, pDerefLine236.memoryAddress.firstOrNull())
-        assertEquals(1, pDerefLine236.prevDFG.size)
-        assertEquals(jDecl.prevDFG.firstOrNull(), pDerefLine236.prevDFG.firstOrNull())
+        // Line 237
+        assertEquals(1, pDerefLine237.memoryAddress.size)
+        assertEquals(jDecl.memoryAddress, pDerefLine237.memoryAddress.firstOrNull())
+        assertEquals(1, pDerefLine237.prevDFG.size)
+        assertEquals(jDecl.prevDFG.firstOrNull(), pDerefLine237.prevDFG.firstOrNull())
     }
 }
