@@ -67,10 +67,6 @@ fun TranslationResult.persist() {
     val nodes = this@persist.nodes
     val edges = this@persist.allEdges<Edge<*>>()
 
-    neo4jSession.executeWrite { tx ->
-        tx.run("CREATE INDEX IF NOT EXISTS FOR (n:Node) ON (n.id)").consume()
-    }
-
     log.info("Persisting {} nodes", nodes.size)
     nodes.persist()
 
@@ -101,6 +97,10 @@ private fun List<Node>.persist() {
 }
 
 private fun Collection<Edge<*>>.persist() {
+    neo4jSession.executeWrite { tx ->
+        tx.run("CREATE INDEX IF NOT EXISTS FOR (n:Node) ON (n.id)").consume()
+    }
+
     val groups = groupBy { it.label }
     groups.forEach {
         it.value.chunked(10000).forEach { chunk ->
