@@ -33,10 +33,10 @@ import org.neo4j.ogm.annotation.*
 
 /** This property edge describes a parent/child relationship in the Abstract Syntax Tree (AST). */
 @RelationshipEntity
-open class AstEdge<T : Node>(start: Node, end: T, label: String = "AST") : Edge<T>(start, end) {
+open class AstEdge<T : Node>(start: Node, end: T, override var label: String = "AST") :
+    Edge<T>(start, end) {
     init {
         end.astParent = start
-        this.label = label
     }
 }
 

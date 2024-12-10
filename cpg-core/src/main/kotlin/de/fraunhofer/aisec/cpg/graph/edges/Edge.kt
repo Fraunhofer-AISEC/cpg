@@ -71,7 +71,7 @@ abstract class Edge<NodeType : Node> : Persistable, Cloneable {
         end = edge.end
     }
 
-    @Transient open var label: String = "EDGE"
+    abstract var label: String
 
     /**
      * The index of this node, if it is stored in an
