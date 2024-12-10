@@ -253,10 +253,10 @@ abstract class Node :
     var isImplicit = false
 
     /** Required field for object graph mapping. It contains the node id. */
-    @Id @GeneratedValue var id: Long? = null
+    @Id @GeneratedValue var legacyId: Long? = null
 
-    /** Will replace [id] */
-    var graphId: Uuid? = null
+    /** Will replace [legacyId] */
+    var id: Uuid? = null
 
     /** Index of the argument if this node is used in a function call or parameter list. */
     var argumentIndex = 0
