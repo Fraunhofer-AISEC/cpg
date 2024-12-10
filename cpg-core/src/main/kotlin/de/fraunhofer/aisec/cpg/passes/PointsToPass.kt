@@ -244,7 +244,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
             // doubleState.
 
             // First, collect all writes to all parameters
-            var changedParams = mutableMapOf<Node, MutableSet<Pair<Node, Boolean>>>()
+            val changedParams = mutableMapOf<Node, MutableSet<Pair<Node, Boolean>>>()
             currentNode.invokes.forEach { fd ->
                 val tmp = ctx.config.functionSummaries.getLastWrites(fd)
                 for ((k, v) in tmp) {
@@ -281,7 +281,26 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                                 } else {
                                     sources.add(currentNode.arguments[value.argumentIndex])
                                 }
-                        //                            else -> null
+                            is ParameterMemoryValue -> {
+                                // In case the FunctionSummary says that we have to use the
+                                // dereferenced value here, we look up the argument, dereference it,
+                                // and then add it to the sources
+                                if (value.name.localName == "derefvalue") {
+                                    val p =
+                                        currentNode.invokes
+                                            .flatMap { it.parameters }
+                                            .filter { it.name == value.name.parent }
+                                    p.forEach {
+                                        val arg = currentNode.arguments[it.argumentIndex]
+                                        sources.addAll(
+                                            doubleState.getValues(arg).flatMap {
+                                                doubleState.getValues(it)
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                            else -> sources.add(value)
                         }
                     }
                     if (destinations != null && sources.isNotEmpty()) {
