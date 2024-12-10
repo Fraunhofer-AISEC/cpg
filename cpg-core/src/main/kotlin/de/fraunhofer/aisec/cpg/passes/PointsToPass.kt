@@ -31,8 +31,10 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.functional.*
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
+import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass.Configuration
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 
@@ -83,20 +85,6 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
         }
 
         log.trace("Handling {} (complexity: {})", node.name, c)
-
-        // clearFlowsOfVariableDeclarations(node)
-        // val startState = PointsToState2<Node?>()
-        // val startState = PointsToState2(Pair(emptyMapLattice<Node?,
-        // TupleLattice<PowersetLattice<Node?>, PowersetLattice<Node?>>>(), emptyMapLattice<Node?,
-        // TupleLattice<PowersetLattice<Node?>, PowersetLattice<Node?>>>()))
-        // val startState = PointsToState(Pair<LatticeElement<Map<Node?,
-        // TupleLattice<emptyPowersetLattice<Node?>(), emptyPowersetLattice<Node?>()>>>,
-        // LatticeElement<Map<Node?, TupleLattice(Pair(emptyPowersetLattice<Node?>() ,
-        // emptyPowersetLattice<Node?>())) >>>)
-        // val test = emptyMapLattice<Node?, Pair<PowersetLattice<Node?>, PowersetLattice<Node?>>>()
-
-        /*MapLattice(
-        mapOf(Pair(null)) TupleLattice(Pair(emptyPowersetLattice<Node?>() , emptyPowersetLattice<Node?>()))*/
 
         var startState = PointsToState2()
         startState =
@@ -273,7 +261,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                                 /*doubleState
                                 .getAddresses(currentNode.arguments[param.argumentIndex])
                                 .flatMap { doubleState.getValues(it) }
-                                .toSet()*/
+                                .toIdentitySet()*/
                                 //
                                 doubleState.getValues(currentNode.arguments[param.argumentIndex])
                             // currentNode.arguments[param.argumentIndex]
@@ -322,7 +310,10 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                 newDeclState.replace(
                     addr,
                     TupleLattice(
-                        Pair(PowersetLattice(addresses), PowersetLattice(setOf(currentNode)))
+                        Pair(
+                            PowersetLattice(addresses),
+                            PowersetLattice(identitySetOf(currentNode))
+                        )
                     )
                 )
             }
@@ -340,13 +331,14 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
         var doubleState = doubleState
         /* For AssignExpressions, we update the value of the rhs with the lhs
          * In C(++), both the lhs and the rhs should only have one element
-         * */
+         */
         if (currentNode.lhs.size == 1 && currentNode.rhs.size == 1) {
             // We fetch the value of the source, but not the destination, this is done by the
             // updateValues-Function
-            val sources = currentNode.rhs.flatMap { doubleState.getValues(it) }.toSet()
-            // val destinations = currentNode.lhs.flatMap { doubleState.getAddresses(it) }.toSet()
-            doubleState = doubleState.updateValues(sources, currentNode.lhs.toSet())
+            val sources = currentNode.rhs.flatMap { doubleState.getValues(it) }.toIdentitySet()
+            // val destinations = currentNode.lhs.flatMap { doubleState.getAddresses(it)
+            // }.toIdentitySet()
+            doubleState = doubleState.updateValues(sources, currentNode.lhs.toIdentitySet())
         }
 
         return doubleState
@@ -386,7 +378,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
         val values =
             (currentNode as? HasInitializer)?.initializer?.let { initializer ->
                 doubleState.getValues(initializer)
-            } ?: setOf()
+            } ?: identitySetOf()
 
         var doubleState =
             doubleState.push(
@@ -415,7 +407,10 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
             val parameterMemoryValue = ParameterMemoryValue(Name("value", param.name))
             val paramState: LatticeElement<Pair<PowersetLatticeT<Node>, PowersetLatticeT<Node>>> =
                 TupleLattice(
-                    Pair(PowersetLattice(addresses), PowersetLattice(setOf(parameterMemoryValue)))
+                    Pair(
+                        PowersetLattice(addresses),
+                        PowersetLattice(identitySetOf(parameterMemoryValue))
+                    )
                 )
             // We also need to track the MemoryValue of the dereference of the parameter, since that
             // is what would have an influence outside the function
@@ -424,7 +419,9 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                 TupleLattice(
                     Pair(
                         PowersetLattice(identitySetOf(parameterMemoryValue)),
-                        PowersetLattice(setOf(ParameterMemoryValue(Name("derefvalue", param.name))))
+                        PowersetLattice(
+                            identitySetOf(ParameterMemoryValue(Name("derefvalue", param.name)))
+                        )
                     )
                 )
             addresses.forEach { addr ->
@@ -444,14 +441,14 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                     Node, LatticeElement<Pair<LatticeElement<Set<Node>>, LatticeElement<Set<Node>>>>
                 >
             > =
-            MapLattice(mapOf()),
+            MapLattice(mutableMapOf()),
         declarationsState:
             LatticeElement<
                 Map<
                     Node, LatticeElement<Pair<LatticeElement<Set<Node>>, LatticeElement<Set<Node>>>>
                 >
             > =
-            MapLattice(mapOf())
+            MapLattice(mutableMapOf())
     ) :
         TupleLattice<
             Map<Node, LatticeElement<Pair<LatticeElement<Set<Node>>, LatticeElement<Set<Node>>>>>,
@@ -514,7 +511,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                 LatticeElement<Pair<LatticeElement<Set<Node>>, LatticeElement<Set<Node>>>>
         ): PointsToState2 {
             val newGeneralState =
-                this.generalState.lub(MapLattice(mapOf(Pair(newNode, newLatticeElement))))
+                this.generalState.lub(MapLattice(mutableMapOf(Pair(newNode, newLatticeElement))))
             return PointsToState2(newGeneralState, declarationsState)
         }
 
@@ -525,7 +522,9 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                 LatticeElement<Pair<LatticeElement<Set<Node>>, LatticeElement<Set<Node>>>>
         ): PointsToState2 {
             val newDeclarationsState =
-                this.declarationsState.lub(MapLattice(mapOf(Pair(newNode, newLatticeElement))))
+                this.declarationsState.lub(
+                    MapLattice(mutableMapOf(Pair(newNode, newLatticeElement)))
+                )
             return PointsToState2(generalState, newDeclarationsState)
         }
 
@@ -540,8 +539,29 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                 is MemoryAddress -> {
                     /* In these cases, we simply have to fetch the current value for the MemoryAddress from the DeclarationState */
                     val elements = this.declarationsState.elements[node]?.elements?.second?.elements
-                    if (elements == null || elements.isEmpty()) setOf(UnknownMemoryValue())
-                    else elements
+                    if (elements == null || elements.isEmpty()) {
+                        val newEntry = identitySetOf(UnknownMemoryValue(node.name))
+                        (this.declarationsState.elements
+                                as?
+                                MutableMap<
+                                    Node,
+                                    LatticeElement<
+                                        Pair<LatticeElement<Set<Node>>, LatticeElement<Set<Node>>>
+                                    >
+                                >)
+                            ?.computeIfAbsent(node) {
+                                TupleLattice(
+                                    Pair(
+                                        PowersetLattice(identitySetOf(node)),
+                                        PowersetLattice(newEntry)
+                                    )
+                                )
+                            }
+                        (this.declarationsState.elements[node]?.elements?.second?.elements
+                                as? IdentitySet<Node>)
+                            ?.addAll(newEntry)
+                        newEntry
+                    } else elements
                 }
                 is PointerReference -> {
                     /* For PointerReferences, the value is the address of the input
@@ -557,9 +577,9 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                         when (node.input) {
                             is Reference -> this.getValues(node.input)
                             else -> // TODO: How can we handle other cases?
-                            setOf(UnknownMemoryValue())
+                            identitySetOf(UnknownMemoryValue(node.name))
                         }
-                    inputVal.flatMap { this.getValues(it) }.toSet()
+                    inputVal.flatMap { this.getValues(it) }.toIdentitySet()
                 }
                 is Declaration -> {
                     /* For Declarations, we have to look up the last value written to it.
@@ -567,33 +587,24 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                     if (!node.memoryAddressIsInitialized())
                         node.memoryAddress = MemoryAddress(node.name)
                     this.declarationsState.elements[node.memoryAddress]?.elements?.second?.elements
-                        ?: setOf(UnknownMemoryValue())
+                        ?: identitySetOf(UnknownMemoryValue(node.name))
                 }
                 is Reference -> {
                     /* For References, we have to look up the last value written to its declaration.
                      */
-                    this.getAddresses(node)
-                        .flatMap {
-                            this.declarationsState.elements[it]?.elements?.second?.elements
-                                ?: setOf(UnknownMemoryValue())
-                        }
-                        .toSet()
+                    this.getAddresses(node).flatMap { this.getValues(it) }.toIdentitySet()
                 }
                 is CastExpression -> {
                     this.getValues(node.expression)
                 }
                 is UnaryOperator -> this.getValues(node.input)
                 is SubscriptExpression ->
-                    this.getAddresses(node)
-                        .flatMap {
-                            this.declarationsState.elements[it]?.elements?.second?.elements
-                                ?: setOf(UnknownMemoryValue())
-                        }
-                        .toSet()
+                    this.getAddresses(node).flatMap { this.getValues(it) }.toIdentitySet()
                 is CallExpression -> {
                     // Let's see if we have a functionSummary for the CallExpression
                     val functionDeclaration =
-                        node.invokes.firstOrNull() ?: return setOf(UnknownMemoryValue(node.name))
+                        node.invokes.firstOrNull()
+                            ?: return identitySetOf(UnknownMemoryValue(node.name))
                     val functionSummaries = node.ctx?.config?.functionSummaries
                     if (
                         functionSummaries?.hasSummary(functionDeclaration) == true &&
@@ -608,19 +619,19 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                         val retVals =
                             node.ctx?.config?.functionSummaries?.getLastWrites(functionDeclaration)
                         if (retVals != null) {
-                            val r = mutableSetOf<Node>()
+                            val r = identitySetOf<Node>()
                             for ((param, values) in retVals) {
                                 if (param is ReturnStatement) {
                                     r.addAll(values.map { it.first })
                                 }
                             }
                             r
-                        } else setOf(UnknownMemoryValue(node.name))
-                    } else setOf(UnknownMemoryValue(node.name))
+                        } else identitySetOf(UnknownMemoryValue(node.name))
+                    } else identitySetOf(UnknownMemoryValue(node.name))
                 }
-                is Literal<*>, /*-> setOf(UnknownMemoryValue(Name(node.value.toString())))*/
-                is BinaryOperator -> setOf(node)
-                else -> setOf(UnknownMemoryValue())
+                is Literal<*>, /*-> identitySetOf(UnknownMemoryValue(Name(node.value.toString())))*/
+                is BinaryOperator -> identitySetOf(node)
+                else -> identitySetOf(UnknownMemoryValue(node.name))
             }
         }
 
@@ -632,10 +643,10 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                      */
                     if (!node.memoryAddressIsInitialized())
                         node.memoryAddress = MemoryAddress(node.name)
-                    setOf(node.memoryAddress)
+                    identitySetOf(node.memoryAddress)
                 }
                 is PointerReference -> {
-                    setOf()
+                    identitySetOf()
                 }
                 is PointerDereference -> {
                     /*
@@ -665,8 +676,8 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                         if (!refersTo.memoryAddressIsInitialized())
                             refersTo.memoryAddress = MemoryAddress(node.name)
 
-                        setOf(refersTo.memoryAddress)
-                    } ?: setOf()
+                        identitySetOf(refersTo.memoryAddress)
+                    } ?: identitySetOf()
                 }
                 is CastExpression -> {
                     /*
@@ -684,7 +695,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                         Name(localName, node.arrayExpression.name)
                     )
                 }
-                else -> setOf()
+                else -> identitySetOf()
             }
         }
 
@@ -697,7 +708,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
             /*indexString: String,*/
             nodeName: Name
         ): Set<Node> {
-            val fieldAddresses = mutableSetOf<MemoryAddress>()
+            val fieldAddresses = identitySetOf<MemoryAddress>()
 
             /* Theoretically, the base can have multiple addresses. Additionally, also the fieldDeclaration can have multiple Addresses. To simplify, we flatten the set and collect all possible addresses of the fieldDeclaration in a flat set */
             baseAddresses.forEach { addr ->
@@ -709,7 +720,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
 
                 fieldAddresses.add(newMemoryAddress)
                 baseAddresses.forEach { addr ->
-                    addr.fieldAddresses[nodeName.localName] = setOf(newMemoryAddress)
+                    addr.fieldAddresses[nodeName.localName] = identitySetOf(newMemoryAddress)
                 }
             }
             return fieldAddresses
@@ -722,7 +733,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
          * dereferences b/c we don't need if there's the need to
          */
         fun updateValues(sources: Set<Node>, destinations: Set<Node>): PointsToState2 {
-            val addresses = destinations.flatMap { this.getAddresses(it) }.toSet()
+            val addresses = destinations.flatMap { this.getAddresses(it) }.toIdentitySet()
             // destinations.forEach { d -> this.getAddresses(d).forEach { addresses.add(it) } }
             val values = sources // mutableSetOf<Node>()
             // sources.forEach { s -> this.getValues(s).forEach { values.add(it) } }
@@ -757,10 +768,3 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
         }
     }
 }
-
-/*
-typealias PointsToState = TupleLattice<MapLattice<Node?, TupleLattice<PowersetLattice<Node?>, PowersetLattice<Node?>>>,MapLattice<Node?, TupleLattice<PowersetLattice<Node?>, PowersetLattice<Node?>>>>
-val PointsToState.generalState
-    get() = this.elements.first
-val PointsToState.declarationState
-    get() = this.elements.second*/
