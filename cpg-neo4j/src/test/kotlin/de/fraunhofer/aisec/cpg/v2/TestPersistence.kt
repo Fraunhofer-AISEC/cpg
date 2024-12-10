@@ -25,7 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.v2
 
+import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
+import de.fraunhofer.aisec.cpg.test.analyze
 import de.fraunhofer.aisec.cpg_vis_neo4j.createTranslationResult
+import java.nio.file.Path
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 
@@ -37,5 +40,27 @@ class TestPersistence {
 
         neo4jSession.executeWrite { tx -> tx.run("MATCH (n) DETACH DELETE n").consume() }
         result.second.persist()
+    }
+
+    @Test
+    fun testPersistGlance() {
+        val topLevel =
+            Path.of("/Users/chr55316/Repositories/openstack-checker/targets/projects/glance")
+        val result =
+            analyze(
+                listOf(
+                    topLevel.resolve("glance").toFile(),
+                ),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<PythonLanguage>()
+                it.exclusionPatterns("tests")
+                it.useParallelFrontends(false)
+                it.failOnError(false)
+            }
+
+        neo4jSession.executeWrite { tx -> tx.run("MATCH (n) DETACH DELETE n").consume() }
+        result.persist()
     }
 }

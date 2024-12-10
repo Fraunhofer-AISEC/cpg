@@ -42,7 +42,12 @@ import kotlin.reflect.full.withNullability
 import kotlin.uuid.Uuid
 import org.neo4j.driver.GraphDatabase
 import org.neo4j.driver.TransactionContext
+import org.slf4j.LoggerFactory
 
+/**
+ * docker run \ --name neo4j-apoc \ -p 7474:7474 -p 7687:7687 \ -d \ -e NEO4J_AUTH=neo4j/password \
+ * -e NEO4JLABS_PLUGINS='["apoc"]' \ neo4j:5
+ */
 val dbUri = "neo4j://localhost"
 val dbUser = "neo4j"
 val dbPassword = "password"
@@ -56,40 +61,76 @@ val labelCache: MutableMap<KClass<out Node>, Set<String>> = mutableMapOf()
 val schemaPropertiesCache: MutableMap<KClass<out Node>, Map<String, KProperty1<out Node, *>>> =
     mutableMapOf()
 
-fun TranslationResult.persist() {
-    neo4jSession.executeWrite { tx ->
-        with(tx) {
-            val nodes = this@persist.nodes
-            for (node in nodes) {
-                node.persist()
-            }
+val log = LoggerFactory.getLogger("Persistence")
 
-            val edges = this@persist.allEdges<Edge<*>>()
-            for (edge in edges) {
-                edge.persist()
+fun TranslationResult.persist() {
+    val nodes = this@persist.nodes
+    val edges = this@persist.allEdges<Edge<*>>()
+
+    log.info("Persisting {} nodes", nodes.size)
+    nodes.persist()
+
+    log.info("Persisting {} edges", edges.size)
+    edges.persist()
+}
+
+private fun List<Node>.persist() {
+    val groups = groupBy { it::class }
+    groups.forEach {
+        it.value.chunked(10000).forEach { chunk ->
+            log.info("Processing ${chunk.size} nodes of type ${it.key}")
+
+            val params = mapOf("props" to chunk.map { it.properties() })
+            val start = System.currentTimeMillis()
+            neo4jSession.executeWrite { tx ->
+                tx.run(
+                        "UNWIND \$props AS map CREATE (n:${it.key.labels.joinToString("&")}) SET n=map",
+                        params
+                    )
+                    .consume()
             }
+            log.info(
+                "Time Taken to process and save ${chunk.size} records to Neo4j Batch Insert took ${System.currentTimeMillis() - start} ms"
+            )
         }
     }
 }
 
-context(TransactionContext)
-fun Node.persist() {
-    if (this.id == null) {
-        this.id = Uuid.random()
+private fun Collection<Edge<*>>.persist() {
+    val groups = groupBy { it.label }
+    groups.forEach {
+        it.value.chunked(10000).forEach { chunk ->
+            log.info("Processing ${chunk.size} edges of type ${it.key}")
+
+            val params =
+                mapOf(
+                    "props" to
+                        chunk.map {
+                            mapOf(
+                                "startId" to it.start.id.toString(),
+                                "endId" to it.end.id.toString(),
+                            )
+                        }
+                )
+            val start = System.currentTimeMillis()
+            neo4jSession.executeWrite { tx ->
+                tx.run(
+                        """
+            UNWIND ${'$'}props AS map
+            MATCH (s {id: map.startId})
+            MATCH (e {id: map.endId})
+            CREATE (s)-[r:${it.key} {}]->(e)
+            """
+                            .trimIndent(),
+                        params
+                    )
+                    .consume()
+            }
+            log.info(
+                "Time Taken to process and save ${chunk.size} records to Neo4j Batch Insert took ${System.currentTimeMillis() - start} ms"
+            )
+        }
     }
-
-    val properties = this.properties()
-
-    this@TransactionContext.run(
-            "MERGE (n:${this.labels.joinToString("&")} ${properties.writePlaceHolder()} ) RETURN n.id",
-            this.properties()
-        )
-        .consume()
-    println("Created node with id $id")
-}
-
-fun Map<String, Any?>.writePlaceHolder(): String {
-    return this.map { "${it.key}: \$${it.key}" }.joinToString(", ", prefix = "{ ", postfix = " }")
 }
 
 /**
@@ -135,6 +176,12 @@ val Node.labels: Set<String>
 
         // Check, if we already computed the labels for this node's class
         return labelCache.computeIfAbsent(klazz) { setOf<String>("Node", klazz.simpleName!!) }
+    }
+
+val KClass<out Node>.labels: Set<String>
+    get() {
+        // Check, if we already computed the labels for this node's class
+        return labelCache.computeIfAbsent(this) { setOf<String>("Node", this.simpleName!!) }
     }
 
 val primitiveTypes =
