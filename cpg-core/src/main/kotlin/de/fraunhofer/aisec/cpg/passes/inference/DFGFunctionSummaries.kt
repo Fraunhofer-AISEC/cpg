@@ -289,11 +289,10 @@ class DFGFunctionSummaries {
                     val receiver = (functionDeclaration as? MethodDeclaration)?.receiver
                     if (from != null) {
                         if (receiver != null) {
-                            // TODO: fix me
-                            /*functionToChangedParameters
-                            .computeIfAbsent(functionDeclaration) { mutableMapOf() }
-                            .computeIfAbsent(receiver, ::mutableSetOf<Pair<Node, Boolean>>)
-                            .add(Pair(from, derefSource))*/
+                            functionToChangedParameters
+                                .computeIfAbsent(functionDeclaration) { mutableMapOf() }
+                                .computeIfAbsent(receiver) { mutableSetOf() }
+                                .add(Pair(from, derefSource))
                         }
                     }
                     receiver

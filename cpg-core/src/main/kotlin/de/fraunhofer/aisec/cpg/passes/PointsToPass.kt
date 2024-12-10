@@ -262,7 +262,15 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                 if (param !is ReturnStatement) {
                     val destinations =
                         when (param) {
-                            is ParameterDeclaration -> currentNode.arguments[param.argumentIndex]
+                            is ParameterDeclaration ->
+                                // Dereference the parameter
+                                /*doubleState
+                                .getAddresses(currentNode.arguments[param.argumentIndex])
+                                .flatMap { doubleState.getValues(it) }
+                                .toSet()*/
+                                //
+                                doubleState.getValues(currentNode.arguments[param.argumentIndex])
+                            // currentNode.arguments[param.argumentIndex]
                             else -> null
                         }
                     val sources = mutableSetOf<Node>()
@@ -270,10 +278,12 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                         when (value) {
                             is ParameterDeclaration ->
                                 // Add the value of the respective argument in the CallExpression
+                                // Only dereference the parameter when we stored that in the
+                                // functionSummary
                                 if (derefSource) {
                                     doubleState
                                         .getValues(currentNode.arguments[value.argumentIndex])
-                                        .forEach { sources.add(it) }
+                                        .forEach { sources.addAll(doubleState.getValues(it)) }
                                 } else {
                                     sources.add(currentNode.arguments[value.argumentIndex])
                                 }
@@ -281,10 +291,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                         }
                     }
                     if (destinations != null && sources.isNotEmpty()) {
-                        // Since arg is a pointer (otherwise it couldn't change in the function), we
-                        // have to work with the value of the pointer
-                        doubleState =
-                            doubleState.updateValues(sources, doubleState.getValues(destinations))
+                        doubleState = doubleState.updateValues(sources, destinations)
                     }
                 }
             }
@@ -329,8 +336,10 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
          * In C(++), both the lhs and the rhs should only have one element
          * */
         if (currentNode.lhs.size == 1 && currentNode.rhs.size == 1) {
-            val sources = mutableSetOf<Node>()
-            currentNode.rhs.forEach { sources.addAll(doubleState.getValues(it)) }
+            // We fetch the value of the source, but not the destination, this is done by the
+            // updateValues-Function
+            val sources = currentNode.rhs.flatMap { doubleState.getValues(it) }.toSet()
+            // val destinations = currentNode.lhs.flatMap { doubleState.getAddresses(it) }.toSet()
             doubleState = doubleState.updateValues(sources, currentNode.lhs.toSet())
         }
 
@@ -522,10 +531,12 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
 
         fun getValues(node: Node): Set<Node> {
             return when (node) {
-                is MemoryAddress ->
+                is MemoryAddress -> {
                     /* In these cases, we simply have to fetch the current value for the MemoryAddress from the DeclarationState */
-                    this.declarationsState.elements[node]?.elements?.second?.elements
-                        ?: setOf(UnknownMemoryValue())
+                    val elements = this.declarationsState.elements[node]?.elements?.second?.elements
+                    if (elements == null || elements.isEmpty()) setOf(UnknownMemoryValue())
+                    else elements
+                }
                 is PointerReference -> {
                     /* For PointerReferences, the value is the address of the input
                      * For example, the value of `&i` is the address of `i`
@@ -591,15 +602,16 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                             node.ctx?.config?.functionSummaries?.getLastWrites(functionDeclaration)
                         if (retVals != null) {
                             val r = mutableSetOf<Node>()
-                            for ((param, value) in retVals) {
-                                if (param is ReturnStatement) println(value)
-                                // r.addAll(value.fi)
+                            for ((param, values) in retVals) {
+                                if (param is ReturnStatement) {
+                                    r.addAll(values.map { it.first })
+                                }
                             }
                             r
                         } else setOf(UnknownMemoryValue(node.name))
                     } else setOf(UnknownMemoryValue(node.name))
                 }
-                is Literal<*> -> setOf(UnknownMemoryValue(Name(node.value.toString())))
+                is Literal<*>, /*-> setOf(UnknownMemoryValue(Name(node.value.toString())))*/
                 is BinaryOperator -> setOf(node)
                 else -> setOf(UnknownMemoryValue())
             }
@@ -698,11 +710,13 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
 
         /**
          * Update the node `dst` to the values of `src`. Updates the declarationState and the
-         * generalState for `dst`
+         * generalState for `dst` For the destination, we dereference ourselves, b/c we also need
+         * the destination themselves to update the set. However, the source will not be
+         * dereferences b/c we don't need if there's the need to
          */
         fun updateValues(sources: Set<Node>, destinations: Set<Node>): PointsToState2 {
-            val addresses = mutableSetOf<Node>()
-            destinations.forEach { d -> this.getAddresses(d).forEach { addresses.add(it) } }
+            val addresses = destinations.flatMap { this.getAddresses(it) }.toSet()
+            // destinations.forEach { d -> this.getAddresses(d).forEach { addresses.add(it) } }
             val values = sources // mutableSetOf<Node>()
             // sources.forEach { s -> this.getValues(s).forEach { values.add(it) } }
             val newDeclState = this.declarationsState.elements.toMutableMap()
