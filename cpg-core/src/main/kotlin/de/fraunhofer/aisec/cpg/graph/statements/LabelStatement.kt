@@ -40,7 +40,8 @@ import org.neo4j.ogm.annotation.Relationship
  * breaks (Java) or goto(C++).
  */
 class LabelStatement : Statement(), StatementHolder {
-    @Relationship(value = "SUB_STATEMENT") var subStatementEdge = astOptionalEdgeOf<Statement>()
+    @Relationship(value = "SUB_STATEMENT")
+    var subStatementEdge = astOptionalEdgeOf<Statement>(label = "SUB_STATEMENT")
 
     /** Statement that the label is attached to. Can be a simple or compound statement. */
     var subStatement by unwrapping(LabelStatement::subStatementEdge)
@@ -58,7 +59,7 @@ class LabelStatement : Statement(), StatementHolder {
 
     override var statementEdges: AstEdges<Statement, AstEdge<Statement>>
         get() {
-            var list = astEdgesOf<Statement>()
+            var list = astEdgesOf<Statement>(label = "STATEMENTS")
             subStatement?.let { list.resetTo(listOf(it)) }
             return list
         }

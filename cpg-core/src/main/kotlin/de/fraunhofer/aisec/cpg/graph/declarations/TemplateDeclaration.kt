@@ -51,7 +51,7 @@ abstract class TemplateDeclaration : Declaration(), DeclarationHolder {
 
     /** Parameters the Template requires for instantiation */
     @Relationship(value = "PARAMETERS", direction = Relationship.Direction.OUTGOING)
-    var parameterEdges = astEdgesOf<Declaration>()
+    var parameterEdges = astEdgesOf<Declaration>(label = "PARAMETERS")
     val parameters by unwrapping(TemplateDeclaration::parameterEdges)
 
     val parametersWithDefaults: List<Declaration>

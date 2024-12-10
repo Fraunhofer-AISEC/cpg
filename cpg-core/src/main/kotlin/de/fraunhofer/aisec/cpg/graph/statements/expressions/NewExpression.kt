@@ -36,7 +36,8 @@ import org.neo4j.ogm.annotation.Relationship
 
 /** Represents the creation of a new object through the `new` keyword. */
 class NewExpression : Expression(), HasInitializer {
-    @Relationship("INITIALIZER") var initializerEdge = astOptionalEdgeOf<Expression>()
+    @Relationship("INITIALIZER")
+    var initializerEdge = astOptionalEdgeOf<Expression>(label = "INITIALIZER")
 
     /** The initializer expression. */
     override var initializer by unwrapping(NewExpression::initializerEdge)
@@ -46,7 +47,7 @@ class NewExpression : Expression(), HasInitializer {
      * ConstructExpression is created
      */
     @Relationship(value = "TEMPLATE_PARAMETERS", direction = Relationship.Direction.OUTGOING)
-    var templateParameterEdges = astEdgesOf<Node>()
+    var templateParameterEdges = astEdgesOf<Node>(label = "TEMPLATE_PARAMETERS")
     var templateParameters by unwrapping(NewExpression::templateParameterEdges)
 
     override fun toString(): String {

@@ -27,9 +27,13 @@ package de.fraunhofer.aisec.cpg.v2
 
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.edges.Edge
+import de.fraunhofer.aisec.cpg.graph.edges.allEdges
+import de.fraunhofer.aisec.cpg.graph.edges.edges
 import de.fraunhofer.aisec.cpg.graph.nodes
 import kotlin.collections.joinToString
 import kotlin.reflect.KClass
+import kotlin.uuid.Uuid
 import org.neo4j.driver.GraphDatabase
 import org.neo4j.driver.TransactionContext
 
@@ -50,19 +54,42 @@ fun TranslationResult.persist() {
             for (node in nodes) {
                 node.persist()
             }
+
+            val edges = this@persist.allEdges<Edge<*>>()
+            for (edge in edges) {
+                edge.persist()
+            }
         }
     }
 }
 
 context(TransactionContext)
 fun Node.persist() {
+    if (this.graphId == null) {
+        this.graphId = Uuid.random()
+    }
+
     val result =
         this@TransactionContext.run(
-            "MERGE (n:${this.labels.joinToString("&")} { name: \$name } ) RETURN elementId(n) AS id",
-            mapOf("name" to this.name.localName)
+            "MERGE (n:${this.labels.joinToString("&")} { name: \$name, id: \$id } ) RETURN n.id",
+            mapOf(
+                "name" to this.name.localName,
+                "id" to this.graphId.toString(),
+            )
         )
-    val id = result.single()["id"]
-    println("Created node with id $id")
+    println("Created node with id $graphId")
+}
+
+context(TransactionContext)
+fun Edge<*>.persist() {
+    val result =
+        this@TransactionContext.run(
+            "MATCH (start { id: \$startId }), (end { id: \$endId } ) MERGE (start)-[r:${label}]->(end)",
+            mapOf(
+                "startId" to this.start.graphId.toString(),
+                "endId" to this.end.graphId.toString()
+            )
+        )
 }
 
 val Node.labels: Set<String>

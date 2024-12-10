@@ -45,7 +45,7 @@ open class DeclarationStatement : Statement() {
      * it only contains a single [Declaration].
      */
     @Relationship(value = "DECLARATIONS", direction = Relationship.Direction.OUTGOING)
-    var declarationEdges = astEdgesOf<Declaration>()
+    var declarationEdges = astEdgesOf<Declaration>(label = "DECLARATIONS")
     override var declarations by unwrapping(DeclarationStatement::declarationEdges)
 
     var singleDeclaration: Declaration?

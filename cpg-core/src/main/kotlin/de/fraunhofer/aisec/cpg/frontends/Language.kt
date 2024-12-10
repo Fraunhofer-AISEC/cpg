@@ -323,7 +323,7 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
         // matches
         val source = result.source
         if (this is HasTemplates && source is CallExpression) {
-            source.templateArgumentEdges = TemplateArguments(source)
+            source.templateArgumentEdges = TemplateArguments(source, label = "TEMPLATE_ARGUMENTS")
             val (ok, candidates) =
                 this.handleTemplateFunctionCalls(
                     null,

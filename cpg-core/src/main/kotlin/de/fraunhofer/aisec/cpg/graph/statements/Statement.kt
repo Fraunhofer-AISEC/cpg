@@ -52,7 +52,7 @@ abstract class Statement : Node(), DeclarationHolder {
      * TODO: This is actually an AST node just for a subset of nodes, i.e. initializers in for-loops
      */
     @Relationship(value = "LOCALS", direction = Relationship.Direction.OUTGOING)
-    var localEdges = astEdgesOf<ValueDeclaration>()
+    var localEdges = astEdgesOf<ValueDeclaration>(label = "LOCALS")
 
     /** Virtual property to access [localEdges] without property edges. */
     var locals by unwrapping(Statement::localEdges)

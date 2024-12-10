@@ -39,7 +39,7 @@ class RecordTemplateDeclaration : TemplateDeclaration() {
      * expansion pass for each instantiation of the ClassTemplate there will be a realization
      */
     @Relationship(value = "REALIZATION", direction = Relationship.Direction.OUTGOING)
-    val realizationEdges = astEdgesOf<RecordDeclaration>()
+    val realizationEdges = astEdgesOf<RecordDeclaration>(label = "REALIZATION")
     override val realizations by unwrapping(RecordTemplateDeclaration::realizationEdges)
 
     override fun addDeclaration(declaration: Declaration) {

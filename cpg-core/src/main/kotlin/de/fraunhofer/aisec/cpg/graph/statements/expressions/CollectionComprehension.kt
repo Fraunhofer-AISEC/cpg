@@ -46,7 +46,8 @@ import org.neo4j.ogm.annotation.Relationship
 class CollectionComprehension : Expression(), ArgumentHolder {
 
     @Relationship("COMPREHENSION_EXPRESSIONS")
-    var comprehensionExpressionEdges = astEdgesOf<ComprehensionExpression>()
+    var comprehensionExpressionEdges =
+        astEdgesOf<ComprehensionExpression>(label = "COMPREHENSION_EXPRESSIONS")
     /**
      * This field contains one or multiple [ComprehensionExpression]s.
      *
@@ -60,7 +61,8 @@ class CollectionComprehension : Expression(), ArgumentHolder {
     @Relationship("STATEMENT")
     var statementEdge =
         astEdgeOf<Statement>(
-            ProblemExpression("No statement provided but is required in ${this::class}")
+            ProblemExpression("No statement provided but is required in ${this::class}"),
+            label = "STATEMENT",
         )
     /**
      * This field contains the statement which is applied to each element of the input for which the

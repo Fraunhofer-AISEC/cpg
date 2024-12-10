@@ -48,6 +48,7 @@ class CastExpression : Expression(), ArgumentHolder, HasType.TypeObserver {
     var expressionEdge =
         astEdgeOf<Expression>(
             of = ProblemExpression("could not parse inner expression"),
+            label = "EXPRESSION",
             onChanged = ::exchangeTypeObserver
         )
     var expression by unwrapping(CastExpression::expressionEdge)

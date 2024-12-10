@@ -33,9 +33,14 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 class TemplateArgument<NodeType : Node>(
     start: Node,
     end: NodeType,
+    label: String,
     var instantiation: TemplateInitialization? = TemplateInitialization.EXPLICIT,
-) : AstEdge<NodeType>(start, end)
+) : AstEdge<NodeType>(start, end, label)
 
 /** A container for [TemplateArgument] edges. */
-class TemplateArguments<NodeType : Node>(thisRef: Node) :
-    AstEdges<NodeType, TemplateArgument<NodeType>>(thisRef, init = ::TemplateArgument)
+class TemplateArguments<NodeType : Node>(thisRef: Node, label: String) :
+    AstEdges<NodeType, TemplateArgument<NodeType>>(
+        thisRef,
+        label,
+        init = { start, end -> TemplateArgument(start, end, label = label) }
+    )

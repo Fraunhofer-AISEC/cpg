@@ -36,11 +36,12 @@ import java.util.Objects
 import org.neo4j.ogm.annotation.Relationship
 
 class CatchClause : Statement(), BranchingNode, EOGStarterHolder {
-    @Relationship(value = "PARAMETER") var parameterEdge = astOptionalEdgeOf<VariableDeclaration>()
+    @Relationship(value = "PARAMETER")
+    var parameterEdge = astOptionalEdgeOf<VariableDeclaration>(label = "PARAMETER")
 
     var parameter by unwrapping(CatchClause::parameterEdge)
 
-    @Relationship(value = "BODY") var bodyEdge = astOptionalEdgeOf<Block>()
+    @Relationship(value = "BODY") var bodyEdge = astOptionalEdgeOf<Block>(label = "BODY")
     var body by unwrapping(CatchClause::bodyEdge)
 
     override val branchedBy: Node?

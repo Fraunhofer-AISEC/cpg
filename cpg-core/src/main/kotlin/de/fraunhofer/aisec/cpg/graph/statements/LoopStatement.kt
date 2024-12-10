@@ -43,7 +43,7 @@ import org.neo4j.ogm.annotation.Relationship
  */
 abstract class LoopStatement : Statement() {
 
-    @Relationship("STATEMENT") var statementEdge = astOptionalEdgeOf<Statement>()
+    @Relationship("STATEMENT") var statementEdge = astOptionalEdgeOf<Statement>(label = "STATEMENT")
     /** This field contains the body of the loop, e.g. a [Block] or single [Statement]. */
     var statement by unwrapping(LoopStatement::statementEdge)
 
@@ -54,7 +54,8 @@ abstract class LoopStatement : Statement() {
      * `else`-Statement at loop level. E.g. in Python the [elseStatement] is executed when the loop
      * was not left through a break.
      */
-    @Relationship(value = "ELSE_STATEMENT") var elseStatementEdge = astOptionalEdgeOf<Statement>()
+    @Relationship(value = "ELSE_STATEMENT")
+    var elseStatementEdge = astOptionalEdgeOf<Statement>(label = "ELSE_STATEMENT")
     var elseStatement by unwrapping(LoopStatement::elseStatementEdge)
 
     override fun toString() =

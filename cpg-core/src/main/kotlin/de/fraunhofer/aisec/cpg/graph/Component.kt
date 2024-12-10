@@ -43,7 +43,7 @@ import org.neo4j.ogm.annotation.Transient
  */
 open class Component : Node() {
     @Relationship("TRANSLATION_UNITS")
-    val translationUnitEdges = astEdgesOf<TranslationUnitDeclaration>()
+    val translationUnitEdges = astEdgesOf<TranslationUnitDeclaration>(label = "TRANSLATION_UNITS")
     /** All translation units belonging to this application. */
     val translationUnits by unwrapping(Component::translationUnitEdges)
 

@@ -65,6 +65,7 @@ class TupleDeclaration : VariableDeclaration() {
     /** The list of elements in this tuple. */
     var elementEdges =
         astEdgesOf<VariableDeclaration>(
+            label = "ELEMENTS",
             onAdd = { registerTypeObserver(it.end) },
             onRemove = { unregisterTypeObserver(it.end) }
         )

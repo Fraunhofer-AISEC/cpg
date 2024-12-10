@@ -65,7 +65,8 @@ class ConstructExpression : CallExpression() {
             }
         }
 
-    @Relationship("ANONYMOUS_CLASS") var anonymousClassEdge = astOptionalEdgeOf<RecordDeclaration>()
+    @Relationship("ANONYMOUS_CLASS")
+    var anonymousClassEdge = astOptionalEdgeOf<RecordDeclaration>(label = "ANONYMOUS_CLASS")
 
     var anonymousClass by unwrapping(ConstructExpression::anonymousClassEdge)
 

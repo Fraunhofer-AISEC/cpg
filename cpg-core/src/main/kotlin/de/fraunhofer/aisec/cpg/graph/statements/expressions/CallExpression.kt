@@ -65,7 +65,7 @@ open class CallExpression :
 
     /** The list of arguments of this call expression, backed by a list of [Edge] objects. */
     @Relationship(value = "ARGUMENTS", direction = Relationship.Direction.OUTGOING)
-    var argumentEdges = astEdgesOf<Expression>()
+    var argumentEdges = astEdgesOf<Expression>(label = "ARGUMENTS")
 
     /**
      * The list of arguments as a simple list. This is a delegated property delegated to
@@ -85,7 +85,8 @@ open class CallExpression :
      * is intentionally left empty. It is not filled by the [SymbolResolver].
      */
     @Relationship(value = "CALLEE", direction = Relationship.Direction.OUTGOING)
-    private var calleeEdge = astEdgeOf<Expression>(ProblemExpression("could not parse callee"))
+    private var calleeEdge =
+        astEdgeOf<Expression>(ProblemExpression("could not parse callee"), label = "CALLEE")
 
     var callee by unwrapping(CallExpression::calleeEdge)
 
@@ -120,7 +121,7 @@ open class CallExpression :
 
     /** Adds the specified [expression] with an optional [name] to this call. */
     fun addArgument(expression: Expression, name: String? = null) {
-        val edge = AstEdge(this, expression)
+        val edge = AstEdge(this, expression, label = "ARGUMENTS")
         edge.name = name
 
         argumentEdges.add(edge)
@@ -185,7 +186,7 @@ open class CallExpression :
     ) {
         if (templateParam is Expression || templateParam is Type) {
             if (templateArgumentEdges == null) {
-                templateArgumentEdges = TemplateArguments(this)
+                templateArgumentEdges = TemplateArguments(this, label = "TEMPLATE_ARGUMENTS")
             }
 
             templateArgumentEdges?.add(templateParam) { instantiation = templateInitialization }
@@ -198,7 +199,7 @@ open class CallExpression :
         orderedInitializationSignature: List<Node>
     ) {
         if (templateArgumentEdges == null) {
-            templateArgumentEdges = TemplateArguments(this)
+            templateArgumentEdges = TemplateArguments(this, label = "TEMPLATE_ARGUMENTS")
         }
 
         for (edge in templateArgumentEdges ?: listOf()) {

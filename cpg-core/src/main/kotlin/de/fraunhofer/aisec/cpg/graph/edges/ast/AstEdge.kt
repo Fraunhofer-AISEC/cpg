@@ -33,18 +33,20 @@ import org.neo4j.ogm.annotation.*
 
 /** This property edge describes a parent/child relationship in the Abstract Syntax Tree (AST). */
 @RelationshipEntity
-open class AstEdge<T : Node>(start: Node, end: T) : Edge<T>(start, end) {
+open class AstEdge<T : Node>(start: Node, end: T, label: String = "AST") : Edge<T>(start, end) {
     init {
         end.astParent = start
+        this.label = label
     }
 }
 
 /** Creates an [AstEdges] container starting from this node. */
 fun <NodeType : Node> Node.astEdgesOf(
+    label: String = "AST",
     onAdd: ((AstEdge<NodeType>) -> Unit)? = null,
     onRemove: ((AstEdge<NodeType>) -> Unit)? = null,
 ): AstEdges<NodeType, AstEdge<NodeType>> {
-    return AstEdges(thisRef = this, onAdd = onAdd, onRemove = onRemove)
+    return AstEdges(thisRef = this, label = label, onAdd = onAdd, onRemove = onRemove)
 }
 
 /**
@@ -52,11 +54,12 @@ fun <NodeType : Node> Node.astEdgesOf(
  * container).
  */
 fun <NodeType : Node> Node.astOptionalEdgeOf(
-    onChanged: ((old: AstEdge<NodeType>?, new: AstEdge<NodeType>?) -> Unit)? = null,
+    label: String = "AST",
+    onChanged: ((old: AstEdge<NodeType>?, new: AstEdge<NodeType>?) -> Unit)? = null
 ): EdgeSingletonList<NodeType, NodeType?, AstEdge<NodeType>> {
     return EdgeSingletonList(
         thisRef = this,
-        init = ::AstEdge,
+        init = { start, end -> AstEdge(start, end, label = label) },
         outgoing = true,
         onChanged = onChanged,
         of = null
@@ -68,11 +71,12 @@ fun <NodeType : Node> Node.astOptionalEdgeOf(
  */
 fun <NodeType : Node> Node.astEdgeOf(
     of: NodeType,
+    label: String,
     onChanged: ((old: AstEdge<NodeType>?, new: AstEdge<NodeType>?) -> Unit)? = null,
 ): EdgeSingletonList<NodeType, NodeType, AstEdge<NodeType>> {
     return EdgeSingletonList(
         thisRef = this,
-        init = ::AstEdge,
+        init = { start, end -> AstEdge(start, end, label = label) },
         outgoing = true,
         onChanged = onChanged,
         of = of
@@ -82,12 +86,13 @@ fun <NodeType : Node> Node.astEdgeOf(
 /** This property edge list describes elements that are AST children of a node. */
 open class AstEdges<NodeType : Node, PropertyEdgeType : AstEdge<NodeType>>(
     thisRef: Node,
+    label: String = "AST",
     onAdd: ((PropertyEdgeType) -> Unit)? = null,
     onRemove: ((PropertyEdgeType) -> Unit)? = null,
     @Suppress("UNCHECKED_CAST")
     init: (start: Node, end: NodeType) -> PropertyEdgeType = { start, end ->
-        AstEdge(start, end) as PropertyEdgeType
-    }
+        AstEdge(start, end, label = label) as PropertyEdgeType
+    },
 ) :
     EdgeList<NodeType, PropertyEdgeType>(
         thisRef = thisRef,

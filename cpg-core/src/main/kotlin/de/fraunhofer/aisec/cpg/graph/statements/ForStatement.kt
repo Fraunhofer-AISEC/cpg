@@ -42,17 +42,19 @@ import org.neo4j.ogm.annotation.Relationship
 class ForStatement : LoopStatement(), BranchingNode {
 
     @Relationship("INITIALIZER_STATEMENT")
-    var initializerStatementEdge = astOptionalEdgeOf<Statement>()
+    var initializerStatementEdge = astOptionalEdgeOf<Statement>(label = "INITIALIZER_STATEMENT")
     var initializerStatement by unwrapping(ForStatement::initializerStatementEdge)
 
     @Relationship("CONDITION_DECLARATION")
-    var conditionDeclarationEdge = astOptionalEdgeOf<Declaration>()
+    var conditionDeclarationEdge = astOptionalEdgeOf<Declaration>(label = "CONDITION_DECLARATION")
     var conditionDeclaration by unwrapping(ForStatement::conditionDeclarationEdge)
 
-    @Relationship("CONDITION") var conditionEdge = astOptionalEdgeOf<Expression>()
+    @Relationship("CONDITION")
+    var conditionEdge = astOptionalEdgeOf<Expression>(label = "CONDITION")
     var condition by unwrapping(ForStatement::conditionEdge)
 
-    @Relationship("ITERATION_STATEMENT") var iterationStatementEdge = astOptionalEdgeOf<Statement>()
+    @Relationship("ITERATION_STATEMENT")
+    var iterationStatementEdge = astOptionalEdgeOf<Statement>(label = "ITERATION_STATEMENT")
     var iterationStatement by unwrapping(ForStatement::iterationStatementEdge)
 
     override val branchedBy: Node?

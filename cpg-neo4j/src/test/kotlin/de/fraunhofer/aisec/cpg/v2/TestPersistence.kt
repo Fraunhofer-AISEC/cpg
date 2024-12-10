@@ -34,6 +34,8 @@ class TestPersistence {
     @Test
     fun testPersist() {
         val result = createTranslationResult()
+
+        neo4jSession.executeWrite { tx -> tx.run("MATCH (n) DETACH DELETE n").consume() }
         result.second.persist()
     }
 }
