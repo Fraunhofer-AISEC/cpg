@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.v2
 
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
+import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.test.analyze
 import de.fraunhofer.aisec.cpg_vis_neo4j.createTranslationResult
 import java.nio.file.Path
@@ -60,7 +61,9 @@ class TestPersistence {
                 it.failOnError(false)
             }
 
+        val bench = Benchmark(this.javaClass, "Persist")
         neo4jSession.executeWrite { tx -> tx.run("MATCH (n) DETACH DELETE n").consume() }
         result.persist()
+        bench.stop()
     }
 }

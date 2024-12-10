@@ -67,6 +67,10 @@ fun TranslationResult.persist() {
     val nodes = this@persist.nodes
     val edges = this@persist.allEdges<Edge<*>>()
 
+    neo4jSession.executeWrite { tx ->
+        tx.run("CREATE INDEX IF NOT EXISTS FOR (n:Node) ON (n.id)").consume()
+    }
+
     log.info("Persisting {} nodes", nodes.size)
     nodes.persist()
 
@@ -117,8 +121,8 @@ private fun Collection<Edge<*>>.persist() {
                 tx.run(
                         """
             UNWIND ${'$'}props AS map
-            MATCH (s {id: map.startId})
-            MATCH (e {id: map.endId})
+            MATCH (s:Node {id: map.startId})
+            MATCH (e:Node {id: map.endId})
             CREATE (s)-[r:${it.key} {}]->(e)
             """
                             .trimIndent(),
