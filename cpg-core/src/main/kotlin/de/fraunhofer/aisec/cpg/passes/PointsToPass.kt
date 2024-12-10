@@ -51,6 +51,11 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
     }
 
     override fun accept(node: Node) {
+        functionSummaryAnalysisChain.clear()
+        return acceptInternal(node)
+    }
+
+    fun acceptInternal(node: Node) {
         // For now, we only execute this for function declarations, we will support all EOG starters
         // in the future.
         if (node !is FunctionDeclaration) {
@@ -227,9 +232,10 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
         currentNode.invokes.forEach { invoke ->
             if (!ctx.config.functionSummaries.hasSummary(invoke)) {
                 if (invoke.hasBody()) {
+                    log.debug("functionSummaryAnalysisChain: {}", functionSummaryAnalysisChain)
                     if (invoke !in functionSummaryAnalysisChain) {
                         functionSummaryAnalysisChain.add(invoke)
-                        accept(invoke)
+                        acceptInternal(invoke)
                     } else {
                         log.error(
                             "Cannot calculate functionSummary for $invoke as it's recursively called. callChain: $functionSummaryAnalysisChain"
@@ -242,7 +248,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                     }
             }
         }
-        functionSummaryAnalysisChain.clear()
+        // functionSummaryAnalysisChain.clear()
 
         if (currentNode.invokes.all { ctx.config.functionSummaries.hasSummary(it) }) {
             // We have a FunctionSummary. Set the new values for the arguments. Push the
@@ -586,7 +592,8 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                         .toSet()
                 is CallExpression -> {
                     // Let's see if we have a functionSummary for the CallExpression
-                    val functionDeclaration = node.invokes.first()
+                    val functionDeclaration =
+                        node.invokes.firstOrNull() ?: return setOf(UnknownMemoryValue(node.name))
                     val functionSummaries = node.ctx?.config?.functionSummaries
                     if (
                         functionSummaries?.hasSummary(functionDeclaration) == true &&
