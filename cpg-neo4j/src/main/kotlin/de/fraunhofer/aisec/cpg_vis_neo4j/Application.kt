@@ -253,6 +253,15 @@ class Application : Callable<Int> {
     private var topLevel: File? = null
 
     @CommandLine.Option(
+        names = ["--exclusion-patterns"],
+        description =
+            [
+                "Set top level directory of project structure. Default: Largest common path of all source files"
+            ]
+    )
+    private var exclusionPatterns: List<String> = listOf()
+
+    @CommandLine.Option(
         names = ["--benchmark-json"],
         description = ["Save benchmark results to json file"]
     )
@@ -450,6 +459,7 @@ class Application : Callable<Int> {
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.jvm.JVMLanguage")
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.ini.IniFileLanguage")
                 .loadIncludes(loadIncludes)
+                .exclusionPatterns(*exclusionPatterns.toTypedArray())
                 .addIncludesToGraph(loadIncludes)
                 .debugParser(DEBUG_PARSER)
                 .useUnityBuild(useUnityBuild)
