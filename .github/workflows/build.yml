@@ -38,7 +38,7 @@ jobs:
           go-version: 1.21
       - name: Setup neo4j
         run: |
-          docker run -d --env NEO4J_AUTH=neo4j/password -p7474:7474 -p7687:7687 neo4j || true
+          docker run -d --env NEO4J_AUTH=neo4j/password -p7474:7474 -p7687:7687 -e NEO4JLABS_PLUGINS='["apoc"]' neo4j:5 || true
       - name: Determine Version
         run: |
           # determine version from tag

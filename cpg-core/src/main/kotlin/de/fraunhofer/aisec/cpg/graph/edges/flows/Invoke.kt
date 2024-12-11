@@ -43,6 +43,8 @@ class Invoke(
      */
     var dynamicInvoke: Boolean = false,
 ) : Edge<FunctionDeclaration>(start, end) {
+    override var labels = setOf("INVOKES")
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is Invoke) return false

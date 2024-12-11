@@ -41,6 +41,7 @@ class ComprehensionExpression : Expression(), ArgumentHolder {
     var variableEdge =
         astEdgeOf<Statement>(
             of = ProblemExpression("Missing variableEdge in ${this::class}"),
+            label = "VARIABLE",
             onChanged = { _, new ->
                 val end = new?.end
                 if (end is Reference) {
@@ -57,12 +58,15 @@ class ComprehensionExpression : Expression(), ArgumentHolder {
 
     @Relationship("ITERABLE")
     var iterableEdge =
-        astEdgeOf<Expression>(ProblemExpression("Missing iterable in ${this::class}"))
+        astEdgeOf<Expression>(
+            ProblemExpression("Missing iterable in ${this::class}"),
+            label = "ITERABLE"
+        )
 
     /** This field contains the iteration subject of the loop. */
     var iterable by unwrapping(ComprehensionExpression::iterableEdge)
 
-    @Relationship("PREDICATE") var predicateEdge = astOptionalEdgeOf<Statement>()
+    @Relationship("PREDICATE") var predicateEdge = astOptionalEdgeOf<Statement>(label = "PREDICATE")
 
     /**
      * This field contains the predicate which has to hold to evaluate `statement(variable)` and

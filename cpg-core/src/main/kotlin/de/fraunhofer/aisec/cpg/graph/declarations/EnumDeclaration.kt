@@ -32,7 +32,7 @@ import org.neo4j.ogm.annotation.Relationship
 
 class EnumDeclaration : RecordDeclaration() {
     @Relationship(value = "ENTRIES", direction = Relationship.Direction.OUTGOING)
-    var entryEdges = astEdgesOf<EnumConstantDeclaration>()
+    var entryEdges = astEdgesOf<EnumConstantDeclaration>(label = "ENTRIES")
     var entries by unwrapping(EnumDeclaration::entryEdges)
 
     override fun toString(): String {

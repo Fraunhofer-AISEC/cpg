@@ -37,7 +37,8 @@ import org.neo4j.ogm.annotation.Relationship
 class ThrowExpression : Expression(), ArgumentHolder {
 
     /** The exception object to be raised. */
-    @Relationship(value = "EXCEPTION") var exceptionEdge = astOptionalEdgeOf<Expression>()
+    @Relationship(value = "EXCEPTION")
+    var exceptionEdge = astOptionalEdgeOf<Expression>(label = "EXCEPTION")
     var exception by unwrapping(ThrowExpression::exceptionEdge)
 
     /**
@@ -45,7 +46,7 @@ class ThrowExpression : Expression(), ArgumentHolder {
      * was raised while handling another exception.
      */
     @Relationship(value = "PARENT_EXCEPTION")
-    var parentExceptionEdge = astOptionalEdgeOf<Expression>()
+    var parentExceptionEdge = astOptionalEdgeOf<Expression>(label = "PARENT_EXCEPTION")
     var parentException by unwrapping(ThrowExpression::parentExceptionEdge)
 
     override fun addArgument(expression: Expression) {

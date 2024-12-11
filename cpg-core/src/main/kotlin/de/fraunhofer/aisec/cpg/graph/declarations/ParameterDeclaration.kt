@@ -37,7 +37,7 @@ class ParameterDeclaration : ValueDeclaration(), HasDefault<Expression?> {
     var isVariadic = false
 
     @Relationship(value = "DEFAULT", direction = Relationship.Direction.OUTGOING)
-    var defaultValueEdge = astOptionalEdgeOf<Expression>()
+    var defaultValueEdge = astOptionalEdgeOf<Expression>(label = "DEFAULT")
     private var defaultValue by unwrapping(ParameterDeclaration::defaultValueEdge)
 
     var modifiers: List<String> = mutableListOf()

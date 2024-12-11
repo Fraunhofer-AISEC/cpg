@@ -43,7 +43,8 @@ open class MethodDeclaration : FunctionDeclaration() {
      */
     open var recordDeclaration: RecordDeclaration? = null
 
-    @Relationship("RECEIVER") var receiverEdge = astOptionalEdgeOf<VariableDeclaration>()
+    @Relationship("RECEIVER")
+    var receiverEdge = astOptionalEdgeOf<VariableDeclaration>(label = "RECEIVER")
     /**
      * The receiver variable of this method. In most cases, this variable is called `this`, but in
      * some languages, it is `self` (e.g. in Rust or Python) or can be freely named (e.g. in

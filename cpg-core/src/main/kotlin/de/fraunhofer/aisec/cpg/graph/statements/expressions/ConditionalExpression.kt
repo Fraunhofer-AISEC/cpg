@@ -43,12 +43,16 @@ import org.neo4j.ogm.annotation.Relationship
 class ConditionalExpression : Expression(), ArgumentHolder, BranchingNode, HasType.TypeObserver {
     @Relationship("CONDITION")
     var conditionEdge =
-        astEdgeOf<Expression>(ProblemExpression("could not parse condition expression"))
+        astEdgeOf<Expression>(
+            ProblemExpression("could not parse condition expression"),
+            label = "CONDITION"
+        )
     var condition by unwrapping(ConditionalExpression::conditionEdge)
 
     @Relationship("THEN_EXPRESSION")
     var thenExpressionEdge =
         astOptionalEdgeOf<Expression>(
+            label = "THEN_EXPRESSION",
             onChanged = { old, new ->
                 old?.end?.unregisterTypeObserver(this)
                 new?.end?.registerTypeObserver(this)
@@ -59,6 +63,7 @@ class ConditionalExpression : Expression(), ArgumentHolder, BranchingNode, HasTy
     @Relationship("ELSE_EXPRESSION")
     var elseExpressionEdge =
         astOptionalEdgeOf<Expression>(
+            label = "ELSE_EXPRESSION",
             onChanged = { old, new ->
                 old?.end?.unregisterTypeObserver(this)
                 new?.end?.registerTypeObserver(this)

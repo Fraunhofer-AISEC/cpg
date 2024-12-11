@@ -39,7 +39,7 @@ import org.neo4j.ogm.annotation.Relationship
  */
 class CaseStatement : Statement() {
     @Relationship(value = "CASE_EXPRESSION")
-    var caseExpressionEdge = astOptionalEdgeOf<Expression>()
+    var caseExpressionEdge = astOptionalEdgeOf<Expression>(label = "CASE_EXPRESSION")
 
     /**
      * Primitive side effect free statement that has to match with the evaluated selector in

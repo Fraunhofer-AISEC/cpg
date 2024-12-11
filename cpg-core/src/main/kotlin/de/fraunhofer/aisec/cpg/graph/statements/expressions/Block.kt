@@ -42,7 +42,7 @@ import org.neo4j.ogm.annotation.Relationship
 open class Block : Expression(), StatementHolder {
     /** The list of statements. */
     @Relationship(value = "STATEMENTS", direction = Relationship.Direction.OUTGOING)
-    override var statementEdges = astEdgesOf<Statement>()
+    override var statementEdges = astEdgesOf<Statement>(label = "STATEMENTS")
     override var statements by unwrapping(Block::statementEdges)
     /**
      * This variable helps to differentiate between static and non-static initializer blocks. Static

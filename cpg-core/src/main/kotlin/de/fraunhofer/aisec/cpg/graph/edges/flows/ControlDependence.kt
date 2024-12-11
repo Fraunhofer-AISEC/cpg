@@ -49,6 +49,8 @@ class ControlDependence(
         dependence = DependenceType.CONTROL
     }
 
+    override var labels = setOf("CDG")
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is ControlDependence) return false

@@ -43,6 +43,7 @@ class SubscriptExpression : Expression(), HasBase, HasType.TypeObserver, Argumen
     var arrayExpressionEdge =
         astEdgeOf<Expression>(
             of = ProblemExpression("could not parse array expression"),
+            label = "ARRAY_EXPRESSION",
             onChanged = ::exchangeTypeObserver
         )
     /** The array on which the access is happening. This is most likely a [Reference]. */
@@ -50,7 +51,10 @@ class SubscriptExpression : Expression(), HasBase, HasType.TypeObserver, Argumen
 
     @Relationship("SUBSCRIPT_EXPRESSION")
     var subscriptExpressionEdge =
-        astEdgeOf<Expression>(ProblemExpression("could not parse index expression"))
+        astEdgeOf<Expression>(
+            ProblemExpression("could not parse index expression"),
+            label = "SUBSCRIPT_EXPRESSION"
+        )
     /**
      * The expression which represents the "subscription" or index on which the array is accessed.
      * This can for example be a reference to another variable ([Reference]), a [Literal] or a

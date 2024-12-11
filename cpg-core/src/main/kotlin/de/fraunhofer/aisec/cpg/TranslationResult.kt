@@ -54,7 +54,7 @@ class TranslationResult(
     var finalCtx: TranslationContext,
 ) : Node(), StatisticsHolder {
 
-    @Relationship("COMPONENTS") val componentEdges = astEdgesOf<Component>()
+    @Relationship("COMPONENTS") val componentEdges = astEdgesOf<Component>(label = "COMPONENTS")
     /**
      * Entry points to the CPG: "SoftwareComponent" refer to programs, application, other "bundles"
      * of software.

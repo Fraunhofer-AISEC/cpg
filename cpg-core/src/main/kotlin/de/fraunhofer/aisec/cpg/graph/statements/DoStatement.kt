@@ -39,7 +39,8 @@ import org.neo4j.ogm.annotation.Relationship
  * a [Block], is executed and re-executed if the [condition] evaluates to true.
  */
 class DoStatement : LoopStatement(), ArgumentHolder {
-    @Relationship("CONDITION") var conditionEdge = astOptionalEdgeOf<Expression>()
+    @Relationship("CONDITION")
+    var conditionEdge = astOptionalEdgeOf<Expression>(label = "CONDITION")
     /**
      * The loop condition that is evaluated after the loop statement and may trigger reevaluation.
      */

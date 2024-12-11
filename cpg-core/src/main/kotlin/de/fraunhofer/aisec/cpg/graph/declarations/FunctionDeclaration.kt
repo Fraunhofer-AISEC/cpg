@@ -40,13 +40,13 @@ import org.neo4j.ogm.annotation.Relationship
 
 /** Represents the declaration or definition of a function. */
 open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder, EOGStarterHolder {
-    @Relationship("BODY") var bodyEdge = astOptionalEdgeOf<Statement>()
+    @Relationship("BODY") var bodyEdge = astOptionalEdgeOf<Statement>(label = "BODY")
     /** The function body. Usually a [Block]. */
     var body by unwrapping(FunctionDeclaration::bodyEdge)
 
     /** The list of function parameters. */
     @Relationship(value = "PARAMETERS", direction = Relationship.Direction.OUTGOING)
-    var parameterEdges = astEdgesOf<ParameterDeclaration>()
+    var parameterEdges = astEdgesOf<ParameterDeclaration>(label = "PARAMETERS")
     /** Virtual property for accessing [parameterEdges] without property edges. */
     var parameters by unwrapping(FunctionDeclaration::parameterEdges)
 

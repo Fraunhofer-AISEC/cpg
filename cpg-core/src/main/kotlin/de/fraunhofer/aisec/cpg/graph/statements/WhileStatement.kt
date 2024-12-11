@@ -42,11 +42,12 @@ import org.neo4j.ogm.annotation.Relationship
  */
 class WhileStatement : LoopStatement(), BranchingNode, ArgumentHolder {
     @Relationship(value = "CONDITION_DECLARATION")
-    var conditionDeclarationEdge = astOptionalEdgeOf<Declaration>()
+    var conditionDeclarationEdge = astOptionalEdgeOf<Declaration>(label = "CONDITION_DECLARATION")
     /** C++ allows defining a declaration instead of a pure logical expression as condition */
     var conditionDeclaration by unwrapping(WhileStatement::conditionDeclarationEdge)
 
-    @Relationship(value = "CONDITION") var conditionEdge = astOptionalEdgeOf<Expression>()
+    @Relationship(value = "CONDITION")
+    var conditionEdge = astOptionalEdgeOf<Expression>(label = "CONDITION")
     /** The condition that decides if the block is executed. */
     var condition by unwrapping(WhileStatement::conditionEdge)
 

@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.scopes
 
+import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 
 /**
@@ -37,6 +38,6 @@ sealed class NameScope(node: Node?) : StructureDeclarationScope(node) {
     init {
         astNode = node
         // Set the name so that we can use it as a namespace later
-        name = node?.name
+        name = node?.name ?: Name(EMPTY_NAME)
     }
 }

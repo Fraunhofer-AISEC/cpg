@@ -44,28 +44,28 @@ open class RecordDeclaration :
     var kind: String? = null
 
     @Relationship(value = "FIELDS", direction = Relationship.Direction.OUTGOING)
-    var fieldEdges = astEdgesOf<FieldDeclaration>()
+    var fieldEdges = astEdgesOf<FieldDeclaration>(label = "FIELDS")
     var fields by unwrapping(RecordDeclaration::fieldEdges)
 
     @Relationship(value = "METHODS", direction = Relationship.Direction.OUTGOING)
-    var methodEdges = astEdgesOf<MethodDeclaration>()
+    var methodEdges = astEdgesOf<MethodDeclaration>(label = "METHODS")
     var methods by unwrapping(RecordDeclaration::methodEdges)
 
     @Relationship(value = "CONSTRUCTORS", direction = Relationship.Direction.OUTGOING)
-    var constructorEdges = astEdgesOf<ConstructorDeclaration>()
+    var constructorEdges = astEdgesOf<ConstructorDeclaration>(label = "CONSTRUCTORS")
     var constructors by unwrapping(RecordDeclaration::constructorEdges)
 
     @Relationship(value = "RECORDS", direction = Relationship.Direction.OUTGOING)
-    var recordEdges = astEdgesOf<RecordDeclaration>()
+    var recordEdges = astEdgesOf<RecordDeclaration>(label = "RECORDS")
     var records by unwrapping(RecordDeclaration::recordEdges)
 
     @Relationship(value = "TEMPLATES", direction = Relationship.Direction.OUTGOING)
-    var templateEdges = astEdgesOf<TemplateDeclaration>()
+    var templateEdges = astEdgesOf<TemplateDeclaration>(label = "TEMPLATES")
     var templates by unwrapping(RecordDeclaration::templateEdges)
 
     /** The list of statements. */
     @Relationship(value = "STATEMENTS", direction = Relationship.Direction.OUTGOING)
-    override var statementEdges = astEdgesOf<Statement>()
+    override var statementEdges = astEdgesOf<Statement>(label = "STATEMENTS")
     override var statements by unwrapping(RecordDeclaration::statementEdges)
 
     @Transient var superClasses: MutableList<Type> = ArrayList()

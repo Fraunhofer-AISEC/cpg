@@ -25,4 +25,5 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
+/** This interface represents all objects that can be persisted in a graph database. */
 interface Persistable

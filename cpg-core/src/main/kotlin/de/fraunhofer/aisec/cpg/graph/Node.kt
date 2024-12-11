@@ -48,6 +48,7 @@ import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.processing.IVisitable
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.util.*
+import kotlin.uuid.Uuid
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.apache.commons.lang3.builder.ToStringStyle
 import org.neo4j.ogm.annotation.*
@@ -252,13 +253,16 @@ abstract class Node :
     var isImplicit = false
 
     /** Required field for object graph mapping. It contains the node id. */
-    @Id @GeneratedValue var id: Long? = null
+    @Id @GeneratedValue var legacyId: Long? = null
+
+    /** Will replace [legacyId] */
+    var id: Uuid = Uuid.random()
 
     /** Index of the argument if this node is used in a function call or parameter list. */
     var argumentIndex = 0
 
     /** List of annotations associated with that node. */
-    @Relationship("ANNOTATIONS") var annotationEdges = astEdgesOf<Annotation>()
+    @Relationship("ANNOTATIONS") var annotationEdges = astEdgesOf<Annotation>(label = "ANNOTATIONS")
     var annotations by unwrapping(Node::annotationEdges)
 
     /**

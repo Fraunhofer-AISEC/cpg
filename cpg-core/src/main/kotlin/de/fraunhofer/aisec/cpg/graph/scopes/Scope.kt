@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.graph.scopes
 
 import com.fasterxml.jackson.annotation.JsonBackReference
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.Node.Companion.TO_STRING_STYLE
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
@@ -35,13 +34,9 @@ import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.LabelStatement
 import de.fraunhofer.aisec.cpg.graph.statements.LookupScopeStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
-import de.fraunhofer.aisec.cpg.helpers.neo4j.NameConverter
 import org.apache.commons.lang3.builder.ToStringBuilder
-import org.neo4j.ogm.annotation.GeneratedValue
-import org.neo4j.ogm.annotation.Id
 import org.neo4j.ogm.annotation.NodeEntity
 import org.neo4j.ogm.annotation.Relationship
-import org.neo4j.ogm.annotation.typeconversion.Convert
 
 /**
  * A symbol is a simple, local name. It is valid within the scope that declares it and all of its
@@ -60,16 +55,10 @@ sealed class Scope(
     @Relationship(value = "SCOPE", direction = Relationship.Direction.INCOMING)
     @JsonBackReference
     open var astNode: Node?
-) {
-
-    /** Required field for object graph mapping. It contains the scope id. */
-    @Id @GeneratedValue var id: Long? = null
+) : Node() {
 
     /** FQN Name currently valid */
     var scopedName: String? = null
-
-    /** The real new name */
-    @Convert(NameConverter::class) var name: Name? = null
 
     /**
      * Scopes are nested and therefore have a parent child relationship, this two members will help
