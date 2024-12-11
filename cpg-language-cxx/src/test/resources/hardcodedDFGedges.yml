@@ -1,0 +1,110 @@
+- functionDeclaration:
+    language: de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
+    methodName: strcpy
+  dataFlows:
+    - from: param1.address
+      to: param0.address
+      dfgType: full
+    - from: param0.address
+      to: return
+      dfgType: full
+
+- functionDeclaration:
+    language: de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
+    methodName: memcpy
+  dataFlows:
+    - from: param1.address
+      to: param0.address
+      dfgType: full
+    - from: param0.address
+      to: return
+      dfgType: full
+
+- functionDeclaration:
+    language: de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
+    methodName: memcpy_verw
+  dataFlows:
+    - from: param1.address
+      to: param0.address
+      dfgType: full
+    - from: param0.address
+      to: return
+      dfgType: full
+
+- functionDeclaration:
+    language: de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
+    methodName: memcpy_s
+  dataFlows:
+    - from: param2.address
+      to: param0.address
+      dfgType: full
+
+- functionDeclaration:
+    language: de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
+    methodName: memcpy_verw_s
+  dataFlows:
+    - from: param2.address
+      to: param0.address
+      dfgType: full
+
+
+- functionDeclaration:
+    language: de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
+    methodName: sgx_sha256_update
+  dataFlows:
+    - from: param0.address
+      to: param2.address
+      dfgType: full
+
+- functionDeclaration:
+    language: de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
+    methodName: sgx_sha256_init
+  dataFlows:
+    - from: param0.address
+      to: param0.address
+      dfgType: full
+
+- functionDeclaration:
+    language: de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
+    methodName: sgx_ocall
+  dataFlows:
+    - from: param1.address
+      to: param1.address
+      dfgType: full
+
+- functionDeclaration:
+    language: de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
+    methodName: fread
+  dataFlows:
+    - from: param1.address
+      to: param1.address
+      dfgType: full
+
+- functionDeclaration:
+    language: de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
+    methodName: sgx_get_key
+  dataFlows:
+    - from: param1.address
+      to: param1.address
+      dfgType: full
+
+- functionDeclaration:
+    language: de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
+    methodName: memset
+  dataFlows:
+    - from: param1.value
+      to: param0.address
+      dfgType: full
+
+- functionDeclaration:
+    language: de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
+    methodName: malloc
+  dataFlows: []
+
+- functionDeclaration:
+    language: de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
+    methodName: ocall_malloc
+  dataFlows:
+    - from: param0.address
+      to: param0.address
+      dfgType: full

@@ -579,12 +579,29 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         // b = *ptr;
         val assign = statements[++line] as AssignExpression
 
-        val dereference = assign.rhs<UnaryOperator>()
+        val dereference = assign.rhs<PointerDereference>()
         assertNotNull(dereference)
-        input = dereference.input
-        assertLocalName("ptr", input)
-        assertEquals("*", dereference.operatorCode)
-        assertTrue(dereference.isPrefix)
+        assertLocalName("ptr", dereference.refersTo)
+
+        // int* c;
+        val cDecl = statements[++line] as DeclarationStatement
+        // *c = 7;
+        val cAssignment = statements[++line] as AssignExpression
+
+        val cDeref = cAssignment.lhs<PointerDereference>()
+        assertNotNull(cDeref)
+        assertLocalName("c", cDeref.refersTo)
+
+        val literal7 = cAssignment.rhs<Literal<Int>>()
+        assertNotNull(literal7)
+        assertEquals(setOf<Node>(cDeref), literal7.nextDFG)
+
+        val cNextUsageStmt = statements[++line] as AssignExpression
+        val cNextUsage = cNextUsageStmt.rhs<PointerDereference>()
+        assertNotNull(cNextUsage)
+        assertEquals(setOf<Node>(cNextUsage), cDeref.nextDFG)
+
+        // TODO: this no longer tests UnaryOperator -> move to test PointerDereference
     }
 
     @Test
@@ -1564,11 +1581,12 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         // We do not want any inferred functions
         assertTrue(tu.functions.none { it.isInferred })
 
-        val noParamPointerCall = tu.calls("no_param").firstOrNull { it.callee is UnaryOperator }
+        val noParamPointerCall =
+            tu.calls("no_param").firstOrNull { it.callee is PointerDereference }
         assertInvokes(assertNotNull(noParamPointerCall), target)
 
         val noParamNoInitPointerCall =
-            tu.calls("no_param_uninitialized").firstOrNull { it.callee is UnaryOperator }
+            tu.calls("no_param_uninitialized").firstOrNull { it.callee is PointerDereference }
         assertInvokes(assertNotNull(noParamNoInitPointerCall), target)
 
         val noParamCall = tu.calls("no_param").firstOrNull { it.callee is Reference }

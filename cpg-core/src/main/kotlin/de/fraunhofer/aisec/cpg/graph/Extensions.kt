@@ -480,6 +480,7 @@ fun Node.followXUntilHit(
     x: (Node) -> List<Node>,
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
+    continueAfterHit: Boolean = false,
     predicate: (Node) -> Boolean
 ): FulfilledAndFailedPaths {
     // Looks complicated but at least it's not recursive...
@@ -517,9 +518,18 @@ fun Node.followXUntilHit(
             }
             // The next node is new in the current path (i.e., there's no loop), so we add the path
             // with the next step to the worklist.
+            // For our daily dose of special magic, we check that the path reaching the next node
+            // differs. If the path is different, we do accept seeing the same node multiple times.
+            val indexedPath =
+                currentPath
+                    .mapIndexed { index, node -> if (node == next) Pair(index, node) else null }
+                    .filterNotNull()
             if (
-                next !in currentPath &&
-                    (findAllPossiblePaths ||
+                (indexedPath.isEmpty() ||
+                    indexedPath.all {
+                        it.first == 0 || currentNode != currentPath[it.first - 1]
+                    }) &&
+                    ((findAllPossiblePaths && currentPath.count { it == next } <= 2) ||
                         (next !in alreadySeenNodes && worklist.none { next in it }))
             ) {
                 worklist.add(nextPath)
@@ -542,12 +552,14 @@ fun Node.followXUntilHit(
 fun Node.followNextFullDFGEdgesUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
+    continueAfterHit: Boolean = true,
     predicate: (Node) -> Boolean
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
         x = { currentNode -> currentNode.nextFullDFG },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
+        continueAfterHit = continueAfterHit,
         predicate = predicate
     )
 }
@@ -1001,8 +1013,8 @@ private fun Node.eogDistanceTo(to: Node): Int {
 fun Expression?.unwrapReference(): Reference? {
     return when {
         this is Reference -> this
-        this is UnaryOperator && (this.operatorCode == "*" || this.operatorCode == "&") ->
-            this.input.unwrapReference()
+        this is PointerReference -> this
+        this is PointerDereference -> this
         this is CastExpression -> this.expression.unwrapReference()
         else -> null
     }
