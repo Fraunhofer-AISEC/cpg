@@ -69,7 +69,7 @@ class EvaluationOrder(
         return result
     }
 
-    override var label: String = "EOG"
+    override var labels = setOf("EOG")
 }
 
 /**

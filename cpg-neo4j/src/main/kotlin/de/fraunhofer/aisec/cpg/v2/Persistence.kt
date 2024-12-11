@@ -138,12 +138,16 @@ private fun Collection<Edge<*>>.persist() {
 
     this.chunked(edgeChunkSize).map { chunk ->
         createRelationships(
-            chunk.map {
-                mapOf(
-                    "startId" to it.start.id.toString(),
-                    "endId" to it.end.id.toString(),
-                    "type" to it.label
-                ) + it.properties()
+            chunk.flatMap { edge ->
+                // Since Neo4J does not support multiple labels on edges, but we do internally, we
+                // duplicate the edge for each label
+                edge.labels.map { label ->
+                    mapOf(
+                        "startId" to edge.start.id.toString(),
+                        "endId" to edge.end.id.toString(),
+                        "type" to label
+                    ) + edge.properties()
+                }
             }
         )
     }

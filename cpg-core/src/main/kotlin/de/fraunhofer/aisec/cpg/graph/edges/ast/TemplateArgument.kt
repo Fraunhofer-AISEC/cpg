@@ -35,7 +35,7 @@ class TemplateArgument<NodeType : Node>(
     end: NodeType,
     label: String,
     var instantiation: TemplateInitialization? = TemplateInitialization.EXPLICIT,
-) : AstEdge<NodeType>(start, end, label)
+) : AstEdge<NodeType>(start, end, setOf(label, "AST"))
 
 /** A container for [TemplateArgument] edges. */
 class TemplateArguments<NodeType : Node>(thisRef: Node, label: String) :

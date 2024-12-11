@@ -46,5 +46,5 @@ class Assignment(
     /** The holder of this assignment */
     @JsonIgnore val holder: AssignmentHolder
 ) : Edge<Node>(value, target as Node) {
-    override var label: String = "ASSIGMENT"
+    override var labels = setOf("ASSIGMENT")
 }

@@ -71,7 +71,7 @@ abstract class Edge<NodeType : Node> : Persistable, Cloneable {
         end = edge.end
     }
 
-    abstract var label: String
+    abstract var labels: Set<String>
 
     /**
      * The index of this node, if it is stored in an

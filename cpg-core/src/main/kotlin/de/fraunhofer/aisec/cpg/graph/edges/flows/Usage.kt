@@ -53,7 +53,7 @@ class Usage(
         return result
     }
 
-    override var label: String = "USAGE"
+    override var labels = setOf("USAGE")
 }
 
 /** A container for [Usage] edges. [NodeType] is necessary because of the Neo4J OGM. */
