@@ -23,7 +23,7 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.v2
+package de.fraunhofer.aisec.cpg.persistence
 
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.Name
@@ -49,7 +49,7 @@ import kotlin.reflect.full.memberProperties
 import kotlin.reflect.full.superclasses
 import kotlin.reflect.full.withNullability
 import kotlin.uuid.Uuid
-import org.neo4j.driver.GraphDatabase
+import org.neo4j.driver.Session
 import org.neo4j.ogm.typeconversion.CompositeAttributeConverter
 import org.slf4j.LoggerFactory
 
@@ -57,15 +57,6 @@ import org.slf4j.LoggerFactory
  * docker run \ --name neo4j-apoc \ -p 7474:7474 -p 7687:7687 \ -d \ -e NEO4J_AUTH=neo4j/password \
  * -e NEO4JLABS_PLUGINS='["apoc"]' \ neo4j:5
  */
-val dbUri = "neo4j://localhost"
-val dbUser = "neo4j"
-val dbPassword = "password"
-
-val neo4jSession by lazy {
-    val driver = GraphDatabase.driver(dbUri, org.neo4j.driver.AuthTokens.basic(dbUser, dbPassword))
-    driver.session()
-}
-
 val labelCache: MutableMap<KClass<*>, Set<String>> = mutableMapOf()
 
 val schemaPropertiesCache:
@@ -77,6 +68,7 @@ val log = LoggerFactory.getLogger("Persistence")
 val edgeChunkSize = 10000
 val nodeChunkSize = 10000
 
+context(Session)
 fun TranslationResult.persist() {
     val b = Benchmark(Persistable::class.java, "Persisting translation result")
 
@@ -108,12 +100,13 @@ fun TranslationResult.persist() {
     b.stop()
 }
 
+context(Session)
 private fun List<Node>.persist() {
     this.chunked(nodeChunkSize).map { chunk ->
         val b = Benchmark(Persistable::class.java, "Persisting chunk of ${chunk.size} nodes")
         val params =
             mapOf("props" to chunk.map { mapOf("labels" to it::class.labels) + it.properties() })
-        neo4jSession.executeWrite { tx ->
+        this@Session.executeWrite { tx ->
             tx.run(
                     """
                    UNWIND ${"$"}props AS map
@@ -129,10 +122,11 @@ private fun List<Node>.persist() {
     }
 }
 
+context(Session)
 private fun Collection<Edge<*>>.persist() {
     // Create an index for the "id" field of node, because we are "MATCH"ing on it in the edge
     // creation. We need to wait for this to be finished
-    neo4jSession.executeWrite { tx ->
+    this@Session.executeWrite { tx ->
         tx.run("CREATE INDEX IF NOT EXISTS FOR (n:Node) ON (n.id)").consume()
     }
 
@@ -157,6 +151,7 @@ private fun Collection<Edge<*>>.persist() {
  * Some of our relationships are not real "edges" (i.e., [Edge]) (yet). We need to handle these case
  * separately (for now).
  */
+context(Session)
 private fun List<Node>.persistExtraRelationships() {
     val relationships =
         this.flatMap {
@@ -195,15 +190,15 @@ private fun List<Node>.persistExtraRelationships() {
             )
         }
 
-    relationships.chunked(10000).map { chunk -> createRelationships(chunk) }
+    relationships.chunked(10000).map { chunk -> this@Session.createRelationships(chunk) }
 }
 
-private fun createRelationships(
+private fun Session.createRelationships(
     props: List<Map<String, Any?>>,
 ) {
     val b = Benchmark(Persistable::class.java, "Persisting chunk of ${props.size} relationships")
     val params = mapOf("props" to props)
-    neo4jSession.executeWrite { tx ->
+    executeWrite { tx ->
         tx.run(
                 """
             UNWIND ${'$'}props AS map

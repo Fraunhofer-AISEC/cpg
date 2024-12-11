@@ -30,23 +30,20 @@ import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase.Companion.fromFile
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.passes.*
+import de.fraunhofer.aisec.cpg.persistence.persist
 import java.io.File
 import java.net.ConnectException
 import java.nio.file.Paths
 import java.util.concurrent.Callable
 import kotlin.reflect.KClass
 import kotlin.system.exitProcess
-import org.neo4j.driver.exceptions.AuthenticationException
-import org.neo4j.ogm.config.Configuration
+import org.neo4j.driver.GraphDatabase
 import org.neo4j.ogm.context.EntityGraphMapper
 import org.neo4j.ogm.context.MappingContext
 import org.neo4j.ogm.cypher.compiler.MultiStatementCypherCompiler
 import org.neo4j.ogm.cypher.compiler.builders.node.DefaultNodeBuilder
 import org.neo4j.ogm.cypher.compiler.builders.node.DefaultRelationshipBuilder
-import org.neo4j.ogm.exception.ConnectionException
 import org.neo4j.ogm.metadata.MetaData
-import org.neo4j.ogm.session.Session
-import org.neo4j.ogm.session.SessionFactory
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import picocli.CommandLine
@@ -381,33 +378,14 @@ class Application : Callable<Int> {
      * Pushes the whole translationResult to the neo4j db.
      *
      * @param translationResult, not null
-     * @throws InterruptedException, if the thread is interrupted while it try´s to connect to the
-     *   neo4j db.
-     * @throws ConnectException, if there is no connection to bolt://localhost:7687 possible
      */
-    @Throws(InterruptedException::class, ConnectException::class)
     fun pushToNeo4j(translationResult: TranslationResult) {
-        val bench = Benchmark(this.javaClass, "Push cpg to neo4j", false, translationResult)
-        log.info("Using import depth: $depth")
-        log.info(
-            "Count base nodes to save: " +
-                translationResult.components.size +
-                translationResult.additionalNodes.size
-        )
-
-        val sessionAndSessionFactoryPair = connect()
-
-        val session = sessionAndSessionFactoryPair.first
-        session.beginTransaction().use { transaction ->
-            if (!noPurgeDb) session.purgeDatabase()
-            session.save(translationResult.components, depth)
-            session.save(translationResult.additionalNodes, depth)
-            transaction.commit()
+        val session = connect()
+        with(session) {
+            if (!noPurgeDb) executeWrite { tx -> tx.run("MATCH (n) DETACH DELETE n").consume() }
+            translationResult.persist()
         }
-
-        session.clear()
-        sessionAndSessionFactoryPair.second.close()
-        bench.addMeasurement()
+        session.close()
     }
 
     /**
@@ -420,41 +398,14 @@ class Application : Callable<Int> {
      * @throws ConnectException, if there is no connection to bolt://localhost:7687 possible
      */
     @Throws(InterruptedException::class, ConnectException::class)
-    fun connect(): Pair<Session, SessionFactory> {
-        var fails = 0
-        var sessionFactory: SessionFactory? = null
-        var session: Session? = null
-        while (session == null && fails < MAX_COUNT_OF_FAILS) {
-            try {
-                val configuration =
-                    Configuration.Builder()
-                        .uri("$PROTOCOL$host:$port")
-                        .credentials(neo4jUsername, neo4jPassword)
-                        .verifyConnection(VERIFY_CONNECTION)
-                        .build()
-                sessionFactory = SessionFactory(configuration, *packages)
-
-                session = sessionFactory.openSession()
-            } catch (ex: ConnectionException) {
-                sessionFactory = null
-                fails++
-                log.error(
-                    "Unable to connect to localhost:7687, " +
-                        "ensure the database is running and that " +
-                        "there is a working network connection to it."
-                )
-                Thread.sleep(TIME_BETWEEN_CONNECTION_TRIES)
-            } catch (ex: AuthenticationException) {
-                log.error("Unable to connect to localhost:7687, wrong username/password!")
-                exitProcess(EXIT_FAILURE)
-            }
-        }
-        if (session == null || sessionFactory == null) {
-            log.error("Unable to connect to localhost:7687")
-            exitProcess(EXIT_FAILURE)
-        }
-        assert(fails <= MAX_COUNT_OF_FAILS)
-        return Pair(session, sessionFactory)
+    fun connect(): org.neo4j.driver.Session {
+        val driver =
+            GraphDatabase.driver(
+                "$PROTOCOL$host:$port",
+                org.neo4j.driver.AuthTokens.basic(neo4jUsername, neo4jPassword)
+            )
+        driver.verifyConnectivity()
+        return driver.session()
     }
 
     /**
