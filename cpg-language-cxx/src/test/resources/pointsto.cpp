@@ -239,4 +239,5 @@ int testFunctionSummaries() {
   incp(p);
   printf("i: %d j: %d *p: %d p: %p\n", i, j, *p, p);
 
+  i = unknownFunc(i, p);
 } 

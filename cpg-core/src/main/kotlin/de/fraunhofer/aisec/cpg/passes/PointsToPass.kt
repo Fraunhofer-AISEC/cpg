@@ -132,8 +132,6 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
     private fun storeFunctionSummary(node: FunctionDeclaration, doubleState: PointsToState2) {
         node.parameters.forEach { param ->
             val indexes = mutableSetOf<Node>()
-            //            startState.getAddresses(param).forEach {
-            // indexes.addAll(startState.getValues(it)) }
             doubleState.getAddresses(param).forEach { indexes.addAll(doubleState.getValues(it)) }
             indexes.forEach { index ->
                 val finalValue =
@@ -156,7 +154,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                     ?.forEach { value ->
                         config.functionSummaries.functionToChangedParameters
                             .computeIfAbsent(node) { mutableMapOf() }
-                            .computeIfAbsent(param) { mutableSetOf() }
+                            .computeIfAbsent(param) { identitySetOf() }
                             .add(Pair(value, false))
                     }
             }
@@ -194,7 +192,8 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
         currentNode: ReturnStatement,
         doubleState: PointsToPass.PointsToState2
     ): PointsToPass.PointsToState2 {
-        /* For Return Statements, all we really want to do is to collect their return values to add them to the FunctionSummary */
+        /* For Return Statements, all we really want to do is to collect their return values
+        to add them to the FunctionSummary */
         var doubleState = doubleState
         if (currentNode.returnValues.isNotEmpty()) {
             val parentFD = currentNode.scope?.parent?.astNode as? FunctionDeclaration
@@ -202,7 +201,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                 currentNode.returnValues.forEach { retval ->
                     config.functionSummaries.functionToChangedParameters
                         .computeIfAbsent(parentFD) { mutableMapOf() }
-                        .computeIfAbsent(currentNode) { mutableSetOf() }
+                        .computeIfAbsent(currentNode) { identitySetOf() }
                         .addAll(doubleState.getValues(retval).map { Pair(it, false) })
                 }
             }
@@ -229,14 +228,16 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                             "Cannot calculate functionSummary for $invoke as it's recursively called. callChain: $functionSummaryAnalysisChain"
                         )
                     }
-                } else
-                // Add an empty function Summary so that we don't try this every time
-                config.functionSummaries.functionToChangedParameters.computeIfAbsent(invoke) {
-                        mutableMapOf()
-                    }
+                } else {
+                    // Add a dummy function Summary so that we don't try this every time
+                    // In this dummy, all parameters point to the return
+                    val newValues: IdentitySet<Pair<Node, Boolean>> =
+                        invoke.parameters.map { Pair(it, false) }.toIdentitySet()
+                    config.functionSummaries.functionToChangedParameters
+                        .computeIfAbsent(invoke) { mutableMapOf() }[ReturnStatement()] = newValues
+                }
             }
         }
-        // functionSummaryAnalysisChain.clear()
 
         if (currentNode.invokes.all { ctx.config.functionSummaries.hasSummary(it) }) {
             // We have a FunctionSummary. Set the new values for the arguments. Push the
@@ -258,13 +259,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                         when (param) {
                             is ParameterDeclaration ->
                                 // Dereference the parameter
-                                /*doubleState
-                                .getAddresses(currentNode.arguments[param.argumentIndex])
-                                .flatMap { doubleState.getValues(it) }
-                                .toIdentitySet()*/
-                                //
                                 doubleState.getValues(currentNode.arguments[param.argumentIndex])
-                            // currentNode.arguments[param.argumentIndex]
                             else -> null
                         }
                     val sources = mutableSetOf<Node>()
@@ -355,8 +350,6 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
             // We fetch the value of the source, but not the destination, this is done by the
             // updateValues-Function
             val sources = currentNode.rhs.flatMap { doubleState.getValues(it) }.toIdentitySet()
-            // val destinations = currentNode.lhs.flatMap { doubleState.getAddresses(it)
-            // }.toIdentitySet()
             doubleState = doubleState.updateValues(sources, currentNode.lhs.toIdentitySet())
         }
 
@@ -641,7 +634,16 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                             val r = identitySetOf<Node>()
                             for ((param, values) in retVals) {
                                 if (param is ReturnStatement) {
-                                    r.addAll(values.map { it.first })
+                                    values.forEach { (v, derefSource) ->
+                                        if (v is ParameterDeclaration) {
+                                            if (derefSource) {
+                                                this.getValues(node.arguments[v.argumentIndex])
+                                                    .forEach { r.addAll(this.getValues(it)) }
+                                            } else {
+                                                r.add(node.arguments[v.argumentIndex])
+                                            }
+                                        } else r.add(v)
+                                    }
                                 }
                             }
                             r
@@ -724,7 +726,6 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
          */
         fun getFieldAddresses(
             baseAddresses: List<MemoryAddress>,
-            /*indexString: String,*/
             nodeName: Name
         ): Set<Node> {
             val fieldAddresses = identitySetOf<MemoryAddress>()
@@ -753,20 +754,17 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
          */
         fun updateValues(sources: Set<Node>, destinations: Set<Node>): PointsToState2 {
             val addresses = destinations.flatMap { this.getAddresses(it) }.toIdentitySet()
-            // destinations.forEach { d -> this.getAddresses(d).forEach { addresses.add(it) } }
-            val values = sources // mutableSetOf<Node>()
-            // sources.forEach { s -> this.getValues(s).forEach { values.add(it) } }
             val newDeclState = this.declarationsState.elements.toMutableMap()
             val newGenState = this.generalState.elements.toMutableMap()
             /* Update the declarationState for the address */
             addresses.forEach { addr ->
                 newDeclState[addr] =
-                    TupleLattice(Pair(PowersetLattice(addresses), PowersetLattice(values)))
+                    TupleLattice(Pair(PowersetLattice(addresses), PowersetLattice(sources)))
             }
             /* Also update the generalState for dst */
             destinations.forEach { d ->
                 newGenState[d] =
-                    TupleLattice(Pair(PowersetLattice(addresses), PowersetLattice(values)))
+                    TupleLattice(Pair(PowersetLattice(addresses), PowersetLattice(sources)))
             }
             var doubleState = PointsToState2(MapLattice(newGenState), MapLattice(newDeclState))
 

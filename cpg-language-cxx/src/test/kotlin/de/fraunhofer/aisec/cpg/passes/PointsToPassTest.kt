@@ -1126,6 +1126,31 @@ class PointsToPassTest {
                 .firstOrNull()
         assertNotNull(iRefLine240)
 
+        val iRefLine242Left =
+            tu.allChildren<Reference> {
+                    it.location?.region?.startLine == 242 &&
+                        it.name.localName == "i" &&
+                        it.location?.region?.startColumn == 3
+                }
+                .firstOrNull()
+        assertNotNull(iRefLine242Left)
+
+        val iRefLine242Right =
+            tu.allChildren<Reference> {
+                    it.location?.region?.startLine == 242 &&
+                        it.name.localName == "i" &&
+                        it.location?.region?.startColumn == 19
+                }
+                .firstOrNull()
+        assertNotNull(iRefLine242Right)
+
+        val pRefLine242 =
+            tu.allChildren<Reference> {
+                    it.location?.region?.startLine == 242 && it.name.localName == "p"
+                }
+                .firstOrNull()
+        assertNotNull(pRefLine242)
+
         // Dereferences
         val pDerefLine231 =
             tu.allChildren<PointerDereference> {
@@ -1194,5 +1219,10 @@ class PointsToPassTest {
         assertEquals(binOpLine212, pDerefLine240.prevDFG.firstOrNull())
         assertEquals(1, iRefLine240.prevDFG.size)
         assertEquals(binOpLine212, iRefLine240.prevDFG.firstOrNull())
+
+        // Line 242
+        assertEquals(2, iRefLine242Left.prevDFG.size)
+        assertTrue(iRefLine242Left.prevDFG.contains(iRefLine242Right))
+        assertTrue(iRefLine242Left.prevDFG.contains(pRefLine242))
     }
 }

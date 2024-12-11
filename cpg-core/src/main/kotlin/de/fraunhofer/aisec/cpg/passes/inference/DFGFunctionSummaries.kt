@@ -38,6 +38,8 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.parseName
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.unknownType
+import de.fraunhofer.aisec.cpg.helpers.IdentitySet
+import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.matchesSignature
 import de.fraunhofer.aisec.cpg.tryCast
 import java.io.File
@@ -63,7 +65,7 @@ class DFGFunctionSummaries {
      * [FunctionDeclaration], we store all previous DFG nodes.
      */
     val functionToChangedParameters =
-        mutableMapOf<FunctionDeclaration, MutableMap<Node, MutableSet<Pair<Node, Boolean>>>>()
+        mutableMapOf<FunctionDeclaration, MutableMap<Node, IdentitySet<Pair<Node, Boolean>>>>()
 
     fun hasSummary(functionDeclaration: FunctionDeclaration) =
         functionDeclaration in functionToChangedParameters
@@ -278,7 +280,7 @@ class DFGFunctionSummaries {
                         if (from != null && paramTo != null) {
                             functionToChangedParameters
                                 .computeIfAbsent(functionDeclaration) { mutableMapOf() }
-                                .computeIfAbsent(paramTo) { mutableSetOf() }
+                                .computeIfAbsent(paramTo) { identitySetOf<Pair<Node, Boolean>>() }
                                 .add(Pair(from, derefSource))
                         }
                         paramTo
@@ -291,7 +293,7 @@ class DFGFunctionSummaries {
                         if (receiver != null) {
                             functionToChangedParameters
                                 .computeIfAbsent(functionDeclaration) { mutableMapOf() }
-                                .computeIfAbsent(receiver) { mutableSetOf() }
+                                .computeIfAbsent(receiver) { identitySetOf<Pair<Node, Boolean>>() }
                                 .add(Pair(from, derefSource))
                         }
                     }
