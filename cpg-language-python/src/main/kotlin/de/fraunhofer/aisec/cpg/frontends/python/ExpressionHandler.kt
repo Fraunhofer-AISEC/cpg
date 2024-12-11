@@ -480,7 +480,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         var ref =
             if (isImport(base.name)) {
                 // Yes, it's an import, so we need to construct a reference with an FQN
-                newReference(base.reconstructedImportName.fqn(node.attr), rawNode = node)
+                newReference(base.name.fqn(node.attr), rawNode = node)
             } else {
                 newMemberExpression(name = node.attr, base = base, rawNode = node)
             }
@@ -596,17 +596,3 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         return lambda
     }
 }
-
-/**
- * This utility function tries to reconstruct the name as if the expression was part of an imported
- * symbol. This is needed because the [MemberExpression.name] includes the [MemberExpression.base]'s
- * type instead of the name, and thus it might be "UNKNOWN".
- */
-val Expression.reconstructedImportName: Name
-    get() {
-        return if (this is MemberExpression) {
-            this.base.reconstructedImportName.fqn(this.name.localName)
-        } else {
-            this.name
-        }
-    }

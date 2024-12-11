@@ -1590,27 +1590,6 @@ class PythonFrontendTest : BaseTest() {
         }
     }
 
-    @Test
-    fun testImportTest() {
-        val topLevel = Path.of("src", "test", "resources", "python")
-        val tu =
-            analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("import_test.py").toFile()),
-                topLevel,
-                true
-            ) {
-                it.registerLanguage<PythonLanguage>()
-            }
-        assertNotNull(tu)
-
-        val refs = tu.refs
-        refs.forEach { assertIsNot<MemberExpression>(it) }
-        assertEquals(
-            setOf("a", "b", "pkg.module.foo", "another_module.foo"),
-            refs.map { it.name.toString() }.toSet()
-        )
-    }
-
     class PythonValueEvaluator : ValueEvaluator() {
         override fun computeBinaryOpEffect(
             lhsValue: Any?,
