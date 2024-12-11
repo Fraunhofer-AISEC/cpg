@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.StatementHolder
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeCollection
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.passes.Pass
@@ -370,6 +371,14 @@ fun SubgraphWalker.ScopedWalker.replace(parent: Node?, old: Expression, new: Exp
 
     val success =
         when (parent) {
+            is CallExpression -> {
+                if (parent.callee == old) {
+                    parent.callee = new
+                    true
+                } else {
+                    parent.replace(old, new)
+                }
+            }
             is ArgumentHolder -> parent.replace(old, new)
             is StatementHolder -> parent.replace(old, new)
             else -> {
@@ -398,6 +407,9 @@ fun SubgraphWalker.ScopedWalker.replace(parent: Node?, old: Expression, new: Exp
             old.unregisterTypeObserver(it)
             new.registerTypeObserver(it)
         }
+
+        old.astParent = null
+        new.astParent = parent
 
         // Make sure to inform the walker about our change
         this.registerReplacement(old, new)
