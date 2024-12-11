@@ -59,7 +59,7 @@ import org.slf4j.LoggerFactory
 /** The base class for all graph objects that are going to be persisted in the database. */
 abstract class Node :
     IVisitable<Node>,
-    PersistedAsNode,
+    Persistable,
     LanguageProvider,
     ScopeProvider,
     ContextProvider,

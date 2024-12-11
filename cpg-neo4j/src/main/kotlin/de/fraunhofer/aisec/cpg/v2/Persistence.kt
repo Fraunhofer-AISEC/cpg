@@ -29,21 +29,22 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.Persistable
-import de.fraunhofer.aisec.cpg.graph.PersistedAsNode
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.allEdges
 import de.fraunhofer.aisec.cpg.graph.edges.flows.DependenceType
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Granularity
 import de.fraunhofer.aisec.cpg.graph.nodes
+import de.fraunhofer.aisec.cpg.graph.types.HasType
+import de.fraunhofer.aisec.cpg.graph.types.SecondOrderType
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.neo4j.DataflowGranularityConverter
 import de.fraunhofer.aisec.cpg.helpers.neo4j.NameConverter
 import de.fraunhofer.aisec.cpg.helpers.neo4j.SimpleNameConverter
-import kotlin.collections.plusAssign
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 import kotlin.reflect.full.createType
 import kotlin.reflect.full.memberProperties
+import kotlin.reflect.full.superclasses
 import kotlin.reflect.full.withNullability
 import kotlin.uuid.Uuid
 import org.neo4j.driver.GraphDatabase
@@ -63,7 +64,7 @@ val neo4jSession by lazy {
     driver.session()
 }
 
-val labelCache: MutableMap<KClass<out PersistedAsNode>, Set<String>> = mutableMapOf()
+val labelCache: MutableMap<KClass<out Node>, Set<String>> = mutableMapOf()
 
 val schemaPropertiesCache:
     MutableMap<KClass<out Persistable>, Map<String, KProperty1<out Persistable, *>>> =
@@ -75,32 +76,36 @@ val edgeChunkSize = 10000
 val nodeChunkSize = 10000
 
 fun TranslationResult.persist() {
-    val nodes = this@persist.nodes
-    val edges = this@persist.allEdges<Edge<*>>()
-    val scopes = this.finalCtx.scopeManager.filterScopes { true }
-    val languages = this.finalCtx.config.languages
-
     val b = Benchmark(Persistable::class.java, "Persisting translation result")
 
-    log.info("Persisting {} AST nodes", nodes.size)
+    val astNodes = this@persist.nodes
+    val scopes = this.finalCtx.scopeManager.filterScopes { true }
+    val languages = this.finalCtx.config.languages
+    val types =
+        this.finalCtx.typeManager.firstOrderTypes + this.finalCtx.typeManager.secondOrderTypes
+    val nodes = listOf(astNodes, scopes, languages, types).flatten()
+    val edges = this@persist.allEdges<Edge<*>>()
+
+    log.info(
+        "Persisting {} nodes: AST nodes ({}), types ({}), scopes ({}) and languages ({})",
+        nodes.size,
+        astNodes.size,
+        types.size,
+        scopes.size,
+        languages.size
+    )
     nodes.persist()
-
-    log.info("Persisting {} scopes", nodes.size)
-    scopes.persist()
-
-    log.info("Persisting {} languages", nodes.size)
-    languages.persist()
 
     log.info("Persisting {} edges", edges.size)
     edges.persist()
 
-    log.info("Persisting {} extra relationships (language, scopes)", edges.size)
+    log.info("Persisting {} extra relationships (types, scopes, languages)", edges.size)
     nodes.persistExtraRelationships()
 
     b.stop()
 }
 
-private fun List<PersistedAsNode>.persist() {
+private fun List<Node>.persist() {
     this.chunked(nodeChunkSize).map { chunk ->
         val b = Benchmark(Persistable::class.java, "Persisting chunk of ${chunk.size} nodes")
         val params =
@@ -141,9 +146,13 @@ private fun Collection<Edge<*>>.persist() {
     }
 }
 
+/**
+ * Some of our relationships are not real "edges" (yet). We need to handle these case separately
+ * (for now).
+ */
 private fun List<Node>.persistExtraRelationships() {
     this.flatMap {
-            listOf(
+            listOfNotNull(
                 mapOf(
                     "startId" to it.id.toString(),
                     "endId" to it.language?.id.toString(),
@@ -154,6 +163,21 @@ private fun List<Node>.persistExtraRelationships() {
                     "endId" to it.scope?.id.toString(),
                     "type" to "SCOPE"
                 ),
+                if (it is HasType) {
+                    mapOf(
+                        "startId" to it.id.toString(),
+                        "endId" to it.type.id.toString(),
+                        "type" to "TYPE"
+                    )
+                } else if (it is SecondOrderType) {
+                    mapOf(
+                        "startId" to it.id.toString(),
+                        "endId" to it.elementType.id.toString(),
+                        "type" to "ELEMENT_TYPE"
+                    )
+                } else {
+                    null
+                }
             )
         }
         .chunked(10000)
@@ -224,10 +248,13 @@ fun Any.convert(originalKey: String, properties: MutableMap<String, Any?>) {
     }
 }
 
-val KClass<out PersistedAsNode>.labels: Set<String>
+val KClass<out Node>.labels: Set<String>
     get() {
         // Check, if we already computed the labels for this node's class
-        return labelCache.computeIfAbsent(this) { setOf<String>("Node", this.simpleName!!) }
+        return labelCache.computeIfAbsent(this) {
+            setOfNotNull<String>("Node", this.simpleName) +
+                it.superclasses.mapNotNull { it.simpleName }
+        }
     }
 
 val propertyTypes =

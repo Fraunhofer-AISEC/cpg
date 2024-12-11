@@ -29,7 +29,7 @@ import com.fasterxml.jackson.annotation.JsonBackReference
 import com.fasterxml.jackson.annotation.JsonIgnore
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.Node.Companion.TO_STRING_STYLE
-import de.fraunhofer.aisec.cpg.graph.PersistedAsEdge
+import de.fraunhofer.aisec.cpg.graph.Persistable
 import de.fraunhofer.aisec.cpg.graph.edges.flows.DependenceType
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.passes.ProgramDependenceGraphPass
@@ -51,7 +51,7 @@ import org.neo4j.ogm.annotation.*
  * ```
  */
 @RelationshipEntity
-abstract class Edge<NodeType : Node> : PersistedAsEdge, Cloneable {
+abstract class Edge<NodeType : Node> : Persistable, Cloneable {
     /** Required field for object graph mapping. It contains the node id. */
     @field:Id @field:GeneratedValue private val id: Long? = null
 
