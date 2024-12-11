@@ -25,4 +25,17 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
+import de.fraunhofer.aisec.cpg.graph.scopes.Scope
+
+/**
+ * This interface represents that the object will be persisted as a "node" in a graph database. This
+ * is not to be confused with our [Node] class -- for example a [Scope] is also a [PersistedAsNode],
+ * but not a [Node].
+ */
+interface PersistedAsNode : Persistable
+
+/** This interface represents that the object will be persisted as a "edge" in a graph database. */
+interface PersistedAsEdge : Persistable
+
+/** This interface represents all objects that can be persisted in a graph database. */
 interface Persistable

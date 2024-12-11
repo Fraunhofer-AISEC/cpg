@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.Persistable
+import de.fraunhofer.aisec.cpg.graph.PersistedAsNode
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.allEdges
 import de.fraunhofer.aisec.cpg.graph.edges.flows.DependenceType
@@ -62,7 +63,7 @@ val neo4jSession by lazy {
     driver.session()
 }
 
-val labelCache: MutableMap<KClass<out Node>, Set<String>> = mutableMapOf()
+val labelCache: MutableMap<KClass<out PersistedAsNode>, Set<String>> = mutableMapOf()
 
 val schemaPropertiesCache:
     MutableMap<KClass<out Persistable>, Map<String, KProperty1<out Persistable, *>>> =
@@ -76,19 +77,30 @@ val nodeChunkSize = 10000
 fun TranslationResult.persist() {
     val nodes = this@persist.nodes
     val edges = this@persist.allEdges<Edge<*>>()
+    val scopes = this.finalCtx.scopeManager.filterScopes { true }
+    val languages = this.finalCtx.config.languages
 
     val b = Benchmark(Persistable::class.java, "Persisting translation result")
 
-    log.info("Persisting {} nodes", nodes.size)
+    log.info("Persisting {} AST nodes", nodes.size)
     nodes.persist()
+
+    log.info("Persisting {} scopes", nodes.size)
+    scopes.persist()
+
+    log.info("Persisting {} languages", nodes.size)
+    languages.persist()
 
     log.info("Persisting {} edges", edges.size)
     edges.persist()
 
+    log.info("Persisting {} extra relationships (language, scopes)", edges.size)
+    nodes.persistExtraRelationships()
+
     b.stop()
 }
 
-private fun List<Node>.persist() {
+private fun List<PersistedAsNode>.persist() {
     this.chunked(nodeChunkSize).map { chunk ->
         val b = Benchmark(Persistable::class.java, "Persisting chunk of ${chunk.size} nodes")
         val params =
@@ -117,21 +129,45 @@ private fun Collection<Edge<*>>.persist() {
     }
 
     this.chunked(edgeChunkSize).map { chunk ->
-        val b = Benchmark(Persistable::class.java, "Persisting chunk of ${chunk.size} edges")
-        val params =
-            mapOf(
-                "props" to
-                    chunk.map {
-                        mapOf(
-                            "startId" to it.start.id.toString(),
-                            "endId" to it.end.id.toString(),
-                            "type" to it.label
-                        ) + it.properties()
-                    }
+        createRelationships(
+            chunk.map {
+                mapOf(
+                    "startId" to it.start.id.toString(),
+                    "endId" to it.end.id.toString(),
+                    "type" to it.label
+                ) + it.properties()
+            }
+        )
+    }
+}
+
+private fun List<Node>.persistExtraRelationships() {
+    this.flatMap {
+            listOf(
+                mapOf(
+                    "startId" to it.id.toString(),
+                    "endId" to it.language?.id.toString(),
+                    "type" to "LANGUAGE"
+                ),
+                mapOf(
+                    "startId" to it.id.toString(),
+                    "endId" to it.scope?.id.toString(),
+                    "type" to "SCOPE"
+                ),
             )
-        neo4jSession.executeWrite { tx ->
-            tx.run(
-                    """
+        }
+        .chunked(10000)
+        .map { chunk -> createRelationships(chunk) }
+}
+
+private fun createRelationships(
+    props: List<Map<String, Any?>>,
+) {
+    val b = Benchmark(Persistable::class.java, "Persisting chunk of ${props.size} relationships")
+    val params = mapOf("props" to props)
+    neo4jSession.executeWrite { tx ->
+        tx.run(
+                """
             UNWIND ${'$'}props AS map
             MATCH (s:Node {id: map.startId})
             MATCH (e:Node {id: map.endId})
@@ -139,13 +175,12 @@ private fun Collection<Edge<*>>.persist() {
             CALL apoc.create.relationship(s, map.type, properties, e) YIELD rel
             RETURN rel
             """
-                        .trimIndent(),
-                    params
-                )
-                .consume()
-        }
-        b.stop()
+                    .trimIndent(),
+                params
+            )
+            .consume()
     }
+    b.stop()
 }
 
 /**
@@ -189,7 +224,7 @@ fun Any.convert(originalKey: String, properties: MutableMap<String, Any?>) {
     }
 }
 
-val KClass<out Node>.labels: Set<String>
+val KClass<out PersistedAsNode>.labels: Set<String>
     get() {
         // Check, if we already computed the labels for this node's class
         return labelCache.computeIfAbsent(this) { setOf<String>("Node", this.simpleName!!) }

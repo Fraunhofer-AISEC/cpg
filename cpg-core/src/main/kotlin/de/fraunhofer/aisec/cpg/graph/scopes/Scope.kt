@@ -30,12 +30,14 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.Node.Companion.TO_STRING_STYLE
+import de.fraunhofer.aisec.cpg.graph.PersistedAsNode
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.LabelStatement
 import de.fraunhofer.aisec.cpg.graph.statements.LookupScopeStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.helpers.neo4j.NameConverter
+import kotlin.uuid.Uuid
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.GeneratedValue
 import org.neo4j.ogm.annotation.Id
@@ -60,10 +62,12 @@ sealed class Scope(
     @Relationship(value = "SCOPE", direction = Relationship.Direction.INCOMING)
     @JsonBackReference
     open var astNode: Node?
-) {
+) : PersistedAsNode {
 
     /** Required field for object graph mapping. It contains the scope id. */
-    @Id @GeneratedValue var id: Long? = null
+    @Id @GeneratedValue var legacyId: Long? = null
+
+    var id: Uuid = Uuid.random()
 
     /** FQN Name currently valid */
     var scopedName: String? = null
