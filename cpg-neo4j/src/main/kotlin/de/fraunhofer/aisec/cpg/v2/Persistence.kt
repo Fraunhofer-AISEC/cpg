@@ -34,12 +34,14 @@ import de.fraunhofer.aisec.cpg.graph.edges.allEdges
 import de.fraunhofer.aisec.cpg.graph.edges.flows.DependenceType
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Granularity
 import de.fraunhofer.aisec.cpg.graph.nodes
+import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.SecondOrderType
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.neo4j.DataflowGranularityConverter
 import de.fraunhofer.aisec.cpg.helpers.neo4j.NameConverter
 import de.fraunhofer.aisec.cpg.helpers.neo4j.SimpleNameConverter
+import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 import kotlin.reflect.full.createType
@@ -64,7 +66,7 @@ val neo4jSession by lazy {
     driver.session()
 }
 
-val labelCache: MutableMap<KClass<out Node>, Set<String>> = mutableMapOf()
+val labelCache: MutableMap<KClass<*>, Set<String>> = mutableMapOf()
 
 val schemaPropertiesCache:
     MutableMap<KClass<out Persistable>, Map<String, KProperty1<out Persistable, *>>> =
@@ -82,7 +84,8 @@ fun TranslationResult.persist() {
     val scopes = this.finalCtx.scopeManager.filterScopes { true }
     val languages = this.finalCtx.config.languages
     val types =
-        this.finalCtx.typeManager.firstOrderTypes + this.finalCtx.typeManager.secondOrderTypes
+        (this.finalCtx.typeManager.firstOrderTypes + this.finalCtx.typeManager.secondOrderTypes)
+            .toIdentitySet()
     val nodes = listOf(astNodes, scopes, languages, types).flatten()
     val edges = this@persist.allEdges<Edge<*>>()
 
@@ -99,7 +102,7 @@ fun TranslationResult.persist() {
     log.info("Persisting {} edges", edges.size)
     edges.persist()
 
-    log.info("Persisting {} extra relationships (types, scopes, languages)", edges.size)
+    log.info("Persisting extra relationships (types, scopes, languages)")
     nodes.persistExtraRelationships()
 
     b.stop()
@@ -147,11 +150,12 @@ private fun Collection<Edge<*>>.persist() {
 }
 
 /**
- * Some of our relationships are not real "edges" (yet). We need to handle these case separately
- * (for now).
+ * Some of our relationships are not real "edges" (i.e., [Edge]) (yet). We need to handle these case
+ * separately (for now).
  */
 private fun List<Node>.persistExtraRelationships() {
-    this.flatMap {
+    val relationships =
+        this.flatMap {
             listOfNotNull(
                 mapOf(
                     "startId" to it.id.toString(),
@@ -175,13 +179,19 @@ private fun List<Node>.persistExtraRelationships() {
                         "endId" to it.elementType.id.toString(),
                         "type" to "ELEMENT_TYPE"
                     )
+                } else if (it is FunctionPointerType) {
+                    mapOf(
+                        "startId" to it.id.toString(),
+                        "endId" to it.returnType.id.toString(),
+                        "type" to "RETURN_TYPE"
+                    )
                 } else {
                     null
                 }
             )
         }
-        .chunked(10000)
-        .map { chunk -> createRelationships(chunk) }
+
+    relationships.chunked(10000).map { chunk -> createRelationships(chunk) }
 }
 
 private fun createRelationships(
@@ -248,13 +258,28 @@ fun Any.convert(originalKey: String, properties: MutableMap<String, Any?>) {
     }
 }
 
-val KClass<out Node>.labels: Set<String>
+val KClass<*>.labels: Set<String>
     get() {
-        // Check, if we already computed the labels for this node's class
-        return labelCache.computeIfAbsent(this) {
-            setOfNotNull<String>("Node", this.simpleName) +
-                it.superclasses.mapNotNull { it.simpleName }
+        // Ignore interfaces and the Kotlin base class
+        if (this.java.isInterface || this == Any::class) {
+            return setOf()
         }
+
+        val cacheKey = this
+
+        // Note: we cannot use computeIfAbsent here, because we are calling our function
+        // recursively and this would result in a ConcurrentModificationException
+        if (labelCache.containsKey(cacheKey)) {
+            return labelCache[cacheKey] ?: setOf()
+        }
+
+        val labels = mutableSetOf<String>()
+        labels.addAll(this.superclasses.flatMap { it.labels })
+        this.simpleName?.let { labels.add(it) }
+
+        // update the cache
+        labelCache[cacheKey] = labels
+        return labels
     }
 
 val propertyTypes =
