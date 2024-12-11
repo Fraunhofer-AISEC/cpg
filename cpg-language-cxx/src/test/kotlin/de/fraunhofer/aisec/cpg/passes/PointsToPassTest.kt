@@ -982,6 +982,13 @@ class PointsToPassTest {
                 .first()
         assertNotNull(local_28Line172)
 
+        val local_10Line172 =
+            tu.allChildren<Reference> {
+                    it.location?.region?.startLine == 172 && it.name.localName == "local_10"
+                }
+                .first()
+        assertNotNull(local_10Line172)
+
         val local_28Line177 =
             tu.allChildren<Reference> {
                     it.location?.region?.startLine == 177 && it.name.localName == "local_28"
@@ -1019,6 +1026,10 @@ class PointsToPassTest {
         assertNotNull(local_28DerefLine179)
 
         // Literals
+        val literal10Line166 =
+            tu.allChildren<Literal<*>> { it.location?.region?.startLine == 166 }.first()
+        assertNotNull(literal10Line166)
+
         val literal0Line167 =
             tu.allChildren<Literal<*>> { it.location?.region?.startLine == 167 }.first()
         assertNotNull(literal0Line167)
@@ -1036,26 +1047,31 @@ class PointsToPassTest {
         // Effect from Line 160
         assertEquals(1, local_30Line165.prevDFG.size)
         assertTrue(local_30Line165.prevDFG.first() is ParameterMemoryValue)
-        assertEquals("param_1.value", local_30Line165.prevDFG.firstOrNull()?.name.toString())
+        assertEquals("param_1.derefvalue", local_30Line165.prevDFG.firstOrNull()?.name.toString())
 
         // Line 165
         assertEquals(1, local_18Line165.prevDFG.size)
         assertTrue(local_18Line165.prevDFG.first() is ParameterMemoryValue)
-        assertEquals("param_1.value", local_18Line165.prevDFG.firstOrNull()?.name.toString())
+        assertEquals("param_1.derefvalue", local_18Line165.prevDFG.firstOrNull()?.name.toString())
 
         // Line 172
         assertEquals(1, local_28Line172.prevDFG.size)
-        assertTrue(local_28Line172.prevDFG.firstOrNull() is UnknownMemoryValue)
-        assertEquals("dlmalloc", local_28Line172.prevDFG.firstOrNull()?.name?.localName)
+        assertEquals(local_10Line172, local_28Line172.prevDFG.firstOrNull())
 
         // Line 177
         assertEquals(1, local_28Line177.prevDFG.size)
-        assertTrue(local_28Line177.prevDFG.firstOrNull() is UnknownMemoryValue)
-        assertTrue(local_28Line177.prevDFG.firstOrNull()?.name?.localName == "dlmalloc")
+        assertEquals(local_10Line172, local_28Line177.prevDFG.firstOrNull())
 
         // Line 179
-        assertEquals(2, local_28DerefLine179.prevDFG.size)
-        assertTrue(local_28DerefLine179.prevDFG.contains(literal0Line167))
+        assertEquals(3, local_28DerefLine179.prevDFG.size)
+        assertTrue(local_28DerefLine179.prevDFG.contains(literal10Line166))
+        assertEquals(
+            1,
+            local_28DerefLine179.prevDFG
+                .filterIsInstance<UnknownMemoryValue>()
+                .filter { it.name.localName == "0" }
+                .size
+        )
         assertTrue(local_28DerefLine179.prevDFG.contains(literal0Line177))
         assertEquals(2, local_28DerefLine179.memoryAddress.size)
 

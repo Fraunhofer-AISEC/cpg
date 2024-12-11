@@ -546,34 +546,39 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                 other.elements.second == this.elements.second
         }
 
+        /* Fetch the entry for `node` from the DeclarationState. If there isn't any, create
+        an UnknownMemoryValue
+        */
+        private fun fetchElementFromDeclarationState(node: Node): IdentitySet<Node> {
+            val elements = this.declarationsState.elements[node]?.elements?.second?.elements
+            if (elements.isNullOrEmpty()) {
+                val newName = if (node is Literal<*>) Name(node.value.toString()) else node.name
+                val newEntry = identitySetOf<Node>(UnknownMemoryValue(newName))
+                (this.declarationsState.elements
+                        as?
+                        MutableMap<
+                            Node,
+                            LatticeElement<
+                                Pair<LatticeElement<Set<Node>>, LatticeElement<Set<Node>>>
+                            >
+                        >)
+                    ?.computeIfAbsent(node) {
+                        TupleLattice(
+                            Pair(PowersetLattice(identitySetOf(node)), PowersetLattice(newEntry))
+                        )
+                    }
+                (this.declarationsState.elements[node]?.elements?.second?.elements
+                        as? IdentitySet<Node>)
+                    ?.addAll(newEntry)
+                return newEntry
+            } else return elements.toIdentitySet()
+        }
+
         fun getValues(node: Node): Set<Node> {
             return when (node) {
                 is MemoryAddress -> {
                     /* In these cases, we simply have to fetch the current value for the MemoryAddress from the DeclarationState */
-                    val elements = this.declarationsState.elements[node]?.elements?.second?.elements
-                    if (elements == null || elements.isEmpty()) {
-                        val newEntry = identitySetOf(UnknownMemoryValue(node.name))
-                        (this.declarationsState.elements
-                                as?
-                                MutableMap<
-                                    Node,
-                                    LatticeElement<
-                                        Pair<LatticeElement<Set<Node>>, LatticeElement<Set<Node>>>
-                                    >
-                                >)
-                            ?.computeIfAbsent(node) {
-                                TupleLattice(
-                                    Pair(
-                                        PowersetLattice(identitySetOf(node)),
-                                        PowersetLattice(newEntry)
-                                    )
-                                )
-                            }
-                        (this.declarationsState.elements[node]?.elements?.second?.elements
-                                as? IdentitySet<Node>)
-                            ?.addAll(newEntry)
-                        newEntry
-                    } else elements
+                    fetchElementFromDeclarationState(node)
                 }
                 is PointerReference -> {
                     /* For PointerReferences, the value is the address of the input
@@ -591,15 +596,21 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                             else -> // TODO: How can we handle other cases?
                             identitySetOf(UnknownMemoryValue(node.name))
                         }
-                    inputVal.flatMap { this.getValues(it) }.toIdentitySet()
+                    val retVal = identitySetOf<Node>()
+                    inputVal.forEach {
+                        // If we have a literal here, we don't further resolve this b/c we don't
+                        // know anything about memory addresses
+                        if (it is Literal<*>) retVal.addAll(fetchElementFromDeclarationState(it))
+                        else retVal.addAll(this.getValues(it))
+                    }
+                    retVal
                 }
                 is Declaration -> {
                     /* For Declarations, we have to look up the last value written to it.
                      */
                     if (!node.memoryAddressIsInitialized())
                         node.memoryAddress = MemoryAddress(node.name)
-                    this.declarationsState.elements[node.memoryAddress]?.elements?.second?.elements
-                        ?: identitySetOf(UnknownMemoryValue(node.name))
+                    fetchElementFromDeclarationState(node)
                 }
                 is Reference -> {
                     /* For References, we have to look up the last value written to its declaration.
@@ -650,9 +661,9 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                         } else identitySetOf(UnknownMemoryValue(node.name))
                     } else identitySetOf(UnknownMemoryValue(node.name))
                 }
-                is Literal<*>, /*-> identitySetOf(UnknownMemoryValue(Name(node.value.toString())))*/
+                is Literal<*>, // -> identitySetOf(UnknownMemoryValue(Name(node.value.toString())))
                 is BinaryOperator -> identitySetOf(node)
-                else -> identitySetOf(UnknownMemoryValue(node.name))
+                else -> fetchElementFromDeclarationState(node)
             }
         }
 
@@ -724,10 +735,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
          * Look up the `indexString` in the `baseAddress`es and return the fieldAddresses
          * If no MemoryAddress exits at `indexString`, it will be created
          */
-        fun getFieldAddresses(
-            baseAddresses: List<MemoryAddress>,
-            nodeName: Name
-        ): Set<Node> {
+        fun getFieldAddresses(baseAddresses: List<MemoryAddress>, nodeName: Name): Set<Node> {
             val fieldAddresses = identitySetOf<MemoryAddress>()
 
             /* Theoretically, the base can have multiple addresses. Additionally, also the fieldDeclaration can have multiple Addresses. To simplify, we flatten the set and collect all possible addresses of the fieldDeclaration in a flat set */
