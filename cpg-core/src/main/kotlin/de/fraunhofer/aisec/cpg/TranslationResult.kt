@@ -35,9 +35,9 @@ import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.helpers.MeasurementHolder
 import de.fraunhofer.aisec.cpg.helpers.StatisticsHolder
 import de.fraunhofer.aisec.cpg.passes.Pass
-import org.neo4j.ogm.annotation.Relationship
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+import org.neo4j.ogm.annotation.Relationship
 
 /**
  * The global (intermediate) result of the translation. A [LanguageFrontend] will initially populate

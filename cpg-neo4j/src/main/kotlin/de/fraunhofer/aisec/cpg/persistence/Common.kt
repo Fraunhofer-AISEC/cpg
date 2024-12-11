@@ -38,6 +38,7 @@ import de.fraunhofer.aisec.cpg.helpers.neo4j.LocationConverter
 import de.fraunhofer.aisec.cpg.helpers.neo4j.NameConverter
 import de.fraunhofer.aisec.cpg.helpers.neo4j.SimpleNameConverter
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
+import java.math.BigInteger
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 import kotlin.reflect.KTypeProjection
@@ -133,6 +134,8 @@ fun Any.convert(originalKey: String, properties: MutableMap<String, Any?>) {
     } else if (this is Enum<*>) {
         properties.put(originalKey, this.name)
     } else if (this is Uuid) {
+        properties.put(originalKey, this.toString())
+    } else if (this is BigInteger) {
         properties.put(originalKey, this.toString())
     } else {
         properties.put(originalKey, this)
