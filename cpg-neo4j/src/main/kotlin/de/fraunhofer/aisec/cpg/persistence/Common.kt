@@ -25,19 +25,29 @@
  */
 package de.fraunhofer.aisec.cpg.persistence
 
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.Name
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.Persistable
 import de.fraunhofer.aisec.cpg.graph.edges.flows.DependenceType
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Granularity
+import de.fraunhofer.aisec.cpg.helpers.BenchmarkResults
 import de.fraunhofer.aisec.cpg.helpers.neo4j.DataflowGranularityConverter
+import de.fraunhofer.aisec.cpg.helpers.neo4j.LocationConverter
 import de.fraunhofer.aisec.cpg.helpers.neo4j.NameConverter
 import de.fraunhofer.aisec.cpg.helpers.neo4j.SimpleNameConverter
+import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
+import kotlin.reflect.KTypeProjection
+import kotlin.reflect.KVisibility
 import kotlin.reflect.full.createType
+import kotlin.reflect.full.isSubtypeOf
 import kotlin.reflect.full.memberProperties
 import kotlin.reflect.full.superclasses
 import kotlin.reflect.full.withNullability
+import kotlin.reflect.jvm.javaType
 import kotlin.uuid.Uuid
 import org.neo4j.ogm.typeconversion.CompositeAttributeConverter
 import org.slf4j.LoggerFactory
@@ -116,6 +126,8 @@ fun Any.convert(originalKey: String, properties: MutableMap<String, Any?>) {
         properties += NameConverter().toGraphProperties(this)
     } else if (this is Name) {
         properties.put(originalKey, SimpleNameConverter().toGraphProperty(this))
+    } else if (this is PhysicalLocation) {
+        properties += LocationConverter().toGraphProperties(this)
     } else if (this is Granularity) {
         properties += DataflowGranularityConverter().toGraphProperties(this)
     } else if (this is Enum<*>) {
@@ -160,6 +172,19 @@ val KClass<*>.labels: Set<String>
         return labels
     }
 
+/** A list of specific types that are intended to be ignored for persistence. */
+internal val ignoredTypes =
+    listOf(
+        TranslationContext::class.createType(),
+        TranslationConfiguration::class.createType(),
+        BenchmarkResults::class.createType(),
+        KClass::class.createType(listOf(KTypeProjection.STAR)),
+    )
+
+internal val nodeType = Node::class.createType()
+internal val collectionType = Collection::class.createType(listOf(KTypeProjection.STAR))
+internal val mapType = Map::class.createType(listOf(KTypeProjection.STAR, KTypeProjection.STAR))
+
 /**
  * Retrieves a map of schema properties (not relationships!) for the given class implementing
  * [Persistable].
@@ -173,15 +198,44 @@ val KClass<*>.labels: Set<String>
  */
 val KClass<out Persistable>.schemaProperties: Map<String, KProperty1<out Persistable, *>>
     get() {
-        // Check, if we already computed the labels for this node's class
+        // Check, if we already computed the properties for this node's class
         return schemaPropertiesCache.computeIfAbsent(this) {
             val schema = mutableMapOf<String, KProperty1<out Persistable, *>>()
             val properties = it.memberProperties
             for (property in properties) {
-                if (property.returnType.withNullability(false) in propertyTypes) {
+                if (isSimpleProperty(property)) {
                     schema.put(property.name, property)
                 }
             }
             schema
         }
     }
+
+/**
+ * Evaluates whether a given property qualifies as a "simple" property based on its characteristics.
+ *
+ * This evaluates to false, when
+ * - The property is a list (see [collectionType])
+ * - The property is a map (see [mapType])
+ * - The property is one of our [ignoredTypes]
+ * - The property is referring to a [Node]
+ * - The property is an interface
+ *
+ * @param property the property to be evaluated, belonging to a class implementing the Persistable
+ *   interface
+ * @return true if the property satisfies the conditions of being a "simple" property, false
+ *   otherwise
+ */
+private fun isSimpleProperty(property: KProperty1<out Persistable, *>): Boolean {
+    val returnType = property.returnType.withNullability(false)
+
+    return when {
+        property.visibility == KVisibility.PRIVATE -> false
+        ignoredTypes.any { returnType.isSubtypeOf(it) } -> false
+        returnType.isSubtypeOf(collectionType) -> false
+        returnType.isSubtypeOf(mapType) -> false
+        returnType.withNullability(false).isSubtypeOf(nodeType) -> false
+        (returnType.javaType as? Class<*>)?.isInterface == true -> false
+        else -> true
+    }
+}
