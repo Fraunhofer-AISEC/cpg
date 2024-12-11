@@ -26,48 +26,57 @@
 package de.fraunhofer.aisec.cpg.persistence
 
 import de.fraunhofer.aisec.cpg.TranslationResult
-import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.Persistable
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.allEdges
-import de.fraunhofer.aisec.cpg.graph.edges.flows.DependenceType
-import de.fraunhofer.aisec.cpg.graph.edges.flows.Granularity
 import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.SecondOrderType
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
-import de.fraunhofer.aisec.cpg.helpers.neo4j.DataflowGranularityConverter
-import de.fraunhofer.aisec.cpg.helpers.neo4j.NameConverter
-import de.fraunhofer.aisec.cpg.helpers.neo4j.SimpleNameConverter
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
-import kotlin.reflect.KClass
-import kotlin.reflect.KProperty1
-import kotlin.reflect.full.createType
-import kotlin.reflect.full.memberProperties
-import kotlin.reflect.full.superclasses
-import kotlin.reflect.full.withNullability
-import kotlin.uuid.Uuid
 import org.neo4j.driver.Session
-import org.neo4j.ogm.typeconversion.CompositeAttributeConverter
-import org.slf4j.LoggerFactory
 
 /**
- * docker run \ --name neo4j-apoc \ -p 7474:7474 -p 7687:7687 \ -d \ -e NEO4J_AUTH=neo4j/password \
- * -e NEO4JLABS_PLUGINS='["apoc"]' \ neo4j:5
+ * Defines the number of edges to be processed in a single batch operation during persistence.
+ *
+ * This constant is used for chunking collections of edges into smaller groups to optimize write
+ * performance and reduce memory usage when interacting with the Neo4j database. Specifically, it
+ * determines the maximum size of each chunk of edges to be persisted in one batch operation.
  */
-val labelCache: MutableMap<KClass<*>, Set<String>> = mutableMapOf()
+const val edgeChunkSize = 10000
 
-val schemaPropertiesCache:
-    MutableMap<KClass<out Persistable>, Map<String, KProperty1<out Persistable, *>>> =
-    mutableMapOf()
+/**
+ * Specifies the maximum number of nodes to be processed in a single chunk during persistence
+ * operations.
+ *
+ * This constant is used to control the size of batches when persisting a list of nodes to the
+ * database. Breaking the list into chunks of this size helps improve performance and memory
+ * efficiency during database writes. Each chunk is handled individually, ensuring that operations
+ * remain manageable even for large data sets.
+ */
+const val nodeChunkSize = 10000
 
-val log = LoggerFactory.getLogger("Persistence")
-
-val edgeChunkSize = 10000
-val nodeChunkSize = 10000
-
+/**
+ * Persists the current [TranslationResult] into a graph database.
+ *
+ * This method performs the following actions:
+ * - Logs information about the number and categories of nodes (e.g., AST nodes, scopes, types,
+ *   languages) and edges that are being persisted.
+ * - Collects nodes that include AST nodes, scopes, types, and languages, as well as all associated
+ *   edges.
+ * - Persists the collected nodes and edges.
+ * - Persists additional relationships between nodes, such as those related to types, scopes, and
+ *   languages.
+ * - Utilizes a benchmarking mechanism to measure and log the time taken to complete the persistence
+ *   operation.
+ *
+ * This method relies on the following context and properties:
+ * - The [TranslationResult.finalCtx] property for accessing the scope manager, type manager, and
+ *   configuration.
+ * - A [Session] context to perform persistence actions.
+ */
 context(Session)
 fun TranslationResult.persist() {
     val b = Benchmark(Persistable::class.java, "Persisting translation result")
@@ -100,6 +109,20 @@ fun TranslationResult.persist() {
     b.stop()
 }
 
+/**
+ * Persists a list of nodes into a database in chunks for efficient processing.
+ *
+ * This function utilizes the surrounding [Session] context to execute the database write
+ * operations. Nodes are processed in chunks of size determined by [nodeChunkSize], and each chunk
+ * is persisted using Cypher queries. The process is benchmarked using the [Benchmark] utility.
+ *
+ * The function generates a list of properties for the nodes, which includes their labels and other
+ * properties. These properties are used to construct Cypher queries that create nodes in the
+ * database with the given labels and properties.
+ *
+ * The function uses the APOC library for creating nodes in the database. For each node in the list,
+ * it extracts the labels and properties and executes the Cypher query to persist the node.
+ */
 context(Session)
 private fun List<Node>.persist() {
     this.chunked(nodeChunkSize).map { chunk ->
@@ -122,6 +145,24 @@ private fun List<Node>.persist() {
     }
 }
 
+/**
+ * Persists a collection of edges into a Neo4j graph database within the context of a [Session].
+ *
+ * This method ensures that the required index for node IDs is created before proceeding with
+ * relationship creation. The edges are subdivided into chunks, and for each chunk, the
+ * relationships are created in the database. Neo4j does not support multiple labels on edges, so
+ * each edge is duplicated for each assigned label. The created relationships are associated with
+ * their respective nodes and additional properties derived from the edges.
+ *
+ * Constraints:
+ * - The session context is required to execute write transactions.
+ * - Edges should define their labels and properties for appropriate persistence.
+ *
+ * Mechanisms:
+ * - An index for [Node] IDs is created (if not already existing) to optimize matching operations.
+ * - Edges are chunked to avoid overloading transactional operations.
+ * - Relationship properties and labels are mapped before using database utilities for creation.
+ */
 context(Session)
 private fun Collection<Edge<*>>.persist() {
     // Create an index for the "id" field of node, because we are "MATCH"ing on it in the edge
@@ -193,6 +234,14 @@ private fun List<Node>.persistExtraRelationships() {
     relationships.chunked(10000).map { chunk -> this@Session.createRelationships(chunk) }
 }
 
+/**
+ * Creates relationships in a graph database based on provided properties.
+ *
+ * @param props A list of maps, where each map represents properties of a relationship including
+ *   keys such as `startId`, `endId`, and `type`. The `startId` and `endId` identify the nodes to
+ *   connect, while `type` defines the type of the relationship. Additional properties for the
+ *   relationship can also be included in the map.
+ */
 private fun Session.createRelationships(
     props: List<Map<String, Any?>>,
 ) {
@@ -215,95 +264,3 @@ private fun Session.createRelationships(
     }
     b.stop()
 }
-
-/**
- * Returns the [Persistable]'s properties. This DOES NOT include relationships, but only properties
- * directly attached to the node/edge.
- */
-fun Persistable.properties(): Map<String, Any?> {
-    val properties = mutableMapOf<String, Any?>()
-    for (entry in this::class.schemaProperties) {
-        val value = entry.value.call(this)
-
-        if (value == null) {
-            continue
-        }
-
-        value.convert(entry.key, properties)
-    }
-
-    return properties
-}
-
-/**
- * Runs any conversions that are necessary by [CompositeAttributeConverter] and
- * [org.neo4j.ogm.typeconversion.AttributeConverter]. Since both of these classes are Neo4J OGM
- * classes, we need to find new base types at some point.
- */
-fun Any.convert(originalKey: String, properties: MutableMap<String, Any?>) {
-    // TODO: generalize conversions
-    if (this is Name && originalKey == "name") {
-        properties += NameConverter().toGraphProperties(this)
-    } else if (this is Name) {
-        properties.put(originalKey, SimpleNameConverter().toGraphProperty(this))
-    } else if (this is Granularity) {
-        properties += DataflowGranularityConverter().toGraphProperties(this)
-    } else if (this is Enum<*>) {
-        properties.put(originalKey, this.name)
-    } else if (this is Uuid) {
-        properties.put(originalKey, this.toString())
-    } else {
-        properties.put(originalKey, this)
-    }
-}
-
-val KClass<*>.labels: Set<String>
-    get() {
-        // Ignore interfaces and the Kotlin base class
-        if (this.java.isInterface || this == Any::class) {
-            return setOf()
-        }
-
-        val cacheKey = this
-
-        // Note: we cannot use computeIfAbsent here, because we are calling our function
-        // recursively and this would result in a ConcurrentModificationException
-        if (labelCache.containsKey(cacheKey)) {
-            return labelCache[cacheKey] ?: setOf()
-        }
-
-        val labels = mutableSetOf<String>()
-        labels.addAll(this.superclasses.flatMap { it.labels })
-        this.simpleName?.let { labels.add(it) }
-
-        // update the cache
-        labelCache[cacheKey] = labels
-        return labels
-    }
-
-val propertyTypes =
-    setOf(
-        String::class.createType(),
-        Int::class.createType(),
-        Long::class.createType(),
-        Boolean::class.createType(),
-        Name::class.createType(),
-        Uuid::class.createType(),
-        Granularity::class.createType(),
-        DependenceType::class.createType(),
-    )
-
-val KClass<out Persistable>.schemaProperties: Map<String, KProperty1<out Persistable, *>>
-    get() {
-        // Check, if we already computed the labels for this node's class
-        return schemaPropertiesCache.computeIfAbsent(this) {
-            val schema = mutableMapOf<String, KProperty1<out Persistable, *>>()
-            val properties = it.memberProperties
-            for (property in properties) {
-                if (property.returnType.withNullability(false) in propertyTypes) {
-                    schema.put(property.name, property)
-                }
-            }
-            schema
-        }
-    }

@@ -50,14 +50,10 @@ import picocli.CommandLine
 import picocli.CommandLine.ArgGroup
 
 private const val S_TO_MS_FACTOR = 1000
-private const val TIME_BETWEEN_CONNECTION_TRIES: Long = 2000
-private const val MAX_COUNT_OF_FAILS = 10
 private const val EXIT_SUCCESS = 0
 private const val EXIT_FAILURE = 1
-private const val VERIFY_CONNECTION = true
 private const val DEBUG_PARSER = true
-private const val AUTO_INDEX = "none"
-private const val PROTOCOL = "bolt://"
+private const val PROTOCOL = "neo4j://"
 
 private const val DEFAULT_HOST = "localhost"
 private const val DEFAULT_PORT = 7687
@@ -81,6 +77,14 @@ data class JsonGraph(val nodes: List<JsonNode>, val edges: List<JsonEdge>)
 /**
  * An application to export the <a href="https://github.com/Fraunhofer-AISEC/cpg">cpg</a> to a <a
  * href="https://github.com/Fraunhofer-AISEC/cpg">neo4j</a> database.
+ *
+ * Please make sure, that the [APOC](https://neo4j.com/labs/apoc/) plugin is enabled on your neo4j
+ * server. It is used in mass-creating nodes and relationships.
+ *
+ * For example using docker:
+ * ```
+ * docker run -p 7474:7474 -p 7687:7687 -d -e NEO4J_AUTH=neo4j/password -e NEO4JLABS_PLUGINS='["apoc"]' neo4j:5
+ * ```
  */
 class Application : Callable<Int> {
 
