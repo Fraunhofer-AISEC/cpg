@@ -27,27 +27,33 @@ package de.fraunhofer.aisec.cpg.passes.concepts
 
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.conceptNodes
 import de.fraunhofer.aisec.cpg.graph.concepts.file.FileOperationNode
 import de.fraunhofer.aisec.cpg.graph.followNextEOGEdgesUntilHit
-import de.fraunhofer.aisec.cpg.passes.TranslationResultPass
+import de.fraunhofer.aisec.cpg.passes.ComponentPass
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLate
 
 @ExecuteLate
 @DependsOn(FileConceptPass::class)
-class FileConceptEOGPass(ctx: TranslationContext) : TranslationResultPass(ctx) {
+class FileConceptEOGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     private val allCPGConceptNodes: MutableMap<Node, FileOperationNode> = HashMap()
 
     override fun cleanup() {
         // nothing to do
     }
 
-    override fun accept(result: TranslationResult) {
-        val conceptNodes = result.conceptNodes.filterIsInstance<FileOperationNode>()
-        conceptNodes.forEach { allCPGConceptNodes += it.cpgNode to it }
-        conceptNodes.forEach { handle(it) }
+    override fun accept(comp: Component) {
+        val parent = comp.astParent
+        if (parent is TranslationResult) {
+            val conceptNodes = parent.conceptNodes.filterIsInstance<FileOperationNode>()
+            conceptNodes.forEach { allCPGConceptNodes += it.cpgNode to it }
+            conceptNodes.forEach { handle(it) }
+        } else {
+            TODO("Failed to find a translation result.")
+        }
     }
 
     private fun handle(fileOp: FileOperationNode) {

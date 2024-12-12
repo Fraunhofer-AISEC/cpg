@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.passes.concepts
 
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.file.FileNode
 import de.fraunhofer.aisec.cpg.graph.concepts.file.newFileNode
@@ -34,12 +35,12 @@ import de.fraunhofer.aisec.cpg.graph.concepts.file.newFileReadNode
 import de.fraunhofer.aisec.cpg.graph.concepts.file.newFileWriteNode
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
-import de.fraunhofer.aisec.cpg.passes.TranslationResultPass
+import de.fraunhofer.aisec.cpg.passes.ComponentPass
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLate
 
 // TODO: TranslationResultPass is an ugly hack. However, we need this to access tr.additionalNodes
 @ExecuteLate
-class FileConceptPass(ctx: TranslationContext) : TranslationResultPass(ctx) {
+class FileConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
     private val fileNodes = mutableMapOf<Node, FileNode>()
     private lateinit var result: TranslationResult
 
@@ -47,12 +48,18 @@ class FileConceptPass(ctx: TranslationContext) : TranslationResultPass(ctx) {
         // nothing to do
     }
 
-    override fun accept(result: TranslationResult) {
-        this.result = result
+    override fun accept(comp: Component) {
+        val parent = comp.astParent
+        if (parent is TranslationResult) {
+            result = parent
+        } else {
+            TODO("Failed to find a translation result.")
+        }
+
         val walker = SubgraphWalker.ScopedWalker(ctx.scopeManager)
         walker.registerHandler { _, _, currNode -> handle(currNode) }
 
-        for (tu in result.components.flatMap { it.translationUnits }) {
+        for (tu in comp.translationUnits) {
             walker.iterate(tu)
         }
     }
