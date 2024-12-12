@@ -245,7 +245,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             return if (this.declSpecifier is IASTCompositeTypeSpecifier) {
                 if (this.declSpecifier.rawSignature.contains("typedef")) {
                     // This is very stupid. For composite type specifiers, we need to make sure that
-                    // we do not match simple because our declarations contain a typedef.
+                    // we do not match simply because our declarations contain a typedef.
                     // The problem is that we cannot correctly detect the case where both our "main"
                     // declaration and our sub declarations contain a typedef :(
                     (this.declSpecifier as IASTCompositeTypeSpecifier).getDeclarations(true).none {
