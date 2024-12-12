@@ -68,10 +68,10 @@ fun MetadataProvider.newLogOperationNode(
     logger.logOps += node
 
     // connect DFG
-    logArguments.forEach {
-        it.nextDFG += node
-        it.nextEOG += node
-        node.nextEOG += it
+    logArguments.forEach { cpgArgNode ->
+        cpgArgNode.nextDFG += node
+        // cpgArgNode.nextEOG += node
+        // node.nextEOG += cpgArgNode
     }
 
     result.additionalNodes += node

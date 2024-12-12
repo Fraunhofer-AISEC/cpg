@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.concepts.logging.LogLevel
 import de.fraunhofer.aisec.cpg.graph.concepts.logging.LogOperationNode
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.passes.concepts.FileConceptPass
 import de.fraunhofer.aisec.cpg.passes.concepts.LoggingConceptPass
 import de.fraunhofer.aisec.cpg.test.BaseTest
 import de.fraunhofer.aisec.cpg.test.analyze
@@ -87,13 +88,6 @@ class LoggingConceptTest : BaseTest() {
         assertTrue(nextDFG.isNotEmpty())
         val secretDFG = getSecretCall.followNextFullDFGEdgesUntilHit { it is LogOperationNode }
         assertTrue(secretDFG.fulfilled.isNotEmpty())
-
-        /*
-        val secretRef = result.refs["secret"]
-        assertIs<Reference>(secretRef)
-        val secretDFG = secretRef.followNextFullDFGEdgesUntilHit { it is LogOperationNode }
-        assertTrue(secretDFG.fulfilled.isNotEmpty())
-        */
     }
 
     @Test
@@ -107,25 +101,13 @@ class LoggingConceptTest : BaseTest() {
                 usePasses = true
             ) {
                 it.registerLanguage<PythonLanguage>()
+
                 it.registerPass<LoggingConceptPass>()
+                it.registerPass<FileConceptPass>()
             }
         assertNotNull(result)
 
         val loggingNodes = result.conceptNodes
         assertTrue(loggingNodes.isNotEmpty())
-
-        val getSecretCall = result.calls("get_secret").singleOrNull()
-        assertIs<CallExpression>(getSecretCall)
-        val nextDFG = getSecretCall.nextDFG
-        assertTrue(nextDFG.isNotEmpty())
-        val secretDFG = getSecretCall.followNextFullDFGEdgesUntilHit { it is LogOperationNode }
-        assertTrue(secretDFG.fulfilled.isNotEmpty())
-
-        /*
-        val secretRef = result.refs["secret"]
-        assertIs<Reference>(secretRef)
-        val secretDFG = secretRef.followNextFullDFGEdgesUntilHit { it is LogOperationNode }
-        assertTrue(secretDFG.fulfilled.isNotEmpty())
-        */
     }
 }

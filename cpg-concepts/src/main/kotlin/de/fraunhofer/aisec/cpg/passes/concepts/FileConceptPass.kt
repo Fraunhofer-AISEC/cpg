@@ -32,10 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.concepts.file.FileNode
 import de.fraunhofer.aisec.cpg.graph.concepts.file.newFileNode
 import de.fraunhofer.aisec.cpg.graph.concepts.file.newFileReadNode
 import de.fraunhofer.aisec.cpg.graph.concepts.file.newFileWriteNode
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.TranslationResultPass
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLate
@@ -94,31 +91,50 @@ class FileConceptPass(ctx: TranslationContext) : TranslationResultPass(ctx) {
                         singleAssignment.target as? Node ?: TODO("Cast failed unexpectedly.")
                     fileNodes += target to newFileNode
                 } else {
-                    TODO("CAnnot handle complex assignments yet.")
+                    TODO("Cannot handle complex assignments yet.")
                 }
             } else {
                 // what do we use as a key? think of code like open().write().close()
                 TODO("Open call not part of assign expr. Maybe directly used?")
             }
         } else if (callExpression is MemberCallExpression) {
-            val fileNode =
-                fileNodes.values
-                    .first() // TODO: this is an ugly hack until the refersTo property is fixed
-            val localName = name.localName.toString()
-            when (localName) {
-                "read" -> {
-                    newFileReadNode(
-                        cpgNode = callExpression,
-                        result = result,
-                        fileNode = fileNode,
-                    )
+            val fileNode = findConceptNode(callExpression, fileNodes)
+            fileNode?.let {
+                val localName = name.localName.toString()
+                when (localName) {
+                    "read" -> {
+                        newFileReadNode(
+                            cpgNode = callExpression,
+                            result = result,
+                            fileNode = fileNode,
+                        )
+                    }
+                    "write" -> {
+                        newFileWriteNode(
+                            cpgNode = callExpression,
+                            result = result,
+                            fileNode = fileNode
+                        )
+                    }
+                    else -> {}
                 }
-                "write" -> {
-                    newFileWriteNode(cpgNode = callExpression, result = result, fileNode = fileNode)
-                }
-                else -> {}
             }
         } else {}
+    }
+
+    private fun <T> findConceptNode(
+        callExpression: MemberCallExpression,
+        map: MutableMap<Node, T>
+    ): T? {
+
+        val callee = callExpression.callee
+        if ((callee is MemberExpression)) {
+            val refTo = (callee.base as? Reference)?.refersTo
+            refTo?.let {
+                return map[it]
+            }
+        }
+        return null
     }
 
     private fun getFileName(call: CallExpression): String {

@@ -27,33 +27,43 @@ package de.fraunhofer.aisec.cpg.passes.concepts
 
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.logging.LoggingNode
 import de.fraunhofer.aisec.cpg.graph.concepts.logging.newLogOperationNode
 import de.fraunhofer.aisec.cpg.graph.concepts.logging.newLoggingNode
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
-import de.fraunhofer.aisec.cpg.passes.TranslationResultPass
+import de.fraunhofer.aisec.cpg.passes.ComponentPass
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLate
 
-// TODO: TranslationResultPass is an ugly hack. However, we need this to access tr.additionalNodes
 @ExecuteLate
-class LoggingConceptPass(ctx: TranslationContext) :
-    TranslationResultPass(ctx) { // TODO: componentpass astParent -> result
-    private val loggers = mutableMapOf<Node, LoggingNode>()
+class LoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
+
+    /** A storage connceting CPG nodes with [LoggingNode]s. */
+    private val loggers = mutableMapOf<Declaration, LoggingNode>()
     private lateinit var result: TranslationResult
 
     override fun cleanup() {
         // nothing to do
     }
 
-    override fun accept(result: TranslationResult) {
-        this.result = result
+    override fun accept(comp: Component) {
+        val parent = comp.astParent
+        if (parent is TranslationResult) {
+            result = parent
+        } else {
+            TODO("Failed to find a translation result.")
+        }
+
+        // Now we start with the real pass work
         val walker = SubgraphWalker.ScopedWalker(ctx.scopeManager)
+
         walker.registerHandler { _, _, currNode -> handle(currNode) }
 
-        for (tu in result.components.flatMap { it.translationUnits }) {
+        for (tu in comp.translationUnits) {
             walker.iterate(tu)
         }
     }
@@ -69,62 +79,67 @@ class LoggingConceptPass(ctx: TranslationContext) :
     }
 
     private fun handleImport(importDeclaration: ImportDeclaration) {
-        if (importDeclaration.import.toString() == "logging") {
+        if (
+            importDeclaration.import.toString() == "logging"
+        ) { // TODO what about import logging as foo
             val newNode = newLoggingNode(cpgNode = importDeclaration, result)
-            loggers +=
-                importDeclaration to
-                    newNode // TODO using the importDeclaration feels wrong -> this should somehow
-            // be the imported symbol...
+            loggers += importDeclaration to newNode
         }
     }
 
     private fun handleCall(callExpression: CallExpression) {
+        val callee = callExpression.callee
         if (
-            callExpression.callee.name.startsWith("logging.")
-        ) { // TODO this assumes `logging` always refers to `import logging`
-            when (callExpression.callee.name.toString()) {
-                "logging.critical",
-                "logging.error",
-                "logging.warning",
-                "logging.info",
-                "logging.debug", -> {
-                    val logger =
-                        loggers
-                            .filterKeys { node -> node.name.toString() == "logging" }
-                            .values
-                            .singleOrNull()
-                            ?: TODO("Expected to find exactly one \"logging\" logger.")
+            callee is MemberExpression && (callee.base as Reference).refersTo in loggers.keys
+        ) { // TODO join with helper in FileConceptPass
+            val logger = loggers[(callee.base as Reference).refersTo]!! // TODO !!
+            logOpHelper(callExpression, logger)
+        } else if (callee is Reference && callee.name.toString().startsWith("logging")) {
+            val logger =
+                loggers
+                    .filterKeys { it is ImportDeclaration && it.name.toString() == "logging" }
+                    .values
+                    .singleOrNull() ?: TODO("Did not find an `import logging` logger.")
+            logOpHelper(callExpression = callExpression, logger = logger)
+        } else if (callee.name.toString() == "logging.getLogger") {
+            val newNode = newLoggingNode(cpgNode = callExpression, result)
 
-                    newLogOperationNode(
-                        cpgNode = callExpression,
-                        result = result,
-                        logger = logger,
-                        logArguments = callExpression.arguments,
-                        level = callExpression.callee.name.toString().substringAfterLast('.')
-                    )
-                }
-                "logging.getLogger" -> {
-                    val newNode = newLoggingNode(cpgNode = callExpression, result)
-                    if (callExpression.astParent is AssignExpression) {
-                        val assign = callExpression.astParent
-                        (assign as? AssignExpression)?.let {
-                            if (assign.isCompoundAssignment) {
-                                TODO("Cannot handle complex assignments yet.")
-                            } else {
-                                assign.lhs.singleOrNull()?.let { loggers += it to newNode }
-                            }
-                        }
+            if (callExpression.astParent is AssignExpression) {
+                val assign = callExpression.astParent
+
+                (assign as? AssignExpression)?.let {
+                    if (assign.isCompoundAssignment) {
+                        TODO("Cannot handle complex assignments yet.")
                     } else {
-                        TODO(
-                            "Logger not created as part of an assign expr. This is not yet supported."
-                        )
+                        assign.declarations.singleOrNull()?.let { loggers += it to newNode }
                     }
                 }
-                else -> {}
+            } else {
+                TODO("Logger not created as part of an assign expr. This is not yet supported.")
             }
         } else if (callExpression is MemberCallExpression) {
             // TODO MemberExpression base refersTo
             val log = ((callExpression.callee as MemberExpression).base as Reference).refersTo
+        }
+    }
+
+    private fun logOpHelper(callExpression: CallExpression, logger: LoggingNode) {
+        val name = callExpression.name.localName.toString()
+        when (name) {
+            "critical",
+            "error",
+            "warning",
+            "info",
+            "debug" -> {
+                newLogOperationNode(
+                    cpgNode = callExpression,
+                    result = result,
+                    logger = logger,
+                    logArguments = callExpression.arguments,
+                    level = name
+                )
+            }
+            else -> {}
         }
     }
 }
