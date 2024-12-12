@@ -243,9 +243,11 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     private val IASTSimpleDeclaration.isTypedef: Boolean
         get() {
             return if (this.declSpecifier is IASTCompositeTypeSpecifier) {
-                // This is very stupid. For composite type specifiers, we need to check whether any
-                // of the sub-declarations contain a typedef
                 if (this.declSpecifier.rawSignature.contains("typedef")) {
+                    // This is very stupid. For composite type specifiers, we need to make sure that
+                    // we do not match simple because our declarations contain a typedef.
+                    // The problem is that we cannot correctly detect the case where both our "main"
+                    // declaration and our sub declarations contain a typedef :(
                     (this.declSpecifier as IASTCompositeTypeSpecifier).getDeclarations(true).none {
                         it.rawSignature.contains("typedef")
                     }
