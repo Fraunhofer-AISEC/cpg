@@ -2,6 +2,11 @@
 // more conventionally spelled "typedef unsigned long long int ullong;"
 unsigned long typedef long int ullong;
 
+// usage of type that is identical to typedef
+unsigned long long int someUllong1;
+// usage of typedef
+ullong someUllong2;
+
 // also possible with structs
 struct bar {
   int a;
