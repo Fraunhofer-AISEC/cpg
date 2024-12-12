@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
@@ -74,6 +75,15 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder, EOGStart
         get() {
             return if (isDefinition) this else field
         }
+
+    /**
+     * Saves the information on which parameter(s) of the function are modified by the function. This
+     * is interesting since we need to add DFG edges between the modified parameter and the
+     * respective argument(s). For each [ParameterDeclaration] as well as the
+     * [MethodDeclaration.receiver] that has some incoming DFG-edge within this
+     * [FunctionDeclaration], we store all previous DFG nodes.
+     */
+    var functionSummary = mutableMapOf<Node, IdentitySet<Pair<Node, Boolean>>>()
 
     /** Returns true, if this function has a [body] statement. */
     fun hasBody(): Boolean {

@@ -153,10 +153,9 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                     }
                     // If so, store the last write for the parameter in the FunctionSummary
                     ?.forEach { value ->
-                        config.functionSummaries.functionToChangedParameters
-                            .computeIfAbsent(node) { mutableMapOf() }
+                        node.functionSummary
                             .computeIfAbsent(param) { identitySetOf() }
-                            .add(Pair(value, false))
+                            .add(Pair(value, true))
                     }
             }
         }
@@ -200,8 +199,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
             val parentFD = currentNode.scope?.parent?.astNode as? FunctionDeclaration
             if (parentFD != null) {
                 currentNode.returnValues.forEach { retval ->
-                    config.functionSummaries.functionToChangedParameters
-                        .computeIfAbsent(parentFD) { mutableMapOf() }
+                    parentFD.functionSummary
                         .computeIfAbsent(currentNode) { identitySetOf() }
                         .addAll(doubleState.getValues(retval).map { Pair(it, false) })
                 }
@@ -234,8 +232,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                     // In this dummy, all parameters point to the return
                     val newValues: IdentitySet<Pair<Node, Boolean>> =
                         invoke.parameters.map { Pair(it, false) }.toIdentitySet()
-                    config.functionSummaries.functionToChangedParameters
-                        .computeIfAbsent(invoke) { mutableMapOf() }[ReturnStatement()] = newValues
+                    invoke.functionSummary[ReturnStatement()] = newValues
                 }
             }
         }

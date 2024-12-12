@@ -38,7 +38,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.parseName
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.unknownType
-import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.matchesSignature
 import de.fraunhofer.aisec.cpg.tryCast
@@ -57,23 +56,12 @@ class DFGFunctionSummaries {
     /** Caches a mapping of the [FunctionDeclarationEntry] to a list of its [DFGEntry]. */
     val functionToDFGEntryMap = mutableMapOf<FunctionDeclarationEntry, List<DFGEntry>>()
 
-    /**
-     * Saves the information on which parameter(s) of a function are modified by the function. This
-     * is interesting since we need to add DFG edges between the modified parameter and the
-     * respective argument(s). For each [ParameterDeclaration] as well as the
-     * [MethodDeclaration.receiver] that has some incoming DFG-edge within this
-     * [FunctionDeclaration], we store all previous DFG nodes.
-     */
-    val functionToChangedParameters =
-        mutableMapOf<FunctionDeclaration, MutableMap<Node, IdentitySet<Pair<Node, Boolean>>>>()
-
     fun hasSummary(functionDeclaration: FunctionDeclaration) =
-        functionDeclaration in functionToChangedParameters
+        functionDeclaration.functionSummary.isNotEmpty()
 
     fun getLastWrites(
         functionDeclaration: FunctionDeclaration
-    ): Map<Node, Set<Pair<Node, Boolean>>> =
-        functionToChangedParameters[functionDeclaration] ?: mapOf()
+    ): Map<Node, Set<Pair<Node, Boolean>>> = functionDeclaration.functionSummary
 
     /** This function returns a list of [DataflowEntry] from the specified file. */
     private fun addEntriesFromFile(file: File): Map<FunctionDeclarationEntry, List<DFGEntry>> {
@@ -278,8 +266,7 @@ class DFGFunctionSummaries {
                         val paramTo =
                             paramIndex?.let { functionDeclaration.parameters.getOrNull(it) }
                         if (from != null && paramTo != null) {
-                            functionToChangedParameters
-                                .computeIfAbsent(functionDeclaration) { mutableMapOf() }
+                            functionDeclaration.functionSummary
                                 .computeIfAbsent(paramTo) { identitySetOf<Pair<Node, Boolean>>() }
                                 .add(Pair(from, derefSource))
                         }
@@ -291,8 +278,7 @@ class DFGFunctionSummaries {
                     val receiver = (functionDeclaration as? MethodDeclaration)?.receiver
                     if (from != null) {
                         if (receiver != null) {
-                            functionToChangedParameters
-                                .computeIfAbsent(functionDeclaration) { mutableMapOf() }
+                            functionDeclaration.functionSummary
                                 .computeIfAbsent(receiver) { identitySetOf<Pair<Node, Boolean>>() }
                                 .add(Pair(from, derefSource))
                         }

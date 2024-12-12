@@ -178,7 +178,8 @@ undefined4 sgx_ecall_key_to_out(long param_1)
   }
   printf("%d\n", *local_28);
   ecall_key_to_out(local_28);
-  if ((local_28 != (void *)0x0) &&
+  printf("%d\n", *local_28);
+  if ((local_28 != (void *)0x0) && /*printf("%d", *local_28) &&*/ 
      (iVar1 = memcpy_verw_s(local_18,local_10,local_28,local_10), iVar1 != 0)) {
     uVar2 = 1;
   }
@@ -189,8 +190,7 @@ LAB_001011ce:
   return uVar2;
 }
 
-void ecall_key_to_out(undefined8 *param_1)
-
+void ecall_key_to_out(/*undefined8*/ void *param_1)
 {
   undefined8 uVar1;
   

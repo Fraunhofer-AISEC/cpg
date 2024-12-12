@@ -70,8 +70,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     private fun connectInferredCallArguments(functionSummaries: DFGFunctionSummaries) {
         for (call in callsInferredFunctions) {
             for (invoked in call.invokes.filter { it.isInferred }) {
-                val changedParams =
-                    functionSummaries.functionToChangedParameters[invoked] ?: mapOf()
+                val changedParams = invoked.functionSummary
                 for ((param, _) in changedParams) {
                     if (param == (invoked as? MethodDeclaration)?.receiver) {
                         (call as? MemberCallExpression)

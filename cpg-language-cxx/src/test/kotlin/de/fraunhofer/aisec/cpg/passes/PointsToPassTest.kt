@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.printDFG
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.test.assertLocalName
@@ -269,9 +270,11 @@ class PointsToPassTest {
     @Test
     fun testStructs() {
         val file = File("src/test/resources/pointsto.cpp")
+        // val file = File("/tmp/pointsto.c")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
+                // it.registerLanguage<CLanguage>()
                 it.registerPass<PointsToPass>()
                 it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
             }
@@ -948,9 +951,13 @@ class PointsToPassTest {
         assertNotNull(tu)
 
         // ParameterDeclaration
-        val param_1 =
+        val param_1Line145 =
             tu.allChildren<ParameterDeclaration> { it.location?.region?.startLine == 145 }.first()
-        assertNotNull(param_1)
+        assertNotNull(param_1Line145)
+
+        val param_1Line193 =
+            tu.allChildren<ParameterDeclaration> { it.location?.region?.startLine == 193 }.first()
+        assertNotNull(param_1Line193)
 
         // References
         val local_20Line159 =
@@ -993,6 +1000,15 @@ class PointsToPassTest {
                 .first()
         assertNotNull(local_18Line165)
 
+        val local_10Line166 =
+            tu.allChildren<Reference> {
+                    it.location?.region?.startLine == 166 && it.name.localName == "local_10"
+                }
+                .first()
+        assertNotNull(local_10Line166)
+        File("/home/moe/.config/JetBrains/IdeaIC2024.1/scratches/scratch_1.md")
+            .writeText(local_10Line166.printDFG(maxConnections = 100))
+
         val local_28Line172 =
             tu.allChildren<Reference> {
                     it.location?.region?.startLine == 172 && it.name.localName == "local_28"
@@ -1014,6 +1030,13 @@ class PointsToPassTest {
                 .first()
         assertNotNull(local_28Line177)
 
+        val local_10Line177 =
+            tu.allChildren<Reference> {
+                    it.location?.region?.startLine == 177 && it.name.localName == "local_10"
+                }
+                .first()
+        assertNotNull(local_10Line177)
+
         val local_28Line180 =
             tu.allChildren<Reference> {
                     it.location?.region?.startLine == 180 && it.name.localName == "local_28"
@@ -1021,12 +1044,12 @@ class PointsToPassTest {
                 .first()
         assertNotNull(local_28Line180)
 
-        val local_10Line182 =
-            tu.allChildren<Reference> {
-                    it.location?.region?.startLine == 182 && it.name.localName == "local_10"
+        val local_28DerefLine181 =
+            tu.allChildren<PointerDereference> {
+                    it.location?.region?.startLine == 181 && it.name.localName == "local_28"
                 }
                 .first()
-        assertNotNull(local_10Line182)
+        assertNotNull(local_28DerefLine181)
 
         val local_28Line182 =
             tu.allChildren<Reference> {
@@ -1059,8 +1082,8 @@ class PointsToPassTest {
         // Line 159
         assertEquals(1, local_20Line159.prevDFG.size)
         assertEquals(1, local_20Line159.prevDFG.size)
-        assertEquals(1, param_1.prevDFG.size)
-        assertEquals(param_1.prevDFG.first(), local_20Line159.prevDFG.first())
+        assertEquals(1, param_1Line145.prevDFG.size)
+        assertEquals(param_1Line145.prevDFG.first(), local_20Line159.prevDFG.first())
 
         // Effect from Line 160
         assertEquals(1, local_30Line165.prevDFG.size)
@@ -1092,10 +1115,19 @@ class PointsToPassTest {
         )
         assertTrue(local_28DerefLine179.prevDFG.contains(literal0Line177))
         assertEquals(2, local_28DerefLine179.memoryAddress.size)
+        assertTrue(local_28DerefLine179.memoryAddress.contains(literal0Line167))
+        assertTrue(local_28DerefLine179.memoryAddress.contains(local_10Line172))
 
         // Line 180
         assertEquals(2, local_28Line180.prevDFG.size)
         assertTrue(literal0Line167 in local_28Line180.prevDFG)
+        assertTrue(local_10Line172 in local_28Line180.prevDFG)
+
+        // Line 181
+        println(local_28DerefLine181)
+
+        // Line 192
+        println(param_1Line193)
     }
 
     @Test
