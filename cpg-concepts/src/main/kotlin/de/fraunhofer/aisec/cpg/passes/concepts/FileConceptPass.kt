@@ -38,7 +38,6 @@ import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.ComponentPass
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLate
 
-// TODO: TranslationResultPass is an ugly hack. However, we need this to access tr.additionalNodes
 @ExecuteLate
 class FileConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
     private val fileNodes = mutableMapOf<Node, FileNode>()
