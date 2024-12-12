@@ -108,7 +108,8 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                 is Expression -> {
                     val newMemoryValues = value.elements.second.elements
                     val newMemoryAddresses =
-                        value.elements.first.elements.filterIsInstance<MemoryAddress>()
+                        value.elements.first.elements
+                            as Collection<Node> /*.filterIsInstance<MemoryAddress>()*/
                     if (newMemoryValues.isNotEmpty()) {
                         key.prevDFG.clear()
                         key.prevDFG.addAll(newMemoryValues)

@@ -326,9 +326,7 @@ class PointsToPassTest {
         // Line 51
         assertEquals(1, saLine51.memoryAddress.size)
         assertEquals(
-            (saLine51.base as? Reference)
-                ?.memoryAddress
-                ?.firstOrNull()
+            ((saLine51.base as? Reference)?.memoryAddress?.firstOrNull() as? MemoryAddress)
                 ?.fieldAddresses
                 ?.filter { it.key == saLine51.refersTo?.name.toString() }
                 ?.entries
@@ -343,9 +341,7 @@ class PointsToPassTest {
         // Line 52
         assertEquals(1, sbLine52.memoryAddress.size)
         assertEquals(
-            (sbLine52.base as? Reference)
-                ?.memoryAddress
-                ?.firstOrNull()
+            ((sbLine52.base as? Reference)?.memoryAddress?.firstOrNull() as? MemoryAddress)
                 ?.fieldAddresses
                 ?.filter { it.key == sbLine52.refersTo?.name.toString() }
                 ?.entries
@@ -360,9 +356,7 @@ class PointsToPassTest {
         // Line 53
         assertEquals(1, saLine53.memoryAddress.size)
         assertEquals(
-            (saLine53.base as? Reference)
-                ?.memoryAddress
-                ?.firstOrNull()
+            ((saLine53.base as? Reference)?.memoryAddress?.firstOrNull() as? MemoryAddress)
                 ?.fieldAddresses
                 ?.filter { it.key == saLine53.refersTo?.name.toString() }
                 ?.entries
@@ -376,9 +370,7 @@ class PointsToPassTest {
 
         assertEquals(1, sbLine53.memoryAddress.size)
         assertEquals(
-            (sbLine53.base as? Reference)
-                ?.memoryAddress
-                ?.firstOrNull()
+            ((sbLine53.base as? Reference)?.memoryAddress?.firstOrNull() as? MemoryAddress)
                 ?.fieldAddresses
                 ?.filter { it.key == sbLine53.refersTo?.name.toString() }
                 ?.entries
@@ -459,8 +451,14 @@ class PointsToPassTest {
 
         // Line 66
         assertEquals(1, n0Line66.memoryAddress.size)
+        assertTrue(n0Line66.arrayExpression.memoryAddress.first() is MemoryAddress)
         assertEquals(
-            n0Line66.arrayExpression.memoryAddress.first().fieldAddresses["0"]?.first(),
+            (n0Line66.arrayExpression.memoryAddress
+                .filterIsInstance<MemoryAddress>()
+                .firstOrNull()
+                ?.fieldAddresses
+                ?.get("0")
+                ?.first() as MemoryAddress),
             n0Line66.memoryAddress.first()
         )
         assertEquals(1, n0Line66.prevDFG.size)
@@ -469,7 +467,12 @@ class PointsToPassTest {
         // Line 67
         assertEquals(1, n0Line67.memoryAddress.size)
         assertEquals(
-            n0Line67.arrayExpression.memoryAddress.first().fieldAddresses["0"]?.first(),
+            (n0Line67.arrayExpression.memoryAddress
+                .filterIsInstance<MemoryAddress>()
+                .firstOrNull()
+                ?.fieldAddresses
+                ?.get("0")
+                ?.first() as MemoryAddress),
             n0Line67.memoryAddress.first()
         )
         assertEquals(1, n0Line67.prevDFG.size)
@@ -478,7 +481,12 @@ class PointsToPassTest {
         // Line 68
         assertEquals(1, n0Line68.memoryAddress.size)
         assertEquals(
-            n0Line68.arrayExpression.memoryAddress.first().fieldAddresses["0"]?.first(),
+            (n0Line68.arrayExpression.memoryAddress
+                .filterIsInstance<MemoryAddress>()
+                .firstOrNull()
+                ?.fieldAddresses
+                ?.get("0")
+                ?.first() as MemoryAddress),
             n0Line68.memoryAddress.first()
         )
         assertEquals(1, n0Line68.prevDFG.size)
@@ -487,7 +495,12 @@ class PointsToPassTest {
         // Line 71
         assertEquals(1, niLine71.memoryAddress.size)
         assertEquals(
-            niLine71.arrayExpression.memoryAddress.first().fieldAddresses["i"]?.first(),
+            (niLine71.arrayExpression.memoryAddress
+                .filterIsInstance<MemoryAddress>()
+                .firstOrNull()
+                ?.fieldAddresses
+                ?.get("i")
+                ?.first() as MemoryAddress),
             niLine71.memoryAddress.first()
         )
         assertEquals(1, niLine71.prevDFG.size)
@@ -496,7 +509,12 @@ class PointsToPassTest {
         // Line 75
         assertEquals(1, njLine75.memoryAddress.size)
         assertEquals(
-            njLine75.arrayExpression.memoryAddress.first().fieldAddresses["j"]?.first(),
+            (njLine75.arrayExpression.memoryAddress
+                .filterIsInstance<MemoryAddress>()
+                .firstOrNull()
+                ?.fieldAddresses
+                ?.get("j")
+                ?.first() as MemoryAddress),
             njLine75.memoryAddress.first()
         )
         // TODO: What are our expections for njLine75.prevDFG? I think null is fine, since we

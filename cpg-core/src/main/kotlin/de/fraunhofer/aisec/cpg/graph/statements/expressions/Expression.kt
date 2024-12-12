@@ -87,7 +87,7 @@ abstract class Expression : Statement(), HasType {
         }
 
     /** Each Expression also has a MemoryAddress. */
-    var memoryAddress = mutableSetOf<MemoryAddress>()
+    var memoryAddress = mutableSetOf<Node>()
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)
