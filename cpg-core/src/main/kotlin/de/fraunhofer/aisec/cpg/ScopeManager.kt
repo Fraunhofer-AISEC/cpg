@@ -510,16 +510,13 @@ class ScopeManager : ScopeProvider {
         }
 
         val extractedScope = extractScope(ref, startScope)
-        var scope: Scope?
-        val name: Name
+        // If the scope extraction fails, we can only return here directly without any result
         if (extractedScope == null) {
-            // the scope does not exist at all
-            scope = startScope
-            name = ref.name
-        } else {
-            scope = extractedScope.scope
-            name = extractedScope.adjustedName
+            return null
         }
+
+        var scope = extractedScope.scope
+        val name = extractedScope.adjustedName
         if (scope == null) {
             scope = startScope
         }
@@ -564,16 +561,22 @@ class ScopeManager : ScopeProvider {
         return decl
     }
 
+    /**
+     * This class represents the result of the [extractScope] operation. It contains a [scope]
+     * object, if a scope was found and the [adjustedName] that is normalized if any aliases were
+     * found during scope extraction.
+     */
     data class ScopeExtraction(val scope: Scope?, val adjustedName: Name)
 
     /**
-     * This function extracts a scope for the [Name], e.g. if the name is fully qualified. `null` is
-     * returned, if no scope can be extracted.
+     * This function extracts a scope for the [Name], e.g. if the name is fully qualified (wrapped
+     * in a [ScopeExtraction] object. `null` is returned if a scope was specified, but does not
+     * exist as a [Scope] object.
      *
-     * The pair returns the extracted scope and a name that is adjusted by possible import aliases.
-     * The extracted scope is "responsible" for the name (e.g. declares the parent namespace) and
-     * the returned name only differs from the provided name if aliasing was involved at the node
-     * location (e.g. because of imports).
+     * The returned object contains the extracted scope and a name that is adjusted by possible
+     * import aliases. The extracted scope is "responsible" for the name (e.g. declares the parent
+     * namespace) and the returned name only differs from the provided name if aliasing was involved
+     * at the node location (e.g. because of imports).
      *
      * Note: Currently only *fully* qualified names are properly resolved. This function will
      * probably return imprecise results for partially qualified names, e.g. if a name `A` inside
@@ -581,7 +584,7 @@ class ScopeManager : ScopeProvider {
      *
      * @param node the nodes name references a namespace constituted by a scope
      * @param scope the current scope relevant for the name resolution, e.g. parent of node
-     * @return a pair with the scope of node.name and the alias-adjusted name
+     * @return a [ScopeExtraction] object with the scope of node.name and the alias-adjusted name
      */
     fun extractScope(node: HasNameAndLocation, scope: Scope? = currentScope): ScopeExtraction? {
         return extractScope(node.name, node.location, scope)

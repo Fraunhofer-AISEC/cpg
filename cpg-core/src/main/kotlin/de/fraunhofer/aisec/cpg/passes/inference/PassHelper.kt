@@ -100,7 +100,8 @@ internal fun Pass<*>.tryRecordInference(
             "class"
         }
     // Determine the scope where we want to start our inference
-    val extractedScope = scopeManager.extractScope(type, scope = type.scope)
+    val extractedScope =
+        scopeManager.extractScope(type.name, location = locationHint?.location, scope = type.scope)
     var scope = extractedScope?.scope
 
     if (scope !is NameScope) {
