@@ -143,7 +143,8 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         // If we didn't find anything, we create a new function or method declaration
         if (target == null) {
             // Determine the scope where we want to start our inference
-            var (scope, _) = scopeManager.extractScope(reference)
+            val extractedScope = scopeManager.extractScope(reference)
+            var scope = extractedScope?.scope
             if (scope !is NameScope) {
                 scope = null
             }
@@ -539,7 +540,8 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         }
 
         // Set the start scope. This can either be the call's scope or a scope specified in an FQN
-        val (scope, _) = ctx.scopeManager.extractScope(source, source.scope)
+        val extractedScope = ctx.scopeManager.extractScope(source, source.scope)
+        val scope = extractedScope?.scope
         result.actualStartScope = scope ?: source.scope
 
         // If the function does not allow function overloading, and we have multiple candidate

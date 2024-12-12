@@ -509,7 +509,17 @@ class ScopeManager : ScopeProvider {
             return pair.second
         }
 
-        var (scope, name) = extractScope(ref, startScope)
+        val extractedScope = extractScope(ref, startScope)
+        var scope: Scope?
+        val name: Name
+        if (extractedScope == null) {
+            // the scope does not exist at all
+            scope = startScope
+            name = ref.name
+        } else {
+            scope = extractedScope.scope
+            name = extractedScope.adjustedName
+        }
         if (scope == null) {
             scope = startScope
         }
@@ -554,6 +564,8 @@ class ScopeManager : ScopeProvider {
         return decl
     }
 
+    data class ScopeExtraction(val scope: Scope?, val adjustedName: Name)
+
     /**
      * This function extracts a scope for the [Name], e.g. if the name is fully qualified. `null` is
      * returned, if no scope can be extracted.
@@ -571,7 +583,7 @@ class ScopeManager : ScopeProvider {
      * @param scope the current scope relevant for the name resolution, e.g. parent of node
      * @return a pair with the scope of node.name and the alias-adjusted name
      */
-    fun extractScope(node: HasNameAndLocation, scope: Scope? = currentScope): Pair<Scope?, Name> {
+    fun extractScope(node: HasNameAndLocation, scope: Scope? = currentScope): ScopeExtraction? {
         return extractScope(node.name, node.location, scope)
     }
 
@@ -596,7 +608,7 @@ class ScopeManager : ScopeProvider {
         name: Name,
         location: PhysicalLocation? = null,
         scope: Scope? = currentScope,
-    ): Pair<Scope?, Name> {
+    ): ScopeExtraction? {
         var n = name
         var s: Scope? = null
 
@@ -611,20 +623,18 @@ class ScopeManager : ScopeProvider {
 
             // this is a scoped call. we need to explicitly jump to that particular scope
             val scopes = filterScopes { (it is NameScope && it.name == scopeName) }
-            s =
-                if (scopes.isEmpty()) {
-                    Util.warnWithFileLocation(
-                        location,
-                        LOGGER,
-                        "Could not find the scope $scopeName needed to resolve $n"
-                    )
-                    null
-                } else {
-                    scopes[0]
-                }
+            if (scopes.isEmpty()) {
+                Util.warnWithFileLocation(
+                    location,
+                    LOGGER,
+                    "Could not find the scope $scopeName needed to resolve $n"
+                )
+                return null
+            }
+            s = scopes[0]
         }
 
-        return Pair(s, n)
+        return ScopeExtraction(s, n)
     }
 
     /**
@@ -892,7 +902,16 @@ class ScopeManager : ScopeProvider {
         startScope: Scope? = currentScope,
         predicate: ((Declaration) -> Boolean)? = null,
     ): List<Declaration> {
-        val (scope, n) = extractScope(name, location, startScope)
+        val extractedScope = extractScope(name, location, startScope)
+        val scope: Scope?
+        val n: Name
+        if (extractedScope == null) {
+            // the scope does not exist at all
+            return listOf()
+        } else {
+            scope = extractedScope.scope
+            n = extractedScope.adjustedName
+        }
 
         // We need to differentiate between a qualified and unqualified lookup. We have a qualified
         // lookup, if the scope is not null. In this case we need to stay within the specified scope
