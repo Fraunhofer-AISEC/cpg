@@ -13,6 +13,7 @@ val enableTypeScriptFrontend: Boolean by rootProject.extra
 val enableRubyFrontend: Boolean by rootProject.extra
 val enableJVMFrontend: Boolean by rootProject.extra
 val enableINIFrontend: Boolean by rootProject.extra
+val enableConcepts: Boolean by rootProject.extra
 
 dependencies {
     if (enableJavaFrontend) {
@@ -50,5 +51,9 @@ dependencies {
     if (enableINIFrontend) {
         api(project(":cpg-language-ini"))
         kover(project(":cpg-language-ini"))
+    }
+    if (enableConcepts) {
+        api(project(":cpg-concepts"))
+        kover(project(":cpg-concepts"))
     }
 }
