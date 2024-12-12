@@ -32,9 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.concepts.logging.LoggingNode
 import de.fraunhofer.aisec.cpg.graph.concepts.logging.newLogOperationNode
 import de.fraunhofer.aisec.cpg.graph.concepts.logging.newLoggingNode
 import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.TranslationResultPass
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLate
@@ -126,7 +124,7 @@ class LoggingConceptPass(ctx: TranslationContext) :
             }
         } else if (callExpression is MemberCallExpression) {
             // TODO MemberExpression base refersTo
-            // ((callExpression.callee as MemberExpression).base as Reference).refersTo
+            val log = ((callExpression.callee as MemberExpression).base as Reference).refersTo
         }
     }
 }

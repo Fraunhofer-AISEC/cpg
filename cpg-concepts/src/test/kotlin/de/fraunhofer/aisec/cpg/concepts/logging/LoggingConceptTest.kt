@@ -95,4 +95,37 @@ class LoggingConceptTest : BaseTest() {
         assertTrue(secretDFG.fulfilled.isNotEmpty())
         */
     }
+
+    @Test
+    fun test02() {
+        val topLevel = Path.of("src", "test", "resources", "concepts", "logging", "python")
+
+        val result =
+            analyze(
+                files = listOf(topLevel.resolve("simple_log2.py").toFile()),
+                topLevel = topLevel,
+                usePasses = false
+            ) {
+                it.registerLanguage<PythonLanguage>()
+                it.registerPass<LoggingConceptPass>()
+            }
+        assertNotNull(result)
+
+        val loggingNodes = result.conceptNodes
+        assertTrue(loggingNodes.isNotEmpty())
+
+        val getSecretCall = result.calls("get_secret").singleOrNull()
+        assertIs<CallExpression>(getSecretCall)
+        val nextDFG = getSecretCall.nextDFG
+        assertTrue(nextDFG.isNotEmpty())
+        val secretDFG = getSecretCall.followNextFullDFGEdgesUntilHit { it is LogOperationNode }
+        assertTrue(secretDFG.fulfilled.isNotEmpty())
+
+        /*
+        val secretRef = result.refs["secret"]
+        assertIs<Reference>(secretRef)
+        val secretDFG = secretRef.followNextFullDFGEdgesUntilHit { it is LogOperationNode }
+        assertTrue(secretDFG.fulfilled.isNotEmpty())
+        */
+    }
 }
