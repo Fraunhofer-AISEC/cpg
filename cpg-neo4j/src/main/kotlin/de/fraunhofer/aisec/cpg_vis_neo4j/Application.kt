@@ -30,10 +30,14 @@ import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase.Companion.fromFile
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.passes.*
+import de.fraunhofer.aisec.cpg.passes.concepts.FileConceptEOGPass
+import de.fraunhofer.aisec.cpg.passes.concepts.FileConceptPass
+import de.fraunhofer.aisec.cpg.passes.concepts.LoggingConceptPass
 import java.io.File
 import java.net.ConnectException
 import java.nio.file.Paths
 import java.util.concurrent.Callable
+import kotlin.Throws
 import kotlin.reflect.KClass
 import kotlin.system.exitProcess
 import org.neo4j.driver.exceptions.AuthenticationException
@@ -540,6 +544,9 @@ class Application : Callable<Int> {
             }
         }
         translationConfiguration.registerPass(PrepareSerialization::class)
+        translationConfiguration.registerPass(LoggingConceptPass::class)
+        translationConfiguration.registerPass(FileConceptPass::class)
+        translationConfiguration.registerPass(FileConceptEOGPass::class)
 
         mutuallyExclusiveParameters.jsonCompilationDatabase?.let {
             val db = fromFile(it)

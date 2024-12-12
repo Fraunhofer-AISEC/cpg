@@ -30,8 +30,8 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import kotlin.Throws
 import kotlin.math.absoluteValue
 
 /**
@@ -690,7 +690,7 @@ fun Node.followPrevFullDFG(predicate: (Node) -> Boolean): MutableList<Node>? {
     return null
 }
 
-/** Returns all [Node] children in this graph, starting with this [Node]. */
+/** Returns all AST [Node] children in this graph, starting with this [Node]. */
 val Node?.nodes: List<Node>
     get() = this.allChildren()
 
