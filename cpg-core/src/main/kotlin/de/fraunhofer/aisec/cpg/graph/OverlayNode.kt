@@ -23,36 +23,10 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.concepts.file
+package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.concepts.ConceptNode
-import java.util.*
-
-enum class FileAccessMode {
-    READ,
-    WRITE,
-    APPEND,
-    UNKNOWN
-
-    // what do we want to have here? binary? text? r+ vs w+? create mode? ...?
-}
-
-data class FileNode(
-    override val cpgNode: Node,
-    override val ops: MutableSet<FileOperationNode>,
-    val fileName: String,
-    val accessMode: FileAccessMode,
-) : ConceptNode(), IsFile {
-    override fun hashCode(): Int {
-        return Objects.hash(
-            super.hashCode(),
-            cpgNode,
-            fileName,
-            accessMode
-        ) // TODO: exclude ops because this would result in a circular reference. how to do this in
-        // a nice way?
-    }
-}
-
-// TODO: encoding? newline?
+/**
+ * Represents an extra node added to the CPG. These nodes can live next to the CPG, typically having
+ * shared edges to extend the original CPG graph.
+ */
+interface OverlayNode

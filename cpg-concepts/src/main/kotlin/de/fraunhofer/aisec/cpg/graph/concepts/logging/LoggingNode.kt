@@ -30,5 +30,5 @@ import de.fraunhofer.aisec.cpg.graph.concepts.ConceptNode
 
 data class LoggingNode(override val cpgNode: Node) : ConceptNode(), IsLogging {
     // TODO: target: stdout / err / file / ...
-    val logOps: MutableSet<LogOperationNode> = HashSet()
+    override val ops: MutableSet<LogOperationNode> = HashSet()
 }

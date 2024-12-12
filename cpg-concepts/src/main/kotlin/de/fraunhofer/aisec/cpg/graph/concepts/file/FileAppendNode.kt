@@ -29,6 +29,6 @@ import de.fraunhofer.aisec.cpg.graph.Node
 
 data class FileAppendNode(
     override val cpgNode: Node,
-    val fileNode: FileNode,
-    val what: List<Node>
+    override val concept: FileNode,
+    val what: List<Node>,
 ) : FileOperationNode()

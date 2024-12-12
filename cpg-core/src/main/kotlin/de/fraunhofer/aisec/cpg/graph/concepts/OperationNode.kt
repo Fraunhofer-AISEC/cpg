@@ -23,8 +23,12 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.concepts.file
+package de.fraunhofer.aisec.cpg.graph.concepts
 
-import de.fraunhofer.aisec.cpg.graph.concepts.ConceptNode
-
-abstract class FileConcept : ConceptNode()
+/**
+ * Represents an operation executed on/with a [ConceptNode] (stored in [concept]). This is typically
+ * a `write` on a file or log object or an `execute` on a database.
+ */
+abstract class OperationNode : Concept() {
+    abstract val concept: ConceptNode
+}

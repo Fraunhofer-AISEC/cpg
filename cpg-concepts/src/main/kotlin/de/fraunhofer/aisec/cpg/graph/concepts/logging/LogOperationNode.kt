@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.concepts.logging
 
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.concepts.ConceptNode
+import de.fraunhofer.aisec.cpg.graph.concepts.OperationNode
 
 enum class LogLevel {
     CRITICAL,
@@ -39,7 +39,7 @@ enum class LogLevel {
 
 data class LogOperationNode(
     override val cpgNode: Node,
-    val log: LoggingNode,
+    override val concept: LoggingNode,
     val logLevel: LogLevel,
-    val logArguments: List<Node>
-) : ConceptNode(), IsLogging
+    val logArguments: List<Node>,
+) : OperationNode(), IsLogging

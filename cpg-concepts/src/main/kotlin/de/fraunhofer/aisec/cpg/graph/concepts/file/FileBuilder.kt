@@ -68,7 +68,7 @@ fun MetadataProvider.newFileReadNode(
     result: TranslationResult,
     fileNode: FileNode,
 ): FileReadNode {
-    val node = FileReadNode(cpgNode = result, fileNode = fileNode, target = cpgNode.nextDFG)
+    val node = FileReadNode(cpgNode = result, concept = fileNode, target = cpgNode.nextDFG)
     node.codeAndLocationFrom(cpgNode)
 
     node.name = Name("read") // to have a nice name in Neo4j
@@ -91,7 +91,7 @@ fun MetadataProvider.newFileWriteNode(
     val node =
         FileWriteNode(
             cpgNode = cpgNode,
-            fileNode = fileNode,
+            concept = fileNode,
             what = (cpgNode as? CallExpression)?.arguments ?: listOf()
         )
     node.codeAndLocationFrom(cpgNode)
@@ -116,7 +116,7 @@ fun MetadataProvider.newFileAppendNode(
     val node =
         FileAppendNode(
             cpgNode = cpgNode,
-            fileNode = fileNode,
+            concept = fileNode,
             what = (cpgNode as? CallExpression)?.arguments ?: listOf()
         )
     node.codeAndLocationFrom(cpgNode)

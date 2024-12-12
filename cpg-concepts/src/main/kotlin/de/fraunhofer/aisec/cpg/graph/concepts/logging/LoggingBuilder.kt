@@ -49,7 +49,7 @@ fun MetadataProvider.newLogOperationNode(
     val node =
         LogOperationNode(
             cpgNode = cpgNode,
-            log = logger,
+            concept = logger,
             logArguments = logArguments,
             logLevel =
                 when (level) {
@@ -65,7 +65,7 @@ fun MetadataProvider.newLogOperationNode(
 
     node.name = Name("log." + node.logLevel) // to have a nice name in Neo4j
 
-    logger.logOps += node
+    logger.ops += node
 
     // connect DFG
     logArguments.forEach { cpgArgNode ->

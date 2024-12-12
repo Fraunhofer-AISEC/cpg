@@ -25,10 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.graph.concepts
 
-import de.fraunhofer.aisec.cpg.graph.Node
-
-/** Represents all nodes which model a "concept". */
-abstract class ConceptNode() : Node() {
-    /** All concept nodes are connected to an original cpg [Node] by this. */
-    abstract val cpgNode: Node
+/**
+ * Represents a new concept added to the CPG. This is intended for modelling "concepts" like
+ * logging, files, databases. The relevant operations on this concept are modeled as
+ * [OperationNode]s and stored in [ops].
+ */
+abstract class ConceptNode() : Concept() {
+    abstract val ops: Set<OperationNode>
 }

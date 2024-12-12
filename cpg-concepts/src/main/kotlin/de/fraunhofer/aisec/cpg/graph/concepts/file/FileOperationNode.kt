@@ -25,4 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.graph.concepts.file
 
-abstract class FileOperationNode() : FileConcept()
+import de.fraunhofer.aisec.cpg.graph.concepts.OperationNode
+
+abstract class FileOperationNode() : OperationNode(), IsFile

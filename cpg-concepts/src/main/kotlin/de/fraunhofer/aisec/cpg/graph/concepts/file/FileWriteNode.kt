@@ -27,5 +27,8 @@ package de.fraunhofer.aisec.cpg.graph.concepts.file
 
 import de.fraunhofer.aisec.cpg.graph.Node
 
-data class FileWriteNode(override val cpgNode: Node, val fileNode: FileNode, val what: List<Node>) :
-    FileOperationNode()
+data class FileWriteNode(
+    override val cpgNode: Node,
+    override val concept: FileNode,
+    val what: List<Node>
+) : FileOperationNode()
