@@ -65,7 +65,7 @@ class FileConceptTest : BaseTest() {
             analyze(
                 files = listOf(topLevel.resolve("file_write.py").toFile()),
                 topLevel = topLevel,
-                usePasses = false
+                usePasses = true
             ) {
                 it.registerLanguage<PythonLanguage>()
                 it.registerPass<FileConceptPass>()
@@ -85,7 +85,7 @@ class FileConceptTest : BaseTest() {
             analyze(
                 files = listOf(topLevel.resolve("testEOG.py").toFile()),
                 topLevel = topLevel,
-                usePasses = false
+                usePasses = true
             ) {
                 it.registerLanguage<PythonLanguage>()
                 it.registerPass<FileConceptPass>()

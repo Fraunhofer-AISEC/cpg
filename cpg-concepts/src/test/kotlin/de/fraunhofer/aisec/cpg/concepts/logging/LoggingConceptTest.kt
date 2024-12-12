@@ -47,7 +47,7 @@ class LoggingConceptTest : BaseTest() {
             analyze(
                 files = listOf(topLevel.resolve("simple_log.py").toFile()),
                 topLevel = topLevel,
-                usePasses = false
+                usePasses = true
             ) {
                 it.registerLanguage<PythonLanguage>()
                 it.registerPass<LoggingConceptPass>()
@@ -104,7 +104,7 @@ class LoggingConceptTest : BaseTest() {
             analyze(
                 files = listOf(topLevel.resolve("simple_log2.py").toFile()),
                 topLevel = topLevel,
-                usePasses = false
+                usePasses = true
             ) {
                 it.registerLanguage<PythonLanguage>()
                 it.registerPass<LoggingConceptPass>()
