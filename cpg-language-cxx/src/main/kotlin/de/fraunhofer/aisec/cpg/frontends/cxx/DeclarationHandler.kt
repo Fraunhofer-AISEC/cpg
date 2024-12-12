@@ -242,18 +242,18 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
      */
     private val IASTSimpleDeclaration.isTypedef: Boolean
         get() {
-            return if (this.rawSignature.contains("typedef")) {
-                if (this.declSpecifier is CPPASTCompositeTypeSpecifier) {
-                    // we need to make a difference between structs that have typedefs and structs
-                    // that are typedefs themselves
-                    this.declSpecifier.toString() == "struct" &&
-                        this.rawSignature.trim().startsWith("typedef")
+            return if (this.declSpecifier is IASTCompositeTypeSpecifier) {
+                // This is very stupid. For composite type specifiers, we need to check whether any
+                // of the sub-declarations contain a typedef
+                if (this.declSpecifier.rawSignature.contains("typedef")) {
+                    (this.declSpecifier as IASTCompositeTypeSpecifier).getDeclarations(true).none {
+                        it.rawSignature.contains("typedef")
+                    }
                 } else {
-
-                    true
+                    false
                 }
             } else {
-                false
+                this.declSpecifier.rawSignature.contains("typedef")
             }
         }
 

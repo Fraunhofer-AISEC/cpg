@@ -1777,4 +1777,40 @@ internal class CXXLanguageFrontendTest : BaseTest() {
 
         assertEquals(label, goto.targetLabel)
     }
+
+    @Test
+    fun testTypedefStructCPP() {
+        val file = File("src/test/resources/cxx/typedef_struct.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+                it.inferenceConfiguration(builder().enabled(false).build())
+            }
+        with(tu) {
+            val me = tu.memberExpressions
+            me.forEach { assertNotNull(it.refersTo) }
+
+            val test = tu.records.singleOrNull()
+            assertNotNull(test)
+            assertLocalName("test", test)
+        }
+    }
+
+    @Test
+    fun testTypedefStructC() {
+        val file = File("src/test/resources/c/typedef_struct.c")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CLanguage>()
+                it.inferenceConfiguration(builder().enabled(false).build())
+            }
+        with(tu) {
+            val me = tu.memberExpressions
+            me.forEach { assertNotNull(it.refersTo) }
+
+            val test = tu.records.singleOrNull()
+            assertNotNull(test)
+            assertLocalName("test", test)
+        }
+    }
 }

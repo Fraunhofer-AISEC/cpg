@@ -187,7 +187,7 @@ internal class TypedefTest : BaseTest() {
     fun testArbitraryTypedefLocation() {
         val tu =
             analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("typedefs.cpp").toFile()),
+                listOf(topLevel.resolve("weird_typedefs.cpp").toFile()),
                 topLevel,
                 true
             ) {
