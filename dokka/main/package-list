@@ -30,6 +30,7 @@ de.fraunhofer.aisec.cpg.helpers.neo4j
 de.fraunhofer.aisec.cpg.passes
 de.fraunhofer.aisec.cpg.passes.configuration
 de.fraunhofer.aisec.cpg.passes.inference
+de.fraunhofer.aisec.cpg.persistence
 de.fraunhofer.aisec.cpg.processing
 de.fraunhofer.aisec.cpg.processing.strategy
 de.fraunhofer.aisec.cpg.sarif
@@ -57,4 +58,5 @@ de.fraunhofer.aisec.cpg.frontends.ruby
 module:cpg-language-typescript
 de.fraunhofer.aisec.cpg.frontends.typescript
 module:cpg-neo4j
+de.fraunhofer.aisec.cpg.persistence
 de.fraunhofer.aisec.cpg_vis_neo4j
