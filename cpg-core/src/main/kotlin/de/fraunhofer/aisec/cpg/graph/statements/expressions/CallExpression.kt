@@ -120,7 +120,7 @@ open class CallExpression :
 
     /** Adds the specified [expression] with an optional [name] to this call. */
     fun addArgument(expression: Expression, name: String? = null) {
-        val edge = AstEdge(this, expression, labels = setOf("ARGUMENTS", "ARGUMENT"))
+        val edge = AstEdge(this, expression)
         edge.name = name
 
         argumentEdges.add(edge)
