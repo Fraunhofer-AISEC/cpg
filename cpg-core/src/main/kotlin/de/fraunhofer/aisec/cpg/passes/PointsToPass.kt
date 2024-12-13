@@ -132,8 +132,21 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
 
     private fun storeFunctionSummary(node: FunctionDeclaration, doubleState: PointsToState2) {
         node.parameters.forEach { param ->
+            val addresses = doubleState.getAddresses(param)
             val indexes = mutableSetOf<Node>()
-            doubleState.getAddresses(param).forEach { indexes.addAll(doubleState.getValues(it)) }
+            addresses.forEach { addr ->
+                indexes.addAll(doubleState.getValues(addr))
+                // Additionally check for partial writes to fields
+                if (addr is MemoryAddress) {
+                    addr.fieldAddresses
+                        .flatMap { it.value }
+                        .forEach {
+                            //                            indexes.addAll( doubleState.getValues(it)
+                            // )
+                            indexes.add(it)
+                        }
+                }
+            }
             indexes.forEach { index ->
                 val finalValue =
                     doubleState.declarationsState.elements
@@ -154,7 +167,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                     // If so, store the last write for the parameter in the FunctionSummary
                     ?.forEach { value ->
                         node.functionSummary
-                            .computeIfAbsent(param) { identitySetOf() }
+                            .computeIfAbsent(param) { mutableSetOf() }
                             .add(Pair(value, true))
                     }
             }
@@ -196,11 +209,12 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
         to add them to the FunctionSummary */
         var doubleState = doubleState
         if (currentNode.returnValues.isNotEmpty()) {
-            val parentFD = currentNode.scope?.parent?.astNode as? FunctionDeclaration
+            val parentFD =
+                currentNode.firstParentOrNull { it is FunctionDeclaration } as? FunctionDeclaration
             if (parentFD != null) {
                 currentNode.returnValues.forEach { retval ->
                     parentFD.functionSummary
-                        .computeIfAbsent(currentNode) { identitySetOf() }
+                        .computeIfAbsent(currentNode) { mutableSetOf() }
                         .addAll(doubleState.getValues(retval).map { Pair(it, false) })
                 }
             }
@@ -230,8 +244,8 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                 } else {
                     // Add a dummy function Summary so that we don't try this every time
                     // In this dummy, all parameters point to the return
-                    val newValues: IdentitySet<Pair<Node, Boolean>> =
-                        invoke.parameters.map { Pair(it, false) }.toIdentitySet()
+                    val newValues: MutableSet<Pair<Node, Boolean>> =
+                        invoke.parameters.map { Pair(it, false) }.toMutableSet()
                     invoke.functionSummary[ReturnStatement()] = newValues
                 }
             }
@@ -385,10 +399,12 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
         /* No need to set the address, this already happens in the constructor */
         val addresses = doubleState.getAddresses(currentNode)
 
-        val values =
-            (currentNode as? HasInitializer)?.initializer?.let { initializer ->
-                doubleState.getValues(initializer)
-            } ?: identitySetOf()
+        val values = identitySetOf<Node>()
+
+        (currentNode as? HasInitializer)?.initializer?.let { initializer ->
+            if (initializer is Literal<*>) values.add(initializer)
+            else values.addAll(doubleState.getValues(initializer))
+        }
 
         var doubleState =
             doubleState.push(
@@ -574,10 +590,6 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
 
         fun getValues(node: Node): Set<Node> {
             return when (node) {
-                is MemoryAddress -> {
-                    /* In these cases, we simply have to fetch the current value for the MemoryAddress from the DeclarationState */
-                    fetchElementFromDeclarationState(node)
-                }
                 is PointerReference -> {
                     /* For PointerReferences, the value is the address of the input
                      * For example, the value of `&i` is the address of `i`
@@ -595,12 +607,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                             identitySetOf(UnknownMemoryValue(node.name))
                         }
                     val retVal = identitySetOf<Node>()
-                    inputVal.forEach {
-                        // If we have a literal here, we don't further resolve this b/c we don't
-                        // know anything about memory addresses
-                        if (it is Literal<*>) retVal.addAll(fetchElementFromDeclarationState(it))
-                        else retVal.addAll(this.getValues(it))
-                    }
+                    inputVal.forEach { retVal.addAll(this.getValues(it)) }
                     retVal
                 }
                 is Declaration -> {
@@ -659,8 +666,8 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                         } else identitySetOf(UnknownMemoryValue(node.name))
                     } else identitySetOf(UnknownMemoryValue(node.name))
                 }
-                is Literal<*>, // -> identitySetOf(UnknownMemoryValue(Name(node.value.toString())))
                 is BinaryOperator -> identitySetOf(node)
+                /* In these cases, we simply have to fetch the current value for the MemoryAddress from the DeclarationState */
                 else -> fetchElementFromDeclarationState(node)
             }
         }

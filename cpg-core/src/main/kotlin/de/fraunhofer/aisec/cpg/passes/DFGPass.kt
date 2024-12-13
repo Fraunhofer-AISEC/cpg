@@ -84,7 +84,9 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                             callingContext = CallingContextOut(call)
                         )
                         (arg as? Reference)?.let {
-                            it.access = AccessValues.READWRITE
+                            // The access value stays on READ. Even if it's a pointer, only the
+                            // dereference will be written.
+                            // it.access = AccessValues.READWRITE
                             it.refersTo?.let { it1 -> it.nextDFGEdges += it1 }
                         }
                     }
