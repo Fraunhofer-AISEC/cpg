@@ -25,20 +25,35 @@
  */
 package de.fraunhofer.aisec.cpg_vis_neo4j
 
-import de.fraunhofer.aisec.cpg.graph.functions
+import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import java.math.BigInteger
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import org.junit.jupiter.api.Tag
 
 @Tag("integration")
 class Neo4JTest {
     @Test
-    @Throws(InterruptedException::class)
     fun testPush() {
         val (application, translationResult) = createTranslationResult()
 
         // 22 inferred functions, 1 inferred method, 2 inferred constructors, 11 regular functions
         assertEquals(36, translationResult.functions.size)
+
+        application.pushToNeo4j(translationResult)
+    }
+
+    @Test
+    fun testPushVeryLong() {
+        val (application, translationResult) = createTranslationResult("very_long.cpp")
+
+        assertEquals(1, translationResult.variables.size)
+
+        val lit = translationResult.variables["l"]?.initializer
+        assertIs<Literal<BigInteger>>(lit)
+        assertEquals(BigInteger("10958011617037158669"), lit.value)
 
         application.pushToNeo4j(translationResult)
     }
