@@ -509,7 +509,14 @@ class ScopeManager : ScopeProvider {
             return pair.second
         }
 
-        var (scope, name) = extractScope(ref, startScope)
+        val extractedScope = extractScope(ref, startScope)
+        // If the scope extraction fails, we can only return here directly without any result
+        if (extractedScope == null) {
+            return null
+        }
+
+        var scope = extractedScope.scope
+        val name = extractedScope.adjustedName
         if (scope == null) {
             scope = startScope
         }
@@ -555,13 +562,21 @@ class ScopeManager : ScopeProvider {
     }
 
     /**
-     * This function extracts a scope for the [Name], e.g. if the name is fully qualified. `null` is
-     * returned, if no scope can be extracted.
+     * This class represents the result of the [extractScope] operation. It contains a [scope]
+     * object, if a scope was found and the [adjustedName] that is normalized if any aliases were
+     * found during scope extraction.
+     */
+    data class ScopeExtraction(val scope: Scope?, val adjustedName: Name)
+
+    /**
+     * This function extracts a scope for the [Name], e.g. if the name is fully qualified (wrapped
+     * in a [ScopeExtraction] object. `null` is returned if a scope was specified, but does not
+     * exist as a [Scope] object.
      *
-     * The pair returns the extracted scope and a name that is adjusted by possible import aliases.
-     * The extracted scope is "responsible" for the name (e.g. declares the parent namespace) and
-     * the returned name only differs from the provided name if aliasing was involved at the node
-     * location (e.g. because of imports).
+     * The returned object contains the extracted scope and a name that is adjusted by possible
+     * import aliases. The extracted scope is "responsible" for the name (e.g. declares the parent
+     * namespace) and the returned name only differs from the provided name if aliasing was involved
+     * at the node location (e.g. because of imports).
      *
      * Note: Currently only *fully* qualified names are properly resolved. This function will
      * probably return imprecise results for partially qualified names, e.g. if a name `A` inside
@@ -569,9 +584,9 @@ class ScopeManager : ScopeProvider {
      *
      * @param node the nodes name references a namespace constituted by a scope
      * @param scope the current scope relevant for the name resolution, e.g. parent of node
-     * @return a pair with the scope of node.name and the alias-adjusted name
+     * @return a [ScopeExtraction] object with the scope of node.name and the alias-adjusted name
      */
-    fun extractScope(node: HasNameAndLocation, scope: Scope? = currentScope): Pair<Scope?, Name> {
+    fun extractScope(node: HasNameAndLocation, scope: Scope? = currentScope): ScopeExtraction? {
         return extractScope(node.name, node.location, scope)
     }
 
@@ -596,7 +611,7 @@ class ScopeManager : ScopeProvider {
         name: Name,
         location: PhysicalLocation? = null,
         scope: Scope? = currentScope,
-    ): Pair<Scope?, Name> {
+    ): ScopeExtraction? {
         var n = name
         var s: Scope? = null
 
@@ -611,20 +626,18 @@ class ScopeManager : ScopeProvider {
 
             // this is a scoped call. we need to explicitly jump to that particular scope
             val scopes = filterScopes { (it is NameScope && it.name == scopeName) }
-            s =
-                if (scopes.isEmpty()) {
-                    Util.warnWithFileLocation(
-                        location,
-                        LOGGER,
-                        "Could not find the scope $scopeName needed to resolve $n"
-                    )
-                    null
-                } else {
-                    scopes[0]
-                }
+            if (scopes.isEmpty()) {
+                Util.warnWithFileLocation(
+                    location,
+                    LOGGER,
+                    "Could not find the scope $scopeName needed to resolve $n"
+                )
+                return null
+            }
+            s = scopes[0]
         }
 
-        return Pair(s, n)
+        return ScopeExtraction(s, n)
     }
 
     /**
@@ -818,7 +831,7 @@ class ScopeManager : ScopeProvider {
                 // This process has several steps:
                 // First, do a quick local lookup, to see if we have a typedef our current scope
                 // (only do this if the name is not qualified)
-                if (!alias.isQualified() && current == currentScope) {
+                if (!alias.isQualified() && current == scope) {
                     val decl = current.typedefs[alias]
                     if (decl != null) {
                         return decl.type
@@ -892,7 +905,16 @@ class ScopeManager : ScopeProvider {
         startScope: Scope? = currentScope,
         predicate: ((Declaration) -> Boolean)? = null,
     ): List<Declaration> {
-        val (scope, n) = extractScope(name, location, startScope)
+        val extractedScope = extractScope(name, location, startScope)
+        val scope: Scope?
+        val n: Name
+        if (extractedScope == null) {
+            // the scope does not exist at all
+            return listOf()
+        } else {
+            scope = extractedScope.scope
+            n = extractedScope.adjustedName
+        }
 
         // We need to differentiate between a qualified and unqualified lookup. We have a qualified
         // lookup, if the scope is not null. In this case we need to stay within the specified scope
