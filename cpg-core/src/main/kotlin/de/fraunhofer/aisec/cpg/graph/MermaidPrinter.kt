@@ -109,7 +109,7 @@ fun <T : Edge<Node>> Node.printGraph(
 private fun Edge<Node>.label(): String {
     val builder = StringBuilder()
     builder.append("\"")
-    builder.append(this.labels)
+    builder.append(this.labels.joinToString(","))
 
     if (this is Dataflow) {
         var granularity = this.granularity
