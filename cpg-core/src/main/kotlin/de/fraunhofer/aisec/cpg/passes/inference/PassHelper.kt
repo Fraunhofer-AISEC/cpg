@@ -64,7 +64,8 @@ import kotlin.collections.forEach
  */
 fun Pass<*>.tryNamespaceInference(name: Name, locationHint: Node?): NamespaceDeclaration? {
     // Determine the scope where we want to start our inference
-    var (scope, _) = scopeManager.extractScope(name, location = locationHint?.location)
+    val extractedScope = scopeManager.extractScope(name, location = locationHint?.location)
+    var scope = extractedScope?.scope
 
     if (scope !is NameScope) {
         scope = null
@@ -99,7 +100,9 @@ internal fun Pass<*>.tryRecordInference(
             "class"
         }
     // Determine the scope where we want to start our inference
-    var (scope, _) = scopeManager.extractScope(type, scope = type.scope)
+    val extractedScope =
+        scopeManager.extractScope(type.name, location = locationHint?.location, scope = type.scope)
+    var scope = extractedScope?.scope
 
     if (scope !is NameScope) {
         scope = null
@@ -173,8 +176,8 @@ internal fun Pass<*>.tryVariableInference(
     } else if (ref.name.isQualified()) {
         // For now, we only infer globals at the top-most global level, i.e., no globals in
         // namespaces
-        val (scope, _) = scopeManager.extractScope(ref, null)
-        when (scope) {
+        val extractedScope = scopeManager.extractScope(ref, null)
+        when (val scope = extractedScope?.scope) {
             is NameScope -> {
                 log.warn(
                     "We should infer a namespace variable ${ref.name} at this point, but this is not yet implemented."
@@ -218,7 +221,8 @@ internal fun Pass<*>.tryFieldInference(
 ): VariableDeclaration? {
     // We only want to infer fields here, this can either happen if we have a reference with an
     // implicit receiver or if we have a scoped reference and the scope points to a record
-    val (scope, _) = scopeManager.extractScope(ref)
+    val extractedScope = scopeManager.extractScope(ref)
+    val scope = extractedScope?.scope
     if (scope != null && scope !is RecordScope) {
         return null
     }
