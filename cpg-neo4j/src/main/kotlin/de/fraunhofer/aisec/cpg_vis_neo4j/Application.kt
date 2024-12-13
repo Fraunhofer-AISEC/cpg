@@ -255,9 +255,7 @@ class Application : Callable<Int> {
     @CommandLine.Option(
         names = ["--exclusion-patterns"],
         description =
-            [
-                "Set top level directory of project structure. Default: Largest common path of all source files"
-            ]
+            ["Configures an exclusion pattern for files or directories that should not be parsed"]
     )
     private var exclusionPatterns: List<String> = listOf()
 
