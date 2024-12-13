@@ -25,27 +25,19 @@
  */
 package de.fraunhofer.aisec.cpg.persistence
 
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
-import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.Persistable
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeCollection
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeList
-import de.fraunhofer.aisec.cpg.graph.edges.flows.DependenceType
-import de.fraunhofer.aisec.cpg.graph.edges.flows.Granularity
-import de.fraunhofer.aisec.cpg.helpers.BenchmarkResults
-import de.fraunhofer.aisec.cpg.helpers.neo4j.DataflowGranularityConverter
-import de.fraunhofer.aisec.cpg.helpers.neo4j.LocationConverter
 import de.fraunhofer.aisec.cpg.helpers.neo4j.NameConverter
-import de.fraunhofer.aisec.cpg.helpers.neo4j.SimpleNameConverter
-import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.math.BigInteger
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 import kotlin.reflect.KTypeProjection
 import kotlin.reflect.KVariance
 import kotlin.reflect.KVisibility
+import kotlin.reflect.full.createInstance
 import kotlin.reflect.full.createType
 import kotlin.reflect.full.hasAnnotation
 import kotlin.reflect.full.isSubtypeOf
@@ -57,6 +49,8 @@ import kotlin.reflect.jvm.javaType
 import kotlin.uuid.Uuid
 import org.neo4j.ogm.annotation.Relationship
 import org.neo4j.ogm.annotation.Relationship.Direction.INCOMING
+import org.neo4j.ogm.annotation.typeconversion.Convert
+import org.neo4j.ogm.typeconversion.AttributeConverter
 import org.neo4j.ogm.typeconversion.CompositeAttributeConverter
 
 /**
@@ -91,22 +85,6 @@ val schemaRelationshipCache:
     mutableMapOf()
 
 /**
- * A set containing predefined property types represented as Kotlin type objects that can be used as
- * properties in [schemaProperties].
- */
-val propertyTypes =
-    setOf(
-        String::class.createType(),
-        Int::class.createType(),
-        Long::class.createType(),
-        Boolean::class.createType(),
-        Name::class.createType(),
-        Uuid::class.createType(),
-        Granularity::class.createType(),
-        DependenceType::class.createType(),
-    )
-
-/**
  * Returns the [Persistable]'s properties. This DOES NOT include relationships, but only properties
  * directly attached to the node/edge.
  */
@@ -119,7 +97,7 @@ fun Persistable.properties(): Map<String, Any?> {
             continue
         }
 
-        value.convert(entry.key, properties)
+        value.convert(entry, properties)
     }
 
     return properties
@@ -127,19 +105,31 @@ fun Persistable.properties(): Map<String, Any?> {
 
 /**
  * Runs any conversions that are necessary by [CompositeAttributeConverter] and
- * [org.neo4j.ogm.typeconversion.AttributeConverter]. Since both of these classes are Neo4J OGM
- * classes, we need to find new base types at some point.
+ * [AttributeConverter]. Since both of these classes are Neo4J OGM classes, we need to find new base
+ * types at some point.
  */
-fun Any.convert(originalKey: String, properties: MutableMap<String, Any?>) {
-    // TODO: generalize conversions
-    if (this is Name && originalKey == "name") {
+fun Any.convert(
+    entry: Map.Entry<String, KProperty1<out Persistable, *>>,
+    properties: MutableMap<String, Any?>
+) {
+    val originalKey = entry.key
+
+    val annotation = entry.value.javaField?.getAnnotation(Convert::class.java)
+    @Suppress("UNCHECKED_CAST")
+    if (annotation != null) {
+        val converter = annotation.value.createInstance()
+        if (converter is CompositeAttributeConverter<*>) {
+            properties += (converter as CompositeAttributeConverter<Any>).toGraphProperties(this)
+        } else if (converter is AttributeConverter<*, *>) {
+            properties.put(
+                originalKey,
+                (converter as AttributeConverter<Any, Any>).toGraphProperty(this)
+            )
+        }
+    } else if (this is Name && originalKey == "name") {
+        // needs to be extra because of the way annotations work, this will be re-designed once OGM
+        // is completely gone
         properties += NameConverter().toGraphProperties(this)
-    } else if (this is Name) {
-        properties.put(originalKey, SimpleNameConverter().toGraphProperty(this))
-    } else if (this is PhysicalLocation) {
-        properties += LocationConverter().toGraphProperties(this)
-    } else if (this is Granularity) {
-        properties += DataflowGranularityConverter().toGraphProperties(this)
     } else if (this is Enum<*>) {
         properties.put(originalKey, this.name)
     } else if (this is Uuid) {
@@ -184,15 +174,7 @@ val KClass<*>.labels: Set<String>
         return labels
     }
 
-/** A list of specific types that are intended to be ignored for persistence. */
-internal val ignoredTypes =
-    listOf(
-        TranslationContext::class.createType(),
-        TranslationConfiguration::class.createType(),
-        BenchmarkResults::class.createType(),
-        KClass::class.createType(listOf(KTypeProjection.STAR)),
-    )
-
+internal val kClassType = KClass::class.createType(listOf(KTypeProjection.STAR))
 internal val nodeType = Node::class.createType()
 internal val collectionType = Collection::class.createType(listOf(KTypeProjection.STAR))
 internal val collectionOfNodeType =
@@ -206,9 +188,8 @@ internal val mapType = Map::class.createType(listOf(KTypeProjection.STAR, KTypeP
  * [Persistable].
  *
  * This property computes a map that associates property names (as strings) to their corresponding
- * [KProperty1] objects, which represent the properties defined in the class. Only properties whose
- * return types are included in a predefined set of supported property types ([propertyTypes]) are
- * included in the map.
+ * [KProperty1] objects, which represent the properties defined in the class. Only properties for
+ * which [isSimpleProperty] returns true, are included.
  *
  * The computed map is cached to optimize subsequent lookups for properties of the same class.
  */
@@ -227,6 +208,25 @@ val KClass<out Persistable>.schemaProperties: Map<String, KProperty1<out Persist
         }
     }
 
+/**
+ * Provides a property that computes and returns a map of "relationships" for a given class
+ * implementing the [Persistable] interface.
+ *
+ * The relationships are represented as a `Map` where:
+ * - The key is the name of the relationship as a `String`.
+ * - The value is a reference to the property representing the relationship, encapsulated as a
+ *   [KProperty1].
+ *
+ * A "relationship" is determined based on a specific set of criteria defined by the
+ * [isRelationship] function. These criteria evaluate properties that are associated with other
+ * nodes in a graph model, excluding fields explicitly marked to skip persistence.
+ *
+ * The computed relationships are cached for performance optimization to ensure that repeated
+ * lookups do not re-evaluate the relationships for the same class.
+ *
+ * This property enhances schema introspection, allowing retrieval of relational data connections
+ * within classes modeled as entities in a graph database.
+ */
 val KClass<out Persistable>.schemaRelationships: Map<String, KProperty1<out Persistable, *>>
     get() {
         // Check, if we already computed the relationship for this node's class
@@ -249,10 +249,11 @@ val KClass<out Persistable>.schemaRelationships: Map<String, KProperty1<out Pers
  * This evaluates to true, when
  * - The property is not a list (see [collectionType])
  * - The property is not a map (see [mapType])
- * - The property is not one of our [ignoredTypes]
+ * - The property is not a [KClass]
  * - The property is not referring to a [Node]
  * - The property is not an interface
- * - The property does not have the annotation [DoNotPersist]
+ * - The property does not have the annotation [DoNotPersist] and its return type does not have the
+ *   annotation [DoNotPersist]
  *
  * @param property the property to be evaluated, belonging to a class implementing the Persistable
  *   interface
@@ -263,9 +264,11 @@ private fun isSimpleProperty(property: KProperty1<out Persistable, *>): Boolean 
     val returnType = property.returnType.withNullability(false)
 
     return when {
-        property.hasAnnotation<DoNotPersist>() -> false
         property.visibility == KVisibility.PRIVATE -> false
-        ignoredTypes.any { returnType.isSubtypeOf(it) } -> false
+        property.hasAnnotation<DoNotPersist>() -> false
+        returnType.hasAnnotation<DoNotPersist>() -> false
+        (returnType.javaType as? Class<*>)?.getAnnotation(DoNotPersist::class.java) != null -> false
+        returnType.isSubtypeOf(kClassType) -> false
         returnType.isSubtypeOf(collectionType) -> false
         returnType.isSubtypeOf(mapType) -> false
         returnType.isSubtypeOf(nodeType) -> false
@@ -306,6 +309,17 @@ private fun isRelationship(property: KProperty1<out Persistable, *>): Boolean {
     }
 }
 
+/**
+ * Retrieves the relational name associated with a property in the context of the raph schema.
+ *
+ * The `relationshipName` is determined based on the following rules:
+ * - If the property is annotated with the `@Relationship` annotation, the value of the annotation
+ *   is used as the relationship name, provided it is non-null and not an empty string.
+ * - If the property name ends with "Edge", this suffix is removed. This adjustment is made to
+ *   account for cases where two variables represent an edge, one named with "Edge" and another as
+ *   the delegate without the suffix. The desired name is the one without "Edge".
+ * - The resulting name is converted to UPPER_SNAKE_CASE for standardization.
+ */
 val <K, V> KProperty1<K, V>.relationshipName: String
     get() {
         // If we have a (legacy) Neo4J annotation for our relationship, we take this one
@@ -323,6 +337,15 @@ val <K, V> KProperty1<K, V>.relationshipName: String
         return this.name.substringBeforeLast("Edge").toUpperSnakeCase()
     }
 
+/**
+ * Converts the current string to UPPER_SNAKE_CASE format.
+ *
+ * Each word boundary in camelCase or PascalCase naming convention is replaced with an underscore,
+ * and all characters are converted to uppercase. This is commonly used for representing constants
+ * or environment-style variable names.
+ *
+ * @return A string converted to UPPER_SNAKE_CASE.
+ */
 fun String.toUpperSnakeCase(): String {
     val pattern = "(?<=.)[A-Z]".toRegex()
     return this.replace(pattern, "_$0").uppercase()

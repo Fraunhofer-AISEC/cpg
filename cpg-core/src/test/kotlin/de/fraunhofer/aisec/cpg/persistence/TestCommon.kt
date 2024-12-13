@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.persistence
 
+import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -54,7 +55,7 @@ class TestCommon {
 
     @Test
     fun testSchemaRelationships() {
-        val relationships = FunctionDeclaration::class.schemaRelationships
+        var relationships = FunctionDeclaration::class.schemaRelationships
         assertEquals(
             listOf(
                 "ANNOTATIONS",
@@ -75,6 +76,23 @@ class TestCommon {
                 "THROWS_TYPES",
                 "TYPE",
                 "USAGE",
+            ),
+            relationships.keys.sorted()
+        )
+
+        relationships = TranslationResult::class.schemaRelationships
+        assertEquals(
+            listOf(
+                "ADDITIONAL_NODES",
+                "ANNOTATIONS",
+                "AST",
+                "CDG",
+                "COMPONENTS",
+                "DFG",
+                "EOG",
+                "LANGUAGE",
+                "PDG",
+                "SCOPE",
             ),
             relationships.keys.sorted()
         )
