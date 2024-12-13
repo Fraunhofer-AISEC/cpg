@@ -25,10 +25,16 @@
  */
 package de.fraunhofer.aisec.cpg.graph.concepts
 
+import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.OverlayNode
+
 /**
- * Represents an operation executed on/with a [ConceptNode] (stored in [concept]). This is typically
- * a `write` on a file or log object or an `execute` on a database.
+ * Represents an operation executed on/with a [Concept] (stored in [concept]). This is typically a
+ * `write` on a file or log object or an `execute` on a database.
  */
-abstract class OperationNode : Concept() {
-    abstract val concept: ConceptNode
+abstract class Operation : OverlayNode() {
+    /** All concept nodes are connected to an original cpg [Node] by this. */
+    abstract val cpgNode: Node
+    /** The [Concept] this operation belongs to. */
+    abstract val concept: Concept
 }
