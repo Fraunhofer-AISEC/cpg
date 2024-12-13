@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.enhancements.types
 
+import de.fraunhofer.aisec.cpg.InferenceConfiguration.Companion.builder
+import de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
 import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
@@ -34,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.types.NumericType
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.variables
 import de.fraunhofer.aisec.cpg.test.*
+import java.io.File
 import java.nio.file.Path
 import kotlin.test.*
 
@@ -187,7 +190,7 @@ internal class TypedefTest : BaseTest() {
     fun testArbitraryTypedefLocation() {
         val tu =
             analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("typedefs.cpp").toFile()),
+                listOf(topLevel.resolve("weird_typedefs.cpp").toFile()),
                 topLevel,
                 true
             ) {
@@ -195,8 +198,15 @@ internal class TypedefTest : BaseTest() {
             }
 
         val ullong1 = tu.variables["someUllong1"]
+        assertNotNull(ullong1)
+
         val ullong2 = tu.variables["someUllong2"]
-        assertEquals(ullong1?.type, ullong2?.type)
+        assertNotNull(ullong2)
+        assertEquals(ullong1.type, ullong2.type)
+
+        val records = tu.records
+        assertEquals(2, records.size)
+        assertEquals(listOf("bar", "foo"), records.map { it.name.localName })
     }
 
     @Test
@@ -242,5 +252,41 @@ internal class TypedefTest : BaseTest() {
         val size = result.memberExpressions["size"]
         assertNotNull(size)
         assertRefersTo(size, sizeField)
+    }
+
+    @Test
+    fun testTypedefStructCPP() {
+        val file = File("src/test/resources/cxx/typedef_struct.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+                it.inferenceConfiguration(builder().enabled(false).build())
+            }
+        with(tu) {
+            val me = tu.memberExpressions
+            me.forEach { assertNotNull(it.refersTo) }
+
+            val test = tu.records.singleOrNull()
+            assertNotNull(test)
+            assertLocalName("test", test)
+        }
+    }
+
+    @Test
+    fun testTypedefStructC() {
+        val file = File("src/test/resources/c/typedef_struct.c")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CLanguage>()
+                it.inferenceConfiguration(builder().enabled(false).build())
+            }
+        with(tu) {
+            val me = tu.memberExpressions
+            me.forEach { assertNotNull(it.refersTo) }
+
+            val test = tu.records.singleOrNull()
+            assertNotNull(test)
+            assertLocalName("test", test)
+        }
     }
 }

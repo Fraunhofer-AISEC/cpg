@@ -818,7 +818,7 @@ class ScopeManager : ScopeProvider {
                 // This process has several steps:
                 // First, do a quick local lookup, to see if we have a typedef our current scope
                 // (only do this if the name is not qualified)
-                if (!alias.isQualified() && current == currentScope) {
+                if (!alias.isQualified() && current == scope) {
                     val decl = current.typedefs[alias]
                     if (decl != null) {
                         return decl.type
