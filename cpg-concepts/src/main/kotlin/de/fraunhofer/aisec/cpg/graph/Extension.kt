@@ -26,9 +26,12 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.TranslationResult
-import de.fraunhofer.aisec.cpg.graph.concepts.ConceptNode
+import de.fraunhofer.aisec.cpg.graph.concepts.Concept
+import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 
-val TranslationResult.conceptNodes: List<ConceptNode>
-    get() = this.additionalNodes.filterIsInstance<ConceptNode>() // doesn't work because AST
+val TranslationResult.conceptNodes: List<Concept>
+    get() = this.additionalNodes.filterIsInstance<Concept>() // doesn't work because AST
+val TranslationResult.operationNodes: List<Operation>
+    get() = this.additionalNodes.filterIsInstance<Operation>()
 
 // TODO: belongs to concept -> check parent recursively

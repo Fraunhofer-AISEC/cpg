@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.concepts.file
 
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.concepts.ConceptNode
+import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import java.util.*
 
 enum class FileAccessMode {
@@ -43,7 +43,7 @@ data class FileNode(
     override val ops: MutableSet<FileOperationNode>,
     val fileName: String,
     val accessMode: FileAccessMode,
-) : ConceptNode(), IsFile {
+) : Concept(), IsFile {
     override fun hashCode(): Int {
         return Objects.hash(
             super.hashCode(),
