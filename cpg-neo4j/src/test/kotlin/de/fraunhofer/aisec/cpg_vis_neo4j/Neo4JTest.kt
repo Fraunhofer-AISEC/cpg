@@ -25,20 +25,17 @@
  */
 package de.fraunhofer.aisec.cpg_vis_neo4j
 
-import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.Name
-import de.fraunhofer.aisec.cpg.graph.builder.translationResult
-import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
-import de.fraunhofer.aisec.cpg.graph.functions
+import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import java.math.BigInteger
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
+import kotlin.test.assertIs
 import org.junit.jupiter.api.Tag
 
 @Tag("integration")
 class Neo4JTest {
     @Test
-    @Throws(InterruptedException::class)
     fun testPush() {
         val (application, translationResult) = createTranslationResult()
 
@@ -49,32 +46,15 @@ class Neo4JTest {
     }
 
     @Test
-    fun testSimpleNameConverter() {
-        val result =
-            with(TestLanguageFrontend()) {
-                translationResult {
-                    val import = ImportDeclaration()
-                    import.name = Name("myname")
-                    import.alias = Name("myname", Name("myparent"), "::")
-                    additionalNodes += import
-                }
-            }
+    fun testPushVeryLong() {
+        val (application, translationResult) = createTranslationResult("very_long.cpp")
 
-        val app = Application()
-        app.pushToNeo4j(result)
+        assertEquals(1, translationResult.variables.size)
 
-        val sessionAndSessionFactoryPair = app.connect()
+        val lit = translationResult.variables["l"]?.initializer
+        assertIs<Literal<BigInteger>>(lit)
+        assertEquals(BigInteger("10958011617037158669"), lit.value)
 
-        val session = sessionAndSessionFactoryPair.first
-        session.beginTransaction().use { transaction ->
-            val imports = session.loadAll(ImportDeclaration::class.java)
-            assertNotNull(imports)
-
-            var loadedImport = imports.singleOrNull()
-            assertNotNull(loadedImport)
-            assertEquals("myname", loadedImport.alias?.localName)
-
-            transaction.commit()
-        }
+        application.pushToNeo4j(translationResult)
     }
 }

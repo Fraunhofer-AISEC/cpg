@@ -30,37 +30,30 @@ import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase.Companion.fromFile
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.passes.*
+import de.fraunhofer.aisec.cpg.persistence.persist
 import java.io.File
 import java.net.ConnectException
 import java.nio.file.Paths
 import java.util.concurrent.Callable
 import kotlin.reflect.KClass
 import kotlin.system.exitProcess
-import org.neo4j.driver.exceptions.AuthenticationException
-import org.neo4j.ogm.config.Configuration
+import org.neo4j.driver.GraphDatabase
 import org.neo4j.ogm.context.EntityGraphMapper
 import org.neo4j.ogm.context.MappingContext
 import org.neo4j.ogm.cypher.compiler.MultiStatementCypherCompiler
 import org.neo4j.ogm.cypher.compiler.builders.node.DefaultNodeBuilder
 import org.neo4j.ogm.cypher.compiler.builders.node.DefaultRelationshipBuilder
-import org.neo4j.ogm.exception.ConnectionException
 import org.neo4j.ogm.metadata.MetaData
-import org.neo4j.ogm.session.Session
-import org.neo4j.ogm.session.SessionFactory
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import picocli.CommandLine
 import picocli.CommandLine.ArgGroup
 
 private const val S_TO_MS_FACTOR = 1000
-private const val TIME_BETWEEN_CONNECTION_TRIES: Long = 2000
-private const val MAX_COUNT_OF_FAILS = 10
 private const val EXIT_SUCCESS = 0
 private const val EXIT_FAILURE = 1
-private const val VERIFY_CONNECTION = true
 private const val DEBUG_PARSER = true
-private const val AUTO_INDEX = "none"
-private const val PROTOCOL = "bolt://"
+private const val PROTOCOL = "neo4j://"
 
 private const val DEFAULT_HOST = "localhost"
 private const val DEFAULT_PORT = 7687
@@ -84,6 +77,14 @@ data class JsonGraph(val nodes: List<JsonNode>, val edges: List<JsonEdge>)
 /**
  * An application to export the <a href="https://github.com/Fraunhofer-AISEC/cpg">cpg</a> to a <a
  * href="https://github.com/Fraunhofer-AISEC/cpg">neo4j</a> database.
+ *
+ * Please make sure, that the [APOC](https://neo4j.com/labs/apoc/) plugin is enabled on your neo4j
+ * server. It is used in mass-creating nodes and relationships.
+ *
+ * For example using docker:
+ * ```
+ * docker run -p 7474:7474 -p 7687:7687 -d -e NEO4J_AUTH=neo4j/password -e NEO4JLABS_PLUGINS='["apoc"]' neo4j:5
+ * ```
  */
 class Application : Callable<Int> {
 
@@ -252,6 +253,13 @@ class Application : Callable<Int> {
     private var topLevel: File? = null
 
     @CommandLine.Option(
+        names = ["--exclusion-patterns"],
+        description =
+            ["Configures an exclusion pattern for files or directories that should not be parsed"]
+    )
+    private var exclusionPatterns: List<String> = listOf()
+
+    @CommandLine.Option(
         names = ["--benchmark-json"],
         description = ["Save benchmark results to json file"]
     )
@@ -381,33 +389,14 @@ class Application : Callable<Int> {
      * Pushes the whole translationResult to the neo4j db.
      *
      * @param translationResult, not null
-     * @throws InterruptedException, if the thread is interrupted while it try´s to connect to the
-     *   neo4j db.
-     * @throws ConnectException, if there is no connection to bolt://localhost:7687 possible
      */
-    @Throws(InterruptedException::class, ConnectException::class)
     fun pushToNeo4j(translationResult: TranslationResult) {
-        val bench = Benchmark(this.javaClass, "Push cpg to neo4j", false, translationResult)
-        log.info("Using import depth: $depth")
-        log.info(
-            "Count base nodes to save: " +
-                translationResult.components.size +
-                translationResult.additionalNodes.size
-        )
-
-        val sessionAndSessionFactoryPair = connect()
-
-        val session = sessionAndSessionFactoryPair.first
-        session.beginTransaction().use { transaction ->
-            if (!noPurgeDb) session.purgeDatabase()
-            session.save(translationResult.components, depth)
-            session.save(translationResult.additionalNodes, depth)
-            transaction.commit()
+        val session = connect()
+        with(session) {
+            if (!noPurgeDb) executeWrite { tx -> tx.run("MATCH (n) DETACH DELETE n").consume() }
+            translationResult.persist()
         }
-
-        session.clear()
-        sessionAndSessionFactoryPair.second.close()
-        bench.addMeasurement()
+        session.close()
     }
 
     /**
@@ -420,41 +409,14 @@ class Application : Callable<Int> {
      * @throws ConnectException, if there is no connection to bolt://localhost:7687 possible
      */
     @Throws(InterruptedException::class, ConnectException::class)
-    fun connect(): Pair<Session, SessionFactory> {
-        var fails = 0
-        var sessionFactory: SessionFactory? = null
-        var session: Session? = null
-        while (session == null && fails < MAX_COUNT_OF_FAILS) {
-            try {
-                val configuration =
-                    Configuration.Builder()
-                        .uri("$PROTOCOL$host:$port")
-                        .credentials(neo4jUsername, neo4jPassword)
-                        .verifyConnection(VERIFY_CONNECTION)
-                        .build()
-                sessionFactory = SessionFactory(configuration, *packages)
-
-                session = sessionFactory.openSession()
-            } catch (ex: ConnectionException) {
-                sessionFactory = null
-                fails++
-                log.error(
-                    "Unable to connect to localhost:7687, " +
-                        "ensure the database is running and that " +
-                        "there is a working network connection to it."
-                )
-                Thread.sleep(TIME_BETWEEN_CONNECTION_TRIES)
-            } catch (ex: AuthenticationException) {
-                log.error("Unable to connect to localhost:7687, wrong username/password!")
-                exitProcess(EXIT_FAILURE)
-            }
-        }
-        if (session == null || sessionFactory == null) {
-            log.error("Unable to connect to localhost:7687")
-            exitProcess(EXIT_FAILURE)
-        }
-        assert(fails <= MAX_COUNT_OF_FAILS)
-        return Pair(session, sessionFactory)
+    fun connect(): org.neo4j.driver.Session {
+        val driver =
+            GraphDatabase.driver(
+                "$PROTOCOL$host:$port",
+                org.neo4j.driver.AuthTokens.basic(neo4jUsername, neo4jPassword)
+            )
+        driver.verifyConnectivity()
+        return driver.session()
     }
 
     /**
@@ -495,6 +457,7 @@ class Application : Callable<Int> {
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.jvm.JVMLanguage")
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.ini.IniFileLanguage")
                 .loadIncludes(loadIncludes)
+                .exclusionPatterns(*exclusionPatterns.toTypedArray())
                 .addIncludesToGraph(loadIncludes)
                 .debugParser(DEBUG_PARSER)
                 .useUnityBuild(useUnityBuild)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2024, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph
+package de.fraunhofer.aisec.cpg.persistence
 
-/** This interface represents all objects that can be persisted in a graph database. */
-interface Persistable
+/** This annotation is used to denote that this property or class should not be persisted */
+@Target(AnnotationTarget.PROPERTY, AnnotationTarget.CLASS) annotation class DoNotPersist()

@@ -26,11 +26,13 @@
 package de.fraunhofer.aisec.cpg
 
 import de.fraunhofer.aisec.cpg.graph.Component
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 
 /**
  * The translation context holds all necessary managers and configurations needed during the
  * translation process.
  */
+@DoNotPersist
 class TranslationContext(
     /** The configuration for this translation. */
     val config: TranslationConfiguration,

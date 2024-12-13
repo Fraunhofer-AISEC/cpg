@@ -68,6 +68,8 @@ class EvaluationOrder(
         result = 31 * result + branch.hashCode()
         return result
     }
+
+    override var labels = setOf("EOG")
 }
 
 /**
