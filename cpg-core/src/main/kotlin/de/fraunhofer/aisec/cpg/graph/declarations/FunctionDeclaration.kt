@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
@@ -41,7 +42,7 @@ import org.neo4j.ogm.annotation.Relationship
 /** Represents the declaration or definition of a function. */
 open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder, EOGStarterHolder {
     @Relationship("BODY") var bodyEdge = astOptionalEdgeOf<Statement>(label = "BODY")
-    /** The function body. Usually a [Block]. */
+    /** The function body. Usualfly a [Block]. */
     var body by unwrapping(FunctionDeclaration::bodyEdge)
 
     /** The list of function parameters. */
@@ -134,16 +135,6 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder, EOGStart
             return parameters.map { it.default }
         }
 
-    val defaultParameterSignature: List<Type> // TODO: What's this property?
-        get() =
-            parameters.map {
-                if (it.default != null) {
-                    it.type
-                } else {
-                    unknownType()
-                }
-            }
-
     val signatureTypes: List<Type>
         get() = parameters.map { it.type }
 
@@ -154,6 +145,7 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder, EOGStart
             .toString()
     }
 
+    @DoNotPersist
     override val eogStarters: List<Node>
         get() = listOfNotNull(this)
 
@@ -179,11 +171,11 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder, EOGStart
         }
     }
 
+    @DoNotPersist
     override val declarations: List<Declaration>
         get() {
             val list = ArrayList<Declaration>()
             list.addAll(parameters)
-            list.addAll(records)
             return list
         }
 

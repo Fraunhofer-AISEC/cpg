@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import org.neo4j.ogm.annotation.NodeEntity
 
 /**
@@ -40,6 +41,7 @@ import org.neo4j.ogm.annotation.NodeEntity
  */
 @NodeEntity
 abstract class Declaration : Node() {
+    @DoNotPersist
     val symbol: Symbol
         get() {
             return this.name.localName

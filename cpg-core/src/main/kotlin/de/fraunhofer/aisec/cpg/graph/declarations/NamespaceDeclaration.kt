@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import java.util.Objects
 import org.neo4j.ogm.annotation.Relationship
 
@@ -75,6 +76,7 @@ class NamespaceDeclaration : Declaration(), DeclarationHolder, StatementHolder, 
 
     override var statements by unwrapping(NamespaceDeclaration::statementEdges)
 
+    @DoNotPersist
     override val eogStarters: List<Node>
         get() {
             val list = mutableListOf<Node>()

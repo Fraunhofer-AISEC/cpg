@@ -28,15 +28,13 @@ package de.fraunhofer.aisec.cpg.persistence
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.Persistable
-import de.fraunhofer.aisec.cpg.graph.edges.Edge
-import de.fraunhofer.aisec.cpg.graph.edges.allEdges
+import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeCollection
 import de.fraunhofer.aisec.cpg.graph.nodes
-import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
-import de.fraunhofer.aisec.cpg.graph.types.HasType
-import de.fraunhofer.aisec.cpg.graph.types.SecondOrderType
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
-import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
+import de.fraunhofer.aisec.cpg.helpers.IdentitySet
+import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import org.neo4j.driver.Session
+import org.slf4j.LoggerFactory
 
 /**
  * Defines the number of edges to be processed in a single batch operation during persistence.
@@ -57,6 +55,10 @@ const val edgeChunkSize = 10000
  * remain manageable even for large data sets.
  */
 const val nodeChunkSize = 10000
+
+internal val log = LoggerFactory.getLogger("Persistence")
+
+internal typealias Relationship = Map<String, Any?>
 
 /**
  * Persists the current [TranslationResult] into a graph database.
@@ -82,29 +84,21 @@ fun TranslationResult.persist() {
     val b = Benchmark(Persistable::class.java, "Persisting translation result")
 
     val astNodes = this@persist.nodes
-    val scopes = this.finalCtx.scopeManager.filterScopes { true }
-    val languages = this.finalCtx.config.languages
-    val types =
-        (this.finalCtx.typeManager.firstOrderTypes + this.finalCtx.typeManager.secondOrderTypes)
-            .toIdentitySet()
-    val nodes = listOf(astNodes, scopes, languages, types).flatten()
-    val edges = this@persist.allEdges<Edge<*>>()
+    val connected = astNodes.flatMap { it.connectedNodes }
+    val nodes = astNodes + connected
 
     log.info(
-        "Persisting {} nodes: AST nodes ({}), types ({}), scopes ({}) and languages ({})",
+        "Persisting {} nodes: AST nodes ({}), other nodes ({})",
         nodes.size,
         astNodes.size,
-        types.size,
-        scopes.size,
-        languages.size
+        connected.size
     )
     nodes.persist()
 
-    log.info("Persisting {} edges", edges.size)
-    edges.persist()
+    val relationships = nodes.collectRelationships()
 
-    log.info("Persisting extra relationships (types, scopes, languages)")
-    nodes.persistExtraRelationships()
+    log.info("Persisting {} relationships", relationships.size)
+    relationships.persist()
 
     b.stop()
 }
@@ -164,74 +158,14 @@ private fun List<Node>.persist() {
  * - Relationship properties and labels are mapped before using database utilities for creation.
  */
 context(Session)
-private fun Collection<Edge<*>>.persist() {
+private fun Collection<Relationship>.persist() {
     // Create an index for the "id" field of node, because we are "MATCH"ing on it in the edge
     // creation. We need to wait for this to be finished
     this@Session.executeWrite { tx ->
         tx.run("CREATE INDEX IF NOT EXISTS FOR (n:Node) ON (n.id)").consume()
     }
 
-    this.chunked(edgeChunkSize).map { chunk ->
-        createRelationships(
-            chunk.flatMap { edge ->
-                // Since Neo4J does not support multiple labels on edges, but we do internally, we
-                // duplicate the edge for each label
-                edge.labels.map { label ->
-                    mapOf(
-                        "startId" to edge.start.id.toString(),
-                        "endId" to edge.end.id.toString(),
-                        "type" to label
-                    ) + edge.properties()
-                }
-            }
-        )
-    }
-}
-
-/**
- * Some of our relationships are not real "edges" (i.e., [Edge]) (yet). We need to handle these case
- * separately (for now).
- */
-context(Session)
-private fun List<Node>.persistExtraRelationships() {
-    val relationships =
-        this.flatMap {
-            listOfNotNull(
-                mapOf(
-                    "startId" to it.id.toString(),
-                    "endId" to it.language?.id.toString(),
-                    "type" to "LANGUAGE"
-                ),
-                mapOf(
-                    "startId" to it.id.toString(),
-                    "endId" to it.scope?.id.toString(),
-                    "type" to "SCOPE"
-                ),
-                if (it is HasType) {
-                    mapOf(
-                        "startId" to it.id.toString(),
-                        "endId" to it.type.id.toString(),
-                        "type" to "TYPE"
-                    )
-                } else if (it is SecondOrderType) {
-                    mapOf(
-                        "startId" to it.id.toString(),
-                        "endId" to it.elementType.id.toString(),
-                        "type" to "ELEMENT_TYPE"
-                    )
-                } else if (it is FunctionPointerType) {
-                    mapOf(
-                        "startId" to it.id.toString(),
-                        "endId" to it.returnType.id.toString(),
-                        "type" to "RETURN_TYPE"
-                    )
-                } else {
-                    null
-                }
-            )
-        }
-
-    relationships.chunked(10000).map { chunk -> this@Session.createRelationships(chunk) }
+    this.chunked(edgeChunkSize).map { chunk -> createRelationships(chunk) }
 }
 
 /**
@@ -243,7 +177,7 @@ private fun List<Node>.persistExtraRelationships() {
  *   relationship can also be included in the map.
  */
 private fun Session.createRelationships(
-    props: List<Map<String, Any?>>,
+    props: List<Relationship>,
 ) {
     val b = Benchmark(Persistable::class.java, "Persisting chunk of ${props.size} relationships")
     val params = mapOf("props" to props)
@@ -263,4 +197,73 @@ private fun Session.createRelationships(
             .consume()
     }
     b.stop()
+}
+
+/**
+ * Returns all [Node] objects that are connected with this node with some kind of relationship
+ * defined in [schemaRelationships].
+ */
+val Persistable.connectedNodes: IdentitySet<Node>
+    get() {
+        val nodes = identitySetOf<Node>()
+
+        for (entry in this::class.schemaRelationships) {
+            val value = entry.value.call(this)
+            if (value is EdgeCollection<*, *>) {
+                nodes += value.toNodeCollection()
+            } else if (value is List<*>) {
+                nodes += value.filterIsInstance<Node>()
+            } else if (value is Node) {
+                nodes += value
+            }
+        }
+
+        return nodes
+    }
+
+private fun List<Node>.collectRelationships(): List<Relationship> {
+    val relationships = mutableListOf<Relationship>()
+
+    for (node in this) {
+        for (entry in node::class.schemaRelationships) {
+            val value = entry.value.call(node)
+            if (value is EdgeCollection<*, *>) {
+                relationships +=
+                    value.map { edge ->
+                        mapOf(
+                            "startId" to edge.start.id.toString(),
+                            "endId" to edge.end.id.toString(),
+                            "type" to entry.key
+                        ) + edge.properties()
+                    }
+            } else if (value is List<*>) {
+                relationships +=
+                    value.filterIsInstance<Node>().map { end ->
+                        mapOf(
+                            "startId" to node.id.toString(),
+                            "endId" to end.id.toString(),
+                            "type" to entry.key
+                        )
+                    }
+            } else if (value is Node) {
+                relationships +=
+                    mapOf(
+                        "startId" to node.id.toString(),
+                        "endId" to value.id.toString(),
+                        "type" to entry.key
+                    )
+            }
+        }
+    }
+
+    // Since Neo4J does not support multiple labels on edges, but we do internally, we
+    // duplicate the edge for each label
+    /*edge.labels.map { label ->
+        mapOf(
+            "startId" to edge.start.id.toString(),
+            "endId" to edge.end.id.toString(),
+            "type" to label
+        ) + edge.properties()
+    }*/
+    return relationships
 }

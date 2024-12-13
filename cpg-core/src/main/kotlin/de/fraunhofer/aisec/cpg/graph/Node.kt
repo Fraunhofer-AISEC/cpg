@@ -45,6 +45,7 @@ import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.neo4j.LocationConverter
 import de.fraunhofer.aisec.cpg.helpers.neo4j.NameConverter
 import de.fraunhofer.aisec.cpg.passes.*
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import de.fraunhofer.aisec.cpg.processing.IVisitable
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.util.*
@@ -167,7 +168,7 @@ abstract class Node :
     var astChildren: List<Node> = listOf()
         get() = SubgraphWalker.getAstChildren(this)
 
-    @Transient var astParent: Node? = null
+    @DoNotPersist @Transient var astParent: Node? = null
 
     /** Virtual property for accessing [prevEOGEdges] without property edges. */
     @PopulatedByPass(EvaluationOrderGraphPass::class) var prevEOG by unwrapping(Node::prevEOGEdges)
@@ -190,6 +191,7 @@ abstract class Node :
      * Virtual property for accessing [nextDFGEdges] that have a
      * [de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity].
      */
+    @DoNotPersist
     @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
     val prevFullDFG: List<Node>
         get() {
@@ -213,6 +215,7 @@ abstract class Node :
      * Virtual property for accessing [nextDFGEdges] that have a
      * [de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity].
      */
+    @DoNotPersist
     @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
     val nextFullDFG: List<Node>
         get() {
@@ -253,7 +256,7 @@ abstract class Node :
     var isImplicit = false
 
     /** Required field for object graph mapping. It contains the node id. */
-    @Id @GeneratedValue var legacyId: Long? = null
+    @DoNotPersist @Id @GeneratedValue var legacyId: Long? = null
 
     /** Will replace [legacyId] */
     var id: Uuid = Uuid.random()

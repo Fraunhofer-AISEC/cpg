@@ -30,6 +30,8 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.Persistable
+import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeCollection
+import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeList
 import de.fraunhofer.aisec.cpg.graph.edges.flows.DependenceType
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Granularity
 import de.fraunhofer.aisec.cpg.helpers.BenchmarkResults
@@ -42,16 +44,20 @@ import java.math.BigInteger
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 import kotlin.reflect.KTypeProjection
+import kotlin.reflect.KVariance
 import kotlin.reflect.KVisibility
 import kotlin.reflect.full.createType
+import kotlin.reflect.full.hasAnnotation
 import kotlin.reflect.full.isSubtypeOf
 import kotlin.reflect.full.memberProperties
 import kotlin.reflect.full.superclasses
 import kotlin.reflect.full.withNullability
+import kotlin.reflect.jvm.javaField
 import kotlin.reflect.jvm.javaType
 import kotlin.uuid.Uuid
+import org.neo4j.ogm.annotation.Relationship
+import org.neo4j.ogm.annotation.Relationship.Direction.INCOMING
 import org.neo4j.ogm.typeconversion.CompositeAttributeConverter
-import org.slf4j.LoggerFactory
 
 /**
  * A cache used to store and retrieve sets of labels associated with specific Kotlin class types.
@@ -79,6 +85,11 @@ val schemaPropertiesCache:
     MutableMap<KClass<out Persistable>, Map<String, KProperty1<out Persistable, *>>> =
     mutableMapOf()
 
+/** A cache mapping classes of type [Persistable] to their respective properties. */
+val schemaRelationshipCache:
+    MutableMap<KClass<out Persistable>, Map<String, KProperty1<out Persistable, *>>> =
+    mutableMapOf()
+
 /**
  * A set containing predefined property types represented as Kotlin type objects that can be used as
  * properties in [schemaProperties].
@@ -94,8 +105,6 @@ val propertyTypes =
         Granularity::class.createType(),
         DependenceType::class.createType(),
     )
-
-internal val log = LoggerFactory.getLogger("Persistence")
 
 /**
  * Returns the [Persistable]'s properties. This DOES NOT include relationships, but only properties
@@ -186,6 +195,10 @@ internal val ignoredTypes =
 
 internal val nodeType = Node::class.createType()
 internal val collectionType = Collection::class.createType(listOf(KTypeProjection.STAR))
+internal val collectionOfNodeType =
+    Collection::class.createType(listOf(KTypeProjection(variance = KVariance.OUT, type = nodeType)))
+internal val edgeCollectionType =
+    EdgeCollection::class.createType(listOf(KTypeProjection.STAR, KTypeProjection.STAR))
 internal val mapType = Map::class.createType(listOf(KTypeProjection.STAR, KTypeProjection.STAR))
 
 /**
@@ -214,15 +227,32 @@ val KClass<out Persistable>.schemaProperties: Map<String, KProperty1<out Persist
         }
     }
 
+val KClass<out Persistable>.schemaRelationships: Map<String, KProperty1<out Persistable, *>>
+    get() {
+        // Check, if we already computed the relationship for this node's class
+        return schemaRelationshipCache.computeIfAbsent(this) {
+            val schema = mutableMapOf<String, KProperty1<out Persistable, *>>()
+            val properties = it.memberProperties
+            for (property in properties) {
+                if (isRelationship(property)) {
+                    val name = property.relationshipName
+                    schema.put(name, property)
+                }
+            }
+            schema
+        }
+    }
+
 /**
  * Evaluates whether a given property qualifies as a "simple" property based on its characteristics.
  *
- * This evaluates to false, when
- * - The property is a list (see [collectionType])
- * - The property is a map (see [mapType])
- * - The property is one of our [ignoredTypes]
- * - The property is referring to a [Node]
- * - The property is an interface
+ * This evaluates to true, when
+ * - The property is not a list (see [collectionType])
+ * - The property is not a map (see [mapType])
+ * - The property is not one of our [ignoredTypes]
+ * - The property is not referring to a [Node]
+ * - The property is not an interface
+ * - The property does not have the annotation [DoNotPersist]
  *
  * @param property the property to be evaluated, belonging to a class implementing the Persistable
  *   interface
@@ -233,12 +263,67 @@ private fun isSimpleProperty(property: KProperty1<out Persistable, *>): Boolean 
     val returnType = property.returnType.withNullability(false)
 
     return when {
+        property.hasAnnotation<DoNotPersist>() -> false
         property.visibility == KVisibility.PRIVATE -> false
         ignoredTypes.any { returnType.isSubtypeOf(it) } -> false
         returnType.isSubtypeOf(collectionType) -> false
         returnType.isSubtypeOf(mapType) -> false
-        returnType.withNullability(false).isSubtypeOf(nodeType) -> false
+        returnType.isSubtypeOf(nodeType) -> false
         (returnType.javaType as? Class<*>)?.isInterface == true -> false
         else -> true
     }
+}
+
+/**
+ * Evaluates whether a given property qualifies as a "relationship" based on its characteristics.
+ *
+ * This evaluates to true, when
+ * - The property is not a delegate (Note: this might change in the future, once we re-design node
+ *   properties if Neo4J OGM is completely removed)
+ * - The property is an [EdgeList]
+ * - The property is referring to a [Collection] of [Node] objects
+ * - The property is referring to a [Node]
+ * - The property does not have the annotation [DoNotPersist]
+ * - The property does not have the annotation [org.neo4j.ogm.annotation.Relationship] with an
+ *   incoming direction (Note: We will replace this with our own annotation at some point)
+ *
+ * @param property the property to be evaluated, belonging to a class implementing the Persistable
+ *   interface
+ * @return true if the property satisfies the conditions of being a "relationship", false otherwise
+ */
+private fun isRelationship(property: KProperty1<out Persistable, *>): Boolean {
+    val returnType = property.returnType.withNullability(false)
+
+    return when {
+        property.hasAnnotation<DoNotPersist>() -> false
+        property.javaField?.type?.simpleName?.contains("Delegate") == true -> false
+        property.javaField?.getAnnotation(Relationship::class.java)?.direction == INCOMING -> false
+        property.visibility == KVisibility.PRIVATE -> false
+        returnType.isSubtypeOf(edgeCollectionType) -> true
+        returnType.isSubtypeOf(collectionOfNodeType) -> true
+        returnType.isSubtypeOf(nodeType) -> true
+        else -> false
+    }
+}
+
+val <K, V> KProperty1<K, V>.relationshipName: String
+    get() {
+        // If we have a (legacy) Neo4J annotation for our relationship, we take this one
+        // Note: We will replace this with something else in the future
+        val value = this.javaField?.getAnnotation(Relationship::class.java)?.value
+        if (value != null && value != "") {
+            return value
+        }
+
+        // If the name ends with "Edge", we cut that of, since we always have two
+        // variables for real edges, one called "exampleEdge" and one just called
+        // "example" (which is only a delegate), but the name we want is "example".
+        //
+        // Replace camel case with UPPER_CASE
+        return this.name.substringBeforeLast("Edge").toUpperSnakeCase()
+    }
+
+fun String.toUpperSnakeCase(): String {
+    val pattern = "(?<=.)[A-Z]".toRegex()
+    return this.replace(pattern, "_$0").uppercase()
 }
