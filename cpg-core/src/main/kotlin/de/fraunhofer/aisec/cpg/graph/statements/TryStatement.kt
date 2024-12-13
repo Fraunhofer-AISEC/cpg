@@ -42,15 +42,14 @@ class TryStatement : Statement() {
      * enter the [tryBlock].
      */
     @Relationship(value = "RESOURCES", direction = Relationship.Direction.OUTGOING)
-    var resourceEdges = astEdgesOf<Statement>(label = "RESOURCES")
+    var resourceEdges = astEdgesOf<Statement>()
     var resources by unwrapping(TryStatement::resourceEdges)
 
     /**
      * This represents a block whose statements can throw exceptions which are handled by the
      * [catchClauses].
      */
-    @Relationship(value = "TRY_BLOCK")
-    var tryBlockEdge = astOptionalEdgeOf<Block>(label = "TRY_BLOCK")
+    @Relationship(value = "TRY_BLOCK") var tryBlockEdge = astOptionalEdgeOf<Block>()
     var tryBlock by unwrapping(TryStatement::tryBlockEdge)
 
     /**
@@ -58,8 +57,7 @@ class TryStatement : Statement() {
      * exceptions. Note that any exception thrown in this block is no longer caught by the
      * [catchClauses].
      */
-    @Relationship(value = "ELSE_BLOCK")
-    var elseBlockEdge = astOptionalEdgeOf<Block>(label = "ELSE_BLOCK")
+    @Relationship(value = "ELSE_BLOCK") var elseBlockEdge = astOptionalEdgeOf<Block>()
     var elseBlock by unwrapping(TryStatement::elseBlockEdge)
 
     /**
@@ -67,8 +65,7 @@ class TryStatement : Statement() {
      * or one of the [catchClauses]. Note that any exception thrown in this block is no longer
      * caught by the [catchClauses].
      */
-    @Relationship(value = "FINALLY_BLOCK")
-    var finallyBlockEdge = astOptionalEdgeOf<Block>(label = "FINALLY_BLOCK")
+    @Relationship(value = "FINALLY_BLOCK") var finallyBlockEdge = astOptionalEdgeOf<Block>()
     var finallyBlock by unwrapping(TryStatement::finallyBlockEdge)
 
     /**
@@ -77,7 +74,7 @@ class TryStatement : Statement() {
      * exists.
      */
     @Relationship(value = "CATCH_CLAUSES", direction = Relationship.Direction.OUTGOING)
-    var catchClauseEdges = astEdgesOf<CatchClause>(label = "CATCH_CLAUSES")
+    var catchClauseEdges = astEdgesOf<CatchClause>()
     var catchClauses by unwrapping(TryStatement::catchClauseEdges)
 
     override fun equals(other: Any?): Boolean {

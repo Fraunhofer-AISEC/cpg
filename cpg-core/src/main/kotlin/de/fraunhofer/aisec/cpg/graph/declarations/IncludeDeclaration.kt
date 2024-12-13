@@ -35,11 +35,11 @@ import org.neo4j.ogm.annotation.Relationship
 /** This declaration represents either an include or an import, depending on the language. */
 class IncludeDeclaration : Declaration() {
     @Relationship(value = "INCLUDES", direction = Relationship.Direction.OUTGOING)
-    val includeEdges = astEdgesOf<IncludeDeclaration>(label = "INCLUDES")
+    val includeEdges = astEdgesOf<IncludeDeclaration>()
     val includes by unwrapping(IncludeDeclaration::includeEdges)
 
     @Relationship(value = "PROBLEMS", direction = Relationship.Direction.OUTGOING)
-    val problemEdges = astEdgesOf<ProblemDeclaration>(label = "PROBLEMS")
+    val problemEdges = astEdgesOf<ProblemDeclaration>()
     val problems by unwrapping(IncludeDeclaration::problemEdges)
 
     /**

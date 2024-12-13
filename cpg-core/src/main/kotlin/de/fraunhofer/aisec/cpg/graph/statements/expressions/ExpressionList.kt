@@ -34,7 +34,7 @@ import org.neo4j.ogm.annotation.Relationship
 
 class ExpressionList : Expression() {
     @Relationship(value = "SUBEXPR", direction = Relationship.Direction.OUTGOING)
-    var expressionEdges = astEdgesOf<Statement>(label = "SUBEXPR")
+    var expressionEdges = astEdgesOf<Statement>()
     var expressions by unwrapping(ExpressionList::expressionEdges)
 
     override fun equals(other: Any?): Boolean {

@@ -40,16 +40,14 @@ import org.neo4j.ogm.annotation.Relationship
  */
 class KeyValueExpression : Expression(), ArgumentHolder {
 
-    @Relationship("KEY")
-    var keyEdge = astEdgeOf<Expression>(ProblemExpression("missing key"), label = "KEY")
+    @Relationship("KEY") var keyEdge = astEdgeOf<Expression>(ProblemExpression("missing key"))
     /**
      * The key of this pair. It is usually a literal, but some languages even allow references to
      * variables as a key.
      */
     var key by unwrapping(KeyValueExpression::keyEdge)
 
-    @Relationship("VALUE")
-    var valueEdge = astEdgeOf<Expression>(ProblemExpression("missing value"), label = "VALUE")
+    @Relationship("VALUE") var valueEdge = astEdgeOf<Expression>(ProblemExpression("missing value"))
 
     /** The value of this pair. It can be any expression */
     var value by unwrapping(KeyValueExpression::valueEdge)

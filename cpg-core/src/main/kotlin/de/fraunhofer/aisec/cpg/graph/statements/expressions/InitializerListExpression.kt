@@ -49,9 +49,9 @@ class InitializerListExpression : Expression(), ArgumentHolder, HasType.TypeObse
     var initializerEdges =
         astEdgesOf<Expression>(
             onAdd = { it.end.registerTypeObserver(this) },
-            onRemove = { it.end.unregisterTypeObserver(this) },
-            label = "INITIALIZERS",
-        )
+        ) {
+            it.end.unregisterTypeObserver(this)
+        }
 
     /** Virtual property to access [initializerEdges] without property edges. */
     var initializers by unwrapping(InitializerListExpression::initializerEdges)

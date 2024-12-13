@@ -45,7 +45,6 @@ class ForEachStatement : LoopStatement(), BranchingNode, StatementHolder {
     @Relationship("VARIABLE")
     var variableEdge =
         astOptionalEdgeOf<Statement>(
-            label = "VARIABLE",
             onChanged = { _, new ->
                 val end = new?.end
                 if (end is Reference) {
@@ -60,7 +59,7 @@ class ForEachStatement : LoopStatement(), BranchingNode, StatementHolder {
      */
     var variable by unwrapping(ForEachStatement::variableEdge)
 
-    @Relationship("ITERABLE") var iterableEdge = astOptionalEdgeOf<Statement>(label = "ITERABLE")
+    @Relationship("ITERABLE") var iterableEdge = astOptionalEdgeOf<Statement>()
     /** This field contains the iteration subject of the loop. */
     var iterable by unwrapping(ForEachStatement::iterableEdge)
 
@@ -69,7 +68,7 @@ class ForEachStatement : LoopStatement(), BranchingNode, StatementHolder {
 
     override var statementEdges: AstEdges<Statement, AstEdge<Statement>>
         get() {
-            val statements = astEdgesOf<Statement>(label = "STATEMENTS")
+            val statements = astEdgesOf<Statement>()
             statements += variableEdge
             statements += iterableEdge
             statements += statementEdge

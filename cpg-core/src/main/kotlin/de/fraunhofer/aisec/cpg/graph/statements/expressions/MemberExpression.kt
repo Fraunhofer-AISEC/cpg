@@ -48,7 +48,6 @@ class MemberExpression : Reference(), HasOverloadedOperation, ArgumentHolder, Ha
     var baseEdge =
         astEdgeOf<Expression>(
             ProblemExpression("could not parse base expression"),
-            label = "BASE",
             onChanged = { old, new ->
                 exchangeTypeObserver(old, new)
                 updateName()

@@ -35,7 +35,7 @@ import org.neo4j.ogm.annotation.Relationship
 /** A declaration of a type template parameter */
 class TypeParameterDeclaration : ValueDeclaration(), HasDefault<Type?> {
     @Relationship(value = "DEFAULT", direction = Relationship.Direction.OUTGOING)
-    var defaultEdge = astOptionalEdgeOf<Type>(label = "DEFAULT")
+    var defaultEdge = astOptionalEdgeOf<Type>()
     /** TemplateParameters can define a default for the type parameter. */
     override var default by unwrapping(TypeParameterDeclaration::defaultEdge)
 

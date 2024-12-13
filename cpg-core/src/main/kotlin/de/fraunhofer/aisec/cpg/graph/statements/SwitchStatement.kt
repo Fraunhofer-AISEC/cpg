@@ -40,23 +40,21 @@ import org.neo4j.ogm.annotation.Relationship
  * handled properly.
  */
 class SwitchStatement : Statement(), BranchingNode {
-    @Relationship(value = "SELECTOR")
-    var selectorEdge = astOptionalEdgeOf<Expression>(label = "SELECTOR")
+    @Relationship(value = "SELECTOR") var selectorEdge = astOptionalEdgeOf<Expression>()
     /** Selector that determines the case/default statement of the subsequent execution */
     var selector by unwrapping(SwitchStatement::selectorEdge)
 
     @Relationship(value = "INITIALIZER_STATEMENT")
-    var initializerStatementEdge = astOptionalEdgeOf<Statement>(label = "INITIALIZER_STATEMENT")
+    var initializerStatementEdge = astOptionalEdgeOf<Statement>()
     /** C++ can have an initializer statement in a switch */
     var initializerStatement by unwrapping(SwitchStatement::initializerStatementEdge)
 
     @Relationship(value = "SELECTOR_DECLARATION")
-    var selectorDeclarationEdge = astOptionalEdgeOf<Declaration>(label = "SELECTOR_DECLARATION")
+    var selectorDeclarationEdge = astOptionalEdgeOf<Declaration>()
     /** C++ allows to use a declaration instead of an expression as selector */
     var selectorDeclaration by unwrapping(SwitchStatement::selectorDeclarationEdge)
 
-    @Relationship(value = "STATEMENT")
-    var statementEdge = astOptionalEdgeOf<Statement>(label = "STATEMENT")
+    @Relationship(value = "STATEMENT") var statementEdge = astOptionalEdgeOf<Statement>()
     /**
      * The compound statement that contains break/default statements with regular statements on the
      * same hierarchy

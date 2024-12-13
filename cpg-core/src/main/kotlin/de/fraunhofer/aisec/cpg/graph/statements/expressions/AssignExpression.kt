@@ -63,7 +63,6 @@ class AssignExpression :
     @Relationship("LHS")
     var lhsEdges =
         astEdgesOf<Expression>(
-            label = "LHS",
             onAdd = {
                 var end = it.end
                 var base = (end as? MemberExpression)?.base as? MemberExpression
@@ -84,11 +83,9 @@ class AssignExpression :
     @Relationship("RHS")
     /** The expressions on the right-hand side. */
     var rhsEdges =
-        astEdgesOf<Expression>(
-            label = "RHS",
-            onAdd = { it.end.registerTypeObserver(this) },
-            onRemove = { it.end.unregisterTypeObserver(this) }
-        )
+        astEdgesOf<Expression>(onAdd = { it.end.registerTypeObserver(this) }) {
+            it.end.unregisterTypeObserver(this)
+        }
     var rhs by unwrapping(AssignExpression::rhsEdges)
 
     /**
@@ -126,8 +123,7 @@ class AssignExpression :
             return operatorCode in (language?.simpleAssignmentOperators ?: setOf())
         }
 
-    @Relationship("DECLARATIONS")
-    var declarationEdges = astEdgesOf<VariableDeclaration>(label = "DECLARATIONS")
+    @Relationship("DECLARATIONS") var declarationEdges = astEdgesOf<VariableDeclaration>()
     /**
      * Some languages, such as Go explicitly allow the definition / declaration of variables in the
      * assignment (known as a "short assignment"). Some languages, such as Python even implicitly

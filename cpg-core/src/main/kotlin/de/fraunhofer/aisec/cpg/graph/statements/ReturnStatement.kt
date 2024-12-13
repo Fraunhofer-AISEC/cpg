@@ -35,8 +35,7 @@ import org.neo4j.ogm.annotation.Relationship
 
 /** Represents a statement that returns out of the current function. */
 class ReturnStatement : Statement(), ArgumentHolder {
-    @Relationship(value = "RETURN_VALUES")
-    var returnValueEdges = astEdgesOf<Expression>(label = "RETURN_VALUES")
+    @Relationship(value = "RETURN_VALUES") var returnValueEdges = astEdgesOf<Expression>()
 
     /** The expression whose value will be returned. */
     var returnValues by unwrapping(ReturnStatement::returnValueEdges)

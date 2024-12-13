@@ -31,7 +31,7 @@ import java.util.Objects
 import org.neo4j.ogm.annotation.Relationship
 
 class DeleteExpression : Expression() {
-    @Relationship("OPERANDS") var operandEdges = astEdgesOf<Expression>(label = "OPERANDS")
+    @Relationship("OPERANDS") var operandEdges = astEdgesOf<Expression>()
     var operands by unwrapping(DeleteExpression::operandEdges)
 
     override fun equals(other: Any?): Boolean {

@@ -49,12 +49,12 @@ class NamespaceDeclaration : Declaration(), DeclarationHolder, StatementHolder, 
      * Edges to nested namespaces, records, functions, fields etc. contained in the current
      * namespace.
      */
-    val declarationEdges = astEdgesOf<Declaration>(label = "DECLARATIONS")
+    val declarationEdges = astEdgesOf<Declaration>()
     override val declarations by unwrapping(NamespaceDeclaration::declarationEdges)
 
     /** The list of statements. */
     @Relationship(value = "STATEMENTS", direction = Relationship.Direction.OUTGOING)
-    override var statementEdges = astEdgesOf<Statement>(label = "STATEMENTS")
+    override var statementEdges = astEdgesOf<Statement>()
 
     /**
      * In some languages, there is a relationship between paths / directories and the package

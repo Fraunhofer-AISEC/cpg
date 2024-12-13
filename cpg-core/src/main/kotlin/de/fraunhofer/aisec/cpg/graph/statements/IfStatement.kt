@@ -40,17 +40,16 @@ import org.neo4j.ogm.annotation.Relationship
 /** Represents a condition control flow statement, usually indicating by `If`. */
 class IfStatement : Statement(), BranchingNode, ArgumentHolder {
     @Relationship(value = "INITIALIZER_STATEMENT")
-    var initializerStatementEdge = astOptionalEdgeOf<Statement>(label = "INITIALIZER_STATEMENT")
+    var initializerStatementEdge = astOptionalEdgeOf<Statement>()
     /** C++ initializer statement. */
     var initializerStatement by unwrapping(IfStatement::initializerStatementEdge)
 
     @Relationship(value = "CONDITION_DECLARATION")
-    var conditionDeclarationEdge = astOptionalEdgeOf<Declaration>(label = "CONDITION_DECLARATION")
+    var conditionDeclarationEdge = astOptionalEdgeOf<Declaration>()
     /** C++ alternative to the condition. */
     var conditionDeclaration by unwrapping(IfStatement::conditionDeclarationEdge)
 
-    @Relationship(value = "CONDITION")
-    var conditionEdge = astOptionalEdgeOf<Expression>(label = "CONDITION")
+    @Relationship(value = "CONDITION") var conditionEdge = astOptionalEdgeOf<Expression>()
     /** The condition to be evaluated. */
     var condition by unwrapping(IfStatement::conditionEdge)
 
@@ -60,13 +59,11 @@ class IfStatement : Statement(), BranchingNode, ArgumentHolder {
     /** C++ constexpr construct. */
     var isConstExpression = false
 
-    @Relationship(value = "THEN_STATEMENT")
-    var thenStatementEdge = astOptionalEdgeOf<Statement>(label = "THEN_STATEMENT")
+    @Relationship(value = "THEN_STATEMENT") var thenStatementEdge = astOptionalEdgeOf<Statement>()
     /** The statement that is executed, if the condition is evaluated as true. Usually a [Block]. */
     var thenStatement by unwrapping(IfStatement::thenStatementEdge)
 
-    @Relationship(value = "ELSE_STATEMENT")
-    var elseStatementEdge = astOptionalEdgeOf<Statement>(label = "ELSE_STATEMENT")
+    @Relationship(value = "ELSE_STATEMENT") var elseStatementEdge = astOptionalEdgeOf<Statement>()
     /**
      * The statement that is executed, if the condition is evaluated as false. Usually a [Block].
      */

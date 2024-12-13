@@ -48,7 +48,7 @@ open class VariableDeclaration : ValueDeclaration(), HasInitializer, HasType.Typ
      * the [ConstructExpression] is created.
      */
     @Relationship(value = "TEMPLATE_PARAMETERS", direction = Relationship.Direction.OUTGOING)
-    var templateParameterEdges = astEdgesOf<Node>(label = "TEMPLATE_PARAMETERS")
+    var templateParameterEdges = astEdgesOf<Node>()
     var templateParameters by unwrapping(VariableDeclaration::templateParameterEdges)
 
     /** Determines if this is a global variable. */
@@ -69,7 +69,6 @@ open class VariableDeclaration : ValueDeclaration(), HasInitializer, HasType.Typ
     @Relationship("INITIALIZER")
     var initializerEdge =
         astOptionalEdgeOf<Expression>(
-            label = "INITIALIZER",
             onChanged = { old, new ->
                 val value = new?.end
                 exchangeTypeObserver(old, new)

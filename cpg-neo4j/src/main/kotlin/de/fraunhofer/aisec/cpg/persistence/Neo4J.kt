@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.persistence
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.Persistable
+import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeCollection
 import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
@@ -84,8 +85,8 @@ fun TranslationResult.persist() {
     val b = Benchmark(Persistable::class.java, "Persisting translation result")
 
     val astNodes = this@persist.nodes
-    val connected = astNodes.flatMap { it.connectedNodes }
-    val nodes = astNodes + connected
+    val connected = astNodes.flatMap { it.connectedNodes }.toSet()
+    val nodes = (astNodes + connected).distinct()
 
     log.info(
         "Persisting {} nodes: AST nodes ({}), other nodes ({})",
@@ -166,6 +167,31 @@ private fun Collection<Relationship>.persist() {
     }
 
     this.chunked(edgeChunkSize).map { chunk -> createRelationships(chunk) }
+}
+
+context(Session)
+private fun Collection<Edge<*>>.persistEdgesOld() {
+    // Create an index for the "id" field of node, because we are "MATCH"ing on it in the edge
+    // creation. We need to wait for this to be finished
+    this@Session.executeWrite { tx ->
+        tx.run("CREATE INDEX IF NOT EXISTS FOR (n:Node) ON (n.id)").consume()
+    }
+
+    this.chunked(edgeChunkSize).map { chunk ->
+        createRelationships(
+            chunk.flatMap { edge ->
+                // Since Neo4J does not support multiple labels on edges, but we do internally, we
+                // duplicate the edge for each label
+                edge.labels.map { label ->
+                    mapOf(
+                        "startId" to edge.start.id.toString(),
+                        "endId" to edge.end.id.toString(),
+                        "type" to label
+                    ) + edge.properties()
+                }
+            }
+        )
+    }
 }
 
 /**

@@ -42,7 +42,6 @@ class UnaryOperator : Expression(), HasOverloadedOperation, ArgumentHolder, HasT
     var inputEdge =
         astEdgeOf<Expression>(
             of = ProblemExpression("could not parse input"),
-            label = "INPUT",
             onChanged = { old, new ->
                 exchangeTypeObserver(old, new)
                 changeExpressionAccess()

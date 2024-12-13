@@ -265,7 +265,7 @@ abstract class Node :
     var argumentIndex = 0
 
     /** List of annotations associated with that node. */
-    @Relationship("ANNOTATIONS") var annotationEdges = astEdgesOf<Annotation>(label = "ANNOTATIONS")
+    @Relationship("ANNOTATIONS") var annotationEdges = astEdgesOf<Annotation>()
     var annotations by unwrapping(Node::annotationEdges)
 
     /**

@@ -55,15 +55,15 @@ import org.neo4j.ogm.annotation.Relationship
  * Individual meaning of the range indices might differ per language.
  */
 class RangeExpression : Expression() {
-    @Relationship("FLOOR") var floorEdge = astOptionalEdgeOf<Expression>(label = "FLOOR")
+    @Relationship("FLOOR") var floorEdge = astOptionalEdgeOf<Expression>()
     /** The lower bound ("floor") of the range. This index is usually *inclusive*. */
     var floor by unwrapping(RangeExpression::floorEdge)
 
-    @Relationship("CEILING") var ceilingEdge = astOptionalEdgeOf<Expression>(label = "CEILING")
+    @Relationship("CEILING") var ceilingEdge = astOptionalEdgeOf<Expression>()
     /** The upper bound ("ceiling") of the range. This index is usually *exclusive*. */
     var ceiling by unwrapping(RangeExpression::ceilingEdge)
 
-    @Relationship("THIRD") var thirdEdge = astOptionalEdgeOf<Expression>(label = "THIRD")
+    @Relationship("THIRD") var thirdEdge = astOptionalEdgeOf<Expression>()
     /**
      * Some languages offer a third value. The meaning depends completely on the language. For
      * example, Python allows specifying a step, while Go allows to control the underlying array's

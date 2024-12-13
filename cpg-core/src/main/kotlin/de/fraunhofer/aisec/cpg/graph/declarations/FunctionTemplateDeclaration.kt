@@ -39,7 +39,7 @@ class FunctionTemplateDeclaration : TemplateDeclaration() {
      * expansion pass for each instantiation of the FunctionTemplate there will be a realization
      */
     @Relationship(value = "REALIZATION", direction = Relationship.Direction.OUTGOING)
-    val realizationEdges = astEdgesOf<FunctionDeclaration>(label = "REALIZATION")
+    val realizationEdges = astEdgesOf<FunctionDeclaration>()
     val realization by unwrapping(FunctionTemplateDeclaration::realizationEdges)
 
     override val realizations: List<Declaration>

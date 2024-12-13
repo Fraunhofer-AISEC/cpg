@@ -33,11 +33,10 @@ import java.util.Objects
 import org.neo4j.ogm.annotation.Relationship
 
 class SynchronizedStatement : Statement() {
-    @Relationship(value = "EXPRESSION")
-    var expressionEdge = astOptionalEdgeOf<Expression>(label = "EXPRESSION")
+    @Relationship(value = "EXPRESSION") var expressionEdge = astOptionalEdgeOf<Expression>()
     var expression by unwrapping(SynchronizedStatement::expressionEdge)
 
-    @Relationship(value = "BLOCK") var blockEdge = astOptionalEdgeOf<Block>(label = "BLOCK")
+    @Relationship(value = "BLOCK") var blockEdge = astOptionalEdgeOf<Block>()
     var block by unwrapping(SynchronizedStatement::blockEdge)
 
     override fun equals(other: Any?): Boolean {

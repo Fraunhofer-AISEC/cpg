@@ -40,22 +40,22 @@ class TranslationUnitDeclaration :
     Declaration(), DeclarationHolder, StatementHolder, EOGStarterHolder {
     /** A list of declarations within this unit. */
     @Relationship(value = "DECLARATIONS", direction = Relationship.Direction.OUTGOING)
-    val declarationEdges = astEdgesOf<Declaration>(label = "DECLARATIONS")
+    val declarationEdges = astEdgesOf<Declaration>()
     override val declarations by unwrapping(TranslationUnitDeclaration::declarationEdges)
 
     /** A list of includes within this unit. */
     @Relationship(value = "INCLUDES", direction = Relationship.Direction.OUTGOING)
-    val includeEdges = astEdgesOf<IncludeDeclaration>(label = "INCLUDES")
+    val includeEdges = astEdgesOf<IncludeDeclaration>()
     val includes by unwrapping(TranslationUnitDeclaration::includeEdges)
 
     /** A list of namespaces within this unit. */
     @Relationship(value = "NAMESPACES", direction = Relationship.Direction.OUTGOING)
-    val namespaceEdges = astEdgesOf<NamespaceDeclaration>(label = "NAMESPACES")
+    val namespaceEdges = astEdgesOf<NamespaceDeclaration>()
     val namespaces by unwrapping(TranslationUnitDeclaration::namespaceEdges)
 
     /** The list of statements. */
     @Relationship(value = "STATEMENTS", direction = Relationship.Direction.OUTGOING)
-    override var statementEdges = astEdgesOf<Statement>(label = "STATEMENTS")
+    override var statementEdges = astEdgesOf<Statement>()
     override var statements by unwrapping(TranslationUnitDeclaration::statementEdges)
 
     override fun addDeclaration(declaration: Declaration) {

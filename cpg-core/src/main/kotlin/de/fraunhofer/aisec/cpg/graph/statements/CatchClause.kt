@@ -37,12 +37,11 @@ import java.util.Objects
 import org.neo4j.ogm.annotation.Relationship
 
 class CatchClause : Statement(), BranchingNode, EOGStarterHolder {
-    @Relationship(value = "PARAMETER")
-    var parameterEdge = astOptionalEdgeOf<VariableDeclaration>(label = "PARAMETER")
+    @Relationship(value = "PARAMETER") var parameterEdge = astOptionalEdgeOf<VariableDeclaration>()
 
     var parameter by unwrapping(CatchClause::parameterEdge)
 
-    @Relationship(value = "BODY") var bodyEdge = astOptionalEdgeOf<Block>(label = "BODY")
+    @Relationship(value = "BODY") var bodyEdge = astOptionalEdgeOf<Block>()
     var body by unwrapping(CatchClause::bodyEdge)
 
     @DoNotPersist

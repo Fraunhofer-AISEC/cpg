@@ -39,8 +39,7 @@ import org.neo4j.ogm.annotation.Relationship
  */
 // TODO Merge and/or refactor with new Expression
 class NewArrayExpression : Expression() {
-    @Relationship("INITIALIZER")
-    var initializerEdge = astOptionalEdgeOf<Expression>(label = "INITIALIZER")
+    @Relationship("INITIALIZER") var initializerEdge = astOptionalEdgeOf<Expression>()
 
     /**
      * The initializer of the expression, if present. Many languages, such as Java, either specify
@@ -54,7 +53,7 @@ class NewArrayExpression : Expression() {
      * dimensions. In the graph, this will NOT be done.
      */
     @Relationship(value = "DIMENSIONS", direction = Relationship.Direction.OUTGOING)
-    var dimensionEdges = astEdgesOf<Expression>(label = "DIMENSIONS")
+    var dimensionEdges = astEdgesOf<Expression>()
 
     /** Virtual property to access [dimensionEdges] without property edges. */
     var dimensions by unwrapping(NewArrayExpression::dimensionEdges)

@@ -33,13 +33,11 @@ import org.neo4j.ogm.annotation.Relationship
 
 /** Represents an assert statement */
 class AssertStatement : Statement() {
-    @Relationship(value = "CONDITION")
-    var conditionEdge = astOptionalEdgeOf<Expression>(label = "CONDITION")
+    @Relationship(value = "CONDITION") var conditionEdge = astOptionalEdgeOf<Expression>()
     /** The condition to be evaluated. */
     var condition by unwrapping(AssertStatement::conditionEdge)
 
-    @Relationship(value = "MESSAGE")
-    var messageEdge = astOptionalEdgeOf<Statement>(label = "MESSAGE")
+    @Relationship(value = "MESSAGE") var messageEdge = astOptionalEdgeOf<Statement>()
     /** The *optional* message that is shown, if the assert is evaluated as true */
     var message by unwrapping(AssertStatement::messageEdge)
 
