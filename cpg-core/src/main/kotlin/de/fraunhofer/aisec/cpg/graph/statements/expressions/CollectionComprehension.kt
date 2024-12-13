@@ -60,7 +60,7 @@ class CollectionComprehension : Expression(), ArgumentHolder {
     @Relationship("STATEMENT")
     var statementEdge =
         astEdgeOf<Statement>(
-            ProblemExpression("No statement provided but is required in ${this::class}")
+            ProblemExpression("No statement provided but is required in ${this::class}"),
         )
     /**
      * This field contains the statement which is applied to each element of the input for which the

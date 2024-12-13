@@ -37,6 +37,8 @@ open class AstEdge<T : Node>(start: Node, end: T) : Edge<T>(start, end) {
     init {
         end.astParent = start
     }
+
+    override var labels: Set<String> = setOf("AST")
 }
 
 /** Creates an [AstEdges] container starting from this node. */
