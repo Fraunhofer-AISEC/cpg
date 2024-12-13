@@ -32,13 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.types.BooleanType
 import de.fraunhofer.aisec.cpg.test.*
 import java.io.File
-import kotlin.test.Test
-import kotlin.test.assertContains
-import kotlin.test.assertEquals
-import kotlin.test.assertIs
-import kotlin.test.assertIsNot
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 class CXXInferenceTest {
     @Test
@@ -198,5 +192,33 @@ class CXXInferenceTest {
             assertTrue(pair.isInferred)
             assertEquals(pairType, pair.returnTypes.singleOrNull())
         }
+    }
+
+    @Test
+    fun testInferParentClassInNamespace() {
+        val file = File("src/test/resources/cxx/inference/parent_inference.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+                it.loadIncludes(false)
+                it.addIncludesToGraph(false)
+            }
+        assertNotNull(tu)
+
+        val util = tu.namespaces["ABC"]
+        assertNotNull(util)
+
+        val recordABCA = util.records["A"]
+        assertNotNull(recordABCA)
+        assertTrue(recordABCA.isInferred)
+
+        val recordA = tu.records["A"]
+        assertNotNull(recordA)
+        val funcFoo = recordA.functions["foo"]
+        assertNotNull(funcFoo)
+        assertTrue(funcFoo.isInferred)
+        val funcBar = recordA.functions["bar"]
+        assertNotNull(funcBar)
+        assertFalse(funcBar.isInferred)
     }
 }
