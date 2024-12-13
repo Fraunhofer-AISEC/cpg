@@ -29,4 +29,4 @@ package de.fraunhofer.aisec.cpg.graph
  * Represents an extra node added to the CPG. These nodes can live next to the CPG, typically having
  * shared edges to extend the original CPG graph.
  */
-interface OverlayNode
+abstract class OverlayNode : Node()
