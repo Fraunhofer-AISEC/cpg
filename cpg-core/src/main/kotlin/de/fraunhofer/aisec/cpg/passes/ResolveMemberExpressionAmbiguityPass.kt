@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.HasCallExpressionAmbiguity
 import de.fraunhofer.aisec.cpg.graph.Name
+import de.fraunhofer.aisec.cpg.graph.codeAndLocationFrom
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.isImport
 import de.fraunhofer.aisec.cpg.graph.fqn
@@ -81,8 +82,10 @@ class ResolveMemberExpressionAmbiguityPass(ctx: TranslationContext) : Translatio
         // qualified name
         val baseName = me.base.reconstructedImportName
         if (baseName.isImport || me.name.isImport) {
-            val ref = newReference(baseName.fqn(me.name.localName))
-            walker.replace(me.astParent, me, ref)
+            with(me) {
+                val ref = newReference(baseName.fqn(me.name.localName)).codeAndLocationFrom(this)
+                walker.replace(me.astParent, me, ref)
+            }
         }
     }
 
