@@ -166,12 +166,11 @@ class ImportDeclaration : Declaration() {
 }
 
 context(Pass<*>)
-fun Name.isImport(imports: List<ImportDeclaration>): Boolean {
-    return imports.any {
-        if (it.alias != null) {
-            it.alias == this
-        } else {
-            it.name == this
-        }
+val Name.isImport: Boolean
+    get() {
+        val decl =
+            this@Pass.scopeManager.currentScope
+                ?.lookupSymbol(this.localName, replaceImports = false)
+                ?.filterIsInstance<ImportDeclaration>()
+        return decl?.isNotEmpty() == true
     }
-}

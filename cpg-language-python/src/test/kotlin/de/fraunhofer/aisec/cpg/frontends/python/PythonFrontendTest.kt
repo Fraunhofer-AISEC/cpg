@@ -1604,7 +1604,7 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(tu)
 
         val refs = tu.refs
-        refs.forEach { assertIsNot<MemberExpression>(it) }
+        refs.forEach { assertIsNot<MemberExpression>(it, "{${it.name}} is a member expression") }
         assertEquals(
             setOf("a", "b", "pkg.module.foo", "another_module.foo"),
             refs.map { it.name.toString() }.toSet()

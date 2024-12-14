@@ -284,6 +284,9 @@ abstract class Node :
      * further children that have no alternative connection paths to the rest of the graph.
      */
     fun disconnectFromGraph() {
+        // Disconnect all AST children first
+        this.astChildren.forEach { it.disconnectFromGraph() }
+
         nextDFGEdges.clear()
         prevDFGEdges.clear()
         prevCDGEdges.clear()
