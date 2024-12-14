@@ -29,12 +29,10 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend
-import de.fraunhofer.aisec.cpg.frontends.python.reconstructedImportName
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.isImport
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
@@ -42,7 +40,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.InitializerTypePropagation
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
-import de.fraunhofer.aisec.cpg.helpers.replace
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 import de.fraunhofer.aisec.cpg.passes.configuration.RequiredFrontend
 
@@ -78,21 +75,9 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
         when (node) {
             is AssignExpression -> handleAssignExpression(node)
             is ForEachStatement -> handleForEach(node)
-            is MemberExpression -> handleMemberExpression(node)
             else -> {
                 // Nothing to do for all other types of nodes
             }
-        }
-    }
-
-    private fun handleMemberExpression(me: MemberExpression) {
-        // We need to check, if our "base" (or our expression) is really a name that refers to an
-        // import, because in this case we do not have a member expression, but a reference with a
-        // qualified name
-        val baseName = me.base.reconstructedImportName
-        if (baseName.isImport || me.name.isImport) {
-            val ref = newReference(baseName.fqn(me.name.localName))
-            walker.replace(me.astParent, me, ref)
         }
     }
 

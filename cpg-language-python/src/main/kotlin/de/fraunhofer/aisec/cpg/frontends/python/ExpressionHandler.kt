@@ -575,17 +575,3 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         return lambda
     }
 }
-
-/**
- * This utility function tries to reconstruct the name as if the expression was part of an imported
- * symbol. This is needed because the [MemberExpression.name] includes the [MemberExpression.base]'s
- * type instead of the name, and thus it might be "UNKNOWN".
- */
-val Expression.reconstructedImportName: Name
-    get() {
-        return if (this is MemberExpression) {
-            this.base.reconstructedImportName.fqn(this.name.localName)
-        } else {
-            this.name
-        }
-    }
