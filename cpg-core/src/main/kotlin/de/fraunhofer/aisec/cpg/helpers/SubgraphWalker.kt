@@ -438,6 +438,7 @@ fun SubgraphWalker.ScopedWalker.replace(parent: Node?, old: Expression, new: Exp
 private fun CallExpression.duplicateTo(call: CallExpression, callee: Reference) {
     call.ctx = this.ctx
     call.language = this.language
+    call.arguments = this.arguments
     call.type = this.type
     call.assignedTypes = this.assignedTypes
     call.code = this.code
@@ -447,6 +448,7 @@ private fun CallExpression.duplicateTo(call: CallExpression, callee: Reference) 
     call.comment = this.comment
     call.file = this.file
     call.callee = callee
+    callee.resolutionHelper = call
     call.isImplicit = this.isImplicit
     call.isInferred = this.isInferred
 }
