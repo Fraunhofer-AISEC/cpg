@@ -40,6 +40,16 @@ import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 import de.fraunhofer.aisec.cpg.passes.configuration.RequiresLanguageTrait
 
+/**
+ * A translation unit pass that resolves ambiguities in member expressions within a translation unit.
+ * This pass checks whether the base or member name in a member expression refers to an import and,
+ * if so, replaces the member expression with a reference using the fully qualified name.
+ *
+ * This pass is dependent on the [ImportResolver] pass and requires the language trait [HasCallExpressionAmbiguity].
+ * It is executed before the [EvaluationOrderGraphPass].
+ *
+ * @constructor Initializes the pass with the provided translation context.
+ */
 @ExecuteBefore(EvaluationOrderGraphPass::class)
 @DependsOn(ImportResolver::class)
 @RequiresLanguageTrait(HasCallExpressionAmbiguity::class)
@@ -58,6 +68,13 @@ class ResolveMemberExpressionAmbiguityPass(ctx: TranslationContext) : Translatio
         walker.iterate(tu)
     }
 
+    /**
+     * Resolves ambiguities in a given member expression. Checks whether the base or member name of
+     * the member expression refers to an import, and if so, replaces the member expression with a
+     * reference that uses the fully qualified name.
+     *
+     * @param me The member expression to disambiguate and potentially replace.
+     */
     private fun resolveAmbiguity(me: MemberExpression) {
         // We need to check, if our "base" (or our expression) is really a name that refers to an
         // import, because in this case we do not have a member expression, but a reference with a

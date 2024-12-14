@@ -165,6 +165,17 @@ class ImportDeclaration : Declaration() {
     var importedSymbols: SymbolMap = mutableMapOf()
 }
 
+/**
+ * This property determines if a given name represents an import declaration within the context of a
+ * [Pass].
+ *
+ * The resolution is performed by looking up the current scope's symbols to find matching
+ * [ImportDeclaration] instances for the name's [Name.localName]. If such instances are found, the
+ * property evaluates to `true`, indicating the name is an import declaration. Otherwise, it
+ * evaluates to `false`. The lookup does not replace imports during the resolution process.
+ *
+ * This property operates within the contextual scope provided by the associated [Pass].
+ */
 context(Pass<*>)
 val Name.isImport: Boolean
     get() {
