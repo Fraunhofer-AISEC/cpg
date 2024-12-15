@@ -94,13 +94,13 @@ class ResolveMemberExpressionAmbiguityPass(ctx: TranslationContext) : Translatio
         }
     }
 
-    private fun isImportedNamespace(name: Name, me: MemberExpression): Boolean {
+    private fun isImportedNamespace(name: Name, hint: Expression): Boolean {
         val resolved =
             scopeManager.lookupSymbolByName(
                 name,
-                language = me.language,
-                location = me.location,
-                startScope = me.scope
+                language = hint.language,
+                location = hint.location,
+                startScope = hint.scope
             )
         var isImportedNamespace = resolved.singleOrNull() is NamespaceDeclaration
         if (!isImportedNamespace) {
@@ -108,13 +108,9 @@ class ResolveMemberExpressionAmbiguityPass(ctx: TranslationContext) : Translatio
             // The problem is that we do not really know at this point whether we import a
             // (sub)module or a global variable of the namespace. We tend to assume that this is a
             // namespace
-            val imports = me.translationUnit.imports
+            val imports = hint.translationUnit.imports
             isImportedNamespace =
-                imports.any {
-                    var toMatch = it.name
-                    it.alias?.let { toMatch = it }
-                    toMatch.lastPartsMatch(name) || toMatch.startsWith(name)
-                }
+                imports.any { it.name.lastPartsMatch(name) || it.name.startsWith(name) }
         }
         return isImportedNamespace
     }

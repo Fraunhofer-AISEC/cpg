@@ -38,7 +38,6 @@ import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.SetType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.ControlDependenceGraphPass
-import de.fraunhofer.aisec.cpg.query.value
 import de.fraunhofer.aisec.cpg.sarif.Region
 import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
@@ -1426,6 +1425,9 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(call)
         assertInvokes(call, aFunc)
 
+        var pair = call.isImported
+        assertTrue(pair.first)
+
         call = result.calls["a_func"]
         assertNotNull(call)
         assertInvokes(call, aFunc)
@@ -1445,6 +1447,8 @@ class PythonFrontendTest : BaseTest() {
         call = result.calls["different.completely_different_func"]
         assertNotNull(call)
         assertInvokes(call, cCompletelyDifferentFunc)
+        pair = call.isImported
+        assertTrue(pair.first)
     }
 
     @Test

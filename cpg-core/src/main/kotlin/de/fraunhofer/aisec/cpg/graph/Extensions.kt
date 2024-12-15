@@ -1011,13 +1011,36 @@ fun Expression?.unwrapReference(): Reference? {
 /** Returns the [TranslationUnitDeclaration] where this node is located in. */
 val Node.translationUnit: TranslationUnitDeclaration?
     get() {
-        var node: Node? = this
-        while (node != null) {
-            if (node is TranslationUnitDeclaration) {
-                return node
-            }
-            node = node.astParent
+        return firstParentOrNull { it is TranslationUnitDeclaration } as? TranslationUnitDeclaration
+    }
+
+/**
+ * This helper function be used to find out if a particular expression (usually a [CallExpression]
+ * or a [Reference]) is imported through a [ImportDeclaration].
+ *
+ * It returns a [Pair], with the [Pair.first] being a boolean value whether it was imported and
+ * [Pair.second] the [ImportDeclaration] if applicable.
+ */
+val Expression.isImported: Pair<Boolean, ImportDeclaration?>
+    get() {
+        if (this is CallExpression) {
+            return this.callee.isImported
+        } else if (this is MemberExpression) {
+            return this.base.isImported
+        } else if (this is Reference) {
+            val imports = this.translationUnit.imports
+
+            val import =
+                if (name.parent == null) {
+                    // If the name does not have a parent, this reference could directly be the name
+                    // of an import, let's check
+                    imports.firstOrNull { it.name == this.name }
+                } else {
+                    // Otherwise, the parent name could be the import
+                    imports.firstOrNull { it.name == this.name.parent }
+                }
+            return Pair(import != null, import)
         }
 
-        return null
+        return Pair(false, null)
     }
