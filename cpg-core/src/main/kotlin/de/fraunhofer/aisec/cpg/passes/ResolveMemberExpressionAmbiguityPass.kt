@@ -29,12 +29,14 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.HasCallExpressionAmbiguity
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.codeAndLocationFrom
+import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.isImport
 import de.fraunhofer.aisec.cpg.graph.fqn
+import de.fraunhofer.aisec.cpg.graph.imports
 import de.fraunhofer.aisec.cpg.graph.newReference
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.translationUnit
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.replace
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
@@ -81,12 +83,39 @@ class ResolveMemberExpressionAmbiguityPass(ctx: TranslationContext) : Translatio
         // import, because in this case we do not have a member expression, but a reference with a
         // qualified name
         val baseName = me.base.reconstructedImportName
-        if (baseName.isImport || me.name.isImport) {
+        var isImportedNamespace = isImportedNamespace(baseName, me)
+
+        if (isImportedNamespace) {
             with(me) {
                 val ref = newReference(baseName.fqn(me.name.localName)).codeAndLocationFrom(this)
                 walker.replace(me.astParent, me, ref)
             }
         }
+    }
+
+    private fun isImportedNamespace(name: Name, me: MemberExpression): Boolean {
+        val resolved =
+            scopeManager.lookupSymbolByName(
+                name,
+                language = me.language,
+                location = me.location,
+                startScope = me.scope
+            )
+        var isImportedNamespace = resolved.singleOrNull() is NamespaceDeclaration
+        if (!isImportedNamespace) {
+            // It still could be an imported namespace of an imported package that we do not know.
+            // The problem is that we do not really know at this point whether we import a
+            // (sub)module or a global variable of the namespace. We tend to assume that this is a
+            // namespace
+            val imports = me.translationUnit.imports
+            isImportedNamespace =
+                imports.any {
+                    var toMatch = it.name
+                    it.alias?.let { toMatch = it }
+                    toMatch.lastPartsMatch(name) || toMatch.startsWith(name)
+                }
+        }
+        return isImportedNamespace
     }
 
     override fun cleanup() {
