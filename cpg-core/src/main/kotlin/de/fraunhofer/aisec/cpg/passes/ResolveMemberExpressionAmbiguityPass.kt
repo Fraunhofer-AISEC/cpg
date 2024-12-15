@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.HasCallExpressionAmbiguity
+import de.fraunhofer.aisec.cpg.frontends.HasMemberExpressionAmbiguity
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.codeAndLocationFrom
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
@@ -55,7 +56,7 @@ import de.fraunhofer.aisec.cpg.passes.configuration.RequiresLanguageTrait
  */
 @ExecuteBefore(EvaluationOrderGraphPass::class)
 @DependsOn(ImportResolver::class)
-@RequiresLanguageTrait(HasCallExpressionAmbiguity::class)
+@RequiresLanguageTrait(HasMemberExpressionAmbiguity::class)
 class ResolveMemberExpressionAmbiguityPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
 
     lateinit var walker: SubgraphWalker.ScopedWalker
