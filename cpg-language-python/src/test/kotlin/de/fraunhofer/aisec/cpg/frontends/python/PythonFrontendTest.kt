@@ -29,7 +29,10 @@ import de.fraunhofer.aisec.cpg.InferenceConfiguration
 import de.fraunhofer.aisec.cpg.analysis.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
-import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ListType
@@ -38,7 +41,6 @@ import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.SetType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.ControlDependenceGraphPass
-import de.fraunhofer.aisec.cpg.query.value
 import de.fraunhofer.aisec.cpg.sarif.Region
 import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
@@ -1426,6 +1428,8 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(call)
         assertInvokes(call, aFunc)
 
+        assertTrue(call.isImported)
+
         call = result.calls["a_func"]
         assertNotNull(call)
         assertInvokes(call, aFunc)
@@ -1445,6 +1449,37 @@ class PythonFrontendTest : BaseTest() {
         call = result.calls["different.completely_different_func"]
         assertNotNull(call)
         assertInvokes(call, cCompletelyDifferentFunc)
+        assertTrue(call.isImported)
+    }
+
+    @Test
+    fun testImportsWithoutDependencySource() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("import_no_src.py").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(tu)
+
+        val barCall = tu.calls["bar"]
+        assertIs<CallExpression>(barCall)
+        assertTrue(barCall.isImported)
+
+        val bazCall = tu.calls["baz"]
+        assertIs<CallExpression>(bazCall)
+        assertTrue(bazCall.isImported)
+
+        val fooCall = tu.calls["foo"]
+        assertIs<CallExpression>(fooCall)
+        assertTrue(fooCall.isImported)
+
+        val foo3Call = tu.calls["foo3"]
+        assertIs<CallExpression>(foo3Call)
+        assertTrue(foo3Call.isImported)
     }
 
     @Test
@@ -1588,6 +1623,44 @@ class PythonFrontendTest : BaseTest() {
             assertNotNull(it)
             assertNotNull(it.refersTo)
         }
+    }
+
+    @Test
+    fun testImportTest() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("import_test.py").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(tu)
+
+        val refs = tu.refs
+        refs.forEach { assertIsNot<MemberExpression>(it, "{${it.name}} is a member expression") }
+        assertEquals(
+            setOf("a", "b", "pkg.module.foo", "another_module.foo"),
+            refs.map { it.name.toString() }.toSet()
+        )
+    }
+
+    @Test
+    fun testImportVsMember() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("import_vs_member.py").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(tu)
+
+        val refs = tu.refs
+        refs.forEach { assertIsNot<MemberExpression>(it) }
     }
 
     class PythonValueEvaluator : ValueEvaluator() {

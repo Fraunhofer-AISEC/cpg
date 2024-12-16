@@ -31,3 +31,6 @@ other_func()
 # these calls should resolve to module "c"
 completely_different_func()
 different.completely_different_func()
+
+# these should be a nested member call with an "inner" call to a qualified "a.foobar"
+a.foobar.bar()

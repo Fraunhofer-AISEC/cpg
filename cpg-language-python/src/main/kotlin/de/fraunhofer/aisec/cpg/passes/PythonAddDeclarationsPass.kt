@@ -47,12 +47,15 @@ import de.fraunhofer.aisec.cpg.passes.configuration.RequiredFrontend
 @ExecuteBefore(SymbolResolver::class)
 @RequiredFrontend(PythonLanguageFrontend::class)
 class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), LanguageProvider {
+
+    lateinit var walker: SubgraphWalker.ScopedWalker
+
     override fun cleanup() {
         // nothing to do
     }
 
     override fun accept(p0: Component) {
-        val walker = SubgraphWalker.ScopedWalker(ctx.scopeManager)
+        walker = SubgraphWalker.ScopedWalker(ctx.scopeManager)
         walker.registerHandler { _, _, currNode -> handle(currNode) }
 
         for (tu in p0.translationUnits) {
