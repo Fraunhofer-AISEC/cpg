@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.helpers
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import java.io.File
 import java.nio.file.Path
 import java.time.Duration
@@ -36,6 +37,7 @@ import java.util.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
+@DoNotPersist
 class BenchmarkResults(val entries: List<List<Any>>) {
 
     val json: String
@@ -175,6 +177,7 @@ constructor(
     }
 }
 
+@DoNotPersist
 /** Represents some kind of measurements, e.g., on the performance or problems. */
 open class MeasurementHolder
 @JvmOverloads

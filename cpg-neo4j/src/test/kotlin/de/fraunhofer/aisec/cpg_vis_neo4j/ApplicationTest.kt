@@ -43,9 +43,9 @@ import kotlin.test.assertNotNull
 import org.neo4j.ogm.annotation.Relationship
 import picocli.CommandLine
 
-fun createTranslationResult(): Pair<Application, TranslationResult> {
+fun createTranslationResult(file: String = "client.cpp"): Pair<Application, TranslationResult> {
     val topLevel = Paths.get("src").resolve("test").resolve("resources").toAbsolutePath()
-    val path = topLevel.resolve("client.cpp").toAbsolutePath()
+    val path = topLevel.resolve(file).toAbsolutePath()
 
     val cmd = CommandLine(Application::class.java)
     cmd.parseArgs(path.toString())
