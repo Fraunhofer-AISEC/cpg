@@ -29,7 +29,10 @@ import de.fraunhofer.aisec.cpg.InferenceConfiguration
 import de.fraunhofer.aisec.cpg.analysis.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
-import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ListType
@@ -1449,6 +1452,36 @@ class PythonFrontendTest : BaseTest() {
         assertInvokes(call, cCompletelyDifferentFunc)
         pair = call.isImported
         assertTrue(pair.first)
+    }
+
+    @Test
+    fun testImportsWithoutDependencySource() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("import_no_src_test.py").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(tu)
+
+        val barCall = tu.calls["bar"]
+        assertIs<CallExpression>(barCall)
+        assertTrue(barCall.isImported.first)
+
+        val bazCall = tu.calls["baz"]
+        assertIs<CallExpression>(bazCall)
+        assertTrue(bazCall.isImported.first)
+
+        val fooCall = tu.calls["foo"]
+        assertIs<CallExpression>(fooCall)
+        assertTrue(fooCall.isImported.first)
+
+        val foo3Call = tu.calls["foo3"]
+        assertIs<CallExpression>(foo3Call)
+        assertTrue(foo3Call.isImported.first)
     }
 
     @Test
