@@ -79,7 +79,7 @@ class FileConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
             val fileName = getFileName(callExpression)
             val newFileNode =
                 newFileNode(
-                    cpgNode = callExpression,
+                    underlayingNode = callExpression,
                     result = result,
                     accessMode = getAccessMode(callExpression),
                     fileName = fileName
@@ -110,14 +110,14 @@ class FileConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 when (localName) {
                     "read" -> {
                         newFileReadNode(
-                            cpgNode = callExpression,
+                            underlayingNode = callExpression,
                             result = result,
                             fileNode = fileNode,
                         )
                     }
                     "write" -> {
                         newFileWriteNode(
-                            cpgNode = callExpression,
+                            underlayingNode = callExpression,
                             result = result,
                             fileNode = fileNode
                         )

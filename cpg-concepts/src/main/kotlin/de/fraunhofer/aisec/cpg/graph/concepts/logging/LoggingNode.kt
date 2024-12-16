@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.concepts.logging
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 
-data class LoggingNode(override val cpgNode: Node) : Concept(), IsLogging {
+data class LoggingNode(override val underlayingNode: Node) : Concept(), IsLogging {
     // TODO: target: stdout / err / file / ...
     override val ops: MutableSet<LogOperationNode> = HashSet()
 }

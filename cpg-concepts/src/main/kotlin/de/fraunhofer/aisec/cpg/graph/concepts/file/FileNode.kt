@@ -39,7 +39,7 @@ enum class FileAccessMode {
 }
 
 data class FileNode(
-    override val cpgNode: Node,
+    override val underlayingNode: Node,
     override val ops: MutableSet<FileOperationNode>,
     val fileName: String,
     val accessMode: FileAccessMode,
@@ -47,7 +47,7 @@ data class FileNode(
     override fun hashCode(): Int {
         return Objects.hash(
             super.hashCode(),
-            cpgNode,
+            underlayingNode,
             fileName,
             accessMode
         ) // TODO: exclude ops because this would result in a circular reference. how to do this in

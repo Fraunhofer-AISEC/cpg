@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.concepts.file
 import de.fraunhofer.aisec.cpg.graph.Node
 
 data class FileReadNode(
-    override val cpgNode: Node,
+    override val underlayingNode: Node,
     override val concept: FileNode,
     val target: Set<Node>,
 ) : FileOperationNode()

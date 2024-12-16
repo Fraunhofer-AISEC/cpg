@@ -38,7 +38,7 @@ enum class LogLevel {
 }
 
 data class LogOperationNode(
-    override val cpgNode: Node,
+    override val underlayingNode: Node,
     override val concept: LoggingNode,
     val logLevel: LogLevel,
     val logArguments: List<Node>,

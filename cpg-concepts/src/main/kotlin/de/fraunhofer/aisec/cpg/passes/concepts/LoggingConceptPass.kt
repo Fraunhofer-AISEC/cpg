@@ -82,7 +82,7 @@ class LoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
         if (
             importDeclaration.import.toString() == "logging"
         ) { // TODO what about import logging as foo
-            val newNode = newLoggingNode(cpgNode = importDeclaration, result)
+            val newNode = newLoggingNode(underlayingNode = importDeclaration, result)
             loggers += importDeclaration to newNode
         }
     }
@@ -102,7 +102,7 @@ class LoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     .singleOrNull() ?: TODO("Did not find an `import logging` logger.")
             logOpHelper(callExpression = callExpression, logger = logger)
         } else if (callee.name.toString() == "logging.getLogger") {
-            val newNode = newLoggingNode(cpgNode = callExpression, result)
+            val newNode = newLoggingNode(underlayingNode = callExpression, result)
 
             if (callExpression.astParent is AssignExpression) {
                 val assign = callExpression.astParent
@@ -132,7 +132,7 @@ class LoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
             "info",
             "debug" -> {
                 newLogOperationNode(
-                    cpgNode = callExpression,
+                    underlayingNode = callExpression,
                     result = result,
                     logger = logger,
                     logArguments = callExpression.arguments,

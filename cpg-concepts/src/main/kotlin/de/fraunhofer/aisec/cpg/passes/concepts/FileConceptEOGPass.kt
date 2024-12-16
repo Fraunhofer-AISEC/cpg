@@ -49,7 +49,7 @@ class FileConceptEOGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         val parent = comp.astParent
         if (parent is TranslationResult) {
             val conceptNodes = parent.conceptNodes.filterIsInstance<FileOperationNode>()
-            conceptNodes.forEach { allCPGConceptNodes += it.cpgNode to it }
+            conceptNodes.forEach { allCPGConceptNodes += it.underlayingNode to it }
             conceptNodes.forEach { handle(it) }
         } else {
             TODO("Failed to find a translation result.")
@@ -58,7 +58,7 @@ class FileConceptEOGPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
     private fun handle(fileOp: FileOperationNode) {
         val nextEOGFulfilled =
-            fileOp.cpgNode
+            fileOp.underlayingNode
                 .followNextEOGEdgesUntilHit(collectFailedPaths = false) {
                     it in allCPGConceptNodes.keys
                 }
