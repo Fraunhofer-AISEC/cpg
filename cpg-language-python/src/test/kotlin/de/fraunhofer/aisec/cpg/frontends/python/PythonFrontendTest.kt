@@ -1459,7 +1459,7 @@ class PythonFrontendTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val tu =
             analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("import_no_src_test.py").toFile()),
+                listOf(topLevel.resolve("import_no_src.py").toFile()),
                 topLevel,
                 true
             ) {

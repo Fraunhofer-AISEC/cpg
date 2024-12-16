@@ -1034,7 +1034,7 @@ val Expression.isImported: Pair<Boolean, ImportDeclaration?>
                 if (name.parent == null) {
                     // If the name does not have a parent, this reference could directly be the name
                     // of an import, let's check
-                    imports.firstOrNull { it.name == this.name }
+                    imports.firstOrNull { it.name.lastPartsMatch(name) }
                 } else {
                     // Otherwise, the parent name could be the import
                     imports.firstOrNull { it.name == this.name.parent }
