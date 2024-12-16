@@ -2,7 +2,7 @@
 <html class="no-js">
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
-    <title>HasCallExpressionAmbiguity</title>
+    <title>HasMemberExpressionAmbiguity</title>
 <link href="../../../images/logo-icon.svg" rel="icon" type="image/svg">    <script>var pathToRoot = "../../../";</script>
     <script>document.documentElement.classList.replace("no-js","js");</script>
     <script>const storage = localStorage.getItem("dokka-dark-mode")
@@ -43,7 +43,7 @@
                             cpg
                     </a>            </div>
             <div class="library-version">
-<dokka-template-command data="{&quot;@class&quot;:&quot;org.jetbrains.dokka.base.templating.ReplaceVersionsCommand&quot;,&quot;location&quot;:&quot;de.fraunhofer.aisec.cpg.frontends/-has-call-expression-ambiguity/index.html&quot;}">main</dokka-template-command>            </div>
+<dokka-template-command data="{&quot;@class&quot;:&quot;org.jetbrains.dokka.base.templating.ReplaceVersionsCommand&quot;,&quot;location&quot;:&quot;de.fraunhofer.aisec.cpg.frontends/-has-member-expression-ambiguity/index.html&quot;}">main</dokka-template-command>            </div>
         </div>
         <div class="filter-section" id="filter-section">
                 <button class="platform-tag platform-selector jvm-like" data-active="" data-filter=":cpg-core:dokkaHtmlPartial/main">jvm</button>
@@ -59,11 +59,11 @@
                 <div class="sidebar--inner" id="sideMenu"></div>
             </div>
             <div id="main">
-<div class="main-content" data-page-type="classlike" id="content" pageids="cpg-core::de.fraunhofer.aisec.cpg.frontends/HasCallExpressionAmbiguity///PointingToDeclaration//1556141526">
-  <div class="breadcrumbs"><a href="../../index.html">cpg-core</a><span class="delimiter">/</span><a href="../index.html">de.fraunhofer.aisec.cpg.frontends</a><span class="delimiter">/</span><span class="current">HasCallExpressionAmbiguity</span></div>
+<div class="main-content" data-page-type="classlike" id="content" pageids="cpg-core::de.fraunhofer.aisec.cpg.frontends/HasMemberExpressionAmbiguity///PointingToDeclaration//1556141526">
+  <div class="breadcrumbs"><a href="../../index.html">cpg-core</a><span class="delimiter">/</span><a href="../index.html">de.fraunhofer.aisec.cpg.frontends</a><span class="delimiter">/</span><span class="current">HasMemberExpressionAmbiguity</span></div>
   <div class="cover ">
-    <h1 class="cover"><span>Has</span><wbr><span>Call</span><wbr><span>Expression</span><wbr><span><span>Ambiguity</span></span></h1>
-    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">interface </span><a href="index.html">HasCallExpressionAmbiguity</a> : <a href="../-language-trait/index.html">LanguageTrait</a></div><p class="paragraph">A common super-class for all language traits that arise because they are an ambiguity of a function call, e.g., function-style casts. This means that we cannot differentiate between a <a href="../../de.fraunhofer.aisec.cpg.graph.statements.expressions/-call-expression/index.html">CallExpression</a> and other expressions during the frontend, and we need to invoke the <a href="../../de.fraunhofer.aisec.cpg.passes/-resolve-call-expression-ambiguity-pass/index.html">ResolveCallExpressionAmbiguityPass</a> to resolve this.</p><h4 class="">Inheritors</h4><div class="table"><div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"><div class="main-subrow keyValue "><div class=""><span class="inline-flex"><div><a href="../-has-function-style-casts/index.html">HasFunctionStyleCasts</a></div></span></div><div></div></div></div><div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"><div class="main-subrow keyValue "><div class=""><span class="inline-flex"><div><a href="../-has-function-style-construction/index.html">HasFunctionStyleConstruction</a></div></span></div><div></div></div></div></div></div></div>
+    <h1 class="cover"><span>Has</span><wbr><span>Member</span><wbr><span>Expression</span><wbr><span><span>Ambiguity</span></span></h1>
+    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">interface </span><a href="index.html">HasMemberExpressionAmbiguity</a> : <a href="../-language-trait/index.html">LanguageTrait</a></div><p class="paragraph">A common trait for classes, in which supposed member expressions (and thus also member calls) in the form of "a.b" have an ambiguity between a real field/method access (when "a" is an object) and a qualified call because of an import, if "a" is an import / namespace.</p><p class="paragraph">We can only resolve this after we have dealt with imports and know all symbols. Therefore, we invoke the <a href="../../de.fraunhofer.aisec.cpg.passes/-resolve-member-expression-ambiguity-pass/index.html">ResolveMemberExpressionAmbiguityPass</a>.</p></div></div>
   </div>
   <div class="tabbedcontent">
     <div class="tabs-section" tabs-section="tabs-section"></div>
