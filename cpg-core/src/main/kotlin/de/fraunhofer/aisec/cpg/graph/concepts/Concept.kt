@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.graph.concepts
 
-import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
 
 /**
@@ -34,8 +33,6 @@ import de.fraunhofer.aisec.cpg.graph.OverlayNode
  * and stored in [ops].
  */
 abstract class Concept() : OverlayNode() {
-    /** All concept nodes are connected to an original cpg [Node] by this. */
-    abstract val cpgNode: Node
     /** All [Operation]s belonging to this concept. */
     abstract val ops: Set<Operation>
 }

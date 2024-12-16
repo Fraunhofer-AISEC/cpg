@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.graph.concepts
 
-import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
 
 /**
@@ -33,8 +32,6 @@ import de.fraunhofer.aisec.cpg.graph.OverlayNode
  * `write` on a file or log object or an `execute` on a database.
  */
 abstract class Operation : OverlayNode() {
-    /** All concept nodes are connected to an original cpg [Node] by this. */
-    abstract val cpgNode: Node
     /** The [Concept] this operation belongs to. */
     abstract val concept: Concept
 }
