@@ -1021,26 +1021,36 @@ val Node.translationUnit: TranslationUnitDeclaration?
  * It returns a [Pair], with the [Pair.first] being a boolean value whether it was imported and
  * [Pair.second] the [ImportDeclaration] if applicable.
  */
-val Expression.isImported: Pair<Boolean, ImportDeclaration?>
+val Expression.importedFrom: List<ImportDeclaration>
     get() {
         if (this is CallExpression) {
-            return this.callee.isImported
+            return this.callee.importedFrom
         } else if (this is MemberExpression) {
-            return this.base.isImported
+            return this.base.importedFrom
         } else if (this is Reference) {
             val imports = this.translationUnit.imports
 
-            val import =
-                if (name.parent == null) {
-                    // If the name does not have a parent, this reference could directly be the name
-                    // of an import, let's check
-                    imports.firstOrNull { it.name.lastPartsMatch(name) }
-                } else {
-                    // Otherwise, the parent name could be the import
-                    imports.firstOrNull { it.name == this.name.parent }
-                }
-            return Pair(import != null, import)
+            return if (name.parent == null) {
+                // If the name does not have a parent, this reference could directly be the name
+                // of an import, let's check
+                imports.filter { it.name.lastPartsMatch(name) }
+            } else {
+                // Otherwise, the parent name could be the import
+                imports.filter { it.name == this.name.parent }
+            } ?: listOf<ImportDeclaration>()
         }
 
-        return Pair(false, null)
+        return listOf<ImportDeclaration>()
+    }
+
+/**
+ * Determines whether the expression is imported from another source.
+ *
+ * This property evaluates to `true` if the expression originates from an external or supplemental
+ * source by checking if the [importedFrom] property contains any entries. Otherwise, it evaluates
+ * to `false`.
+ */
+val Expression.isImported: Boolean
+    get() {
+        return this.importedFrom.isNotEmpty()
     }

@@ -1428,8 +1428,7 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(call)
         assertInvokes(call, aFunc)
 
-        var pair = call.isImported
-        assertTrue(pair.first)
+        assertTrue(call.isImported)
 
         call = result.calls["a_func"]
         assertNotNull(call)
@@ -1450,8 +1449,7 @@ class PythonFrontendTest : BaseTest() {
         call = result.calls["different.completely_different_func"]
         assertNotNull(call)
         assertInvokes(call, cCompletelyDifferentFunc)
-        pair = call.isImported
-        assertTrue(pair.first)
+        assertTrue(call.isImported)
     }
 
     @Test
@@ -1469,19 +1467,19 @@ class PythonFrontendTest : BaseTest() {
 
         val barCall = tu.calls["bar"]
         assertIs<CallExpression>(barCall)
-        assertTrue(barCall.isImported.first)
+        assertTrue(barCall.isImported)
 
         val bazCall = tu.calls["baz"]
         assertIs<CallExpression>(bazCall)
-        assertTrue(bazCall.isImported.first)
+        assertTrue(bazCall.isImported)
 
         val fooCall = tu.calls["foo"]
         assertIs<CallExpression>(fooCall)
-        assertTrue(fooCall.isImported.first)
+        assertTrue(fooCall.isImported)
 
         val foo3Call = tu.calls["foo3"]
         assertIs<CallExpression>(foo3Call)
-        assertTrue(foo3Call.isImported.first)
+        assertTrue(foo3Call.isImported)
     }
 
     @Test
