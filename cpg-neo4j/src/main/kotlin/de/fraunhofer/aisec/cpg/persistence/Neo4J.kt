@@ -86,7 +86,7 @@ fun TranslationResult.persist() {
 
     val astNodes = this@persist.nodes
     val connected = astNodes.flatMap { it.connectedNodes }.toSet()
-    val nodes = (astNodes + connected + this.additionalNodes).distinct()
+    val nodes = (astNodes + connected).distinct()
 
     log.info(
         "Persisting {} nodes: AST nodes ({}), other nodes ({})",

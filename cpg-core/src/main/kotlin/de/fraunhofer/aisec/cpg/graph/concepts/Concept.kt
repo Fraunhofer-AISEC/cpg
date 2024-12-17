@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.graph.concepts
 
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
-import org.neo4j.ogm.annotation.Relationship
 
 /**
  * Represents a new concept added to the CPG. This is intended for modelling "concepts" like
