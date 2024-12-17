@@ -45,4 +45,3 @@ abstract class OverlayNode() : Node() {
         )
     var underlyingNode by unwrapping(OverlayNode::underlyingNodeEdge)
 }
-

@@ -67,9 +67,9 @@ class Neo4JTest {
         val connectCall = result.calls["connect"]
 
         abstract class NetworkingOperation(
-            concept: Concept<*>,
+            concept: Concept<out Operation>,
         ) : Operation(concept)
-        class Connect(concept: Concept<*>) : NetworkingOperation(concept)
+        class Connect(concept: Concept<out Operation>) : NetworkingOperation(concept)
         class Networking() : Concept<NetworkingOperation>()
 
         val nw = Networking()
@@ -78,6 +78,7 @@ class Neo4JTest {
         val connect = Connect(concept = nw)
         connect.underlyingNode = connectCall
         connect.name = Name("connect")
+        nw.ops += connect
 
         assertEquals(connect, connectCall?.overlayNode)
 
