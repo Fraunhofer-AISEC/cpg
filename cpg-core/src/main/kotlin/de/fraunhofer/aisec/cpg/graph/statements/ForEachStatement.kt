@@ -70,10 +70,10 @@ class ForEachStatement : LoopStatement(), BranchingNode, StatementHolder {
     override var statementEdges: AstEdges<Statement, AstEdge<Statement>>
         get() {
             val statements = astEdgesOf<Statement>()
-            variable?.let { statements.add(AstEdge(this, it)) }
-            iterable?.let { statements.add(AstEdge(this, it)) }
-            statement?.let { statements.add(AstEdge(this, it)) }
-            elseStatement?.let { statements.add(AstEdge(this, it)) }
+            statements += variableEdge
+            statements += iterableEdge
+            statements += statementEdge
+            statements += elseStatementEdge
             return statements
         }
         set(_) {

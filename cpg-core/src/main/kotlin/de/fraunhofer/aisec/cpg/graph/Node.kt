@@ -45,9 +45,11 @@ import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.neo4j.LocationConverter
 import de.fraunhofer.aisec.cpg.helpers.neo4j.NameConverter
 import de.fraunhofer.aisec.cpg.passes.*
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import de.fraunhofer.aisec.cpg.processing.IVisitable
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.util.*
+import kotlin.uuid.Uuid
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.apache.commons.lang3.builder.ToStringStyle
 import org.neo4j.ogm.annotation.*
@@ -166,7 +168,7 @@ abstract class Node :
     var astChildren: List<Node> = listOf()
         get() = SubgraphWalker.getAstChildren(this)
 
-    @Transient var astParent: Node? = null
+    @DoNotPersist @Transient var astParent: Node? = null
 
     /** Virtual property for accessing [prevEOGEdges] without property edges. */
     @PopulatedByPass(EvaluationOrderGraphPass::class) var prevEOG by unwrapping(Node::prevEOGEdges)
@@ -189,7 +191,8 @@ abstract class Node :
      * Virtual property for accessing [nextDFGEdges] that have a
      * [de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity].
      */
-    @PopulatedByPass(DFGPass::class, PointsToPass::class)
+    @DoNotPersist
+    @PopulatedByPass(DFGPass::class, PointsToPass::class, ControlFlowSensitiveDFGPass::class)
     val prevFullDFG: List<Node>
         get() {
             return prevDFGEdges
@@ -212,7 +215,8 @@ abstract class Node :
      * Virtual property for accessing [nextDFGEdges] that have a
      * [de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity].
      */
-    @PopulatedByPass(DFGPass::class, PointsToPass::class)
+    @DoNotPersist
+    @PopulatedByPass(DFGPass::class, PointsToPass::class, ControlFlowSensitiveDFGPass::class)
     val nextFullDFG: List<Node>
         get() {
             return nextDFGEdges.filter { it.granularity is FullDataflowGranularity }.map { it.end }
@@ -252,7 +256,10 @@ abstract class Node :
     var isImplicit = false
 
     /** Required field for object graph mapping. It contains the node id. */
-    @Id @GeneratedValue var id: Long? = null
+    @DoNotPersist @Id @GeneratedValue var legacyId: Long? = null
+
+    /** Will replace [legacyId] */
+    var id: Uuid = Uuid.random()
 
     /** Index of the argument if this node is used in a function call or parameter list. */
     var argumentIndex = 0
@@ -277,6 +284,9 @@ abstract class Node :
      * further children that have no alternative connection paths to the rest of the graph.
      */
     fun disconnectFromGraph() {
+        // Disconnect all AST children first
+        this.astChildren.forEach { it.disconnectFromGraph() }
+
         nextDFGEdges.clear()
         prevDFGEdges.clear()
         prevCDGEdges.clear()
@@ -285,6 +295,8 @@ abstract class Node :
         nextPDGEdges.clear()
         nextEOGEdges.clear()
         prevEOGEdges.clear()
+
+        astParent = null
     }
 
     override fun toString(): String {

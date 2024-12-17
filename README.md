@@ -29,7 +29,14 @@ Instead of manually generating or editing the `gradle.properties` file, you can 
 
 ### For Visualization Purposes
 
-In order to get familiar with the graph itself, you can use the subproject [cpg-neo4j](https://github.com/Fraunhofer-AISEC/cpg/tree/master/cpg-neo4j). It uses this library to generate the CPG for a set of user-provided code files. The graph is then persisted to a [Neo4j](https://neo4j.com/) graph database. The advantage this has for the user, is that Neo4j's visualization software [Neo4j Browser](https://neo4j.com/developer/neo4j-browser/) can be used to graphically look at the CPG nodes and edges, instead of their Java representations.
+In order to get familiar with the graph itself, you can use the subproject [cpg-neo4j](./cpg-neo4j). It uses this library to generate the CPG for a set of user-provided code files. The graph is then persisted to a [Neo4j](https://neo4j.com/) graph database. The advantage this has for the user, is that Neo4j's visualization software [Neo4j Browser](https://neo4j.com/developer/neo4j-browser/) can be used to graphically look at the CPG nodes and edges, instead of their Java representations.
+
+Please make sure, that the [APOC](https://neo4j.com/labs/apoc/) plugin is enabled on your neo4j server. It is used in mass-creating nodes and relationships.
+
+For example using docker:
+```
+docker run -p 7474:7474 -p 7687:7687 -d -e NEO4J_AUTH=neo4j/password -e NEO4JLABS_PLUGINS='["apoc"]' neo4j:5
+```
 
 ### As Library
 

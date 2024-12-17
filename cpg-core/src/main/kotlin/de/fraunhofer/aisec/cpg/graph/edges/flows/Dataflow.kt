@@ -117,7 +117,7 @@ open class Dataflow(
     @JsonIgnore
     var granularity: Granularity = default()
 ) : Edge<Node>(start, end) {
-    override val label: String = "DFG"
+    override var labels = setOf("DFG")
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -158,7 +158,7 @@ class ContextSensitiveDataflow(
     val callingContext: CallingContext
 ) : Dataflow(start, end, granularity) {
 
-    override val label: String = "DFG"
+    override var labels = setOf("DFG")
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

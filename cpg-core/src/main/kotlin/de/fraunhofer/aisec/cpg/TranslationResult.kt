@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.helpers.MeasurementHolder
 import de.fraunhofer.aisec.cpg.helpers.StatisticsHolder
 import de.fraunhofer.aisec.cpg.passes.Pass
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import org.neo4j.ogm.annotation.Relationship
@@ -92,6 +93,7 @@ class TranslationResult(
      * @return the list of all translation units.
      */
     @Deprecated(message = "translation units of individual components should be accessed instead")
+    @DoNotPersist
     val translationUnits: List<TranslationUnitDeclaration>
         get() {
             if (components.size == 1) {

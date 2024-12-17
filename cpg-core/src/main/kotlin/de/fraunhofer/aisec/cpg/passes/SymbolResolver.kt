@@ -106,7 +106,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
             // Gather all resolution EOG starters; and make sure they really do not have a
             // predecessor, otherwise we might analyze a node multiple times
-            val nodes = it.allEOGStarters.filter { it.prevEOGEdges.isEmpty() }
+            val nodes = it.allEOGStarters.filter { it.prevEOGEdges.isEmpty }
 
             for (node in nodes) {
                 walker.iterate(node)
@@ -143,7 +143,12 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         // If we didn't find anything, we create a new function or method declaration
         if (target == null) {
             // Determine the scope where we want to start our inference
-            var (scope, _) = scopeManager.extractScope(reference)
+            val extractedScope = scopeManager.extractScope(reference)
+            if (extractedScope == null) {
+                return null
+            }
+
+            var scope = extractedScope.scope
             if (scope !is NameScope) {
                 scope = null
             }
@@ -528,18 +533,26 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 setOf(),
                 mapOf(),
                 setOf(),
-                CallResolutionResult.SuccessKind.UNRESOLVED,
+                UNRESOLVED,
                 source.scope,
             )
         val language = source.language
 
         if (language == null) {
-            result.success = CallResolutionResult.SuccessKind.PROBLEMATIC
+            result.success = PROBLEMATIC
             return result
         }
 
         // Set the start scope. This can either be the call's scope or a scope specified in an FQN
-        val (scope, _) = ctx.scopeManager.extractScope(source, source.scope)
+        val extractedScope = ctx.scopeManager.extractScope(source, source.scope)
+
+        // If we could not extract the scope (even though one was specified), we can only return an
+        // empty result
+        if (extractedScope == null) {
+            return result
+        }
+
+        val scope = extractedScope.scope
         result.actualStartScope = scope ?: source.scope
 
         // If the function does not allow function overloading, and we have multiple candidate
@@ -569,7 +582,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
         // If we have a "problematic" result, we can stop here. In this case we cannot really
         // determine anything more.
-        if (result.success == CallResolutionResult.SuccessKind.PROBLEMATIC) {
+        if (result.success == PROBLEMATIC) {
             result.bestViable = result.viableFunctions
             return result
         }

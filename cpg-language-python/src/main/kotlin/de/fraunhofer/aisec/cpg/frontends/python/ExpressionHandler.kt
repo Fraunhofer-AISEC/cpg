@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import jep.python.PyObject
@@ -473,19 +472,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     private fun handleAttribute(node: Python.AST.Attribute): Expression {
         var base = handle(node.value)
 
-        // We do a quick check, if this refers to an import. This is faster than doing
-        // this in a pass and most likely valid, since we are under the assumption that
-        // our current file is (more or less) complete, but we might miss some
-        // additional dependencies
-        var ref =
-            if (isImport(base.name)) {
-                // Yes, it's an import, so we need to construct a reference with an FQN
-                newReference(base.name.fqn(node.attr), rawNode = node)
-            } else {
-                newMemberExpression(name = node.attr, base = base, rawNode = node)
-            }
-
-        return ref
+        return newMemberExpression(name = node.attr, base = base, rawNode = node)
     }
 
     private fun handleConstant(node: Python.AST.Constant): Expression {
@@ -551,14 +538,6 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         }
 
         return ret
-    }
-
-    private fun isImport(name: Name): Boolean {
-        val decl =
-            frontend.scopeManager.currentScope
-                ?.lookupSymbol(name.localName, replaceImports = false)
-                ?.filterIsInstance<ImportDeclaration>()
-        return decl?.isNotEmpty() == true
     }
 
     private fun handleName(node: Python.AST.Name): Expression {

@@ -110,13 +110,11 @@ class AssignExpression :
     var lhs by unwrapping(AssignExpression::lhsEdges)
 
     @Relationship("RHS")
-
     /** The expressions on the right-hand side. */
     var rhsEdges =
-        astEdgesOf<Expression>(
-            onAdd = { it.end.registerTypeObserver(this) },
-            onRemove = { it.end.unregisterTypeObserver(this) },
-        )
+        astEdgesOf<Expression>(onAdd = { it.end.registerTypeObserver(this) }) {
+            it.end.unregisterTypeObserver(this)
+        }
     var rhs by unwrapping(AssignExpression::rhsEdges)
 
     /**

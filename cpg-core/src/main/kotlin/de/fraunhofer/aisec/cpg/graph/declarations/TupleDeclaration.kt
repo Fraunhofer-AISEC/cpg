@@ -64,10 +64,9 @@ import de.fraunhofer.aisec.cpg.graph.types.TupleType
 class TupleDeclaration : VariableDeclaration() {
     /** The list of elements in this tuple. */
     var elementEdges =
-        astEdgesOf<VariableDeclaration>(
-            onAdd = { registerTypeObserver(it.end) },
-            onRemove = { unregisterTypeObserver(it.end) }
-        )
+        astEdgesOf<VariableDeclaration>(onAdd = { registerTypeObserver(it.end) }) {
+            unregisterTypeObserver(it.end)
+        }
     var elements by unwrapping(TupleDeclaration::elementEdges)
 
     override var name: Name
