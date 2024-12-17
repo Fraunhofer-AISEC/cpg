@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.autoType
 import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.newInitializerListExpression
-import de.fraunhofer.aisec.cpg.graph.newUnaryOperator
 import de.fraunhofer.aisec.cpg.graph.newVariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin.POINTER
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -169,7 +168,7 @@ class GraphExamples {
                                     forStmt(
                                         initializer = declare { variable("a") },
                                         condition = literal(true, t("bool")),
-                                        iteration = newUnaryOperator("++", true, false),
+                                        iteration = ref("a").inc(),
                                         elseStmt = call("elseCall")
                                     ) {
                                         ifStmt {
@@ -179,18 +178,6 @@ class GraphExamples {
                                         call("postIf")
                                     }
                                     call("postFor")
-                                    forStmt(
-                                        initializer = declare { variable("a") },
-                                        condition = literal(true, t("bool")),
-                                        iteration = newUnaryOperator("++", true, false),
-                                        elseStmt = call("elseCall")
-                                    ) {
-                                        ifStmt {
-                                            condition { literal(true, t("bool")) }
-                                            thenStmt { breakStmt() }
-                                        }
-                                        call("postIf")
-                                    }
                                 }
                             }
                         }
