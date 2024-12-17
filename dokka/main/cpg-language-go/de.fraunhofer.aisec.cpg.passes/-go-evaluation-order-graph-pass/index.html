@@ -25,45 +25,77 @@
 <link href="../../../styles/prism.css" rel="Stylesheet">
 <link href="../../../styles/logo-styles.css" rel="Stylesheet">
 <link href="../../../styles/font-jb-sans-auto.css" rel="Stylesheet">
+<link href="../../../ui-kit/ui-kit.min.css" rel="Stylesheet">
 <script type="text/javascript" src="../../../scripts/clipboard.js" async></script>
 <script type="text/javascript" src="../../../scripts/navigation-loader.js" async></script>
 <script type="text/javascript" src="../../../scripts/platform-content-handler.js" async></script>
 <script type="text/javascript" src="../../../scripts/main.js" defer></script>
 <script type="text/javascript" src="../../../scripts/prism.js" async></script>
+<script type="text/javascript" src="../../../ui-kit/ui-kit.min.js" defer></script>
 <script type="text/javascript" src="../../../scripts/symbol-parameters-wrapper_deferred.js" defer></script>
 <link href="../../../styles/multimodule.css" rel="Stylesheet"></head>
 <body>
     <div class="root">
-<nav class="navigation" id="navigation-wrapper">
-    <div class="navigation--inner">
-        <div class="navigation-title">
-            <button class="menu-toggle" id="menu-toggle" type="button">toggle menu</button>
-            <div class="library-name">
+    <nav class="navigation theme-dark" id="navigation-wrapper">
 <a class="library-name--link" href="../../../index.html">
-                            cpg
-                    </a>            </div>
-            <div class="library-version">
-<dokka-template-command data="{&quot;@class&quot;:&quot;org.jetbrains.dokka.base.templating.ReplaceVersionsCommand&quot;,&quot;location&quot;:&quot;de.fraunhofer.aisec.cpg.passes/-go-evaluation-order-graph-pass/index.html&quot;}">main</dokka-template-command>            </div>
-        </div>
-        <div class="filter-section" id="filter-section">
+                    cpg
+            </a>        <button class="navigation-controls--btn navigation-controls--btn_toc ui-kit_mobile-only" id="toc-toggle" type="button">Toggle table of contents
+        </button>
+        <div class="navigation-controls--break ui-kit_mobile-only"></div>
+        <div class="library-version" id="library-version">
+<dokka-template-command data="{&quot;@class&quot;:&quot;org.jetbrains.dokka.base.templating.ReplaceVersionsCommand&quot;,&quot;location&quot;:&quot;de.fraunhofer.aisec.cpg.passes/-go-evaluation-order-graph-pass/index.html&quot;}">main</dokka-template-command>        </div>
+        <div class="navigation-controls">
+        <div class="filter-section filter-section_loading" id="filter-section">
                 <button class="platform-tag platform-selector jvm-like" data-active="" data-filter=":cpg-language-go:dokkaHtmlPartial/main">jvm</button>
+            <div class="dropdown filter-section--dropdown" data-role="dropdown" id="filter-section-dropdown">
+                <button class="button button_dropdown filter-section--dropdown-toggle" role="combobox" data-role="dropdown-toggle" aria-controls="platform-tags-listbox" aria-haspopup="listbox" aria-expanded="false" aria-label="Toggle source sets"></button>
+                <ul role="listbox" id="platform-tags-listbox" class="dropdown--list" data-role="dropdown-listbox">
+                    <div class="dropdown--header"><span>Platform filter</span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close platform filter">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                        <li role="option" class="dropdown--option platform-selector-option jvm-like" tabindex="0">
+                            <label class="checkbox">
+                                <input type="checkbox" class="checkbox--input" id=":cpg-language-go:dokkaHtmlPartial/main" data-filter=":cpg-language-go:dokkaHtmlPartial/main">
+                                <span class="checkbox--icon"></span>
+                                jvm
+                            </label>
+                        </li>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
         </div>
-    </div>
-    <div class="navigation-controls">
-        <button class="navigation-controls--btn navigation-controls--theme" id="theme-toggle-button" type="button">switch theme</button>
-        <div class="navigation-controls--btn navigation-controls--search" id="searchBar" role="button">search in API</div>
-    </div>
-</nav>
+            <button class="navigation-controls--btn navigation-controls--btn_theme" id="theme-toggle-button" type="button">Switch theme
+            </button>
+            <div class="navigation-controls--btn navigation-controls--btn_search" id="searchBar" role="button">Search in
+                API
+            </div>
+        </div>
+    </nav>
         <div id="container">
             <div class="sidebar" id="leftColumn">
-                <div class="sidebar--inner" id="sideMenu"></div>
+                <div class="dropdown theme-dark_mobile" data-role="dropdown" id="toc-dropdown">
+                    <ul role="listbox" id="toc-listbox" class="dropdown--list dropdown--list_toc-list" data-role="dropdown-listbox">
+                        <div class="dropdown--header">
+                            <span>
+                                    cpg
+                            </span>
+                            <button class="button" data-role="dropdown-toggle" aria-label="Close table of contents">
+                                <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                            </button>
+                        </div>
+                        <div class="sidebar--inner" id="sideMenu"></div>
+                    </ul>
+                    <div class="dropdown--overlay"></div>
+                </div>
             </div>
             <div id="main">
 <div class="main-content" data-page-type="classlike" id="content" pageids="cpg-language-go::de.fraunhofer.aisec.cpg.passes/GoEvaluationOrderGraphPass///PointingToDeclaration//-1165803760">
   <div class="breadcrumbs"><a href="../../index.html">cpg-language-go</a><span class="delimiter">/</span><a href="../index.html">de.fraunhofer.aisec.cpg.passes</a><span class="delimiter">/</span><span class="current">GoEvaluationOrderGraphPass</span></div>
   <div class="cover ">
     <h1 class="cover"><span>Go</span><wbr><span>Evaluation</span><wbr><span>Order</span><wbr><span>Graph</span><wbr><span><span>Pass</span></span></h1>
-    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-go:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="index.html">GoEvaluationOrderGraphPass</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">ctx<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg/-translation-context/index.html">TranslationContext</a></span></span><span class="token punctuation">)</span> : <a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.passes/-evaluation-order-graph-pass/index.html">EvaluationOrderGraphPass</a></div><p class="paragraph">This pass contains fine-grained improvements to the EOG for the <a href="../../de.fraunhofer.aisec.cpg.frontends.golang/-go-language/index.html">GoLanguage</a>.</p></div></div>
+    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-go:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="index.html">GoEvaluationOrderGraphPass</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">ctx<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg/-translation-context/index.html">TranslationContext</a></span></span><span class="token punctuation">)</span> : <a href="../../../cpg-core/de.fraunhofer.aisec.cpg.passes/-evaluation-order-graph-pass/index.html">EvaluationOrderGraphPass</a></div><p class="paragraph">This pass contains fine-grained improvements to the EOG for the <a href="../../de.fraunhofer.aisec.cpg.frontends.golang/-go-language/index.html">GoLanguage</a>.</p></div></div>
   </div>
   <div class="tabbedcontent">
     <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="CONSTRUCTOR,TYPE,PROPERTY,FUNCTION">Members</button></div>
@@ -90,16 +122,16 @@
       <div data-togglable="PROPERTY">
         <h2 class="">Properties</h2>
         <div class="table"><a data-name="475293141%2FProperties%2F-1165803760" anchor-label="conditions" id="475293141%2FProperties%2F-1165803760" data-filterable-set=":cpg-language-go:dokkaHtmlPartial/main"></a>
-          <div class="table-row" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":cpg-language-go:dokkaHtmlPartial/main" data-filterable-set=":cpg-language-go:dokkaHtmlPartial/main">
+          <div class="table-row" data-filterable-current=":cpg-language-go:dokkaHtmlPartial/main" data-filterable-set=":cpg-language-go:dokkaHtmlPartial/main">
             <div class="main-subrow keyValue ">
               <div class=""><span class="inline-flex">
-                  <div><a href="index.html#475293141%2FExtensions%2F-1165803760"><span><span>conditions</span></span></a></div>
+                  <div><a href="index.html#475293141%2FProperties%2F-1165803760"><span><span>conditions</span></span></a></div>
 <span class="anchor-wrapper"><span class="anchor-icon" pointing-to="475293141%2FProperties%2F-1165803760"></span>
                     <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-go:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">.</span><a href="index.html#475293141%2FExtensions%2F-1165803760">conditions</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">&gt;</span></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-go:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">.</span><a href="index.html#475293141%2FProperties%2F-1165803760">conditions</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">&gt;</span></div></div></div>
                 </div>
               </div>
             </div>
@@ -114,7 +146,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-go:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="../-go-extra-pass/index.html#-27087183%2FProperties%2F-1165803760">config</a><span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg/-translation-configuration/index.html">TranslationConfiguration</a></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-go:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="../-go-extra-pass/index.html#-27087183%2FProperties%2F-1165803760">config</a><span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg/-translation-configuration/index.html">TranslationConfiguration</a></div></div></div>
                 </div>
               </div>
             </div>
@@ -144,7 +176,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-go:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">var </span><a href="../-go-extra-pass/index.html#1530319112%2FProperties%2F-1165803760">name</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-go:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">var </span><a href="../-go-extra-pass/index.html#1530319112%2FProperties%2F-1165803760">name</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></div></div></div>
                 </div>
               </div>
             </div>
@@ -159,7 +191,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-go:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="index.html#-981403755%2FProperties%2F-1165803760">nodesToInternalThrows</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-mutable-map/index.html">MutableMap</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-mutable-map/index.html">MutableMap</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.types/-type/index.html">Type</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-mutable-list/index.html">MutableList</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">&gt;</span><span class="token operator">&gt;</span><span class="token operator">&gt;</span></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-go:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="index.html#-981403755%2FProperties%2F-1165803760">nodesToInternalThrows</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-mutable-map/index.html">MutableMap</a><span class="token operator">&lt;</span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">, </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-mutable-map/index.html">MutableMap</a><span class="token operator">&lt;</span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.types/-type/index.html">Type</a><span class="token punctuation">, </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-mutable-list/index.html">MutableList</a><span class="token operator">&lt;</span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">&gt;</span><span class="token operator">&gt;</span><span class="token operator">&gt;</span></div></div></div>
                 </div>
               </div>
             </div>
@@ -174,7 +206,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-go:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="index.html#-631246731%2FProperties%2F-1165803760">nodesWithContinuesAndBreaks</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-mutable-map/index.html">MutableMap</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-mutable-list/index.html">MutableList</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">&gt;</span><span class="token operator">&gt;</span></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-go:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="index.html#-631246731%2FProperties%2F-1165803760">nodesWithContinuesAndBreaks</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-mutable-map/index.html">MutableMap</a><span class="token operator">&lt;</span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">, </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-mutable-list/index.html">MutableList</a><span class="token operator">&lt;</span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">&gt;</span><span class="token operator">&gt;</span></div></div></div>
                 </div>
               </div>
             </div>
@@ -204,22 +236,22 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-go:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="../-go-extra-pass/index.html#-1966931302%2FProperties%2F-1165803760">scopeManager</a><span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg/-scope-manager/index.html">ScopeManager</a></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-go:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="../-go-extra-pass/index.html#-1966931302%2FProperties%2F-1165803760">scopeManager</a><span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg/-scope-manager/index.html">ScopeManager</a></div></div></div>
                 </div>
               </div>
             </div>
           </div>
 <a data-name="1133897723%2FProperties%2F-1165803760" anchor-label="starts" id="1133897723%2FProperties%2F-1165803760" data-filterable-set=":cpg-language-go:dokkaHtmlPartial/main"></a>
-          <div class="table-row" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":cpg-language-go:dokkaHtmlPartial/main" data-filterable-set=":cpg-language-go:dokkaHtmlPartial/main">
+          <div class="table-row" data-filterable-current=":cpg-language-go:dokkaHtmlPartial/main" data-filterable-set=":cpg-language-go:dokkaHtmlPartial/main">
             <div class="main-subrow keyValue ">
               <div class=""><span class="inline-flex">
-                  <div><a href="index.html#1133897723%2FExtensions%2F-1165803760"><span><span>starts</span></span></a></div>
+                  <div><a href="index.html#1133897723%2FProperties%2F-1165803760"><span><span>starts</span></span></a></div>
 <span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1133897723%2FProperties%2F-1165803760"></span>
                     <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-go:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.statements/-loop-statement/index.html">LoopStatement</a><span class="token punctuation">.</span><a href="index.html#1133897723%2FExtensions%2F-1165803760">starts</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">&gt;</span></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-go:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.statements/-loop-statement/index.html">LoopStatement</a><span class="token punctuation">.</span><a href="index.html#1133897723%2FProperties%2F-1165803760">starts</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">&gt;</span></div></div></div>
                 </div>
               </div>
             </div>
@@ -234,7 +266,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-go:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="../-go-extra-pass/index.html#816551380%2FProperties%2F-1165803760">typeManager</a><span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg/-type-manager/index.html">TypeManager</a></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-go:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="../-go-extra-pass/index.html#816551380%2FProperties%2F-1165803760">typeManager</a><span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg/-type-manager/index.html">TypeManager</a></div></div></div>
                 </div>
               </div>
             </div>
@@ -268,7 +300,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-go:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword"></span><span class="token keyword">fun </span><a href="index.html#-2086085763%2FFunctions%2F-1165803760"><span class="token function">andThen</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">p0<span class="token operator">: </span><a href="https://docs.oracle.com/javase/8/docs/api/java/util/function/Consumer.html">Consumer</a><span class="token operator">&lt;</span><span class="token keyword">in </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.declarations/-translation-unit-declaration/index.html">TranslationUnitDeclaration</a><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://docs.oracle.com/javase/8/docs/api/java/util/function/Consumer.html">Consumer</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.declarations/-translation-unit-declaration/index.html">TranslationUnitDeclaration</a><span class="token operator">&gt;</span></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-go:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">fun </span><a href="index.html#-2086085763%2FFunctions%2F-1165803760"><span class="token function">andThen</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">p0<span class="token operator">: </span><a href="https://docs.oracle.com/javase/8/docs/api/java/util/function/Consumer.html">Consumer</a><span class="token operator">&lt;</span><span class="token keyword">in </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.declarations/-translation-unit-declaration/index.html">TranslationUnitDeclaration</a><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://docs.oracle.com/javase/8/docs/api/java/util/function/Consumer.html">Consumer</a><span class="token operator">&lt;</span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.declarations/-translation-unit-declaration/index.html">TranslationUnitDeclaration</a><span class="token operator">&gt;</span></div></div></div>
                 </div>
               </div>
             </div>
@@ -283,7 +315,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-go:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="index.html#-622066608%2FFunctions%2F-1165803760"><span class="token function">attachToEOG</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">node<span class="token operator">: </span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a></span></span><span class="token punctuation">)</span></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-go:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="index.html#-622066608%2FFunctions%2F-1165803760"><span class="token function">attachToEOG</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">node<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a></span></span><span class="token punctuation">)</span></div></div></div>
                 </div>
               </div>
             </div>
@@ -313,7 +345,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-go:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="index.html#-1733084033%2FFunctions%2F-1165803760"><span class="token function">drawEOGToEntriesOf</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">from<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">toEntriesOf<span class="token operator">: </span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">?</span><span class="token punctuation">, </span></span><span class="parameter ">branchLabel<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html">Boolean</a><span class="token operator">?</span></span></span><span class="token punctuation">)</span></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-go:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="index.html#-1733084033%2FFunctions%2F-1165803760"><span class="token function">drawEOGToEntriesOf</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">from<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">toEntriesOf<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">?</span><span class="token punctuation">, </span></span><span class="parameter ">branchLabel<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a><span class="token operator">?</span></span></span><span class="token punctuation">)</span></div></div></div>
                 </div>
               </div>
             </div>
@@ -328,37 +360,37 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-go:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="index.html#924318891%2FFunctions%2F-1165803760"><span class="token function">getLabeledASTNode</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">node<span class="token operator">: </span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">, </span></span><span class="parameter ">label<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">?</span></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-go:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="index.html#924318891%2FFunctions%2F-1165803760"><span class="token function">getLabeledASTNode</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">node<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">, </span></span><span class="parameter ">label<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">?</span></div></div></div>
                 </div>
               </div>
             </div>
           </div>
 <a data-name="-892548998%2FFunctions%2F-1165803760" anchor-label="isBreakable" id="-892548998%2FFunctions%2F-1165803760" data-filterable-set=":cpg-language-go:dokkaHtmlPartial/main"></a>
-          <div class="table-row" data-togglable="EXTENSION_FUNCTION" data-filterable-current=":cpg-language-go:dokkaHtmlPartial/main" data-filterable-set=":cpg-language-go:dokkaHtmlPartial/main">
+          <div class="table-row" data-filterable-current=":cpg-language-go:dokkaHtmlPartial/main" data-filterable-set=":cpg-language-go:dokkaHtmlPartial/main">
             <div class="main-subrow keyValue ">
               <div class=""><span class="inline-flex">
-                  <div><a href="index.html#-892548998%2FExtensions%2F-1165803760"><span>is</span><wbr><span><span>Breakable</span></span></a></div>
+                  <div><a href="index.html#-892548998%2FFunctions%2F-1165803760"><span>is</span><wbr><span><span>Breakable</span></span></a></div>
 <span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-892548998%2FFunctions%2F-1165803760"></span>
                     <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-go:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">.</span><a href="index.html#-892548998%2FExtensions%2F-1165803760"><span class="token function">isBreakable</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html">Boolean</a></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-go:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">.</span><a href="index.html#-892548998%2FFunctions%2F-1165803760"><span class="token function">isBreakable</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a></div></div></div>
                 </div>
               </div>
             </div>
           </div>
 <a data-name="-712102885%2FFunctions%2F-1165803760" anchor-label="isContinuable" id="-712102885%2FFunctions%2F-1165803760" data-filterable-set=":cpg-language-go:dokkaHtmlPartial/main"></a>
-          <div class="table-row" data-togglable="EXTENSION_FUNCTION" data-filterable-current=":cpg-language-go:dokkaHtmlPartial/main" data-filterable-set=":cpg-language-go:dokkaHtmlPartial/main">
+          <div class="table-row" data-filterable-current=":cpg-language-go:dokkaHtmlPartial/main" data-filterable-set=":cpg-language-go:dokkaHtmlPartial/main">
             <div class="main-subrow keyValue ">
               <div class=""><span class="inline-flex">
-                  <div><a href="index.html#-712102885%2FExtensions%2F-1165803760"><span>is</span><wbr><span><span>Continuable</span></span></a></div>
+                  <div><a href="index.html#-712102885%2FFunctions%2F-1165803760"><span>is</span><wbr><span><span>Continuable</span></span></a></div>
 <span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-712102885%2FFunctions%2F-1165803760"></span>
                     <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-go:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">.</span><a href="index.html#-712102885%2FExtensions%2F-1165803760"><span class="token function">isContinuable</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html">Boolean</a></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-go:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">.</span><a href="index.html#-712102885%2FFunctions%2F-1165803760"><span class="token function">isContinuable</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a></div></div></div>
                 </div>
               </div>
             </div>
@@ -373,7 +405,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-go:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../-go-extra-pass/index.html#2068845920%2FFunctions%2F-1165803760">T</a><span class="token operator"> : </span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.passes/-pass-configuration/index.html">PassConfiguration</a><span class="token operator">&gt; </span><a href="../-go-extra-pass/index.html#2068845920%2FFunctions%2F-1165803760"><span class="token function">passConfig</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../-go-extra-pass/index.html#2068845920%2FFunctions%2F-1165803760">T</a><span class="token operator">?</span></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-go:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">fun </span><span class="token operator">&lt;</span><a href="../-go-extra-pass/index.html#2068845920%2FFunctions%2F-1165803760">T</a><span class="token operator"> : </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.passes/-pass-configuration/index.html">PassConfiguration</a><span class="token operator">&gt; </span><a href="../-go-extra-pass/index.html#2068845920%2FFunctions%2F-1165803760"><span class="token function">passConfig</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../-go-extra-pass/index.html#2068845920%2FFunctions%2F-1165803760">T</a><span class="token operator">?</span></div></div></div>
                 </div>
               </div>
             </div>
@@ -388,7 +420,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-go:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="../-go-extra-pass/index.html#-1952537933%2FFunctions%2F-1165803760"><span class="token function">runsWithCurrentFrontend</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">usedFrontends<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-collection/index.html">Collection</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.frontends/-language-frontend/index.html">LanguageFrontend</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token punctuation">, </span><span class="token operator">*</span><span class="token operator">&gt;</span><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html">Boolean</a></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-go:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="../-go-extra-pass/index.html#-1952537933%2FFunctions%2F-1165803760"><span class="token function">runsWithCurrentFrontend</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">usedFrontends<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-collection/index.html">Collection</a><span class="token operator">&lt;</span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.frontends/-language-frontend/index.html">LanguageFrontend</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token punctuation">, </span><span class="token operator">*</span><span class="token operator">&gt;</span><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a></div></div></div>
                 </div>
               </div>
             </div>
@@ -403,7 +435,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-go:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="../-go-extra-pass/index.html#318198637%2FFunctions%2F-1165803760"><span class="token function">runsWithLanguageTrait</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">language<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.frontends/-language/index.html">Language</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span><span class="token operator">?</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html">Boolean</a></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-go:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="../-go-extra-pass/index.html#318198637%2FFunctions%2F-1165803760"><span class="token function">runsWithLanguageTrait</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">language<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.frontends/-language/index.html">Language</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span><span class="token operator">?</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a></div></div></div>
                 </div>
               </div>
             </div>
@@ -418,7 +450,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-go:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="index.html#1898668760%2FFunctions%2F-1165803760"><span class="token function">setCurrentEOGs</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">nodes<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-go:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="index.html#1898668760%2FFunctions%2F-1165803760"><span class="token function">setCurrentEOGs</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">nodes<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span></div></div></div>
                 </div>
               </div>
             </div>
@@ -433,7 +465,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-go:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="../-go-extra-pass/index.html#-323338937%2FFunctions%2F-1165803760"><span class="token function">toString</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-go:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="../-go-extra-pass/index.html#-323338937%2FFunctions%2F-1165803760"><span class="token function">toString</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></div></div></div>
                 </div>
               </div>
             </div>
@@ -443,12 +475,18 @@
     </div>
   </div>
 </div>
-      <div class="footer">
-        <span class="go-to-top-icon"><a href="#content" id="go-to-top-link"></a></span><span>© 2024 Copyright</span><span class="pull-right"><span>Generated by </span><a href="https://github.com/Kotlin/dokka"><span>dokka</span><span class="padded-icon"></span></a></span>
-      </div>
+    <div class="footer">
+        <a href="#content" id="go-to-top-link" class="footer--button footer--button_go-to-top"></a>
+        <span>© 2024 Copyright</span>
+        <span class="pull-right">
+            <span>Generated by </span>
+            <a class="footer--link footer--link_external" href="https://github.com/Kotlin/dokka">
+                <span>dokka</span>
+            </a>
+        </span>
+    </div>
             </div>
         </div>
     </div>
 </body>
 </html>
-

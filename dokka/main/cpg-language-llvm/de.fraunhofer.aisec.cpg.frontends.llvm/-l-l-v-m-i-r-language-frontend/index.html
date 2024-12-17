@@ -25,45 +25,77 @@
 <link href="../../../styles/prism.css" rel="Stylesheet">
 <link href="../../../styles/logo-styles.css" rel="Stylesheet">
 <link href="../../../styles/font-jb-sans-auto.css" rel="Stylesheet">
+<link href="../../../ui-kit/ui-kit.min.css" rel="Stylesheet">
 <script type="text/javascript" src="../../../scripts/clipboard.js" async></script>
 <script type="text/javascript" src="../../../scripts/navigation-loader.js" async></script>
 <script type="text/javascript" src="../../../scripts/platform-content-handler.js" async></script>
 <script type="text/javascript" src="../../../scripts/main.js" defer></script>
 <script type="text/javascript" src="../../../scripts/prism.js" async></script>
+<script type="text/javascript" src="../../../ui-kit/ui-kit.min.js" defer></script>
 <script type="text/javascript" src="../../../scripts/symbol-parameters-wrapper_deferred.js" defer></script>
 <link href="../../../styles/multimodule.css" rel="Stylesheet"></head>
 <body>
     <div class="root">
-<nav class="navigation" id="navigation-wrapper">
-    <div class="navigation--inner">
-        <div class="navigation-title">
-            <button class="menu-toggle" id="menu-toggle" type="button">toggle menu</button>
-            <div class="library-name">
+    <nav class="navigation theme-dark" id="navigation-wrapper">
 <a class="library-name--link" href="../../../index.html">
-                            cpg
-                    </a>            </div>
-            <div class="library-version">
-<dokka-template-command data="{&quot;@class&quot;:&quot;org.jetbrains.dokka.base.templating.ReplaceVersionsCommand&quot;,&quot;location&quot;:&quot;de.fraunhofer.aisec.cpg.frontends.llvm/-l-l-v-m-i-r-language-frontend/index.html&quot;}">main</dokka-template-command>            </div>
-        </div>
-        <div class="filter-section" id="filter-section">
+                    cpg
+            </a>        <button class="navigation-controls--btn navigation-controls--btn_toc ui-kit_mobile-only" id="toc-toggle" type="button">Toggle table of contents
+        </button>
+        <div class="navigation-controls--break ui-kit_mobile-only"></div>
+        <div class="library-version" id="library-version">
+<dokka-template-command data="{&quot;@class&quot;:&quot;org.jetbrains.dokka.base.templating.ReplaceVersionsCommand&quot;,&quot;location&quot;:&quot;de.fraunhofer.aisec.cpg.frontends.llvm/-l-l-v-m-i-r-language-frontend/index.html&quot;}">main</dokka-template-command>        </div>
+        <div class="navigation-controls">
+        <div class="filter-section filter-section_loading" id="filter-section">
                 <button class="platform-tag platform-selector jvm-like" data-active="" data-filter=":cpg-language-llvm:dokkaHtmlPartial/main">jvm</button>
+            <div class="dropdown filter-section--dropdown" data-role="dropdown" id="filter-section-dropdown">
+                <button class="button button_dropdown filter-section--dropdown-toggle" role="combobox" data-role="dropdown-toggle" aria-controls="platform-tags-listbox" aria-haspopup="listbox" aria-expanded="false" aria-label="Toggle source sets"></button>
+                <ul role="listbox" id="platform-tags-listbox" class="dropdown--list" data-role="dropdown-listbox">
+                    <div class="dropdown--header"><span>Platform filter</span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close platform filter">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                        <li role="option" class="dropdown--option platform-selector-option jvm-like" tabindex="0">
+                            <label class="checkbox">
+                                <input type="checkbox" class="checkbox--input" id=":cpg-language-llvm:dokkaHtmlPartial/main" data-filter=":cpg-language-llvm:dokkaHtmlPartial/main">
+                                <span class="checkbox--icon"></span>
+                                jvm
+                            </label>
+                        </li>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
         </div>
-    </div>
-    <div class="navigation-controls">
-        <button class="navigation-controls--btn navigation-controls--theme" id="theme-toggle-button" type="button">switch theme</button>
-        <div class="navigation-controls--btn navigation-controls--search" id="searchBar" role="button">search in API</div>
-    </div>
-</nav>
+            <button class="navigation-controls--btn navigation-controls--btn_theme" id="theme-toggle-button" type="button">Switch theme
+            </button>
+            <div class="navigation-controls--btn navigation-controls--btn_search" id="searchBar" role="button">Search in
+                API
+            </div>
+        </div>
+    </nav>
         <div id="container">
             <div class="sidebar" id="leftColumn">
-                <div class="sidebar--inner" id="sideMenu"></div>
+                <div class="dropdown theme-dark_mobile" data-role="dropdown" id="toc-dropdown">
+                    <ul role="listbox" id="toc-listbox" class="dropdown--list dropdown--list_toc-list" data-role="dropdown-listbox">
+                        <div class="dropdown--header">
+                            <span>
+                                    cpg
+                            </span>
+                            <button class="button" data-role="dropdown-toggle" aria-label="Close table of contents">
+                                <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                            </button>
+                        </div>
+                        <div class="sidebar--inner" id="sideMenu"></div>
+                    </ul>
+                    <div class="dropdown--overlay"></div>
+                </div>
             </div>
             <div id="main">
 <div class="main-content" data-page-type="classlike" id="content" pageids="cpg-language-llvm::de.fraunhofer.aisec.cpg.frontends.llvm/LLVMIRLanguageFrontend///PointingToDeclaration//2048405985">
   <div class="breadcrumbs"><a href="../../index.html">cpg-language-llvm</a><span class="delimiter">/</span><a href="../index.html">de.fraunhofer.aisec.cpg.frontends.llvm</a><span class="delimiter">/</span><span class="current">LLVMIRLanguageFrontend</span></div>
   <div class="cover ">
     <h1 class="cover"><span>LLVMIRLanguage</span><wbr><span><span>Frontend</span></span></h1>
-    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-llvm:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="index.html">LLVMIRLanguageFrontend</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">language<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.frontends/-language/index.html">Language</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="index.html">LLVMIRLanguageFrontend</a><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">ctx<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg/-translation-context/index.html">TranslationContext</a></span></span><span class="token punctuation">)</span> : <a href="../../../cpg-core/de.fraunhofer.aisec.cpg.frontends/-language-frontend/index.html">LanguageFrontend</a><span class="token operator">&lt;</span><span class="token keyword"></span><span data-unresolved-link="org.bytedeco.javacpp/Pointer///PointingToDeclaration/">Pointer</span><span class="token punctuation">, </span><span class="token keyword"></span><span data-unresolved-link="org.bytedeco.llvm.LLVM/LLVMTypeRef///PointingToDeclaration/">LLVMTypeRef</span><span class="token operator">&gt; </span></div><p class="paragraph">Because we are using the C LLVM API, there are two possibly AST nodes that we need to consider: <span data-unresolved-link="org.bytedeco.llvm.LLVM/LLVMValueRef///PointingToDeclaration/">LLVMValueRef</span> and <span data-unresolved-link="org.bytedeco.llvm.LLVM/LLVMBasicBlockRef///PointingToDeclaration/">LLVMBasicBlockRef</span>. Because they do not share any class hierarchy, we need to resort to use <span data-unresolved-link="org.bytedeco.javacpp/Pointer///PointingToDeclaration/">Pointer</span> as the AST node type here.</p></div></div>
+    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-llvm:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="index.html">LLVMIRLanguageFrontend</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">language<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.frontends/-language/index.html">Language</a><span class="token operator">&lt;</span><a href="index.html">LLVMIRLanguageFrontend</a><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">ctx<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg/-translation-context/index.html">TranslationContext</a></span></span><span class="token punctuation">)</span> : <a href="../../../cpg-core/de.fraunhofer.aisec.cpg.frontends/-language-frontend/index.html">LanguageFrontend</a><span class="token operator">&lt;</span><span data-unresolved-link="org.bytedeco.javacpp/Pointer///PointingToDeclaration/">Pointer</span><span class="token punctuation">, </span><span data-unresolved-link="org.bytedeco.llvm.LLVM/LLVMTypeRef///PointingToDeclaration/">LLVMTypeRef</span><span class="token operator">&gt; </span></div><p class="paragraph">Because we are using the C LLVM API, there are two possibly AST nodes that we need to consider: <span data-unresolved-link="org.bytedeco.llvm.LLVM/LLVMValueRef///PointingToDeclaration/">LLVMValueRef</span> and <span data-unresolved-link="org.bytedeco.llvm.LLVM/LLVMBasicBlockRef///PointingToDeclaration/">LLVMBasicBlockRef</span>. Because they do not share any class hierarchy, we need to resort to use <span data-unresolved-link="org.bytedeco.javacpp/Pointer///PointingToDeclaration/">Pointer</span> as the AST node type here.</p></div></div>
   </div>
   <div class="tabbedcontent">
     <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="CONSTRUCTOR,TYPE,PROPERTY,FUNCTION">Members</button></div>
@@ -80,7 +112,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-llvm:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">constructor</span><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">language<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.frontends/-language/index.html">Language</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="index.html">LLVMIRLanguageFrontend</a><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">ctx<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg/-translation-context/index.html">TranslationContext</a></span></span><span class="token punctuation">)</span></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-llvm:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">constructor</span><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">language<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.frontends/-language/index.html">Language</a><span class="token operator">&lt;</span><a href="index.html">LLVMIRLanguageFrontend</a><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">ctx<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg/-translation-context/index.html">TranslationContext</a></span></span><span class="token punctuation">)</span></div></div></div>
                 </div>
               </div>
             </div>
@@ -99,7 +131,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-llvm:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">var </span><a href="bindings-cache.html">bindingsCache</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-mutable-map/index.html">MutableMap</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.declarations/-declaration/index.html">Declaration</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">This contains a cache binding between an LLVMValueRef (representing a variable) and its <a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.declarations/-declaration/index.html">Declaration</a> in the graph. We need this, because this way we can look up and connect a <a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.statements.expressions/-reference/index.html">Reference</a> to its <a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.declarations/-declaration/index.html">Declaration</a> already in the language frontend. This in turn is needed because of the local/global system we cannot rely on the <a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.passes/-symbol-resolver/index.html">SymbolResolver</a>.</p></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-llvm:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">var </span><a href="bindings-cache.html">bindingsCache</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-mutable-map/index.html">MutableMap</a><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.declarations/-declaration/index.html">Declaration</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">This contains a cache binding between an LLVMValueRef (representing a variable) and its <a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.declarations/-declaration/index.html">Declaration</a> in the graph. We need this, because this way we can look up and connect a <a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.statements.expressions/-reference/index.html">Reference</a> to its <a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.declarations/-declaration/index.html">Declaration</a> already in the language frontend. This in turn is needed because of the local/global system we cannot rely on the <a href="../../../cpg-core/de.fraunhofer.aisec.cpg.passes/-symbol-resolver/index.html">SymbolResolver</a>.</p></div></div></div>
                 </div>
               </div>
             </div>
@@ -114,7 +146,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-llvm:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="index.html#160617280%2FProperties%2F2048405985">config</a><span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg/-translation-configuration/index.html">TranslationConfiguration</a></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-llvm:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="index.html#160617280%2FProperties%2F2048405985">config</a><span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg/-translation-configuration/index.html">TranslationConfiguration</a></div></div></div>
                 </div>
               </div>
             </div>
@@ -144,7 +176,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-llvm:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">var </span><a href="ctx-ref.html">ctxRef</a><span class="token operator">: </span><span data-unresolved-link="org.bytedeco.llvm.LLVM/LLVMContextRef///PointingToDeclaration/">LLVMContextRef</span><span class="token operator">?</span></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-llvm:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">var </span><a href="ctx-ref.html">ctxRef</a><span class="token operator">: </span><span data-unresolved-link="org.bytedeco.llvm.LLVM/LLVMContextRef///PointingToDeclaration/">LLVMContextRef</span><span class="token operator">?</span></div></div></div>
                 </div>
               </div>
             </div>
@@ -159,7 +191,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-llvm:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">var </span><a href="index.html#696544414%2FProperties%2F2048405985">currentTU</a><span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.declarations/-translation-unit-declaration/index.html">TranslationUnitDeclaration</a><span class="token operator">?</span></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-llvm:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">var </span><a href="index.html#696544414%2FProperties%2F2048405985">currentTU</a><span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.declarations/-translation-unit-declaration/index.html">TranslationUnitDeclaration</a><span class="token operator">?</span></div></div></div>
                 </div>
               </div>
             </div>
@@ -174,7 +206,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-llvm:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="declaration-handler.html">declarationHandler</a><span class="token operator">: </span><a href="../-declaration-handler/index.html">DeclarationHandler</a></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-llvm:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="declaration-handler.html">declarationHandler</a><span class="token operator">: </span><a href="../-declaration-handler/index.html">DeclarationHandler</a></div></div></div>
                 </div>
               </div>
             </div>
@@ -189,7 +221,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-llvm:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="expression-handler.html">expressionHandler</a><span class="token operator">: </span><a href="../-expression-handler/index.html">ExpressionHandler</a></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-llvm:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="expression-handler.html">expressionHandler</a><span class="token operator">: </span><a href="../-expression-handler/index.html">ExpressionHandler</a></div></div></div>
                 </div>
               </div>
             </div>
@@ -204,7 +236,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-llvm:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">val </span><a href="index.html#391633578%2FProperties%2F2048405985">language</a><span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.frontends/-language/index.html">Language</a><span class="token operator">&lt;</span><span class="token keyword">out </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.frontends/-language-frontend/index.html">LanguageFrontend</a><span class="token operator">&lt;</span><span class="token keyword"></span><span data-unresolved-link="org.bytedeco.javacpp/Pointer///PointingToDeclaration/">Pointer</span><span class="token punctuation">, </span><span class="token keyword"></span><span data-unresolved-link="org.bytedeco.llvm.LLVM/LLVMTypeRef///PointingToDeclaration/">LLVMTypeRef</span><span class="token operator">&gt;</span><span class="token operator">&gt;</span></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-llvm:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">val </span><a href="index.html#391633578%2FProperties%2F2048405985">language</a><span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.frontends/-language/index.html">Language</a><span class="token operator">&lt;</span><span class="token keyword">out </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.frontends/-language-frontend/index.html">LanguageFrontend</a><span class="token operator">&lt;</span><span data-unresolved-link="org.bytedeco.javacpp/Pointer///PointingToDeclaration/">Pointer</span><span class="token punctuation">, </span><span data-unresolved-link="org.bytedeco.llvm.LLVM/LLVMTypeRef///PointingToDeclaration/">LLVMTypeRef</span><span class="token operator">&gt;</span><span class="token operator">&gt;</span></div></div></div>
                 </div>
               </div>
             </div>
@@ -219,7 +251,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-llvm:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">val </span><a href="index.html#841387037%2FProperties%2F2048405985">namespace</a><span class="token operator">: </span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/-name/index.html">Name</a><span class="token operator">?</span></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-llvm:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">val </span><a href="index.html#841387037%2FProperties%2F2048405985">namespace</a><span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph/-name/index.html">Name</a><span class="token operator">?</span></div></div></div>
                 </div>
               </div>
             </div>
@@ -234,7 +266,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-llvm:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="phi-list.html">phiList</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-mutable-list/index.html">MutableList</a><span class="token operator">&lt;</span><span class="token keyword"></span><span data-unresolved-link="org.bytedeco.llvm.LLVM/LLVMValueRef///PointingToDeclaration/">LLVMValueRef</span><span class="token operator">&gt;</span></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-llvm:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="phi-list.html">phiList</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-mutable-list/index.html">MutableList</a><span class="token operator">&lt;</span><span data-unresolved-link="org.bytedeco.llvm.LLVM/LLVMValueRef///PointingToDeclaration/">LLVMValueRef</span><span class="token operator">&gt;</span></div></div></div>
                 </div>
               </div>
             </div>
@@ -264,7 +296,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-llvm:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="index.html#1591951337%2FProperties%2F2048405985">scopeManager</a><span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg/-scope-manager/index.html">ScopeManager</a></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-llvm:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="index.html#1591951337%2FProperties%2F2048405985">scopeManager</a><span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg/-scope-manager/index.html">ScopeManager</a></div></div></div>
                 </div>
               </div>
             </div>
@@ -279,7 +311,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-llvm:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="statement-handler.html">statementHandler</a><span class="token operator">: </span><a href="../-statement-handler/index.html">StatementHandler</a></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-llvm:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="statement-handler.html">statementHandler</a><span class="token operator">: </span><a href="../-statement-handler/index.html">StatementHandler</a></div></div></div>
                 </div>
               </div>
             </div>
@@ -294,7 +326,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-llvm:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="type-cache.html">typeCache</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-mutable-map/index.html">MutableMap</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.types/-type/index.html">Type</a><span class="token operator">&gt;</span></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-llvm:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="type-cache.html">typeCache</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-mutable-map/index.html">MutableMap</a><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.types/-type/index.html">Type</a><span class="token operator">&gt;</span></div></div></div>
                 </div>
               </div>
             </div>
@@ -309,7 +341,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-llvm:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="index.html#100070053%2FProperties%2F2048405985">typeManager</a><span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg/-type-manager/index.html">TypeManager</a></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-llvm:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="index.html#100070053%2FProperties%2F2048405985">typeManager</a><span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg/-type-manager/index.html">TypeManager</a></div></div></div>
                 </div>
               </div>
             </div>
@@ -328,7 +360,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-llvm:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="index.html#-763302929%2FFunctions%2F2048405985"><span class="token function">build</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">init<span class="token operator">: </span><span class="token keyword"></span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.frontends/-language-frontend/index.html">LanguageFrontend</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token punctuation">, </span><span class="token operator">*</span><span class="token operator">&gt;</span><span class="token punctuation">.</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator"> -&gt; </span><span class="token keyword"></span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg/-translation-result/index.html">TranslationResult</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg/-translation-result/index.html">TranslationResult</a></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-llvm:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="index.html#-763302929%2FFunctions%2F2048405985"><span class="token function">build</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">init<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.frontends/-language-frontend/index.html">LanguageFrontend</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token punctuation">, </span><span class="token operator">*</span><span class="token operator">&gt;</span><span class="token punctuation">.</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator"> -&gt; </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg/-translation-result/index.html">TranslationResult</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg/-translation-result/index.html">TranslationResult</a></div></div></div>
                 </div>
               </div>
             </div>
@@ -343,7 +375,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-llvm:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword"></span><span class="token keyword">fun </span><a href="index.html#1136589236%2FFunctions%2F2048405985"><span class="token function">cleanup</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-llvm:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">fun </span><a href="index.html#1136589236%2FFunctions%2F2048405985"><span class="token function">cleanup</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span></div></div></div>
                 </div>
               </div>
             </div>
@@ -358,7 +390,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-llvm:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="index.html#976586405%2FFunctions%2F2048405985"><span class="token function">clearProcessed</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-llvm:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="index.html#976586405%2FFunctions%2F2048405985"><span class="token function">clearProcessed</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span></div></div></div>
                 </div>
               </div>
             </div>
@@ -373,7 +405,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-llvm:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="code-of.html"><span class="token function">codeOf</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">astNode<span class="token operator">: </span><span data-unresolved-link="org.bytedeco.javacpp/Pointer///PointingToDeclaration/">Pointer</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token operator">?</span></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-llvm:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="code-of.html"><span class="token function">codeOf</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">astNode<span class="token operator">: </span><span data-unresolved-link="org.bytedeco.javacpp/Pointer///PointingToDeclaration/">Pointer</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">?</span></div></div></div>
                 </div>
               </div>
             </div>
@@ -388,7 +420,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-llvm:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="get-name-of.html"><span class="token function">getNameOf</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">valueRef<span class="token operator">: </span><span data-unresolved-link="org.bytedeco.llvm.LLVM/LLVMValueRef///PointingToDeclaration/">LLVMValueRef</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-pair/index.html">Pair</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Returns a pair of the name and symbol name of <a href="get-name-of.html">valueRef</a>.</p></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-llvm:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="get-name-of.html"><span class="token function">getNameOf</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">valueRef<span class="token operator">: </span><span data-unresolved-link="org.bytedeco.llvm.LLVM/LLVMValueRef///PointingToDeclaration/">LLVMValueRef</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-pair/index.html">Pair</a><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Returns a pair of the name and symbol name of <a href="get-name-of.html">valueRef</a>.</p></div></div></div>
                 </div>
               </div>
             </div>
@@ -403,7 +435,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-llvm:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="get-operand-value-at-index.html"><span class="token function">getOperandValueAtIndex</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">instr<span class="token operator">: </span><span data-unresolved-link="org.bytedeco.llvm.LLVM/LLVMValueRef///PointingToDeclaration/">LLVMValueRef</span><span class="token punctuation">, </span></span><span class="parameter ">idx<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-int/index.html">Int</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.statements.expressions/-expression/index.html">Expression</a></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-llvm:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="get-operand-value-at-index.html"><span class="token function">getOperandValueAtIndex</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">instr<span class="token operator">: </span><span data-unresolved-link="org.bytedeco.llvm.LLVM/LLVMValueRef///PointingToDeclaration/">LLVMValueRef</span><span class="token punctuation">, </span></span><span class="parameter ">idx<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-int/index.html">Int</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.statements.expressions/-expression/index.html">Expression</a></div></div></div>
                 </div>
               </div>
             </div>
@@ -418,7 +450,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-llvm:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="guess-slot-number.html"><span class="token function">guessSlotNumber</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">valueRef<span class="token operator">: </span><span data-unresolved-link="org.bytedeco.llvm.LLVM/LLVMValueRef///PointingToDeclaration/">LLVMValueRef</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-llvm:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="guess-slot-number.html"><span class="token function">guessSlotNumber</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">valueRef<span class="token operator">: </span><span data-unresolved-link="org.bytedeco.llvm.LLVM/LLVMValueRef///PointingToDeclaration/">LLVMValueRef</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></div></div></div>
                 </div>
               </div>
             </div>
@@ -433,7 +465,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-llvm:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="is-known-struct-type-name.html"><span class="token function">isKnownStructTypeName</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">name<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html">Boolean</a></div><div class="brief "><p class="paragraph">Determines if a struct with <a href="is-known-struct-type-name.html">name</a> exists in the scope.</p></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-llvm:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="is-known-struct-type-name.html"><span class="token function">isKnownStructTypeName</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">name<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a></div><div class="brief "><p class="paragraph">Determines if a struct with <a href="is-known-struct-type-name.html">name</a> exists in the scope.</p></div></div></div>
                 </div>
               </div>
             </div>
@@ -478,7 +510,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-llvm:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="index.html#-421962540%2FFunctions%2F2048405985"><span class="token function">parseAll</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.declarations/-translation-unit-declaration/index.html">TranslationUnitDeclaration</a><span class="token operator">&gt;</span></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-llvm:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="index.html#-421962540%2FFunctions%2F2048405985"><span class="token function">parseAll</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.declarations/-translation-unit-declaration/index.html">TranslationUnitDeclaration</a><span class="token operator">&gt;</span></div></div></div>
                 </div>
               </div>
             </div>
@@ -493,7 +525,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-llvm:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword"></span><span class="token keyword">fun </span><a href="index.html#-535596613%2FFunctions%2F2048405985"><span class="token function">process</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">from<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-any/index.html">Any</a><span class="token punctuation">, </span></span><span class="parameter ">to<span class="token operator">: </span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a></span></span><span class="token punctuation">)</span></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-llvm:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">fun </span><a href="index.html#-535596613%2FFunctions%2F2048405985"><span class="token function">process</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">from<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-any/index.html">Any</a><span class="token punctuation">, </span></span><span class="parameter ">to<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a></span></span><span class="token punctuation">)</span></div></div></div>
                 </div>
               </div>
             </div>
@@ -508,7 +540,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-llvm:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword"></span><span class="token keyword">fun </span><a href="index.html#2009213780%2FFunctions%2F2048405985"><span class="token function">registerObjectListener</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">from<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-any/index.html">Any</a><span class="token punctuation">, </span></span><span class="parameter ">biConsumer<span class="token operator">: </span><a href="https://docs.oracle.com/javase/8/docs/api/java/util/function/BiConsumer.html">BiConsumer</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-any/index.html">Any</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-llvm:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">fun </span><a href="index.html#2009213780%2FFunctions%2F2048405985"><span class="token function">registerObjectListener</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">from<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-any/index.html">Any</a><span class="token punctuation">, </span></span><span class="parameter ">biConsumer<span class="token operator">: </span><a href="https://docs.oracle.com/javase/8/docs/api/java/util/function/BiConsumer.html">BiConsumer</a><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-any/index.html">Any</a><span class="token punctuation">, </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span></div></div></div>
                 </div>
               </div>
             </div>
@@ -523,7 +555,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-llvm:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword"></span><span class="token keyword">fun </span><a href="index.html#2041299042%2FFunctions%2F2048405985"><span class="token function">registerPredicateListener</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">predicate<span class="token operator">: </span><a href="https://docs.oracle.com/javase/8/docs/api/java/util/function/BiPredicate.html">BiPredicate</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-any/index.html">Any</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">biConsumer<span class="token operator">: </span><a href="https://docs.oracle.com/javase/8/docs/api/java/util/function/BiConsumer.html">BiConsumer</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-any/index.html">Any</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-llvm:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">fun </span><a href="index.html#2041299042%2FFunctions%2F2048405985"><span class="token function">registerPredicateListener</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">predicate<span class="token operator">: </span><a href="https://docs.oracle.com/javase/8/docs/api/java/util/function/BiPredicate.html">BiPredicate</a><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-any/index.html">Any</a><span class="token punctuation">, </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">biConsumer<span class="token operator">: </span><a href="https://docs.oracle.com/javase/8/docs/api/java/util/function/BiConsumer.html">BiConsumer</a><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-any/index.html">Any</a><span class="token punctuation">, </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span></div></div></div>
                 </div>
               </div>
             </div>
@@ -538,7 +570,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-llvm:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="set-comment.html"><span class="token function">setComment</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">node<span class="token operator">: </span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">, </span></span><span class="parameter ">astNode<span class="token operator">: </span><span data-unresolved-link="org.bytedeco.javacpp/Pointer///PointingToDeclaration/">Pointer</span></span></span><span class="token punctuation">)</span></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-llvm:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="set-comment.html"><span class="token function">setComment</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">node<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">, </span></span><span class="parameter ">astNode<span class="token operator">: </span><span data-unresolved-link="org.bytedeco.javacpp/Pointer///PointingToDeclaration/">Pointer</span></span></span><span class="token punctuation">)</span></div></div></div>
                 </div>
               </div>
             </div>
@@ -553,7 +585,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-llvm:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="type-of.html"><span class="token function">typeOf</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">type<span class="token operator">: </span><span data-unresolved-link="org.bytedeco.llvm.LLVM/LLVMTypeRef///PointingToDeclaration/">LLVMTypeRef</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.types/-type/index.html">Type</a></div><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="type-of.html"><span class="token function">typeOf</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">valueRef<span class="token operator">: </span><span data-unresolved-link="org.bytedeco.llvm.LLVM/LLVMValueRef///PointingToDeclaration/">LLVMValueRef</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.types/-type/index.html">Type</a></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-llvm:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="type-of.html"><span class="token function">typeOf</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">type<span class="token operator">: </span><span data-unresolved-link="org.bytedeco.llvm.LLVM/LLVMTypeRef///PointingToDeclaration/">LLVMTypeRef</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.types/-type/index.html">Type</a></div><div class="symbol monospace"><span class="token keyword">fun </span><a href="type-of.html"><span class="token function">typeOf</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">valueRef<span class="token operator">: </span><span data-unresolved-link="org.bytedeco.llvm.LLVM/LLVMValueRef///PointingToDeclaration/">LLVMValueRef</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.types/-type/index.html">Type</a></div></div></div>
                 </div>
               </div>
             </div>
@@ -563,12 +595,18 @@
     </div>
   </div>
 </div>
-      <div class="footer">
-        <span class="go-to-top-icon"><a href="#content" id="go-to-top-link"></a></span><span>© 2024 Copyright</span><span class="pull-right"><span>Generated by </span><a href="https://github.com/Kotlin/dokka"><span>dokka</span><span class="padded-icon"></span></a></span>
-      </div>
+    <div class="footer">
+        <a href="#content" id="go-to-top-link" class="footer--button footer--button_go-to-top"></a>
+        <span>© 2024 Copyright</span>
+        <span class="pull-right">
+            <span>Generated by </span>
+            <a class="footer--link footer--link_external" href="https://github.com/Kotlin/dokka">
+                <span>dokka</span>
+            </a>
+        </span>
+    </div>
             </div>
         </div>
     </div>
 </body>
 </html>
-
