@@ -26,35 +26,78 @@
 package de.fraunhofer.aisec.cpg_vis_neo4j
 
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.concepts.Concept
+import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import java.math.BigInteger
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertNotNull
 import org.junit.jupiter.api.Tag
 
 @Tag("integration")
 class Neo4JTest {
     @Test
     fun testPush() {
-        val (application, translationResult) = createTranslationResult()
+        val (application, result) = createTranslationResult()
 
         // 22 inferred functions, 1 inferred method, 2 inferred constructors, 11 regular functions
-        assertEquals(36, translationResult.functions.size)
+        assertEquals(36, result.functions.size)
 
-        application.pushToNeo4j(translationResult)
+        application.pushToNeo4j(result)
     }
 
     @Test
     fun testPushVeryLong() {
-        val (application, translationResult) = createTranslationResult("very_long.cpp")
+        val (application, result) = createTranslationResult("very_long.cpp")
 
-        assertEquals(1, translationResult.variables.size)
+        assertEquals(1, result.variables.size)
 
-        val lit = translationResult.variables["l"]?.initializer
+        val lit = result.variables["l"]?.initializer
         assertIs<Literal<BigInteger>>(lit)
         assertEquals(BigInteger("10958011617037158669"), lit.value)
 
-        application.pushToNeo4j(translationResult)
+        application.pushToNeo4j(result)
+    }
+
+    @Test
+    fun testPushConcepts() {
+        val (application, result) = createTranslationResult()
+
+        val tu = result.translationUnits.firstOrNull()
+        assertNotNull(tu)
+
+        val connectCall = result.calls["connect"]
+        assertNotNull(connectCall)
+
+        abstract class NetworkingOperation(
+            concept: Concept<out Operation>,
+        ) : Operation(concept)
+        class Connect(concept: Concept<out Operation>) : NetworkingOperation(concept)
+        class Networking() : Concept<NetworkingOperation>()
+
+        abstract class FileOperation(
+            concept: Concept<out Operation>,
+        ) : Operation(concept)
+        class FileHandling() : Concept<FileOperation>()
+
+        val nw = Networking()
+        nw.name = Name("Networking")
+        nw.underlyingNode = tu
+
+        val connect = Connect(concept = nw)
+        connect.underlyingNode = connectCall
+        connect.name = Name("connect")
+        nw.ops += connect
+
+        val f = FileHandling()
+        f.name = Name("FileHandling")
+        f.underlyingNode = tu
+
+        assertEquals(setOf<Node>(connect), connectCall.overlays)
+        assertEquals(setOf<Node>(nw, f), tu.overlays)
+
+        application.pushToNeo4j(result)
     }
 }
