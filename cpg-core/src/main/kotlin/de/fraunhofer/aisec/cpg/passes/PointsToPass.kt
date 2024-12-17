@@ -655,7 +655,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                                             if (derefSource) {
                                                 this.getValues(node.arguments[v.argumentIndex])
                                                     .forEach { r.addAll(this.getValues(it)) }
-                                            } else {
+                                            } else if (v.argumentIndex < node.arguments.size) {
                                                 r.add(node.arguments[v.argumentIndex])
                                             }
                                         } else r.add(v)
