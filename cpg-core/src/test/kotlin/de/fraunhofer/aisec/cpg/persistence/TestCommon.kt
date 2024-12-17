@@ -92,6 +92,7 @@ class TestCommon {
                 "DFG",
                 "EOG",
                 "LANGUAGE",
+                "OVERLAY",
                 "PDG",
                 "SCOPE",
             ),
