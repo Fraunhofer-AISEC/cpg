@@ -26,6 +26,8 @@
 package de.fraunhofer.aisec.cpg_vis_neo4j
 
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.concepts.Concept
+import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import java.math.BigInteger
 import kotlin.test.Test
@@ -37,24 +39,45 @@ import org.junit.jupiter.api.Tag
 class Neo4JTest {
     @Test
     fun testPush() {
-        val (application, translationResult) = createTranslationResult()
+        val (application, result) = createTranslationResult()
 
         // 22 inferred functions, 1 inferred method, 2 inferred constructors, 11 regular functions
-        assertEquals(36, translationResult.functions.size)
+        assertEquals(36, result.functions.size)
 
-        application.pushToNeo4j(translationResult)
+        application.pushToNeo4j(result)
     }
 
     @Test
     fun testPushVeryLong() {
-        val (application, translationResult) = createTranslationResult("very_long.cpp")
+        val (application, result) = createTranslationResult("very_long.cpp")
 
-        assertEquals(1, translationResult.variables.size)
+        assertEquals(1, result.variables.size)
 
-        val lit = translationResult.variables["l"]?.initializer
+        val lit = result.variables["l"]?.initializer
         assertIs<Literal<BigInteger>>(lit)
         assertEquals(BigInteger("10958011617037158669"), lit.value)
 
-        application.pushToNeo4j(translationResult)
+        application.pushToNeo4j(result)
+    }
+
+    @Test
+    fun testPushConcepts() {
+        val (application, result) = createTranslationResult()
+
+        val connectCall = result.calls["connect"]
+
+        abstract class NetworkingOperation(
+            concept: Concept<*>,
+        ) : Operation(concept)
+        class Connect(concept: Concept<*>) : NetworkingOperation(concept)
+        class Networking() : Concept<NetworkingOperation>()
+
+        val nw = Networking()
+        nw.underlyingNode = result.translationUnit
+        val connect = Connect(concept = nw)
+        connect.underlyingNode = connectCall
+        assertEquals(connect, connectCall?.overlayNode)
+
+        application.pushToNeo4j(result)
     }
 }

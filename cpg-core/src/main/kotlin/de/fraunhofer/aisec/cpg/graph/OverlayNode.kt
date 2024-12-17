@@ -25,11 +25,21 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
+import de.fraunhofer.aisec.cpg.graph.concepts.OverlaySingleEdge
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+
 /**
  * Represents an extra node added to the CPG. These nodes can live next to the CPG, typically having
  * shared edges to extend the original CPG graph.
  */
-abstract class OverlayNode : Node() {
+abstract class OverlayNode() : Node() {
     /** All [OverlayNode]s nodes are connected to an original cpg [Node] by this. */
-    abstract val underlayingNode: Node
+    val underlyingNodeEdge: OverlaySingleEdge =
+        OverlaySingleEdge(
+            this,
+            of = null,
+            mirrorProperty = Node::overlayNodeEdge,
+            outgoing = false,
+        )
+    var underlyingNode by unwrapping(OverlayNode::underlyingNodeEdge)
 }

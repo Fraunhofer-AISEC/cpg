@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.TypeManager
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.graph.concepts.OverlaySingleEdge
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.*
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
@@ -273,6 +274,15 @@ abstract class Node :
      * a node (i.e. only partially processed).
      */
     val additionalProblems: MutableSet<ProblemNode> = mutableSetOf()
+
+    val overlayNodeEdge: OverlaySingleEdge =
+        OverlaySingleEdge(
+            this,
+            of = null,
+            mirrorProperty = OverlayNode::underlyingNodeEdge,
+            outgoing = true
+        )
+    var overlayNode by unwrapping(Node::overlayNodeEdge)
 
     /**
      * If a node should be removed from the graph, just removing it from the AST is not enough (see
