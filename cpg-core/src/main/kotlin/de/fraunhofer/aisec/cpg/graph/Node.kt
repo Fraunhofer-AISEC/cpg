@@ -275,6 +275,7 @@ abstract class Node :
      */
     val additionalProblems: MutableSet<ProblemNode> = mutableSetOf()
 
+    @Relationship(value = "OVERLAY", direction = Relationship.Direction.OUTGOING)
     val overlayNodeEdge: OverlaySingleEdge =
         OverlaySingleEdge(
             this,

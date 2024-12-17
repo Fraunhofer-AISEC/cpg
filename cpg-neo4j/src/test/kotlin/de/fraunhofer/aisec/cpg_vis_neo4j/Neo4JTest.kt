@@ -73,9 +73,11 @@ class Neo4JTest {
         class Networking() : Concept<NetworkingOperation>()
 
         val nw = Networking()
-        nw.underlyingNode = result.translationUnit
+        nw.underlyingNode = result.translationUnits.first()
+
         val connect = Connect(concept = nw)
         connect.underlyingNode = connectCall
+
         assertEquals(connect, connectCall?.overlayNode)
 
         application.pushToNeo4j(result)
