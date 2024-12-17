@@ -77,6 +77,7 @@ class Neo4JTest {
 
         val connect = Connect(concept = nw)
         connect.underlyingNode = connectCall
+        connect.name = Name("connect")
 
         assertEquals(connect, connectCall?.overlayNode)
 

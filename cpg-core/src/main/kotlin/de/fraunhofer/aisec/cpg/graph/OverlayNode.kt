@@ -25,7 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.graph.concepts.OverlaySingleEdge
+import de.fraunhofer.aisec.cpg.graph.edges.overlay.OverlaySingleEdge
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import org.neo4j.ogm.annotation.Relationship
 
@@ -45,3 +45,4 @@ abstract class OverlayNode() : Node() {
         )
     var underlyingNode by unwrapping(OverlayNode::underlyingNodeEdge)
 }
+
