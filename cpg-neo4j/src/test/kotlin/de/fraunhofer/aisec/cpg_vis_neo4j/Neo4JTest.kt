@@ -33,6 +33,7 @@ import java.math.BigInteger
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertNotNull
 import org.junit.jupiter.api.Tag
 
 @Tag("integration")
@@ -64,7 +65,11 @@ class Neo4JTest {
     fun testPushConcepts() {
         val (application, result) = createTranslationResult()
 
+        val tu = result.translationUnits.firstOrNull()
+        assertNotNull(tu)
+
         val connectCall = result.calls["connect"]
+        assertNotNull(connectCall)
 
         abstract class NetworkingOperation(
             concept: Concept<out Operation>,
@@ -72,15 +77,26 @@ class Neo4JTest {
         class Connect(concept: Concept<out Operation>) : NetworkingOperation(concept)
         class Networking() : Concept<NetworkingOperation>()
 
+        abstract class FileOperation(
+            concept: Concept<out Operation>,
+        ) : Operation(concept)
+        class FileHandling() : Concept<FileOperation>()
+
         val nw = Networking()
-        nw.underlyingNode = result.translationUnits.first()
+        nw.name = Name("Networking")
+        nw.underlyingNode = tu
 
         val connect = Connect(concept = nw)
         connect.underlyingNode = connectCall
         connect.name = Name("connect")
         nw.ops += connect
 
-        assertEquals(connect, connectCall?.overlayNode)
+        val f = FileHandling()
+        f.name = Name("FileHandling")
+        f.underlyingNode = tu
+
+        assertEquals(setOf<Node>(connect), connectCall.overlays)
+        assertEquals(setOf<Node>(nw, f), tu.overlays)
 
         application.pushToNeo4j(result)
     }

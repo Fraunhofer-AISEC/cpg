@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.edges.overlay
 
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
+import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeSet
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeSingletonList
 import de.fraunhofer.aisec.cpg.graph.edges.collections.MirroredEdgeCollection
 import kotlin.reflect.KProperty
@@ -47,4 +48,12 @@ class OverlaySingleEdge(
         outgoing = outgoing,
         of = of,
     ),
+    MirroredEdgeCollection<Node, OverlayEdge>
+
+class Overlays(
+    thisRef: Node,
+    override var mirrorProperty: KProperty<MutableCollection<OverlayEdge>>,
+    outgoing: Boolean,
+) :
+    EdgeSet<Node, OverlayEdge>(thisRef = thisRef, init = ::OverlayEdge, outgoing = outgoing),
     MirroredEdgeCollection<Node, OverlayEdge>

@@ -37,7 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.flows.*
-import de.fraunhofer.aisec.cpg.graph.edges.overlay.OverlaySingleEdge
+import de.fraunhofer.aisec.cpg.graph.edges.overlay.*
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
@@ -279,14 +279,9 @@ abstract class Node :
     val additionalProblems: MutableSet<ProblemNode> = mutableSetOf()
 
     @Relationship(value = "OVERLAY", direction = Relationship.Direction.OUTGOING)
-    val overlayNodeEdge: OverlaySingleEdge =
-        OverlaySingleEdge(
-            this,
-            of = null,
-            mirrorProperty = OverlayNode::underlyingNodeEdge,
-            outgoing = true
-        )
-    var overlayNode by unwrapping(Node::overlayNodeEdge)
+    val overlayEdges: Overlays =
+        Overlays(this, mirrorProperty = OverlayNode::underlyingNodeEdge, outgoing = true)
+    var overlays by unwrapping(Node::overlayEdges)
 
     /**
      * If a node should be removed from the graph, just removing it from the AST is not enough (see
