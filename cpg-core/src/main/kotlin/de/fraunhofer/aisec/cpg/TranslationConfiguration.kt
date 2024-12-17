@@ -542,6 +542,7 @@ private constructor(
             registerPass<ControlFlowSensitiveDFGPass>()
             registerPass<FilenameMapper>()
             registerPass<ResolveCallExpressionAmbiguityPass>()
+            registerPass<ResolveMemberExpressionAmbiguityPass>()
             useDefaultPasses = true
             return this
         }
