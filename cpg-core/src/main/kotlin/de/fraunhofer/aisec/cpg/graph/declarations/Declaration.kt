@@ -52,7 +52,7 @@ abstract class Declaration : Node() {
      * Each Declaration allocates new memory, AKA a new address, so we create a new MemoryAddress
      * node
      */
-    lateinit var memoryAddress: MemoryAddress
+    open lateinit var memoryAddress: MemoryAddress
 
     fun memoryAddressIsInitialized() = ::memoryAddress.isInitialized
 }

@@ -271,7 +271,11 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                         when (param) {
                             is ParameterDeclaration ->
                                 // Dereference the parameter
-                                doubleState.getValues(currentNode.arguments[param.argumentIndex])
+                                if (param.argumentIndex < currentNode.arguments.size) {
+                                    doubleState.getValues(
+                                        currentNode.arguments[param.argumentIndex]
+                                    )
+                                } else null
                             else -> null
                         }
                     val sources = mutableSetOf<Node>()

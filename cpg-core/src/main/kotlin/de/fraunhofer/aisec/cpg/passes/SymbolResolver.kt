@@ -410,7 +410,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         }
     }
 
-    protected fun handleCallExpression(call: CallExpression) {
+    protected open fun handleCallExpression(call: CallExpression) {
         // Some local variables for easier smart casting
         val callee = call.callee
         val language = call.language
