@@ -63,6 +63,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.CommonPath
 import de.fraunhofer.aisec.cpg.passes.JavaExternalTypeHierarchyResolver
+import de.fraunhofer.aisec.cpg.passes.JavaExtraPass
 import de.fraunhofer.aisec.cpg.passes.JavaImportResolver
 import de.fraunhofer.aisec.cpg.passes.configuration.RegisterExtraPass
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -78,6 +79,7 @@ import kotlin.jvm.optionals.getOrNull
     JavaExternalTypeHierarchyResolver::class
 ) // this pass is always required for Java
 @RegisterExtraPass(JavaImportResolver::class)
+@RegisterExtraPass(JavaExtraPass::class)
 open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: TranslationContext) :
     LanguageFrontend<Node, Type>(language, ctx) {
 
@@ -140,6 +142,12 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
                 val incl = newIncludeDeclaration(anImport.nameAsString)
                 scopeManager.addDeclaration(incl)
             }
+
+            // We create an implicit import for "java.lang.*"
+            val decl =
+                newImportDeclaration(parseName("java.lang"), wildcardImport = true)
+                    .implicit("import java.lang.*")
+            scopeManager.addDeclaration(decl)
 
             if (namespaceDeclaration != null) {
                 scopeManager.leaveScope(namespaceDeclaration)

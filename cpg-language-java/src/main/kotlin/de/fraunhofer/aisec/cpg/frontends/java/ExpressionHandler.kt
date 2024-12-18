@@ -25,13 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.java
 
-import com.github.javaparser.Range
-import com.github.javaparser.TokenRange
-import com.github.javaparser.ast.Node
 import com.github.javaparser.ast.body.VariableDeclarator
 import com.github.javaparser.ast.expr.*
 import com.github.javaparser.ast.expr.Expression
 import com.github.javaparser.resolution.UnsolvedSymbolException
+import com.github.javaparser.resolution.declarations.ResolvedFieldDeclaration
 import com.github.javaparser.resolution.declarations.ResolvedMethodDeclaration
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.HandlerInterface
@@ -244,171 +242,32 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         expr: Expression
     ): de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression {
         val fieldAccessExpr = expr.asFieldAccessExpr()
-        var base: de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-        // first, resolve the scope. this adds the necessary nodes, such as IDENTIFIER for the
-        // scope.
-        // it also acts as the first argument of the operator call
-        val scope = fieldAccessExpr.scope
-        if (scope.isNameExpr) {
-            var isStaticAccess = false
-            var baseType: Type
-            try {
-                val resolve = fieldAccessExpr.resolve()
-                if (resolve.asField().isStatic) {
-                    isStaticAccess = true
-                }
-                baseType = this.objectType(resolve.asField().declaringType().qualifiedName)
-            } catch (ex: RuntimeException) {
-                isStaticAccess = true
-                val typeString = frontend.recoverTypeFromUnsolvedException(ex)
-                if (typeString != null) {
-                    baseType = this.objectType(typeString)
-                } else {
-                    // try to get the name
-                    val name: String
-                    val tokenRange = scope.asNameExpr().tokenRange
-                    name =
-                        if (tokenRange.isPresent) {
-                            tokenRange.get().toString()
-                        } else {
-                            scope.asNameExpr().nameAsString
-                        }
-                    val qualifiedNameFromImports = frontend.getQualifiedNameFromImports(name)
-                    baseType =
-                        if (qualifiedNameFromImports != null) {
-                            this.objectType(qualifiedNameFromImports)
-                        } else {
-                            log.info("Unknown base type 1 for {}", fieldAccessExpr)
-                            unknownType()
-                        }
-                }
-            } catch (ex: NoClassDefFoundError) {
-                isStaticAccess = true
-                val typeString = frontend.recoverTypeFromUnsolvedException(ex)
-                if (typeString != null) {
-                    baseType = this.objectType(typeString)
-                } else {
-                    val name: String
-                    val tokenRange = scope.asNameExpr().tokenRange
-                    name =
-                        if (tokenRange.isPresent) {
-                            tokenRange.get().toString()
-                        } else {
-                            scope.asNameExpr().nameAsString
-                        }
-                    val qualifiedNameFromImports = frontend.getQualifiedNameFromImports(name)
-                    baseType =
-                        if (qualifiedNameFromImports != null) {
-                            this.objectType(qualifiedNameFromImports)
-                        } else {
-                            log.info("Unknown base type 1 for {}", fieldAccessExpr)
-                            unknownType()
-                        }
-                }
-            }
-            base = newReference(scope.asNameExpr().nameAsString, baseType, rawNode = scope)
-            base.isStaticAccess = isStaticAccess
-        } else if (scope.isFieldAccessExpr) {
-            base =
-                handle(scope) as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?
-                    ?: newProblemExpression("Could not parse base")
-            var tester = base
-            while (tester is MemberExpression) {
-                // we need to check if any base is only a static access, otherwise, this is a member
-                // access
-                // to this base
-                tester = tester.base
-            }
-            if (tester is Reference && tester.isStaticAccess) {
-                // try to get the name
-                val name: String
-                val tokenRange = scope.asFieldAccessExpr().tokenRange
-                name =
-                    if (tokenRange.isPresent) {
-                        tokenRange.get().toString()
-                    } else {
-                        scope.asFieldAccessExpr().nameAsString
-                    }
-                val qualifiedNameFromImports = frontend.getQualifiedNameFromImports(name)
-                val baseType =
-                    if (qualifiedNameFromImports != null) {
-                        this.objectType(qualifiedNameFromImports)
-                    } else {
-                        log.info("Unknown base type 2 for {}", fieldAccessExpr)
-                        unknownType()
-                    }
-                base =
-                    newReference(scope.asFieldAccessExpr().nameAsString, baseType, rawNode = scope)
-                base.isStaticAccess = true
-            }
-        } else {
-            base =
-                handle(scope) as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?
-                    ?: newProblemExpression("Could not parse base")
-        }
-        var fieldType: Type?
+
+        var baseType = unknownType()
+        var fieldType = unknownType()
+        // We can "try" to resolve the field using JavaParser's logic. The main reason we WANT to do
+        // this is to get information about system types, as long as we are not fully doing that on
+        // our own.
         try {
             val symbol = fieldAccessExpr.resolve()
-            fieldType =
-                frontend.typeManager.getTypeParameter(
-                    frontend.scopeManager.currentRecord,
-                    symbol.asField().type.describe(),
-                )
-            if (fieldType == null) {
-                fieldType = frontend.typeOf(symbol.asField().type)
+            fieldType = frontend.typeOf(symbol.type)
+
+            if (symbol.isField) {
+                baseType = objectType(symbol.asField().declaringType().qualifiedName)
             }
-        } catch (ex: RuntimeException) {
-            val typeString = frontend.recoverTypeFromUnsolvedException(ex)
-            fieldType =
-                if (typeString != null) {
-                    this.objectType(typeString)
-                } else if (fieldAccessExpr.toString().endsWith(".length")) {
-                    this.primitiveType("int")
-                } else {
-                    log.info("Unknown field type for {}", fieldAccessExpr)
-                    unknownType()
-                }
-            val memberExpression =
-                newMemberExpression(
-                    fieldAccessExpr.name.identifier,
-                    base,
-                    fieldType,
-                    ".", // there is only "." in java
-                    rawNode = expr,
-                )
-            memberExpression.isStaticAccess = true
-            return memberExpression
-        } catch (ex: NoClassDefFoundError) {
-            val typeString = frontend.recoverTypeFromUnsolvedException(ex)
-            fieldType =
-                if (typeString != null) {
-                    this.objectType(typeString)
-                } else if (fieldAccessExpr.toString().endsWith(".length")) {
-                    this.primitiveType("int")
-                } else {
-                    log.info("Unknown field type for {}", fieldAccessExpr)
-                    unknownType()
-                }
-            val memberExpression =
-                newMemberExpression(
-                    fieldAccessExpr.name.identifier,
-                    base,
-                    fieldType,
-                    ".",
-                    rawNode = expr,
-                )
-            memberExpression.isStaticAccess = true
-            return memberExpression
-        }
-        if (base.location == null) {
-            base.location = frontend.locationOf(fieldAccessExpr)
-        }
+        } catch (_: UnsolvedSymbolException) {}
+
+        var base =
+            handle(fieldAccessExpr.scope)
+                as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+        base.type = baseType
+
         return newMemberExpression(
             fieldAccessExpr.name.identifier,
             base,
             fieldType,
-            ".",
-            rawNode = expr,
+            operatorCode = ".",
+            rawNode = fieldAccessExpr
         )
     }
 
@@ -502,111 +361,22 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
     ): de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression? {
         val nameExpr = expr.asNameExpr()
 
-        // TODO this commented code breaks field accesses to fields that don't have a primitive
-        // type.
-        //  How should this be handled correctly?
-        //    try {
-        //      ResolvedType resolvedType = nameExpr.calculateResolvedType();
-        //      if (resolvedType.isReferenceType()) {
-        //        return newReference(
-        //            nameExpr.getNameAsString(),
-        //            new Type(((ReferenceTypeImpl) resolvedType).getQualifiedName()),
-        //            nameExpr.toString());
-        //      }
-        //    } catch (
-        //        UnsolvedSymbolException
-        //            e) { // this might throw, e.g. if the type is simply not defined (i.e., syntax
-        // error)
-        //      return newReference(
-        //          nameExpr.getNameAsString(), new Type(UNKNOWN_TYPE), nameExpr.toString());
-        //    }
-        val name = this.parseName(nameExpr.nameAsString)
-        return try {
+        // Try to resolve it. We will remove this in a future where we do not really in the
+        // javaparser symbols anymore. This is mainly needed to resolve implicit "this.field" access
+        // as well as access to static fields of other classes - which we could resolve once we
+        // fully leverage the import system in the Java frontend.
+        try {
             val symbol = nameExpr.resolve()
             if (symbol.isField) {
                 val field = symbol.asField()
-                if (!field.isStatic) {
-                    // convert to FieldAccessExpr
-                    val fieldAccessExpr = FieldAccessExpr(ThisExpr(), field.name)
-                    expr.range.ifPresent { range: Range? -> fieldAccessExpr.setRange(range) }
-                    expr.tokenRange.ifPresent { tokenRange: TokenRange? ->
-                        fieldAccessExpr.setTokenRange(tokenRange)
-                    }
-                    expr.parentNode.ifPresent { newParentNode: Node? ->
-                        fieldAccessExpr.setParentNode(newParentNode)
-                    }
-                    expr.replace(fieldAccessExpr)
-                    fieldAccessExpr.parentNode.ifPresent { newParentNode: Node? ->
-                        expr.setParentNode(newParentNode)
-                    }
+                // handle it as a field expression
+                return handle(field.toFieldAccessExpr(nameExpr))
+                    as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?
+            }
+        } catch (_: UnsolvedSymbolException) {}
 
-                    // handle it as a field expression
-                    handle(fieldAccessExpr)
-                        as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?
-                } else {
-                    val fieldAccessExpr =
-                        FieldAccessExpr(NameExpr(field.declaringType().className), field.name)
-                    expr.range.ifPresent { range: Range? -> fieldAccessExpr.setRange(range) }
-                    expr.tokenRange.ifPresent { tokenRange: TokenRange? ->
-                        fieldAccessExpr.setTokenRange(tokenRange)
-                    }
-                    expr.parentNode.ifPresent { newParentNode: Node? ->
-                        fieldAccessExpr.setParentNode(newParentNode)
-                    }
-                    expr.replace(fieldAccessExpr)
-                    fieldAccessExpr.parentNode.ifPresent { newParentNode: Node? ->
-                        expr.setParentNode(newParentNode)
-                    }
-
-                    // handle it as a field expression
-                    handle(fieldAccessExpr)
-                        as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?
-                }
-            } else {
-                // Resolve type first with ParameterizedType
-                var type: Type? =
-                    frontend.typeManager.getTypeParameter(
-                        frontend.scopeManager.currentRecord,
-                        symbol.type.describe(),
-                    )
-                if (type == null) {
-                    type = frontend.typeOf(symbol.type)
-                }
-                newReference(symbol.name, type, rawNode = nameExpr)
-            }
-        } catch (ex: UnsolvedSymbolException) {
-            val typeString: String? =
-                if (
-                    ex.name.startsWith(
-                        "We are unable to find the value declaration corresponding to"
-                    )
-                ) {
-                    nameExpr.nameAsString
-                } else {
-                    frontend.recoverTypeFromUnsolvedException(ex)
-                }
-            val t: Type
-            if (typeString == null) {
-                t = unknownType()
-            } else {
-                t = this.objectType(typeString)
-                t.typeOrigin = Type.Origin.GUESSED
-            }
-            val declaredReferenceExpression = newReference(name, t, rawNode = nameExpr)
-            val recordDeclaration = frontend.scopeManager.currentRecord
-            if (recordDeclaration != null && recordDeclaration.name.lastPartsMatch(name)) {
-                declaredReferenceExpression.refersTo = recordDeclaration
-            }
-            declaredReferenceExpression
-        } catch (ex: RuntimeException) {
-            val t = unknownType()
-            log.info("Unresolved symbol: {}", nameExpr.nameAsString)
-            newReference(nameExpr.nameAsString, t, rawNode = nameExpr)
-        } catch (ex: NoClassDefFoundError) {
-            val t = unknownType()
-            log.info("Unresolved symbol: {}", nameExpr.nameAsString)
-            newReference(nameExpr.nameAsString, t, rawNode = nameExpr)
-        }
+        val name = this.parseName(nameExpr.nameAsString)
+        return newReference(name, rawNode = expr)
     }
 
     private fun handleInstanceOfExpression(expr: Expression): BinaryOperator {
@@ -885,4 +655,22 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
             handleLambdaExpr(it)
         }
     }
+}
+
+fun ResolvedFieldDeclaration.toFieldAccessExpr(expr: NameExpr): FieldAccessExpr {
+    // Convert to FieldAccessExpr
+    val fieldAccessExpr =
+        if (this.isStatic) {
+            FieldAccessExpr(NameExpr(this.declaringType().className), this.name)
+        } else {
+            FieldAccessExpr(ThisExpr(), this.name)
+        }
+
+    expr.range.ifPresent { fieldAccessExpr.setRange(it) }
+    expr.tokenRange.ifPresent { fieldAccessExpr.setTokenRange(it) }
+    expr.parentNode.ifPresent { fieldAccessExpr.setParentNode(it) }
+    expr.replace(fieldAccessExpr)
+    fieldAccessExpr.parentNode.ifPresent { expr.setParentNode(it) }
+
+    return fieldAccessExpr
 }
