@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.graph.Persistable
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeCollection
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeList
 import de.fraunhofer.aisec.cpg.helpers.neo4j.NameConverter
-import java.math.BigInteger
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 import kotlin.reflect.KTypeProjection
@@ -133,8 +132,6 @@ fun Any.convert(
     } else if (this is Enum<*>) {
         properties.put(originalKey, this.name)
     } else if (this is Uuid) {
-        properties.put(originalKey, this.toString())
-    } else if (this is BigInteger) {
         properties.put(originalKey, this.toString())
     } else {
         properties.put(originalKey, this)
