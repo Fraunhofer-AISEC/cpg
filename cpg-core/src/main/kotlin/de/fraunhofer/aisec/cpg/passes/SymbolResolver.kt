@@ -214,7 +214,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         // Preparation for a future without legacy call resolving. Taking the first candidate is not
         // ideal since we are running into an issue with function pointers here (see workaround
         // below).
-        var wouldResolveTo = ref.candidates.singleOrNull()
+        var wouldResolveTo = ref.candidates.firstOrNull()
 
         // For now, we need to ignore reference expressions that are directly embedded into call
         // expressions, because they are the "callee" property. In the future, we will use this
