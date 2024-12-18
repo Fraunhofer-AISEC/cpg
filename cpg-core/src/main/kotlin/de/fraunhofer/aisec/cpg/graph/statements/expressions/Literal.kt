@@ -63,9 +63,10 @@ class ValueConverter : AttributeConverter<Any?, Any?> {
         // Neo4J only supports a limited set of primitive values natively, everything else, we need
         // to convert to a string.
         return when (value) {
+            null -> null
             (value is Number && value !is BigInteger) -> value
             is Boolean -> value
-            null -> null
+            is String -> value
             else -> value.toString()
         }
     }
