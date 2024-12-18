@@ -320,6 +320,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                 }
                 if (destinations != null && sources.isNotEmpty()) {
                     doubleState = doubleState.updateValues(sources, destinations)
+                }
                 // Ignore the ReturnStatements here, we use them when handling AssignExpressions
                 if (param !is ReturnStatement) {
                     val destinations =
@@ -421,11 +422,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
             // We fetch the value of the source, but not the destination, this is done by the
             // updateValues-Function
             val sources = identitySetOf<Node>()
-            currentNode.rhs.forEach {
-                sources.addAll(
-                    doubleState.getValues(it)
-                )
-            }
+            currentNode.rhs.forEach { sources.addAll(doubleState.getValues(it)) }
             doubleState = doubleState.updateValues(sources, currentNode.lhs.toIdentitySet())
         }
 
