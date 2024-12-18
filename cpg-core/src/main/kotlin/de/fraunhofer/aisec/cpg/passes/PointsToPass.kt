@@ -240,6 +240,9 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                         log.error(
                             "Cannot calculate functionSummary for $invoke as it's recursively called. callChain: $functionSummaryAnalysisChain"
                         )
+                        val newValues: MutableSet<Pair<Node, Boolean>> =
+                            invoke.parameters.map { Pair(it, false) }.toMutableSet()
+                        invoke.functionSummary[ReturnStatement()] = newValues
                     }
                 } else {
                     // Add a dummy function Summary so that we don't try this every time
@@ -356,15 +359,18 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                     newValues.forEach { (value, derefSource) ->
                         when (value) {
                             is ParameterDeclaration ->
-                                // Add the value of the respective argument in the CallExpression
-                                // Only dereference the parameter when we stored that in the
-                                // functionSummary
-                                if (derefSource) {
-                                    doubleState
-                                        .getValues(currentNode.arguments[value.argumentIndex])
-                                        .forEach { sources.addAll(doubleState.getValues(it)) }
-                                } else {
-                                    sources.add(currentNode.arguments[value.argumentIndex])
+                                if (value.argumentIndex < currentNode.arguments.size) {
+                                    // Add the value of the respective argument in the
+                                    // CallExpression
+                                    // Only dereference the parameter when we stored that in the
+                                    // functionSummary
+                                    if (derefSource) {
+                                        doubleState
+                                            .getValues(currentNode.arguments[value.argumentIndex])
+                                            .forEach { sources.addAll(doubleState.getValues(it)) }
+                                    } else {
+                                        sources.add(currentNode.arguments[value.argumentIndex])
+                                    }
                                 }
                             is ParameterMemoryValue -> {
                                 // In case the FunctionSummary says that we have to use the
@@ -376,12 +382,14 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                                             .flatMap { it.parameters }
                                             .filter { it.name == value.name.parent }
                                     p.forEach {
-                                        val arg = currentNode.arguments[it.argumentIndex]
-                                        sources.addAll(
-                                            doubleState.getValues(arg).flatMap {
-                                                doubleState.getValues(it)
-                                            }
-                                        )
+                                        if (value.argumentIndex < currentNode.arguments.size) {
+                                            val arg = currentNode.arguments[it.argumentIndex]
+                                            sources.addAll(
+                                                doubleState.getValues(arg).flatMap {
+                                                    doubleState.getValues(it)
+                                                }
+                                            )
+                                        }
                                     }
                                 }
                             }
