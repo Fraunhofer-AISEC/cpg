@@ -65,7 +65,9 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
         }
         // If the node already has a function summary, we have visited it before and can
         // return here.
-        if (config.functionSummaries.hasSummary(node)) {
+        if (
+            functionSummaryAnalysisChain.contains(node) && config.functionSummaries.hasSummary(node)
+        ) {
             return
         }
 
@@ -229,8 +231,11 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                 if (invoke.hasBody()) {
                     log.debug("functionSummaryAnalysisChain: {}", functionSummaryAnalysisChain)
                     if (invoke !in functionSummaryAnalysisChain) {
+                        val summaryCopy = functionSummaryAnalysisChain.toSet()
                         functionSummaryAnalysisChain.add(invoke)
                         acceptInternal(invoke)
+                        functionSummaryAnalysisChain.clear()
+                        functionSummaryAnalysisChain.addAll(summaryCopy)
                     } else {
                         log.error(
                             "Cannot calculate functionSummary for $invoke as it's recursively called. callChain: $functionSummaryAnalysisChain"
@@ -246,6 +251,26 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
             }
         }
 
+        currentNode.invokes.forEach { fd ->
+            currentNode.arguments.forEach { arg ->
+                if (arg.argumentIndex < fd.parameters.size) {
+                    // Create a DFG-Edge from the argument to the parameter's memoryValue
+                    val p = fd.parameters[arg.argumentIndex]
+                    doubleState =
+                        doubleState.push(
+                            p.memoryValue,
+                            TupleLattice(
+                                Pair(
+                                    PowersetLattice(identitySetOf(p.memoryValue)),
+                                    PowersetLattice(identitySetOf(arg))
+                                )
+                            )
+                        )
+                }
+            }
+        }
+
+        // TODO: Replace this condition by collecting only invokes with function summary below.
         if (currentNode.invokes.all { ctx.config.functionSummaries.hasSummary(it) }) {
             // We have a FunctionSummary. Set the new values for the arguments. Push the
             // values of the arguments and return value after executing the function call to our
@@ -258,23 +283,8 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                 for ((k, v) in tmp) {
                     changedParams.computeIfAbsent(k) { mutableSetOf() }.addAll(v)
                 }
-                currentNode.arguments.forEach { arg ->
-                    if (arg.argumentIndex < fd.parameters.size) {
-                        // Create a DFG-Edge from the argument to the parameter's memoryValue
-                        val p = fd.parameters[arg.argumentIndex]
-                        doubleState =
-                            doubleState.push(
-                                p.memoryValue,
-                                TupleLattice(
-                                    Pair(
-                                        PowersetLattice(identitySetOf(p.memoryValue)),
-                                        PowersetLattice(identitySetOf(arg))
-                                    )
-                                )
-                            )
-                    }
-                }
             }
+
             for ((param, newValues) in changedParams) {
                 val destinations =
                     when (param) {
