@@ -259,18 +259,20 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                     changedParams.computeIfAbsent(k) { mutableSetOf() }.addAll(v)
                 }
                 currentNode.arguments.forEach { arg ->
-                    // Create a DFG-Edge from the argument to the parameter's memoryValue
-                    val p = fd.parameters[arg.argumentIndex]
-                    doubleState =
-                        doubleState.push(
-                            p.memoryValue,
-                            TupleLattice(
-                                Pair(
-                                    PowersetLattice(identitySetOf(p.memoryValue)),
-                                    PowersetLattice(identitySetOf(arg))
+                    if (arg.argumentIndex < fd.parameters.size) {
+                        // Create a DFG-Edge from the argument to the parameter's memoryValue
+                        val p = fd.parameters[arg.argumentIndex]
+                        doubleState =
+                            doubleState.push(
+                                p.memoryValue,
+                                TupleLattice(
+                                    Pair(
+                                        PowersetLattice(identitySetOf(p.memoryValue)),
+                                        PowersetLattice(identitySetOf(arg))
+                                    )
                                 )
                             )
-                        )
+                    }
                 }
             }
             for ((param, newValues) in changedParams) {
@@ -278,7 +280,9 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                     when (param) {
                         is ParameterDeclaration ->
                             // Dereference the parameter
-                            doubleState.getValues(currentNode.arguments[param.argumentIndex])
+                            if (param.argumentIndex < currentNode.arguments.size) {
+                                doubleState.getValues(currentNode.arguments[param.argumentIndex])
+                            } else null
                         is ReturnStatement -> identitySetOf(currentNode)
                         else -> null
                     }
@@ -289,12 +293,14 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                             // Add the value of the respective argument in the CallExpression
                             // Only dereference the parameter when we stored that in the
                             // functionSummary
-                            if (derefSource) {
-                                doubleState
-                                    .getValues(currentNode.arguments[value.argumentIndex])
-                                    .forEach { sources.addAll(doubleState.getValues(it)) }
-                            } else {
-                                sources.add(currentNode.arguments[value.argumentIndex])
+                            if (value.argumentIndex < currentNode.arguments.size) {
+                                if (derefSource) {
+                                    doubleState
+                                        .getValues(currentNode.arguments[value.argumentIndex])
+                                        .forEach { sources.addAll(doubleState.getValues(it)) }
+                                } else {
+                                    sources.add(currentNode.arguments[value.argumentIndex])
+                                }
                             }
                         is ParameterMemoryValue -> {
                             // In case the FunctionSummary says that we have to use the
@@ -306,12 +312,14 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                                         .flatMap { it.parameters }
                                         .filter { it.name == value.name.parent }
                                 p.forEach {
-                                    val arg = currentNode.arguments[it.argumentIndex]
-                                    sources.addAll(
-                                        doubleState.getValues(arg).flatMap {
-                                            doubleState.getValues(it)
-                                        }
-                                    )
+                                    if (it.argumentIndex < currentNode.arguments.size) {
+                                        val arg = currentNode.arguments[it.argumentIndex]
+                                        sources.addAll(
+                                            doubleState.getValues(arg).flatMap {
+                                                doubleState.getValues(it)
+                                            }
+                                        )
+                                    }
                                 }
                             }
                         }
