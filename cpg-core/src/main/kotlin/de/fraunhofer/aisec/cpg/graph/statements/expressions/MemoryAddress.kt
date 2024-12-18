@@ -26,9 +26,9 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.Name
-import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.Node
 
-open class MemoryAddress(override var name: Name) : Declaration() {
+open class MemoryAddress(override var name: Name) : Node() {
     /*
      * When the node represents the MemoryAddress of a struct or an array, we use the fieldAddresses map to store the MemoryAddresses of the different fields.
      * Therefore, for structs the key should be a FieldDeclaration.

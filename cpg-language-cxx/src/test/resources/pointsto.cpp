@@ -169,7 +169,7 @@ undefined4 sgx_ecall_key_to_out(long param_1)
     return 2;
   }
   if ((local_18 != 0) && (local_10 != 0)) {
-    local_28 = dlmalloc(local_10);
+  local_28 = dlmalloc(local_10);
     if (local_28 == (void *)0x0) {
       uVar2 = 3;
       goto LAB_001011ce;
