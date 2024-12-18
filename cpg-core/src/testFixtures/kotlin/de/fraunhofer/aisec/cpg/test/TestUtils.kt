@@ -285,7 +285,7 @@ fun assertUsageOf(usingNode: Node?, usedNode: Node?) {
 fun assertUsageOfMemberAndBase(usingNode: Node?, usedBase: Node?, usedMember: Declaration?) {
     assertNotNull(usingNode)
     if (usingNode !is MemberExpression && !ENFORCE_MEMBER_EXPRESSION) {
-        // Assumtion here is that the target of the member portion of the expression and not the
+        // Assumption here is that the target of the member portion of the expression and not the
         // base is resolved
         assertUsageOf(usingNode, usedMember)
     } else {
