@@ -60,10 +60,13 @@ class Literal<T> : Expression() {
 
 class ValueConverter : AttributeConverter<Any?, Any?> {
     override fun toGraphProperty(value: Any?): Any? {
-        return if (value is BigInteger) {
-            value.toString()
-        } else {
-            value
+        // Neo4J only supports a limited set of primitive values natively, everything else, we need
+        // to convert to a string.
+        return when (value) {
+            (value is Number && value !is BigInteger) -> value
+            is Boolean -> value
+            null -> null
+            else -> value.toString()
         }
     }
 
