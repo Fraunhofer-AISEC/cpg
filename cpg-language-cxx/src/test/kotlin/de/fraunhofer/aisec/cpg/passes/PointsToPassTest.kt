@@ -1107,8 +1107,8 @@ class PointsToPassTest {
 
         // Line 159
         assertEquals(1, local_20Line159.prevDFG.size)
-        assertEquals(1, param_1Line145.prevDFG.size)
-        assertEquals(param_1Line145.prevDFG.first(), local_20Line159.prevDFG.first())
+        assertEquals(1, param_1Line159.prevDFG.size)
+        assertEquals(param_1Line159.prevDFG.first(), local_20Line159.prevDFG.first())
 
         // Effect from Line 160
         assertEquals(1, local_30Line165.prevDFG.size)
@@ -1129,8 +1129,8 @@ class PointsToPassTest {
         assertEquals(ceLine172, local_28Line172.prevDFG.firstOrNull())
 
         // Line 177 TODO: What do we want to check here?
-        /*        assertEquals(1, local_28Line177.prevDFG.size)
-        assertEquals(local_10Line172, local_28Line177.prevDFG.firstOrNull())*/
+        assertEquals(1, local_28Line177.prevDFG.size)
+        assertEquals(local_10Line172, local_28Line177.prevDFG.firstOrNull())
 
         // Line 179
         assertEquals(2, local_28Line179.prevDFG.size)

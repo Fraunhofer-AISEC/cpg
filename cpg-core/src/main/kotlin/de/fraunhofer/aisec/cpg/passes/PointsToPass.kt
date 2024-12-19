@@ -273,40 +273,95 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
             }
         }
 
-        // TODO: Replace this condition by collecting only invokes with function summary below.
-        if (currentNode.invokes.all { ctx.config.functionSummaries.hasSummary(it) }) {
-            // We have a FunctionSummary. Set the new values for the arguments. Push the
-            // values of the arguments and return value after executing the function call to our
-            // doubleState.
+        val destinations = identitySetOf<Node>()
+        val sources = identitySetOf<Node>()
+        val changedParams = mutableMapOf<Node, MutableSet<Pair<Node, Boolean>>>()
 
-            // First, collect all writes to all parameters
-            val changedParams = mutableMapOf<Node, MutableSet<Pair<Node, Boolean>>>()
-            currentNode.invokes.forEach { fd ->
+        // First, collect all writes to all parameters
+        currentNode.invokes
+            .filter { it.functionSummary.isNotEmpty() }
+            .forEach { fd ->
+                // We have a FunctionSummary. Set the new values for the arguments. Push the
+                // values of the arguments and return value after executing the function call to our
+                // doubleState.
                 val tmp = ctx.config.functionSummaries.getLastWrites(fd)
                 for ((k, v) in tmp) {
                     changedParams.computeIfAbsent(k) { mutableSetOf() }.addAll(v)
                 }
             }
 
-            for ((param, newValues) in changedParams) {
+        for ((param, newValues) in changedParams) {
+            when (param) {
+                is ParameterDeclaration ->
+                    if (param.argumentIndex < currentNode.arguments.size) {
+                        // Dereference the parameter
+                        destinations.addAll(
+                            doubleState.getValues(currentNode.arguments[param.argumentIndex])
+                        )
+                    }
+                is ReturnStatement -> destinations.add(currentNode)
+            }
+            newValues.forEach { (value, derefSource) ->
+                when (value) {
+                    is ParameterDeclaration ->
+                        // Add the value of the respective argument in the CallExpression
+                        // Only dereference the parameter when we stored that in the
+                        // functionSummary
+                        if (value.argumentIndex < currentNode.arguments.size) {
+                            if (derefSource) {
+                                doubleState
+                                    .getValues(currentNode.arguments[value.argumentIndex])
+                                    .forEach { sources.addAll(doubleState.getValues(it)) }
+                            } else {
+                                sources.add(currentNode.arguments[value.argumentIndex])
+                            }
+                        }
+                    is ParameterMemoryValue -> {
+                        // In case the FunctionSummary says that we have to use the
+                        // dereferenced value here, we look up the argument, dereference it,
+                        // and then add it to the sources
+                        if (value.name.localName == "derefvalue") {
+                            val p =
+                                currentNode.invokes
+                                    .flatMap { it.parameters }
+                                    .filter { it.name == value.name.parent }
+                            p.forEach {
+                                if (it.argumentIndex < currentNode.arguments.size) {
+                                    val arg = currentNode.arguments[it.argumentIndex]
+                                    sources.addAll(
+                                        doubleState.getValues(arg).flatMap {
+                                            doubleState.getValues(it)
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    else -> sources.add(value)
+                }
+            }
+            /*// Ignore the ReturnStatements here, we use them when handling AssignExpressions
+            if (param !is ReturnStatement) {
                 val destinations =
                     when (param) {
                         is ParameterDeclaration ->
                             // Dereference the parameter
                             if (param.argumentIndex < currentNode.arguments.size) {
-                                doubleState.getValues(currentNode.arguments[param.argumentIndex])
+                                doubleState.getValues(
+                                    currentNode.arguments[param.argumentIndex]
+                                )
                             } else null
-                        is ReturnStatement -> identitySetOf(currentNode)
                         else -> null
                     }
                 val sources = mutableSetOf<Node>()
                 newValues.forEach { (value, derefSource) ->
                     when (value) {
                         is ParameterDeclaration ->
-                            // Add the value of the respective argument in the CallExpression
-                            // Only dereference the parameter when we stored that in the
-                            // functionSummary
                             if (value.argumentIndex < currentNode.arguments.size) {
+                                // Add the value of the respective argument in the
+                                // CallExpression
+                                // Only dereference the parameter when we stored that in the
+                                // functionSummary
                                 if (derefSource) {
                                     doubleState
                                         .getValues(currentNode.arguments[value.argumentIndex])
@@ -325,7 +380,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                                         .flatMap { it.parameters }
                                         .filter { it.name == value.name.parent }
                                 p.forEach {
-                                    if (it.argumentIndex < currentNode.arguments.size) {
+                                    if (value.argumentIndex < currentNode.arguments.size) {
                                         val arg = currentNode.arguments[it.argumentIndex]
                                         sources.addAll(
                                             doubleState.getValues(arg).flatMap {
@@ -342,65 +397,10 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                 if (destinations != null && sources.isNotEmpty()) {
                     doubleState = doubleState.updateValues(sources, destinations)
                 }
-                // Ignore the ReturnStatements here, we use them when handling AssignExpressions
-                if (param !is ReturnStatement) {
-                    val destinations =
-                        when (param) {
-                            is ParameterDeclaration ->
-                                // Dereference the parameter
-                                if (param.argumentIndex < currentNode.arguments.size) {
-                                    doubleState.getValues(
-                                        currentNode.arguments[param.argumentIndex]
-                                    )
-                                } else null
-                            else -> null
-                        }
-                    val sources = mutableSetOf<Node>()
-                    newValues.forEach { (value, derefSource) ->
-                        when (value) {
-                            is ParameterDeclaration ->
-                                if (value.argumentIndex < currentNode.arguments.size) {
-                                    // Add the value of the respective argument in the
-                                    // CallExpression
-                                    // Only dereference the parameter when we stored that in the
-                                    // functionSummary
-                                    if (derefSource) {
-                                        doubleState
-                                            .getValues(currentNode.arguments[value.argumentIndex])
-                                            .forEach { sources.addAll(doubleState.getValues(it)) }
-                                    } else {
-                                        sources.add(currentNode.arguments[value.argumentIndex])
-                                    }
-                                }
-                            is ParameterMemoryValue -> {
-                                // In case the FunctionSummary says that we have to use the
-                                // dereferenced value here, we look up the argument, dereference it,
-                                // and then add it to the sources
-                                if (value.name.localName == "derefvalue") {
-                                    val p =
-                                        currentNode.invokes
-                                            .flatMap { it.parameters }
-                                            .filter { it.name == value.name.parent }
-                                    p.forEach {
-                                        if (value.argumentIndex < currentNode.arguments.size) {
-                                            val arg = currentNode.arguments[it.argumentIndex]
-                                            sources.addAll(
-                                                doubleState.getValues(arg).flatMap {
-                                                    doubleState.getValues(it)
-                                                }
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                            else -> sources.add(value)
-                        }
-                    }
-                    if (destinations != null && sources.isNotEmpty()) {
-                        doubleState = doubleState.updateValues(sources, destinations)
-                    }
-                }
-            }
+            }*/
+        }
+        if (destinations.isNotEmpty() && sources.isNotEmpty()) {
+            doubleState = doubleState.updateValues(sources, destinations)
         }
 
         return doubleState
@@ -542,7 +542,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
             }
             doubleState = doubleState.pushToDeclarationsState(param.memoryValue, paramDerefState)
 
-            doubleState = doubleState.push(param, paramState)
+            //            doubleState = doubleState.push(param, paramState)
         }
         return doubleState
     }
@@ -694,7 +694,9 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                             identitySetOf(UnknownMemoryValue(node.name))
                         }
                     val retVal = identitySetOf<Node>()
-                    inputVal.forEach { retVal.addAll(this.getValues(it)) }
+                    inputVal.forEach {
+                        retVal.addAll(/*this.getValues(it)*/ fetchElementFromDeclarationState(it))
+                    }
                     retVal
                 }
                 is Declaration -> {
