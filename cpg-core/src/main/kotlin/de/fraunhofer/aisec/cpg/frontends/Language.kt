@@ -33,12 +33,15 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.ast.TemplateArguments
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.unknownType
+import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import java.io.File
 import kotlin.reflect.KClass
@@ -359,6 +362,29 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
             Pair(list.toSet(), CallResolutionResult.SuccessKind.AMBIGUOUS)
         } else {
             Pair(list.toSet(), CallResolutionResult.SuccessKind.SUCCESSFUL)
+        }
+    }
+
+    /**
+     * This function returns the best viable declaration when resolving a [Reference]. The
+     * candidates to chose from are stored in [Reference.candidates] In most cases the languages can
+     * keep the default implementation, which only returns a declaration, if the list contains one
+     * single item. Otherwise, we have an ambiguous result and cannot determine the result with
+     * certainty.
+     *
+     * If we encounter an ambiguous result, a warning is issued.
+     */
+    open fun bestViableReferenceCandidate(ref: Reference): Declaration? {
+        return if (ref.candidates.size > 1) {
+            Util.warnWithFileLocation(
+                ref,
+                log,
+                "Resolution of reference {} was ambiguous, cannot set refersTo correctly.",
+                ref.name
+            )
+            null
+        } else {
+            ref.candidates.singleOrNull()
         }
     }
 }
