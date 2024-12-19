@@ -193,6 +193,16 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     protected fun handleReference(currentClass: RecordDeclaration?, ref: Reference) {
         val language = ref.language
 
+        if (language == null) {
+            Util.warnWithFileLocation(
+                ref,
+                log,
+                "Language for reference {} is empty, we cannot resolve this reference correctly.",
+                ref.name
+            )
+            return
+        }
+
         // Ignore references to anonymous identifiers, if the language supports it (e.g., the _
         // identifier in Go)
         if (
@@ -211,10 +221,11 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         // resolution, but in future this will also be used in resolving regular references.
         ref.candidates = scopeManager.lookupSymbolByNameOfNode(ref).toSet()
 
-        // Preparation for a future without legacy call resolving. Taking the first candidate is not
-        // ideal since we are running into an issue with function pointers here (see workaround
-        // below).
-        var wouldResolveTo = ref.candidates.singleOrNull()
+        // We need to choose the best viable candidate out of the ones we have for our reference.
+        // Hopefully we have only one, but there might be instances where more than one is a valid
+        // candidate. We let the language have a chance at overriding the default behaviour (which
+        // takes only a single one).
+        var wouldResolveTo = language.bestViableReferenceCandidate(ref)
 
         // For now, we need to ignore reference expressions that are directly embedded into call
         // expressions, because they are the "callee" property. In the future, we will use this
