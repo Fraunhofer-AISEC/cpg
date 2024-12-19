@@ -33,9 +33,16 @@ import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import de.fraunhofer.aisec.cpg.IncompatibleSignature
 import de.fraunhofer.aisec.cpg.SignatureMatches
 import de.fraunhofer.aisec.cpg.frontends.CastNotPossible
+import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.graph.ContextProvider
+import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.applyMetadata
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.newFunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.newParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.parseName
+import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
@@ -87,6 +94,37 @@ class DFGFunctionSummaries {
         val dfgEntries = findFunctionDeclarationEntry(functionDeclaration) ?: return false
         applyDfgEntryToFunctionDeclaration(functionDeclaration, dfgEntries)
         return true
+    }
+
+    fun generateFunctionForEntry(
+        contextProvider: ContextProvider,
+        language: Language<*>,
+        declEntry: FunctionDeclarationEntry,
+        summary: List<DFGEntry>
+    ) {
+        val inferredFunction =
+            contextProvider.newFunctionDeclaration(language.parseName(declEntry.methodName))
+        declEntry.signature?.forEachIndexed { i, typeName ->
+            val type =
+                if (contextProvider.ctx?.typeManager?.typeExists(typeName) == true) {
+                    contextProvider.ctx?.typeManager?.lookupResolvedType(typeName)
+                } else {
+                    var type = ObjectType(typeName, listOf(), false, language)
+                    // Apply our usual metadata, such as scope, code, location, if we have any. Make
+                    // sure only
+                    // to refer by the local name because we will treat types as sort of references
+                    // when
+                    // creating them and resolve them later.
+                    type.applyMetadata(contextProvider, typeName, localNameOnly = true)
+
+                    // Piping it through register type will ensure that we know the type and can
+                    // resolve it later
+                    contextProvider.ctx?.typeManager?.registerType(type)
+                } ?: language.unknownType()
+            inferredFunction.parameters +=
+                contextProvider.newParameterDeclaration(Name("param$i"), type)
+        }
+        applyDfgEntryToFunctionDeclaration(inferredFunction, summary)
     }
 
     /**

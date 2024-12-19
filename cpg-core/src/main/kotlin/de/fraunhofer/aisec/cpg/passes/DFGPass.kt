@@ -40,7 +40,7 @@ import de.fraunhofer.aisec.cpg.passes.inference.DFGFunctionSummaries
 
 /** Adds the DFG edges for various types of nodes. */
 @DependsOn(SymbolResolver::class)
-class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
+open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     private val callsInferredFunctions = mutableListOf<CallExpression>()
 
     override fun accept(component: Component) {
@@ -243,7 +243,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * Adds the DFG edge for a [FunctionDeclaration]. The data flows from the return statement(s) to
      * the function.
      */
-    protected fun handleFunctionDeclaration(
+    protected open fun handleFunctionDeclaration(
         node: FunctionDeclaration,
         functionSummaries: DFGFunctionSummaries
     ) {
@@ -252,7 +252,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
             if (!summaryExists) {
                 // If the function is inferred, we connect all parameters to the function
-                // declaration.  The condition should make sure that we don't add edges multiple
+                // declaration. The condition should make sure that we don't add edges multiple
                 // times, i.e., we only handle the declaration exactly once.
                 node.prevDFGEdges.addAll(node.parameters)
                 // If it's a method with a receiver, we connect that one too.
