@@ -650,7 +650,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                             identitySetOf(UnknownMemoryValue(node.name))
                         }
                     val retVal = identitySetOf<Node>()
-                    inputVal.forEach { retVal.addAll(this.getValues(it)) }
+                    inputVal.forEach { retVal.addAll(fetchElementFromDeclarationState(it)) }
                     retVal
                 }
                 is Declaration -> {
@@ -782,7 +782,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                         Name(localName, node.arrayExpression.name)
                     )
                 }
-                else -> identitySetOf()
+                else -> identitySetOf(node)
             }
         }
 

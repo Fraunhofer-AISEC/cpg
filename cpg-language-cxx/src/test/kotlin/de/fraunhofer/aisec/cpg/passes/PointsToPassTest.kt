@@ -1095,15 +1095,14 @@ class PointsToPassTest {
             tu.allChildren<MemberExpression> { it.location?.region?.startLine == 201 }.first()
         assertNotNull(meLine201)
 
-        // CastExpressions
-        val ceLine201 =
-            tu.allChildren<CastExpression> { it.location?.region?.startLine == 201 }.first()
-        assertNotNull(ceLine201)
-
         // CallExpressions
         val ceLine172 =
             tu.allChildren<CallExpression> { it.location?.region?.startLine == 172 }.first()
         assertNotNull(ceLine172)
+
+        val ceLine201 =
+            tu.allChildren<CallExpression> { it.location?.region?.startLine == 201 }.first()
+        assertNotNull(ceLine201)
 
         // Line 159
         assertEquals(1, local_20Line159.prevDFG.size)
@@ -1128,56 +1127,38 @@ class PointsToPassTest {
         assertEquals(1, local_28Line172.prevDFG.size)
         assertEquals(ceLine172, local_28Line172.prevDFG.firstOrNull())
 
-        // Line 177 TODO: What do we want to check here?
-        assertEquals(1, local_28Line177.prevDFG.size)
-        assertEquals(local_10Line172, local_28Line177.prevDFG.firstOrNull())
-
         // Line 179
         assertEquals(2, local_28Line179.prevDFG.size)
         assertTrue(local_28Line179.prevDFG.contains(literal0Line167))
         assertTrue(local_28Line179.prevDFG.contains(ceLine172))
 
-        assertEquals(3, local_28DerefLine179.prevDFG.size)
+        assertEquals(2, local_28DerefLine179.prevDFG.size)
         assertTrue(local_28DerefLine179.prevDFG.contains(literal0Line177))
         assertEquals(
-            2,
+            1,
             local_28DerefLine179.prevDFG
                 .filterIsInstance<UnknownMemoryValue>()
-                .filter { it.name.localName == "0" || it.name.localName == "16" }
+                .filter { it.name.localName == "0" }
                 .size
         )
         assertTrue(local_28DerefLine179.prevDFG.contains(literal0Line177))
         assertEquals(2, local_28DerefLine179.memoryAddress.size)
-        assertTrue(
-            local_28DerefLine179.memoryAddress
-                .filterIsInstance<UnknownMemoryValue>()
-                .filter { it.name.localName == "0" }
-                .size == 1
-        )
-        assertTrue(local_28DerefLine179.memoryAddress.contains(local_10Line172))
+        assertTrue(local_28DerefLine179.memoryAddress.contains(literal0Line167))
+        assertTrue(local_28DerefLine179.memoryAddress.contains(ceLine172))
 
         // Line 180
         assertEquals(2, local_28Line180.prevDFG.size)
-        assertTrue(
-            local_28Line180.prevDFG
-                .filterIsInstance<UnknownMemoryValue>()
-                .filter { it.name.localName == "0" }
-                .size == 1
-        )
-        assertTrue(local_10Line172 in local_28Line180.prevDFG)
+        assertTrue(local_28Line180.prevDFG.contains(literal0Line167))
+        assertTrue(local_28Line180.prevDFG.contains(ceLine172))
 
         // Line 181
-        assertEquals(5, local_28DerefLine181.prevDFG.size)
-        assertTrue(local_28DerefLine181.prevDFG.contains(meLine201))
+        assertEquals(2, local_28DerefLine181.prevDFG.size)
         assertTrue(local_28DerefLine181.prevDFG.contains(ceLine201))
         assertTrue(
             local_28DerefLine181.prevDFG.any {
                 it is UnknownMemoryValue && it.name.localName == "DAT_0011b1c8"
             }
         )
-
-        // Line 192
-        println(param_1Line193)
     }
 
     @Test
