@@ -400,7 +400,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         return member
     }
 
-    protected fun handle(node: Node?, currClass: RecordDeclaration?) {
+    protected open fun handle(node: Node?, currClass: RecordDeclaration?) {
         when (node) {
             is MemberExpression -> handleMemberExpression(currClass, node)
             is Reference -> handleReference(currClass, node)
@@ -410,7 +410,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         }
     }
 
-    protected fun handleCallExpression(call: CallExpression) {
+    protected open fun handleCallExpression(call: CallExpression) {
         // Some local variables for easier smart casting
         val callee = call.callee
         val language = call.language
@@ -487,7 +487,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         when (result.success) {
             PROBLEMATIC -> {
                 log.error(
-                    "Resolution of ${call.name} returned an problematic result and we cannot decide correctly, the invokes edge will contain all possible viable functions"
+                    "Resolution of ${call.name} returned a problematic result and we cannot decide correctly, the invokes edge will contain all possible viable functions"
                 )
                 call.invokes = result.bestViable.toMutableList()
             }

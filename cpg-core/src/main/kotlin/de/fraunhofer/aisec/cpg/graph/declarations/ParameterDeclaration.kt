@@ -26,15 +26,19 @@
 package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.HasDefault
+import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ParameterMemoryValue
 import java.util.*
 import org.neo4j.ogm.annotation.Relationship
 
 /** A declaration of a function or nontype template parameter. */
 class ParameterDeclaration : ValueDeclaration(), HasDefault<Expression?> {
     var isVariadic = false
+
+    var memoryValue: ParameterMemoryValue = ParameterMemoryValue(Name("value"))
 
     @Relationship(value = "DEFAULT", direction = Relationship.Direction.OUTGOING)
     var defaultValueEdge = astOptionalEdgeOf<Expression>()

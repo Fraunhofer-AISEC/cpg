@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
 import de.fraunhofer.aisec.cpg.graph.edges.flows.PartialDataflowGranularity
+import de.fraunhofer.aisec.cpg.graph.edges.flows.PointerDataflowGranularity
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import kotlin.reflect.KProperty1
 
@@ -115,6 +116,8 @@ private fun Edge<Node>.label(): String {
         var granularity = this.granularity
         if (granularity is PartialDataflowGranularity) {
             builder.append(" (partial, ${granularity.partialTarget?.name})")
+        } else if (granularity is PointerDataflowGranularity) {
+            builder.append(" (pointer, ${granularity.pointerTarget.name})")
         } else {
             builder.append(" (full)")
         }
