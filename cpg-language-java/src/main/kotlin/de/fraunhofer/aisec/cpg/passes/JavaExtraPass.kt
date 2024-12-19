@@ -73,6 +73,7 @@ class JavaExtraPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
                 newReference(type.name.fqn(me.name.localName), type = me.type)
                     .codeAndLocationFrom(me)
                     .apply { isStaticAccess = true }
+            ref.language = me.language
             walker.replace(parent, me, ref)
         }
     }
