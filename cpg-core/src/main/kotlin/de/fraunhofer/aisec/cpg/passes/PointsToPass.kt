@@ -226,6 +226,8 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
     ): PointsToPass.PointsToState2 {
         var doubleState = doubleState
 
+        val mapDstToSrc = mutableMapOf<Node, MutableSet<Node>>()
+
         // First, check if there are missing FunctionSummaries
         currentNode.invokes.forEach { invoke ->
             if (invoke.functionSummary.isEmpty()) {
@@ -343,12 +345,19 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                         }
                     }
                     if (sources.isNotEmpty()) {
-                        doubleState = doubleState.updateValues(sources, destinations)
+                        destinations.forEach { dst ->
+                            mapDstToSrc.computeIfAbsent(dst) { mutableSetOf<Node>() } += sources
+                        }
                     }
                     // }
                 }
             }
         }
+
+        mapDstToSrc.forEach { (dst, src) ->
+            doubleState = doubleState.updateValues(src, setOf(dst))
+        }
+        // }
 
         return doubleState
     }
