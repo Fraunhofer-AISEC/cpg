@@ -61,34 +61,10 @@ open class MemoryAddress(override var name: Name) : Node() {
  * stone.
  */
 class ParameterMemoryValue(override var name: Name) : MemoryAddress(name) {
-    /*    override fun equals(other: Any?): Boolean {
-        if (this === other) {
-            return true
-        }
-        if (other !is ParameterMemoryValue) {
-            return false
-        }
-        return this.name == other.name
-    }
-
-    override fun hashCode(): Int {
-        return super.hashCode()
-    }*/
+    // The ParameterMemoryValue is usually the Value of a parameter. Let's use this little helper to
+    // get to the parameter's address
+    var memoryAddress: Node? = null
 }
 
 /** We don't know the value. It might be set somewhere else or not. No idea. */
-class UnknownMemoryValue(override var name: Name = Name("")) : MemoryAddress(name) {
-    /*    override fun equals(other: Any?): Boolean {
-        if (this === other) {
-            return true
-        }
-        if (other !is UnknownMemoryValue) {
-            return false
-        }
-        return this.name == other.name
-    }
-
-    override fun hashCode(): Int {
-        return super.hashCode()
-    }*/
-}
+class UnknownMemoryValue(override var name: Name = Name("")) : MemoryAddress(name) {}

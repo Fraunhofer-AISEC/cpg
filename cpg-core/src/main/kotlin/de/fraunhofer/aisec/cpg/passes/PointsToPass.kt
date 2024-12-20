@@ -143,6 +143,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                 if (addr is MemoryAddress) {
                     addr.fieldAddresses.flatMap { it.value }.forEach { indexes.add(it) }
                 }
+                // TODO: Check for writes to deref-derefs
             }
             indexes.forEach { index ->
                 val finalValue =
@@ -274,36 +275,21 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                         )
                 }
             }
-            // }
-
-            // If we have a FunctionSummary, we push the
-            // values of the arguments and return value after executing the function call to our
-            // doubleState.
-
-            // First, collect all writes to all parameters
-            // val changedParams = mutableMapOf<Node, MutableSet<Pair<Node, Boolean>>>()
-            // currentNode.invokes
-            //    .forEach { fd ->
-            //      for ((k, v) in invoke.functionSummary) {
-            //          changedParams.computeIfAbsent(k) { mutableSetOf() }.addAll(v)
-            //      }
-            // }
 
             for ((param, newValues) in invoke.functionSummary) {
 
-                // Ignore the ReturnStatements here, we use them when handling AssignExpressions
-                // if (param !is ReturnStatement) {
-                val destinations =
+                val destination =
                     when (param) {
                         is ParameterDeclaration ->
                             // Dereference the parameter
                             if (param.argumentIndex < currentNode.arguments.size) {
-                                doubleState.getValues(currentNode.arguments[param.argumentIndex])
+                                currentNode.arguments[
+                                        param.argumentIndex]
                             } else null
-                        is ReturnStatement -> identitySetOf(currentNode)
+                        is ReturnStatement -> currentNode
                         else -> null
                     }
-                if (destinations != null) {
+                if (destination != null) {
                     val sources = mutableSetOf<Node>()
                     newValues.forEach { (value, derefSource) ->
                         when (value) {
@@ -315,7 +301,11 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                                     if (derefSource) {
                                         doubleState
                                             .getValues(currentNode.arguments[value.argumentIndex])
-                                            .forEach { sources.addAll(doubleState.getValues(it)) }
+                                            .forEach {
+                                                sources.addAll(
+                                                    doubleState.fetchElementFromDeclarationState(it)
+                                                )
+                                            }
                                     } else {
                                         sources.add(currentNode.arguments[value.argumentIndex])
                                     }
@@ -345,9 +335,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                         }
                     }
                     if (sources.isNotEmpty()) {
-                        destinations.forEach { dst ->
-                            mapDstToSrc.computeIfAbsent(dst) { mutableSetOf<Node>() } += sources
-                        }
+                        mapDstToSrc.computeIfAbsent(destination) { mutableSetOf<Node>() } += sources
                     }
                     // }
                 }
@@ -355,7 +343,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
         }
 
         mapDstToSrc.forEach { (dst, src) ->
-            doubleState = doubleState.updateValues(src, setOf(dst))
+            doubleState = doubleState.updateValues(src, setOf(dst), doubleState.getValues(dst))
         }
         // }
 
@@ -401,11 +389,11 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
          * In C(++), both the lhs and the rhs should only have one element
          */
         if (currentNode.lhs.size == 1 && currentNode.rhs.size == 1) {
-            // We fetch the value of the source, but not the destination, this is done by the
-            // updateValues-Function
-            val sources = identitySetOf<Node>()
-            currentNode.rhs.forEach { sources.addAll(doubleState.getValues(it)) }
-            doubleState = doubleState.updateValues(sources, currentNode.lhs.toIdentitySet())
+            val sources = currentNode.rhs.flatMap { doubleState.getValues(it) }.toIdentitySet()
+            val destinations = currentNode.lhs.map { it }.toIdentitySet().toIdentitySet()
+            val destinationsAddresses =
+                destinations.flatMap { doubleState.getAddresses(it) }.toIdentitySet()
+            doubleState = doubleState.updateValues(sources, destinations, destinationsAddresses)
         }
 
         return doubleState
@@ -474,6 +462,11 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
         parameters.forEach { param ->
             val addresses = doubleState.getAddresses(param)
             param.memoryValue.name = Name("value", param.name)
+            // Since the ParameterDeclaration is never change, we map the ParameterMemoryValue to
+            // the same address
+            // TODO: It may be nicer to use the ParameterDeclaration itself, that could maybe also
+            // work
+            param.memoryValue.memoryAddress = param.memoryAddress
             val paramState: LatticeElement<Pair<PowersetLatticeT<Node>, PowersetLatticeT<Node>>> =
                 TupleLattice(
                     Pair(
@@ -483,14 +476,14 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                 )
             // We also need to track the MemoryValue of the dereference of the parameter, since that
             // is what would have an influence outside the function
+            val paramDeref = ParameterMemoryValue(Name("derefvalue", param.name))
+            paramDeref.memoryAddress = param.memoryValue
             val paramDerefState:
                 LatticeElement<Pair<PowersetLatticeT<Node>, PowersetLatticeT<Node>>> =
                 TupleLattice(
                     Pair(
                         PowersetLattice(identitySetOf(param.memoryValue)),
-                        PowersetLattice(
-                            identitySetOf(ParameterMemoryValue(Name("derefvalue", param.name)))
-                        )
+                        PowersetLattice(identitySetOf(paramDeref))
                     )
                 )
             addresses.forEach { addr ->
@@ -499,6 +492,20 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
             doubleState = doubleState.pushToDeclarationsState(param.memoryValue, paramDerefState)
 
             doubleState = doubleState.push(param, paramState)
+
+            // In case the param is a pointer-to-pointer, we also need a dereference of the
+            // dereference
+            val paramDerefDeref = ParameterMemoryValue(Name("derefderefvalue", param.name))
+            paramDerefDeref.memoryAddress = paramDeref
+            val paramDerefDerefState:
+                LatticeElement<Pair<PowersetLatticeT<Node>, PowersetLatticeT<Node>>> =
+                TupleLattice(
+                    Pair(
+                        PowersetLattice(identitySetOf(paramDeref)),
+                        PowersetLattice(identitySetOf(paramDerefDeref))
+                    )
+                )
+            doubleState = doubleState.pushToDeclarationsState(paramDeref, paramDerefDerefState)
         }
         return doubleState
     }
@@ -606,8 +613,14 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
         /* Fetch the entry for `node` from the DeclarationState. If there isn't any, create
         an UnknownMemoryValue
         */
-        private fun fetchElementFromDeclarationState(node: Node): IdentitySet<Node> {
-            val elements = this.declarationsState.elements[node]?.elements?.second?.elements
+        fun fetchElementFromDeclarationState(
+            node: Node,
+            //            useAddress: Boolean = false
+        ): IdentitySet<Node> {
+            val elements =
+                //                if (useAddress)
+                // this.declarationsState.elements[node]?.elements?.first?.elements
+                /*else*/ this.declarationsState.elements[node]?.elements?.second?.elements
             if (elements.isNullOrEmpty()) {
                 val newName = if (node is Literal<*>) Name(node.value.toString()) else node.name
                 val newEntry = identitySetOf<Node>(UnknownMemoryValue(newName))
@@ -624,9 +637,13 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                             Pair(PowersetLattice(identitySetOf(node)), PowersetLattice(newEntry))
                         )
                     }
-                (this.declarationsState.elements[node]?.elements?.second?.elements
-                        as? IdentitySet<Node>)
-                    ?.addAll(newEntry)
+                val newElements =
+                    /*if (useAddress) this.declarationsState.elements[node]?.elements?.first?.elements
+                    else*/ this.declarationsState.elements[node]
+                        ?.elements
+                        ?.second
+                        ?.elements
+                (newElements as? IdentitySet<Node>)?.addAll(newEntry)
                 return newEntry
             } else return elements.toIdentitySet()
         }
@@ -729,7 +746,13 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                         node.memoryAddress = MemoryAddress(node.name)
                     identitySetOf(node.memoryAddress)
                 }
+                is ParameterMemoryValue -> {
+                    if (node.memoryAddress != null) identitySetOf(node.memoryAddress!!)
+                    else identitySetOf()
+                }
                 is MemoryAddress -> {
+                    TODO()
+                    //                    fetchElementFromDeclarationState(node, useAddress = true)
                     identitySetOf(node)
                 }
                 is PointerReference -> {
@@ -810,24 +833,30 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
         }
 
         /**
-         * Update the node `dst` to the values of `src`. Updates the declarationState and the
-         * generalState for `dst` For the destination, we dereference ourselves, b/c we also need
-         * the destination themselves to update the set. However, the source will not be
-         * dereferences b/c we don't need if there's the need to
+         * Update the generalstate of the nodes in `destinations` to the values in `sources`.
+         * Additionally updates the declarationState at `destinationAddresses`
          */
-        fun updateValues(sources: Set<Node>, destinations: Set<Node>): PointsToState2 {
-            val addresses = destinations.flatMap { this.getAddresses(it) }.toIdentitySet()
+        fun updateValues(
+            sources: Set<Node>,
+            destinations: Set<Node>,
+            destinationAddresses: Set<Node>
+        ): PointsToState2 {
+            // val addresses = destinations.flatMap { this.getAddresses(it) }.toIdentitySet()
             val newDeclState = this.declarationsState.elements.toMutableMap()
             val newGenState = this.generalState.elements.toMutableMap()
             /* Update the declarationState for the address */
-            addresses.forEach { addr ->
+            destinationAddresses.forEach { addr ->
                 newDeclState[addr] =
-                    TupleLattice(Pair(PowersetLattice(addresses), PowersetLattice(sources)))
+                    TupleLattice(
+                        Pair(PowersetLattice(destinationAddresses), PowersetLattice(sources))
+                    )
             }
             /* Also update the generalState for dst */
             destinations.forEach { d ->
                 newGenState[d] =
-                    TupleLattice(Pair(PowersetLattice(addresses), PowersetLattice(sources)))
+                    TupleLattice(
+                        Pair(PowersetLattice(destinationAddresses), PowersetLattice(sources))
+                    )
             }
             var doubleState = PointsToState2(MapLattice(newGenState), MapLattice(newDeclState))
 

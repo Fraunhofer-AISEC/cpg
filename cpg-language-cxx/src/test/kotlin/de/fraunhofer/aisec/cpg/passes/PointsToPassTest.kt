@@ -1077,6 +1077,20 @@ class PointsToPassTest {
                 .first()
         assertNotNull(local_28DerefLine179)
 
+        val local_18DerefLine190 =
+            tu.allChildren<PointerDereference> {
+                    it.location?.region?.startLine == 190 && it.name.localName == "local_18"
+                }
+                .first()
+        assertNotNull(local_18DerefLine190)
+
+        val param_1DerefLine190 =
+            tu.allChildren<PointerDereference> {
+                    it.location?.region?.startLine == 190 && it.name.localName == "param_1"
+                }
+                .first()
+        assertNotNull(param_1DerefLine190)
+
         // Literals
         val literal10Line166 =
             tu.allChildren<Literal<*>> { it.location?.region?.startLine == 166 }.first()
@@ -1159,6 +1173,14 @@ class PointsToPassTest {
                 it is UnknownMemoryValue && it.name.localName == "DAT_0011b1c8"
             }
         )
+
+        // Line 190
+        // TODO: verify the memcpy in Line 183
+        assertEquals(1, local_18DerefLine190.memoryAddress.size)
+        assertEquals(param_1Line145.memoryValue, local_18DerefLine190.prevDFG.firstOrNull())
+        assertEquals(2, local_18DerefLine190.prevDFG.size)
+
+        // Verify the functionSummary for sgx_ecall_key_to_out
     }
 
     @Test

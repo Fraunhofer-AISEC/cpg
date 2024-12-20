@@ -38,7 +38,9 @@ import org.neo4j.ogm.annotation.Relationship
 class ParameterDeclaration : ValueDeclaration(), HasDefault<Expression?> {
     var isVariadic = false
 
-    var memoryValue: ParameterMemoryValue = ParameterMemoryValue(Name("value"))
+    var memoryValue: ParameterMemoryValue = ParameterMemoryValue(Name("value")) /*.apply {
+            memoryAddress = this@ParameterDeclaration.memoryAddress
+        }*/
 
     @Relationship(value = "DEFAULT", direction = Relationship.Direction.OUTGOING)
     var defaultValueEdge = astOptionalEdgeOf<Expression>()
