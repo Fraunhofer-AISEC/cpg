@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemoryAddress
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import org.neo4j.ogm.annotation.NodeEntity
 
@@ -46,4 +47,12 @@ abstract class Declaration : Node() {
         get() {
             return this.name.localName
         }
+
+    /**
+     * Each Declaration allocates new memory, AKA a new address, so we create a new MemoryAddress
+     * node
+     */
+    open lateinit var memoryAddress: MemoryAddress
+
+    fun memoryAddressIsInitialized() = ::memoryAddress.isInitialized
 }

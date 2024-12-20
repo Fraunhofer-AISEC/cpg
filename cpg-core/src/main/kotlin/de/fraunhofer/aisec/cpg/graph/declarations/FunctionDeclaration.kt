@@ -76,6 +76,15 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder, EOGStart
             return if (isDefinition) this else field
         }
 
+    /**
+     * Saves the information on which parameter(s) of the function are modified by the function.
+     * This is interesting since we need to add DFG edges between the modified parameter and the
+     * respective argument(s). For each [ParameterDeclaration] as well as the
+     * [MethodDeclaration.receiver] that has some incoming DFG-edge within this
+     * [FunctionDeclaration], we store all previous DFG nodes.
+     */
+    var functionSummary = mutableMapOf<Node, MutableSet<Pair<Node, Boolean>>>()
+
     /** Returns true, if this function has a [body] statement. */
     fun hasBody(): Boolean {
         return body != null

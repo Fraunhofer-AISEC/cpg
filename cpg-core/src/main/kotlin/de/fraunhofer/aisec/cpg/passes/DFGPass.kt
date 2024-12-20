@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
+import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
 import de.fraunhofer.aisec.cpg.graph.edges.flows.partial
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -69,8 +70,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     private fun connectInferredCallArguments(functionSummaries: DFGFunctionSummaries) {
         for (call in callsInferredFunctions) {
             for (invoked in call.invokes.filter { it.isInferred }) {
-                val changedParams =
-                    functionSummaries.functionToChangedParameters[invoked] ?: mapOf()
+                val changedParams = invoked.functionSummary
                 for ((param, _) in changedParams) {
                     if (param == (invoked as? MethodDeclaration)?.receiver) {
                         (call as? MemberCallExpression)
@@ -84,7 +84,9 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                             callingContext = CallingContextOut(call)
                         )
                         (arg as? Reference)?.let {
-                            it.access = AccessValues.READWRITE
+                            // The access value stays on READ. Even if it's a pointer, only the
+                            // dereference will be written.
+                            // it.access = AccessValues.READWRITE
                             it.refersTo?.let { it1 -> it.nextDFGEdges += it1 }
                         }
                     }
@@ -115,11 +117,10 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             is SubscriptExpression -> handleSubscriptExpression(node)
             is ConditionalExpression -> handleConditionalExpression(node)
             is MemberExpression -> handleMemberExpression(node)
-            is Reference -> handleReference(node)
+            // The ControlFlowSensitiveDFGPass will draw the DFG Edges for these
+            // is Reference -> handleReference(node)
             is ExpressionList -> handleExpressionList(node)
             is NewExpression -> handleNewExpression(node)
-            // We keep the logic for the InitializerListExpression in that class because the
-            // performance would decrease too much.
             is InitializerListExpression -> handleInitializerListExpression(node)
             is KeyValueExpression -> handleKeyValueExpression(node)
             is LambdaExpression -> handleLambdaExpression(node)
@@ -176,7 +177,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     protected fun handleAssignExpression(node: AssignExpression) {
-        // If this is a compound assign, we also need to model a dataflow to the node itself
+        /*        // If this is a compound assign, we also need to model a dataflow to the node itself
         if (node.isCompoundAssignment) {
             node.lhs.firstOrNull()?.let {
                 node.prevDFGEdges += it
@@ -187,7 +188,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             // Find all targets of rhs and connect them
             node.rhs.forEach {
                 val targets = node.findTargets(it)
-                targets.forEach { target -> it.nextDFGEdges += target }
+                targets.forEach { target -> it.nextDFGEdges += Dataflow(start = it, end = target) }
             }
         }
 
@@ -195,7 +196,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         // rhs to the node itself
         if (node.usedAsExpression) {
             node.expressionValue?.nextDFGEdges += node
-        }
+        }*/
     }
 
     /**
@@ -365,14 +366,17 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * case of the operators "++" and "--" also from the node back to the input.
      */
     protected fun handleUnaryOperator(node: UnaryOperator) {
-        node.input.let {
-            node.prevDFGEdges += it
-            if (node.operatorCode == "++" || node.operatorCode == "--") {
-                node.nextDFGEdges += it
+        if ((node.input as? Reference)?.access == AccessValues.WRITE) {
+            node.input.let { node.nextDFGEdges += it }
+        } else {
+            node.input.let {
+                node.prevDFGEdges += it
+                if (node.operatorCode == "++" || node.operatorCode == "--") {
+                    node.nextDFGEdges += it
+                }
             }
         }
     }
-
     /**
      * Adds the DFG edge for a [LambdaExpression]. The data flow from the function representing the
      * lambda to the expression.
@@ -423,10 +427,10 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         node.refersTo?.let {
             when (node.access) {
                 AccessValues.WRITE -> node.nextDFGEdges += it
-                AccessValues.READ -> node.prevDFGEdges += it
+                AccessValues.READ -> node.prevDFGEdges += Dataflow(start = it, end = node)
                 else -> {
                     node.nextDFGEdges += it
-                    node.prevDFGEdges += it
+                    node.prevDFGEdges += Dataflow(start = it, end = node)
                 }
             }
         }

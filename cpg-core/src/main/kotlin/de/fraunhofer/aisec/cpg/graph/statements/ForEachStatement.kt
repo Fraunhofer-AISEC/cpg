@@ -49,6 +49,7 @@ class ForEachStatement : LoopStatement(), BranchingNode, StatementHolder {
                 val end = new?.end
                 if (end is Reference) {
                     end.access = AccessValues.WRITE
+                    end.dfgHandlerHint = true
                 }
             }
         )
