@@ -145,6 +145,9 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                 }
                 // TODO: Check for writes to deref-derefs
             }
+            // Also check for writes to the ParameterMemoryValue of the deref in case of
+            // pointer-to-pointers
+            indexes.addAll(doubleState.getValues(param.memoryValue))
             indexes.forEach { index ->
                 val finalValue =
                     doubleState.declarationsState.elements
@@ -159,11 +162,13 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                     // See if we can find something that is different from the initial value
                     ?.filter {
                         !(it is ParameterMemoryValue &&
-                            it.name.localName == "derefvalue" &&
+                            it.name.localName.contains("derefvalue") &&
                             it.name.parent == param.name)
                     }
                     // If so, store the last write for the parameter in the FunctionSummary
                     ?.forEach { value ->
+                        // TODO: To we also map the writes of pointer-to-pointer to the param or
+                        // should we do something else?
                         node.functionSummary
                             .computeIfAbsent(param) { mutableSetOf() }
                             .add(Pair(value, true))
@@ -277,14 +282,12 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
             }
 
             for ((param, newValues) in invoke.functionSummary) {
-
                 val destination =
                     when (param) {
                         is ParameterDeclaration ->
                             // Dereference the parameter
                             if (param.argumentIndex < currentNode.arguments.size) {
-                                currentNode.arguments[
-                                        param.argumentIndex]
+                                currentNode.arguments[param.argumentIndex]
                             } else null
                         is ReturnStatement -> currentNode
                         else -> null
@@ -335,6 +338,9 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                         }
                     }
                     if (sources.isNotEmpty()) {
+                        /*                        destination.forEach { dst ->
+                            mapDstToSrc.computeIfAbsent(dst) { mutableSetOf<Node>() } += sources
+                        }*/
                         mapDstToSrc.computeIfAbsent(destination) { mutableSetOf<Node>() } += sources
                     }
                     // }
@@ -343,7 +349,13 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
         }
 
         mapDstToSrc.forEach { (dst, src) ->
-            doubleState = doubleState.updateValues(src, setOf(dst), doubleState.getValues(dst))
+            // If the values of the destination are the same as the destination (e.g. if dst is a
+            // CallExpression), we also add destinations to update the generalState, otherwise, the
+            // destinationAddresses for the DeclarationState are enough
+            val dstValues = doubleState.getValues(dst)
+            if (dstValues.all { it == dst })
+                doubleState = doubleState.updateValues(src, dstValues, dstValues)
+            else doubleState = doubleState.updateValues(src, identitySetOf(), dstValues)
         }
         // }
 
@@ -833,8 +845,8 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
         }
 
         /**
-         * Update the generalstate of the nodes in `destinations` to the values in `sources`.
-         * Additionally updates the declarationState at `destinationAddresses`
+         * Updates the declarationState at `destinationAddresses` to the values in `sources`.
+         * Additionally updates the generalstate at `destinations` if there is any
          */
         fun updateValues(
             sources: Set<Node>,
@@ -851,7 +863,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                         Pair(PowersetLattice(destinationAddresses), PowersetLattice(sources))
                     )
             }
-            /* Also update the generalState for dst */
+            /* Also update the generalState for dst (if we have any destinations) */
             destinations.forEach { d ->
                 newGenState[d] =
                     TupleLattice(
