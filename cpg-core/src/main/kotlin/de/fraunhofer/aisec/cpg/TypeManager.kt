@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg
 
-import de.fraunhofer.aisec.cpg.frontends.CastNotPossible
 import de.fraunhofer.aisec.cpg.frontends.CastResult
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
@@ -183,7 +182,7 @@ class TypeManager {
     fun createOrGetTypeParameter(
         templateDeclaration: TemplateDeclaration,
         typeName: String,
-        language: Language<*>?
+        language: Language<*>
     ): ParameterizedType {
         var parameterizedType = getTypeParameter(templateDeclaration, typeName)
         if (parameterizedType == null) {
@@ -271,7 +270,7 @@ internal fun Type.getAncestors(depth: Int): Set<Type.Ancestor> {
  * Optionally, the nodes that hold the respective type can be supplied as [hint] and [targetHint].
  */
 fun Type.tryCast(targetType: Type, hint: HasType? = null, targetHint: HasType? = null): CastResult {
-    return this.language?.tryCast(this, targetType, hint, targetHint) ?: CastNotPossible
+    return this.language.tryCast(this, targetType, hint, targetHint)
 }
 
 /**
@@ -351,7 +350,7 @@ val Collection<Type>.commonType: Type?
 context(Pass<*>)
 fun Reference.nameIsType(): Type? {
     // First, check if it is a simple type
-    var type = language?.getSimpleTypeOf(name)
+    var type = language.getSimpleTypeOf(name)
     if (type != null) {
         return type
     }

@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 
 class StringType(
     typeName: CharSequence = "",
-    language: Language<*>? = null,
+    language: Language<*>,
     generics: List<Type> = listOf()
 ) : ObjectType(typeName, generics, false, language) {
 

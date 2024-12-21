@@ -578,8 +578,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         // value. If the language has the trait of short-circuit evaluation, we check if the
         // operatorCode is amongst the operators that lead to such an evaluation.
         if (
-            lang != null &&
-                lang is HasShortCircuitOperators &&
+            lang is HasShortCircuitOperators &&
                 (lang.conjunctiveOperators.contains(node.operatorCode) ||
                     lang.disjunctiveOperators.contains(node.operatorCode))
         ) {

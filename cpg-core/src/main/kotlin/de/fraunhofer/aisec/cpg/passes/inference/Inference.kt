@@ -65,7 +65,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
     ContextProvider,
     RawNodeTypeProvider<Nothing> {
 
-    override val language: Language<*>?
+    override val language: Language<*>
         get() = start.language
 
     override val isInferred: Boolean
@@ -569,22 +569,20 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
             is UnaryOperator -> {
                 // If it's a boolean operator, the return type is probably a boolean
                 if (holder.operatorCode == "!") {
-                    return hint.language?.builtInTypes?.values?.firstOrNull { it is BooleanType }
+                    return hint.language.builtInTypes.values.firstOrNull { it is BooleanType }
                 }
                 // If it's a numeric operator, return the largest numeric type that we have; we
                 // prefer integers to floats
                 if (holder.operatorCode in listOf("+", "-", "++", "--")) {
                     val numericTypes =
-                        hint.language
-                            ?.builtInTypes
-                            ?.values
-                            ?.filterIsInstance<NumericType>()
-                            ?.sortedWith(
+                        hint.language.builtInTypes.values
+                            .filterIsInstance<NumericType>()
+                            .sortedWith(
                                 compareBy<NumericType> { it.bitWidth }
                                     .then { a, b -> preferIntegerType(a, b) }
                             )
 
-                    return numericTypes?.lastOrNull()
+                    return numericTypes.lastOrNull()
                 }
             }
             is ConstructExpression -> {

@@ -32,7 +32,7 @@ import java.util.*
 open class NumericType(
     typeName: CharSequence = "",
     val bitWidth: Int? = null,
-    language: Language<*>? = null,
+    language: Language<*>,
     val modifier: Modifier = Modifier.SIGNED
 ) : ObjectType(typeName, listOf(), true, language) {
 
