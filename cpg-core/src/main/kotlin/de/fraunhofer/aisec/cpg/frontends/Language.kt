@@ -31,7 +31,6 @@ import com.fasterxml.jackson.databind.JsonSerializer
 import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import de.fraunhofer.aisec.cpg.*
-import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.ast.TemplateArguments
@@ -43,6 +42,7 @@ import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import java.io.File
 import kotlin.reflect.KClass
 import kotlin.reflect.full.primaryConstructor
+import org.apache.commons.lang3.builder.ToStringBuilder
 
 /**
  * [CastResult] is the result of the function [Language.tryCast] and describes whether a cast of one
@@ -75,6 +75,7 @@ data class ImplicitCast(override var depthDistance: Int) : CastResult(depthDista
  * the [Node.language] property.
  */
 abstract class Language<T : LanguageFrontend<*, *>> : Node() {
+
     /** The file extensions without the dot */
     abstract val fileExtensions: List<String>
 
@@ -142,11 +143,14 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
         return result
     }
 
-    init {
-        this.also { language ->
-            this.language = language
-            language::class.simpleName?.let { this.name = Name(it) }
+    override fun toString(): String {
+        val builder = ToStringBuilder(this, TO_STRING_STYLE)
+
+        if (name.isNotEmpty()) {
+            builder.append("name", name)
         }
+
+        return builder.toString()
     }
 
     private fun arithmeticOpTypePropagation(lhs: Type, rhs: Type): Type {
@@ -361,6 +365,10 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
             Pair(list.toSet(), CallResolutionResult.SuccessKind.SUCCESSFUL)
         }
     }
+
+    override var language: Language<*>
+        get() = this
+        set(_) {}
 }
 
 /**

@@ -669,7 +669,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val file = File("src/test/resources/compiling/RecordDeclaration.java")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
-                it.registerLanguage(MyJavaLanguage())
+                it.registerLanguage<MyJavaLanguage>()
             }
 
         assertNotNull(tu)
