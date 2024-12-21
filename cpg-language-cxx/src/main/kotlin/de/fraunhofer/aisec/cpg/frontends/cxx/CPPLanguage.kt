@@ -130,7 +130,7 @@ open class CPPLanguage :
                 IntegerType("unsigned long long int", 64, this, NumericType.Modifier.UNSIGNED),
 
             // Boolean type
-            "bool" to BooleanType("bool"),
+            "bool" to BooleanType("bool", language = this),
 
             // Character types
             "signed char" to IntegerType("signed char", 8, this, NumericType.Modifier.SIGNED),
