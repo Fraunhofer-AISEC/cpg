@@ -38,7 +38,7 @@ object UnknownLanguage : Language<Nothing>() {
         get() = listOf()
 
     override val namespaceDelimiter: String
-        get() = ""
+        get() = "."
 
     override val frontend: KClass<out Nothing> = Nothing::class
     override val builtInTypes: Map<String, Type> = mapOf()
@@ -52,7 +52,7 @@ object UnknownLanguage : Language<Nothing>() {
  */
 class MultipleLanguages(val languages: Set<Language<*>>) : Language<Nothing>() {
     override val fileExtensions = languages.flatMap { it.fileExtensions }
-    override val namespaceDelimiter: String = ""
+    override val namespaceDelimiter: String = "."
     override val frontend: KClass<out Nothing> = Nothing::class
     override val builtInTypes: Map<String, Type> = mapOf()
     override val compoundAssignmentOperators: Set<String> = setOf()

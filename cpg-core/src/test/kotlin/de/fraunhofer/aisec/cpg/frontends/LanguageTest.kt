@@ -74,7 +74,9 @@ class LanguageTest {
 
     @Test
     fun testMultiLanguage() {
-        val otherLanguage = object : TestLanguage() {}
+        class OtherLanguage : TestLanguage()
+
+        val otherLanguage = OtherLanguage()
         val testLanguage = TestLanguage()
 
         val result =

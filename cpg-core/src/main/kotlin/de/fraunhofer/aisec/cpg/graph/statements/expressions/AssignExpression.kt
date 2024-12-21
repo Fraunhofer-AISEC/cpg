@@ -110,7 +110,7 @@ class AssignExpression :
      */
     val isCompoundAssignment: Boolean
         get() {
-            return operatorCode in (language?.compoundAssignmentOperators ?: setOf())
+            return operatorCode in language.compoundAssignmentOperators
         }
 
     /**
@@ -120,7 +120,7 @@ class AssignExpression :
      */
     val isSimpleAssignment: Boolean
         get() {
-            return operatorCode in (language?.simpleAssignmentOperators ?: setOf())
+            return operatorCode in language.simpleAssignmentOperators
         }
 
     @Relationship("DECLARATIONS") var declarationEdges = astEdgesOf<VariableDeclaration>()

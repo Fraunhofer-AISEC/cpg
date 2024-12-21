@@ -141,8 +141,9 @@ class Name(
  * (such as a [Node], a [Language], a [LanguageFrontend] or a [Handler]) to parse a fully qualified
  * name.
  */
-fun LanguageProvider?.parseName(fqn: CharSequence) =
-    parseName(fqn, this?.language?.namespaceDelimiter ?: ".")
+fun LanguageProvider.parseName(fqn: CharSequence): Name {
+    return parseName(fqn, this.language.namespaceDelimiter)
+}
 
 /** Tries to parse the given fully qualified name using the specified [delimiter] into a [Name]. */
 internal fun parseName(fqn: CharSequence, delimiter: String, vararg splitDelimiters: String): Name {

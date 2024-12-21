@@ -115,7 +115,7 @@ class DFGFunctionSummaries {
         if (functionToDFGEntryMap.isEmpty()) return null
 
         val language = functionDecl.language
-        val languageName = language?.javaClass?.name
+        val languageName = language.javaClass.name
         val methodName = functionDecl.name
         val typeManager = functionDecl.ctx?.typeManager ?: return null
 
