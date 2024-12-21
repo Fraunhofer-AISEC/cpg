@@ -83,7 +83,7 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
     abstract val fileExtensions: List<String>
 
     /** The namespace delimiter used by the language. Often, this is "." */
-    abstract val namespaceDelimiter: String
+    open val namespaceDelimiter: String = "."
 
     @get:JsonSerialize(using = KClassSerializer::class)
     /** The class of the frontend which is used to parse files of this language. */
