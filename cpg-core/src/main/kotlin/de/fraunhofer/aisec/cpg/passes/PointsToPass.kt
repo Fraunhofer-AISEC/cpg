@@ -147,7 +147,12 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
             }
             // Also check for writes to the ParameterMemoryValue of the deref in case of
             // pointer-to-pointers
-            indexes.addAll(doubleState.getValues(param.memoryValue))
+            //
+            indexes.addAll(
+                doubleState.fetchElementFromDeclarationState(param.memoryValue).filter {
+                    it is ParameterMemoryValue && it.name.parent == param.name
+                }
+            )
             indexes.forEach { index ->
                 val finalValue =
                     doubleState.declarationsState.elements
@@ -167,7 +172,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                     }
                     // If so, store the last write for the parameter in the FunctionSummary
                     ?.forEach { value ->
-                        // TODO: To we also map the writes of pointer-to-pointer to the param or
+                        // TODO: Do we also map the writes of pointer-to-pointer to the param or
                         // should we do something else?
                         node.functionSummary
                             .computeIfAbsent(param) { mutableSetOf() }

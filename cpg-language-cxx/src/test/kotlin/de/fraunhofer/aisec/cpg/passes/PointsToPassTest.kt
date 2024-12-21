@@ -28,8 +28,10 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.test.assertLocalName
@@ -1091,6 +1093,17 @@ class PointsToPassTest {
                 .first()
         assertNotNull(param_1DerefLine190)
 
+        val param_1DerefLine201 =
+            tu.allChildren<PointerDereference> {
+                    it.location?.region?.startLine == 201 && it.name.localName == "param_1"
+                }
+                .first()
+        assertNotNull(param_1DerefLine201)
+
+        val param_1SSELine202 =
+            tu.allChildren<SubscriptExpression> { it.location?.region?.startLine == 202 }.first()
+        assertNotNull(param_1SSELine202)
+
         // Literals
         val literal10Line166 =
             tu.allChildren<Literal<*>> { it.location?.region?.startLine == 166 }.first()
@@ -1117,6 +1130,19 @@ class PointsToPassTest {
         val ceLine201 =
             tu.allChildren<CallExpression> { it.location?.region?.startLine == 201 }.first()
         assertNotNull(ceLine201)
+
+        // FunctionSummaries
+        val fsecallkeytoout =
+            tu.allChildren<FunctionDeclaration> { it.name.localName == "ecall_key_to_out" }
+                .first()
+                .functionSummary
+        assertNotNull(fsecallkeytoout)
+
+        val fssgxecallkeytoout =
+            tu.allChildren<FunctionDeclaration> { it.name.localName == "sgx_ecall_key_to_out" }
+                .first()
+                .functionSummary
+        assertNotNull(fssgxecallkeytoout)
 
         // Line 159
         assertEquals(1, local_20Line159.prevDFG.size)
@@ -1177,10 +1203,79 @@ class PointsToPassTest {
         // Line 190
         // TODO: verify the memcpy in Line 183
         assertEquals(1, local_18DerefLine190.memoryAddress.size)
-        assertEquals(param_1Line145.memoryValue, local_18DerefLine190.prevDFG.firstOrNull())
-        assertEquals(2, local_18DerefLine190.prevDFG.size)
+        assertTrue(local_18DerefLine190.memoryAddress.firstOrNull() is ParameterMemoryValue)
+        assertLocalName("derefvalue", local_18DerefLine190.memoryAddress.firstOrNull())
+        assertEquals(3, local_18DerefLine190.prevDFG.size)
+        assertTrue(local_18DerefLine190.prevDFG.contains(ceLine201))
+        assertTrue(
+            local_18DerefLine190.prevDFG.any {
+                it is UnknownMemoryValue && it.name.localName == "DAT_0011b1c8"
+            }
+        )
+        assertEquals(
+            1,
+            local_18DerefLine190.prevDFG
+                .filter { it is ParameterMemoryValue && it.name.localName == "derefderefvalue" }
+                .size
+        )
 
-        // Verify the functionSummary for sgx_ecall_key_to_out
+        // Line 201
+        assertEquals(1, param_1DerefLine201.prevDFG.size)
+        assertEquals(ceLine201, param_1DerefLine201.prevDFG.firstOrNull())
+
+        // Line 202
+        assertEquals(1, param_1SSELine202.prevDFG.size)
+        assertTrue(
+            param_1SSELine202.prevDFG.any {
+                it is UnknownMemoryValue && it.name.localName == "DAT_0011b1c8"
+            }
+        )
+
+        // FunctionSummary of ecall_key_to_out
+        assertEquals(1, fsecallkeytoout.size)
+        assertTrue(fsecallkeytoout.entries.firstOrNull()?.key is ParameterDeclaration)
+        assertLocalName("param_1", fsecallkeytoout.entries.firstOrNull()?.key)
+        assertTrue(
+            fsecallkeytoout.entries.firstOrNull()?.value?.any { it.first == ceLine201 } == true
+        )
+        assertTrue(
+            fsecallkeytoout.entries.firstOrNull()?.value?.any {
+                it.first is UnknownMemoryValue && it.first.name.localName == "DAT_0011b1c8"
+            } == true
+        )
+
+        // FunctionSummary of sgx_ecall_key_to_out
+        assertEquals(1, fssgxecallkeytoout.filter { it.key !is ReturnStatement }.size)
+        assertTrue(
+            fssgxecallkeytoout.filter { it.key !is ReturnStatement }.entries.firstOrNull()?.key
+                is ParameterDeclaration
+        )
+        assertLocalName(
+            "param_1",
+            fssgxecallkeytoout.filter { it.key !is ReturnStatement }.entries.firstOrNull()?.key
+        )
+        assertEquals(
+            1,
+            fssgxecallkeytoout
+                .filter { it.key !is ReturnStatement }
+                .entries
+                .firstOrNull()
+                ?.value
+                ?.filter { it.first == ceLine201 }
+                ?.size
+        )
+        assertEquals(
+            1,
+            fssgxecallkeytoout
+                .filter { it.key !is ReturnStatement }
+                .entries
+                .firstOrNull()
+                ?.value
+                ?.filter {
+                    it.first is UnknownMemoryValue && it.first.name.localName == "DAT_0011b1c8"
+                }
+                ?.size
+        )
     }
 
     @Test
