@@ -26,6 +26,8 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.PopulatedByPass
+import de.fraunhofer.aisec.cpg.frontends.MultipleLanguages
+import de.fraunhofer.aisec.cpg.frontends.UnknownLanguage
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
@@ -54,6 +56,14 @@ open class Component : Node() {
     @Synchronized
     fun addTranslationUnit(tu: TranslationUnitDeclaration) {
         translationUnits.add(tu)
+
+        // Check, if this component is of a particular single language or multi-language
+        val languages = translationUnitEdges.map { it.end.language }.toSet()
+        if (languages.size == 1) {
+            this.language = languages.singleOrNull() ?: UnknownLanguage
+        } else if (languages.size > 1) {
+            this.language = MultipleLanguages(languages = languages)
+        }
     }
 
     /**
