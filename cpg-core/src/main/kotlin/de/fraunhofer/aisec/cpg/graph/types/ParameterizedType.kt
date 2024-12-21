@@ -37,7 +37,7 @@ class ParameterizedType : Type {
         language = type.language
     }
 
-    constructor(typeName: String?, language: Language<*>?) : super(typeName) {
+    constructor(typeName: String?, language: Language<*>) : super(typeName) {
         this.language = language
     }
 
