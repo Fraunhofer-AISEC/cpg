@@ -65,7 +65,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
     ContextProvider,
     RawNodeTypeProvider<Nothing> {
 
-    override val language: Language<*>?
+    override val language: Language<*>
         get() = start.language
 
     override val isInferred: Boolean

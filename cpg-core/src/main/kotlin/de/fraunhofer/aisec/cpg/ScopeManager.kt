@@ -532,7 +532,8 @@ class ScopeManager : ScopeProvider {
                             helper?.type is FunctionPointerType && it is FunctionDeclaration -> {
                                 val fptrType = helper.type as FunctionPointerType
                                 // TODO(oxisto): Support multiple return values
-                                val returnType = it.returnTypes.firstOrNull() ?: IncompleteType()
+                                val returnType =
+                                    it.returnTypes.firstOrNull() ?: IncompleteType(ref.language)
                                 returnType == fptrType.returnType &&
                                     it.matchesSignature(fptrType.parameters) !=
                                         IncompatibleSignature

@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends
 
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import kotlin.reflect.KClass
 
@@ -55,4 +56,15 @@ class MultipleLanguages(val languages: Set<Language<*>>) : Language<Nothing>() {
     override val frontend: KClass<out Nothing> = Nothing::class
     override val builtInTypes: Map<String, Type> = mapOf()
     override val compoundAssignmentOperators: Set<String> = setOf()
+}
+
+fun Node.multiLanguage(): Language<*> {
+    val languages = astChildren.map { it.language }.toSet()
+    return if (languages.size == 1) {
+        languages.singleOrNull() ?: UnknownLanguage
+    } else if (languages.size > 1) {
+        MultipleLanguages(languages = languages)
+    } else {
+        UnknownLanguage
+    }
 }
