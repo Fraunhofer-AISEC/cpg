@@ -17,7 +17,7 @@ kotlin-scripting-jvm = { module = "org.jetbrains.kotlin:kotlin-scripting-jvm", v
 kotlin-scripting-dependencies = { module = "org.jetbrains.kotlin:kotlin-scripting-dependencies", version.ref = "kotlin19"}
 kotlin-scripting-dependencies-maven-all = { module = "org.jetbrains.kotlin:kotlin-scripting-dependencies-maven-all", version.ref = "kotlin19"}
 kotlin-scripting-ide-services = { module = "org.jetbrains.kotlin:kotlin-scripting-ide-services", version.ref = "kotlin19"}
-kotlin-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version = "1.9.0"}
+kotlin-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version = "1.10.1"}
 kotlin-ki-shell = { module = "com.github.Kotlin:kotlin-interactive-shell", version = "5b1ff4d821"}
 kotlin-test-junit5 = { module = "org.jetbrains.kotlin:kotlin-test-junit5", version.ref = "kotlin"}  # this is only needed for the testFixtures in cpg-core, everywhere else kotlin("test") is used
 
