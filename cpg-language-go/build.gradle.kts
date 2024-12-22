@@ -44,12 +44,14 @@ dependencies {
     testImplementation(project(":cpg-analysis"))
 }
 
-val downloadLibGoAST = tasks.register("downloadLibGoAST") {
+open class DownloadTask @Inject constructor(@Internal val op: ExecOperations) : DefaultTask()
+
+val downloadLibGoAST = tasks.register<DownloadTask>("downloadLibGoAST") {
     doLast {
-        project.exec {
+        op.exec {
             commandLine("./download.sh")
                 .setStandardOutput(System.out)
-                .workingDir("src/main/resources")
+                .workingDir(project.projectDir.resolve("src/main/resources"))
         }
     }
 }
