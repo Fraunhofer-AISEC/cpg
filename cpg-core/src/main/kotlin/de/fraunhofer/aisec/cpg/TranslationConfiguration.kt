@@ -539,7 +539,7 @@ private constructor(
             registerPass<DynamicInvokeResolver>()
             registerPass<EvaluationOrderGraphPass>() // creates EOG
             registerPass<TypeResolver>()
-            registerPass<ControlFlowSensitiveDFGPass>()
+            //            registerPass<ControlFlowSensitiveDFGPass>()
             registerPass<FilenameMapper>()
             registerPass<ResolveCallExpressionAmbiguityPass>()
             registerPass<ResolveMemberExpressionAmbiguityPass>()
