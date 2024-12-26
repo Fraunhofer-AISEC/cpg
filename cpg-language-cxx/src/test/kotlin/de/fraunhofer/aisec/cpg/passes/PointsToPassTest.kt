@@ -1479,4 +1479,45 @@ class PointsToPassTest {
         assertTrue(ceLine242.prevDFG.contains(iRefLine242Right))
         assertTrue(ceLine242.prevDFG.contains(pRefLine242))
     }
+
+    @Test
+    fun testSubstructs() {
+        val file = File("src/test/resources/c/dataflow/tls.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+                it.registerPass<PointsToPass>()
+                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+            }
+        assertNotNull(tu)
+
+        // FunctionSummaries
+        val FSinnerrenegotiate =
+            tu.allChildren<FunctionDeclaration> { it.name.localName == "inner_renegotiate" }
+                .first()
+                .functionSummary
+        assertNotNull(FSinnerrenegotiate)
+
+        // Literals
+        val literal4 =
+            tu.allChildren<Literal<*>> { it.location?.region?.startLine == 15 }.firstOrNull()
+        assertNotNull(literal4)
+
+        val literal5 =
+            tu.allChildren<Literal<*>> { it.location?.region?.startLine == 16 }.firstOrNull()
+        assertNotNull(literal5)
+
+        assertEquals(1, FSinnerrenegotiate.size)
+        assertEquals(2, FSinnerrenegotiate.entries.firstOrNull()?.value?.size)
+        assertTrue(
+            FSinnerrenegotiate.entries.firstOrNull()?.value?.any {
+                it.first == literal4 && it.third == "j"
+            } == true
+        )
+        assertTrue(
+            FSinnerrenegotiate.entries.firstOrNull()?.value?.any {
+                it.first == literal5 && it.third == "session.l"
+            } == true
+        )
+    }
 }

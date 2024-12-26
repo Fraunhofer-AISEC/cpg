@@ -136,24 +136,23 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
     private fun storeFunctionSummary(node: FunctionDeclaration, doubleState: PointsToState2) {
         node.parameters.forEach { param ->
             val addresses = doubleState.getAddresses(param)
-            val indexes = mutableSetOf<Node>()
+            val indexes = mutableSetOf<Pair<Node, String>>()
             addresses.forEach { addr ->
-                indexes.addAll(doubleState.getValues(addr))
+                doubleState.getValues(addr).forEach { indexes.add(Pair(it, "")) }
                 // Additionally check for partial writes to fields
+                // For the partial writes, we also store the field name in the function Summary
                 if (addr is MemoryAddress) {
-                    addr.fieldAddresses.flatMap { it.value }.forEach { indexes.add(it) }
+                    addr.fieldAddresses
+                        .flatMap { it.value }
+                        .forEach { indexes.add(Pair(it, it.name.localName)) }
                 }
-                // TODO: Check for writes to deref-derefs
             }
-            // Also check for writes to the ParameterMemoryValue of the deref in case of
-            // pointer-to-pointers
-            //
-            indexes.addAll(
-                doubleState.fetchElementFromDeclarationState(param.memoryValue).filter {
-                    it is ParameterMemoryValue && it.name.parent == param.name
-                }
-            )
-            indexes.forEach { index ->
+            doubleState
+                .fetchElementFromDeclarationState(param.memoryValue)
+                .filter { it is ParameterMemoryValue && it.name.parent == param.name }
+                .forEach { indexes.add(Pair(it, "")) }
+
+            indexes.forEach { (index, subAccessName) ->
                 val finalValue =
                     doubleState.declarationsState.elements
                         .filter { it.key == index }
@@ -176,7 +175,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                         // should we do something else?
                         node.functionSummary
                             .computeIfAbsent(param) { mutableSetOf() }
-                            .add(Pair(value, true))
+                            .add(Triple(value, true, subAccessName))
                     }
             }
         }
@@ -224,7 +223,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                 currentNode.returnValues.forEach { retval ->
                     parentFD.functionSummary
                         .computeIfAbsent(currentNode) { mutableSetOf() }
-                        .addAll(doubleState.getValues(retval).map { Pair(it, false) })
+                        .addAll(doubleState.getValues(retval).map { Triple(it, false, "") })
                 }
             }
         }
@@ -254,8 +253,8 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                         log.error(
                             "Cannot calculate functionSummary for $invoke as it's recursively called. callChain: $functionSummaryAnalysisChain"
                         )
-                        val newValues: MutableSet<Pair<Node, Boolean>> =
-                            invoke.parameters.map { Pair(it, false) }.toMutableSet()
+                        val newValues: MutableSet<Triple<Node, Boolean, String>> =
+                            invoke.parameters.map { Triple(it, false, "") }.toMutableSet()
                         invoke.functionSummary[ReturnStatement()] = newValues
                     }
                 } else {
@@ -264,8 +263,8 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                     // TODO: This actually generates a new return statement but it's not part of the
                     // function. Wouldn't the edges better point to the FunctionDeclaration and in a
                     // case with a body, all returns flow to the FunctionDeclaration too?
-                    val newValues: MutableSet<Pair<Node, Boolean>> =
-                        invoke.parameters.map { Pair(it, false) }.toMutableSet()
+                    val newValues: MutableSet<Triple<Node, Boolean, String>> =
+                        invoke.parameters.map { Triple(it, false, "") }.toMutableSet()
                     invoke.functionSummary[ReturnStatement()] = newValues
                 }
             }
@@ -788,11 +787,28 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                      */
                     // TODO: Are there any cases where the address of the base is no MemoryAddress?
                     // but still relevant for us?
-                    getFieldAddresses(
-                        this.getAddresses(node.base).filterIsInstance<MemoryAddress>(),
-                        /*node.refersTo?.name.toString(),*/
-                        node.name
-                    )
+                    // As long as the base in itself is a MemberExpression, resolve that one
+                    var base = node
+                    var newLocalname = ""
+                    while (base is MemberExpression) {
+                        newLocalname =
+                            if (newLocalname.isEmpty()) base.name.split("::")[1]
+                            else base.name.split("::")[1] + "." + newLocalname
+                        base = base.base
+                    }
+                    val newName = Name(newLocalname)
+
+                    val ref = (base as? Reference)?.refersTo
+                    if (ref != null) {
+                        getFieldAddresses(
+                            this.getAddresses(ref).filterIsInstance<MemoryAddress>(),
+                            newName
+                        )
+                    } else
+                        getFieldAddresses(
+                            this.getAddresses(node.base).filterIsInstance<MemoryAddress>(),
+                            newName
+                        )
                 }
                 is Reference -> {
                     /*
@@ -826,9 +842,9 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
             }
         }
 
-        /*
-         * Look up the `indexString` in the `baseAddress`es and return the fieldAddresses
-         * If no MemoryAddress exits at `indexString`, it will be created
+        /**
+         * Look up the `indexString` in the `baseAddress`es and return the fieldAddresses If no
+         * MemoryAddress exits at `indexString`, it will be created
          */
         fun getFieldAddresses(baseAddresses: List<MemoryAddress>, nodeName: Name): Set<Node> {
             val fieldAddresses = identitySetOf<MemoryAddress>()

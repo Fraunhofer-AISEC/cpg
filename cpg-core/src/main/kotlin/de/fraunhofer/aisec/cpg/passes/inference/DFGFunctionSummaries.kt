@@ -61,7 +61,7 @@ class DFGFunctionSummaries {
 
     fun getLastWrites(
         functionDeclaration: FunctionDeclaration
-    ): Map<Node, Set<Pair<Node, Boolean>>> = functionDeclaration.functionSummary
+    ): Map<Node, Set<Triple<Node, Boolean, String>>> = functionDeclaration.functionSummary
 
     /** This function returns a list of [DataflowEntry] from the specified file. */
     private fun addEntriesFromFile(file: File): Map<FunctionDeclarationEntry, List<DFGEntry>> {
@@ -267,8 +267,10 @@ class DFGFunctionSummaries {
                             paramIndex?.let { functionDeclaration.parameters.getOrNull(it) }
                         if (from != null && paramTo != null) {
                             functionDeclaration.functionSummary
-                                .computeIfAbsent(paramTo) { identitySetOf<Pair<Node, Boolean>>() }
-                                .add(Pair(from, derefSource))
+                                .computeIfAbsent(paramTo) {
+                                    identitySetOf<Triple<Node, Boolean, String>>()
+                                }
+                                .add(Triple(from, derefSource, ""))
                         }
                         paramTo
                     } catch (e: NumberFormatException) {
@@ -279,8 +281,10 @@ class DFGFunctionSummaries {
                     if (from != null) {
                         if (receiver != null) {
                             functionDeclaration.functionSummary
-                                .computeIfAbsent(receiver) { identitySetOf<Pair<Node, Boolean>>() }
-                                .add(Pair(from, derefSource))
+                                .computeIfAbsent(receiver) {
+                                    identitySetOf<Triple<Node, Boolean, String>>()
+                                }
+                                .add(Triple(from, derefSource, ""))
                         }
                     }
                     receiver
