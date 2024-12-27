@@ -379,7 +379,8 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
             Util.warnWithFileLocation(
                 ref,
                 log,
-                "Resolution of reference {} was ambiguous, cannot set refersTo correctly.",
+                "Resolution of reference {} was ambiguous, cannot set refersTo correctly, " +
+                    "will be set to null.",
                 ref.name
             )
             null
