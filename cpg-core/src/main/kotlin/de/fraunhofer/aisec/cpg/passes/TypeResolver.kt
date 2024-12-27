@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.TypeManager
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.DeclaresType
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
@@ -141,6 +142,10 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                     t.recordDeclaration = node
                 }
             }
+        } else if (node is ImportDeclaration) {
+            // Update the imports, as they might have changed because of symbols created by
+            // record/type inference
+            node.updateImportedSymbols()
         }
     }
 
