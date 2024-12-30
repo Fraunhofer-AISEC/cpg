@@ -67,9 +67,9 @@ open class BinaryOperator :
     override var operatorCode: String? = null
         set(value) {
             field = value
-            if ((operatorCode in language.compoundAssignmentOperators) || (operatorCode == "=")) {
+            if ((operatorCode in language.compoundAssignmentOperators) || (operatorCode in language.simpleAssignmentOperators)) {
                 throw TranslationException(
-                    "Creating a BinaryOperator with an assignment operator code is not allowed. The class AssignExpression should be used instead."
+                    "Creating a BinaryOperator with an assignment operator code is not allowed. The class AssignExpression must be used instead."
                 )
             }
         }

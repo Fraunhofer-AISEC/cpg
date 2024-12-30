@@ -33,6 +33,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.ast.TemplateArguments
@@ -157,8 +158,8 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
             lhs !is FloatingPointType && lhs is NumericType && rhs is FloatingPointType -> rhs
             lhs is FloatingPointType && rhs is FloatingPointType ||
                 lhs is IntegerType && rhs is IntegerType ->
-                // We take the one with the bigger bitwidth
-                if (((lhs as NumericType).bitWidth ?: 0) >= ((rhs as NumericType).bitWidth ?: 0)) {
+                // We take the one with the bigger bit-width
+                if ((lhs.bitWidth ?: 0) >= (rhs.bitWidth ?: 0)) {
                     lhs
                 } else {
                     rhs
@@ -238,8 +239,8 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
 
     /**
      * This function checks, if [type] can be cast into [targetType]. Note, this also takes the
-     * [WrapState] of the type into account, which means that pointer types of derived types will
-     * not match with a non-pointer type of its base type. But, if both are pointer types, they will
+     * "type" of the type into account, which means that pointer types of derived types will not
+     * match with a non-pointer type of its base type. But, if both are pointer types, they will
      * match.
      *
      * Optionally, the nodes that hold the respective type can be supplied as [hint] and
@@ -397,5 +398,61 @@ internal class KClassSerializer : JsonSerializer<KClass<*>>() {
     override fun serialize(value: KClass<*>, gen: JsonGenerator, provider: SerializerProvider) {
         // Write the fully qualified name as a string
         gen.writeString(value.qualifiedName)
+    }
+}
+
+/**
+ * Represents a language definition with no known implementation or specifics. The class is used as
+ * a placeholder or to handle cases where the language is not explicitly defined or supported.
+ */
+object UnknownLanguage : Language<Nothing>() {
+    override val fileExtensions: List<String>
+        get() = listOf()
+
+    override val namespaceDelimiter: String
+        get() = "."
+
+    override val frontend: KClass<out Nothing> = Nothing::class
+    override val builtInTypes: Map<String, Type> = mapOf()
+    override val compoundAssignmentOperators: Set<String> = setOf()
+}
+
+/**
+ * Represents a "language" that is not really a language. The class is used in cases where the
+ * language is not explicitly defined or supported, for example in an [OverlayNode].
+ */
+object NoLanguage : Language<Nothing>() {
+    override val fileExtensions = listOf<String>()
+    override val namespaceDelimiter: String = "."
+    override val frontend: KClass<out Nothing> = Nothing::class
+    override val builtInTypes: Map<String, Type> = mapOf()
+    override val compoundAssignmentOperators: Set<String> = setOf()
+}
+
+/**
+ * Represents a composite language definition composed of multiple languages.
+ *
+ * @property languages A list of languages that are part of this composite language definition.
+ */
+class MultipleLanguages(val languages: Set<Language<*>>) : Language<Nothing>() {
+    override val fileExtensions = languages.flatMap { it.fileExtensions }
+    override val namespaceDelimiter: String = "."
+    override val frontend: KClass<out Nothing> = Nothing::class
+    override val builtInTypes: Map<String, Type> = mapOf()
+    override val compoundAssignmentOperators: Set<String> = setOf()
+}
+
+/**
+ * Returns the single language of a node and its children. If the node has multiple children with
+ * different languages, it returns a [MultipleLanguages] object.
+ */
+fun Node.multiLanguage(): Language<*> {
+    val languages = astChildren.map { it.language }.toSet()
+    return if (languages.size == 1) {
+        languages.single()
+    } else if (languages.size > 1) {
+        MultipleLanguages(languages = languages)
+    } else {
+        UnknownLanguage
     }
 }
