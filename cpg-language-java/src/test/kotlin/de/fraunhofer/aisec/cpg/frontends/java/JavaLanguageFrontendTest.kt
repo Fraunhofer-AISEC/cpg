@@ -660,16 +660,13 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         }
 
         class MyJavaLanguage : JavaLanguage() {
-            override val fileExtensions = listOf("java")
-            override val namespaceDelimiter = "."
-            override val superClassKeyword = "super"
             override val frontend = MyJavaLanguageFrontend::class
         }
 
         val file = File("src/test/resources/compiling/RecordDeclaration.java")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
-                it.registerLanguage(MyJavaLanguage())
+                it.registerLanguage<MyJavaLanguage>()
             }
 
         assertNotNull(tu)

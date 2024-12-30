@@ -40,11 +40,11 @@ internal class TypeTests : BaseTest() {
         val objectType: Type = IntegerType("int", 32, CPPLanguage(), NumericType.Modifier.SIGNED)
         val pointerType: Type = PointerType(objectType, PointerType.PointerOrigin.POINTER)
         val unknownType: Type = UnknownType.getUnknownType(CPPLanguage())
-        val incompleteType: Type = IncompleteType()
+        val incompleteType: Type = IncompleteType(CPPLanguage())
         val parameterList =
             listOf<Type>(IntegerType("int", 32, CPPLanguage(), NumericType.Modifier.SIGNED))
         val functionPointerType: Type =
-            FunctionPointerType(parameterList, CPPLanguage(), IncompleteType())
+            FunctionPointerType(parameterList, CPPLanguage(), IncompleteType(CPPLanguage()))
 
         // Test 1: ObjectType becomes PointerType containing the original ObjectType as ElementType
         assertEquals(
@@ -79,11 +79,11 @@ internal class TypeTests : BaseTest() {
         val objectType: Type = IntegerType("int", 32, CPPLanguage(), NumericType.Modifier.SIGNED)
         val pointerType: Type = PointerType(objectType, PointerType.PointerOrigin.POINTER)
         val unknownType: Type = UnknownType.getUnknownType(CPPLanguage())
-        val incompleteType: Type = IncompleteType()
+        val incompleteType: Type = IncompleteType(CPPLanguage())
         val parameterList =
             listOf<Type>(IntegerType("int", 32, CPPLanguage(), NumericType.Modifier.SIGNED))
         val functionPointerType: Type =
-            FunctionPointerType(parameterList, CPPLanguage(), IncompleteType())
+            FunctionPointerType(parameterList, CPPLanguage(), IncompleteType(CPPLanguage()))
 
         // Test 1: Dereferencing an ObjectType results in an UnknownType, since we cannot track the
         // type
@@ -120,12 +120,13 @@ internal class TypeTests : BaseTest() {
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val noParamType = FunctionPointerType(emptyList(), CPPLanguage(), IncompleteType())
+        val noParamType =
+            FunctionPointerType(emptyList(), CPPLanguage(), IncompleteType(CPPLanguage()))
         val oneParamType =
             FunctionPointerType(
                 listOf<Type>(tu.primitiveType("int")),
                 CPPLanguage(),
-                IncompleteType()
+                IncompleteType(CPPLanguage())
             )
         val twoParamType =
             FunctionPointerType(

@@ -42,7 +42,7 @@ constructor(
     typeName: String = "",
     var parameters: List<Type> = listOf(),
     var returnTypes: List<Type> = listOf(),
-    language: Language<*>? = null
+    language: Language<*>
 ) : Type(typeName, language) {
 
     override fun reference(pointer: PointerType.PointerOrigin?): Type {

@@ -572,7 +572,7 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
             }
             // void type
             specifier.type == IASTSimpleDeclSpecifier.t_void -> {
-                IncompleteType()
+                incompleteType()
             }
             // __typeof__ type
             specifier.type == IASTSimpleDeclSpecifier.t_typeof -> {

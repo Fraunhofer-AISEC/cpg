@@ -523,8 +523,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
     protected fun isCompoundAssignment(currentNode: Node): Boolean {
         contract { returns(true) implies (currentNode is AssignExpression) }
         return currentNode is AssignExpression &&
-            currentNode.operatorCode in
-                (currentNode.language?.compoundAssignmentOperators ?: setOf()) &&
+            currentNode.operatorCode in currentNode.language.compoundAssignmentOperators &&
             (currentNode.lhs.singleOrNull() as? Reference)?.refersTo != null
     }
 

@@ -471,7 +471,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     node.rhs.nextDFGEdges += node
                 }
             }
-            in node.language?.compoundAssignmentOperators ?: setOf() -> {
+            in node.language.compoundAssignmentOperators -> {
                 node.lhs.let {
                     node.prevDFGEdges += it
                     node.nextDFGEdges += it

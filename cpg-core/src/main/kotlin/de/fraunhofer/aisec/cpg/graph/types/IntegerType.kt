@@ -31,6 +31,6 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 class IntegerType(
     typeName: CharSequence = "",
     bitWidth: Int? = null,
-    language: Language<*>? = null,
+    language: Language<*>,
     modifier: Modifier = Modifier.SIGNED
 ) : NumericType(typeName, bitWidth, language, modifier)
