@@ -51,7 +51,7 @@ ini4j = { module = "org.ini4j:ini4j", version = "0.5.4" }
 
 # test
 junit-params = { module = "org.junit.jupiter:junit-jupiter-params", version = "5.11.0"}
-mockito = { module = "org.mockito:mockito-core", version = "5.14.0"}
+mockito = { module = "org.mockito:mockito-core", version = "5.15.2"}
 
 # plugins needed for build.gradle.kts in buildSrc
 kotlin-gradle = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
