@@ -60,6 +60,7 @@ fun createTranslationResult(file: String = "client.cpp"): Pair<Application, Tran
 class ApplicationTest {
 
     @Test
+    @SkipIfLanguageIsNotAvailable("de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage")
     fun testSerializeCpgViaOGM() {
         val (application, translationResult) = createTranslationResult()
 
@@ -94,6 +95,7 @@ class ApplicationTest {
     }
 
     @Test
+    @SkipIfLanguageIsNotAvailable("de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage")
     fun testExportToJson() {
         val (application, translationResult) = createTranslationResult()
         // 22 inferred functions, 1 inferred method, 2 inferred constructors, 11 regular functions

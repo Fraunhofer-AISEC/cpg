@@ -39,6 +39,7 @@ import org.junit.jupiter.api.Tag
 @Tag("integration")
 class Neo4JTest {
     @Test
+    @SkipIfLanguageIsNotAvailable("de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage")
     fun testPush() {
         val (application, result) = createTranslationResult()
 
@@ -49,6 +50,7 @@ class Neo4JTest {
     }
 
     @Test
+    @SkipIfLanguageIsNotAvailable("de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage")
     fun testPushVeryLong() {
         val (application, result) = createTranslationResult("very_long.cpp")
 
@@ -62,6 +64,7 @@ class Neo4JTest {
     }
 
     @Test
+    @SkipIfLanguageIsNotAvailable("de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage")
     fun testPushConcepts() {
         val (application, result) = createTranslationResult()
 
