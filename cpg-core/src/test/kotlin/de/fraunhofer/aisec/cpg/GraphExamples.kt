@@ -165,19 +165,37 @@ class GraphExamples {
                         record("someRecord") {
                             method("func") {
                                 body {
-                                    forStmt(
-                                        initializer = declare { variable("a") },
-                                        condition = literal(true, t("bool")),
-                                        iteration = ref("a").inc(),
-                                        elseStmt = call("elseCall")
-                                    ) {
-                                        ifStmt {
-                                            condition { literal(true, t("bool")) }
-                                            thenStmt { breakStmt() }
+                                    forStmt {
+                                        loopBody {
+                                            ifStmt {
+                                                condition { literal(true, t("bool")) }
+                                                thenStmt { breakStmt() }
+                                            }
+                                            call("postIf")
                                         }
-                                        call("postIf")
+                                        forInitializer {
+                                            declareVar("a", t("int")) { literal(0, t("int")) }
+                                        }
+                                        forCondition { literal(true, t("bool")) }
+                                        forIteration { ref("a").inc() }
+                                        loopElseStmt { call("elseCall") }
                                     }
                                     call("postFor")
+                                    forStmt {
+                                        loopBody {
+                                            ifStmt {
+                                                condition { literal(true, t("bool")) }
+                                                thenStmt { breakStmt() }
+                                            }
+                                            call("postIf")
+                                        }
+                                        forInitializer {
+                                            declareVar("a", t("int")) { literal(0, t("int")) }
+                                        }
+                                        forCondition { literal(true, t("bool")) }
+                                        forIteration { ref("a").inc() }
+                                        loopElseStmt { call("elseCall") }
+                                    }
                                 }
                             }
                         }

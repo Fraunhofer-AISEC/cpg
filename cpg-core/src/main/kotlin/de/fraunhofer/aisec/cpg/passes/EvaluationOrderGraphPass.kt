@@ -341,6 +341,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
      * e.g. [LoopStatement]s or [BreakStatement].
      */
     protected fun handleEOG(node: Node?) {
+        println(node?.javaClass?.simpleName + ": " + node?.name)
         if (node == null) {
             return
         }
