@@ -28,25 +28,20 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 
-open class MemoryAddress(override var name: Name) : Node() {
-    /*
-     * When the node represents the MemoryAddress of a struct or an array, we use the fieldAddresses map to store the MemoryAddresses of the different fields.
-     * Therefore, for structs the key should be a FieldDeclaration.
-     * For arrays, it may also be a literal if the MemoryAddress is accesses with something like `array[0]`
-     */
-    // FIXME: The FieldDeclarations don't seem to be unique. Also, for arrays, the literals in
-    // different lines won't be the same, so we try a string as index
-    val fieldAddresses = mutableMapOf<String, Set<MemoryAddress>>()
+open class MemoryAddress(override var name: Name, val memoryParent: Node? = null) : Node() {
 
     override fun equals(other: Any?): Boolean {
         if (this === other) {
             return true
         }
-        if (other !is MemoryAddress) {
+        if (other != null && other::class != this::class) {
             return false
         }
         // TODO: What else do we need to compare?
-        return name == other.name && fieldAddresses == other.fieldAddresses
+        return other is MemoryAddress &&
+            name == other.name &&
+            fieldAddresses == other.fieldAddresses &&
+            memoryParent == other.memoryParent
     }
 
     override fun hashCode(): Int {

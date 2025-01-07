@@ -141,11 +141,9 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                 doubleState.getValues(addr).forEach { indexes.add(Pair(it, "")) }
                 // Additionally check for partial writes to fields
                 // For the partial writes, we also store the field name in the function Summary
-                if (addr is MemoryAddress) {
-                    addr.fieldAddresses
-                        .flatMap { it.value }
-                        .forEach { indexes.add(Pair(it, it.name.localName)) }
-                }
+                addr.fieldAddresses
+                    .flatMap { it.value }
+                    .forEach { indexes.add(Pair(it, it.name.localName)) }
             }
             doubleState
                 .fetchElementFromDeclarationState(param.memoryValue)
@@ -297,8 +295,14 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                         else -> null
                     }
                 if (destination != null) {
-                    val sources = mutableSetOf<Node>()
-                    newValues.forEach { (value, derefSource) ->
+                    newValues.forEach { (value, derefSource, subAccessName) ->
+                        val dst =
+                            if (subAccessName.isNotEmpty()) {
+                                doubleState.getFieldAddresses(
+                                    doubleState.getValues(destination).toIdentitySet(),
+                                    Name(subAccessName)
+                                )
+                            } else doubleState.getValues(destination)
                         when (value) {
                             is ParameterDeclaration ->
                                 // Add the value of the respective argument in the CallExpression
@@ -308,13 +312,21 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                                     if (derefSource) {
                                         doubleState
                                             .getValues(currentNode.arguments[value.argumentIndex])
-                                            .forEach {
-                                                sources.addAll(
-                                                    doubleState.fetchElementFromDeclarationState(it)
-                                                )
+                                            .forEach { v ->
+                                                dst.forEach { d ->
+                                                    mapDstToSrc.computeIfAbsent(d) {
+                                                        mutableSetOf<Node>()
+                                                    } +=
+                                                        doubleState
+                                                            .fetchElementFromDeclarationState(v)
+                                                }
                                             }
                                     } else {
-                                        sources.add(currentNode.arguments[value.argumentIndex])
+                                        dst.forEach {
+                                            mapDstToSrc.computeIfAbsent(it) {
+                                                mutableSetOf<Node>()
+                                            } += currentNode.arguments[value.argumentIndex]
+                                        }
                                     }
                                 }
                             is ParameterMemoryValue -> {
@@ -329,25 +341,26 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                                     p.forEach {
                                         if (it.argumentIndex < currentNode.arguments.size) {
                                             val arg = currentNode.arguments[it.argumentIndex]
-                                            sources.addAll(
-                                                doubleState.getValues(arg).flatMap {
-                                                    doubleState.getValues(it)
-                                                }
-                                            )
+                                            dst.forEach { d ->
+                                                mapDstToSrc.computeIfAbsent(d) {
+                                                    mutableSetOf<Node>()
+                                                } +=
+                                                    doubleState.getValues(arg).flatMap {
+                                                        doubleState.getValues(it)
+                                                    }
+                                            }
                                         }
                                     }
                                 }
                             }
-                            else -> sources.add(value)
+                            else -> {
+                                dst.forEach { d ->
+                                    mapDstToSrc.computeIfAbsent(d) { mutableSetOf<Node>() } +=
+                                        doubleState.getValues(value)
+                                }
+                            }
                         }
                     }
-                    if (sources.isNotEmpty()) {
-                        /*                        destination.forEach { dst ->
-                            mapDstToSrc.computeIfAbsent(dst) { mutableSetOf<Node>() } += sources
-                        }*/
-                        mapDstToSrc.computeIfAbsent(destination) { mutableSetOf<Node>() } += sources
-                    }
-                    // }
                 }
             }
         }
@@ -358,10 +371,10 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
             // destinationAddresses for the DeclarationState are enough
             val dstValues = doubleState.getValues(dst)
             if (dstValues.all { it == dst })
-                doubleState = doubleState.updateValues(src, dstValues, dstValues)
-            else doubleState = doubleState.updateValues(src, identitySetOf(), dstValues)
+                doubleState = doubleState.updateValues(src, dstValues, setOf(dst))
+            else doubleState = doubleState.updateValues(src, identitySetOf(), setOf(dst))
+            // doubleState = doubleState.updateValues(src, identitySetOf(), setOf(dst))
         }
-        // }
 
         return doubleState
     }
@@ -791,24 +804,15 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                     var base = node
                     var newLocalname = ""
                     while (base is MemberExpression) {
-                        newLocalname =
-                            if (newLocalname.isEmpty()) base.name.split("::")[1]
-                            else base.name.split("::")[1] + "." + newLocalname
+                        val foo = base.name.split("::")
+                        val tmp = if (foo.size > 1) foo[1] else ""
+                        newLocalname = if (newLocalname.isEmpty()) tmp else "$tmp.$newLocalname"
                         base = base.base
                     }
                     val newName = Name(newLocalname)
 
-                    val ref = (base as? Reference)?.refersTo
-                    if (ref != null) {
-                        getFieldAddresses(
-                            this.getAddresses(ref).filterIsInstance<MemoryAddress>(),
-                            newName
-                        )
-                    } else
-                        getFieldAddresses(
-                            this.getAddresses(node.base).filterIsInstance<MemoryAddress>(),
-                            newName
-                        )
+                    val baseAddr = this.getAddresses(base)
+                    getFieldAddresses(baseAddr.toIdentitySet(), newName)
                 }
                 is Reference -> {
                     /*
@@ -834,7 +838,8 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                             (node.subscriptExpression as? Literal<*>)?.value.toString()
                         else node.subscriptExpression.name.toString()
                     getFieldAddresses(
-                        this.getAddresses(node.base).filterIsInstance<MemoryAddress>(),
+                        this.getAddresses(node.base)
+                            .toIdentitySet() /*.filterIsInstance<MemoryAddress>()*/,
                         Name(localName, node.arrayExpression.name)
                     )
                 }
@@ -846,21 +851,17 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
          * Look up the `indexString` in the `baseAddress`es and return the fieldAddresses If no
          * MemoryAddress exits at `indexString`, it will be created
          */
-        fun getFieldAddresses(baseAddresses: List<MemoryAddress>, nodeName: Name): Set<Node> {
-            val fieldAddresses = identitySetOf<MemoryAddress>()
+        fun getFieldAddresses(baseAddresses: IdentitySet<Node>, nodeName: Name): Set<Node> {
+            val fieldAddresses = identitySetOf<Node>()
 
             /* Theoretically, the base can have multiple addresses. Additionally, also the fieldDeclaration can have multiple Addresses. To simplify, we flatten the set and collect all possible addresses of the fieldDeclaration in a flat set */
             baseAddresses.forEach { addr ->
-                addr.fieldAddresses[nodeName.localName]?.forEach { fieldAddresses.add(it) }
-            }
-            /* If we do not yet have a MemoryAddress for this FieldDeclaration, we create one */
-            if (fieldAddresses.isEmpty()) {
-                val newMemoryAddress = MemoryAddress(nodeName)
-
-                fieldAddresses.add(newMemoryAddress)
-                baseAddresses.forEach { addr ->
-                    addr.fieldAddresses[nodeName.localName] = identitySetOf(newMemoryAddress)
+                /* If we do not yet have a MemoryAddress for this FieldDeclaration, we create one */
+                if (addr.fieldAddresses[nodeName.localName] == null) {
+                    addr.fieldAddresses[nodeName.localName] =
+                        identitySetOf(MemoryAddress(nodeName, addr))
                 }
+                addr.fieldAddresses[nodeName.localName]?.forEach { fieldAddresses.add(it) }
             }
             return fieldAddresses
         }

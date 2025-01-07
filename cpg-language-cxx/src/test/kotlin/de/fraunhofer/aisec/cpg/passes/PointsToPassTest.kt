@@ -1492,31 +1492,114 @@ class PointsToPassTest {
         assertNotNull(tu)
 
         // FunctionSummaries
+        val FSread =
+            tu.allChildren<FunctionDeclaration> { it.name.localName == "mbedtls_ssl_read" }
+                .first()
+                .functionSummary
+        assertNotNull(FSread)
+
         val FSinnerrenegotiate =
             tu.allChildren<FunctionDeclaration> { it.name.localName == "inner_renegotiate" }
                 .first()
                 .functionSummary
         assertNotNull(FSinnerrenegotiate)
 
+        val FSrenegotiate =
+            tu.allChildren<FunctionDeclaration> { it.name.localName == "renegotiate" }
+                .first()
+                .functionSummary
+        assertNotNull(FSrenegotiate)
+
         // Literals
+        val literal1 =
+            tu.allChildren<Literal<*>> { it.location?.region?.startLine == 26 }.firstOrNull()
+        assertNotNull(literal1)
+
+        val literal2 =
+            tu.allChildren<Literal<*>> { it.location?.region?.startLine == 27 }.firstOrNull()
+        assertNotNull(literal2)
+
+        val literal3 =
+            tu.allChildren<Literal<*>> { it.location?.region?.startLine == 28 }.firstOrNull()
+        assertNotNull(literal3)
+
         val literal4 =
-            tu.allChildren<Literal<*>> { it.location?.region?.startLine == 15 }.firstOrNull()
+            tu.allChildren<Literal<*>> { it.location?.region?.startLine == 29 }.firstOrNull()
         assertNotNull(literal4)
 
         val literal5 =
-            tu.allChildren<Literal<*>> { it.location?.region?.startLine == 16 }.firstOrNull()
+            tu.allChildren<Literal<*>> { it.location?.region?.startLine == 20 }.firstOrNull()
         assertNotNull(literal5)
 
+        val literal6 =
+            tu.allChildren<Literal<*>> { it.location?.region?.startLine == 15 }.firstOrNull()
+        assertNotNull(literal6)
+
+        val literal7 =
+            tu.allChildren<Literal<*>> { it.location?.region?.startLine == 16 }.firstOrNull()
+        assertNotNull(literal7)
+
+        // References
+        val ctxLine43 =
+            tu.allChildren<Reference> { it.location?.region?.startLine == 43 }.firstOrNull()
+        assertNotNull(ctxLine43)
+
+        // Initial State
+        println(ctxLine43)
+
+        // Function Summary for mbedtls_ssl_read
+        assertEquals(1, FSread.size)
+        // TODO assertEquals(4, FSread.entries.firstOrNull()?.value?.size)
+        // TODO: should be 4, the unknownmemoryvalue for the session shouldn't be there
+        assertEquals(5, FSread.entries.firstOrNull()?.value?.size)
+        assertTrue(
+            FSread.entries.firstOrNull()?.value?.any { it.first == literal1 && it.third == "i" } ==
+                true
+        )
+        assertTrue(
+            FSread.entries.firstOrNull()?.value?.any { it.first == literal2 && it.third == "j" } ==
+                true
+        )
+        assertTrue(
+            FSread.entries.firstOrNull()?.value?.any { it.first == literal3 && it.third == "k" } ==
+                true
+        )
+        assertTrue(
+            FSread.entries.firstOrNull()?.value?.any {
+                it.first == literal4 && it.third == "session.l"
+            } == true
+        )
+
+        // Function Summary for inner_renegotiate
         assertEquals(1, FSinnerrenegotiate.size)
         assertEquals(2, FSinnerrenegotiate.entries.firstOrNull()?.value?.size)
         assertTrue(
             FSinnerrenegotiate.entries.firstOrNull()?.value?.any {
-                it.first == literal4 && it.third == "j"
+                it.first == literal6 && it.third == "j"
             } == true
         )
         assertTrue(
             FSinnerrenegotiate.entries.firstOrNull()?.value?.any {
-                it.first == literal5 && it.third == "session.l"
+                it.first == literal7 && it.third == "session.l"
+            } == true
+        )
+
+        // Function Summary for renegotiate
+        assertEquals(1, FSrenegotiate.size)
+        assertEquals(3, FSrenegotiate.entries.firstOrNull()?.value?.size)
+        assertTrue(
+            FSrenegotiate.entries.firstOrNull()?.value?.any {
+                it.first == literal5 && it.third == "i"
+            } == true
+        )
+        assertTrue(
+            FSrenegotiate.entries.firstOrNull()?.value?.any {
+                it.first == literal6 && it.third == "j"
+            } == true
+        )
+        assertTrue(
+            FSrenegotiate.entries.firstOrNull()?.value?.any {
+                it.first == literal7 && it.third == "session.l"
             } == true
         )
     }

@@ -178,7 +178,7 @@ undefined4 sgx_ecall_key_to_out(long param_1)
   }
   printf("%d\n", *local_28);
   ecall_key_to_out(local_28);
-  printf("%d\n", *local_28);
+  printf("%d %d\n", *local_28, local_28[1]);
   if ((local_28 != (void *)0x0) && /*printf("%d", *local_28) &&*/ 
      (iVar1 = memcpy_verw_s(local_18,local_10,local_28,local_10), iVar1 != 0)) {
     uVar2 = 1;

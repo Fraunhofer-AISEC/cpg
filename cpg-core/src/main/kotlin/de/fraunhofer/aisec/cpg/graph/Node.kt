@@ -41,6 +41,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrders
 import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.ProgramDependences
 import de.fraunhofer.aisec.cpg.graph.scopes.*
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemoryAddress
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.neo4j.LocationConverter
 import de.fraunhofer.aisec.cpg.helpers.neo4j.NameConverter
@@ -103,6 +104,16 @@ abstract class Node :
     @Relationship(value = "SCOPE", direction = Relationship.Direction.OUTGOING)
     @JsonBackReference
     override var scope: Scope? = null
+
+    /**
+     * When the node is used as address of a pointer, we use the fieldAddresses map to store the
+     * MemoryAddresses of the different fields. Therefore, for structs the key should be a
+     * FieldDeclaration. For arrays, it may also be a literal if the MemoryAddress is accesses with
+     * something like `array[0]`
+     */
+    // FIXME: The FieldDeclarations don't seem to be unique. Also, for arrays, the literals in
+    // different lines won't be the same, so we try a string as index
+    val fieldAddresses = mutableMapOf<String, Set<MemoryAddress>>()
 
     /** Optional comment of this node. */
     var comment: String? = null
