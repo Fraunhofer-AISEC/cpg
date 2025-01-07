@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
@@ -455,12 +456,7 @@ class PointsToPassTest {
         assertEquals(1, n0Line66.memoryAddress.size)
         assertTrue(n0Line66.arrayExpression.memoryAddress.first() is MemoryAddress)
         assertEquals(
-            (n0Line66.arrayExpression.memoryAddress
-                .filterIsInstance<MemoryAddress>()
-                .firstOrNull()
-                ?.fieldAddresses
-                ?.get("0")
-                ?.first() as MemoryAddress),
+            n0Line66.arrayExpression.prevDFG.first().fieldAddresses.get("0")?.first() as Node,
             n0Line66.memoryAddress.first()
         )
         assertEquals(1, n0Line66.prevDFG.size)
@@ -469,12 +465,7 @@ class PointsToPassTest {
         // Line 67
         assertEquals(1, n0Line67.memoryAddress.size)
         assertEquals(
-            (n0Line67.arrayExpression.memoryAddress
-                .filterIsInstance<MemoryAddress>()
-                .firstOrNull()
-                ?.fieldAddresses
-                ?.get("0")
-                ?.first() as MemoryAddress),
+            n0Line67.arrayExpression.prevDFG.first().fieldAddresses.get("0")?.first() as Node,
             n0Line67.memoryAddress.first()
         )
         assertEquals(1, n0Line67.prevDFG.size)
@@ -483,12 +474,7 @@ class PointsToPassTest {
         // Line 68
         assertEquals(1, n0Line68.memoryAddress.size)
         assertEquals(
-            (n0Line68.arrayExpression.memoryAddress
-                .filterIsInstance<MemoryAddress>()
-                .firstOrNull()
-                ?.fieldAddresses
-                ?.get("0")
-                ?.first() as MemoryAddress),
+            n0Line68.arrayExpression.prevDFG.first().fieldAddresses.get("0")?.first() as Node,
             n0Line68.memoryAddress.first()
         )
         assertEquals(1, n0Line68.prevDFG.size)
@@ -497,12 +483,7 @@ class PointsToPassTest {
         // Line 71
         assertEquals(1, niLine71.memoryAddress.size)
         assertEquals(
-            (niLine71.arrayExpression.memoryAddress
-                .filterIsInstance<MemoryAddress>()
-                .firstOrNull()
-                ?.fieldAddresses
-                ?.get("i")
-                ?.first() as MemoryAddress),
+            niLine71.arrayExpression.prevDFG.first().fieldAddresses.get("i")?.first() as Node,
             niLine71.memoryAddress.first()
         )
         assertEquals(1, niLine71.prevDFG.size)
@@ -511,18 +492,12 @@ class PointsToPassTest {
         // Line 75
         assertEquals(1, njLine75.memoryAddress.size)
         assertEquals(
-            (njLine75.arrayExpression.memoryAddress
-                .filterIsInstance<MemoryAddress>()
-                .firstOrNull()
-                ?.fieldAddresses
-                ?.get("j")
-                ?.first() as MemoryAddress),
+            njLine75.arrayExpression.prevDFG.first().fieldAddresses.get("j")?.first() as Node,
             njLine75.memoryAddress.first()
         )
-        // TODO: What are our expections for njLine75.prevDFG? I think null is fine, since we
-        // never defined that
         assertEquals(1, njLine75.prevDFG.size)
         assertTrue(njLine75.prevDFG.first() is UnknownMemoryValue)
+        assertLocalName("j", njLine75.prevDFG.first())
     }
 
     @Test
@@ -1131,6 +1106,11 @@ class PointsToPassTest {
             tu.allChildren<CallExpression> { it.location?.region?.startLine == 201 }.first()
         assertNotNull(ceLine201)
 
+        // SubscriptExpressions
+        val sseLine181 =
+            tu.allChildren<SubscriptExpression> { it.location?.region?.startLine == 181 }.first()
+        assertNotNull(sseLine181)
+
         // FunctionSummaries
         val fsecallkeytoout =
             tu.allChildren<FunctionDeclaration> { it.name.localName == "ecall_key_to_out" }
@@ -1192,12 +1172,13 @@ class PointsToPassTest {
         assertTrue(local_28Line180.prevDFG.contains(ceLine172))
 
         // Line 181
-        assertEquals(2, local_28DerefLine181.prevDFG.size)
-        assertTrue(local_28DerefLine181.prevDFG.contains(ceLine201))
+        assertEquals(1, local_28DerefLine181.prevDFG.size)
+        assertEquals(ceLine201, local_28DerefLine181.prevDFG.first())
+
+        assertEquals(1, sseLine181.prevDFG.size)
         assertTrue(
-            local_28DerefLine181.prevDFG.any {
-                it is UnknownMemoryValue && it.name.localName == "DAT_0011b1c8"
-            }
+            sseLine181.prevDFG.first() is UnknownMemoryValue &&
+                sseLine181.prevDFG.first().name.localName == "DAT_0011b1c8"
         )
 
         // Line 190

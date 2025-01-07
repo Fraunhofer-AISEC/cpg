@@ -38,6 +38,10 @@ import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass.Configuration
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 
+fun nodeNameToString(node: Node): Name {
+    return if (node is Literal<*>) Name((node as? Literal<*>)?.value.toString()) else node.name
+}
+
 @DependsOn(SymbolResolver::class)
 @DependsOn(EvaluationOrderGraphPass::class)
 @DependsOn(DFGPass::class)
@@ -135,13 +139,14 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
 
     private fun storeFunctionSummary(node: FunctionDeclaration, doubleState: PointsToState2) {
         node.parameters.forEach { param ->
-            val addresses = doubleState.getAddresses(param)
+            // fetch the parameter's current value
+            val values = doubleState.getAddresses(param).flatMap { doubleState.getValues(it) }
             val indexes = mutableSetOf<Pair<Node, String>>()
-            addresses.forEach { addr ->
-                doubleState.getValues(addr).forEach { indexes.add(Pair(it, "")) }
+            values.forEach { value ->
+                indexes.add(Pair(value, ""))
                 // Additionally check for partial writes to fields
                 // For the partial writes, we also store the field name in the function Summary
-                addr.fieldAddresses
+                value.fieldAddresses
                     .flatMap { it.value }
                     .forEach { indexes.add(Pair(it, it.name.localName)) }
             }
@@ -298,10 +303,16 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                     newValues.forEach { (value, derefSource, subAccessName) ->
                         val dst =
                             if (subAccessName.isNotEmpty()) {
-                                doubleState.getFieldAddresses(
-                                    doubleState.getValues(destination).toIdentitySet(),
-                                    Name(subAccessName)
-                                )
+                                val fieldAddresses = identitySetOf<Node>()
+                                // Collect the fieldAddresses for each possible value
+                                doubleState.getValues(destination).forEach { v ->
+                                    val parentName = nodeNameToString(v)
+                                    val newName = Name(subAccessName, parentName)
+                                    fieldAddresses.addAll(
+                                        doubleState.getFieldAddresses(identitySetOf(v), newName)
+                                    )
+                                }
+                                fieldAddresses
                             } else doubleState.getValues(destination)
                         when (value) {
                             is ParameterDeclaration ->
@@ -651,7 +662,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                 // this.declarationsState.elements[node]?.elements?.first?.elements
                 /*else*/ this.declarationsState.elements[node]?.elements?.second?.elements
             if (elements.isNullOrEmpty()) {
-                val newName = if (node is Literal<*>) Name(node.value.toString()) else node.name
+                val newName = nodeNameToString(node)
                 val newEntry = identitySetOf<Node>(UnknownMemoryValue(newName))
                 (this.declarationsState.elements
                         as?
@@ -718,46 +729,11 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                     this.getValues(node.expression)
                 }
                 is UnaryOperator -> this.getValues(node.input)
-                is SubscriptExpression ->
+                is SubscriptExpression -> {
                     this.getAddresses(node).flatMap { this.getValues(it) }.toIdentitySet()
+                }
                 is CallExpression -> {
                     identitySetOf(node)
-                    // Let's see if we have a functionSummary for the CallExpression
-                    /*val functionDeclaration =
-                        node.invokes.firstOrNull()
-                            ?: return identitySetOf(UnknownMemoryValue(node.name))
-                    val functionSummaries = node.ctx?.config?.functionSummaries
-                    if (
-                        functionSummaries?.hasSummary(functionDeclaration) == true &&
-                            // Also check that we don't just have a dummy Summary
-                            node.ctx
-                                ?.config
-                                ?.functionSummaries
-                                ?.getLastWrites(functionDeclaration)
-                                ?.isNotEmpty() == true
-                    ) {
-                        // Get all the ReturnValues from the Summary and return their values
-                        val retVals =
-                            node.ctx?.config?.functionSummaries?.getLastWrites(functionDeclaration)
-                        if (retVals != null) {
-                            val r = identitySetOf<Node>()
-                            for ((param, values) in retVals) {
-                                if (param is ReturnStatement) {
-                                    values.forEach { (v, derefSource) ->
-                                        if (v is ParameterDeclaration) {
-                                            if (derefSource) {
-                                                this.getValues(node.arguments[v.argumentIndex])
-                                                    .forEach { r.addAll(this.getValues(it)) }
-                                            } else if (v.argumentIndex < node.arguments.size) {
-                                                r.add(node.arguments[v.argumentIndex])
-                                            }
-                                        } else r.add(v)
-                                    }
-                                }
-                            }
-                            r
-                        } else identitySetOf(UnknownMemoryValue(node.name))
-                    } else identitySetOf(UnknownMemoryValue(node.name))*/
                 }
                 /*is BinaryOperator -> identitySetOf(node)*/
                 /* In these cases, we simply have to fetch the current value for the MemoryAddress from the DeclarationState */
@@ -833,15 +809,15 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                     this.getAddresses(node.expression)
                 }
                 is SubscriptExpression -> {
-                    val localName =
-                        if (node.subscriptExpression is Literal<*>)
-                            (node.subscriptExpression as? Literal<*>)?.value.toString()
-                        else node.subscriptExpression.name.toString()
-                    getFieldAddresses(
-                        this.getAddresses(node.base)
-                            .toIdentitySet() /*.filterIsInstance<MemoryAddress>()*/,
-                        Name(localName, node.arrayExpression.name)
-                    )
+                    val localName = nodeNameToString(node.subscriptExpression)
+                    this.getValues(node.base)
+                        .flatMap {
+                            getFieldAddresses(
+                                identitySetOf(it),
+                                Name(localName.localName, nodeNameToString(it))
+                            )
+                        }
+                        .toIdentitySet()
                 }
                 else -> identitySetOf(node)
             }
