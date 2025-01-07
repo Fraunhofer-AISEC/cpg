@@ -50,6 +50,7 @@ publishing {
 dependencies {
     // neo4j
     implementation(libs.bundles.neo4j)
+    implementation(libs.neo4j.driver)
 
     // Command line interface support
     implementation(libs.picocli)

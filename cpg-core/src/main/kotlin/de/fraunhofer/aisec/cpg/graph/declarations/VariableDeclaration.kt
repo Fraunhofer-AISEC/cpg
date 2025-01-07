@@ -75,7 +75,7 @@ open class VariableDeclaration : ValueDeclaration(), HasInitializer, HasType.Typ
                 if (value is Reference) {
                     value.resolutionHelper = this
                 }
-            }
+            },
         )
     /** The (optional) initializer of the declaration. */
     override var initializer by unwrapping(VariableDeclaration::initializerEdge)

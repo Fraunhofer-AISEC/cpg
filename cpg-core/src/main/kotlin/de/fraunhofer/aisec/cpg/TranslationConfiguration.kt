@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.passes.configuration.*
 import de.fraunhofer.aisec.cpg.passes.inference.DFGFunctionSummaries
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import java.io.File
 import java.nio.file.Path
 import java.util.*
@@ -51,6 +52,7 @@ import org.slf4j.LoggerFactory
  * The configuration for the [TranslationManager] holds all information that is used during the
  * translation.
  */
+@DoNotPersist
 class TranslationConfiguration
 private constructor(
     /** Definition of additional symbols, mostly useful for C++. */
@@ -540,6 +542,7 @@ private constructor(
             registerPass<ControlFlowSensitiveDFGPass>()
             registerPass<FilenameMapper>()
             registerPass<ResolveCallExpressionAmbiguityPass>()
+            registerPass<ResolveMemberExpressionAmbiguityPass>()
             useDefaultPasses = true
             return this
         }
