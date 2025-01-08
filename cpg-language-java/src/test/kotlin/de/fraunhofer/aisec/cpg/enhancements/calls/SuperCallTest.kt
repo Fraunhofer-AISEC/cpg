@@ -94,11 +94,6 @@ internal class SuperCallTest : BaseTest() {
         val getSuperField = findByUniqueName(methods, "getSuperField")
         refs = getSuperField.allChildren<MemberExpression>()
         val superFieldRef = findByUniquePredicate(refs) { "super.field" == it.code }
-        // See https://github.com/Fraunhofer-AISEC/cpg/issues/1863.
-        // We only have a regular call expression here, if we do not resolve anything else in the
-        // frontend
-        /*assertTrue(fieldRef.base is Reference)
-        assertRefersTo(fieldRef.base, getField.receiver)*/
         assertEquals(field, fieldRef.refersTo)
         assertTrue(superFieldRef.base is Reference)
         assertRefersTo(superFieldRef.base, getSuperField.receiver)

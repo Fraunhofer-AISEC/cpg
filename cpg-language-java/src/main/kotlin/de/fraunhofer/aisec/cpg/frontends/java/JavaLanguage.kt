@@ -37,7 +37,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.*
-import de.fraunhofer.aisec.cpg.passes.JavaCallResolverHelper
 import kotlin.reflect.KClass
 import org.neo4j.ogm.annotation.Transient
 

@@ -238,9 +238,12 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         return declarationStatement
     }
 
-    private fun handleFieldAccessExpression(
-        expr: Expression
-    ): de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression {
+    /**
+     * Translates a Java
+     * [field access expression](https://docs.oracle.com/javase/specs/jls/se23/html/jls-15.html#jls-15.11)
+     * into a [MemberExpression].
+     */
+    private fun handleFieldAccessExpression(expr: Expression): MemberExpression {
         val fieldAccessExpr = expr.asFieldAccessExpr()
 
         var baseType = unknownType()
@@ -267,7 +270,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
             base,
             fieldType,
             operatorCode = ".",
-            rawNode = fieldAccessExpr
+            rawNode = fieldAccessExpr,
         )
     }
 
@@ -355,7 +358,14 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         return superExpression
     }
 
-    // TODO: this function needs a MAJOR overhaul!
+    /**
+     * Translates a Java
+     * [expression name](https://docs.oracle.com/javase/specs/jls/se23/html/jls-6.html#jls-ExpressionName)
+     * into an [Expression].
+     *
+     * Since a name can be a multitude of different things the result can either be a [Reference] or
+     * a [MemberExpression].
+     */
     private fun handleNameExpression(
         expr: Expression
     ): de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression? {
@@ -657,6 +667,9 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
     }
 }
 
+/**
+ * Converts a [ResolvedFieldDeclaration] to a [FieldAccessExpr] with the given name (as [NameExpr]).
+ */
 fun ResolvedFieldDeclaration.toFieldAccessExpr(expr: NameExpr): FieldAccessExpr {
     // Convert to FieldAccessExpr
     val fieldAccessExpr =

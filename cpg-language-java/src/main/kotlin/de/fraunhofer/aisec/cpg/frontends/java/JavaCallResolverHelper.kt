@@ -23,10 +23,9 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.passes
+package de.fraunhofer.aisec.cpg.frontends.java
 
 import de.fraunhofer.aisec.cpg.ScopeManager
-import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression

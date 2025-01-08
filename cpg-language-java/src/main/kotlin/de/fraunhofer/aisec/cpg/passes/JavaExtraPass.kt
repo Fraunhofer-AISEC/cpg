@@ -40,6 +40,12 @@ import de.fraunhofer.aisec.cpg.nameIsType
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 
+/**
+ * This pass is responsible for handling Java-specific cases that are not covered by the general CPG
+ * logic. For example, Java has static member access, which is not modeled as a member expression,
+ * but as a reference with an FQN. This pass will convert such member expressions to references with
+ * FQNs.
+ */
 @DependsOn(TypeResolver::class)
 @ExecuteBefore(SymbolResolver::class)
 class JavaExtraPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
