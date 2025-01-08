@@ -410,15 +410,17 @@ class Query {
                                 forStmt {
                                     loopBody {
                                         ref("a") assign
-                                                {
-                                                    ref("a") +
-                                                            subscriptExpr {
-                                                                ref("c")
-                                                                ref("i")
-                                                            }
-                                                }
+                                            {
+                                                ref("a") +
+                                                    subscriptExpr {
+                                                        ref("c")
+                                                        ref("i")
+                                                    }
+                                            }
                                     }
-                                    forInitializer { declareVar("i", t("int")) { literal(0, t("int")) } }
+                                    forInitializer {
+                                        declareVar("i", t("int")) { literal(0, t("int")) }
+                                    }
                                     forCondition { ref("i") le literal(4, t("int")) }
                                     forIteration { ref("i").incNoContext() }
                                 }
@@ -470,15 +472,17 @@ class Query {
                                 forStmt {
                                     loopBody {
                                         ref("a") assign
-                                                {
-                                                    ref("a") +
-                                                            subscriptExpr {
-                                                                ref("c")
-                                                                ref("i")
-                                                            }
-                                                }
+                                            {
+                                                ref("a") +
+                                                    subscriptExpr {
+                                                        ref("c")
+                                                        ref("i")
+                                                    }
+                                            }
                                     }
-                                    forInitializer { declareVar("i", t("int")) { literal(0, t("int")) } }
+                                    forInitializer {
+                                        declareVar("i", t("int")) { literal(0, t("int")) }
+                                    }
                                     forCondition { ref("i") le literal(4, t("int")) }
                                     forIteration { ref("i").incNoContext() }
                                 }
@@ -516,15 +520,17 @@ class Query {
                                 forStmt {
                                     loopBody {
                                         ref("a") assign
-                                                {
-                                                    ref("a") +
-                                                            subscriptExpr {
-                                                                ref("c")
-                                                                ref("i")
-                                                            }
-                                                }
+                                            {
+                                                ref("a") +
+                                                    subscriptExpr {
+                                                        ref("c")
+                                                        ref("i")
+                                                    }
+                                            }
                                     }
-                                    forInitializer { declareVar("i", t("int")) { literal(0, t("int")) } }
+                                    forInitializer {
+                                        declareVar("i", t("int")) { literal(0, t("int")) }
+                                    }
                                     forCondition { ref("i") lt literal(4, t("int")) }
                                     forIteration { ref("i").incNoContext() }
                                 }

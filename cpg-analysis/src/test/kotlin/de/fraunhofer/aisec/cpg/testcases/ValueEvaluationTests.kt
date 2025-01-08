@@ -316,14 +316,16 @@ class ValueEvaluationTests {
                                     }
                                 }
 
-                                forStmt{
+                                forStmt {
                                     loopBody {
                                         subscriptExpr {
                                             ref("array")
                                             ref("i")
                                         } assign ref("i")
                                     }
-                                    forInitializer { declareVar("i", t("int")) { literal(0, t("int")) } }
+                                    forInitializer {
+                                        declareVar("i", t("int")) { literal(0, t("int")) }
+                                    }
                                     forCondition { ref("i") lt literal(6, t("int")) }
                                     forIteration { ref("i").incNoContext() }
                                 }
