@@ -287,7 +287,10 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                         )
                 }
             }
+            // }
 
+            // If we have a FunctionSummary, we push the values of the arguments and return value
+            // after executing the function call to our doubleState.
             for ((param, newValues) in invoke.functionSummary) {
                 val destination =
                     when (param) {
