@@ -152,7 +152,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
             }
             doubleState
                 .fetchElementFromDeclarationState(param.memoryValue)
-                .filter { it is ParameterMemoryValue && it.name.parent == param.name }
+                // .filter { it is ParameterMemoryValue && it.name.parent == param.name }
                 .forEach { indexes.add(Pair(it, "")) }
 
             indexes.forEach { (index, subAccessName) ->
