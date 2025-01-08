@@ -992,7 +992,7 @@ class GoLanguageFrontendTest : BaseTest() {
     @Test
     fun testBuildTags() {
         val stdLib = Path.of("src", "test", "resources", "golang-std")
-        val topLevel = Path.of("src", "test", "resources", "golang", "buildtags")
+        val topLevel = Path.of("src", "test", "resources", "golang", "integration")
 
         // make sure we parse main.go as the last
         val files =
