@@ -56,7 +56,7 @@ fun Node.printEOG(maxConnections: Int = 25): String {
 fun <T : Edge<Node>> Node.printGraph(
     nextEdgeGetter: KProperty1<Node, MutableCollection<T>>,
     prevEdgeGetter: KProperty1<Node, MutableCollection<T>>,
-    maxConnections: Int = 25
+    maxConnections: Int = 25,
 ): String {
     val builder = StringBuilder()
 

@@ -53,7 +53,7 @@ fun Node.printCode(linesAhead: Int = 0, showNumbers: Boolean = false): Node {
 
 fun Collection<Node>.printCode(
     linesAhead: Int = 0,
-    showNumbers: Boolean = false
+    showNumbers: Boolean = false,
 ): Collection<Node> {
     val it = this.iterator()
 
@@ -110,7 +110,7 @@ fun Node.fancyCode(linesAhead: Int = 0, showNumbers: Boolean): String? {
                 val content =
                     line.substring(
                         region.startColumn + extraCharsInLine,
-                        region.endColumn + extraCharsInLine
+                        region.endColumn + extraCharsInLine,
                     )
 
                 // everything after the thing we want to replace. add the extra chars in line to
@@ -281,7 +281,7 @@ fun getFanciesFor(original: Node?, node: Node?): List<Pair<AttributedStyle, Regi
 private fun fancyType(
     outer: Node,
     node: HasType,
-    list: MutableList<Pair<AttributedStyle, Region>>
+    list: MutableList<Pair<AttributedStyle, Region>>,
 ) {
     val types = outer.language.primitiveTypeNames.toMutableSet()
     types += node.type.name.toString()
@@ -296,7 +296,7 @@ private fun fancyWord(
     word: String,
     node: Node,
     list: MutableList<Pair<AttributedStyle, Region>>,
-    style: AttributedStyle
+    style: AttributedStyle,
 ) {
     node.location?.let {
         // look for the name in code; this assumes that it is on the first line for now
@@ -308,7 +308,7 @@ private fun fancyWord(
                     it.region.startLine,
                     it.region.startColumn + offset,
                     it.region.startLine,
-                    it.region.startColumn + offset + word.length
+                    it.region.startColumn + offset + word.length,
                 )
 
             list += Pair(style, region)
@@ -331,14 +331,14 @@ fun getRelativeLocation(parentRegion: Region, region: Region): Region {
         region.startLine - lineOffset,
         region.startColumn - columnOffset,
         region.endLine - lineOffset,
-        region.endColumn - columnOffset
+        region.endColumn - columnOffset,
     )
 }
 
 fun Node?.fancyLocationLink(): String {
     return AttributedString(
             PhysicalLocation.locationLink(this?.location),
-            DEFAULT.foreground(BLUE or BRIGHT)
+            DEFAULT.foreground(BLUE or BRIGHT),
         )
         .toAnsi()
 }

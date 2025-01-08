@@ -97,7 +97,7 @@ fun Type.ref(): Type {
 fun LanguageProvider.objectType(
     name: CharSequence,
     generics: List<Type> = listOf(),
-    rawNode: Any? = null
+    rawNode: Any? = null,
 ): Type {
     // First, we check, whether this is a built-in type, to avoid necessary allocations of simple
     // types

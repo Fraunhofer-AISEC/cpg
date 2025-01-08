@@ -62,7 +62,7 @@ sealed class ValueDeclarationScope(astNode: Node?) : Scope(astNode) {
             Util.errorWithFileLocation(
                 declaration,
                 log,
-                "A non ValueDeclaration can not be added to a DeclarationScope"
+                "A non ValueDeclaration can not be added to a DeclarationScope",
             )
         }
     }
@@ -83,7 +83,7 @@ sealed class ValueDeclarationScope(astNode: Node?) : Scope(astNode) {
                 Util.errorWithFileLocation(
                     valueDeclaration,
                     log,
-                    "Trying to add a value declaration to a scope which does not have a declaration holder AST node"
+                    "Trying to add a value declaration to a scope which does not have a declaration holder AST node",
                 )
             }
         }

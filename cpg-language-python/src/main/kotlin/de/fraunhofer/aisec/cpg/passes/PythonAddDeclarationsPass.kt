@@ -159,7 +159,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
                 "variable"
             },
             decl.name,
-            decl.scope
+            decl.scope,
         )
 
         // Make sure we add the declaration at the correct place, i.e. with the scope we set at the

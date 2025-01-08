@@ -56,7 +56,7 @@ class IniFileTest : BaseTest() {
         assertFullName(
             "config",
             namespace,
-            "Namespace name mismatch."
+            "Namespace name mismatch.",
         ) // analyzeAndGetFirstTU does not provide the full path
 
         assertEquals(2, tu.records.size, "Expected two records")

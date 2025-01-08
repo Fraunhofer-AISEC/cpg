@@ -33,7 +33,7 @@ open class NumericType(
     typeName: CharSequence = "",
     val bitWidth: Int? = null,
     language: Language<*>,
-    val modifier: Modifier = Modifier.SIGNED
+    val modifier: Modifier = Modifier.SIGNED,
 ) : ObjectType(typeName, listOf(), true, language) {
 
     init {
@@ -48,7 +48,7 @@ open class NumericType(
     enum class Modifier {
         SIGNED,
         UNSIGNED,
-        NOT_APPLICABLE
+        NOT_APPLICABLE,
     }
 
     override fun equals(other: Any?) =

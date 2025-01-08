@@ -79,7 +79,7 @@ open class TestLanguageFrontend(
         TranslationContext(
             TranslationConfiguration.builder().build(),
             ScopeManager(),
-            TypeManager()
+            TypeManager(),
         ),
 ) : LanguageFrontend<Any, Any>(language, ctx) {
     override fun parse(file: File): TranslationUnitDeclaration {

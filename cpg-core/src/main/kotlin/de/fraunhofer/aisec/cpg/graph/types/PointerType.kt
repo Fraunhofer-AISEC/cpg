@@ -39,7 +39,7 @@ class PointerType : Type, SecondOrderType {
 
     enum class PointerOrigin {
         POINTER,
-        ARRAY
+        ARRAY,
     }
 
     var pointerOrigin: PointerOrigin? = null

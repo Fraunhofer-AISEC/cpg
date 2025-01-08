@@ -71,7 +71,7 @@ interface StatisticsHolder {
                     listOf("Number of files translated", translatedFiles.size),
                     listOf(
                         "Translated file(s)",
-                        translatedFiles.map { relativeOrAbsolute(Path.of(it), config.topLevel) }
+                        translatedFiles.map { relativeOrAbsolute(Path.of(it), config.topLevel) },
                     ),
                 )
 
@@ -144,7 +144,7 @@ constructor(
     c: Class<*>,
     message: String,
     debug: Boolean = false,
-    holder: StatisticsHolder? = null
+    holder: StatisticsHolder? = null,
 ) : MeasurementHolder(c, message, debug, holder) {
 
     private val start: Instant
@@ -189,7 +189,7 @@ constructor(
     /** Changes the level used for log output. */
     protected var debug: Boolean = false,
     /** The class which should be updated if the value measured by this benchmark changed. */
-    protected var holder: StatisticsHolder? = null
+    protected var holder: StatisticsHolder? = null,
 ) {
 
     val caller: String
@@ -218,7 +218,7 @@ constructor(
     @JvmOverloads
     open fun addMeasurement(
         measurementKey: String? = null,
-        measurementValue: String? = null
+        measurementValue: String? = null,
     ): Any? {
         if (measurementKey == null || measurementValue == null) return null
 

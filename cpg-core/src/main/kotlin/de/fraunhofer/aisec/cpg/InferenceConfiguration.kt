@@ -59,7 +59,7 @@ private constructor(
      * Uses heuristics to add DFG edges for call expressions to unresolved functions (i.e.,
      * functions not implemented in the given source code).
      */
-    val inferDfgForUnresolvedSymbols: Boolean
+    val inferDfgForUnresolvedSymbols: Boolean,
 ) {
     class Builder(
         private var enabled: Boolean = true,
@@ -68,7 +68,7 @@ private constructor(
         private var inferFunctions: Boolean = true,
         private var inferVariables: Boolean = true,
         private var inferReturnTypes: Boolean = false,
-        private var inferDfgForUnresolvedCalls: Boolean = true
+        private var inferDfgForUnresolvedCalls: Boolean = true,
     ) {
         fun enabled(infer: Boolean) = apply { this.enabled = infer }
 
@@ -94,7 +94,7 @@ private constructor(
                 inferFunctions,
                 inferVariables,
                 inferReturnTypes,
-                inferDfgForUnresolvedCalls
+                inferDfgForUnresolvedCalls,
             )
     }
 

@@ -223,7 +223,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
             assignExpr.operator.asString(),
             listOf(lhs),
             listOf(rhs),
-            rawNode = assignExpr
+            rawNode = assignExpr,
         )
     }
 
@@ -352,7 +352,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
             fieldType =
                 frontend.typeManager.getTypeParameter(
                     frontend.scopeManager.currentRecord,
-                    symbol.asField().type.describe()
+                    symbol.asField().type.describe(),
                 )
             if (fieldType == null) {
                 fieldType = frontend.typeOf(symbol.asField().type)
@@ -374,7 +374,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                     base,
                     fieldType,
                     ".", // there is only "." in java
-                    rawNode = expr
+                    rawNode = expr,
                 )
             memberExpression.isStaticAccess = true
             return memberExpression
@@ -395,7 +395,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                     base,
                     fieldType,
                     ".",
-                    rawNode = expr
+                    rawNode = expr,
                 )
             memberExpression.isStaticAccess = true
             return memberExpression
@@ -408,7 +408,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
             base,
             fieldType,
             ".",
-            rawNode = expr
+            rawNode = expr,
         )
     }
 
@@ -418,38 +418,38 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                 newLiteral(
                     literalExpr.asIntegerLiteralExpr().asNumber(),
                     this.primitiveType("int"),
-                    rawNode = expr
+                    rawNode = expr,
                 )
             is StringLiteralExpr ->
                 newLiteral(
                     literalExpr.asStringLiteralExpr().asString(),
                     this.primitiveType("java.lang.String"),
-                    rawNode = expr
+                    rawNode = expr,
                 )
             is BooleanLiteralExpr ->
                 newLiteral(
                     literalExpr.asBooleanLiteralExpr().value,
                     this.primitiveType("boolean"),
-                    rawNode = expr
+                    rawNode = expr,
                 )
             is CharLiteralExpr ->
                 newLiteral(
                     literalExpr.asCharLiteralExpr().asChar(),
                     this.primitiveType("char"),
-                    rawNode = expr
+                    rawNode = expr,
                 )
             is DoubleLiteralExpr ->
                 newLiteral(
                     literalExpr.asDoubleLiteralExpr().asDouble(),
                     if (literalExpr.value.endsWith("f", true)) this.primitiveType("float")
                     else this.primitiveType("double"),
-                    rawNode = expr
+                    rawNode = expr,
                 )
             is LongLiteralExpr ->
                 newLiteral(
                     literalExpr.asLongLiteralExpr().asNumber(),
                     this.primitiveType("long"),
-                    rawNode = expr
+                    rawNode = expr,
                 )
             is NullLiteralExpr -> newLiteral(null, this.objectType("null"), rawNode = expr)
             else -> null
@@ -567,7 +567,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                 var type: Type? =
                     frontend.typeManager.getTypeParameter(
                         frontend.scopeManager.currentRecord,
-                        symbol.type.describe()
+                        symbol.type.describe(),
                     )
                 if (type == null) {
                     type = frontend.typeOf(symbol.type)
@@ -625,7 +625,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
             newLiteral(
                 typeAsGoodAsPossible.typeName,
                 this.objectType("class"),
-                rawNode = binaryExpr
+                rawNode = binaryExpr,
             )
         val binaryOperator = newBinaryOperator("instanceof", rawNode = binaryExpr)
         binaryOperator.lhs = lhs
@@ -646,7 +646,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                 unaryExpr.operator.asString(),
                 unaryExpr.isPostfix,
                 unaryExpr.isPrefix,
-                rawNode = unaryExpr
+                rawNode = unaryExpr,
             )
         unaryOperator.input = expression
         return unaryOperator
@@ -831,10 +831,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
 
             if (anonymousRecord.constructors.isEmpty()) {
                 val constructorDeclaration =
-                    newConstructorDeclaration(
-                            anonymousRecord.name.localName,
-                            anonymousRecord,
-                        )
+                    newConstructorDeclaration(anonymousRecord.name.localName, anonymousRecord)
                         .implicit(anonymousRecord.name.localName)
 
                 ctor.arguments.forEachIndexed { i, arg ->

@@ -46,7 +46,7 @@ class ComprehensionExpression : Expression(), ArgumentHolder {
                 if (end is Reference) {
                     end.access = AccessValues.WRITE
                 }
-            }
+            },
         )
 
     /**

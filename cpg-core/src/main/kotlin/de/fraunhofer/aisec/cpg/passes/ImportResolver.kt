@@ -112,7 +112,7 @@ class ImportDependencies(tus: MutableList<TranslationUnitDeclaration>) :
                         // hoping that this could unlock more
                         log.warn(
                             "We still have {} translation units with import dependency problems. We will just pick the one with the least dependencies",
-                            remaining.size
+                            remaining.size,
                         )
                         tu = remaining.sortedBy { this[it]?.size }.firstOrNull()
                         if (tu == null) {

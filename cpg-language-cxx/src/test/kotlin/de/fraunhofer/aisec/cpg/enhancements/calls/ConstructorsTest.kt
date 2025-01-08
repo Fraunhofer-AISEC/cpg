@@ -140,7 +140,7 @@ internal class ConstructorsTest : BaseTest() {
                     Path.of(topLevel.toString(), "defaultarg", "constructorDefault.cpp").toFile()
                 ),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
@@ -197,7 +197,7 @@ internal class ConstructorsTest : BaseTest() {
                     Path.of(topLevel.toString(), "defaultarg", "constructorDefault.cpp").toFile()
                 ),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
@@ -244,7 +244,7 @@ internal class ConstructorsTest : BaseTest() {
                         .toFile()
                 ),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<CPPLanguage>()
             }

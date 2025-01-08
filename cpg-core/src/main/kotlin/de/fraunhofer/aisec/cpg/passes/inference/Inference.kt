@@ -83,7 +83,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
         isStatic: Boolean,
         signature: List<Type?>,
         incomingReturnType: Type?,
-        hint: CallExpression? = null
+        hint: CallExpression? = null,
     ): FunctionDeclaration? {
         if (!ctx.config.inferenceConfiguration.inferFunctions) {
             return null
@@ -144,7 +144,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
                 inferred.name,
                 signature.map { it?.name },
                 inferred.returnTypes.map { it.name },
-                it
+                it,
             )
 
             // Add it to the scope
@@ -290,9 +290,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
         return param
     }
 
-    private fun inferTemplateParameter(
-        name: String,
-    ): TypeParameterDeclaration {
+    private fun inferTemplateParameter(name: String): TypeParameterDeclaration {
         val parameterizedType = ParameterizedType(name, language)
         typeManager.addTypeParameter(start as FunctionTemplateDeclaration, parameterizedType)
 
@@ -380,7 +378,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
     fun inferRecordDeclaration(
         type: Type,
         kind: String = "class",
-        locationHint: Node? = null
+        locationHint: Node? = null,
     ): RecordDeclaration? {
         if (!ctx.config.inferenceConfiguration.inferRecords) {
             return null
@@ -402,7 +400,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
             errorWithFileLocation(
                 locationHint,
                 log,
-                "Trying to infer a record declaration of a non-object type. Not sure what to do? Should we change the type?"
+                "Trying to infer a record declaration of a non-object type. Not sure what to do? Should we change the type?",
             )
             return null
         }
@@ -416,7 +414,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
             debugWithFileLocation(
                 locationHint,
                 log,
-                "Inferred a new record declaration ${declaration.name} (${declaration.kind}) in $it"
+                "Inferred a new record declaration ${declaration.name} (${declaration.kind}) in $it",
             )
 
             // Update the type
@@ -452,7 +450,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
                 log,
                 "Inferred a new variable declaration {} with type {} in $it",
                 inferred.name,
-                inferred.type
+                inferred.type,
             )
 
             // In any case, we will observe the type of our reference and update our new variable
@@ -481,7 +479,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
                     "with path '$path'"
                 } else {
                     ""
-                }
+                },
             )
 
             val inferred = newNamespaceDeclaration(name)
@@ -528,7 +526,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
                     log.debug(
                         "Inferring type of declaration {} to be {}",
                         declaration.name,
-                        type.name
+                        type.name,
                     )
 
                     declaration.type = type
@@ -641,7 +639,7 @@ fun Node.startInference(ctx: TranslationContext): Inference? {
 fun TranslationUnitDeclaration.inferFunction(
     call: CallExpression,
     isStatic: Boolean = false,
-    ctx: TranslationContext
+    ctx: TranslationContext,
 ): FunctionDeclaration? {
     return startInference(ctx)
         ?.inferFunctionDeclaration(
@@ -651,7 +649,7 @@ fun TranslationUnitDeclaration.inferFunction(
             call.signature,
             // TODO: Is the call's type the return value's type?
             call.type,
-            call
+            call,
         )
 }
 
@@ -659,7 +657,7 @@ fun TranslationUnitDeclaration.inferFunction(
 fun NamespaceDeclaration.inferFunction(
     call: CallExpression,
     isStatic: Boolean = false,
-    ctx: TranslationContext
+    ctx: TranslationContext,
 ): FunctionDeclaration? {
     return startInference(ctx)
         ?.inferFunctionDeclaration(
@@ -669,7 +667,7 @@ fun NamespaceDeclaration.inferFunction(
             call.signature,
             // TODO: Is the call's type the return value's type?
             call.type,
-            call
+            call,
         )
 }
 
@@ -677,7 +675,7 @@ fun NamespaceDeclaration.inferFunction(
 fun RecordDeclaration.inferMethod(
     call: CallExpression,
     isStatic: Boolean = false,
-    ctx: TranslationContext
+    ctx: TranslationContext,
 ): MethodDeclaration? {
     return startInference(ctx)
         ?.inferFunctionDeclaration(
@@ -687,7 +685,7 @@ fun RecordDeclaration.inferMethod(
             call.signature,
             // TODO: Is the call's type the return value's type?
             call.type,
-            call
+            call,
         ) as? MethodDeclaration
 }
 

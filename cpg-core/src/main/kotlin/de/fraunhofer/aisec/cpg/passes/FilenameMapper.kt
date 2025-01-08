@@ -48,7 +48,7 @@ class FilenameMapper(ctx: TranslationContext) : TranslationUnitPass(ctx) {
                 override fun visit(t: Node) {
                     t.file = file
                 }
-            }
+            },
         )
     }
 

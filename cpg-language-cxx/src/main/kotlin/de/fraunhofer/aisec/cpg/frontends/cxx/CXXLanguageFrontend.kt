@@ -179,14 +179,14 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
 
             override fun getContentForInclusion(
                 path: String,
-                macroDictionary: IMacroDictionary
+                macroDictionary: IMacroDictionary,
             ): InternalFileContent? {
                 return getContentUncached(path)
             }
 
             override fun getContentForInclusion(
                 ifl: IIndexFileLocation,
-                astPath: String
+                astPath: String,
             ): InternalFileContent? {
                 return getContentUncached(astPath)
             }
@@ -252,13 +252,13 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
                     includeFileContentProvider,
                     null,
                     opts,
-                    log
+                    log,
                 ) as ASTTranslationUnit
             val length = translationUnit.length
             LOGGER.info(
                 "Parsed {} bytes in ${file.name} corresponding roughly to {} LoC",
                 length,
-                length / 50
+                length / 50,
             )
             bench.stop()
             bench = Benchmark(this.javaClass, "Transforming ${file.name} to CPG")
@@ -277,7 +277,7 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
                                 c.rawSignature,
                                 it.region,
                                 translationUnitDeclaration,
-                                it.artifactLocation
+                                it.artifactLocation,
                             )
                     }
                 }
@@ -421,7 +421,7 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
                 newLiteral(
                         if (code.length >= 2) code.substring(1, code.length - 1) else "",
                         primitiveType("char").pointer(),
-                        rawNode = token
+                        rawNode = token,
                     )
                 else -> newLiteral(code, primitiveType("char").pointer(), rawNode = token)
             }
@@ -444,7 +444,7 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
     private fun getMethod(
         type: Class<*>,
         methodName: String,
-        vararg parameterTypes: Class<*>
+        vararg parameterTypes: Class<*>,
     ): Method {
         return try {
             type.getDeclaredMethod(methodName, *parameterTypes)
@@ -485,7 +485,7 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
     fun typeOf(
         declarator: IASTDeclarator,
         specifier: IASTDeclSpecifier,
-        hint: Declaration? = null
+        hint: Declaration? = null,
     ): Type {
         var type = typeOf(specifier, hint)
 
@@ -521,7 +521,7 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
                         val paramType =
                             typeManager.searchTemplateScopeForDefinedParameterizedTypes(
                                 scopeManager.currentScope,
-                                specifier.name.toString()
+                                specifier.name.toString(),
                             )
                         if (paramType != null) {
                             paramType
@@ -559,10 +559,7 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
         return type
     }
 
-    private fun typeOf(
-        specifier: IASTSimpleDeclSpecifier,
-        hint: Declaration? = null,
-    ): Type {
+    private fun typeOf(specifier: IASTSimpleDeclSpecifier, hint: Declaration? = null): Type {
         val name = specifier.rawSignature
 
         return when {
@@ -578,14 +575,14 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
             specifier.type == IASTSimpleDeclSpecifier.t_typeof -> {
                 objectType(
                     "typeof(${specifier.declTypeExpression.rawSignature})",
-                    rawNode = specifier
+                    rawNode = specifier,
                 )
             }
             // A decl type
             specifier.type == IASTSimpleDeclSpecifier.t_decltype -> {
                 objectType(
                     "decltype(${specifier.declTypeExpression.rawSignature})",
-                    rawNode = specifier
+                    rawNode = specifier,
                 )
             }
             // The type of constructor declaration is always the declaration itself
@@ -620,7 +617,7 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
                     this,
                     specifier,
                     log,
-                    "Type specifier missing, defaulting to 'int'"
+                    "Type specifier missing, defaulting to 'int'",
                 )
                 primitiveType("int")
             }
@@ -629,7 +626,7 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
                     this,
                     specifier,
                     log,
-                    "C++ does not allow unspecified type specifiers"
+                    "C++ does not allow unspecified type specifiers",
                 )
                 newProblemType()
             }
@@ -644,7 +641,7 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
                         this,
                         specifier,
                         log,
-                        "Could not determine canonical name for potential primitive type $name"
+                        "Could not determine canonical name for potential primitive type $name",
                     )
                     newProblemType()
                 } else {
@@ -772,7 +769,7 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
                 paramTypes.joinToString(
                     FunctionDeclaration.COMMA + FunctionDeclaration.WHITESPACE,
                     FunctionDeclaration.BRACKET_LEFT,
-                    FunctionDeclaration.BRACKET_RIGHT
+                    FunctionDeclaration.BRACKET_RIGHT,
                 ) {
                     it.typeName
                 } + type.typeName
@@ -794,7 +791,7 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
             val templateType =
                 typeManager.searchTemplateScopeForDefinedParameterizedTypes(
                     scopeManager.currentScope,
-                    type.root.name.toString()
+                    type.root.name.toString(),
                 )
             if (templateType != null) {
                 type.root = templateType
@@ -818,7 +815,7 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
                     "{}{} -> {}",
                     s,
                     node.javaClass.simpleName,
-                    node.rawSignature.replace('\n', '\\').replace('\t', ' ')
+                    node.rawSignature.replace('\n', '\\').replace('\t', ' '),
                 )
             }
 
