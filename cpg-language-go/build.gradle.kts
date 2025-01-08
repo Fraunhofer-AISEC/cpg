@@ -23,8 +23,11 @@
  *                    \______/ \__|       \______/
  *
  */
+import de.undercouch.gradle.tasks.download.Download
+
 plugins {
     id("cpg.frontend-conventions")
+    alias(libs.plugins.download)
 }
 
 publishing {
@@ -46,16 +49,21 @@ dependencies {
 
 open class DownloadTask @Inject constructor(@Internal val op: ExecOperations) : DefaultTask()
 
-val downloadLibGoAST = tasks.register<DownloadTask>("downloadLibGoAST") {
-    doLast {
-        op.exec {
-            commandLine("./download.sh")
-                .setStandardOutput(System.out)
-                .workingDir(project.projectDir.resolve("src/main/resources"))
-        }
-    }
-}
+tasks {
+    val downloadLibGoAST by registering(Download::class) {
+        val version = "v0.0.4"
 
-tasks.processResources {
-    dependsOn(downloadLibGoAST)
+        src(listOf(
+            "https://github.com/Fraunhofer-AISEC/libgoast/releases/download/${version}/libgoast-arm64.dylib",
+            "https://github.com/Fraunhofer-AISEC/libgoast/releases/download/${version}/libgoast-amd64.dylib",
+            "https://github.com/Fraunhofer-AISEC/libgoast/releases/download/${version}/libgoast-arm64.so",
+            "https://github.com/Fraunhofer-AISEC/libgoast/releases/download/${version}/libgoast-amd64.so"
+        ))
+        dest(projectDir.resolve("src/main/resources"))
+        onlyIfModified(true)
+    }
+
+    processResources {
+        dependsOn(downloadLibGoAST)
+    }
 }
