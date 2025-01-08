@@ -1,4 +1,4 @@
-package buildtags
+package integration
 
 func OS() string {
 	return "linux"
