@@ -32,6 +32,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "18"
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: cpg-language-go/src/test/resources/golang/integration/go.mod
       - name: Setup neo4j
         run: |
           docker run -d --env NEO4J_AUTH=neo4j/password -p7474:7474 -p7687:7687 -e NEO4JLABS_PLUGINS='["apoc"]' neo4j:5 || true
