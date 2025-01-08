@@ -272,7 +272,7 @@ class DFGFunctionSummaries {
      * This method parses the [DFGEntry] entries in [dfgEntries] and adds the respective DFG edges
      * between the parameters, receiver and potentially the [functionDeclaration] itself.
      */
-    private fun applyDfgEntryToFunctionDeclaration(
+    fun applyDfgEntryToFunctionDeclaration(
         functionDeclaration: FunctionDeclaration,
         dfgEntries: List<DFGEntry>
     ) {
