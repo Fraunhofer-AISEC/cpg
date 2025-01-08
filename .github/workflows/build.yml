@@ -28,7 +28,7 @@ jobs:
           java-version: "17"
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: "3.12"
       - uses: actions/setup-node@v4
         with:
           node-version: "18"
@@ -56,10 +56,9 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_ENV
       - name: Install JEP
         run: |
+          python3 -m venv ~/.virtualenvs/cpg
+          source ~/.virtualenvs/cpg/bin/activate
           pip3 install jep==$(grep "black.ninia:jep" gradle/libs.versions.toml | grep -o -E "[0-9]\d*(\.[0-9]\d*)*")
-          if [ -d "/opt/hostedtoolcache/Python" ]; then
-            find /opt/hostedtoolcache/Python/ -name libjep.so -exec sudo cp '{}' /usr/lib/ \;
-          fi
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
       - name: Build ${{ env.version }}
