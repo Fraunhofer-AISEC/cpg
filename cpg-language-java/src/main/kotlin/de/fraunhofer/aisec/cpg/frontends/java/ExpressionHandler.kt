@@ -243,11 +243,10 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
      * [field access expression](https://docs.oracle.com/javase/specs/jls/se23/html/jls-15.html#jls-15.11)
      * into a [MemberExpression].
      */
-    private fun handleFieldAccessExpression(expr: Expression): MemberExpression {
-        val fieldAccessExpr = expr.asFieldAccessExpr()
-
+    private fun handleFieldAccessExpression(fieldAccessExpr: FieldAccessExpr): MemberExpression {
         var baseType = unknownType()
         var fieldType = unknownType()
+
         // We can "try" to resolve the field using JavaParser's logic. The main reason we WANT to do
         // this is to get information about system types, as long as we are not fully doing that on
         // our own.
@@ -367,11 +366,9 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
      * a [MemberExpression].
      */
     private fun handleNameExpression(
-        expr: Expression
+        nameExpr: NameExpr
     ): de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression? {
-        val nameExpr = expr.asNameExpr()
-
-        // Try to resolve it. We will remove this in a future where we do not really in the
+        // Try to resolve it. We will remove this in a future where we do not rely on the
         // javaparser symbols anymore. This is mainly needed to resolve implicit "this.field" access
         // as well as access to static fields of other classes - which we could resolve once we
         // fully leverage the import system in the Java frontend.
@@ -386,7 +383,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         } catch (_: UnsolvedSymbolException) {}
 
         val name = this.parseName(nameExpr.nameAsString)
-        return newReference(name, rawNode = expr)
+        return newReference(name, rawNode = nameExpr)
     }
 
     private fun handleInstanceOfExpression(expr: Expression): BinaryOperator {
@@ -637,12 +634,14 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         map[com.github.javaparser.ast.expr.AssignExpr::class.java] = HandlerInterface {
             handleAssignmentExpression(it)
         }
-        map[FieldAccessExpr::class.java] = HandlerInterface { handleFieldAccessExpression(it) }
+        map[FieldAccessExpr::class.java] = HandlerInterface {
+            handleFieldAccessExpression(it.asFieldAccessExpr())
+        }
         map[LiteralExpr::class.java] = HandlerInterface { handleLiteralExpression(it) }
         map[ThisExpr::class.java] = HandlerInterface { handleThisExpression(it) }
         map[SuperExpr::class.java] = HandlerInterface { handleSuperExpression(it) }
         map[ClassExpr::class.java] = HandlerInterface { handleClassExpression(it) }
-        map[NameExpr::class.java] = HandlerInterface { handleNameExpression(it) }
+        map[NameExpr::class.java] = HandlerInterface { handleNameExpression(it.asNameExpr()) }
         map[InstanceOfExpr::class.java] = HandlerInterface { handleInstanceOfExpression(it) }
         map[UnaryExpr::class.java] = HandlerInterface { handleUnaryExpression(it) }
         map[BinaryExpr::class.java] = HandlerInterface { handleBinaryExpression(it) }
