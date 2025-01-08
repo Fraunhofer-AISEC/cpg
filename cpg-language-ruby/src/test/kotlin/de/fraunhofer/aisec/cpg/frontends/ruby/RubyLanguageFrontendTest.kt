@@ -57,7 +57,7 @@ class RubyLanguageFrontendTest {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("variables.rb").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<RubyLanguage>()
             }

@@ -250,7 +250,7 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
         type: Type,
         targetType: Type,
         hint: HasType? = null,
-        targetHint: HasType? = null
+        targetHint: HasType? = null,
     ): CastResult {
         // We can take a shortcut if it is the same type
         if (type == targetType) {
@@ -308,13 +308,13 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
             // This is an ambiguous result. Let's return all direct matches
             return Pair(
                 directMatches.map { it.key }.toSet(),
-                CallResolutionResult.SuccessKind.AMBIGUOUS
+                CallResolutionResult.SuccessKind.AMBIGUOUS,
             )
         } else if (directMatches.size == 1) {
             // Let's return the single direct match
             return Pair(
                 setOf(directMatches.first().key),
-                CallResolutionResult.SuccessKind.SUCCESSFUL
+                CallResolutionResult.SuccessKind.SUCCESSFUL,
             )
         }
 
@@ -334,7 +334,7 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
                     false,
                     source.ctx!!,
                     null,
-                    needsExactMatch = true
+                    needsExactMatch = true,
                 )
             if (ok) {
                 return Pair(candidates.toSet(), CallResolutionResult.SuccessKind.SUCCESSFUL)
@@ -381,7 +381,7 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
                 log,
                 "Resolution of reference {} was ambiguous, cannot set refersTo correctly, " +
                     "will be set to null.",
-                ref.name
+                ref.name,
             )
             null
         } else {

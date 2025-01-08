@@ -47,7 +47,7 @@ abstract class TemplateDeclaration : Declaration(), DeclarationHolder {
         DEFAULT,
         /** Template Parameter is provided explicitly */
         EXPLICIT,
-        UNKNOWN
+        UNKNOWN,
     }
 
     /** Parameters the Template requires for instantiation */

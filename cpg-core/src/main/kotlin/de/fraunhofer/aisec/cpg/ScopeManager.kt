@@ -82,6 +82,7 @@ class ScopeManager : ScopeProvider {
     /** True, if the scope manager is currently in a [FunctionScope]. */
     val isInFunction: Boolean
         get() = this.firstScopeOrNull { it is FunctionScope } != null
+
     /** True, if the scope manager is currently in a [RecordScope], e.g. a class. */
     val isInRecord: Boolean
         get() = this.firstScopeOrNull { it is RecordScope } != null
@@ -107,6 +108,7 @@ class ScopeManager : ScopeProvider {
         get() =
             this.firstScopeOrNull { scope: Scope? -> scope?.astNode is MethodDeclaration }?.astNode
                 as? MethodDeclaration
+
     /** The current record, according to the scope that is currently active. */
     val currentRecord: RecordDeclaration?
         get() = this.firstScopeIsInstanceOrNull<RecordScope>()?.astNode as? RecordDeclaration
@@ -249,7 +251,7 @@ class ScopeManager : ScopeProvider {
                     else -> {
                         LOGGER.error(
                             "No known scope for AST node of type {}",
-                            nodeToScope.javaClass
+                            nodeToScope.javaClass,
                         )
                         return
                     }
@@ -322,14 +324,14 @@ class ScopeManager : ScopeProvider {
                     nodeToLeave,
                     LOGGER,
                     "Node of type {} has a scope but is not active in the moment.",
-                    nodeToLeave.javaClass
+                    nodeToLeave.javaClass,
                 )
             } else {
                 Util.errorWithFileLocation(
                     nodeToLeave,
                     LOGGER,
                     "Node of type {} is not associated with a scope.",
-                    nodeToLeave.javaClass
+                    nodeToLeave.javaClass,
                 )
             }
 
@@ -631,7 +633,7 @@ class ScopeManager : ScopeProvider {
                 Util.warnWithFileLocation(
                     location,
                     LOGGER,
-                    "Could not find the scope $scopeName needed to resolve $n"
+                    "Could not find the scope $scopeName needed to resolve $n",
                 )
                 return null
             }
@@ -734,7 +736,7 @@ class ScopeManager : ScopeProvider {
     internal inline fun <reified T : Declaration> resolve(
         searchScope: Scope?,
         stopIfFound: Boolean = false,
-        noinline predicate: (T) -> Boolean
+        noinline predicate: (T) -> Boolean,
     ): List<T> {
         return resolve(T::class.java, searchScope, stopIfFound, predicate)
     }
@@ -743,7 +745,7 @@ class ScopeManager : ScopeProvider {
         klass: Class<T>,
         searchScope: Scope?,
         stopIfFound: Boolean = false,
-        predicate: (T) -> Boolean
+        predicate: (T) -> Boolean,
     ): List<T> {
         var scope = searchScope
         val declarations = mutableListOf<T>()
@@ -796,7 +798,7 @@ class ScopeManager : ScopeProvider {
     @JvmOverloads
     fun resolveFunctionTemplateDeclaration(
         call: CallExpression,
-        scope: Scope? = currentScope
+        scope: Scope? = currentScope,
     ): List<FunctionTemplateDeclaration> {
         return resolve(scope, true) { c -> c.name.lastPartsMatch(call.name) }
     }
@@ -927,7 +929,7 @@ class ScopeManager : ScopeProvider {
                             n.localName,
                             languageOnly = language,
                             thisScopeOnly = true,
-                            predicate = predicate
+                            predicate = predicate,
                         )
                         .toMutableList()
                 }
@@ -966,7 +968,7 @@ class ScopeManager : ScopeProvider {
     fun lookupUniqueTypeSymbolByName(
         name: Name,
         language: Language<*>?,
-        startScope: Scope?
+        startScope: Scope?,
     ): DeclaresType? {
         var symbols =
             lookupSymbolByName(name = name, language = language, startScope = startScope) {
@@ -979,7 +981,7 @@ class ScopeManager : ScopeProvider {
         if (symbols.size > 1) {
             LOGGER.warn(
                 "Lookup of type {} returned more than one symbol which declares a type, this is an ambiguity and the following analysis might not be correct.",
-                name
+                name,
             )
         }
 
@@ -1122,7 +1124,7 @@ data class CallResolutionResult(
      * callee. This can differ from the original start scope parameter handed to
      * [SymbolResolver.resolveWithArguments] if the callee contains an FQN.
      */
-    var actualStartScope: Scope?
+    var actualStartScope: Scope?,
 ) {
     /**
      * This enum holds information about the kind of success this call resolution had. For example,
@@ -1165,6 +1167,6 @@ data class CallResolutionResult(
          *
          * [bestViable] is empty in this case.
          */
-        UNRESOLVED
+        UNRESOLVED,
     }
 }

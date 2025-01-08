@@ -106,7 +106,7 @@ class CompilationDatabase : ArrayList<CompilationDatabase.CompilationDatabaseEnt
         val command: String? = null,
         val arguments: List<String>? = null,
         val file: String,
-        val output: String?
+        val output: String?,
     )
 
     /**
@@ -115,7 +115,7 @@ class CompilationDatabase : ArrayList<CompilationDatabase.CompilationDatabaseEnt
     data class ParsedCompilationDatabaseEntry(
         val includes: MutableList<String> = mutableListOf(),
         var component: String = DEFAULT_COMPONENT, // Default to the default component name
-        var arch: String? = null
+        var arch: String? = null,
     )
 
     companion object {
@@ -162,7 +162,7 @@ class CompilationDatabase : ArrayList<CompilationDatabase.CompilationDatabaseEnt
                 if (srcFile.exists()) {
                     db.addIncludePath(
                         srcFile,
-                        parsedEntry.includes.map { resolveRelativePath(it, basedir) }
+                        parsedEntry.includes.map { resolveRelativePath(it, basedir) },
                     )
                 }
 
@@ -409,7 +409,7 @@ class CompilationDatabase : ArrayList<CompilationDatabase.CompilationDatabaseEnt
         private fun parseCMakeNativeOutput(
             output: String,
             cmakeIdx: Int,
-            isLibrary: Boolean
+            isLibrary: Boolean,
         ): String? {
             // If there is any prefix before it, analyze it for some patterns
             var isLibrary = isLibrary

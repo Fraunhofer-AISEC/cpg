@@ -47,9 +47,7 @@ class InitializerListExpression : Expression(), ArgumentHolder, HasType.TypeObse
     /** The list of initializers. */
     @Relationship(value = "INITIALIZERS", direction = Relationship.Direction.OUTGOING)
     var initializerEdges =
-        astEdgesOf<Expression>(
-            onAdd = { it.end.registerTypeObserver(this) },
-        ) {
+        astEdgesOf<Expression>(onAdd = { it.end.registerTypeObserver(this) }) {
             it.end.unregisterTypeObserver(this)
         }
 

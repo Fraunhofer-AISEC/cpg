@@ -137,7 +137,7 @@ internal class SuperCallTest : BaseTest() {
         assertEquals(1, inner.fields.size)
         assertEquals(
             listOf("SubClass.Inner.this\$SubClass"),
-            inner.fields.map { it.name.toString() }
+            inner.fields.map { it.name.toString() },
         )
     }
 }

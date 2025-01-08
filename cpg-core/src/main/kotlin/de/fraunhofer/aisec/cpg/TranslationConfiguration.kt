@@ -122,7 +122,7 @@ private constructor(
     /** A list of exclusion patterns used to filter files and directories. */
     val exclusionPatternsByString: List<String>,
     /** A list of exclusion patterns using regular expressions to filter files and directories. */
-    val exclusionPatternsByRegex: List<Regex>
+    val exclusionPatternsByRegex: List<Regex>,
 ) {
     /** This list contains all languages which we want to translate. */
     val languages: List<Language<*>>
@@ -418,7 +418,7 @@ private constructor(
         inline fun <
             reified OldPass : Pass<*>,
             reified For : Language<*>,
-            reified With : Pass<*>
+            reified With : Pass<*>,
         > replacePass(): Builder {
             return replacePass(OldPass::class, For::class, With::class)
         }
@@ -426,7 +426,7 @@ private constructor(
         fun replacePass(
             passType: KClass<out Pass<*>>,
             forLanguage: KClass<out Language<*>>,
-            with: KClass<out Pass<*>>
+            with: KClass<out Pass<*>>,
         ): Builder {
             replacedPasses[Pair(passType, forLanguage)] = with
             return this
@@ -566,7 +566,7 @@ private constructor(
                         registerPass(p.value)
                         log.info(
                             "Registered an extra (frontend dependent) default dependency: {}",
-                            p.value
+                            p.value,
                         )
                     }
                 }
@@ -581,7 +581,7 @@ private constructor(
                         replacePass(p.old, p.lang, p.with)
                         log.info(
                             "Registered an extra (frontend dependent) default dependency, which replaced an existing pass: {}",
-                            p.old
+                            p.old,
                         )
                     }
                 }
@@ -684,7 +684,7 @@ private constructor(
                 addIncludesToGraph,
                 passConfigurations,
                 exclusionPatternsByString,
-                exclusionPatternsByRegex
+                exclusionPatternsByRegex,
             )
         }
 

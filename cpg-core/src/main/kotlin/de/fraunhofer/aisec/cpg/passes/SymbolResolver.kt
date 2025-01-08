@@ -136,7 +136,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     /** This function seems to resolve function pointers pointing to a [MethodDeclaration]. */
     protected fun resolveMethodFunctionPointer(
         reference: Reference,
-        type: FunctionPointerType
+        type: FunctionPointerType,
     ): ValueDeclaration? {
         var target = scopeManager.resolveReference(reference)
 
@@ -161,7 +161,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                         null,
                         false,
                         type.parameters,
-                        type.returnType
+                        type.returnType,
                     )
         }
 
@@ -198,7 +198,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 ref,
                 log,
                 "Language for reference {} is empty, we cannot resolve this reference correctly.",
-                ref.name
+                ref.name,
             )
             return
         }
@@ -305,11 +305,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 base is Reference &&
                 base.name.endsWith(language.superClassKeyword)
         ) {
-            language.handleSuperExpression(
-                current,
-                curClass,
-                scopeManager,
-            )
+            language.handleSuperExpression(current, curClass, scopeManager)
         }
 
         // For legacy reasons, method and field resolving is split between the VariableUsageResolver
@@ -369,7 +365,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
     protected fun resolveMember(
         containingClass: ObjectType,
-        reference: Reference
+        reference: Reference,
     ): ValueDeclaration? {
         if (isSuperclassReference(reference)) {
             // if we have a "super" on the member side, this is a member call. We need to resolve
@@ -454,7 +450,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                     true,
                     ctx,
                     call.translationUnit,
-                    false
+                    false,
                 )
             if (ok) {
                 call.invokes = candidates.toMutableList()
@@ -584,7 +580,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                             arguments.map(Expression::type),
                             arguments,
                             source.language is HasDefaultArguments,
-                        )
+                        ),
                     )
                 }
                 .filter { it.second is SignatureMatches }
@@ -609,7 +605,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
     protected fun resolveMemberByName(
         symbol: String,
-        possibleContainingTypes: Set<Type>
+        possibleContainingTypes: Set<Type>,
     ): Set<Declaration> {
         var candidates = mutableSetOf<Declaration>()
         val records = possibleContainingTypes.mapNotNull { it.root.recordDeclaration }.toSet()
@@ -658,13 +654,13 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                     val missingNewParams: List<Node?> =
                         template.parameterDefaults.subList(
                             constructExpression.templateArguments.size,
-                            template.parameterDefaults.size
+                            template.parameterDefaults.size,
                         )
                     for (missingParam in missingNewParams) {
                         if (missingParam != null) {
                             constructExpression.addTemplateParameter(
                                 missingParam,
-                                TemplateDeclaration.TemplateInitialization.DEFAULT
+                                TemplateDeclaration.TemplateInitialization.DEFAULT,
                             )
                         }
                     }
@@ -758,7 +754,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
     protected fun getOverridingCandidates(
         possibleSubTypes: Set<Type>,
-        declaration: FunctionDeclaration
+        declaration: FunctionDeclaration,
     ): Set<FunctionDeclaration> {
         return declaration.overriddenBy
             .filter { f ->
@@ -776,7 +772,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
      */
     protected fun getConstructorDeclaration(
         constructExpression: ConstructExpression,
-        recordDeclaration: RecordDeclaration
+        recordDeclaration: RecordDeclaration,
     ): ConstructorDeclaration? {
         val signature = constructExpression.signature
         val constructorCandidate =
@@ -806,7 +802,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
          */
         fun addImplicitTemplateParametersToCall(
             templateParams: List<Node>,
-            constructExpression: ConstructExpression
+            constructExpression: ConstructExpression,
         ) {
             for (node in templateParams) {
                 if (node is TypeExpression) {

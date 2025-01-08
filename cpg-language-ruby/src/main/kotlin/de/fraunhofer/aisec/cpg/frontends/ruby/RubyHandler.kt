@@ -32,7 +32,7 @@ import de.fraunhofer.aisec.cpg.helpers.Util
 
 abstract class RubyHandler<ResultNode : Node, HandlerNode : org.jruby.ast.Node>(
     configConstructor: () -> ResultNode,
-    frontend: RubyLanguageFrontend
+    frontend: RubyLanguageFrontend,
 ) : Handler<ResultNode, HandlerNode, RubyLanguageFrontend>(configConstructor, frontend) {
     /**
      * We intentionally override the logic of [Handler.handle] because we do not want the map-based
@@ -60,7 +60,7 @@ abstract class RubyHandler<ResultNode : Node, HandlerNode : org.jruby.ast.Node>(
             frontend,
             node,
             log,
-            "Parsing of type $name is not supported (yet)"
+            "Parsing of type $name is not supported (yet)",
         )
 
         val cpgNode = this.configConstructor.get()

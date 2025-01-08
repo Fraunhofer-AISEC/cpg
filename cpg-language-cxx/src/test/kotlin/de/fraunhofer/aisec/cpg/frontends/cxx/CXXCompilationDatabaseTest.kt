@@ -40,7 +40,7 @@ class CXXCompilationDatabaseTest {
         val ccs =
             listOf(
                 "src/test/resources/cxxCompilationDatabase/compile_commands_arguments.json",
-                "src/test/resources/cxxCompilationDatabase/compile_commands_commands.json"
+                "src/test/resources/cxxCompilationDatabase/compile_commands_commands.json",
             )
         for (path in ccs) {
             val cc = File(path)

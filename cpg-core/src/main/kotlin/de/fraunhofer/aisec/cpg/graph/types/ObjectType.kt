@@ -60,7 +60,7 @@ open class ObjectType : Type {
         typeName: CharSequence,
         generics: List<Type>,
         primitive: Boolean,
-        language: Language<*>
+        language: Language<*>,
     ) : super(typeName, language) {
         this.generics = generics
         isPrimitive = primitive
@@ -71,7 +71,7 @@ open class ObjectType : Type {
         type: Type?,
         generics: List<Type>,
         primitive: Boolean,
-        language: Language<*>
+        language: Language<*>,
     ) : super(type) {
         this.language = language
         this.generics = generics

@@ -64,10 +64,11 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
             is Python.AST.YieldFrom ->
                 newProblemExpression(
                     "The expression of class ${node.javaClass} is not supported yet",
-                    rawNode = node
+                    rawNode = node,
                 )
         }
     }
+
     /**
      * Translates a Python
      * [`comprehension`](https://docs.python.org/3/library/ast.html#ast.comprehension) into a
@@ -77,7 +78,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
      */
     private fun handleComprehension(
         node: Python.AST.comprehension,
-        parent: Python.AST.BaseExpr
+        parent: Python.AST.BaseExpr,
     ): ComprehensionExpression {
         return newComprehensionExpression(rawNode = parent).apply {
             variable = handle(node.target)
@@ -93,7 +94,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                 additionalProblems +=
                     newProblemExpression(
                         "Node marked as is_async but we don't support this yet",
-                        rawNode = node
+                        rawNode = node,
                     )
         }
     }
@@ -145,7 +146,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                 newKeyValueExpression(
                     key = handle(node.key),
                     value = handle(node.value),
-                    rawNode = node
+                    rawNode = node,
                 )
             this.comprehensionExpressions += node.generators.map { handleComprehension(it, node) }
             this.type = objectType("dict") // TODO: Replace this once we have dedicated types
@@ -164,7 +165,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                 operatorCode = ":=",
                 lhs = listOf(handle(node.target)),
                 rhs = listOf(handle(node.value)),
-                rawNode = node
+                rawNode = node,
             )
         assignExpression.usedAsExpression = true
         return assignExpression
@@ -224,7 +225,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                         newCallExpression(
                                 callee = newReference(name = "str", rawNode = node),
                                 fqn = "str",
-                                rawNode = node
+                                rawNode = node,
                             )
                             .implicit()
                     strCall.addArgument(valueExpression)
@@ -236,7 +237,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                         newCallExpression(
                                 callee = newReference(name = "repr", rawNode = node),
                                 fqn = "repr",
-                                rawNode = node
+                                rawNode = node,
                             )
                             .implicit()
                     reprCall.addArgument(valueExpression)
@@ -248,7 +249,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                         newCallExpression(
                                 newReference("ascii", rawNode = node),
                                 "ascii",
-                                rawNode = node
+                                rawNode = node,
                             )
                             .implicit()
                     asciiCall.addArgument(handle(node.value))
@@ -258,14 +259,14 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                     newProblemExpression(
                         problem =
                             "Cannot handle formatted value with conversion code ${node.conversion} yet",
-                        rawNode = node
+                        rawNode = node,
                     )
             }
         if (formatSpec != null) {
             return newCallExpression(
                     callee = newReference(name = "format", rawNode = node),
                     fqn = "format",
-                    rawNode = node
+                    rawNode = node,
                 )
                 .implicit()
                 .apply {
@@ -300,7 +301,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         operatorCode: String,
         nodes: List<Expression>,
         rawNode: Python.AST.AST? = null,
-        isImplicit: Boolean = true
+        isImplicit: Boolean = true,
     ): BinaryOperator {
         val lastTwo =
             newBinaryOperator(operatorCode = operatorCode, rawNode = rawNode).apply {
@@ -358,14 +359,14 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         return if (node.values.size <= 1) {
             newProblemExpression(
                 "Expected exactly two expressions but got ${node.values.size}",
-                rawNode = node
+                rawNode = node,
             )
         } else {
             joinListWithBinOp(
                 operatorCode = op,
                 nodes = node.values.map(::handle),
                 rawNode = node,
-                isImplicit = true
+                isImplicit = true,
             )
         }
     }
@@ -408,7 +409,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
             condition = handle(node.test),
             thenExpression = handle(node.body),
             elseExpression = handle(node.orelse),
-            rawNode = node
+            rawNode = node,
         )
     }
 

@@ -58,7 +58,7 @@ import de.fraunhofer.aisec.cpg.analysis.compareTo
 open class QueryTree<T>(
     open var value: T,
     open val children: MutableList<QueryTree<*>> = mutableListOf(),
-    open var stringRepresentation: String = ""
+    open var stringRepresentation: String = "",
 ) : Comparable<QueryTree<T>> {
     fun printNicely(depth: Int = 0): String {
         var res =
@@ -164,7 +164,7 @@ infix fun QueryTree<Boolean>.and(other: QueryTree<Boolean>): QueryTree<Boolean> 
     return QueryTree(
         this.value && other.value,
         mutableListOf(this, other),
-        stringRepresentation = "${this.value} && ${other.value}"
+        stringRepresentation = "${this.value} && ${other.value}",
     )
 }
 
@@ -173,7 +173,7 @@ infix fun QueryTree<Boolean>.or(other: QueryTree<Boolean>): QueryTree<Boolean> {
     return QueryTree(
         this.value || other.value,
         mutableListOf(this, other),
-        stringRepresentation = "${this.value} || ${other.value}"
+        stringRepresentation = "${this.value} || ${other.value}",
     )
 }
 
@@ -182,7 +182,7 @@ infix fun QueryTree<Boolean>.xor(other: QueryTree<Boolean>): QueryTree<Boolean> 
     return QueryTree(
         this.value xor other.value,
         mutableListOf(this, other),
-        stringRepresentation = "${this.value} xor ${other.value}"
+        stringRepresentation = "${this.value} xor ${other.value}",
     )
 }
 
@@ -191,7 +191,7 @@ infix fun QueryTree<Boolean>.implies(other: QueryTree<Boolean>): QueryTree<Boole
     return QueryTree(
         !this.value || other.value,
         mutableListOf(this, other),
-        stringRepresentation = "${this.value} => ${other.value}"
+        stringRepresentation = "${this.value} => ${other.value}",
     )
 }
 
@@ -201,7 +201,7 @@ infix fun QueryTree<Boolean>.implies(other: Lazy<QueryTree<Boolean>>): QueryTree
         !this.value || other.value.value,
         if (!this.value) mutableListOf(this) else mutableListOf(this, other.value),
         stringRepresentation =
-            if (!this.value) "false => XYZ" else "${this.value} => ${other.value}"
+            if (!this.value) "false => XYZ" else "${this.value} => ${other.value}",
     )
 }
 

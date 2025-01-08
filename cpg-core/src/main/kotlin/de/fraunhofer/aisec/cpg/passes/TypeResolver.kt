@@ -121,7 +121,7 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 "Resolving type {} in {} scope to {}",
                 type.name,
                 type.scope,
-                declaredType.name
+                declaredType.name,
             )
             type.name = declaredType.name
             type.declaredFrom = declares

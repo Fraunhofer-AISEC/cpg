@@ -32,5 +32,5 @@ class BooleanType(
     typeName: CharSequence = "bool",
     bitWidth: Int? = 1,
     language: Language<*>,
-    modifier: Modifier = Modifier.NOT_APPLICABLE
+    modifier: Modifier = Modifier.NOT_APPLICABLE,
 ) : NumericType(typeName, bitWidth, language, modifier)

@@ -55,7 +55,7 @@ class TestFileLanguageFrontend(
         TranslationContext(
             TranslationConfiguration.builder().build(),
             ScopeManager(),
-            TypeManager()
+            TypeManager(),
         ),
 ) : TestLanguageFrontend("::", language, ctx) {
     override fun parse(file: File): TranslationUnitDeclaration {

@@ -224,7 +224,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     funcTypeName(func.signatureTypes, func.returnTypes),
                     func.signatureTypes,
                     func.returnTypes,
-                    func.language
+                    func.language,
                 )
             )
         scopeManager.addDeclaration(func)

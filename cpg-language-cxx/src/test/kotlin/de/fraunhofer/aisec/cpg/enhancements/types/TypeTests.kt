@@ -49,13 +49,13 @@ internal class TypeTests : BaseTest() {
         // Test 1: ObjectType becomes PointerType containing the original ObjectType as ElementType
         assertEquals(
             PointerType(objectType, PointerType.PointerOrigin.POINTER),
-            objectType.reference(PointerType.PointerOrigin.POINTER)
+            objectType.reference(PointerType.PointerOrigin.POINTER),
         )
 
         // Test 2: Existing PointerType adds one level more of references as ElementType
         assertEquals(
             PointerType(pointerType, PointerType.PointerOrigin.POINTER),
-            pointerType.reference(PointerType.PointerOrigin.POINTER)
+            pointerType.reference(PointerType.PointerOrigin.POINTER),
         )
 
         // Test 3: UnknownType cannot be referenced
@@ -64,13 +64,13 @@ internal class TypeTests : BaseTest() {
         // Test 4: IncompleteType can be refereced e.g. void*
         assertEquals(
             PointerType(incompleteType, PointerType.PointerOrigin.POINTER),
-            incompleteType.reference(PointerType.PointerOrigin.POINTER)
+            incompleteType.reference(PointerType.PointerOrigin.POINTER),
         )
 
         // Test 5: Create reference to function pointer = pointer to function pointer
         assertEquals(
             PointerType(functionPointerType, PointerType.PointerOrigin.POINTER),
-            functionPointerType.reference(PointerType.PointerOrigin.POINTER)
+            functionPointerType.reference(PointerType.PointerOrigin.POINTER),
         )
     }
 
@@ -116,7 +116,7 @@ internal class TypeTests : BaseTest() {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("fptr_type.cpp").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
@@ -126,13 +126,13 @@ internal class TypeTests : BaseTest() {
             FunctionPointerType(
                 listOf<Type>(tu.primitiveType("int")),
                 CPPLanguage(),
-                IncompleteType(CPPLanguage())
+                IncompleteType(CPPLanguage()),
             )
         val twoParamType =
             FunctionPointerType(
                 listOf(tu.primitiveType("int"), tu.primitiveType("unsigned long int")),
                 CPPLanguage(),
-                IntegerType("int", 32, CPPLanguage(), NumericType.Modifier.SIGNED)
+                IntegerType("int", 32, CPPLanguage(), NumericType.Modifier.SIGNED),
             )
         val variables = tu.variables
         val localTwoParam = findByUniqueName(variables, "local_two_param")
@@ -169,8 +169,8 @@ internal class TypeTests : BaseTest() {
                 TranslationContext(
                     TranslationConfiguration.builder().build(),
                     ScopeManager(),
-                    TypeManager()
-                )
+                    TypeManager(),
+                ),
             )
         ) {
             val topLevel =
@@ -260,7 +260,7 @@ internal class TypeTests : BaseTest() {
         level1: Type,
         level1b: Type,
         level2: Type,
-        unrelated: Type
+        unrelated: Type,
     ) {
         /*
         Type hierarchy:

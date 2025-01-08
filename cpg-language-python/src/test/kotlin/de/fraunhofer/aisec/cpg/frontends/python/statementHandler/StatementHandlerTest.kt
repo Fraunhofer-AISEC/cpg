@@ -108,7 +108,7 @@ class StatementHandlerTest : BaseTest() {
             Util.eogConnect(
                 n = tryAll.elseBlock,
                 en = Util.Edge.ENTRIES,
-                refs = listOf(tryAll.tryBlock)
+                refs = listOf(tryAll.tryBlock),
             )
         )
 
@@ -117,7 +117,7 @@ class StatementHandlerTest : BaseTest() {
             Util.eogConnect(
                 n = tryAll.elseBlock,
                 en = Util.Edge.EXITS,
-                refs = listOf(tryAll.finallyBlock)
+                refs = listOf(tryAll.finallyBlock),
             )
         )
     }

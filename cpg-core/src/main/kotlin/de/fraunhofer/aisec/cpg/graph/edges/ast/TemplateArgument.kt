@@ -40,5 +40,5 @@ class TemplateArgument<NodeType : Node>(
 class TemplateArguments<NodeType : Node>(thisRef: Node) :
     AstEdges<NodeType, TemplateArgument<NodeType>>(
         thisRef,
-        init = { start, end -> TemplateArgument(start, end) }
+        init = { start, end -> TemplateArgument(start, end) },
     )

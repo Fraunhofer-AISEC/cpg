@@ -69,7 +69,7 @@ data class JsonEdge(
     val type: String,
     val startNode: Long,
     val endNode: Long,
-    val properties: Map<String, Any>
+    val properties: Map<String, Any>,
 )
 
 data class JsonGraph(val nodes: List<JsonNode>, val edges: List<JsonEdge>)
@@ -90,6 +90,7 @@ class Application : Callable<Int> {
 
     private val log: Logger
         get() = LoggerFactory.getLogger(Application::class.java)
+
     // Either provide the files to evaluate or provide the path of compilation database with
     // --json-compilation-database flag
     @ArgGroup(exclusive = true, multiplicity = "1")
@@ -101,7 +102,7 @@ class Application : Callable<Int> {
             description =
                 [
                     "The paths to analyze. If module support is enabled, the paths will be looked at if they contain modules"
-                ]
+                ],
         )
         var files: List<String> = mutableListOf()
 
@@ -110,45 +111,45 @@ class Application : Callable<Int> {
             description =
                 [
                     "Maps the names of software components to their respective files. The files are separated by commas (No whitespace!).",
-                    "Example: -S App1=./file1.c,./file2.c -S App2=./Main.java,./Class.java"
-                ]
+                    "Example: -S App1=./file1.c,./file2.c -S App2=./Main.java,./Class.java",
+                ],
         )
         var softwareComponents: Map<String, String> = mutableMapOf()
 
         @CommandLine.Option(
             names = ["--json-compilation-database"],
-            description = ["The path to an optional a JSON compilation database"]
+            description = ["The path to an optional a JSON compilation database"],
         )
         var jsonCompilationDatabase: File? = null
 
         @CommandLine.Option(
             names = ["--list-passes"],
-            description = ["Prints the list available passes"]
+            description = ["Prints the list available passes"],
         )
         var listPasses: Boolean = false
     }
 
     @CommandLine.Option(
         names = ["--user"],
-        description = ["Neo4j user name (default: $DEFAULT_USER_NAME)"]
+        description = ["Neo4j user name (default: $DEFAULT_USER_NAME)"],
     )
     var neo4jUsername: String = DEFAULT_USER_NAME
 
     @CommandLine.Option(
         names = ["--password"],
-        description = ["Neo4j password (default: $DEFAULT_PASSWORD"]
+        description = ["Neo4j password (default: $DEFAULT_PASSWORD"],
     )
     var neo4jPassword: String = DEFAULT_PASSWORD
 
     @CommandLine.Option(
         names = ["--host"],
-        description = ["Set the host of the neo4j Database (default: $DEFAULT_HOST)."]
+        description = ["Set the host of the neo4j Database (default: $DEFAULT_HOST)."],
     )
     private var host: String = DEFAULT_HOST
 
     @CommandLine.Option(
         names = ["--port"],
-        description = ["Set the port of the neo4j Database (default: $DEFAULT_PORT)."]
+        description = ["Set the port of the neo4j Database (default: $DEFAULT_PORT)."],
     )
     private var port: Int = DEFAULT_PORT
 
@@ -159,7 +160,7 @@ class Application : Callable<Int> {
                 "Performance optimisation: " +
                     "Limit recursion depth form neo4j OGM when leaving the AST. " +
                     "$DEFAULT_SAVE_DEPTH (default) means no limit is used."
-            ]
+            ],
     )
     private var depth: Int = DEFAULT_SAVE_DEPTH
 
@@ -170,19 +171,19 @@ class Application : Callable<Int> {
                 "Performance optimisation: " +
                     "Limit the ControlFlowSensitiveDFGPass to functions with a complexity less than what is specified here. " +
                     "$DEFAULT_MAX_COMPLEXITY (default) means no limit is used."
-            ]
+            ],
     )
     private var maxComplexity: Int = DEFAULT_MAX_COMPLEXITY
 
     @CommandLine.Option(
         names = ["--load-includes"],
-        description = ["Enable TranslationConfiguration option loadIncludes"]
+        description = ["Enable TranslationConfiguration option loadIncludes"],
     )
     private var loadIncludes: Boolean = false
 
     @CommandLine.Option(
         names = ["--use-unity-build"],
-        description = ["Enable unity build mode for C++ (requires --load-includes)"]
+        description = ["Enable unity build mode for C++ (requires --load-includes)"],
     )
     private var useUnityBuild: Boolean = false
 
@@ -191,13 +192,13 @@ class Application : Callable<Int> {
 
     @CommandLine.Option(
         names = ["--print-benchmark"],
-        description = ["Print benchmark result as markdown table"]
+        description = ["Print benchmark result as markdown table"],
     )
     private var printBenchmark: Boolean = false
 
     @CommandLine.Option(
         names = ["--no-default-passes"],
-        description = ["Do not register default passes [used for debugging]"]
+        description = ["Do not register default passes [used for debugging]"],
     )
     private var noDefaultPasses: Boolean = false
 
@@ -209,37 +210,37 @@ class Application : Callable<Int> {
                     " passed as a comma-separated list; give either pass name if pass is in list," +
                     " or its FQDN" +
                     " (e.g. --custom-pass-list=DFGPass,CallResolver)"
-            ]
+            ],
     )
     private var customPasses: String = "DEFAULT"
 
     @CommandLine.Option(
         names = ["--no-neo4j"],
-        description = ["Do not push cpg into neo4j [used for debugging]"]
+        description = ["Do not push cpg into neo4j [used for debugging]"],
     )
     private var noNeo4j: Boolean = false
 
     @CommandLine.Option(
         names = ["--no-purge-db"],
-        description = ["Do no purge neo4j database before pushing the cpg"]
+        description = ["Do no purge neo4j database before pushing the cpg"],
     )
     private var noPurgeDb: Boolean = false
 
     @CommandLine.Option(
         names = ["--infer-nodes"],
-        description = ["Create inferred nodes for missing declarations"]
+        description = ["Create inferred nodes for missing declarations"],
     )
     private var inferNodes: Boolean = false
 
     @CommandLine.Option(
         names = ["--schema-markdown"],
-        description = ["Print the CPGs nodes and edges that they can have."]
+        description = ["Print the CPGs nodes and edges that they can have."],
     )
     private var schemaMarkdown: Boolean = false
 
     @CommandLine.Option(
         names = ["--schema-json"],
-        description = ["Print the CPGs nodes and edges that they can have."]
+        description = ["Print the CPGs nodes and edges that they can have."],
     )
     private var schemaJson: Boolean = false
 
@@ -248,20 +249,20 @@ class Application : Callable<Int> {
         description =
             [
                 "Set top level directory of project structure. Default: Largest common path of all source files"
-            ]
+            ],
     )
     private var topLevel: File? = null
 
     @CommandLine.Option(
         names = ["--exclusion-patterns"],
         description =
-            ["Configures an exclusion pattern for files or directories that should not be parsed"]
+            ["Configures an exclusion pattern for files or directories that should not be parsed"],
     )
     private var exclusionPatterns: List<String> = listOf()
 
     @CommandLine.Option(
         names = ["--benchmark-json"],
-        description = ["Save benchmark results to json file"]
+        description = ["Save benchmark results to json file"],
     )
     private var benchmarkJson: File? = null
 
@@ -278,7 +279,7 @@ class Application : Callable<Int> {
             ControlFlowSensitiveDFGPass::class,
             FilenameMapper::class,
             ControlDependenceGraphPass::class,
-            ProgramDependenceGraphPass::class
+            ProgramDependenceGraphPass::class,
         )
     private var passClassMap = passClassList.associateBy { it.simpleName }
 
@@ -334,7 +335,7 @@ class Application : Callable<Int> {
      */
     fun buildJsonGraph(
         newNodeBuilders: List<DefaultNodeBuilder>?,
-        newRelationshipBuilders: List<DefaultRelationshipBuilder>?
+        newRelationshipBuilders: List<DefaultRelationshipBuilder>?,
     ): JsonGraph {
         // create simple json structure with flat list of nodes and edges
         val nodes =
@@ -343,7 +344,7 @@ class Application : Callable<Int> {
                 JsonNode(
                     node.id,
                     node.labels.toSet(),
-                    node.propertyList.associate { prop -> prop.key to prop.value }
+                    node.propertyList.associate { prop -> prop.key to prop.value },
                 )
             } ?: emptyList()
         val edges =
@@ -357,7 +358,7 @@ class Application : Callable<Int> {
                         edge.type,
                         edge.startNode,
                         edge.endNode,
-                        edge.propertyList.associate { prop -> prop.key to prop.value }
+                        edge.propertyList.associate { prop -> prop.key to prop.value },
                     )
                 } ?: emptyList()
 
@@ -413,7 +414,7 @@ class Application : Callable<Int> {
         val driver =
             GraphDatabase.driver(
                 "$PROTOCOL$host:$port",
-                org.neo4j.driver.AuthTokens.basic(neo4jUsername, neo4jPassword)
+                org.neo4j.driver.AuthTokens.basic(neo4jUsername, neo4jPassword),
             )
         driver.verifyConnectivity()
         return driver.session()
@@ -465,9 +466,7 @@ class Application : Callable<Int> {
 
         if (maxComplexity != -1) {
             translationConfiguration.configurePass<ControlFlowSensitiveDFGPass>(
-                ControlFlowSensitiveDFGPass.Configuration(
-                    maxComplexity = maxComplexity,
-                )
+                ControlFlowSensitiveDFGPass.Configuration(maxComplexity = maxComplexity)
             )
         }
 

@@ -45,7 +45,7 @@ internal class FunctionTemplateTest : BaseTest() {
             analyze(
                 listOf(Path.of(topLevel.toString(), "functionTemplate.cpp").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
@@ -65,20 +65,20 @@ internal class FunctionTemplateTest : BaseTest() {
     private fun testFunctionTemplateArguments(
         callFloat3: CallExpression,
         floatType: ObjectType,
-        int3: Literal<*>
+        int3: Literal<*>,
     ) {
         assertEquals(2, callFloat3.templateArguments.size)
         assertEquals(floatType, (callFloat3.templateArguments[0] as TypeExpression).type)
         assertEquals(0, callFloat3.templateArgumentEdges!![0].index)
         assertEquals(
             TemplateDeclaration.TemplateInitialization.EXPLICIT,
-            callFloat3.templateArgumentEdges!![0].instantiation
+            callFloat3.templateArgumentEdges!![0].instantiation,
         )
         assertEquals(int3, callFloat3.templateArguments[1])
         assertEquals(1, callFloat3.templateArgumentEdges!![1].index)
         assertEquals(
             TemplateDeclaration.TemplateInitialization.EXPLICIT,
-            callFloat3.templateArgumentEdges!![1].instantiation
+            callFloat3.templateArgumentEdges!![1].instantiation,
         )
     }
 
@@ -89,7 +89,7 @@ internal class FunctionTemplateTest : BaseTest() {
             analyze(
                 listOf(Path.of(topLevel.toString(), "functionTemplate.cpp").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
@@ -159,7 +159,7 @@ internal class FunctionTemplateTest : BaseTest() {
             analyze(
                 listOf(Path.of(topLevel.toString(), "functionTemplateInvocation1.cpp").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
@@ -189,7 +189,7 @@ internal class FunctionTemplateTest : BaseTest() {
             analyze(
                 listOf(Path.of(topLevel.toString(), "functionTemplateInvocation2.cpp").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
@@ -235,7 +235,7 @@ internal class FunctionTemplateTest : BaseTest() {
             analyze(
                 listOf(Path.of(topLevel.toString(), "functionTemplateInvocation3.cpp").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
@@ -277,7 +277,7 @@ internal class FunctionTemplateTest : BaseTest() {
             analyze(
                 listOf(Path.of(topLevel.toString(), "functionTemplateInvocation4.cpp").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
@@ -326,7 +326,7 @@ internal class FunctionTemplateTest : BaseTest() {
             analyze(
                 listOf(Path.of(topLevel.toString(), "functionTemplateInvocation5.cpp").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
@@ -372,7 +372,7 @@ internal class FunctionTemplateTest : BaseTest() {
             analyze(
                 listOf(Path.of(topLevel.toString(), "functionTemplateInvocation6.cpp").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
@@ -428,7 +428,7 @@ internal class FunctionTemplateTest : BaseTest() {
             analyze(
                 listOf(Path.of(topLevel.toString(), "functionTemplateInvocation7.cpp").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
@@ -480,7 +480,7 @@ internal class FunctionTemplateTest : BaseTest() {
             analyze(
                 listOf(Path.of(topLevel.toString(), "functionTemplateMethod.cpp").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
@@ -515,7 +515,7 @@ internal class FunctionTemplateTest : BaseTest() {
         assertLocalName("int", callExpression.templateArguments[0])
         assertEquals(
             TemplateDeclaration.TemplateInitialization.EXPLICIT,
-            callExpression.templateArgumentEdges?.get(0)?.instantiation
+            callExpression.templateArgumentEdges?.get(0)?.instantiation,
         )
         assertEquals(0, callExpression.templateArgumentEdges!![0].index)
         val int5 =
@@ -524,7 +524,7 @@ internal class FunctionTemplateTest : BaseTest() {
         assertEquals(1, callExpression.templateArgumentEdges!![1].index)
         assertEquals(
             TemplateDeclaration.TemplateInitialization.DEFAULT,
-            callExpression.templateArgumentEdges!![1].instantiation
+            callExpression.templateArgumentEdges!![1].instantiation,
         )
     }
 
@@ -536,7 +536,7 @@ internal class FunctionTemplateTest : BaseTest() {
             analyze(
                 listOf(Path.of(topLevel.toString(), "functionTemplateInvocation8.cpp").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<CPPLanguage>()
             }

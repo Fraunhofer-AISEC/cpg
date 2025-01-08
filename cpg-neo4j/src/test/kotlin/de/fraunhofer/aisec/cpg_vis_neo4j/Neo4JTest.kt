@@ -74,15 +74,11 @@ class Neo4JTest {
         val connectCall = result.calls["connect"]
         assertNotNull(connectCall)
 
-        abstract class NetworkingOperation(
-            concept: Concept<out Operation>,
-        ) : Operation(concept)
+        abstract class NetworkingOperation(concept: Concept<out Operation>) : Operation(concept)
         class Connect(concept: Concept<out Operation>) : NetworkingOperation(concept)
         class Networking() : Concept<NetworkingOperation>()
 
-        abstract class FileOperation(
-            concept: Concept<out Operation>,
-        ) : Operation(concept)
+        abstract class FileOperation(concept: Concept<out Operation>) : Operation(concept)
         class FileHandling() : Concept<FileOperation>()
 
         val nw = Networking()

@@ -197,7 +197,7 @@ class IniFileFrontend(language: Language<IniFileFrontend>, ctx: TranslationConte
     override fun locationOf(astNode: Any): PhysicalLocation? {
         return PhysicalLocation(
             uri,
-            region
+            region,
         ) // currently, the line number / column cannot be accessed given an Ini object -> we only
         // provide a precise uri
     }

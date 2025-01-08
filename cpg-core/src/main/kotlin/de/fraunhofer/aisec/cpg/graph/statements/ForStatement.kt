@@ -87,7 +87,7 @@ class ForStatement : LoopStatement(), BranchingNode {
             this.condition,
             this.initializerStatement,
             this.conditionDeclaration,
-            this.iterationStatement
+            this.iterationStatement,
         )
     }
 }

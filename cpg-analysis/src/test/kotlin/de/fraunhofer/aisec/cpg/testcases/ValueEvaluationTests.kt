@@ -61,7 +61,7 @@ class ValueEvaluationTests {
                                             variable("i", t("int")) { literal(0, t("int")) }
                                         },
                                         ref("i") lt member("length", ref("array")),
-                                        ref("i").inc()
+                                        ref("i").inc(),
                                     ) {
                                         subscriptExpr {
                                             ref("array")
@@ -292,7 +292,7 @@ class ValueEvaluationTests {
                                             newConditionalExpression(
                                                 ref("b") lt literal(2, t("int")),
                                                 literal(3, t("int")),
-                                                literal(5, t("int")).inc()
+                                                literal(5, t("int")).inc(),
                                             )
                                     }
                                 }
@@ -316,7 +316,7 @@ class ValueEvaluationTests {
                                 forStmt(
                                     declareVar("i", t("int")) { literal(0, t("int")) },
                                     ref("i") lt literal(6, t("int")),
-                                    ref("i").incNoContext()
+                                    ref("i").incNoContext(),
                                 ) {
                                     subscriptExpr {
                                         ref("array")

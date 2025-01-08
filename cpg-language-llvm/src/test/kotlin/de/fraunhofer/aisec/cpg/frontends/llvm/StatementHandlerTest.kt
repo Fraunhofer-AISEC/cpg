@@ -66,7 +66,7 @@ class StatementHandlerTest {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("integer_ops.ll").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<LLVMIRLanguage>()
             }
@@ -230,7 +230,7 @@ class StatementHandlerTest {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("floatingpoint_ops.ll").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<LLVMIRLanguage>()
             }
@@ -334,7 +334,7 @@ class StatementHandlerTest {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("integer_comparisons.ll").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<LLVMIRLanguage>()
             }
@@ -486,7 +486,7 @@ class StatementHandlerTest {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("floatingpoint_comparisons.ll").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<LLVMIRLanguage>()
             }
@@ -767,7 +767,7 @@ class StatementHandlerTest {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("atomicrmw.ll").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<LLVMIRLanguage>()
             }
@@ -844,7 +844,7 @@ class StatementHandlerTest {
         atomicrmwStatement: Block,
         cmp: String,
         variableName: String,
-        requiresUintCast: Boolean
+        requiresUintCast: Boolean,
     ) {
         // Check that the value is assigned to
         val declaration = atomicrmwStatement.statements[0].declarations[0]
@@ -899,7 +899,7 @@ class StatementHandlerTest {
     private fun checkAtomicRmwBinaryOpReplacement(
         atomicrmwStatement: Block,
         operator: String,
-        variableName: String
+        variableName: String,
     ) {
         // Check that the value is assigned to
         val declaration = atomicrmwStatement.statements[0].declarations[0]
@@ -957,7 +957,7 @@ class StatementHandlerTest {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("indirectbr.ll").toFile()),
                 topLevel,
-                false
+                false,
             ) {
                 it.registerLanguage<LLVMIRLanguage>()
             }
