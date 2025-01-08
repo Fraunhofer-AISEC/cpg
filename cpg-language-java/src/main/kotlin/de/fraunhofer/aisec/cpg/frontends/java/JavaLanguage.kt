@@ -96,7 +96,7 @@ open class JavaLanguage :
 
             // String: https://docs.oracle.com/javase/specs/jls/se19/html/jls-4.html#jls-4.3.3
             "String" to StringType("java.lang.String", this),
-            "java.lang.String" to StringType("java.lang.String", this)
+            "java.lang.String" to StringType("java.lang.String", this),
         )
 
     override fun propagateTypeOfBinaryOperation(operation: BinaryOperator): Type {

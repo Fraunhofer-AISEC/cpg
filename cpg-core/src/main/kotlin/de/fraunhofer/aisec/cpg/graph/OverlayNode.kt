@@ -43,11 +43,6 @@ abstract class OverlayNode() : Node() {
     @Relationship(value = "OVERLAY", direction = Relationship.Direction.INCOMING)
     /** All [OverlayNode]s nodes are connected to an original cpg [Node] by this. */
     val underlyingNodeEdge: OverlaySingleEdge =
-        OverlaySingleEdge(
-            this,
-            of = null,
-            mirrorProperty = Node::overlayEdges,
-            outgoing = false,
-        )
+        OverlaySingleEdge(this, of = null, mirrorProperty = Node::overlayEdges, outgoing = false)
     var underlyingNode by unwrapping(OverlayNode::underlyingNodeEdge)
 }

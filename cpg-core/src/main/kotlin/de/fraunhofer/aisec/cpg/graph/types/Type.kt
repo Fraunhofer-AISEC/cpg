@@ -117,7 +117,7 @@ abstract class Type : Node {
         RESOLVED,
         DATAFLOW,
         GUESSED,
-        UNRESOLVED
+        UNRESOLVED,
     }
 
     /**

@@ -47,7 +47,7 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
  */
 inline fun <reified T> Node.allExtended(
     noinline sel: ((T) -> Boolean)? = null,
-    noinline mustSatisfy: (T) -> QueryTree<Boolean>
+    noinline mustSatisfy: (T) -> QueryTree<Boolean>,
 ): QueryTree<Boolean> {
     val nodes = this.allChildren(sel)
 
@@ -68,7 +68,7 @@ inline fun <reified T> Node.allExtended(
  */
 inline fun <reified T> Node.all(
     noinline sel: ((T) -> Boolean)? = null,
-    noinline mustSatisfy: (T) -> Boolean
+    noinline mustSatisfy: (T) -> Boolean,
 ): Pair<Boolean, List<T>> {
     val nodes = this.allChildren(sel)
 
@@ -85,7 +85,7 @@ inline fun <reified T> Node.all(
  */
 inline fun <reified T> Node.existsExtended(
     noinline sel: ((T) -> Boolean)? = null,
-    noinline mustSatisfy: (T) -> QueryTree<Boolean>
+    noinline mustSatisfy: (T) -> QueryTree<Boolean>,
 ): QueryTree<Boolean> {
     val nodes = this.allChildren(sel)
 
@@ -105,7 +105,7 @@ inline fun <reified T> Node.existsExtended(
  */
 inline fun <reified T> Node.exists(
     noinline sel: ((T) -> Boolean)? = null,
-    noinline mustSatisfy: (T) -> Boolean
+    noinline mustSatisfy: (T) -> Boolean,
 ): Pair<Boolean, List<T>> {
     val nodes = this.allChildren(sel)
 
@@ -198,7 +198,7 @@ fun dataFlow(
     from: Node,
     to: Node,
     collectFailedPaths: Boolean = true,
-    findAllPossiblePaths: Boolean = true
+    findAllPossiblePaths: Boolean = true,
 ): QueryTree<Boolean> {
     val evalRes =
         from.followNextFullDFGEdgesUntilHit(collectFailedPaths, findAllPossiblePaths) { it == to }
@@ -207,7 +207,7 @@ fun dataFlow(
     return QueryTree(
         evalRes.fulfilled.isNotEmpty(),
         allPaths.toMutableList(),
-        "data flow from $from to $to"
+        "data flow from $from to $to",
     )
 }
 
@@ -219,7 +219,7 @@ fun dataFlow(
     from: Node,
     predicate: (Node) -> Boolean,
     collectFailedPaths: Boolean = true,
-    findAllPossiblePaths: Boolean = true
+    findAllPossiblePaths: Boolean = true,
 ): QueryTree<Boolean> {
     val evalRes =
         from.followNextFullDFGEdgesUntilHit(collectFailedPaths, findAllPossiblePaths, predicate)
@@ -228,7 +228,7 @@ fun dataFlow(
     return QueryTree(
         evalRes.fulfilled.isNotEmpty(),
         allPaths.toMutableList(),
-        "data flow from $from to ${evalRes.fulfilled.map { it.last() }}"
+        "data flow from $from to ${evalRes.fulfilled.map { it.last() }}",
     )
 }
 
@@ -240,7 +240,7 @@ fun executionPath(from: Node, to: Node): QueryTree<Boolean> {
     return QueryTree(
         evalRes.fulfilled.isNotEmpty(),
         allPaths.toMutableList(),
-        "executionPath($from, $to)"
+        "executionPath($from, $to)",
     )
 }
 
@@ -255,7 +255,7 @@ fun executionPath(from: Node, predicate: (Node) -> Boolean): QueryTree<Boolean> 
     return QueryTree(
         evalRes.fulfilled.isNotEmpty(),
         allPaths.toMutableList(),
-        "executionPath($from, $predicate)"
+        "executionPath($from, $predicate)",
     )
 }
 
@@ -270,7 +270,7 @@ fun executionPathBackwards(to: Node, predicate: (Node) -> Boolean): QueryTree<Bo
     return QueryTree(
         evalRes.fulfilled.isNotEmpty(),
         allPaths.toMutableList(),
-        "executionPathBackwards($to, $predicate)"
+        "executionPathBackwards($to, $predicate)",
     )
 }
 

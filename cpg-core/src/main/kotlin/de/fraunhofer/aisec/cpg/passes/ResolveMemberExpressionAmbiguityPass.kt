@@ -100,7 +100,7 @@ class ResolveMemberExpressionAmbiguityPass(ctx: TranslationContext) : Translatio
                 name,
                 language = hint.language,
                 location = hint.location,
-                startScope = hint.scope
+                startScope = hint.scope,
             )
         var isImportedNamespace = resolved.singleOrNull() is NamespaceDeclaration
         if (!isImportedNamespace) {

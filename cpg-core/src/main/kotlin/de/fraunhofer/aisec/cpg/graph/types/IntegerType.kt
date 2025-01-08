@@ -32,5 +32,5 @@ class IntegerType(
     typeName: CharSequence = "",
     bitWidth: Int? = null,
     language: Language<*>,
-    modifier: Modifier = Modifier.SIGNED
+    modifier: Modifier = Modifier.SIGNED,
 ) : NumericType(typeName, bitWidth, language, modifier)

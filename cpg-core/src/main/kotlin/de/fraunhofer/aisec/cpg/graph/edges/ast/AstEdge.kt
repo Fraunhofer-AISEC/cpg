@@ -54,14 +54,14 @@ fun <NodeType : Node> Node.astEdgesOf(
  * container).
  */
 fun <NodeType : Node> Node.astOptionalEdgeOf(
-    onChanged: ((old: AstEdge<NodeType>?, new: AstEdge<NodeType>?) -> Unit)? = null,
+    onChanged: ((old: AstEdge<NodeType>?, new: AstEdge<NodeType>?) -> Unit)? = null
 ): EdgeSingletonList<NodeType, NodeType?, AstEdge<NodeType>> {
     return EdgeSingletonList(
         thisRef = this,
         init = ::AstEdge,
         outgoing = true,
         onChanged = onChanged,
-        of = null
+        of = null,
     )
 }
 
@@ -77,7 +77,7 @@ fun <NodeType : Node> Node.astEdgeOf(
         init = ::AstEdge,
         outgoing = true,
         onChanged = onChanged,
-        of = of
+        of = of,
     )
 }
 
@@ -89,7 +89,7 @@ open class AstEdges<NodeType : Node, PropertyEdgeType : AstEdge<NodeType>>(
     @Suppress("UNCHECKED_CAST")
     init: (start: Node, end: NodeType) -> PropertyEdgeType = { start, end ->
         AstEdge(start, end) as PropertyEdgeType
-    }
+    },
 ) :
     EdgeList<NodeType, PropertyEdgeType>(
         thisRef = thisRef,

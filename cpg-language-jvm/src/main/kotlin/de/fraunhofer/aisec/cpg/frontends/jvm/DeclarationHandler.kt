@@ -59,7 +59,7 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
                 } else {
                     "class"
                 },
-                rawNode = sootClass
+                rawNode = sootClass,
             )
 
         // Collect super class
@@ -140,7 +140,7 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
             field.name,
             frontend.typeOf(field.type),
             field.modifiers.map { it.name.lowercase() },
-            rawNode = field
+            rawNode = field,
         )
     }
 

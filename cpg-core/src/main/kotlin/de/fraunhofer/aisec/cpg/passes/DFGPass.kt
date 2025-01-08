@@ -45,7 +45,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     override fun accept(component: Component) {
         log.info(
             "Function summaries database has {} entries",
-            config.functionSummaries.functionToDFGEntryMap.size
+            config.functionSummaries.functionToDFGEntryMap.size,
         )
 
         val inferDfgForUnresolvedCalls = config.inferenceConfiguration.inferDfgForUnresolvedSymbols
@@ -81,7 +81,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                         val arg = call.arguments[param.argumentIndex]
                         arg.prevDFGEdges.addContextSensitive(
                             param,
-                            callingContext = CallingContextOut(call)
+                            callingContext = CallingContextOut(call),
                         )
                         (arg as? Reference)?.let {
                             it.access = AccessValues.READWRITE
@@ -101,7 +101,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         node: Node?,
         parent: Node?,
         inferDfgForUnresolvedSymbols: Boolean,
-        functionSummaries: DFGFunctionSummaries
+        functionSummaries: DFGFunctionSummaries,
     ) {
         when (node) {
             // Expressions
@@ -244,7 +244,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      */
     protected fun handleFunctionDeclaration(
         node: FunctionDeclaration,
-        functionSummaries: DFGFunctionSummaries
+        functionSummaries: DFGFunctionSummaries,
     ) {
         if (node.isInferred) {
             val summaryExists = functionSummaries.addFlowsToFunctionDeclaration(node)
@@ -317,7 +317,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
             node,
             node.condition,
-            node.conditionDeclaration
+            node.conditionDeclaration,
         )
     }
 
@@ -330,7 +330,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
             node,
             node.condition,
-            node.conditionDeclaration
+            node.conditionDeclaration,
         )
     }
 
@@ -343,7 +343,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
             node,
             node.selector,
-            node.selectorDeclaration
+            node.selectorDeclaration,
         )
     }
 
@@ -356,7 +356,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
             node,
             node.condition,
-            node.conditionDeclaration
+            node.conditionDeclaration,
         )
     }
 

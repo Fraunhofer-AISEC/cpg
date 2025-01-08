@@ -48,7 +48,7 @@ class JVMLanguageFrontendTest {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("HelloWorld.jimple").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<JVMLanguage>()
             }
@@ -68,7 +68,7 @@ class JVMLanguageFrontendTest {
             assertNotNull(refersTo, "${it.name} could not be resolved")
             assertFalse(
                 refersTo.isInferred,
-                "${it.name} should not be resolved to an inferred node"
+                "${it.name} should not be resolved to an inferred node",
             )
         }
 
@@ -93,7 +93,7 @@ class JVMLanguageFrontendTest {
                 // We just need to specify one file to trigger the class byte loader
                 listOf(topLevel.resolve("mypackage/Adder.class").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<JVMLanguage>()
             }
@@ -143,7 +143,7 @@ class JVMLanguageFrontendTest {
                 assertNotNull(refersTo, "${it.name} could not be resolved")
                 assertFalse(
                     refersTo.isInferred,
-                    "${it.name} should not be resolved to an inferred node"
+                    "${it.name} should not be resolved to an inferred node",
                 )
             }
     }
@@ -157,7 +157,7 @@ class JVMLanguageFrontendTest {
                 // We just need to specify one file to trigger the byte code loader
                 listOf(topLevel.resolve("mypackage/Literals.class").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<JVMLanguage>()
             }
@@ -180,7 +180,7 @@ class JVMLanguageFrontendTest {
                 // In case of a jar, the jar is directly used as a class path
                 listOf(topLevel.resolve("literals.jar").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<JVMLanguage>()
             }
@@ -198,7 +198,7 @@ class JVMLanguageFrontendTest {
                 // In case of a jar, the jar is directly used as a class path
                 listOf(topLevel.resolve("mypackage/Application.class").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<JVMLanguage>()
             }
@@ -225,7 +225,7 @@ class JVMLanguageFrontendTest {
 
         assertEquals(
             baseClass.toType(),
-            listOf(extendedClass.toType(), anotherExtendedClass.toType()).commonType
+            listOf(extendedClass.toType(), anotherExtendedClass.toType()).commonType,
         )
 
         val appInit = tu.methods["mypackage.Application.<init>"]
@@ -275,7 +275,7 @@ class JVMLanguageFrontendTest {
                 // We just need to specify one file to trigger the byte code loader
                 listOf(topLevel.resolve("mypackage/Fields.class").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<JVMLanguage>()
             }
@@ -289,7 +289,7 @@ class JVMLanguageFrontendTest {
             assertNotNull(refersTo, "${it.name} could not be resolved")
             assertFalse(
                 refersTo.isInferred,
-                "${it.name} should not be resolved to an inferred node"
+                "${it.name} should not be resolved to an inferred node",
             )
         }
 
@@ -311,7 +311,7 @@ class JVMLanguageFrontendTest {
                 // We just need to specify one file to trigger the source code loader
                 listOf(topLevel.resolve("mypackage/Literals.java").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<JVMLanguage>()
             }
@@ -332,7 +332,7 @@ class JVMLanguageFrontendTest {
                 // We just need to specify one file to trigger the class byte loader
                 listOf(topLevel.resolve("mypackage/Arrays.class").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<JVMLanguage>()
             }
@@ -402,7 +402,7 @@ class JVMLanguageFrontendTest {
                 // We just need to specify one file to trigger the class byte loader
                 listOf(topLevel.resolve("mypackage/Exceptional.class").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<JVMLanguage>()
             }

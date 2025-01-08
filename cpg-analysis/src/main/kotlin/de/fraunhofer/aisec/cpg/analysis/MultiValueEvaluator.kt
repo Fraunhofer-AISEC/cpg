@@ -365,7 +365,7 @@ class MultiValueEvaluator : ValueEvaluator() {
                             } else {
                                 loopOp.input
                             },
-                            loopOp
+                            loopOp,
                         )
                             as? Number
                     }

@@ -103,7 +103,7 @@ class DeclarationTest {
         val fields = myStruct.fields
         assertEquals(
             listOf("MyField", "OtherStruct", "EvenAnotherStruct"),
-            fields.map { it.name.localName }
+            fields.map { it.name.localName },
         )
 
         var methods = myStruct.methods
@@ -258,7 +258,7 @@ class DeclarationTest {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("type_constraints.go").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<GoLanguage>()
             }
@@ -317,12 +317,9 @@ class DeclarationTest {
         val topLevel = Path.of("src", "test", "resources", "golang")
         val result =
             analyze(
-                listOf(
-                    topLevel.resolve("importalias.go").toFile(),
-                    stdLib.resolve("fmt").toFile(),
-                ),
+                listOf(topLevel.resolve("importalias.go").toFile(), stdLib.resolve("fmt").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<GoLanguage>()
                 it.includePath(stdLib)
@@ -357,7 +354,7 @@ class DeclarationTest {
                     topLevel.resolve("srv.go").toFile(),
                 ),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<GoLanguage>()
             }

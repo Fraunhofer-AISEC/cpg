@@ -42,12 +42,12 @@ class Name(
     /** The parent name, e.g., the namespace this name lives in. */
     val parent: Name? = null,
     /** A potential namespace delimiter, usually either `.` or `::`. */
-    val delimiter: String = "."
+    val delimiter: String = ".",
 ) : Cloneable, Comparable<Name>, CharSequence {
     constructor(
         localName: String,
         parent: Name? = null,
-        language: Language<*>?
+        language: Language<*>?,
     ) : this(localName, parent, language?.namespaceDelimiter ?: ".")
 
     companion object {

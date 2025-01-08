@@ -68,7 +68,7 @@ private fun toNewDfa(fsm: FSM) =
 internal fun acceptsSameLanguage(
     fsm: FSM,
     otherFsm: FSM,
-    compareCurrentState: Boolean = true
+    compareCurrentState: Boolean = true,
 ): Boolean {
     val stateSets = mutableListOf<Set<State>>()
 

@@ -281,7 +281,7 @@ object SubgraphWalker {
 
         constructor(
             scopeManager: ScopeManager,
-            strategy: (Node) -> Iterator<Node> = Strategy::AST_FORWARD
+            strategy: (Node) -> Iterator<Node> = Strategy::AST_FORWARD,
         ) {
             this.scopeManager = scopeManager
             this.strategy = strategy
@@ -339,7 +339,7 @@ object SubgraphWalker {
         private fun handleNode(
             current: Node,
             parent: Node?,
-            handler: TriConsumer<RecordDeclaration?, Node?, Node?>
+            handler: TriConsumer<RecordDeclaration?, Node?, Node?>,
         ) {
             // Jump to the node's scope, if it is different from ours.
             if (scopeManager.currentScope != current.scope) {

@@ -58,7 +58,7 @@ import java.nio.file.StandardCopyOption
  */
 class TypeScriptLanguageFrontend(
     language: Language<TypeScriptLanguageFrontend>,
-    ctx: TranslationContext
+    ctx: TranslationContext,
 ) : LanguageFrontend<TypeScriptNode, TypeScriptNode>(language, ctx) {
 
     val declarationHandler = DeclarationHandler(this)
@@ -78,12 +78,12 @@ class TypeScriptLanguageFrontend(
             link?.use {
                 log.info(
                     "Extracting parser.js out of resources to {}",
-                    parserFile.absoluteFile.toPath()
+                    parserFile.absoluteFile.toPath(),
                 )
                 Files.copy(
                     it,
                     parserFile.absoluteFile.toPath(),
-                    StandardCopyOption.REPLACE_EXISTING
+                    StandardCopyOption.REPLACE_EXISTING,
                 )
             }
         }
@@ -145,7 +145,7 @@ class TypeScriptLanguageFrontend(
                 FrontendUtils.matchCommentToNode(
                     comment,
                     commentRegion ?: translationUnit.location?.region ?: Region(),
-                    translationUnit
+                    translationUnit,
                 )
             }
         }
@@ -191,7 +191,7 @@ class TypeScriptLanguageFrontend(
                     end - start,
                     start,
                     startLine,
-                    endLine
+                    endLine,
                 )
             }
         return region
@@ -243,7 +243,7 @@ class TypeScriptNode(
     var type: String,
     var children: List<TypeScriptNode>?,
     var location: Location,
-    var code: String?
+    var code: String?,
 ) {
     /** Returns the first child node, that represent a type, if it exists. */
     val typeChildNode: TypeScriptNode?

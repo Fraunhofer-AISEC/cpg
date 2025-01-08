@@ -124,7 +124,7 @@ sealed class Scope(
         languageOnly: Language<*>? = null,
         thisScopeOnly: Boolean = false,
         replaceImports: Boolean = true,
-        predicate: ((Declaration) -> Boolean)? = null
+        predicate: ((Declaration) -> Boolean)? = null,
     ): List<Declaration> {
         // First, try to look for the symbol in the current scope (unless we have a predefined
         // search scope). In the latter case we also need to restrict the lookup to the search scope

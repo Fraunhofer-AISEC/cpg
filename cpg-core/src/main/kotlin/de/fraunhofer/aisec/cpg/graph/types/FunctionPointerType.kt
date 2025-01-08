@@ -50,7 +50,7 @@ class FunctionPointerType : Type {
     constructor(
         parameters: List<Type> = listOf(),
         language: Language<*>,
-        returnType: Type = UnknownType.getUnknownType(language)
+        returnType: Type = UnknownType.getUnknownType(language),
     ) : super(EMPTY_NAME, language) {
         this.parameters = parameters
         this.returnType = returnType
@@ -60,7 +60,7 @@ class FunctionPointerType : Type {
         type: Type,
         parameters: List<Type> = listOf(),
         language: Language<*> = UnknownLanguage,
-        returnType: Type = UnknownType.getUnknownType(language)
+        returnType: Type = UnknownType.getUnknownType(language),
     ) : super(type) {
         this.parameters = parameters
         this.returnType = returnType

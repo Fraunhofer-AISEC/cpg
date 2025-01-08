@@ -82,7 +82,7 @@ object CpgConsole {
                     jvm {
                         dependenciesFromClassloader(
                             classLoader = CpgConsole::class.java.classLoader,
-                            wholeClasspath = true
+                            wholeClasspath = true,
                         )
                     }
                     compilerOptions(
@@ -91,7 +91,7 @@ object CpgConsole {
                 },
                 ScriptEvaluationConfiguration {
                     jvm { baseClassLoader(CpgConsole::class.java.classLoader) }
-                }
+                },
             )
 
         Runtime.getRuntime()

@@ -53,7 +53,7 @@ class JavaCallResolverHelper {
         fun handleSuperExpression(
             memberExpression: MemberExpression,
             curClass: RecordDeclaration,
-            scopeManager: ScopeManager
+            scopeManager: ScopeManager,
         ): Boolean {
             // Because the "super" keyword still refers to "this" (but cast to another class), we
             // still need to connect the super reference to the receiver of this method.
@@ -74,7 +74,7 @@ class JavaCallResolverHelper {
                     Util.warnWithFileLocation(
                         memberExpression,
                         LOGGER,
-                        "super call without direct superclass! Expected java.lang.Object to be present at least!"
+                        "super call without direct superclass! Expected java.lang.Object to be present at least!",
                     )
                 }
             } else {
@@ -106,7 +106,7 @@ class JavaCallResolverHelper {
 
         fun handleSpecificSupertype(
             callee: MemberExpression,
-            curClass: RecordDeclaration
+            curClass: RecordDeclaration,
         ): RecordDeclaration? {
             val baseName = callee.base.name.parent ?: return null
 
@@ -126,7 +126,7 @@ class JavaCallResolverHelper {
                         Util.warnWithFileLocation(
                             callee,
                             LOGGER,
-                            "super call without direct superclass! Expected java.lang.Object to be present at least!"
+                            "super call without direct superclass! Expected java.lang.Object to be present at least!",
                         )
                     }
                 }

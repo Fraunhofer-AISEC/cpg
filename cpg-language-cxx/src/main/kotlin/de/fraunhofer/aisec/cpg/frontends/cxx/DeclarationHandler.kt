@@ -298,7 +298,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
      */
     private fun addTemplateParameters(
         ctx: CPPASTTemplateDeclaration,
-        templateDeclaration: TemplateDeclaration
+        templateDeclaration: TemplateDeclaration,
     ) {
         for (templateParameter in ctx.templateParameters) {
             if (templateParameter is CPPASTSimpleTypeTemplateParameter) {
@@ -309,7 +309,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                     frontend.typeManager.createOrGetTypeParameter(
                         templateDeclaration,
                         templateParameter.name.toString(),
-                        language
+                        language,
                     )
                 typeParamDecl.type = parameterizedType
                 if (templateParameter.defaultType != null) {
@@ -363,7 +363,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
      */
     private fun addParameterizedTypesToRecord(
         templateDeclaration: TemplateDeclaration,
-        innerDeclaration: RecordDeclaration
+        innerDeclaration: RecordDeclaration,
     ) {
         val parameterizedTypes = frontend.typeManager.getAllParameterizedType(templateDeclaration)
 
@@ -402,7 +402,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
      */
     private fun addParameterizedTypesToType(
         type: Type,
-        parameterizedTypes: List<ParameterizedType>
+        parameterizedTypes: List<ParameterizedType>,
     ): Type {
         if (type is ObjectType) {
             // Because we cannot mutate the existing type (otherwise this will affect ALL usages of
@@ -522,7 +522,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     private fun handleDeclarationSpecifier(
         declSpecifier: IASTDeclSpecifier?,
         ctx: IASTSimpleDeclaration,
-        sequence: DeclarationSequence
+        sequence: DeclarationSequence,
     ): Pair<Declaration?, Boolean> {
         var primaryDeclaration: Declaration? = null
         var useNameOfDeclarator = false
@@ -643,7 +643,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
     private fun handleEnum(
         ctx: IASTSimpleDeclaration,
-        declSpecifier: IASTEnumerationSpecifier
+        declSpecifier: IASTEnumerationSpecifier,
     ): EnumDeclaration {
         val entries = mutableListOf<EnumConstantDeclaration>()
         val enum = newEnumDeclaration(name = declSpecifier.name.toString(), rawNode = ctx)
@@ -657,10 +657,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             // put the symbol both in the outer scope as well as the enum's scope.
             frontend.scopeManager.enterScope(enum)
             val enumConst =
-                newEnumConstantDeclaration(
-                    enumerator.name.toString(),
-                    rawNode = enumerator,
-                )
+                newEnumConstantDeclaration(enumerator.name.toString(), rawNode = enumerator)
             frontend.scopeManager.addDeclaration(enumConst)
             frontend.scopeManager.leaveScope(enum)
 
@@ -708,7 +705,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
     private fun parseInclusions(
         includes: Array<IASTInclusionNode>?,
-        allIncludes: HashMap<String, HashSet<String?>>
+        allIncludes: HashMap<String, HashSet<String?>>,
     ) {
         if (includes != null) {
             for (n in includes) {
@@ -762,7 +759,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     private fun addIncludes(
         translationUnit: IASTTranslationUnit,
         problematicIncludes: Map<String?, Set<ProblemDeclaration>>,
-        node: TranslationUnitDeclaration
+        node: TranslationUnitDeclaration,
     ) {
         // TODO: Remark CB: I am not quite sure, what the point of the code beyond this line is.
         // Probably needs to be refactored

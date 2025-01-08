@@ -342,7 +342,7 @@ fun MetadataProvider.newDefaultStatement(rawNode: Any? = null): DefaultStatement
 fun MetadataProvider.newLookupScopeStatement(
     symbols: List<Symbol>,
     targetScope: Scope?,
-    rawNode: Any? = null
+    rawNode: Any? = null,
 ): LookupScopeStatement {
     val node = LookupScopeStatement()
     node.targetScope = targetScope
