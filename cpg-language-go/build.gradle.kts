@@ -47,8 +47,6 @@ dependencies {
     testImplementation(project(":cpg-analysis"))
 }
 
-open class DownloadTask @Inject constructor(@Internal val op: ExecOperations) : DefaultTask()
-
 tasks {
     val downloadLibGoAST by registering(Download::class) {
         val version = "v0.0.4"
@@ -64,6 +62,10 @@ tasks {
     }
 
     processResources {
+        dependsOn(downloadLibGoAST)
+    }
+
+    sourcesJar {
         dependsOn(downloadLibGoAST)
     }
 }
