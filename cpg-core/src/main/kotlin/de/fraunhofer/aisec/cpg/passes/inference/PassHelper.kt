@@ -322,7 +322,7 @@ internal fun Pass<*>.tryFunctionInference(
 /** This function tries to infer a missing [FunctionDeclaration] from a function pointer usage. */
 internal fun Pass<*>.tryFunctionInferenceFromFunctionPointer(
     ref: Reference,
-    type: FunctionPointerType
+    type: FunctionPointerType,
 ): ValueDeclaration? {
     // Determine the scope where we want to start our inference
     var (scope, _) = scopeManager.extractScope(ref)

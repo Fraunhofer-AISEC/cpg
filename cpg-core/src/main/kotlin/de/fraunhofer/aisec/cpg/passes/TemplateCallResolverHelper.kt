@@ -137,7 +137,7 @@ fun applyMissingParams(
                             .lookupSymbolByName(
                                 missingParam.name,
                                 missingParam.location,
-                                missingParam.scope
+                                missingParam.scope,
                             )
                             .singleOrNull()
                     scopeManager.jumpTo(currentScope)
