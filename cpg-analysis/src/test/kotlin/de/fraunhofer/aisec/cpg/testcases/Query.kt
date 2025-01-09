@@ -485,7 +485,6 @@ class Query {
                                     }
                                     forCondition { ref("i") le literal(4, t("int")) }
                                     forIteration { ref("i").incNoContext() }
-
                                 }
 
                                 returnStmt { ref("a") }
@@ -534,7 +533,6 @@ class Query {
                                     }
                                     forCondition { ref("i") lt literal(4, t("int")) }
                                     forIteration { ref("i").incNoContext() }
-
                                 }
 
                                 returnStmt { ref("a") }

@@ -156,7 +156,7 @@ class EvaluationOrderGraphPassTest {
                 en = Util.Edge.ENTRIES,
                 n = elseCall,
                 refs = listOf(forStmt),
-                cr = Util.Connect.NODE
+                cr = Util.Connect.NODE,
             )
         )
         assertTrue(
@@ -164,7 +164,7 @@ class EvaluationOrderGraphPassTest {
                 en = Util.Edge.ENTRIES,
                 n = postFor,
                 refs = listOf(forStmt.elseStatement, breakStmt),
-                cr = Util.Connect.NODE
+                cr = Util.Connect.NODE,
             )
         )
         assertTrue(
@@ -172,7 +172,7 @@ class EvaluationOrderGraphPassTest {
                 en = Util.Edge.EXITS,
                 n = forStmt.elseStatement,
                 refs = listOf(postFor),
-                cr = Util.Connect.SUBTREE
+                cr = Util.Connect.SUBTREE,
             )
         )
         assertTrue(
@@ -180,7 +180,7 @@ class EvaluationOrderGraphPassTest {
                 en = Util.Edge.EXITS,
                 n = breakStmt,
                 refs = listOf(postFor),
-                cr = Util.Connect.SUBTREE
+                cr = Util.Connect.SUBTREE,
             )
         )
     }
@@ -206,7 +206,7 @@ class EvaluationOrderGraphPassTest {
                 en = Util.Edge.ENTRIES,
                 n = elseCall,
                 refs = listOf(forEachStmt),
-                cr = Util.Connect.NODE
+                cr = Util.Connect.NODE,
             )
         )
         assertTrue(
@@ -214,7 +214,7 @@ class EvaluationOrderGraphPassTest {
                 en = Util.Edge.ENTRIES,
                 n = postForEach,
                 refs = listOf(forEachStmt.elseStatement, breakStmt),
-                cr = Util.Connect.NODE
+                cr = Util.Connect.NODE,
             )
         )
         assertTrue(
@@ -222,7 +222,7 @@ class EvaluationOrderGraphPassTest {
                 en = Util.Edge.EXITS,
                 n = forEachStmt.elseStatement,
                 refs = listOf(postForEach),
-                cr = Util.Connect.SUBTREE
+                cr = Util.Connect.SUBTREE,
             )
         )
         assertTrue(
@@ -230,9 +230,8 @@ class EvaluationOrderGraphPassTest {
                 en = Util.Edge.EXITS,
                 n = breakStmt,
                 refs = listOf(postForEach),
-                cr = Util.Connect.SUBTREE
+                cr = Util.Connect.SUBTREE,
             )
-
         )
     }
 

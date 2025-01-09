@@ -70,7 +70,6 @@ class ValueEvaluationTests {
                                         }
                                         forCondition { ref("i") lt member("length", ref("array")) }
                                         forIteration { ref("i").inc() }
-
                                     }
                                     memberCall("println", member("out", ref("System"))) {
                                         subscriptExpr {
@@ -329,7 +328,6 @@ class ValueEvaluationTests {
                                     }
                                     forCondition { ref("i") lt literal(6, t("int")) }
                                     forIteration { ref("i").incNoContext() }
-
                                 }
                                 returnStmt { literal(0, t("int")) }
                             }

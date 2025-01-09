@@ -165,7 +165,6 @@ class GraphExamples {
                         record("someRecord") {
                             method("func") {
                                 body {
-
                                     forStmt {
                                         loopBody {
                                             ifStmt {
@@ -173,7 +172,6 @@ class GraphExamples {
                                                 thenStmt { breakStmt() }
                                             }
                                             call("postIf")
-
                                         }
                                         forInitializer {
                                             declareVar("a", t("int")) { literal(0, t("int")) }
@@ -190,7 +188,6 @@ class GraphExamples {
                                                 thenStmt { breakStmt() }
                                             }
                                             call("postIf")
-
                                         }
                                         forInitializer {
                                             declareVar("a", t("int")) { literal(0, t("int")) }
