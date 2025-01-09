@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"mymodule.io/buildtags"
+	"mymodule.io/integration"
 )
 
 func main() {

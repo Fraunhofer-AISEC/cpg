@@ -2,8 +2,8 @@
 
 //go:build darwin
 
-// Package buildtags is awesome
-package buildtags
+// Package integration is awesome
+package integration
 
 func OS() string {
 	return "darwin"
