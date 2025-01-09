@@ -1,3 +1,3 @@
-package buildtags
+package integration
 
 func someSpecific() {}

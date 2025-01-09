@@ -133,13 +133,7 @@ fun applyMissingParams(
                     val currentScope = scopeManager.currentScope
                     scopeManager.jumpTo(missingParam.scope)
                     missingParam.refersTo =
-                        scopeManager
-                            .lookupSymbolByName(
-                                missingParam.name,
-                                missingParam.location,
-                                missingParam.scope,
-                            )
-                            .singleOrNull()
+                        scopeManager.lookupSymbolByNameOfNode(missingParam).singleOrNull()
                     scopeManager.jumpTo(currentScope)
                 }
                 missingParam = missingParam.refersTo

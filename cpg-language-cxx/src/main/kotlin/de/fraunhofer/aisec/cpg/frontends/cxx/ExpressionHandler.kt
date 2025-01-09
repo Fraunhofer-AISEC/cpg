@@ -142,7 +142,10 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 if (capture.isByReference) {
                     val valueDeclaration =
                         frontend.scopeManager
-                            .lookupSymbolByName(newName(capture.identifier?.toString() ?: "")) {
+                            .lookupSymbolByName(
+                                newName(capture.identifier?.toString() ?: ""),
+                                language = language,
+                            ) {
                                 it is ValueDeclaration
                             }
                             .singleOrNull() as? ValueDeclaration

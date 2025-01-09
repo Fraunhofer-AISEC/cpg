@@ -193,7 +193,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
         // Find a list of candidate symbols. Currently, this is only used the in the "next-gen" call
         // resolution, but in future this will also be used in resolving regular references.
-        ref.candidates = scopeManager.lookupSymbolByNameOfNode(ref).toSet()
+        ref.candidates = scopeManager.lookupSymbolByNameOfNode(ref, predicate = predicate).toSet()
 
         // We need to choose the best viable candidate out of the ones we have for our reference.
         // Hopefully we have only one, but there might be instances where more than one is a valid

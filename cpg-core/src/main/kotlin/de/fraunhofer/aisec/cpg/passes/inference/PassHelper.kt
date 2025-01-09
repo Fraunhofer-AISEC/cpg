@@ -325,10 +325,13 @@ internal fun Pass<*>.tryFunctionInferenceFromFunctionPointer(
     type: FunctionPointerType,
 ): ValueDeclaration? {
     // Determine the scope where we want to start our inference
-    var (scope, _) = scopeManager.extractScope(ref)
-    if (scope !is NameScope) {
-        scope = null
-    }
+    var extracted = scopeManager.extractScope(ref)
+    val scope =
+        if (extracted?.scope !is NameScope) {
+            null
+        } else {
+            extracted.scope
+        }
 
     return (scope?.astNode ?: ref.translationUnit)
         ?.startInference(ctx)

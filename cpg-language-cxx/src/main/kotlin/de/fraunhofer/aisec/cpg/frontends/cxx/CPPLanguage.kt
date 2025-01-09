@@ -245,9 +245,7 @@ open class CPPLanguage :
     ): Pair<Boolean, List<FunctionDeclaration>> {
         val instantiationCandidates =
             ctx.scopeManager
-                .lookupSymbolByName(templateCall.name, templateCall.location, templateCall.scope) {
-                    it is FunctionTemplateDeclaration
-                }
+                .lookupSymbolByNameOfNode(templateCall) { it is FunctionTemplateDeclaration }
                 .filterIsInstance<FunctionTemplateDeclaration>()
         for (functionTemplateDeclaration in instantiationCandidates) {
             val initializationType =
