@@ -28,9 +28,4 @@ dependencies {
     api(projects.cpgCore)
     api(projects.cpgAnalysis)
     api(projects.cpgNeo4j)
-
-    kover(projects.cpgConsole)
-    kover(projects.cpgCore)
-    kover(projects.cpgAnalysis)
-    kover(projects.cpgNeo4j)
 }

@@ -48,13 +48,16 @@ publishing {
 }
 
 dependencies {
-    // neo4j
+    // Neo4j OGM. This will be removed at some point
     implementation(libs.bundles.neo4j)
-    implementation(libs.neo4j.driver)
+    integrationTestImplementation(libs.bundles.neo4j)
+
+    // Neo4J Driver
+    api(libs.neo4j.driver)
 
     // Command line interface support
-    implementation(libs.picocli)
+    api(libs.picocli)
     annotationProcessor(libs.picocli.codegen)
 
-    testImplementation(testFixtures(projects.cpgCore))
+    integrationTestImplementation(libs.kotlin.reflect)
 }

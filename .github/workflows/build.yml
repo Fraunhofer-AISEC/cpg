@@ -72,13 +72,13 @@ jobs:
           # See https://github.com/codecov/feedback/issues/564 and https://github.com/Kotlin/kotlinx-kover/issues/699.
           # Actually these lines should just not exist in the coverage XML file, since they are only structural elements, such
           # as brackets.
-          cat cpg-all/build/reports/kover/report.xml | grep -v 'mi="0" ci="0" mb="0" cb="0"' > cpg-all/build/reports/kover/report-codecov.xml
-          rm cpg-all/build/reports/kover/report.xml
+          cat ./build/reports/kover/report.xml | grep -v 'mi="0" ci="0" mb="0" cb="0"' > ./build/reports/kover/report-codecov.xml
+          rm ./build/reports/kover/report.xml
       - name: Upload Code Coverage
         uses: codecov/codecov-action@v5
         with:
           fail_ci_if_error: true
-          files: ./cpg-all/build/reports/kover/report-codecov.xml
+          files: ./build/reports/kover/report-codecov.xml
           token: ${{ secrets.CODECOV_TOKEN }}
           verbose: true
       - name: Prepare test and coverage reports
