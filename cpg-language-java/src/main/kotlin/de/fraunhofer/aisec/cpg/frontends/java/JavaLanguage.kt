@@ -28,11 +28,15 @@ package de.fraunhofer.aisec.cpg.frontends.java
 import com.fasterxml.jackson.annotation.JsonIgnore
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.frontends.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.*
-import de.fraunhofer.aisec.cpg.passes.JavaCallResolverHelper
 import kotlin.reflect.KClass
 import org.neo4j.ogm.annotation.Transient
 
@@ -114,6 +118,25 @@ open class JavaLanguage :
         curClass: RecordDeclaration,
         scopeManager: ScopeManager,
     ) = JavaCallResolverHelper.handleSuperExpression(memberExpression, curClass, scopeManager)
+
+    /**
+     * This function handles some specifics of the Java language when choosing a reference target
+     * before invoking [Language.bestViableReferenceCandidate].
+     */
+    override fun bestViableReferenceCandidate(ref: Reference): Declaration? {
+        // Java allows to have "ambiguous" symbol when importing static fields and methods.
+        // Therefore, it can be that we both import a field and a method with the same name. We
+        // therefore do some additional filtering of the candidates here, before handling it.
+        if (ref.candidates.size > 1) {
+            if (ref.resolutionHelper is CallExpression) {
+                ref.candidates = ref.candidates.filter { it is FunctionDeclaration }.toSet()
+            } else {
+                ref.candidates = ref.candidates.filter { it is VariableDeclaration }.toSet()
+            }
+        }
+
+        return super.bestViableReferenceCandidate(ref)
+    }
 
     override val startCharacter = '<'
     override val endCharacter = '>'

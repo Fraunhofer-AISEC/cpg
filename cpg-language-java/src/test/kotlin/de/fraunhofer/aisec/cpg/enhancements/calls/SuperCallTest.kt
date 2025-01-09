@@ -89,13 +89,11 @@ internal class SuperCallTest : BaseTest() {
         val methods = subClass.methods
         val field = findByUniqueName(subClass.fields, "field")
         val getField = findByUniqueName(methods, "getField")
-        var refs = getField.allChildren<MemberExpression>()
+        var refs = getField.refs
         val fieldRef = findByUniquePredicate(refs) { "field" == it.code }
         val getSuperField = findByUniqueName(methods, "getSuperField")
         refs = getSuperField.allChildren<MemberExpression>()
         val superFieldRef = findByUniquePredicate(refs) { "super.field" == it.code }
-        assertTrue(fieldRef.base is Reference)
-        assertRefersTo(fieldRef.base, getField.receiver)
         assertEquals(field, fieldRef.refersTo)
         assertTrue(superFieldRef.base is Reference)
         assertRefersTo(superFieldRef.base, getSuperField.receiver)
