@@ -62,7 +62,7 @@ class NullPointerCheck {
                     fun visit(v: SubscriptExpression) {
                         handleHasBase(v)
                     }
-                }
+                },
             )
         }
     }

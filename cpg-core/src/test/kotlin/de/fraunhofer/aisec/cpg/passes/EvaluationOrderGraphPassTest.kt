@@ -56,7 +56,7 @@ class EvaluationOrderGraphPassTest {
                 en = Util.Edge.ENTRIES,
                 n = elseCall,
                 refs = listOf(whileStmt),
-                cr = Util.Connect.NODE
+                cr = Util.Connect.NODE,
             )
         )
         assertTrue(
@@ -64,7 +64,7 @@ class EvaluationOrderGraphPassTest {
                 en = Util.Edge.ENTRIES,
                 n = postWhile,
                 refs = listOf(whileStmt.elseStatement, breakStmt),
-                cr = Util.Connect.NODE
+                cr = Util.Connect.NODE,
             )
         )
         assertTrue(
@@ -72,7 +72,7 @@ class EvaluationOrderGraphPassTest {
                 en = Util.Edge.EXITS,
                 n = whileStmt.elseStatement,
                 refs = listOf(postWhile),
-                cr = Util.Connect.SUBTREE
+                cr = Util.Connect.SUBTREE,
             )
         )
         assertTrue(
@@ -80,7 +80,7 @@ class EvaluationOrderGraphPassTest {
                 en = Util.Edge.EXITS,
                 n = breakStmt,
                 refs = listOf(postWhile),
-                cr = Util.Connect.SUBTREE
+                cr = Util.Connect.SUBTREE,
             )
         )
     }
@@ -106,7 +106,7 @@ class EvaluationOrderGraphPassTest {
                 en = Util.Edge.ENTRIES,
                 n = elseCall,
                 refs = listOf(doStmt),
-                cr = Util.Connect.NODE
+                cr = Util.Connect.NODE,
             )
         )
         assertTrue(
@@ -114,7 +114,7 @@ class EvaluationOrderGraphPassTest {
                 en = Util.Edge.ENTRIES,
                 n = postWhile,
                 refs = listOf(doStmt.elseStatement, breakStmt),
-                cr = Util.Connect.NODE
+                cr = Util.Connect.NODE,
             )
         )
         assertTrue(
@@ -122,7 +122,7 @@ class EvaluationOrderGraphPassTest {
                 en = Util.Edge.EXITS,
                 n = doStmt.elseStatement,
                 refs = listOf(postWhile),
-                cr = Util.Connect.SUBTREE
+                cr = Util.Connect.SUBTREE,
             )
         )
         assertTrue(
@@ -130,7 +130,7 @@ class EvaluationOrderGraphPassTest {
                 en = Util.Edge.EXITS,
                 n = breakStmt,
                 refs = listOf(postWhile),
-                cr = Util.Connect.SUBTREE
+                cr = Util.Connect.SUBTREE,
             )
         )
     }
@@ -232,6 +232,7 @@ class EvaluationOrderGraphPassTest {
                 refs = listOf(postForEach),
                 cr = Util.Connect.SUBTREE
             )
+
         )
     }
 
@@ -261,7 +262,7 @@ class EvaluationOrderGraphPassTest {
                 en = Util.Edge.EXITS,
                 n = preCall,
                 refs = listOf(listComp),
-                cr = Util.Connect.SUBTREE
+                cr = Util.Connect.SUBTREE,
             )
         )
         assertTrue(
@@ -269,7 +270,7 @@ class EvaluationOrderGraphPassTest {
                 en = Util.Edge.EXITS,
                 n = listComp,
                 refs = listOf(postCall),
-                cr = Util.Connect.SUBTREE
+                cr = Util.Connect.SUBTREE,
             )
         )
         assertTrue(
@@ -280,9 +281,9 @@ class EvaluationOrderGraphPassTest {
                     listOf(
                         innerComprehensionExpression,
                         listComp,
-                        outerComprehensionExpression.variable
+                        outerComprehensionExpression.variable,
                     ),
-                cr = Util.Connect.SUBTREE
+                cr = Util.Connect.SUBTREE,
             )
         )
         assertTrue(
@@ -290,12 +291,9 @@ class EvaluationOrderGraphPassTest {
                 q = Util.Quantifier.ANY,
                 en = Util.Edge.EXITS,
                 n = outerComprehensionExpression,
-                refs =
-                    listOf(
-                        innerComprehensionExpression,
-                    ),
+                refs = listOf(innerComprehensionExpression),
                 cr = Util.Connect.SUBTREE,
-                predicate = { it.branch == true }
+                predicate = { it.branch == true },
             )
         )
 
@@ -306,7 +304,7 @@ class EvaluationOrderGraphPassTest {
                 n = outerComprehensionExpression,
                 refs = listOf(listComp),
                 cr = Util.Connect.SUBTREE,
-                predicate = { it.branch == false }
+                predicate = { it.branch == false },
             )
         )
 
@@ -315,7 +313,7 @@ class EvaluationOrderGraphPassTest {
                 en = Util.Edge.EXITS,
                 n = innerComprehensionExpression,
                 refs = listOf(outerComprehensionExpression, listComp.statement),
-                cr = Util.Connect.SUBTREE
+                cr = Util.Connect.SUBTREE,
             )
         )
 
@@ -326,7 +324,7 @@ class EvaluationOrderGraphPassTest {
                 n = innerComprehensionExpression,
                 refs = listOf(listComp.statement),
                 cr = Util.Connect.SUBTREE,
-                predicate = { it.branch == true }
+                predicate = { it.branch == true },
             )
         )
 
@@ -337,7 +335,7 @@ class EvaluationOrderGraphPassTest {
                 n = innerComprehensionExpression,
                 refs = listOf(outerComprehensionExpression),
                 cr = Util.Connect.SUBTREE,
-                predicate = { it.branch == false }
+                predicate = { it.branch == false },
             )
         )
 
@@ -348,7 +346,7 @@ class EvaluationOrderGraphPassTest {
                 n = outerComprehensionExpression.iterable,
                 refs = listOf(outerComprehensionExpression.variable),
                 cr = Util.Connect.SUBTREE,
-                predicate = { it.branch == true }
+                predicate = { it.branch == true },
             )
         )
 
@@ -359,7 +357,7 @@ class EvaluationOrderGraphPassTest {
                 n = innerComprehensionExpression.iterable,
                 refs = listOf(innerComprehensionExpression.variable),
                 cr = Util.Connect.SUBTREE,
-                predicate = { it.branch == true }
+                predicate = { it.branch == true },
             )
         )
     }

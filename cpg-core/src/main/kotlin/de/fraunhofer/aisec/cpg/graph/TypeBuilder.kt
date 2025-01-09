@@ -45,8 +45,8 @@ fun LanguageProvider.autoType(): Type {
     return AutoType(this.language)
 }
 
-fun MetadataProvider?.incompleteType(): Type {
-    return IncompleteType()
+fun LanguageProvider.incompleteType(): Type {
+    return IncompleteType(this.language)
 }
 
 /** Returns a [PointerType] that describes an array reference to the current type. */
@@ -97,7 +97,7 @@ fun Type.ref(): Type {
 fun LanguageProvider.objectType(
     name: CharSequence,
     generics: List<Type> = listOf(),
-    rawNode: Any? = null
+    rawNode: Any? = null,
 ): Type {
     // First, we check, whether this is a built-in type, to avoid necessary allocations of simple
     // types

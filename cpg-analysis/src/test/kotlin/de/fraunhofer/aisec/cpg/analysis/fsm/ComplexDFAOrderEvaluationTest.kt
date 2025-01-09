@@ -424,7 +424,7 @@ class ComplexDFAOrderEvaluationTest {
                 nodesToOp,
                 mutableMapOf(),
                 afterInterprocNodes,
-                withoutInterprocNodes
+                withoutInterprocNodes,
             )
         val everythingOk = orderEvaluator.evaluateOrder(p1Decl)
 
@@ -432,7 +432,7 @@ class ComplexDFAOrderEvaluationTest {
         assertContains(
             afterInterprocNodes,
             (functionOk.body as Block).statements[3],
-            "Expected start() node in list of unknown nodes"
+            "Expected start() node in list of unknown nodes",
         )
         assertTrue(withoutInterprocNodes.isEmpty(), "No node should be clearly violating the rule")
     }
@@ -460,7 +460,7 @@ class ComplexDFAOrderEvaluationTest {
                 nodesToOp,
                 mutableMapOf(),
                 afterInterprocNodes,
-                withoutInterprocNodes
+                withoutInterprocNodes,
             )
         // We cannot use p1Decl as start of the analysis because it has no nextEOG edges. Instead,
         // we want to start with the first instruction of the function.
@@ -470,7 +470,7 @@ class ComplexDFAOrderEvaluationTest {
         assertContains(
             afterInterprocNodes,
             (functionOk.body as Block).statements[0],
-            "Expected init() node in list of unknown nodes"
+            "Expected init() node in list of unknown nodes",
         )
         assertTrue(withoutInterprocNodes.isEmpty(), "No node should be clearly violating the rule")
     }
@@ -498,7 +498,7 @@ class ComplexDFAOrderEvaluationTest {
                 nodesToOp,
                 mutableMapOf(),
                 possibleInterprocFailures,
-                withoutInterprocNodes
+                withoutInterprocNodes,
             )
         val everythingOk = orderEvaluator.evaluateOrder(p1Decl)
 
@@ -506,7 +506,7 @@ class ComplexDFAOrderEvaluationTest {
         assertContains(
             possibleInterprocFailures,
             (functionOk.body as Block).statements[3],
-            "Expected start() node in list of unknown nodes"
+            "Expected start() node in list of unknown nodes",
         )
         assertTrue(withoutInterprocNodes.isEmpty(), "No node should be clearly violating the rule")
     }
@@ -534,7 +534,7 @@ class ComplexDFAOrderEvaluationTest {
                 nodesToOp,
                 mutableMapOf(),
                 afterInterprocNodes,
-                withoutInterprocNodes
+                withoutInterprocNodes,
             )
         val everythingOk = orderEvaluator.evaluateOrder(p1Decl)
 
@@ -542,12 +542,12 @@ class ComplexDFAOrderEvaluationTest {
         assertContains(
             afterInterprocNodes,
             (functionOk.body as Block).statements[3],
-            "Expected start() node in list of unknown nodes"
+            "Expected start() node in list of unknown nodes",
         )
         assertContains(
             withoutInterprocNodes,
             (functionOk.body as Block).statements[3],
-            "Expected start() node in list of unknown nodes"
+            "Expected start() node in list of unknown nodes",
         )
     }
 
@@ -574,7 +574,7 @@ class ComplexDFAOrderEvaluationTest {
                 nodesToOp,
                 mutableMapOf(),
                 afterInterprocNodes,
-                withoutInterprocNodes
+                withoutInterprocNodes,
             )
         val everythingOk = orderEvaluator.evaluateOrder(p1Decl)
 
@@ -583,7 +583,7 @@ class ComplexDFAOrderEvaluationTest {
         assertContains(
             withoutInterprocNodes,
             (functionOk.body as Block).statements[5],
-            "Expected start() node in list of unknown nodes"
+            "Expected start() node in list of unknown nodes",
         )
     }
 
@@ -597,20 +597,20 @@ class ComplexDFAOrderEvaluationTest {
         nodesToOp: Map<Node, Set<String>>,
         thisPositionOfNode: Map<Node, Int>,
         private val possibleInterprocFailures: MutableList<Node>,
-        private val withoutInterprocNodes: MutableList<Node>
+        private val withoutInterprocNodes: MutableList<Node>,
     ) :
         DFAOrderEvaluator(
             dfa = dfa,
             consideredBases = referencedVertices,
             nodeToRelevantMethod = nodesToOp,
-            thisPositionOfNode = thisPositionOfNode
+            thisPositionOfNode = thisPositionOfNode,
         ) {
         private val log: Logger = LoggerFactory.getLogger(DummyDFAOrderEvaluator::class.java)
 
         override fun actionMissingTransitionForNode(
             node: Node,
             fsm: DFA,
-            interproceduralFlow: Boolean
+            interproceduralFlow: Boolean,
         ) {
             if (interproceduralFlow) {
                 possibleInterprocFailures.add(node)
@@ -625,7 +625,7 @@ class ComplexDFAOrderEvaluationTest {
         override fun actionNonAcceptingTermination(
             base: String,
             fsm: DFA,
-            interproceduralFlow: Boolean
+            interproceduralFlow: Boolean,
         ) {
             val lastNode = fsm.executionTrace.last().cpgNode as CallExpression
             var baseOfLastNode = getBaseOfNode(lastNode)

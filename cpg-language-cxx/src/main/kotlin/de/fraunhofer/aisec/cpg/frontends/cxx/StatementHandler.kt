@@ -79,12 +79,10 @@ class StatementHandler(lang: CXXLanguageFrontend) :
             frontend,
             problemStatement,
             log,
-            problemStatement.problem.message
-        )
-
-        return newProblemExpression(
             problemStatement.problem.message,
         )
+
+        return newProblemExpression(problemStatement.problem.message)
     }
 
     private fun handleEmptyStatement(nullStatement: IASTNullStatement): EmptyStatement {
@@ -186,7 +184,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
             // names of CPG nodes using the predicate listeners
             frontend.registerPredicateListener(
                 { _, to -> (to is LabelStatement && to.label == statement.labelName) },
-                assigneeTargetLabel
+                assigneeTargetLabel,
             )
         }
         return statement

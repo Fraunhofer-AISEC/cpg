@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.frontends.UnknownLanguage
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
@@ -158,7 +159,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
                 "variable"
             },
             decl.name,
-            decl.scope
+            decl.scope,
         )
 
         // Make sure we add the declaration at the correct place, i.e. with the scope we set at the
@@ -207,6 +208,6 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
         }
     }
 
-    override val language: Language<*>?
-        get() = ctx.config.languages.firstOrNull { it is PythonLanguage }
+    override val language: Language<*>
+        get() = ctx.config.languages.firstOrNull { it is PythonLanguage } ?: UnknownLanguage
 }

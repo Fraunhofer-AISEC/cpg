@@ -109,7 +109,7 @@ fun Persistable.properties(): Map<String, Any?> {
  */
 fun Any.convert(
     entry: Map.Entry<String, KProperty1<out Persistable, *>>,
-    properties: MutableMap<String, Any?>
+    properties: MutableMap<String, Any?>,
 ) {
     val originalKey = entry.key
 
@@ -122,7 +122,7 @@ fun Any.convert(
         } else if (converter is AttributeConverter<*, *>) {
             properties.put(
                 originalKey,
-                (converter as AttributeConverter<Any, Any>).toGraphProperty(this)
+                (converter as AttributeConverter<Any, Any>).toGraphProperty(this),
             )
         }
     } else if (this is Name && originalKey == "name") {

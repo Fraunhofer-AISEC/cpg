@@ -25,7 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg
 
+import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.multiLanguage
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
@@ -172,6 +174,12 @@ class TranslationResult(
 
     override val config: TranslationConfiguration
         get() = finalCtx.config
+
+    override var language: Language<*>
+        get() {
+            return multiLanguage()
+        }
+        set(_) {}
 
     companion object {
         const val SOURCE_LOCATIONS_TO_FRONTEND = "sourceLocationsToFrontend"

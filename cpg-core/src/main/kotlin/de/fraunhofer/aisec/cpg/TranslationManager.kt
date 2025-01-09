@@ -136,7 +136,7 @@ private constructor(
     @Throws(TranslationException::class)
     private fun runFrontends(
         ctx: TranslationContext,
-        result: TranslationResult
+        result: TranslationResult,
     ): Set<LanguageFrontend<*, *>> {
         val usedFrontends = mutableSetOf<LanguageFrontend<*, *>>()
         for (sc in ctx.config.softwareComponents.keys) {
@@ -200,7 +200,7 @@ private constructor(
                                 ".c"
                             } else {
                                 ".cpp"
-                            }
+                            },
                         )
                         .toFile()
                 tmpFile.deleteOnExit()
@@ -236,7 +236,7 @@ private constructor(
                     // merge include paths from all translation units
                     ctx.config.compilationDatabase.addIncludePath(
                         tmpFile,
-                        ctx.config.compilationDatabase.allIncludePaths
+                        ctx.config.compilationDatabase.allIncludePaths,
                     )
                 }
             } else {
@@ -259,7 +259,7 @@ private constructor(
         component: Component,
         result: TranslationResult,
         globalCtx: TranslationContext,
-        sourceLocations: Collection<File>
+        sourceLocations: Collection<File>,
     ): Set<LanguageFrontend<*, *>> {
         val usedFrontends = mutableSetOf<LanguageFrontend<*, *>>()
 
@@ -279,7 +279,7 @@ private constructor(
                     globalCtx.config,
                     ScopeManager(),
                     globalCtx.typeManager,
-                    component
+                    component,
                 )
             parallelContexts.add(ctx)
 
@@ -341,7 +341,7 @@ private constructor(
         component: Component,
         result: TranslationResult,
         ctx: TranslationContext,
-        sourceLocations: Collection<File>
+        sourceLocations: Collection<File>,
     ): Set<LanguageFrontend<*, *>> {
         val usedFrontends = mutableSetOf<LanguageFrontend<*, *>>()
 
@@ -360,7 +360,7 @@ private constructor(
         result: TranslationResult,
         usedFrontends: MutableSet<LanguageFrontend<*, *>>,
         sourceLocation: File?,
-        f: LanguageFrontend<*, *>
+        f: LanguageFrontend<*, *>,
     ) {
         usedFrontends.add(f)
 
@@ -423,7 +423,7 @@ private constructor(
                         log.error(
                             "Could not instantiate language frontend {}",
                             language.frontend.simpleName,
-                            e
+                            e,
                         )
                         null
                     }

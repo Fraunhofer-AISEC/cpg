@@ -85,7 +85,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                 return newProblemExpression(
                     "Metadata or ASM value kind not supported yet",
                     ProblemNode.ProblemType.TRANSLATION,
-                    rawNode = value
+                    rawNode = value,
                 )
             }
             else -> {
@@ -102,14 +102,14 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                     newLiteral(
                         LLVMPrintValueToString(printVal).string,
                         frontend.typeOf(value),
-                        rawNode = value
+                        rawNode = value,
                     )
                 } else {
                     log.error("Unknown expression {}", kind)
                     newProblemExpression(
                         "Unknown expression $kind",
                         ProblemNode.ProblemType.TRANSLATION,
-                        rawNode = value
+                        rawNode = value,
                     )
                 }
             }
@@ -226,7 +226,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                 newProblemExpression(
                     "Not handling constant expression of opcode $kind yet",
                     ProblemNode.ProblemType.TRANSLATION,
-                    rawNode = value
+                    rawNode = value,
                 )
             }
         }
@@ -400,7 +400,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
             newProblemExpression(
                 "Default node for getelementptr",
                 ProblemNode.ProblemType.TRANSLATION,
-                rawNode = instr
+                rawNode = instr,
             )
 
         // loop through all operands / indices
@@ -451,14 +451,14 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                 if (record == null) {
                     log.error(
                         "Could not find structure type with name {}, cannot continue",
-                        baseType.typeName
+                        baseType.typeName,
                     )
                     break
                 }
 
                 log.debug(
                     "Trying to access a field within the record declaration of {}",
-                    record.name
+                    record.name,
                 )
 
                 // look for the field

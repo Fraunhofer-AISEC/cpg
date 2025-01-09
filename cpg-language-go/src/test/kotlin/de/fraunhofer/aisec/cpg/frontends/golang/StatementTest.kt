@@ -115,7 +115,7 @@ class StatementTest {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("type_assert.go").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<GoLanguage>()
             }
@@ -139,7 +139,7 @@ class StatementTest {
         assertNotNull(vs)
         assertEquals(
             listOf("main.MyStruct", "main.MyStruct*", "main.MyInterface"),
-            vs.map { it.type.name.toString() }
+            vs.map { it.type.name.toString() },
         )
         vs.forEach {
             assertLocalName("v", it)

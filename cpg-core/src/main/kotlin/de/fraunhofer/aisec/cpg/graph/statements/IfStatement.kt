@@ -111,6 +111,6 @@ class IfStatement : Statement(), BranchingNode, ArgumentHolder {
             conditionDeclaration,
             condition,
             thenStatement,
-            elseStatement
+            elseStatement,
         )
 }

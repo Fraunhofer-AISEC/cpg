@@ -39,7 +39,7 @@ import org.neo4j.ogm.annotation.Transient
 open class EdgeSingletonList<
     NodeType : Node,
     NullableNodeType : NodeType?,
-    EdgeType : Edge<NodeType>
+    EdgeType : Edge<NodeType>,
 >(
     override var thisRef: Node,
     override var init: (Node, NodeType) -> EdgeType,
@@ -177,9 +177,7 @@ open class EdgeSingletonList<
     }
 
     @Transient
-    inner class UnwrapDelegate<
-        ThisType : Node,
-    >() {
+    inner class UnwrapDelegate<ThisType : Node>() {
         @Suppress("UNCHECKED_CAST")
         operator fun getValue(thisRef: ThisType, property: KProperty<*>): NullableNodeType {
             return (if (outgoing) {

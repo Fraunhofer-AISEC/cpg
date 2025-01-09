@@ -55,7 +55,7 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
                 val method =
                     newMethodDeclaration(
                         Name(funcDecl.name.name, recordType.root.name),
-                        rawNode = funcDecl
+                        rawNode = funcDecl,
                     )
 
                 // The name of the Go receiver is optional. In fact, if the name is not
@@ -67,7 +67,7 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
                         newVariableDeclaration(
                             recvField.names[0].name,
                             recordType,
-                            rawNode = recvField
+                            rawNode = recvField,
                         )
                 }
 
@@ -124,7 +124,7 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
                         newVariableDeclaration(
                             returnVar.names[0].name,
                             frontend.typeOf(returnVar.type),
-                            rawNode = returnVar
+                            rawNode = returnVar,
                         )
 
                     // Add parameter to scope

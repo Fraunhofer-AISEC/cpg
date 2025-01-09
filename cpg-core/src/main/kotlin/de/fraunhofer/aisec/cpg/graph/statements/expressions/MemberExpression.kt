@@ -51,7 +51,7 @@ class MemberExpression : Reference(), HasOverloadedOperation, ArgumentHolder, Ha
             onChanged = { old, new ->
                 exchangeTypeObserver(old, new)
                 updateName()
-            }
+            },
         )
     override var base by unwrapping(MemberExpression::baseEdge)
 

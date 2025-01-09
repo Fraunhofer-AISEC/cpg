@@ -91,7 +91,7 @@ fun Pass<*>.tryNamespaceInference(name: Name, locationHint: Node?): NamespaceDec
  */
 internal fun Pass<*>.tryRecordInference(
     type: Type,
-    locationHint: Node? = null
+    locationHint: Node? = null,
 ): RecordDeclaration? {
     val kind =
         if (type.language is HasStructs) {
@@ -161,9 +161,7 @@ internal fun Pass<*>.tryRecordInference(
  * - No inference, in any other cases since this would mean that we would infer a local variable.
  *   This is something we do not want to do see (see above).
  */
-internal fun Pass<*>.tryVariableInference(
-    ref: Reference,
-): VariableDeclaration? {
+internal fun Pass<*>.tryVariableInference(ref: Reference): VariableDeclaration? {
     var currentRecordType = scopeManager.currentRecord?.toType() as? ObjectType
     return if (
         ref.language is HasImplicitReceiver &&
@@ -217,7 +215,7 @@ internal fun Pass<*>.tryVariableInference(
  */
 internal fun Pass<*>.tryFieldInference(
     ref: Reference,
-    targetType: ObjectType
+    targetType: ObjectType,
 ): VariableDeclaration? {
     // We only want to infer fields here, this can either happen if we have a reference with an
     // implicit receiver or if we have a scoped reference and the scope points to a record
@@ -427,10 +425,7 @@ internal fun Pass<*>.tryScopeInference(scopeName: Name, locationHint: Node?): De
  *
  * This function should solely be used in [tryMethodInference].
  */
-private fun methodExists(
-    type: ObjectType,
-    name: String,
-): Boolean {
+private fun methodExists(type: ObjectType, name: String): Boolean {
     var types = type.ancestors.map { it.type }
     var methods = types.map { it.recordDeclaration }.flatMap { it.methods }
     return methods.any { it.name.localName == name }

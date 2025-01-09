@@ -35,7 +35,7 @@ import kotlin.reflect.KProperty
 /** The types of dependences that might be represented in the CPG */
 enum class DependenceType {
     CONTROL,
-    DATA
+    DATA,
 }
 
 /**
@@ -56,7 +56,7 @@ class ProgramDependences<NodeType : Node> :
     constructor(
         thisRef: Node,
         mirrorProperty: KProperty<MutableCollection<Edge<NodeType>>>,
-        outgoing: Boolean
+        outgoing: Boolean,
     ) : super(
         thisRef,
         init = { start, end ->
@@ -64,7 +64,7 @@ class ProgramDependences<NodeType : Node> :
                 "This container only allows adding existing edges, but not creating new ones."
             )
         },
-        outgoing
+        outgoing,
     ) {
         this.mirrorProperty = mirrorProperty
     }

@@ -40,7 +40,7 @@ class ExpressionTest {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("type_assert.go").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<GoLanguage>()
             }
@@ -163,7 +163,7 @@ class ExpressionTest {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("short_assign.go").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<GoLanguage>()
             }

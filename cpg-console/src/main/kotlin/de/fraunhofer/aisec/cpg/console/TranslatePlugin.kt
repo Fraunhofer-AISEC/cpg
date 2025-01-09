@@ -90,7 +90,7 @@ class TranslatePlugin : Plugin {
                     "val analyzer = TranslationManager.builder().config(config).build()",
                     "val result = analyzer.analyze().get()",
                     // for convenience
-                    "val tu = result.translationUnits.first()"
+                    "val tu = result.translationUnits.first()",
                 )
             )
         }

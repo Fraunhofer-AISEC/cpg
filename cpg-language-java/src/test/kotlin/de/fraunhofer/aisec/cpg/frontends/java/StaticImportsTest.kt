@@ -45,12 +45,12 @@ internal class StaticImportsTest : BaseTest() {
                 listOf(
                     // we want JavaParser to analyze both files so that resolving works
                     topLevel.resolve("single/A.java").toFile(),
-                    topLevel.resolve("single/B.java").toFile()
+                    topLevel.resolve("single/B.java").toFile(),
                 ),
                 // we need to specify the root of the folder so that the JavaParser correctly
                 // resolve the package
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage(JavaLanguage())
             }
@@ -101,7 +101,7 @@ internal class StaticImportsTest : BaseTest() {
                     val bs = methods { it.name.localName == "b" && it.isStatic }
                     assertEquals(
                         call.invokes.toList(),
-                        bs { it.matchesSignature(call.signature) != IncompatibleSignature }
+                        bs { it.matchesSignature(call.signature) != IncompatibleSignature },
                     )
                 }
                 "nonStatic" -> {

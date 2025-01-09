@@ -37,7 +37,7 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 /** A simple interface that a node has [language]. */
 interface HasLanguage {
 
-    var language: Language<*>?
+    var language: Language<*>
 }
 
 /** A simple interface that a node has [name] and [location]. */

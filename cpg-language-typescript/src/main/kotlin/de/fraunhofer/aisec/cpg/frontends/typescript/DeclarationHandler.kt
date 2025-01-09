@@ -76,7 +76,7 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
                 } else {
                     "class"
                 },
-                rawNode = node
+                rawNode = node,
             )
 
         this.frontend.scopeManager.enterScope(record)
@@ -143,7 +143,7 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
                     newConstructorDeclaration(
                         record?.name?.toString() ?: "",
                         record,
-                        rawNode = node
+                        rawNode = node,
                     )
                 }
                 else -> newFunctionDeclaration(name, rawNode = node)

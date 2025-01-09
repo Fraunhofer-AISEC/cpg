@@ -141,12 +141,12 @@ class Query {
                                         ref("Dataflow", t("Dataflow")) {
                                             isStatic = true
                                             refersTo = this@record
-                                        }
+                                        },
                                     ) {
                                         this@memberCall.isStatic = true
                                         memberCall(
                                             "toString",
-                                            ref("Integer", t("Integer"), makeMagic = false)
+                                            ref("Integer", t("Integer"), makeMagic = false),
                                         ) {
                                             this.type = t("string")
                                             this@memberCall.isStatic = true
@@ -226,12 +226,12 @@ class Query {
                                         ref("Dataflow", t("Dataflow")) {
                                             isStatic = true
                                             refersTo = this@record
-                                        }
+                                        },
                                     ) {
                                         this@memberCall.isStatic = true
                                         memberCall(
                                             "toString",
-                                            ref("Integer", t("Integer"), makeMagic = false)
+                                            ref("Integer", t("Integer"), makeMagic = false),
                                         ) {
                                             this.type = t("string")
                                             this@memberCall.isStatic = true
@@ -303,12 +303,12 @@ class Query {
                                         ref("Dataflow", t("Dataflow")) {
                                             isStatic = true
                                             refersTo = this@record
-                                        }
+                                        },
                                     ) {
                                         this@memberCall.isStatic = true
                                         memberCall(
                                             "toString",
-                                            ref("Integer", t("Integer"), makeMagic = false)
+                                            ref("Integer", t("Integer"), makeMagic = false),
                                         ) {
                                             this.type = t("string")
                                             this@memberCall.isStatic = true
@@ -485,6 +485,7 @@ class Query {
                                     }
                                     forCondition { ref("i") le literal(4, t("int")) }
                                     forIteration { ref("i").incNoContext() }
+
                                 }
 
                                 returnStmt { ref("a") }
@@ -533,6 +534,7 @@ class Query {
                                     }
                                     forCondition { ref("i") lt literal(4, t("int")) }
                                     forIteration { ref("i").incNoContext() }
+
                                 }
 
                                 returnStmt { ref("a") }

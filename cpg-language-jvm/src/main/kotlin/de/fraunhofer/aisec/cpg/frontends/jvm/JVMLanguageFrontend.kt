@@ -52,7 +52,7 @@ typealias SootType = sootup.core.types.Type
 
 class JVMLanguageFrontend(
     language: Language<out LanguageFrontend<Any, SootType>>,
-    ctx: TranslationContext
+    ctx: TranslationContext,
 ) : LanguageFrontend<Any, SootType>(language, ctx) {
 
     val declarationHandler = DeclarationHandler(this)
@@ -89,8 +89,8 @@ class JVMLanguageFrontend(
                                 // ConditionalBranchFolder(),
                                 EmptySwitchEliminator(),
                                 TypeAssigner(),
-                                LocalNameStandardizer()
-                            )
+                                LocalNameStandardizer(),
+                            ),
                         )
                     )
                 }
@@ -108,8 +108,8 @@ class JVMLanguageFrontend(
                                 // ConditionalBranchFolder(),
                                 EmptySwitchEliminator(),
                                 TypeAssigner(),
-                                LocalNameStandardizer()
-                            )
+                                LocalNameStandardizer(),
+                            ),
                         )
                     )
                 }

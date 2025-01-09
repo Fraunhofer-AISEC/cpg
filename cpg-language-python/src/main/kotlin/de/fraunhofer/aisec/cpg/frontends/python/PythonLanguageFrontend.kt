@@ -103,7 +103,7 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
     private fun addCommentsToCPG(
         tud: TranslationUnitDeclaration,
         pyTokens: ArrayList<*>,
-        pyCommentCode: Long
+        pyCommentCode: Long,
     ) {
         val commentMatcher = CommentMatcher()
         for (token in pyTokens) {
@@ -126,9 +126,9 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
                             startLine.toInt(),
                             (startCol + 1).toInt(),
                             endLine.toInt(),
-                            (endCol + 1).toInt()
+                            (endCol + 1).toInt(),
                         ),
-                        tud
+                        tud,
                     )
                 }
             }
@@ -208,7 +208,7 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
 
     private fun fixStartColumn(
         location: PhysicalLocation,
-        lines: MutableList<String>
+        lines: MutableList<String>,
     ): MutableList<String> {
         for (idx in lines.indices) {
             // -1 to equalize for +1 in sarif
@@ -222,7 +222,7 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
 
     private fun removeExtraAtEnd(
         location: PhysicalLocation,
-        lines: MutableList<String>
+        lines: MutableList<String>,
     ): MutableList<String> {
         val lastLineIdx = lines.lastIndex
         val lastLineLength = lines[lastLineIdx].length
@@ -243,7 +243,7 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
                     endLine = astNode.end_lineno,
                     startColumn = astNode.col_offset + 1,
                     endColumn = astNode.end_col_offset + 1,
-                )
+                ),
             )
         } else {
             null

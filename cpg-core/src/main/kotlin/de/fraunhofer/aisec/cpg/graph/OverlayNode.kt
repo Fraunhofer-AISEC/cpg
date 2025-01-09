@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
+import de.fraunhofer.aisec.cpg.frontends.NoLanguage
 import de.fraunhofer.aisec.cpg.graph.edges.overlay.OverlaySingleEdge
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import org.neo4j.ogm.annotation.Relationship
@@ -34,14 +35,14 @@ import org.neo4j.ogm.annotation.Relationship
  * typically having shared edges to extend the original graph.
  */
 abstract class OverlayNode() : Node() {
+
+    init {
+        this.language = NoLanguage
+    }
+
     @Relationship(value = "OVERLAY", direction = Relationship.Direction.INCOMING)
     /** All [OverlayNode]s nodes are connected to an original cpg [Node] by this. */
     val underlyingNodeEdge: OverlaySingleEdge =
-        OverlaySingleEdge(
-            this,
-            of = null,
-            mirrorProperty = Node::overlayEdges,
-            outgoing = false,
-        )
+        OverlaySingleEdge(this, of = null, mirrorProperty = Node::overlayEdges, outgoing = false)
     var underlyingNode by unwrapping(OverlayNode::underlyingNodeEdge)
 }
