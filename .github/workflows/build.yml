@@ -78,7 +78,7 @@ jobs:
         uses: codecov/codecov-action@v5
         with:
           fail_ci_if_error: true
-          files: ./build/reports/kover/report-codecov.xml
+          files: ./cpg-all/build/reports/kover/report-codecov.xml
           token: ${{ secrets.CODECOV_TOKEN }}
           verbose: true
       - name: Prepare test and coverage reports
