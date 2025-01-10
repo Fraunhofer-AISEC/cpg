@@ -11,7 +11,7 @@ description: >
 
 # Getting Started
 
-After [installing the library](./installation), it can be used in different ways:
+The CPG can be used in different ways:
 
 * [As a library for Kotlin/Java](./library)
 * [Via an interactive command line interface](./cli)
