@@ -18,3 +18,4 @@ links to the specifications of the following concepts:
 * [Data Flow Graph (DFG)](./dfg)
 * [Data Flow Graph (DFG) Function Summaries](./dfg-function-summaries.md)
 * [Evaluation Order Graph (EOG)](./eog)
+* [Our inference rules](./inference) which may modify the graph
