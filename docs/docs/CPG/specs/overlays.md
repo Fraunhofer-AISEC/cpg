@@ -8,6 +8,8 @@ description: >
     Overlay Graph
 ---
 
+# Overlay Graph
+
 The CPG represents the code of a program as a graph of nodes $N_{CPG}$
 and edges $E$.
 
@@ -36,7 +38,7 @@ extending the interface `de.fraunhofer.aisec.cpg.graph.OverlayNode` and
 are connected via an edge to the  nodes in $N_{AST}$. The overlay nodes
 may have additional edges and can fill  all known except from the AST edge.
 
-# Concepts and Operations
+## Concepts and Operations
 
 One generic extension of the CPG can include **concepts** and
 **operations** for which we provide the two classes
