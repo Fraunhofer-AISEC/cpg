@@ -153,7 +153,6 @@ nav:
   - "Home": index.md
   - "Getting Started":
       - GettingStarted/index.md
-      - "Installing the CPG library": GettingStarted/installation.md
       - "Usage as library": GettingStarted/library.md
       - "Using the Interactive CLI": GettingStarted/cli.md
       - "Using the Query API": GettingStarted/query.md
