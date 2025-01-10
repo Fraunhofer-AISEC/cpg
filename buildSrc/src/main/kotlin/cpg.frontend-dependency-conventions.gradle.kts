@@ -15,30 +15,30 @@ val enableINIFrontend: Boolean by rootProject.extra
 
 dependencies {
     if (enableJavaFrontend) {
-        api(project(":cpg-language-java"))
+        implementation(project(":cpg-language-java"))
     }
     if (enableJVMFrontend) {
-        api(project(":cpg-language-jvm"))
+        implementation(project(":cpg-language-jvm"))
     }
     if (enableCXXFrontend) {
-        api(project(":cpg-language-cxx"))
+        implementation(project(":cpg-language-cxx"))
     }
     if (enableGoFrontend) {
-        api(project(":cpg-language-go"))
+        implementation(project(":cpg-language-go"))
     }
     if (enablePythonFrontend) {
-        api(project(":cpg-language-python"))
+        implementation(project(":cpg-language-python"))
     }
     if (enableLLVMFrontend) {
-        api(project(":cpg-language-llvm"))
+        implementation(project(":cpg-language-llvm"))
     }
     if (enableTypeScriptFrontend) {
-        api(project(":cpg-language-typescript"))
+        implementation(project(":cpg-language-typescript"))
     }
     if (enableRubyFrontend) {
-        api(project(":cpg-language-ruby"))
+        implementation(project(":cpg-language-ruby"))
     }
     if (enableINIFrontend) {
-        api(project(":cpg-language-ini"))
+        implementation(project(":cpg-language-ini"))
     }
 }
