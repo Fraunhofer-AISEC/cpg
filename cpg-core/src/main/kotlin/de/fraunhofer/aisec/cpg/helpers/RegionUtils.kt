@@ -37,7 +37,7 @@ fun getCodeOfSubregion(
     code: String,
     nodeRegion: Region,
     subRegion: Region,
-    lineBreakSequence: CharSequence = "\n"
+    lineBreakSequence: CharSequence = "\n",
 ): String {
     val start =
         if (subRegion.startLine == nodeRegion.startLine) {
@@ -46,7 +46,7 @@ fun getCodeOfSubregion(
             (StringUtils.ordinalIndexOf(
                 code,
                 lineBreakSequence,
-                subRegion.startLine - nodeRegion.startLine
+                subRegion.startLine - nodeRegion.startLine,
             ) + subRegion.startColumn)
         }
     var end =
@@ -56,7 +56,7 @@ fun getCodeOfSubregion(
             (StringUtils.ordinalIndexOf(
                 code,
                 lineBreakSequence,
-                subRegion.endLine - nodeRegion.startLine
+                subRegion.endLine - nodeRegion.startLine,
             ) + subRegion.endColumn)
         }
 

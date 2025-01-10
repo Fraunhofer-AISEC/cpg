@@ -32,25 +32,32 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.TypeManager
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.edges.*
+import de.fraunhofer.aisec.cpg.frontends.UnknownLanguage
+import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
-import de.fraunhofer.aisec.cpg.graph.edges.flows.ControlDependences
-import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflows
-import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrders
-import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
-import de.fraunhofer.aisec.cpg.graph.edges.flows.ProgramDependences
-import de.fraunhofer.aisec.cpg.graph.scopes.*
+import de.fraunhofer.aisec.cpg.graph.edges.flows.*
+import de.fraunhofer.aisec.cpg.graph.edges.overlay.*
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
+import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
+import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.neo4j.LocationConverter
 import de.fraunhofer.aisec.cpg.helpers.neo4j.NameConverter
 import de.fraunhofer.aisec.cpg.passes.*
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import de.fraunhofer.aisec.cpg.processing.IVisitable
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.util.*
+import kotlin.uuid.Uuid
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.apache.commons.lang3.builder.ToStringStyle
-import org.neo4j.ogm.annotation.*
+import org.neo4j.ogm.annotation.GeneratedValue
+import org.neo4j.ogm.annotation.Id
+import org.neo4j.ogm.annotation.Relationship
+import org.neo4j.ogm.annotation.Transient
 import org.neo4j.ogm.annotation.typeconversion.Convert
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -87,7 +94,7 @@ abstract class Node :
      */
     @Relationship(value = "LANGUAGE", direction = Relationship.Direction.OUTGOING)
     @JsonBackReference
-    override var language: Language<*>? = null
+    override var language: Language<*> = UnknownLanguage
 
     /**
      * The scope this node "lives" in / in which it is defined. This property is set in
@@ -166,7 +173,7 @@ abstract class Node :
     var astChildren: List<Node> = listOf()
         get() = SubgraphWalker.getAstChildren(this)
 
-    @Transient var astParent: Node? = null
+    @DoNotPersist @Transient var astParent: Node? = null
 
     /** Virtual property for accessing [prevEOGEdges] without property edges. */
     @PopulatedByPass(EvaluationOrderGraphPass::class) var prevEOG by unwrapping(Node::prevEOGEdges)
@@ -189,6 +196,7 @@ abstract class Node :
      * Virtual property for accessing [nextDFGEdges] that have a
      * [de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity].
      */
+    @DoNotPersist
     @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
     val prevFullDFG: List<Node>
         get() {
@@ -212,6 +220,7 @@ abstract class Node :
      * Virtual property for accessing [nextDFGEdges] that have a
      * [de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity].
      */
+    @DoNotPersist
     @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
     val nextFullDFG: List<Node>
         get() {
@@ -252,7 +261,10 @@ abstract class Node :
     var isImplicit = false
 
     /** Required field for object graph mapping. It contains the node id. */
-    @Id @GeneratedValue var id: Long? = null
+    @DoNotPersist @Id @GeneratedValue var legacyId: Long? = null
+
+    /** Will replace [legacyId] */
+    var id: Uuid = Uuid.random()
 
     /** Index of the argument if this node is used in a function call or parameter list. */
     var argumentIndex = 0
@@ -267,6 +279,11 @@ abstract class Node :
      */
     val additionalProblems: MutableSet<ProblemNode> = mutableSetOf()
 
+    @Relationship(value = "OVERLAY", direction = Relationship.Direction.OUTGOING)
+    val overlayEdges: Overlays =
+        Overlays(this, mirrorProperty = OverlayNode::underlyingNodeEdge, outgoing = true)
+    var overlays by unwrapping(Node::overlayEdges)
+
     /**
      * If a node should be removed from the graph, just removing it from the AST is not enough (see
      * issue #60). It will most probably be referenced somewhere via DFG or EOG edges. Thus, if it
@@ -277,6 +294,9 @@ abstract class Node :
      * further children that have no alternative connection paths to the rest of the graph.
      */
     fun disconnectFromGraph() {
+        // Disconnect all AST children first
+        this.astChildren.forEach { it.disconnectFromGraph() }
+
         nextDFGEdges.clear()
         prevDFGEdges.clear()
         prevCDGEdges.clear()
@@ -285,6 +305,8 @@ abstract class Node :
         nextPDGEdges.clear()
         nextEOGEdges.clear()
         prevEOGEdges.clear()
+
+        astParent = null
     }
 
     override fun toString(): String {

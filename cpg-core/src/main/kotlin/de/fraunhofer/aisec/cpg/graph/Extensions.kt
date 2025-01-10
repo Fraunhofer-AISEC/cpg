@@ -102,13 +102,13 @@ enum class SearchModifier {
      * This search modifier denotes that the result returned by the search needs to be unique. If it
      * is not unique, a [NoSuchElementException] is thrown, even if a `orNull` function is used.
      */
-    UNIQUE
+    UNIQUE,
 }
 
 /** A shortcut to call [byNameOrNull] using the `[]` syntax. */
 operator fun <T : Node> Collection<T>?.get(
     lookup: String,
-    modifier: SearchModifier = SearchModifier.NONE
+    modifier: SearchModifier = SearchModifier.NONE,
 ): T? {
     return this.byNameOrNull(lookup, modifier)
 }
@@ -116,7 +116,7 @@ operator fun <T : Node> Collection<T>?.get(
 /** A shortcut to call [firstOrNull] using the `[]` syntax. */
 operator fun <T : Node> Collection<T>?.get(
     predicate: (T) -> Boolean,
-    modifier: SearchModifier = SearchModifier.NONE
+    modifier: SearchModifier = SearchModifier.NONE,
 ): T? {
     return if (modifier == SearchModifier.NONE) {
         return this?.firstOrNull(predicate)
@@ -202,13 +202,13 @@ class FulfilledAndFailedPaths(val fulfilled: List<List<Node>>, val failed: List<
 fun Node.followPrevFullDFGEdgesUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
-    predicate: (Node) -> Boolean
+    predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
         x = { currentNode -> currentNode.prevFullDFG },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
-        predicate = predicate
+        predicate = predicate,
     )
 }
 
@@ -221,7 +221,7 @@ fun Node.collectAllPrevFullDFGPaths(): List<List<Node>> {
     // failed paths (everything)
     return this.followPrevFullDFGEdgesUntilHit(
             collectFailedPaths = true,
-            findAllPossiblePaths = true
+            findAllPossiblePaths = true,
         ) {
             false
         }
@@ -251,10 +251,7 @@ fun Node.collectAllNextFullDFGPaths(): List<List<Node>> {
 fun Node.collectAllNextEOGPaths(): List<List<Node>> {
     // We make everything fail to reach the end of the CDG. Then, we use the stuff collected in the
     // failed paths (everything)
-    return this.followNextEOGEdgesUntilHit(
-            collectFailedPaths = true,
-            findAllPossiblePaths = true,
-        ) {
+    return this.followNextEOGEdgesUntilHit(collectFailedPaths = true, findAllPossiblePaths = true) {
             false
         }
         .failed
@@ -280,10 +277,7 @@ fun Node.collectAllPrevEOGPaths(interproceduralAnalysis: Boolean): List<List<Nod
 fun Node.collectAllNextPDGGPaths(): List<List<Node>> {
     // We make everything fail to reach the end of the CDG. Then, we use the stuff collected in the
     // failed paths (everything)
-    return this.followNextPDGUntilHit(
-            collectFailedPaths = true,
-            findAllPossiblePaths = true,
-        ) {
+    return this.followNextPDGUntilHit(collectFailedPaths = true, findAllPossiblePaths = true) {
             false
         }
         .failed
@@ -299,7 +293,7 @@ fun Node.collectAllPrevPDGPaths(interproceduralAnalysis: Boolean): List<List<Nod
     return this.followPrevPDGUntilHit(
             collectFailedPaths = true,
             findAllPossiblePaths = true,
-            interproceduralAnalysis = interproceduralAnalysis
+            interproceduralAnalysis = interproceduralAnalysis,
         ) {
             false
         }
@@ -316,7 +310,7 @@ fun Node.collectAllPrevCDGPaths(interproceduralAnalysis: Boolean): List<List<Nod
     return this.followPrevCDGUntilHit(
             collectFailedPaths = true,
             findAllPossiblePaths = true,
-            interproceduralAnalysis = interproceduralAnalysis
+            interproceduralAnalysis = interproceduralAnalysis,
         ) {
             false
         }
@@ -333,7 +327,7 @@ fun Node.collectAllNextCDGPaths(interproceduralAnalysis: Boolean): List<List<Nod
     return this.followNextCDGUntilHit(
             collectFailedPaths = true,
             findAllPossiblePaths = true,
-            interproceduralAnalysis = interproceduralAnalysis
+            interproceduralAnalysis = interproceduralAnalysis,
         ) {
             false
         }
@@ -353,7 +347,7 @@ fun Node.followNextPDGUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
     interproceduralAnalysis: Boolean = false,
-    predicate: (Node) -> Boolean
+    predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
         x = { currentNode ->
@@ -365,7 +359,7 @@ fun Node.followNextPDGUntilHit(
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
-        predicate = predicate
+        predicate = predicate,
     )
 }
 
@@ -382,7 +376,7 @@ fun Node.followNextCDGUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
     interproceduralAnalysis: Boolean = false,
-    predicate: (Node) -> Boolean
+    predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
         x = { currentNode ->
@@ -394,7 +388,7 @@ fun Node.followNextCDGUntilHit(
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
-        predicate = predicate
+        predicate = predicate,
     )
 }
 
@@ -412,7 +406,7 @@ fun Node.followPrevPDGUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
     interproceduralAnalysis: Boolean = false,
-    predicate: (Node) -> Boolean
+    predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
         x = { currentNode ->
@@ -428,7 +422,7 @@ fun Node.followPrevPDGUntilHit(
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
-        predicate = predicate
+        predicate = predicate,
     )
 }
 
@@ -446,7 +440,7 @@ fun Node.followPrevCDGUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
     interproceduralAnalysis: Boolean = false,
-    predicate: (Node) -> Boolean
+    predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
         x = { currentNode ->
@@ -462,7 +456,7 @@ fun Node.followPrevCDGUntilHit(
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
-        predicate = predicate
+        predicate = predicate,
     )
 }
 
@@ -480,7 +474,7 @@ fun Node.followXUntilHit(
     x: (Node) -> List<Node>,
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
-    predicate: (Node) -> Boolean
+    predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     // Looks complicated but at least it's not recursive...
     // result: List of paths (between from and to)
@@ -542,13 +536,13 @@ fun Node.followXUntilHit(
 fun Node.followNextFullDFGEdgesUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
-    predicate: (Node) -> Boolean
+    predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
         x = { currentNode -> currentNode.nextFullDFG },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
-        predicate = predicate
+        predicate = predicate,
     )
 }
 
@@ -565,7 +559,7 @@ fun Node.followNextFullDFGEdgesUntilHit(
 fun Node.followNextEOGEdgesUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
-    predicate: (Node) -> Boolean
+    predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
         x = { currentNode ->
@@ -573,7 +567,7 @@ fun Node.followNextEOGEdgesUntilHit(
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
-        predicate = predicate
+        predicate = predicate,
     )
 }
 
@@ -590,7 +584,7 @@ fun Node.followNextEOGEdgesUntilHit(
 fun Node.followPrevEOGEdgesUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
-    predicate: (Node) -> Boolean
+    predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
         x = { currentNode ->
@@ -598,7 +592,7 @@ fun Node.followPrevEOGEdgesUntilHit(
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
-        predicate = predicate
+        predicate = predicate,
     )
 }
 
@@ -1011,13 +1005,46 @@ fun Expression?.unwrapReference(): Reference? {
 /** Returns the [TranslationUnitDeclaration] where this node is located in. */
 val Node.translationUnit: TranslationUnitDeclaration?
     get() {
-        var node: Node? = this
-        while (node != null) {
-            if (node is TranslationUnitDeclaration) {
-                return node
-            }
-            node = node.astParent
+        return firstParentOrNull { it is TranslationUnitDeclaration } as? TranslationUnitDeclaration
+    }
+
+/**
+ * This helper function be used to find out if a particular expression (usually a [CallExpression]
+ * or a [Reference]) is imported through a [ImportDeclaration].
+ *
+ * It returns a [Pair], with the [Pair.first] being a boolean value whether it was imported and
+ * [Pair.second] the [ImportDeclaration] if applicable.
+ */
+val Expression.importedFrom: List<ImportDeclaration>
+    get() {
+        if (this is CallExpression) {
+            return this.callee.importedFrom
+        } else if (this is MemberExpression) {
+            return this.base.importedFrom
+        } else if (this is Reference) {
+            val imports = this.translationUnit.imports
+
+            return if (name.parent == null) {
+                // If the name does not have a parent, this reference could directly be the name
+                // of an import, let's check
+                imports.filter { it.name.lastPartsMatch(name) }
+            } else {
+                // Otherwise, the parent name could be the import
+                imports.filter { it.name == this.name.parent }
+            } ?: listOf<ImportDeclaration>()
         }
 
-        return null
+        return listOf<ImportDeclaration>()
+    }
+
+/**
+ * Determines whether the expression is imported from another source.
+ *
+ * This property evaluates to `true` if the expression originates from an external or supplemental
+ * source by checking if the [importedFrom] property contains any entries. Otherwise, it evaluates
+ * to `false`.
+ */
+val Expression.isImported: Boolean
+    get() {
+        return this.importedFrom.isNotEmpty()
     }

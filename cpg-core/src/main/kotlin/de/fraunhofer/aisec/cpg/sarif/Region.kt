@@ -32,7 +32,7 @@ class Region(
     @JvmField var startLine: Int = -1,
     @JvmField var startColumn: Int = -1,
     var endLine: Int = -1,
-    var endColumn: Int = -1
+    var endColumn: Int = -1,
 ) : Comparable<Region> {
 
     override fun toString(): String {

@@ -41,7 +41,7 @@ class ExamplesTest {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("rust_sample.ll").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<LLVMIRLanguage>()
             }

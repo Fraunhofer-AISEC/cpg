@@ -50,8 +50,8 @@ internal class CXXSymbolConfigurationTest : BaseTest() {
                     TranslationContext(
                         TranslationConfiguration.builder().build(),
                         ScopeManager(),
-                        TypeManager()
-                    )
+                        TypeManager(),
+                    ),
                 )
                 .parse(File("src/test/resources/symbols.cpp"))
         val main = tu.functions["main"]
@@ -90,7 +90,7 @@ internal class CXXSymbolConfigurationTest : BaseTest() {
         val tu =
             CXXLanguageFrontend(
                     CPPLanguage(),
-                    TranslationContext(config, ScopeManager(), TypeManager())
+                    TranslationContext(config, ScopeManager(), TypeManager()),
                 )
                 .parse(File("src/test/resources/symbols.cpp"))
         val main = tu.functions["main"]

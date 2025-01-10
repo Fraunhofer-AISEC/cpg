@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import jep.python.PyObject
@@ -65,10 +64,11 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
             is Python.AST.YieldFrom ->
                 newProblemExpression(
                     "The expression of class ${node.javaClass} is not supported yet",
-                    rawNode = node
+                    rawNode = node,
                 )
         }
     }
+
     /**
      * Translates a Python
      * [`comprehension`](https://docs.python.org/3/library/ast.html#ast.comprehension) into a
@@ -76,8 +76,11 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
      *
      * Connects multiple predicates by `and`.
      */
-    private fun handleComprehension(node: Python.AST.comprehension): ComprehensionExpression {
-        return newComprehensionExpression(rawNode = node).apply {
+    private fun handleComprehension(
+        node: Python.AST.comprehension,
+        parent: Python.AST.BaseExpr,
+    ): ComprehensionExpression {
+        return newComprehensionExpression(rawNode = parent).apply {
             variable = handle(node.target)
             iterable = handle(node.iter)
             val predicates = node.ifs.map { handle(it) }
@@ -85,13 +88,13 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                 predicate = predicates.single()
             } else if (predicates.size > 1) {
                 predicate =
-                    joinListWithBinOp(operatorCode = "and", nodes = predicates, rawNode = node)
+                    joinListWithBinOp(operatorCode = "and", nodes = predicates, rawNode = parent)
             }
             if (node.is_async != 0L)
                 additionalProblems +=
                     newProblemExpression(
                         "Node marked as is_async but we don't support this yet",
-                        rawNode = node
+                        rawNode = node,
                     )
         }
     }
@@ -104,7 +107,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     private fun handleGeneratorExp(node: Python.AST.GeneratorExp): CollectionComprehension {
         return newCollectionComprehension(rawNode = node).apply {
             statement = handle(node.elt)
-            comprehensionExpressions += node.generators.map { handleComprehension(it) }
+            comprehensionExpressions += node.generators.map { handleComprehension(it, node) }
             type = objectType("Generator")
         }
     }
@@ -116,7 +119,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     private fun handleListComprehension(node: Python.AST.ListComp): CollectionComprehension {
         return newCollectionComprehension(rawNode = node).apply {
             statement = handle(node.elt)
-            comprehensionExpressions += node.generators.map { handleComprehension(it) }
+            comprehensionExpressions += node.generators.map { handleComprehension(it, node) }
             type = objectType("list") // TODO: Replace this once we have dedicated types
         }
     }
@@ -128,7 +131,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     private fun handleSetComprehension(node: Python.AST.SetComp): CollectionComprehension {
         return newCollectionComprehension(rawNode = node).apply {
             this.statement = handle(node.elt)
-            this.comprehensionExpressions += node.generators.map { handleComprehension(it) }
+            this.comprehensionExpressions += node.generators.map { handleComprehension(it, node) }
             this.type = objectType("set") // TODO: Replace this once we have dedicated types
         }
     }
@@ -143,9 +146,9 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                 newKeyValueExpression(
                     key = handle(node.key),
                     value = handle(node.value),
-                    rawNode = node
+                    rawNode = node,
                 )
-            this.comprehensionExpressions += node.generators.map { handleComprehension(it) }
+            this.comprehensionExpressions += node.generators.map { handleComprehension(it, node) }
             this.type = objectType("dict") // TODO: Replace this once we have dedicated types
         }
     }
@@ -162,7 +165,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                 operatorCode = ":=",
                 lhs = listOf(handle(node.target)),
                 rhs = listOf(handle(node.value)),
-                rawNode = node
+                rawNode = node,
             )
         assignExpression.usedAsExpression = true
         return assignExpression
@@ -222,7 +225,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                         newCallExpression(
                                 callee = newReference(name = "str", rawNode = node),
                                 fqn = "str",
-                                rawNode = node
+                                rawNode = node,
                             )
                             .implicit()
                     strCall.addArgument(valueExpression)
@@ -234,7 +237,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                         newCallExpression(
                                 callee = newReference(name = "repr", rawNode = node),
                                 fqn = "repr",
-                                rawNode = node
+                                rawNode = node,
                             )
                             .implicit()
                     reprCall.addArgument(valueExpression)
@@ -246,7 +249,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                         newCallExpression(
                                 newReference("ascii", rawNode = node),
                                 "ascii",
-                                rawNode = node
+                                rawNode = node,
                             )
                             .implicit()
                     asciiCall.addArgument(handle(node.value))
@@ -256,14 +259,14 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                     newProblemExpression(
                         problem =
                             "Cannot handle formatted value with conversion code ${node.conversion} yet",
-                        rawNode = node
+                        rawNode = node,
                     )
             }
         if (formatSpec != null) {
             return newCallExpression(
                     callee = newReference(name = "format", rawNode = node),
                     fqn = "format",
-                    rawNode = node
+                    rawNode = node,
                 )
                 .implicit()
                 .apply {
@@ -298,7 +301,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         operatorCode: String,
         nodes: List<Expression>,
         rawNode: Python.AST.AST? = null,
-        isImplicit: Boolean = true
+        isImplicit: Boolean = true,
     ): BinaryOperator {
         val lastTwo =
             newBinaryOperator(operatorCode = operatorCode, rawNode = rawNode).apply {
@@ -356,14 +359,14 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         return if (node.values.size <= 1) {
             newProblemExpression(
                 "Expected exactly two expressions but got ${node.values.size}",
-                rawNode = node
+                rawNode = node,
             )
         } else {
             joinListWithBinOp(
                 operatorCode = op,
                 nodes = node.values.map(::handle),
                 rawNode = node,
-                isImplicit = true
+                isImplicit = true,
             )
         }
     }
@@ -406,7 +409,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
             condition = handle(node.test),
             thenExpression = handle(node.body),
             elseExpression = handle(node.orelse),
-            rawNode = node
+            rawNode = node,
         )
     }
 
@@ -470,19 +473,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     private fun handleAttribute(node: Python.AST.Attribute): Expression {
         var base = handle(node.value)
 
-        // We do a quick check, if this refers to an import. This is faster than doing
-        // this in a pass and most likely valid, since we are under the assumption that
-        // our current file is (more or less) complete, but we might miss some
-        // additional dependencies
-        var ref =
-            if (isImport(base.name)) {
-                // Yes, it's an import, so we need to construct a reference with an FQN
-                newReference(base.name.fqn(node.attr), rawNode = node)
-            } else {
-                newMemberExpression(name = node.attr, base = base, rawNode = node)
-            }
-
-        return ref
+        return newMemberExpression(name = node.attr, base = base, rawNode = node)
     }
 
     private fun handleConstant(node: Python.AST.Constant): Expression {
@@ -548,14 +539,6 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         }
 
         return ret
-    }
-
-    private fun isImport(name: Name): Boolean {
-        val decl =
-            frontend.scopeManager.currentScope
-                ?.lookupSymbol(name.localName, replaceImports = false)
-                ?.filterIsInstance<ImportDeclaration>()
-        return decl?.isNotEmpty() == true
     }
 
     private fun handleName(node: Python.AST.Name): Expression {

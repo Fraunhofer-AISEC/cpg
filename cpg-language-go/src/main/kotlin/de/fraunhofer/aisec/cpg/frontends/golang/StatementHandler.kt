@@ -281,7 +281,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
                 incDecStmt.tokString,
                 postfix = true,
                 prefix = false,
-                rawNode = incDecStmt
+                rawNode = incDecStmt,
             )
         op.input = frontend.expressionHandler.handle(incDecStmt.x)
 

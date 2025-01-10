@@ -35,7 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.unknownType
  *
  * Note: This is intentionally a distinct type and not the [UnknownType].
  */
-class AutoType(override var language: Language<*>?) : Type("auto", language) {
+class AutoType(override var language: Language<*>) : Type("auto", language) {
     override fun reference(pointer: PointerType.PointerOrigin?): Type {
         return PointerType(this, pointer)
     }

@@ -56,7 +56,7 @@ fun Node.printEOG(maxConnections: Int = 25): String {
 fun <T : Edge<Node>> Node.printGraph(
     nextEdgeGetter: KProperty1<Node, MutableCollection<T>>,
     prevEdgeGetter: KProperty1<Node, MutableCollection<T>>,
-    maxConnections: Int = 25
+    maxConnections: Int = 25,
 ): String {
     val builder = StringBuilder()
 
@@ -109,7 +109,7 @@ fun <T : Edge<Node>> Node.printGraph(
 private fun Edge<Node>.label(): String {
     val builder = StringBuilder()
     builder.append("\"")
-    builder.append(this.label)
+    builder.append(this.labels.joinToString(","))
 
     if (this is Dataflow) {
         var granularity = this.granularity

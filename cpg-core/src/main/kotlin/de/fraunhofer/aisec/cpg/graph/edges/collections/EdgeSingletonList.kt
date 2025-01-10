@@ -36,7 +36,11 @@ import org.neo4j.ogm.annotation.Transient
  *
  * Therefore, we need to wrap the edge in a list with a single element.
  */
-class EdgeSingletonList<NodeType : Node, NullableNodeType : NodeType?, EdgeType : Edge<NodeType>>(
+open class EdgeSingletonList<
+    NodeType : Node,
+    NullableNodeType : NodeType?,
+    EdgeType : Edge<NodeType>,
+>(
     override var thisRef: Node,
     override var init: (Node, NodeType) -> EdgeType,
     var onChanged: ((old: EdgeType?, new: EdgeType?) -> Unit)? = null,
@@ -71,7 +75,15 @@ class EdgeSingletonList<NodeType : Node, NullableNodeType : NodeType?, EdgeType 
     }
 
     override fun add(element: EdgeType): Boolean {
-        throw UnsupportedOperationException()
+        if (this.element == null) {
+            this.element = element
+            onChanged?.invoke(null, this.element)
+            return true
+        } else {
+            throw UnsupportedOperationException(
+                "We cannot 'add' to a singleton edge list, that is already populated"
+            )
+        }
     }
 
     override fun addAll(elements: Collection<EdgeType>): Boolean {
@@ -151,6 +163,13 @@ class EdgeSingletonList<NodeType : Node, NullableNodeType : NodeType?, EdgeType 
                 @Suppress("UNCHECKED_CAST") init(node, thisRef as NodeType)
             }
         onChanged?.invoke(old, this.element)
+
+        val element = this.element
+        if (element != null) {
+            handleOnAdd(element)
+        } else if (old != null) {
+            handleOnRemove(old)
+        }
     }
 
     fun <ThisType : Node> delegate(): UnwrapDelegate<ThisType> {
@@ -158,9 +177,7 @@ class EdgeSingletonList<NodeType : Node, NullableNodeType : NodeType?, EdgeType 
     }
 
     @Transient
-    inner class UnwrapDelegate<
-        ThisType : Node,
-    >() {
+    inner class UnwrapDelegate<ThisType : Node>() {
         @Suppress("UNCHECKED_CAST")
         operator fun getValue(thisRef: ThisType, property: KProperty<*>): NullableNodeType {
             return (if (outgoing) {

@@ -181,7 +181,7 @@ open class CallExpression :
     @JvmOverloads
     fun addTemplateParameter(
         templateParam: Node,
-        templateInitialization: TemplateInitialization? = TemplateInitialization.EXPLICIT
+        templateInitialization: TemplateInitialization? = TemplateInitialization.EXPLICIT,
     ) {
         if (templateParam is Expression || templateParam is Type) {
             if (templateArgumentEdges == null) {
@@ -195,7 +195,7 @@ open class CallExpression :
 
     fun updateTemplateParameters(
         initializationType: Map<Node?, TemplateInitialization?>,
-        orderedInitializationSignature: List<Node>
+        orderedInitializationSignature: List<Node>,
     ) {
         if (templateArgumentEdges == null) {
             templateArgumentEdges = TemplateArguments(this)
@@ -216,7 +216,7 @@ open class CallExpression :
                 instantiation =
                     initializationType.getOrDefault(
                         orderedInitializationSignature[i],
-                        TemplateInitialization.UNKNOWN
+                        TemplateInitialization.UNKNOWN,
                     )
             }
         }

@@ -66,7 +66,7 @@ internal class TypeTests : BaseTest() {
         val methodDeclarationGet = findByUniqueName(methodDeclarations, "get")
         assertEquals(
             FunctionType("get()T", listOf(), listOf(typeT), JavaLanguage()),
-            methodDeclarationGet.type
+            methodDeclarationGet.type,
         )
     }
 
@@ -133,7 +133,7 @@ internal class TypeTests : BaseTest() {
         level1: Type,
         level1b: Type,
         level2: Type,
-        unrelated: Type
+        unrelated: Type,
     ) {
         /*
         Type hierarchy:
@@ -174,7 +174,7 @@ internal class TypeTests : BaseTest() {
             assertFullName(
                 "java.lang.Object",
                 setOf(unrelated, t).commonType,
-                "${t.typeName} and ${unrelated.typeName} do not have a common type (java.lang.Object) which they should"
+                "${t.typeName} and ${unrelated.typeName} do not have a common type (java.lang.Object) which they should",
             )
         }
     }

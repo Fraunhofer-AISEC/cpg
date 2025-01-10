@@ -102,7 +102,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
             node,
             finalState.returnStatements.values.flatMap {
                 it.elements.filterIsInstance<ReturnStatement>()
-            }
+            },
         )
 
         for ((key, value) in finalState.generalState) {
@@ -130,7 +130,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                     ) {
                         key.prevDFGEdges.addContextSensitive(
                             it,
-                            callingContext = (edgePropertiesMap[Pair(it, key)] as CallingContext)
+                            callingContext = (edgePropertiesMap[Pair(it, key)] as CallingContext),
                         )
                     } else {
                         key.prevDFGEdges += it
@@ -183,7 +183,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
     protected open fun transfer(
         currentEdge: Edge<Node>,
         state: State<Node, Set<Node>>,
-        worklist: Worklist<Edge<Node>, Node, Set<Node>>
+        worklist: Worklist<Edge<Node>, Node, Set<Node>>,
     ): State<Node, Set<Node>> {
         // We will set this if we write to a variable
         val writtenDeclaration: Declaration?
@@ -209,7 +209,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                 // We also wrote something to this variable declaration here.
                 doubleState.pushToDeclarationsState(
                     currentNode,
-                    PowersetLattice(identitySetOf(currentNode))
+                    PowersetLattice(identitySetOf(currentNode)),
                 )
             }
         } else if (currentNode is MemberExpression && currentNode.access == AccessValues.WRITE) {
@@ -459,7 +459,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
         } else if (currentNode is ReturnStatement) {
             doubleState.returnStatements.push(
                 currentNode,
-                PowersetLattice(identitySetOf(currentNode))
+                PowersetLattice(identitySetOf(currentNode)),
             )
         } else if (currentNode is CallExpression) {
             // If the CallExpression invokes a function for which we have a function summary, we use
@@ -494,13 +494,13 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                 // The default behavior so we continue with the next EOG thing.
                 doubleState.declarationsState.push(
                     currentNode,
-                    doubleState.declarationsState[currentEdge.start]
+                    doubleState.declarationsState[currentEdge.start],
                 )
             }
         } else {
             doubleState.declarationsState.push(
                 currentNode,
-                doubleState.declarationsState[currentEdge.start]
+                doubleState.declarationsState[currentEdge.start],
             )
         }
         return state
@@ -523,8 +523,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
     protected fun isCompoundAssignment(currentNode: Node): Boolean {
         contract { returns(true) implies (currentNode is AssignExpression) }
         return currentNode is AssignExpression &&
-            currentNode.operatorCode in
-                (currentNode.language?.compoundAssignmentOperators ?: setOf()) &&
+            currentNode.operatorCode in currentNode.language.compoundAssignmentOperators &&
             (currentNode.lhs.singleOrNull() as? Reference)?.refersTo != null
     }
 
@@ -545,7 +544,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
      */
     protected fun removeUnreachableImplicitReturnStatement(
         node: Node,
-        reachableReturnStatements: Collection<ReturnStatement>
+        reachableReturnStatements: Collection<ReturnStatement>,
     ) {
         val lastStatement =
             ((node as? FunctionDeclaration)?.body as? Block)?.statements?.lastOrNull()
@@ -577,7 +576,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
         var declarationsState: State<Any?, V> = State(),
 
         /** The [returnStatements] which are reachable. */
-        var returnStatements: State<Node, V> = State()
+        var returnStatements: State<Node, V> = State(),
     ) : State<Node, V>() {
         override fun duplicate(): DFGPassState<V> {
             return DFGPassState(generalState.duplicate(), declarationsState.duplicate())
@@ -609,7 +608,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
 
         override fun push(
             newNode: de.fraunhofer.aisec.cpg.graph.Node,
-            newLatticeElement: LatticeElement<V>?
+            newLatticeElement: LatticeElement<V>?,
         ): Boolean {
             return generalState.push(newNode, newLatticeElement)
         }
@@ -617,7 +616,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
         /** Pushes the [newNode] and its [newLatticeElement] to the [declarationsState]. */
         fun pushToDeclarationsState(
             newNode: Declaration,
-            newLatticeElement: LatticeElement<V>?
+            newLatticeElement: LatticeElement<V>?,
         ): Boolean {
             return declarationsState.push(newNode, newLatticeElement)
         }

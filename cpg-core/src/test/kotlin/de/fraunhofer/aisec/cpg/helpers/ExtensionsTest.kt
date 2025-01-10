@@ -68,11 +68,11 @@ internal class ExtensionsTest : BaseTest() {
         assertEquals(2, test.problems.size, "Expected two problems.")
         assertNotNull(
             test.problems.filter { it.problem == problemDeclText },
-            "Failed to find the problem declaration."
+            "Failed to find the problem declaration.",
         )
         assertNotNull(
             test.problems.filter { it.problem == problemExprText },
-            "Failed to find the problem expression."
+            "Failed to find the problem expression.",
         )
     }
 }

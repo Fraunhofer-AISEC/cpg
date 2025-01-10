@@ -2,8 +2,9 @@
 kotlin = "2.0.20"
 kotlin19 = "1.9.10"
 neo4j = "4.0.10"
+neo4j5 = "5.27.0"
 log4j = "2.24.0"
-spotless = "6.25.0"
+spotless = "7.0.1"
 nexus-publish = "2.0.0"
 sootup = "1.3.0"
 slf4j = "2.0.16"
@@ -16,7 +17,7 @@ kotlin-scripting-jvm = { module = "org.jetbrains.kotlin:kotlin-scripting-jvm", v
 kotlin-scripting-dependencies = { module = "org.jetbrains.kotlin:kotlin-scripting-dependencies", version.ref = "kotlin19"}
 kotlin-scripting-dependencies-maven-all = { module = "org.jetbrains.kotlin:kotlin-scripting-dependencies-maven-all", version.ref = "kotlin19"}
 kotlin-scripting-ide-services = { module = "org.jetbrains.kotlin:kotlin-scripting-ide-services", version.ref = "kotlin19"}
-kotlin-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version = "1.9.0"}
+kotlin-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version = "1.10.1"}
 kotlin-ki-shell = { module = "com.github.Kotlin:kotlin-interactive-shell", version = "5b1ff4d821"}
 kotlin-test-junit5 = { module = "org.jetbrains.kotlin:kotlin-test-junit5", version.ref = "kotlin"}  # this is only needed for the testFixtures in cpg-core, everywhere else kotlin("test") is used
 
@@ -28,11 +29,12 @@ slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j"}
 apache-commons-lang3 = { module = "org.apache.commons:commons-lang3", version = "3.17.0"}
 neo4j-ogm-core = { module = "org.neo4j:neo4j-ogm-core", version.ref = "neo4j"}
 neo4j-ogm-bolt-driver = { module = "org.neo4j:neo4j-ogm-bolt-driver", version.ref = "neo4j"}
+neo4j-driver = { module = "org.neo4j.driver:neo4j-java-driver", version.ref = "neo4j5"}
 
 javaparser = { module = "com.github.javaparser:javaparser-symbol-solver-core", version = "3.26.0"}
 jackson = { module = "com.fasterxml.jackson.module:jackson-module-kotlin", version = "2.18.0"}
 jacksonyml = { module = "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml", version = "2.18.0"}
-eclipse-runtime = { module = "org.eclipse.platform:org.eclipse.core.runtime", version = "3.31.0"}
+eclipse-runtime = { module = "org.eclipse.platform:org.eclipse.core.runtime", version = "3.32.0"}
 osgi-service = { module = "org.osgi:org.osgi.service.prefs", version = "1.1.2"}
 icu4j = { module = "com.ibm.icu:icu4j", version = "76.1"}
 # Note: This "module" intentionally looks very weird, because the CDT version is actually part of the path of the CDT external
@@ -43,19 +45,19 @@ picocli-codegen = { module = "info.picocli:picocli-codegen", version = "4.7.0"}
 jep = { module = "black.ninia:jep", version = "4.2.0" }  # build.yml uses grep to extract the jep verison number for CI/CD purposes
 llvm = { module = "org.bytedeco:llvm-platform", version = "16.0.4-1.5.9"}
 jruby = { module = "org.jruby:jruby-core", version = "9.4.3.0" }
-jline = { module = "org.jline:jline", version = "3.27.0" }
+jline = { module = "org.jline:jline", version = "3.28.0" }
 antlr-runtime = { module = "org.antlr:antlr4-runtime", version = "4.8-1" } # we cannot upgrade until ki-shell upgrades this!
 ini4j = { module = "org.ini4j:ini4j", version = "0.5.4" }
 
 # test
 junit-params = { module = "org.junit.jupiter:junit-jupiter-params", version = "5.11.0"}
-mockito = { module = "org.mockito:mockito-core", version = "5.14.0"}
+mockito = { module = "org.mockito:mockito-core", version = "5.15.2"}
 
 # plugins needed for build.gradle.kts in buildSrc
 kotlin-gradle = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
-dokka-gradle = { module = "org.jetbrains.dokka:dokka-gradle-plugin", version = "1.9.0" } # the dokka plugin is slightly behind the main Kotlin release cycle
-dokka-versioning = { module = "org.jetbrains.dokka:versioning-plugin", version = "1.9.0"}
-kover-gradle = { module = "org.jetbrains.kotlinx:kover-gradle-plugin", version = "0.8.0" }
+dokka-gradle = { module = "org.jetbrains.dokka:dokka-gradle-plugin", version = "2.0.0" } # the dokka plugin is slightly behind the main Kotlin release cycle
+dokka-versioning = { module = "org.jetbrains.dokka:versioning-plugin", version = "2.0.0"}
+kover-gradle = { module = "org.jetbrains.kotlinx:kover-gradle-plugin", version = "0.9.0" }
 spotless-gradle = { module = "com.diffplug.spotless:spotless-plugin-gradle", version.ref = "spotless" }
 nexus-publish-gradle = { module = "io.github.gradle-nexus:publish-plugin", version.ref = "nexus-publish" }
 
@@ -82,3 +84,4 @@ kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin"}
 dokka = { id = "org.jetbrains.dokka", version.ref = "kotlin" }
 spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
 node = { id = "com.github.node-gradle.node", version = "7.1.0"}
+download = { id = "de.undercouch.download", version = "5.6.0" }

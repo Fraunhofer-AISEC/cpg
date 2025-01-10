@@ -102,7 +102,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 newProblemExpression(
                     "Cannot handle callbr instruction yet",
                     ProblemNode.ProblemType.TRANSLATION,
-                    rawNode = instr
+                    rawNode = instr,
                 )
             }
             LLVMFNeg -> {
@@ -219,7 +219,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 newProblemExpression(
                     "Not handling instruction opcode $opcode yet",
                     ProblemNode.ProblemType.TRANSLATION,
-                    rawNode = instr
+                    rawNode = instr,
                 )
             }
         }
@@ -276,7 +276,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 llvmInternalRef("llvm.catchswitch"),
                 "llvm.catchswitch",
                 false,
-                rawNode = instr
+                rawNode = instr,
             )
         dummyCall.addArgument(parent, "parent")
 
@@ -308,7 +308,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                     llvmInternalRef("llvm.matchesCatchpad"),
                     "llvm.matchesCatchpad",
                     false,
-                    rawNode = instr
+                    rawNode = instr,
                 )
 
             val parentCatchSwitch = LLVMGetParentCatchSwitch(catchpad)
@@ -368,7 +368,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 llvmInternalRef("llvm.cleanuppad"),
                 "llvm.cleanuppad",
                 false,
-                rawNode = instr
+                rawNode = instr,
             )
         dummyCall.addArgument(catchswitch, "parentCatchswitch")
 
@@ -395,7 +395,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 llvmInternalRef("llvm.catchpad"),
                 "llvm.catchpad",
                 false,
-                rawNode = instr
+                rawNode = instr,
             )
         dummyCall.addArgument(catchswitch, "parentCatchswitch")
 
@@ -475,7 +475,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                     newProblemExpression(
                         "No opcode found for binary operator",
                         ProblemNode.ProblemType.TRANSLATION,
-                        rawNode = instr
+                        rawNode = instr,
                     )
             }
         return declarationOrNot(binaryOperator, instr)
@@ -513,7 +513,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             "=",
             listOf(dereference),
             listOf(frontend.getOperandValueAtIndex(instr, 0)),
-            rawNode = instr
+            rawNode = instr,
         )
     }
 
@@ -637,7 +637,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             newProblemExpression(
                 "Default statement for insertvalue",
                 ProblemNode.ProblemType.TRANSLATION,
-                rawNode = instr
+                rawNode = instr,
             )
         if (operand !is ConstructExpression) {
             copy = declarationOrNot(operand, instr)
@@ -646,7 +646,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                     newReference(
                         copy.singleDeclaration?.name?.localName,
                         (copy.singleDeclaration as? VariableDeclaration)?.type ?: unknownType(),
-                        rawNode = instr
+                        rawNode = instr,
                     )
             }
         }
@@ -682,14 +682,14 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 if (record == null) {
                     log.error(
                         "Could not find structure type with name {}, cannot continue",
-                        baseType.typeName
+                        baseType.typeName,
                     )
                     break
                 }
 
                 log.debug(
                     "Trying to access a field within the record declaration of {}",
-                    record.name
+                    record.name,
                 )
 
                 // look for the field
@@ -699,13 +699,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 baseType = field?.type ?: unknownType()
 
                 // construct our member expression
-                expr =
-                    newMemberExpression(
-                        field?.name?.localName,
-                        base,
-                        baseType,
-                        ".",
-                    )
+                expr = newMemberExpression(field?.name?.localName, base, baseType, ".")
                 log.info("{}", expr)
 
                 // the current expression is the new base
@@ -754,13 +748,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         callExpression.addArgument(operand)
 
         // res = (arg != undef && arg != poison) ? arg : llvm.freeze(arg)
-        val conditional =
-            newConditionalExpression(
-                condition,
-                operand,
-                callExpression,
-                operand.type,
-            )
+        val conditional = newConditionalExpression(condition, operand, callExpression, operand.type)
         return declarationOrNot(conditional, instr)
     }
 
@@ -783,7 +771,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             val syncscope = instrString.split("\"")[1]
             callExpression.addArgument(
                 newLiteral(syncscope, objectType("String"), rawNode = instr),
-                "syncscope"
+                "syncscope",
             )
         }
 
@@ -938,12 +926,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 val ptrDerefConditional = newUnaryOperator("*", false, true, rawNode = instr)
                 ptrDerefConditional.input = frontend.getOperandValueAtIndex(instr, 0)
                 val conditional =
-                    newConditionalExpression(
-                        condition,
-                        ptrDerefConditional,
-                        value,
-                        ty,
-                    )
+                    newConditionalExpression(condition, ptrDerefConditional, value, ty)
                 exchOp.rhs = mutableListOf(conditional)
             }
             LLVMAtomicRMWBinOpUMax,
@@ -968,19 +951,14 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 val ptrDerefConditional = newUnaryOperator("*", false, true, rawNode = instr)
                 ptrDerefConditional.input = frontend.getOperandValueAtIndex(instr, 0)
                 val conditional =
-                    newConditionalExpression(
-                        condition,
-                        ptrDerefConditional,
-                        value,
-                        ty,
-                    )
+                    newConditionalExpression(condition, ptrDerefConditional, value, ty)
                 exchOp.rhs = mutableListOf(conditional)
             }
             else -> {
                 newProblemExpression(
                     "LLVMAtomicRMWBinOp $operation not supported",
                     ProblemNode.ProblemType.TRANSLATION,
-                    rawNode = instr
+                    rawNode = instr,
                 )
             }
         }
@@ -1171,7 +1149,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                     "e_${gotoCatch.labelName}",
                     unknownType(),
                     true,
-                    rawNode = instr
+                    rawNode = instr,
                 )
 
             val catchBlockStatement = newBlock(rawNode = instr)
@@ -1223,7 +1201,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 exceptionName,
                 objectType(catchType), // TODO: This doesn't work for multiple types to catch
                 false,
-                rawNode = instr
+                rawNode = instr,
             )
         frontend.bindingsCache["%${exceptionName}"] = except
         catchInstr.parameter = except
@@ -1249,7 +1227,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             newReference(
                 decl?.name?.toString() ?: Node.EMPTY_NAME,
                 decl?.type ?: unknownType(),
-                rawNode = instr
+                rawNode = instr,
             )
         arrayExpr.subscriptExpression = frontend.getOperandValueAtIndex(instr, 2)
 
@@ -1258,7 +1236,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 "=",
                 listOf(arrayExpr),
                 listOf(frontend.getOperandValueAtIndex(instr, 1)),
-                rawNode = instr
+                rawNode = instr,
             )
         compoundStatement.statements += assignExpr
 
@@ -1435,7 +1413,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                     "=",
                     listOf(newReference(varName, type, rawNode = instr)),
                     listOf(r),
-                    rawNode = instr
+                    rawNode = instr,
                 )
             (assignment.lhs.first() as Reference).type = type
             (assignment.lhs.first() as Reference).refersTo = declaration
@@ -1530,7 +1508,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         instr: LLVMValueRef,
         op: String,
         unsigned: Boolean,
-        unordered: Boolean = false
+        unordered: Boolean = false,
     ): Expression {
         val op1 = frontend.getOperandValueAtIndex(instr, 0)
         val op2 = frontend.getOperandValueAtIndex(instr, 1)
@@ -1546,7 +1524,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                     llvmInternalRef("isunordered"),
                     "isunordered",
                     false,
-                    rawNode = instr
+                    rawNode = instr,
                 )
             binaryOperator.addArgument(op1)
             binaryOperator.addArgument(op2)
@@ -1558,7 +1536,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                     llvmInternalRef("isunordered"),
                     "isunordered",
                     false,
-                    rawNode = instr
+                    rawNode = instr,
                 )
             unorderedCall.addArgument(op1)
             unorderedCall.addArgument(op2)
@@ -1596,7 +1574,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                         llvmInternalRef("isunordered"),
                         "isunordered",
                         false,
-                        rawNode = instr
+                        rawNode = instr,
                     )
                 unorderedCall.addArgument(op1)
                 unorderedCall.addArgument(op2)
@@ -1634,7 +1612,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             // names of CPG nodes using the predicate listeners
             frontend.registerPredicateListener(
                 { _: Any?, to: Any? -> (to is LabelStatement && to.label == goto.labelName) },
-                assigneeTargetLabel
+                assigneeTargetLabel,
             )
         }
         return goto

@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg
 
-import de.fraunhofer.aisec.cpg.frontends.CastNotPossible
 import de.fraunhofer.aisec.cpg.frontends.CastResult
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
@@ -86,7 +85,7 @@ class TypeManager {
      */
     fun addTypeParameter(
         recordDeclaration: RecordDeclaration,
-        typeParameters: List<ParameterizedType>
+        typeParameters: List<ParameterizedType>,
     ) {
         recordToTypeParameters[recordDeclaration] = typeParameters
     }
@@ -101,7 +100,7 @@ class TypeManager {
      */
     private fun getTypeParameter(
         templateDeclaration: TemplateDeclaration,
-        name: String
+        name: String,
     ): ParameterizedType? {
         if (templateToTypeParameters.containsKey(templateDeclaration)) {
             for (parameterizedType in templateToTypeParameters[templateDeclaration] ?: listOf()) {
@@ -136,7 +135,7 @@ class TypeManager {
      */
     fun searchTemplateScopeForDefinedParameterizedTypes(
         scope: Scope?,
-        name: String
+        name: String,
     ): ParameterizedType? {
         if (scope is TemplateScope) {
             val node = scope.astNode
@@ -164,7 +163,7 @@ class TypeManager {
      */
     fun addTypeParameter(
         templateDeclaration: TemplateDeclaration,
-        typeParameter: ParameterizedType
+        typeParameter: ParameterizedType,
     ) {
         val parameters =
             templateToTypeParameters.computeIfAbsent(templateDeclaration) { mutableListOf() }
@@ -183,7 +182,7 @@ class TypeManager {
     fun createOrGetTypeParameter(
         templateDeclaration: TemplateDeclaration,
         typeName: String,
-        language: Language<*>?
+        language: Language<*>,
     ): ParameterizedType {
         var parameterizedType = getTypeParameter(templateDeclaration, typeName)
         if (parameterizedType == null) {
@@ -226,7 +225,7 @@ class TypeManager {
     fun lookupResolvedType(
         fqn: CharSequence,
         generics: List<Type>? = null,
-        language: Language<*>? = null
+        language: Language<*>? = null,
     ): Type? {
         var primitiveType = language?.getSimpleTypeOf(fqn)
         if (primitiveType != null) {
@@ -271,7 +270,7 @@ internal fun Type.getAncestors(depth: Int): Set<Type.Ancestor> {
  * Optionally, the nodes that hold the respective type can be supplied as [hint] and [targetHint].
  */
 fun Type.tryCast(targetType: Type, hint: HasType? = null, targetHint: HasType? = null): CastResult {
-    return this.language?.tryCast(this, targetType, hint, targetHint) ?: CastNotPossible
+    return this.language.tryCast(this, targetType, hint, targetHint)
 }
 
 /**
@@ -351,7 +350,7 @@ val Collection<Type>.commonType: Type?
 context(Pass<*>)
 fun Reference.nameIsType(): Type? {
     // First, check if it is a simple type
-    var type = language?.getSimpleTypeOf(name)
+    var type = language.getSimpleTypeOf(name)
     if (type != null) {
         return type
     }
