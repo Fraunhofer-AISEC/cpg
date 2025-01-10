@@ -3,7 +3,8 @@ title: "Using the Interactive CLI"
 linkTitle: "Using the Interactive CLI"
 no_list: true
 weight: 2
-date: 2020-01-30
+date: 2025-01-10
+`
 description: >
   Using neo4j for visualization (cpg-n2o4j)
 ---

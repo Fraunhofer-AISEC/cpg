@@ -23,10 +23,10 @@ repositories {
 }
 
 dependencies {
-    implementation("de.fraunhofer.aisec:cpg:9.0.1") // Install everything
+    implementation("de.fraunhofer.aisec:cpg:9.0.2") // Install everything
     // OR
-    implementation("de.fraunhofer.aisec:cpg-core:9.0.1") // Only cpg-core
-    implementation("de.fraunhofer.aisec:cpg-language-java:9.0.1") // Only the java language frontend
+    implementation("de.fraunhofer.aisec:cpg-core:9.0.2") // Only cpg-core
+    implementation("de.fraunhofer.aisec:cpg-language-java:9.0.2") // Only the java language frontend
     ...
 }
 ```
