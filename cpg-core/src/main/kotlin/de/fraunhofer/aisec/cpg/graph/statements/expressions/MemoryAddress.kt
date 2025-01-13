@@ -38,10 +38,7 @@ open class MemoryAddress(override var name: Name, val memoryParent: Node? = null
             return false
         }
         // TODO: What else do we need to compare?
-        return other is MemoryAddress &&
-            name == other.name &&
-            fieldAddresses == other.fieldAddresses &&
-            memoryParent == other.memoryParent
+        return other is MemoryAddress && name == other.name && memoryParent == other.memoryParent
     }
 
     override fun hashCode(): Int {
