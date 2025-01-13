@@ -38,8 +38,30 @@ import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass.Configuration
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 
+/**
+ * Returns a string that allows a human to identify the node. Mostly, this is simply the node's
+ * localName, but for Literals, it is their value
+ */
 fun nodeNameToString(node: Node): Name {
     return if (node is Literal<*>) Name((node as? Literal<*>)?.value.toString()) else node.name
+}
+
+/**
+ * Resolve a MemberExpression as long as it's base no longer is a MemberExpression itself. Returns
+ * the base a Name that identifies the access
+ */
+fun resolveMemberExpression(node: MemberExpression): Pair<Node, Name> {
+    // As long as the base in itself is a MemberExpression, resolve that one
+    var base: Node = node
+    var newLocalname = ""
+    while (base is MemberExpression) {
+        val b = base.name.split("::")
+        val tmp = if (b.size > 1) b[1] else ""
+        newLocalname = if (newLocalname.isEmpty()) tmp else "$tmp.$newLocalname"
+        base = base.base
+    }
+
+    return Pair(base, Name(newLocalname))
 }
 
 @DependsOn(SymbolResolver::class)
@@ -139,13 +161,18 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
 
     private fun storeFunctionSummary(node: FunctionDeclaration, doubleState: PointsToState2) {
         node.parameters.forEach { param ->
-            // fetch the parameter's current value
-            val values = doubleState.getAddresses(param).flatMap { doubleState.getValues(it) }
+            // fetch the parameter's current address and value
+            val addresses = doubleState.getAddresses(param)
+            val values = addresses.flatMap { doubleState.getValues(it) }
             val indexes = mutableSetOf<Pair<Node, String>>()
+
+            // Add the values
+            // indexes.addAll(values.map { Pair(it, "") })
             values.forEach { value ->
                 indexes.add(Pair(value, ""))
                 // Additionally check for partial writes to fields
                 // For the partial writes, we also store the field name in the function Summary
+                doubleState.fetchElementFromDeclarationState(value).filter { it.name != param.name }
                 value.fieldAddresses
                     .flatMap { it.value }
                     .forEach { indexes.add(Pair(it, it.name.localName)) }
@@ -485,6 +512,23 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
         doubleState: PointsToPass.PointsToState2
     ): PointsToPass.PointsToState2 {
         var doubleState = doubleState
+        /* For MemberExpressions and SubscriptExpressions, we may have to create a memoryAddress first */
+        if (currentNode is MemberExpression) {
+            val (base, fieldName) = resolveMemberExpression(currentNode)
+            doubleState =
+                doubleState.createFieldAddresses(
+                    doubleState.getAddresses(base).toIdentitySet(),
+                    fieldName
+                )
+        } else if (currentNode is SubscriptExpression) {
+            val fieldName = nodeNameToString(currentNode.subscriptExpression)
+            doubleState =
+                doubleState.createFieldAddresses(
+                    doubleState.getValues(currentNode.base).toIdentitySet(),
+                    fieldName
+                )
+        }
+
         /* If we have an Expression that is written to, we handle it later and ignore it now */
         val access =
             if (currentNode is Reference) currentNode.access
@@ -748,7 +792,13 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                             identitySetOf(UnknownMemoryValue(node.name))
                         }
                     val retVal = identitySetOf<Node>()
-                    inputVal.forEach { retVal.addAll(fetchElementFromDeclarationState(it)) }
+                    inputVal.forEach { input ->
+                        retVal.addAll(fetchElementFromDeclarationState(input))
+                        // we also add the values written to fields
+                        input.fieldAddresses
+                            .flatMap { it.value }
+                            .forEach { retVal.addAll(fetchElementFromDeclarationState(it)) }
+                    }
                     retVal
                 }
                 is Declaration -> {
@@ -815,21 +865,8 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                     /*
                      * For MemberExpressions, the fieldAddresses in the MemoryAddress node of the base hold the information we are looking for
                      */
-                    // TODO: Are there any cases where the address of the base is no MemoryAddress?
-                    // but still relevant for us?
-                    // As long as the base in itself is a MemberExpression, resolve that one
-                    var base = node
-                    var newLocalname = ""
-                    while (base is MemberExpression) {
-                        val foo = base.name.split("::")
-                        val tmp = if (foo.size > 1) foo[1] else ""
-                        newLocalname = if (newLocalname.isEmpty()) tmp else "$tmp.$newLocalname"
-                        base = base.base
-                    }
-                    val newName = Name(newLocalname)
-
-                    val baseAddr = this.getAddresses(base)
-                    getFieldAddresses(baseAddr.toIdentitySet(), newName)
+                    val (base, newName) = resolveMemberExpression(node)
+                    getFieldAddresses(this.getAddresses(base).toIdentitySet(), newName)
                 }
                 is Reference -> {
                     /*
@@ -865,20 +902,48 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
         }
 
         /**
-         * Look up the `indexString` in the `baseAddress`es and return the fieldAddresses If no
-         * MemoryAddress exits at `indexString`, it will be created
+         * Create the field `nodeName` at the addresses in `baseAddresses`. If fieldAddresses
+         * already exit, do nothing
+         */
+        fun createFieldAddresses(baseAddresses: IdentitySet<Node>, nodeName: Name): PointsToState2 {
+            var doubleState = this
+
+            baseAddresses.forEach { addr ->
+                /* If we do not yet have a MemoryAddress for this FieldDeclaration, we create one */
+                if (
+                    declarationsState.elements[addr]?.elements?.first?.elements?.filter {
+                        it.name == nodeName
+                    } == null
+                ) {
+                    val fieldAddress = MemoryAddress(nodeName, addr)
+                    doubleState =
+                        pushToDeclarationsState(
+                            addr,
+                            TupleLattice(
+                                Pair(
+                                    PowersetLattice(identitySetOf(fieldAddress)),
+                                    PowersetLattice(identitySetOf())
+                                )
+                            )
+                        )
+                }
+            }
+            return doubleState
+        }
+
+        /**
+         * Lookup the field `nodeName` at the addresses in `baseAddresses` and return their values
          */
         fun getFieldAddresses(baseAddresses: IdentitySet<Node>, nodeName: Name): Set<Node> {
             val fieldAddresses = identitySetOf<Node>()
 
-            /* Theoretically, the base can have multiple addresses. Additionally, also the fieldDeclaration can have multiple Addresses. To simplify, we flatten the set and collect all possible addresses of the fieldDeclaration in a flat set */
             baseAddresses.forEach { addr ->
-                /* If we do not yet have a MemoryAddress for this FieldDeclaration, we create one */
-                if (addr.fieldAddresses[nodeName.localName] == null) {
-                    addr.fieldAddresses[nodeName.localName] =
-                        identitySetOf(MemoryAddress(nodeName, addr))
-                }
-                addr.fieldAddresses[nodeName.localName]?.forEach { fieldAddresses.add(it) }
+                declarationsState.elements[addr]
+                    ?.elements
+                    ?.first
+                    ?.elements
+                    ?.filter { it.name == nodeName }
+                    ?.let { fieldAddresses.addAll(it) }
             }
             return fieldAddresses
         }
