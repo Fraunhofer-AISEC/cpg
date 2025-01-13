@@ -259,6 +259,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                                 summary
                             )
                         }
+                        .filter { it !in currentNode.invokes }
                 }
             )
         }
