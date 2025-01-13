@@ -138,7 +138,7 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 }
             }
 
-        val invocationCandidates = mutableListOf<FunctionDeclaration>()
+        val invocationCandidates = mutableSetOf<FunctionDeclaration>()
         val work: Deque<Node> = ArrayDeque()
         val seen = identitySetOf<Node>()
         work.push(expr)

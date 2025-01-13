@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.edges.flows
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
-import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeList
+import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeSet
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import org.neo4j.ogm.annotation.RelationshipEntity
 
@@ -58,9 +58,9 @@ class Invoke(
     }
 }
 
-/** A container for [Usage] edges. [NodeType] is necessary because of the Neo4J OGM. */
+/** A container for [Invoke] edges. [NodeType] is necessary because of the Neo4J OGM. */
 class Invokes<NodeType : FunctionDeclaration>(thisRef: CallExpression) :
-    EdgeList<FunctionDeclaration, Invoke>(thisRef = thisRef, init = ::Invoke) {
+    EdgeSet<FunctionDeclaration, Invoke>(thisRef = thisRef, init = ::Invoke) {
     override fun handleOnAdd(edge: Invoke) {
         // TODO: Make thisRef generic :(
         edge.end.registerTypeObserver(thisRef as CallExpression)

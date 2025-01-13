@@ -446,7 +446,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                     false
                 )
             if (ok) {
-                call.invokes = candidates.toMutableList()
+                call.invokes = candidates.toMutableSet()
                 return
             }
         }
@@ -489,19 +489,19 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 log.error(
                     "Resolution of ${call.name} returned a problematic result and we cannot decide correctly, the invokes edge will contain all possible viable functions"
                 )
-                call.invokes = result.bestViable.toMutableList()
+                call.invokes = result.bestViable.toMutableSet()
             }
             AMBIGUOUS -> {
                 log.warn(
                     "Resolution of ${call.name} returned an ambiguous result and we cannot decide correctly, the invokes edge will contain the the ambiguous functions"
                 )
-                call.invokes = result.bestViable.toMutableList()
+                call.invokes = result.bestViable.toMutableSet()
             }
             SUCCESSFUL -> {
-                call.invokes = result.bestViable.toMutableList()
+                call.invokes = result.bestViable.toMutableSet()
             }
             UNRESOLVED -> {
-                call.invokes = tryFunctionInference(call, result).toMutableList()
+                call.invokes = tryFunctionInference(call, result).toMutableSet()
             }
         }
 
