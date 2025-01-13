@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.frontends.UnknownLanguage
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
@@ -47,12 +48,15 @@ import de.fraunhofer.aisec.cpg.passes.configuration.RequiredFrontend
 @ExecuteBefore(SymbolResolver::class)
 @RequiredFrontend(PythonLanguageFrontend::class)
 class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), LanguageProvider {
+
+    lateinit var walker: SubgraphWalker.ScopedWalker
+
     override fun cleanup() {
         // nothing to do
     }
 
     override fun accept(p0: Component) {
-        val walker = SubgraphWalker.ScopedWalker(ctx.scopeManager)
+        walker = SubgraphWalker.ScopedWalker(ctx.scopeManager)
         walker.registerHandler { _, _, currNode -> handle(currNode) }
 
         for (tu in p0.translationUnits) {
@@ -155,7 +159,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
                 "variable"
             },
             decl.name,
-            decl.scope
+            decl.scope,
         )
 
         // Make sure we add the declaration at the correct place, i.e. with the scope we set at the
@@ -204,6 +208,6 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
         }
     }
 
-    override val language: Language<*>?
-        get() = ctx.config.languages.firstOrNull { it is PythonLanguage }
+    override val language: Language<*>
+        get() = ctx.config.languages.firstOrNull { it is PythonLanguage } ?: UnknownLanguage
 }

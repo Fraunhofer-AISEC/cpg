@@ -50,7 +50,7 @@ internal class TypedefTest : BaseTest() {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("typedefs.cpp").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
@@ -95,7 +95,7 @@ internal class TypedefTest : BaseTest() {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("typedefs.cpp").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
@@ -117,7 +117,7 @@ internal class TypedefTest : BaseTest() {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("typedefs.cpp").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
@@ -136,7 +136,7 @@ internal class TypedefTest : BaseTest() {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("typedefs.cpp").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
@@ -175,7 +175,7 @@ internal class TypedefTest : BaseTest() {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("typedefs.cpp").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
@@ -192,7 +192,7 @@ internal class TypedefTest : BaseTest() {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("weird_typedefs.cpp").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<CPPLanguage>()
             }

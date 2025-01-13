@@ -1,3 +1,6 @@
+import groovy.util.Node
+import groovy.util.NodeList
+
 /*
  * Copyright (c) 2021, Fraunhofer AISEC. All rights reserved.
  *
@@ -42,18 +45,33 @@ publishing {
                 artifactId = "cpg-neo4j"
                 name.set("Code Property Graph - Neo4j")
                 description.set("An Application to translate and persist specified source code as a Code Property Graph to an installed instance of the Neo4j Graph Database.")
+                withXml {
+                    // Modify the XML to exclude dependencies that start with "cpg-language-".
+                    // This is necessary because we do not want to "leak" the dependency to our dynamically activated
+                    // frontends to the outside
+                    var dependenciesNode = asNode().children().filterIsInstance<Node>().firstOrNull { true && it.name().toString() == "{http://maven.apache.org/POM/4.0.0}dependencies" }
+                    dependenciesNode?.children()?.removeIf {
+                        it is Node &&
+                                (it.name().toString() == "{http://maven.apache.org/POM/4.0.0}dependency") &&
+                                ((it.get("artifactId") as? NodeList)?.text()?.startsWith("cpg-language-") == true)
+                    }
+                }
             }
         }
     }
 }
 
 dependencies {
-    // neo4j
+    // Neo4j OGM. This will be removed at some point
     implementation(libs.bundles.neo4j)
+    integrationTestImplementation(libs.bundles.neo4j)
+
+    // Neo4J Driver
+    api(libs.neo4j.driver)
 
     // Command line interface support
-    implementation(libs.picocli)
+    api(libs.picocli)
     annotationProcessor(libs.picocli.codegen)
 
-    testImplementation(testFixtures(projects.cpgCore))
+    integrationTestImplementation(libs.kotlin.reflect)
 }

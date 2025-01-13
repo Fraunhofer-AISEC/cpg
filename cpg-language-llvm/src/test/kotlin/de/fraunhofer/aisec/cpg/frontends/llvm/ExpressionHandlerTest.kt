@@ -47,7 +47,7 @@ class ExpressionHandlerTest {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("floatingpoint_const.ll").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<LLVMIRLanguage>()
             }
@@ -71,7 +71,7 @@ class ExpressionHandlerTest {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("integer_const.ll").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<LLVMIRLanguage>()
             }

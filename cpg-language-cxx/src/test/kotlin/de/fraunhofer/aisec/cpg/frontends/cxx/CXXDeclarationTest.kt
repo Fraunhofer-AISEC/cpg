@@ -61,7 +61,7 @@ class CXXDeclarationTest {
             analyze(
                 listOf(topLevel.resolve("foo.c"), topLevel.resolve("bar.c")),
                 topLevel.toPath(),
-                true
+                true,
             ) {
                 it.registerLanguage<CLanguage>()
                 it.includePath("src/test/resources/c/foobar/std")
@@ -89,7 +89,7 @@ class CXXDeclarationTest {
             analyze(
                 listOf(topLevel.resolve("foo.c"), topLevel.resolve("bar.c")),
                 topLevel.toPath(),
-                true
+                true,
             ) {
                 it.registerLanguage<CLanguage>()
             }

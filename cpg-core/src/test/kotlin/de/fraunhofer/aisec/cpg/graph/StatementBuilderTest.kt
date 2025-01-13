@@ -46,7 +46,7 @@ class StatementBuilderTest {
                     TranslationContext(
                         TranslationConfiguration.builder().defaultPasses().build(),
                         ScopeManager(),
-                        TypeManager()
+                        TypeManager(),
                     )
             )
         val result =

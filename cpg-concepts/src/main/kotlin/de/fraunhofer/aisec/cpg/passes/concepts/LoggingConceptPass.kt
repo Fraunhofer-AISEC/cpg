@@ -136,7 +136,7 @@ class LoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     result = result,
                     logger = logger,
                     logArguments = callExpression.arguments,
-                    level = name
+                    level = name,
                 )
             }
             else -> {}

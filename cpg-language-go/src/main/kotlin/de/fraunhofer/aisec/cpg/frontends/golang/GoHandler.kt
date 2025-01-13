@@ -36,7 +36,7 @@ import java.util.function.Supplier
 
 abstract class GoHandler<ResultNode : Node?, HandlerNode : GoStandardLibrary.Ast.Node>(
     configConstructor: Supplier<ResultNode?>,
-    lang: GoLanguageFrontend
+    lang: GoLanguageFrontend,
 ) : Handler<ResultNode?, HandlerNode, GoLanguageFrontend>(configConstructor, lang) {
     /**
      * We intentionally override the logic of [Handler.handle] because we do not want the map-based
@@ -70,7 +70,7 @@ abstract class GoHandler<ResultNode : Node?, HandlerNode : GoStandardLibrary.Ast
             frontend,
             node,
             log,
-            "Parsing of type $name is not supported (yet)"
+            "Parsing of type $name is not supported (yet)",
         )
 
         val cpgNode = this.configConstructor.get()

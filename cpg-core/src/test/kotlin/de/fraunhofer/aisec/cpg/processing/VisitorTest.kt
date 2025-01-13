@@ -60,7 +60,7 @@ class VisitorTest : BaseTest() {
                 override fun visit(t: Node) {
                     visited += t
                 }
-            }
+            },
         )
 
         assertEquals(listOf<Node>(tu, name, func), visited)
@@ -87,7 +87,7 @@ class VisitorTest : BaseTest() {
                     log.info("Node: $t")
                     nodeList.add(t)
                 }
-            }
+            },
         )
         assertEquals(24, nodeList.size)
     }
@@ -105,7 +105,7 @@ class VisitorTest : BaseTest() {
                     log.info("Node: $t")
                     nodeList.add(t)
                 }
-            }
+            },
         )
         // TODO: It seems to expect a FieldDeclaration for "System" but that's contrary to other
         // tests where it shouldn't exist.
@@ -125,7 +125,7 @@ class VisitorTest : BaseTest() {
                 fun visit(r: ReturnStatement) {
                     returnStatements.add(r)
                 }
-            }
+            },
         )
         assertEquals(2, returnStatements.size)
     }
@@ -139,7 +139,7 @@ class VisitorTest : BaseTest() {
             TranslationException::class,
             InterruptedException::class,
             ExecutionException::class,
-            TimeoutException::class
+            TimeoutException::class,
         )
         fun setup() {
             val cpg = GraphExamples.getVisitorTest()

@@ -32,7 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.OverlayNode
  * logging, files, databases. The relevant operations on this concept are modeled as [Operation]s
  * and stored in [ops].
  */
-abstract class Concept() : OverlayNode() {
+abstract class Concept<T : Operation>() : OverlayNode() {
     /** All [Operation]s belonging to this concept. */
-    abstract val ops: Set<Operation>
+    val ops: MutableSet<T> = mutableSetOf()
 }

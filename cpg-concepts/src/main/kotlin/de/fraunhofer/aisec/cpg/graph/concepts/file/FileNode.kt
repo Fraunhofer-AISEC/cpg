@@ -33,7 +33,7 @@ enum class FileAccessMode {
     READ,
     WRITE,
     APPEND,
-    UNKNOWN
+    UNKNOWN,
 
     // what do we want to have here? binary? text? r+ vs w+? create mode? ...?
 }
@@ -49,7 +49,7 @@ data class FileNode(
             super.hashCode(),
             underlayingNode,
             fileName,
-            accessMode
+            accessMode,
         ) // TODO: exclude ops because this would result in a circular reference. how to do this in
         // a nice way?
     }

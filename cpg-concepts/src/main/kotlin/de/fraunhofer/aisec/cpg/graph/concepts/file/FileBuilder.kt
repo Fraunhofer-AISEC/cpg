@@ -33,7 +33,7 @@ fun MetadataProvider.newFileNode(
     underlayingNode: Node,
     result: TranslationResult,
     fileName: String,
-    accessMode: String
+    accessMode: String,
 ): FileNode {
     val node =
         FileNode(
@@ -52,7 +52,7 @@ fun MetadataProvider.newFileNode(
                     else -> FileAccessMode.UNKNOWN
                 },
             fileName = fileName,
-            ops = HashSet()
+            ops = HashSet(),
         )
     node.codeAndLocationFrom(underlayingNode)
 
@@ -93,7 +93,7 @@ fun MetadataProvider.newFileWriteNode(
         FileWriteNode(
             underlayingNode = underlayingNode,
             concept = fileNode,
-            what = (underlayingNode as? CallExpression)?.arguments ?: listOf()
+            what = (underlayingNode as? CallExpression)?.arguments ?: listOf(),
         )
     node.codeAndLocationFrom(underlayingNode)
 
@@ -118,7 +118,7 @@ fun MetadataProvider.newFileAppendNode(
         FileAppendNode(
             underlayingNode = underlayingNode,
             concept = fileNode,
-            what = (underlayingNode as? CallExpression)?.arguments ?: listOf()
+            what = (underlayingNode as? CallExpression)?.arguments ?: listOf(),
         )
     node.codeAndLocationFrom(underlayingNode)
 

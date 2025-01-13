@@ -108,9 +108,8 @@ class UnwrappedEdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
         return -1
     }
 
-    inner class ListIterator(
-        var edgeIterator: MutableListIterator<EdgeType>,
-    ) : MutableListIterator<NodeType> {
+    inner class ListIterator(var edgeIterator: MutableListIterator<EdgeType>) :
+        MutableListIterator<NodeType> {
         override fun add(element: NodeType) {
             edgeIterator.add(list.createEdge(element, list.init, list.outgoing))
         }
@@ -191,9 +190,7 @@ class UnwrappedEdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
      * persisted in the graph database.
      */
     @Transient
-    inner class Delegate<
-        ThisType : Node,
-    >() {
+    inner class Delegate<ThisType : Node>() {
         operator fun getValue(thisRef: ThisType, property: KProperty<*>): MutableList<NodeType> {
             return this@UnwrappedEdgeList
         }
@@ -205,7 +202,7 @@ class UnwrappedEdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
 
     operator fun <ThisType : Node> provideDelegate(
         thisRef: ThisType,
-        prop: KProperty<*>
+        prop: KProperty<*>,
     ): Delegate<ThisType> {
         return Delegate()
     }

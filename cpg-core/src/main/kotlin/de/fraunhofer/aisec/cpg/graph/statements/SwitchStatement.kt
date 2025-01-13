@@ -80,6 +80,6 @@ class SwitchStatement : Statement(), BranchingNode {
             initializerStatement,
             selectorDeclaration,
             selector,
-            statement
+            statement,
         )
 }

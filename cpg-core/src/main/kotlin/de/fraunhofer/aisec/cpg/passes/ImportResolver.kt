@@ -112,7 +112,7 @@ class ImportDependencies(tus: MutableList<TranslationUnitDeclaration>) :
                         // hoping that this could unlock more
                         log.warn(
                             "We still have {} translation units with import dependency problems. We will just pick the one with the least dependencies",
-                            remaining.size
+                            remaining.size,
                         )
                         tu = remaining.sortedBy { this[it]?.size }.firstOrNull()
                         if (tu == null) {
@@ -265,38 +265,43 @@ class ImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     private fun handleImportDeclaration(import: ImportDeclaration) {
-        // We always need to search at the global scope because we are "importing" something, so by
-        // definition, this is not in the scope of the current file.
-        val scope = scopeManager.globalScope ?: return
-
-        // Let's do some importing. We need to import either a wildcard
-        if (import.wildcardImport) {
-            val list =
-                scopeManager.lookupSymbolByName(
-                    import.import,
-                    import.language,
-                    import.location,
-                    scope
-                )
-            val symbol = list.singleOrNull()
-            if (symbol != null) {
-                // In this case, the symbol must point to a name scope
-                val symbolScope = scopeManager.lookupScope(symbol)
-                if (symbolScope is NameScope) {
-                    import.importedSymbols = symbolScope.symbols
-                }
-            }
-        } else {
-            // or a symbol directly
-            val list =
-                scopeManager
-                    .lookupSymbolByName(import.import, import.language, import.location, scope)
-                    .toMutableList()
-            import.importedSymbols = mutableMapOf(import.symbol to list)
-        }
+        import.updateImportedSymbols()
     }
 
     override fun cleanup() {
         // Nothing to do
+    }
+}
+
+/**
+ * This function updates the [ImportDeclaration.importedSymbols]. This is done once at the beginning
+ * by the [ImportResolver]. However, we need to update this list once we infer new symbols in
+ * namespaces that are imported at a later stage (e.g., in the [TypeResolver]), otherwise they won't
+ * be visible to the later passes.
+ */
+context(Pass<*>)
+fun ImportDeclaration.updateImportedSymbols() {
+    // We always need to search at the global scope because we are "importing" something, so by
+    // definition, this is not in the scope of the current file.
+    val scope = scopeManager.globalScope ?: return
+
+    // Let's do some importing. We need to import either a wildcard
+    if (this.wildcardImport) {
+        val list = scopeManager.lookupSymbolByName(this.import, this.language, this.location, scope)
+        val symbol = list.singleOrNull()
+        if (symbol != null) {
+            // In this case, the symbol must point to a name scope
+            val symbolScope = scopeManager.lookupScope(symbol)
+            if (symbolScope is NameScope) {
+                this.importedSymbols = symbolScope.symbols
+            }
+        }
+    } else {
+        // or a symbol directly
+        val list =
+            scopeManager
+                .lookupSymbolByName(this.import, this.language, this.location, scope)
+                .toMutableList()
+        this.importedSymbols = mutableMapOf(this.symbol to list)
     }
 }

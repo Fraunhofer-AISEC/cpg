@@ -82,7 +82,7 @@ class FileConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     underlayingNode = callExpression,
                     result = result,
                     accessMode = getAccessMode(callExpression),
-                    fileName = fileName
+                    fileName = fileName,
                 )
             if (callExpression.astParent is AssignExpression) {
                 val assign: AssignExpression =
@@ -119,7 +119,7 @@ class FileConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
                         newFileWriteNode(
                             underlayingNode = callExpression,
                             result = result,
-                            fileNode = fileNode
+                            fileNode = fileNode,
                         )
                     }
                     else -> {}
@@ -130,7 +130,7 @@ class FileConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
     private fun <T> findConceptNode(
         callExpression: MemberCallExpression,
-        map: MutableMap<Node, T>
+        map: MutableMap<Node, T>,
     ): T? {
 
         val callee = callExpression.callee

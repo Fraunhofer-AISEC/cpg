@@ -53,7 +53,7 @@ internal class ScopeManagerTest : BaseTest() {
         val frontend =
             CXXLanguageFrontend(
                 CPPLanguage(),
-                TranslationContext(config, scopeManager, TypeManager())
+                TranslationContext(config, scopeManager, TypeManager()),
             )
         val tu = frontend.parse(File("src/test/resources/cxx/recordstmt.cpp"))
         val methods = tu.allChildren<MethodDeclaration>().filter { it !is ConstructorDeclaration }

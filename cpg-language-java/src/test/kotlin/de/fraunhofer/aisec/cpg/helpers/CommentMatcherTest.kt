@@ -99,7 +99,7 @@ class CommentMatcherTest {
         CommentMatcher().matchCommentToNode(comment6, Region(15, 14, 15, 22), tu)
         assertEquals(
             comment6,
-            forLoop.comment
+            forLoop.comment,
         ) // It doesn't put the whole comment, only the part that matches
 
         // TODO IMHO the comment "i decl" should belong to the declaration statement of i. But

@@ -76,7 +76,7 @@ interface HasTemplates : HasGenerics {
         applyInference: Boolean,
         ctx: TranslationContext,
         currentTU: TranslationUnitDeclaration?,
-        needsExactMatch: Boolean
+        needsExactMatch: Boolean,
     ): Pair<Boolean, List<FunctionDeclaration>>
 }
 
@@ -213,9 +213,19 @@ interface HasGlobalVariables : LanguageTrait
 interface HasGlobalFunctions : LanguageTrait
 
 /**
+ * A common trait for classes, in which supposed member expressions (and thus also member calls) in
+ * the form of "a.b" have an ambiguity between a real field/method access (when "a" is an object)
+ * and a qualified call because of an import, if "a" is an import / namespace.
+ *
+ * We can only resolve this after we have dealt with imports and know all symbols. Therefore, we
+ * invoke the [ResolveMemberExpressionAmbiguityPass].
+ */
+interface HasMemberExpressionAmbiguity : LanguageTrait
+
+/**
  * A common super-class for all language traits that arise because they are an ambiguity of a
  * function call, e.g., function-style casts. This means that we cannot differentiate between a
- * [CallExpression] and other expressions during the frontend and we need to invoke the
+ * [CallExpression] and other expressions during the frontend, and we need to invoke the
  * [ResolveCallExpressionAmbiguityPass] to resolve this.
  */
 sealed interface HasCallExpressionAmbiguity : LanguageTrait

@@ -21,7 +21,5 @@ logs
 *.log
 
 gradle.properties
+LibrariesTest.kt
 
-*private*
-*Private*
-*PRIVATE*

@@ -52,6 +52,8 @@ class Usage(
         result = 31 * result + access.hashCode()
         return result
     }
+
+    override var labels = setOf("USAGE")
 }
 
 /** A container for [Usage] edges. [NodeType] is necessary because of the Neo4J OGM. */

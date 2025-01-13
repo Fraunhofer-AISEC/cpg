@@ -44,7 +44,7 @@ fun MetadataProvider.newLogOperationNode(
     result: TranslationResult,
     level: String,
     logger: LoggingNode,
-    logArguments: List<Node>
+    logArguments: List<Node>,
 ): LogOperationNode {
     val node =
         LogOperationNode(
@@ -59,7 +59,7 @@ fun MetadataProvider.newLogOperationNode(
                     "info" -> LogLevel.INFO
                     "debug" -> LogLevel.DEBUG
                     else -> LogLevel.UNKNOWN
-                }
+                },
         )
     node.codeAndLocationFrom(underlayingNode)
 

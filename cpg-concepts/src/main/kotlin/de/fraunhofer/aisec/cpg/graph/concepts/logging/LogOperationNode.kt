@@ -34,7 +34,7 @@ enum class LogLevel {
     WARN,
     INFO,
     DEBUG,
-    UNKNOWN
+    UNKNOWN,
 }
 
 data class LogOperationNode(

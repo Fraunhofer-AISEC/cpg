@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.OverlayNode
  * Represents an operation executed on/with a [Concept] (stored in [concept]). This is typically a
  * `write` on a file or log object or an `execute` on a database.
  */
-abstract class Operation : OverlayNode() {
+abstract class Operation(
     /** The [Concept] this operation belongs to. */
-    abstract val concept: Concept
-}
+    val concept: Concept<*>
+) : OverlayNode()

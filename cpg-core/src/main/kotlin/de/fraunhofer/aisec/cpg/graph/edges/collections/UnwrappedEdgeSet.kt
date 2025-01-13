@@ -49,9 +49,7 @@ class UnwrappedEdgeSet<NodeType : Node, EdgeType : Edge<NodeType>>(
 
     /** See [UnwrappedEdgeList.Delegate], but as a [MutableSet] instead of [MutableList]. */
     @Transient
-    inner class Delegate<
-        ThisType : Node,
-    >() {
+    inner class Delegate<ThisType : Node>() {
         operator fun getValue(thisRef: ThisType, property: KProperty<*>): MutableSet<NodeType> {
             return this@UnwrappedEdgeSet
         }
@@ -63,7 +61,7 @@ class UnwrappedEdgeSet<NodeType : Node, EdgeType : Edge<NodeType>>(
 
     operator fun <ThisType : Node> provideDelegate(
         thisRef: ThisType,
-        prop: KProperty<*>
+        prop: KProperty<*>,
     ): Delegate<ThisType> {
         return Delegate()
     }

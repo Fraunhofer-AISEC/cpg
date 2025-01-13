@@ -1,5 +1,9 @@
 rootProject.name = "cpg"
 
+plugins {
+    id("org.jetbrains.kotlinx.kover.aggregation") version "0.9.0"
+}
+
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 include(":cpg-all")
@@ -60,3 +64,7 @@ if (enableRubyFrontend) include(":cpg-language-ruby")
 if (enableJVMFrontend) include(":cpg-language-jvm")
 if (enableINIFrontend) include(":cpg-language-ini")
 if (enableConcepts) include(":cpg-concepts")
+
+kover {
+    enableCoverage()
+}

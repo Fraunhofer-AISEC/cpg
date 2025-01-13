@@ -30,5 +30,5 @@ import de.fraunhofer.aisec.cpg.graph.Node
 data class FileWriteNode(
     override val underlayingNode: Node,
     override val concept: FileNode,
-    val what: List<Node>
+    val what: List<Node>,
 ) : FileOperationNode()
