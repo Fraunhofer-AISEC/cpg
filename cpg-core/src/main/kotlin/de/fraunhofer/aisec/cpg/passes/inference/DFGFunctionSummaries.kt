@@ -42,6 +42,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.newFunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.newParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.parseName
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemoryAddress
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.unknownType
@@ -101,7 +102,7 @@ class DFGFunctionSummaries {
         language: Language<*>,
         declEntry: FunctionDeclarationEntry,
         summary: List<DFGEntry>
-    ) {
+    ): FunctionDeclaration {
         val inferredFunction =
             contextProvider.newFunctionDeclaration(language.parseName(declEntry.methodName))
         declEntry.signature?.forEachIndexed { i, typeName ->
@@ -125,6 +126,7 @@ class DFGFunctionSummaries {
                 contextProvider.newParameterDeclaration(Name("param$i"), type)
         }
         applyDfgEntryToFunctionDeclaration(inferredFunction, summary)
+        return inferredFunction
     }
 
     /**
@@ -268,6 +270,9 @@ class DFGFunctionSummaries {
         }
     }
 
+    private val functionDeclarationToMemAddrMap =
+        mutableMapOf<FunctionDeclaration, MutableMap<Name, MemoryAddress>>()
+
     /**
      * This method parses the [DFGEntry] entries in [dfgEntries] and adds the respective DFG edges
      * between the parameters, receiver and potentially the [functionDeclaration] itself.
@@ -291,6 +296,17 @@ class DFGFunctionSummaries {
                     } catch (e: NumberFormatException) {
                         null
                     }
+                } else if (entry.from.startsWith("NewMemoryAddress")) {
+                    val memAddrName = Name(entry.from)
+                    functionDeclarationToMemAddrMap
+                        .computeIfAbsent(
+                            functionDeclaration,
+                            { mutableMapOf<Name, MemoryAddress>() }
+                        )
+                        .computeIfAbsent(
+                            memAddrName,
+                            { MemoryAddress(memAddrName, functionDeclaration) }
+                        )
                 } else if (entry.from == "base") {
                     (functionDeclaration as? MethodDeclaration)?.receiver
                 } else {
@@ -329,7 +345,7 @@ class DFGFunctionSummaries {
                 } else if (entry.to == "return") {
                     functionDeclaration
                 } else if (entry.to.startsWith("return")) {
-                    val returnIndex = entry.to.removePrefix("param").toInt()
+                    val returnIndex = entry.to.removePrefix("return").toInt()
                     // TODO: It would be nice if we could model the index. Not sure how this is done
                     functionDeclaration
                 } else {
