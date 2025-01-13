@@ -70,7 +70,7 @@ fun operatorCallFromDeclaration(
         val call =
             newOperatorCallExpression(operatorCode = op.operatorCode ?: "", ref)
                 .codeAndLocationFrom(ref)
-        call.invokes = mutableSetOf(decl)
+        call.invokes = mutableListOf(decl)
         call
     }
 }
