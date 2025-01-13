@@ -67,6 +67,10 @@ extra_css:
   - stylesheets/extra.css
   - assets/fonts/Inter/inter.css
 
+extra_javascript:
+  - assets/javascripts/mathjax.js
+  - assets/javascripts/MathJax-3.2.2/es5/tex-mml-chtml.js
+
 # Plugins
 plugins:
   - glightbox:
