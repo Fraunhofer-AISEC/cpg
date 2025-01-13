@@ -178,7 +178,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                         // should we do something else?
                         node.functionSummary
                             .computeIfAbsent(param) { mutableSetOf() }
-                            .add(Triple(value, true, subAccessName))
+                            .add(FunctionDeclaration.FSEntry(true, value, true, subAccessName))
                     }
             }
         }
@@ -226,7 +226,11 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                 currentNode.returnValues.forEach { retval ->
                     parentFD.functionSummary
                         .computeIfAbsent(currentNode) { mutableSetOf() }
-                        .addAll(doubleState.getValues(retval).map { Triple(it, false, "") })
+                        .addAll(
+                            doubleState.getValues(retval).map {
+                                FunctionDeclaration.FSEntry(false, it, false, "")
+                            }
+                        )
                 }
             }
         }
@@ -275,8 +279,10 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                         log.error(
                             "Cannot calculate functionSummary for $invoke as it's recursively called. callChain: $functionSummaryAnalysisChain"
                         )
-                        val newValues: MutableSet<Triple<Node, Boolean, String>> =
-                            invoke.parameters.map { Triple(it, false, "") }.toMutableSet()
+                        val newValues: MutableSet<FunctionDeclaration.FSEntry> =
+                            invoke.parameters
+                                .map { FunctionDeclaration.FSEntry(false, it, false, "") }
+                                .toMutableSet()
                         invoke.functionSummary[ReturnStatement()] = newValues
                     }
                 } else {
@@ -285,8 +291,10 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                     // TODO: This actually generates a new return statement but it's not part of the
                     // function. Wouldn't the edges better point to the FunctionDeclaration and in a
                     // case with a body, all returns flow to the FunctionDeclaration too?
-                    val newValues: MutableSet<Triple<Node, Boolean, String>> =
-                        invoke.parameters.map { Triple(it, false, "") }.toMutableSet()
+                    val newValues: MutableSet<FunctionDeclaration.FSEntry> =
+                        invoke.parameters
+                            .map { FunctionDeclaration.FSEntry(false, it, false, "") }
+                            .toMutableSet()
                     invoke.functionSummary[ReturnStatement()] = newValues
                 }
             }
@@ -322,12 +330,15 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                         else -> null
                     }
                 if (destination != null) {
-                    newValues.forEach { (value, derefSource, subAccessName) ->
+                    newValues.forEach { (derefDestination, value, derefSource, subAccessName) ->
                         val dst =
                             if (subAccessName.isNotEmpty()) {
                                 val fieldAddresses = identitySetOf<Node>()
                                 // Collect the fieldAddresses for each possible value
-                                doubleState.getValues(destination).forEach { v ->
+                                val d =
+                                    if (derefDestination) doubleState.getValues(destination)
+                                    else identitySetOf(destination)
+                                d.forEach { v ->
                                     val parentName = nodeNameToString(v)
                                     val newName = Name(subAccessName, parentName)
                                     fieldAddresses.addAll(
@@ -335,7 +346,10 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                                     )
                                 }
                                 fieldAddresses
-                            } else doubleState.getValues(destination)
+                            } else {
+                                if (derefDestination) doubleState.getValues(destination)
+                                else identitySetOf(destination)
+                            }
                         when (value) {
                             is ParameterDeclaration ->
                                 // Add the value of the respective argument in the CallExpression

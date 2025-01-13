@@ -81,12 +81,20 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder, EOGStart
      * This is interesting since we need to add DFG edges between the modified parameter and the
      * respective argument(s). For each [ParameterDeclaration] as well as the
      * [MethodDeclaration.receiver] that has some incoming DFG-edge within this
-     * [FunctionDeclaration], we store all previous DFG nodes. The map stores a Pair of Nodes and
-     * Booleans. The Node indicates the new source value, and the Boolean indicates if the node
-     * should be dereferenced. Additionally, we use the String to indicate sub-accesses, i.e. to
-     * parts of a struct or to array-expressions
+     * [FunctionDeclaration], we store all previous DFG nodes. The map stores a List of FSEntries
+     * for each modified parameter. `derefDst` indicates if we write to the parameter's value or
+     * it's dereferenced value, `srcNode` indicates the new source value and `derefSource` if it
+     * should be dereferenced Additionally, `subAccessName` indicates sub-accesses, i.e. to parts of
+     * a struct or to array-expressions
      */
-    var functionSummary = mutableMapOf<Node, MutableSet<Triple<Node, Boolean, String>>>()
+    data class FSEntry(
+        val derefDst: Boolean,
+        val srcNode: Node,
+        val derefSource: Boolean,
+        val subAccessName: String
+    )
+
+    var functionSummary = mutableMapOf<Node, MutableSet<FSEntry>>()
 
     /** Returns true, if this function has a [body] statement. */
     fun hasBody(): Boolean {

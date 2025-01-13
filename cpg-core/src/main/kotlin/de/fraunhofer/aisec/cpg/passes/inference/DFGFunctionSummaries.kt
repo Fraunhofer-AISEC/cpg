@@ -69,7 +69,7 @@ class DFGFunctionSummaries {
 
     fun getLastWrites(
         functionDeclaration: FunctionDeclaration
-    ): Map<Node, Set<Triple<Node, Boolean, String>>> = functionDeclaration.functionSummary
+    ): Map<Node, Set<FunctionDeclaration.FSEntry>> = functionDeclaration.functionSummary
 
     /** This function returns a list of [DataflowEntry] from the specified file. */
     private fun addEntriesFromFile(file: File): Map<FunctionDeclarationEntry, List<DFGEntry>> {
@@ -283,6 +283,7 @@ class DFGFunctionSummaries {
     ) {
         for (entry in dfgEntries) {
             var derefSource = false
+            var derefDestination = false
             val from =
                 if (entry.from.startsWith("param")) {
                     try {
@@ -317,14 +318,20 @@ class DFGFunctionSummaries {
                     try {
                         val e = entry.to.split(".")
                         val paramIndex = e.getOrNull(0)?.removePrefix("param")?.toInt()
+                        if (e.getOrNull(1) == "address") derefDestination = true
                         val paramTo =
                             paramIndex?.let { functionDeclaration.parameters.getOrNull(it) }
                         if (from != null && paramTo != null) {
                             functionDeclaration.functionSummary
-                                .computeIfAbsent(paramTo) {
-                                    identitySetOf<Triple<Node, Boolean, String>>()
-                                }
-                                .add(Triple(from, derefSource, ""))
+                                .computeIfAbsent(paramTo) { identitySetOf() }
+                                .add(
+                                    FunctionDeclaration.FSEntry(
+                                        derefDestination,
+                                        from,
+                                        derefSource,
+                                        ""
+                                    )
+                                )
                         }
                         paramTo
                     } catch (e: NumberFormatException) {
@@ -335,10 +342,15 @@ class DFGFunctionSummaries {
                     if (from != null) {
                         if (receiver != null) {
                             functionDeclaration.functionSummary
-                                .computeIfAbsent(receiver) {
-                                    identitySetOf<Triple<Node, Boolean, String>>()
-                                }
-                                .add(Triple(from, derefSource, ""))
+                                .computeIfAbsent(receiver) { identitySetOf() }
+                                .add(
+                                    FunctionDeclaration.FSEntry(
+                                        derefDestination,
+                                        from,
+                                        derefSource,
+                                        ""
+                                    )
+                                )
                         }
                     }
                     receiver
