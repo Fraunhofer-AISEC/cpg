@@ -1217,11 +1217,11 @@ class PointsToPassTest {
         assertTrue(fsecallkeytoout.entries.firstOrNull()?.key is ParameterDeclaration)
         assertLocalName("param_1", fsecallkeytoout.entries.firstOrNull()?.key)
         assertTrue(
-            fsecallkeytoout.entries.firstOrNull()?.value?.any { it.first == ceLine201 } == true
+            fsecallkeytoout.entries.firstOrNull()?.value?.any { it.srcNode == ceLine201 } == true
         )
         assertTrue(
             fsecallkeytoout.entries.firstOrNull()?.value?.any {
-                it.first is UnknownMemoryValue && it.first.name.localName == "DAT_0011b1c8"
+                it.srcNode is UnknownMemoryValue && it.srcNode.name.localName == "DAT_0011b1c8"
             } == true
         )
 
@@ -1242,7 +1242,7 @@ class PointsToPassTest {
                 .entries
                 .firstOrNull()
                 ?.value
-                ?.filter { it.first == ceLine201 }
+                ?.filter { it.srcNode == ceLine201 }
                 ?.size
         )
         assertEquals(
@@ -1253,7 +1253,7 @@ class PointsToPassTest {
                 .firstOrNull()
                 ?.value
                 ?.filter {
-                    it.first is UnknownMemoryValue && it.first.name.localName == "DAT_0011b1c8"
+                    it.srcNode is UnknownMemoryValue && it.srcNode.name.localName == "DAT_0011b1c8"
                 }
                 ?.size
         )
@@ -1534,20 +1534,23 @@ class PointsToPassTest {
         // TODO: should be 4, the unknownmemoryvalue for the session shouldn't be there
         assertEquals(5, FSread.entries.firstOrNull()?.value?.size)
         assertTrue(
-            FSread.entries.firstOrNull()?.value?.any { it.first == literal1 && it.third == "i" } ==
-                true
-        )
-        assertTrue(
-            FSread.entries.firstOrNull()?.value?.any { it.first == literal2 && it.third == "j" } ==
-                true
-        )
-        assertTrue(
-            FSread.entries.firstOrNull()?.value?.any { it.first == literal3 && it.third == "k" } ==
-                true
+            FSread.entries.firstOrNull()?.value?.any {
+                it.srcNode == literal1 && it.subAccessName == "i"
+            } == true
         )
         assertTrue(
             FSread.entries.firstOrNull()?.value?.any {
-                it.first == literal4 && it.third == "session.l"
+                it.srcNode == literal2 && it.subAccessName == "j"
+            } == true
+        )
+        assertTrue(
+            FSread.entries.firstOrNull()?.value?.any {
+                it.srcNode == literal3 && it.subAccessName == "k"
+            } == true
+        )
+        assertTrue(
+            FSread.entries.firstOrNull()?.value?.any {
+                it.srcNode == literal4 && it.subAccessName == "session.l"
             } == true
         )
 
@@ -1556,12 +1559,12 @@ class PointsToPassTest {
         assertEquals(2, FSinnerrenegotiate.entries.firstOrNull()?.value?.size)
         assertTrue(
             FSinnerrenegotiate.entries.firstOrNull()?.value?.any {
-                it.first == literal6 && it.third == "j"
+                it.srcNode == literal6 && it.subAccessName == "j"
             } == true
         )
         assertTrue(
             FSinnerrenegotiate.entries.firstOrNull()?.value?.any {
-                it.first == literal7 && it.third == "session.l"
+                it.srcNode == literal7 && it.subAccessName == "session.l"
             } == true
         )
 
@@ -1570,17 +1573,17 @@ class PointsToPassTest {
         assertEquals(3, FSrenegotiate.entries.firstOrNull()?.value?.size)
         assertTrue(
             FSrenegotiate.entries.firstOrNull()?.value?.any {
-                it.first == literal5 && it.third == "i"
+                it.srcNode == literal5 && it.subAccessName == "i"
             } == true
         )
         assertTrue(
             FSrenegotiate.entries.firstOrNull()?.value?.any {
-                it.first == literal6 && it.third == "j"
+                it.srcNode == literal6 && it.subAccessName == "j"
             } == true
         )
         assertTrue(
             FSrenegotiate.entries.firstOrNull()?.value?.any {
-                it.first == literal7 && it.third == "session.l"
+                it.srcNode == literal7 && it.subAccessName == "session.l"
             } == true
         )
     }
