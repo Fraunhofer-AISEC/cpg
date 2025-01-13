@@ -291,7 +291,7 @@ class DFGFunctionSummaries {
                         val paramIndex = e.getOrNull(0)?.removePrefix("param")?.toInt()
                         if (paramIndex != null) {
                             val foo = functionDeclaration.parameters.getOrNull(paramIndex)
-                            if (e.getOrNull(1) == "address") derefSource = true
+                            if (e.getOrNull(1) == "deref") derefSource = true
                             foo
                         } else null
                     } catch (e: NumberFormatException) {
@@ -318,7 +318,7 @@ class DFGFunctionSummaries {
                     try {
                         val e = entry.to.split(".")
                         val paramIndex = e.getOrNull(0)?.removePrefix("param")?.toInt()
-                        if (e.getOrNull(1) == "address") derefDestination = true
+                        if (e.getOrNull(1) == "deref") derefDestination = true
                         val paramTo =
                             paramIndex?.let { functionDeclaration.parameters.getOrNull(it) }
                         if (from != null && paramTo != null) {
