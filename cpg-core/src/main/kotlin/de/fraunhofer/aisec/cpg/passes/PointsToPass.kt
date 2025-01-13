@@ -242,7 +242,26 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
         val mapDstToSrc = mutableMapOf<Node, MutableSet<Node>>()
 
         // First, check if there are missing FunctionSummaries
-        currentNode.invokes.forEach { invoke ->
+        currentNode.language?.let { language ->
+            currentNode.invokes.addAll(
+                ctx.config.functionSummaries.run {
+                    this.functionToDFGEntryMap
+                        .filterKeys { it.methodName == currentNode.name.localName }
+                        .map { (declEntry, summary) ->
+                            this.generateFunctionForEntry(
+                                this@PointsToPass,
+                                language,
+                                declEntry,
+                                summary
+                            )
+                        }
+                }
+            )
+        }
+        var i = 0
+        val invokes = currentNode.invokes.toList()
+        while (i < invokes.size) {
+            val invoke = invokes[i]
             if (invoke.functionSummary.isEmpty()) {
                 if (invoke.hasBody()) {
                     log.debug("functionSummaryAnalysisChain: {}", functionSummaryAnalysisChain)
@@ -377,6 +396,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                     }
                 }
             }
+            i++
         }
 
         mapDstToSrc.forEach { (dst, src) ->
@@ -889,4 +909,17 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
             return doubleState
         }
     }
+}
+
+/**
+ * It's most likely a stub if it calls the same method and has only a call and return and maximum
+ * one more statement.
+ */
+fun FunctionDeclaration.isStub(): Boolean {
+    val bodySize = (body as? Block)?.statements?.size
+    return body == null ||
+        (bodySize != null &&
+            bodySize <= 3 &&
+            this.calls.singleOrNull()?.name == this.name &&
+            this.returns.singleOrNull() != null)
 }
