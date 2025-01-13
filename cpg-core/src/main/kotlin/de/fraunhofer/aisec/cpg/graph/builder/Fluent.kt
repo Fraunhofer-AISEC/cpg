@@ -664,6 +664,11 @@ fun LanguageFrontend<*, *>.forInitializer(
 
     initializerStatement = node
 
+    if (node.isSingleDeclaration()) {
+
+        scopeManager.addDeclaration(node.singleDeclaration, false)
+    }
+
     return node
 }
 
