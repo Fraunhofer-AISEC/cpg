@@ -1,0 +1,3 @@
+package integration
+
+func someSpecific() {}

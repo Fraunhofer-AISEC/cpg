@@ -126,7 +126,8 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * Determines if the [reference] refers to the super class and we have to start searching there.
+     * Determines if the [reference] refers to the super class, and we have to start searching
+     * there.
      */
     protected fun isSuperclassReference(reference: Reference): Boolean {
         val language = reference.language
@@ -192,16 +193,6 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
      */
     protected fun handleReference(currentClass: RecordDeclaration?, ref: Reference) {
         val language = ref.language
-
-        if (language == null) {
-            Util.warnWithFileLocation(
-                ref,
-                log,
-                "Language for reference {} is empty, we cannot resolve this reference correctly.",
-                ref.name,
-            )
-            return
-        }
 
         // Ignore references to anonymous identifiers, if the language supports it (e.g., the _
         // identifier in Go)
