@@ -43,6 +43,10 @@ dependencies {
     // to evaluate some test cases
     testImplementation(project(":cpg-analysis"))
 
-    // to evaluate some test cases
-    integrationTestImplementation(project(":cpg-language-python"))
+    // We depend on the C++ frontend for the integration tests, but the frontend is only available if enabled.
+    // If it's not available, the integration tests fail (which is ok). But if we would directly reference the
+    // project here, the build system would fail any task since it will not find a non-enabled project.
+    findProject(":cpg-language-python")?.also {
+        integrationTestImplementation(it)
+    }
 }
