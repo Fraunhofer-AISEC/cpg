@@ -74,4 +74,6 @@ dependencies {
     annotationProcessor(libs.picocli.codegen)
 
     integrationTestImplementation(libs.kotlin.reflect)
+
+    integrationTestImplementation(project(":cpg-concepts"))
 }
