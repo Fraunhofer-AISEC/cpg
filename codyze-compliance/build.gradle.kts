@@ -1,6 +1,3 @@
-import groovy.util.Node
-import groovy.util.NodeList
-
 /*
  * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
  *
@@ -27,26 +24,23 @@ import groovy.util.NodeList
  *
  */
 plugins {
-    id("cpg.application-conventions")
-    id("cpg.frontend-dependency-conventions")
-}
-
-application {
-    mainClass.set("de.fraunhofer.aisec.cpg.codyze.ApplicationKt")
+    id("cpg.common-conventions")
 }
 
 publishing {
     publications {
-        named<MavenPublication>("cpg-codyze") {
+        named<MavenPublication>("codyze-compliance") {
             pom {
-                artifactId = "cpg-codyze"
-                name.set("Code Property Graph - Codyze")
-                description.set("The one-stop shop to the code property graph")
+                artifactId = "codyze"
+                name.set("Codyze - Compliance Module")
+                description.set("The compliance module of Codyze")
             }
         }
     }
 }
 
 dependencies {
-
+    implementation(libs.clikt)
+    implementation(project(":cpg-core"))
+    implementation("com.charleskorn.kaml:kaml:0.67.0")
 }

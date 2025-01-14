@@ -23,8 +23,27 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.codyze
+package de.fraunhofer.aisec.cpg.codyze.compliance
 
-fun main() {
-    println("Hello, Codyze!")
+import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.subcommands
+
+class Command : CliktCommand() {
+    override fun run() {
+        echo("Hello from compliance")
+    }
 }
+
+class ScanCommand : CliktCommand() {
+    override fun run() {
+        echo("Hello from scan")
+    }
+}
+
+class ListSecurityGoals : CliktCommand() {
+    override fun run() {
+        echo("Hello from listSecurityGoals")
+    }
+}
+
+var ComplianceCommand = Command().subcommands(ScanCommand(), ListSecurityGoals())
