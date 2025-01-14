@@ -39,7 +39,7 @@ import kotlin.test.assertTrue
 class FileConceptTest : BaseTest() {
     @Test
     fun testRead() {
-        val topLevel = Path.of("src", "test", "resources", "concepts", "file", "python")
+        val topLevel = Path.of("src", "integrationTest", "resources", "concepts", "file", "python")
 
         val result =
             analyze(
@@ -59,7 +59,7 @@ class FileConceptTest : BaseTest() {
 
     @Test
     fun testWrite() {
-        val topLevel = Path.of("src", "test", "resources", "concepts", "file", "python")
+        val topLevel = Path.of("src", "integrationTest", "resources", "concepts", "file", "python")
 
         val result =
             analyze(
@@ -79,7 +79,7 @@ class FileConceptTest : BaseTest() {
 
     @Test
     fun testEOG() {
-        val topLevel = Path.of("src", "test", "resources", "concepts", "file", "python")
+        val topLevel = Path.of("src", "integrationTest", "resources", "concepts", "file", "python")
 
         val result =
             analyze(

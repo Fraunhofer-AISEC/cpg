@@ -42,7 +42,8 @@ import kotlin.test.*
 class LoggingConceptTest : BaseTest() {
     @Test
     fun test01() {
-        val topLevel = Path.of("src", "test", "resources", "concepts", "logging", "python")
+        val topLevel =
+            Path.of("src", "integrationTest", "resources", "concepts", "logging", "python")
 
         val result =
             analyze(
@@ -92,7 +93,8 @@ class LoggingConceptTest : BaseTest() {
 
     @Test
     fun test02() {
-        val topLevel = Path.of("src", "test", "resources", "concepts", "logging", "python")
+        val topLevel =
+            Path.of("src", "integrationTest", "resources", "concepts", "logging", "python")
 
         val result =
             analyze(
