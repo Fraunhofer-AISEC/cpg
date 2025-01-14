@@ -38,7 +38,13 @@ import de.fraunhofer.aisec.cpg.test.analyze
 import de.fraunhofer.aisec.cpg.test.assertLiteralValue
 import java.nio.file.Path
 import kotlin.test.*
+import org.junit.jupiter.api.Tag
 
+/**
+ * A class for integration tests. They depend on the Python frontend, so we classify them as an
+ * integration test. This might be replaced with a language-neutral test at some point.
+ */
+@Tag("integration")
 class LoggingConceptTest : BaseTest() {
     @Test
     fun test01() {

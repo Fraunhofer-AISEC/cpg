@@ -35,7 +35,13 @@ import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import org.junit.jupiter.api.Tag
 
+/**
+ * A class for integration tests. They depend on the Python frontend, so we classify them as an
+ * integration test. This might be replaced with a language-neutral test at some point.
+ */
+@Tag("integration")
 class FileConceptTest : BaseTest() {
     @Test
     fun testRead() {
