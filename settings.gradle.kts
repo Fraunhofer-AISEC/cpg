@@ -11,6 +11,7 @@ include(":cpg-core")
 include(":cpg-analysis")
 include(":cpg-neo4j")
 include(":cpg-console")
+include(":cpg-concepts")
 
 // this code block also exists in the root build.gradle.kts
 val enableJavaFrontend: Boolean by extra {
@@ -49,10 +50,6 @@ val enableINIFrontend: Boolean by extra {
     val enableINIFrontend: String? by settings
     enableINIFrontend.toBoolean()
 }
-val enableConcepts: Boolean by extra {
-    val enableConcepts: String? by settings
-    enableConcepts.toBoolean()
-}
 
 if (enableJavaFrontend) include(":cpg-language-java")
 if (enableCXXFrontend) include(":cpg-language-cxx")
@@ -63,7 +60,6 @@ if (enableTypeScriptFrontend) include(":cpg-language-typescript")
 if (enableRubyFrontend) include(":cpg-language-ruby")
 if (enableJVMFrontend) include(":cpg-language-jvm")
 if (enableINIFrontend) include(":cpg-language-ini")
-if (enableConcepts) include(":cpg-concepts")
 
 kover {
     enableCoverage()

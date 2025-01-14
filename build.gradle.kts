@@ -149,9 +149,3 @@ val enableINIFrontend: Boolean by extra {
     enableINIFrontend.toBoolean()
 }
 project.logger.lifecycle("INI frontend is ${if (enableINIFrontend) "enabled" else "disabled"}")
-
-val enableConcepts: Boolean by extra {
-    val enableConcepts: String? by project
-    enableConcepts.toBoolean()
-}
-project.logger.lifecycle("Concepts are ${if (enableConcepts) "enabled" else "disabled"}")

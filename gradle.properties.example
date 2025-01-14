@@ -10,4 +10,3 @@ enableTypeScriptFrontend=true
 enableRubyFrontend=true
 enableJVMFrontend=true
 enableINIFrontend=true
-enableConcepts=true

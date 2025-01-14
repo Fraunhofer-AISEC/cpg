@@ -44,5 +44,5 @@ dependencies {
     testImplementation(project(":cpg-analysis"))
 
     // to evaluate some test cases
-    testImplementation(project(":cpg-language-python"))
+    integrationTestImplementation(project(":cpg-language-python"))
 }

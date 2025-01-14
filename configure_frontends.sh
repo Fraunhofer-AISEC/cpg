@@ -62,5 +62,3 @@ answerJVM=$(ask "Do you want to enable the JVM frontend? (currently $(getPropert
 setProperty "enableJVMFrontend" $answerJVM
 answerINI=$(ask "Do you want to enable the INI frontend? (currently $(getProperty "enableINIFrontend"))")
 setProperty "enableINIFrontend" $answerINI
-answerConcepts=$(ask "Do you want to enable 'concepts'? (currently $(getProperty "enableConcepts"))")
-setProperty "enableConcepts" $answerConcepts
