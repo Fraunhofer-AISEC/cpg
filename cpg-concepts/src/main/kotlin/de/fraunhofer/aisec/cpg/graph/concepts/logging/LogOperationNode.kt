@@ -38,8 +38,8 @@ enum class LogLevel {
 }
 
 data class LogOperationNode(
-    override val underlayingNode: Node,
+    override var underlyingNode: Node?,
     override val concept: LoggingNode,
     val logLevel: LogLevel,
     val logArguments: List<Node>,
-) : Operation(), IsLogging
+) : Operation(concept = concept), IsLogging

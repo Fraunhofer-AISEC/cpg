@@ -29,8 +29,8 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 
-val TranslationResult.conceptNodes: List<Concept>
-    get() = this.additionalNodes.filterIsInstance<Concept>() // doesn't work because AST
+val TranslationResult.conceptNodes: List<Concept<*>>
+    get() = this.additionalNodes.filterIsInstance<Concept<*>>() // doesn't work because AST
 val TranslationResult.operationNodes: List<Operation>
     get() = this.additionalNodes.filterIsInstance<Operation>()
 

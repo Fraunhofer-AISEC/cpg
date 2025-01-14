@@ -42,7 +42,7 @@ import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLate
 @ExecuteLate
 class LoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
-    /** A storage connceting CPG nodes with [LoggingNode]s. */
+    /** A storage connecting CPG nodes with [LoggingNode]s. */
     private val loggers = mutableMapOf<Declaration, LoggingNode>()
     private lateinit var result: TranslationResult
 
@@ -82,7 +82,7 @@ class LoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
         if (
             importDeclaration.import.toString() == "logging"
         ) { // TODO what about import logging as foo
-            val newNode = newLoggingNode(underlayingNode = importDeclaration, result)
+            val newNode = newLoggingNode(underlyingNode = importDeclaration, result)
             loggers += importDeclaration to newNode
         }
     }
@@ -102,7 +102,7 @@ class LoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     .singleOrNull() ?: TODO("Did not find an `import logging` logger.")
             logOpHelper(callExpression = callExpression, logger = logger)
         } else if (callee.name.toString() == "logging.getLogger") {
-            val newNode = newLoggingNode(underlayingNode = callExpression, result)
+            val newNode = newLoggingNode(underlyingNode = callExpression, result)
 
             if (callExpression.astParent is AssignExpression) {
                 val assign = callExpression.astParent
@@ -132,7 +132,7 @@ class LoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
             "info",
             "debug" -> {
                 newLogOperationNode(
-                    underlayingNode = callExpression,
+                    underlyingNode = callExpression,
                     result = result,
                     logger = logger,
                     logArguments = callExpression.arguments,

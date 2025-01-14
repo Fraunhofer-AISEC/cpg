@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.graph.concepts.file
 
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
-import java.util.*
 
 enum class FileAccessMode {
     READ,
@@ -39,20 +38,27 @@ enum class FileAccessMode {
 }
 
 data class FileNode(
-    override val underlayingNode: Node,
-    override val ops: MutableSet<FileOperationNode>,
+    override var underlyingNode: Node?,
+    val opNodes: MutableSet<FileOperationNode>,
     val fileName: String,
     val accessMode: FileAccessMode,
-) : Concept(), IsFile {
+) : Concept<FileOperationNode>(), IsFile {
+    init { // TODO this is ugly
+        ops += opNodes
+    }
+
+    /*
     override fun hashCode(): Int {
         return Objects.hash(
             super.hashCode(),
-            underlayingNode,
+            underlyingNode,
             fileName,
             accessMode,
         ) // TODO: exclude ops because this would result in a circular reference. how to do this in
         // a nice way?
     }
+
+     */
 }
 
 // TODO: encoding? newline?

@@ -28,9 +28,9 @@ package de.fraunhofer.aisec.cpg.graph.concepts.logging
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.*
 
-fun MetadataProvider.newLoggingNode(underlayingNode: Node, result: TranslationResult): LoggingNode {
-    val node = LoggingNode(underlayingNode = underlayingNode)
-    node.codeAndLocationFrom(underlayingNode)
+fun MetadataProvider.newLoggingNode(underlyingNode: Node, result: TranslationResult): LoggingNode {
+    val node = LoggingNode(underlyingNode = underlyingNode)
+    node.codeAndLocationFrom(underlyingNode)
 
     node.name = Name("Log") // to have a nice name in Neo4j
 
@@ -40,7 +40,7 @@ fun MetadataProvider.newLoggingNode(underlayingNode: Node, result: TranslationRe
 }
 
 fun MetadataProvider.newLogOperationNode(
-    underlayingNode: Node,
+    underlyingNode: Node,
     result: TranslationResult,
     level: String,
     logger: LoggingNode,
@@ -48,7 +48,7 @@ fun MetadataProvider.newLogOperationNode(
 ): LogOperationNode {
     val node =
         LogOperationNode(
-            underlayingNode = underlayingNode,
+            underlyingNode = underlyingNode,
             concept = logger,
             logArguments = logArguments,
             logLevel =
@@ -61,7 +61,7 @@ fun MetadataProvider.newLogOperationNode(
                     else -> LogLevel.UNKNOWN
                 },
         )
-    node.codeAndLocationFrom(underlayingNode)
+    node.codeAndLocationFrom(underlyingNode)
 
     node.name = Name("log." + node.logLevel) // to have a nice name in Neo4j
 

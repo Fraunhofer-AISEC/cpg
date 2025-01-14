@@ -30,14 +30,14 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 
 fun MetadataProvider.newFileNode(
-    underlayingNode: Node,
+    underlyingNode: Node,
     result: TranslationResult,
     fileName: String,
     accessMode: String,
 ): FileNode {
     val node =
         FileNode(
-            underlayingNode = underlayingNode,
+            underlyingNode = underlyingNode,
             accessMode =
                 when (accessMode) {
                     "r",
@@ -52,9 +52,9 @@ fun MetadataProvider.newFileNode(
                     else -> FileAccessMode.UNKNOWN
                 },
             fileName = fileName,
-            ops = HashSet(),
+            opNodes = HashSet(),
         )
-    node.codeAndLocationFrom(underlayingNode)
+    node.codeAndLocationFrom(underlyingNode)
 
     node.name = Name(fileName) // to have a nice name in Neo4j
 
@@ -64,20 +64,20 @@ fun MetadataProvider.newFileNode(
 }
 
 fun MetadataProvider.newFileReadNode(
-    underlayingNode: Node,
+    underlyingNode: Node,
     result: TranslationResult,
     fileNode: FileNode,
 ): FileReadNode {
     val node =
-        FileReadNode(underlayingNode = result, concept = fileNode, target = underlayingNode.nextDFG)
-    node.codeAndLocationFrom(underlayingNode)
+        FileReadNode(underlyingNode = result, concept = fileNode, target = underlyingNode.nextDFG)
+    node.codeAndLocationFrom(underlyingNode)
 
     node.name = Name("read") // to have a nice name in Neo4j
 
     fileNode.ops += node
 
     // add DFG
-    node.nextDFG += underlayingNode
+    node.nextDFG += underlyingNode
 
     result.additionalNodes += node
     NodeBuilder.log(node)
@@ -85,24 +85,24 @@ fun MetadataProvider.newFileReadNode(
 }
 
 fun MetadataProvider.newFileWriteNode(
-    underlayingNode: Node,
+    underlyingNode: Node,
     result: TranslationResult,
     fileNode: FileNode,
 ): FileWriteNode {
     val node =
         FileWriteNode(
-            underlayingNode = underlayingNode,
+            underlyingNode = underlyingNode,
             concept = fileNode,
-            what = (underlayingNode as? CallExpression)?.arguments ?: listOf(),
+            what = (underlyingNode as? CallExpression)?.arguments ?: listOf(),
         )
-    node.codeAndLocationFrom(underlayingNode)
+    node.codeAndLocationFrom(underlyingNode)
 
     node.name = Name("write") // to have a nice name in Neo4j
 
     fileNode.ops += node
 
     // add DFG
-    underlayingNode.parameters.forEach { it.nextDFG += node }
+    underlyingNode.parameters.forEach { it.nextDFG += node }
 
     result.additionalNodes += node
     NodeBuilder.log(node)
@@ -110,24 +110,24 @@ fun MetadataProvider.newFileWriteNode(
 }
 
 fun MetadataProvider.newFileAppendNode(
-    underlayingNode: Node,
+    underlyingNode: Node,
     result: TranslationResult,
     fileNode: FileNode,
 ): FileAppendNode {
     val node =
         FileAppendNode(
-            underlayingNode = underlayingNode,
+            underlyingNode = underlyingNode,
             concept = fileNode,
-            what = (underlayingNode as? CallExpression)?.arguments ?: listOf(),
+            what = (underlyingNode as? CallExpression)?.arguments ?: listOf(),
         )
-    node.codeAndLocationFrom(underlayingNode)
+    node.codeAndLocationFrom(underlyingNode)
 
     node.name = Name("write") // to have a nice name in Neo4j
 
     fileNode.ops += node
 
     // add DFG
-    underlayingNode.parameters.forEach { it.nextDFG += node }
+    underlyingNode.parameters.forEach { it.nextDFG += node }
 
     result.additionalNodes += node
     NodeBuilder.log(node)
