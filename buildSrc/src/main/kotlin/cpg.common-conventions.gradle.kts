@@ -12,6 +12,7 @@ plugins {
     signing
     `maven-publish`
     kotlin("jvm")
+    kotlin("plugin.serialization")
     id("org.jetbrains.dokka")
 }
 
