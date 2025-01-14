@@ -45,5 +45,5 @@ abstract class OverlayNode() : Node() {
     val underlyingNodeEdge: OverlaySingleEdge =
         OverlaySingleEdge(this, of = null, mirrorProperty = Node::overlayEdges, outgoing = false)
 
-    open var underlyingNode by unwrapping(OverlayNode::underlyingNodeEdge)
+    var underlyingNode by unwrapping(OverlayNode::underlyingNodeEdge)
 }
