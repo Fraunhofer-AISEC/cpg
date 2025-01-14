@@ -32,9 +32,9 @@ import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 val TranslationResult.conceptNodes: HashSet<Concept<*>>
     get() =
         this.nodes.flatMapTo(HashSet<Concept<*>>()) { it.overlays.filterIsInstance<Concept<*>>() }
-val TranslationResult.operationNodes: List<Operation>
-    get() =
-        this.nodes.flatMapTo(ArrayList<Operation>()) { it.overlays.filterIsInstance<Operation>() }
+
+val TranslationResult.operationNodes: HashSet<Operation>
+    get() = this.nodes.flatMapTo(HashSet<Operation>()) { it.overlays.filterIsInstance<Operation>() }
 
 val Node.belongsToConcept: Concept<*>?
     get() = TODO()
