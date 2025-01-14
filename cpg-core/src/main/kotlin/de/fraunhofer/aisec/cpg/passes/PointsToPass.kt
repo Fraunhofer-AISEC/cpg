@@ -166,33 +166,18 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
             val values = addresses.flatMap { doubleState.getValues(it) }
             val indexes = mutableSetOf<Pair<Node, String>>()
 
-            // Add the values
-            // indexes.addAll(values.map { Pair(it, "") })
+            // Collect all addresses of the parameter that we can use as index to look up possible
+            // new values
             values.forEach { value ->
                 indexes.add(Pair(value, ""))
-                // Additionally check for partial writes to fields
-                // For the partial writes, we also store the field name in the function Summary
-                // TODO: we are going too far here
-                /*                doubleState.fetchElementFromDeclarationState(value, true).filter {
-                    it.name != param.name
-                }*/
+                // Also collect the ParameterMemoryValue, since there might have been writes to
+                // pointer-to-pointers
+                doubleState.getValues(value).filterIsInstance<ParameterMemoryValue>().map {
+                    indexes.add(Pair(it, ""))
+                }
             }
-            // TODO
-            /*            doubleState
-            .fetchElementFromDeclarationState(param.memoryValue)
-            // .filter { it is ParameterMemoryValue && it.name.parent == param.name }
-            .forEach { indexes.add(Pair(it, "")) }*/
 
             indexes.forEach { (index, subAccessName) ->
-                /*                val finalValue =
-                doubleState.declarationsState.elements
-                    .filter { it.key == index }
-                    .entries
-                    .firstOrNull()
-                    ?.value
-                    ?.elements
-                    ?.second
-                    ?.elements*/
                 val finalValue =
                     doubleState.fetchElementFromDeclarationState(index, true).filter {
                         it.name != param.name
@@ -333,21 +318,21 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
             }
             currentNode.arguments.forEach { arg ->
                 if (arg.argumentIndex < invoke.parameters.size) {
+
                     // Create a DFG-Edge from the argument to the parameter's memoryValue
                     val p = invoke.parameters[arg.argumentIndex]
-                    val pValue = doubleState.getValues(p)
-                    pValue.forEach { value ->
-                        doubleState =
-                            doubleState.push(
-                                value,
-                                TupleLattice(
-                                    Pair(
-                                        PowersetLattice(pValue),
-                                        PowersetLattice(identitySetOf(arg))
-                                    )
+                    if (!p.memoryValueIsInitialized())
+                        initializeParameters(mutableListOf(p), doubleState, 1)
+                    doubleState =
+                        doubleState.push(
+                            p.memoryValue,
+                            TupleLattice(
+                                Pair(
+                                    PowersetLattice(identitySetOf(p.memoryValue)),
+                                    PowersetLattice(identitySetOf(arg))
                                 )
                             )
-                    }
+                        )
                 }
             }
             // }
@@ -587,39 +572,49 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
         return doubleState
     }
 
+    /** Create ParameterMemoryValues up to depth `depth` */
     private fun initializeParameters(
         parameters: MutableList<ParameterDeclaration>,
-        doubleState: PointsToState2
+        doubleState: PointsToState2,
+        // Until which depth do we create ParameterMemoryValues
+        depth: Int = 3
     ): PointsToState2 {
         var doubleState = doubleState
-        // Until which depth do we create ParameterMemoryValues
-        val depth = 2
-        parameters.forEach { param ->
-            // In the first step, we have a triangle of ParameterDeclaration, the
-            // ParameterDeclaration's Memory Address and the ParameterMemoryValue
-            // Therefore, the src and the addresses are different. For all other depths, we set both
-            // to the ParameterMemoryValue we create in the first step
-            var src: Node = param
-            var addresses = doubleState.getAddresses(src)
-            for (i in 0..depth) {
-                val pmvName = "deref".repeat(i) + "value"
-                val pmv =
-                    ParameterMemoryValue(Name(pmvName)).apply {
-                        memoryAddress = addresses.first() /* TODO: might there also be more? */
+        parameters
+            .filter { !it.memoryValueIsInitialized() }
+            .forEach { param ->
+                // In the first step, we have a triangle of ParameterDeclaration, the
+                // ParameterDeclaration's Memory Address and the ParameterMemoryValue
+                // Therefore, the src and the addresses are different. For all other depths, we set
+                // both
+                // to the ParameterMemoryValue we create in the first step
+                var src: Node = param
+                var addresses = doubleState.getAddresses(src)
+                for (i in 0..(depth + 1)) {
+                    val pmvName = "deref".repeat(i) + "value"
+                    val pmv =
+                        ParameterMemoryValue(Name(pmvName, param.name)).apply {
+                            memoryAddress = addresses.first() /* TODO: might there also be more? */
+                        }
+                    // In the first step, we link the ParameterDeclaration to the PMV to be able to
+                    // also access it outside the function
+                    if (src is ParameterDeclaration) src.memoryValue = pmv
+
+                    // Update the states
+                    val state:
+                        LatticeElement<Pair<PowersetLatticeT<Node>, PowersetLatticeT<Node>>> =
+                        TupleLattice(
+                            Pair(PowersetLattice(addresses), PowersetLattice(identitySetOf(pmv)))
+                        )
+                    addresses.forEach { addr ->
+                        doubleState = doubleState.pushToDeclarationsState(addr, state)
                     }
-                val state: LatticeElement<Pair<PowersetLatticeT<Node>, PowersetLatticeT<Node>>> =
-                    TupleLattice(
-                        Pair(PowersetLattice(addresses), PowersetLattice(identitySetOf(pmv)))
-                    )
-                addresses.forEach { addr ->
-                    doubleState = doubleState.pushToDeclarationsState(addr, state)
+                    doubleState = doubleState.push(src, state)
+                    // prepare for next step
+                    src = pmv
+                    addresses = setOf(pmv)
                 }
-                doubleState = doubleState.push(src, state)
-                // prepare for next step
-                src = pmv
-                addresses = setOf(pmv)
             }
-        }
         return doubleState
     }
 
@@ -912,7 +907,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                     addrState == null ||
                         addrState.elements.first.elements.filter { it.name == nodeName }.isEmpty()
                 ) {
-                    val fieldAddress = MemoryAddress(nodeName, addr)
+                    val fieldAddress = MemoryAddress(nodeName)
                     doubleState =
                         pushToDeclarationsState(
                             addr,

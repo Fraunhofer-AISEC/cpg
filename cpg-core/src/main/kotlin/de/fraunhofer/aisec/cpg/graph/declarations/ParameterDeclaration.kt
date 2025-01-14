@@ -29,11 +29,18 @@ import de.fraunhofer.aisec.cpg.graph.HasDefault
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ParameterMemoryValue
 import java.util.*
 import org.neo4j.ogm.annotation.Relationship
 
 /** A declaration of a function or nontype template parameter. */
 class ParameterDeclaration : ValueDeclaration(), HasDefault<Expression?> {
+    // We use the memoryValue to link the ParameterDeclaration to the ParameterMemoryValue when we
+    // don't have a declarationState (outside of the function)
+    lateinit var memoryValue: ParameterMemoryValue
+
+    fun memoryValueIsInitialized() = ::memoryValue.isInitialized
+
     var isVariadic = false
 
     @Relationship(value = "DEFAULT", direction = Relationship.Direction.OUTGOING)

@@ -304,10 +304,7 @@ class DFGFunctionSummaries {
                             functionDeclaration,
                             { mutableMapOf<Name, MemoryAddress>() }
                         )
-                        .computeIfAbsent(
-                            memAddrName,
-                            { MemoryAddress(memAddrName, functionDeclaration) }
-                        )
+                        .computeIfAbsent(memAddrName, { MemoryAddress(memAddrName) })
                 } else if (entry.from == "base") {
                     (functionDeclaration as? MethodDeclaration)?.receiver
                 } else {
