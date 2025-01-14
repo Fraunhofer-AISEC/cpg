@@ -33,5 +33,5 @@ import de.fraunhofer.aisec.cpg.graph.OverlayNode
  */
 abstract class Operation(
     /** The [Concept] this operation belongs to. */
-    val concept: Concept<*>
+    open val concept: Concept<*>
 ) : OverlayNode()
