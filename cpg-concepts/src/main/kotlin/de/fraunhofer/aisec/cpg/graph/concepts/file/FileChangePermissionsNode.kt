@@ -27,8 +27,8 @@ package de.fraunhofer.aisec.cpg.graph.concepts.file
 
 import de.fraunhofer.aisec.cpg.graph.Node
 
-data class FileChangePermissionsNode(
-    override var underlyingNode: Node?,
+class FileChangePermissionsNode(
+    underlyingNode: Node,
     override val concept: FileNode,
     val newPermissions: String,
-) : FileOperationNode(concept = concept)
+) : FileOperationNode(underlyingNode = underlyingNode, concept = concept)

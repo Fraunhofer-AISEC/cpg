@@ -37,12 +37,12 @@ enum class FileAccessMode {
     // what do we want to have here? binary? text? r+ vs w+? create mode? ...?
 }
 
-data class FileNode(
-    override var underlyingNode: Node?,
+class FileNode(
+    underlyingNode: Node,
     val opNodes: MutableSet<FileOperationNode>,
     val fileName: String,
     val accessMode: FileAccessMode,
-) : Concept<FileOperationNode>(), IsFile {
+) : Concept<FileOperationNode>(underlyingNode = underlyingNode), IsFile {
     init { // TODO this is ugly
         ops += opNodes
     }

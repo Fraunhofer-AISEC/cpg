@@ -58,7 +58,6 @@ fun MetadataProvider.newFileNode(
 
     node.name = Name(fileName) // to have a nice name in Neo4j
 
-    result.additionalNodes += node
     NodeBuilder.log(node)
     return node
 }
@@ -79,7 +78,6 @@ fun MetadataProvider.newFileReadNode(
     // add DFG
     node.nextDFG += underlyingNode
 
-    result.additionalNodes += node
     NodeBuilder.log(node)
     return node
 }
@@ -104,7 +102,6 @@ fun MetadataProvider.newFileWriteNode(
     // add DFG
     underlyingNode.parameters.forEach { it.nextDFG += node }
 
-    result.additionalNodes += node
     NodeBuilder.log(node)
     return node
 }
@@ -129,7 +126,6 @@ fun MetadataProvider.newFileAppendNode(
     // add DFG
     underlyingNode.parameters.forEach { it.nextDFG += node }
 
-    result.additionalNodes += node
     NodeBuilder.log(node)
     return node
 }

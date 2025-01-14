@@ -34,7 +34,6 @@ fun MetadataProvider.newLoggingNode(underlyingNode: Node, result: TranslationRes
 
     node.name = Name("Log") // to have a nice name in Neo4j
 
-    result.additionalNodes += node
     NodeBuilder.log(node)
     return node
 }
@@ -74,7 +73,6 @@ fun MetadataProvider.newLogOperationNode(
         // node.nextEOG += cpgArgNode
     }
 
-    result.additionalNodes += node
     NodeBuilder.log(node)
     return node
 }
