@@ -29,9 +29,14 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 
-val TranslationResult.conceptNodes: List<Concept<*>>
-    get() = this.additionalNodes.filterIsInstance<Concept<*>>()
+val TranslationResult.conceptNodes: HashSet<Concept<*>>
+    get() =
+        this.nodes.flatMapTo(HashSet<Concept<*>>()) { it.overlays.filterIsInstance<Concept<*>>() }
 val TranslationResult.operationNodes: List<Operation>
-    get() = this.additionalNodes.filterIsInstance<Operation>()
+    get() =
+        this.nodes.flatMapTo(ArrayList<Operation>()) { it.overlays.filterIsInstance<Operation>() }
+
+val Node.belongsToConcept: Concept<*>?
+    get() = TODO()
 
 // TODO: belongs to concept -> check parent recursively
