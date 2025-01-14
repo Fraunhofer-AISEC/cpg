@@ -25,6 +25,9 @@
  */
 package de.fraunhofer.aisec.neo4j
 
+import de.fraunhofer.aisec.cpg.graph.calls
+import de.fraunhofer.aisec.cpg.graph.concepts.Concept
+import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.get
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
@@ -33,6 +36,7 @@ import java.math.BigInteger
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertNotNull
 import org.junit.jupiter.api.Tag
 
 @Tag("integration")
@@ -60,7 +64,6 @@ class Neo4JTest {
         application.pushToNeo4j(result)
     }
 
-    /* TODO enable once https://github.com/Fraunhofer-AISEC/cpg/pull/1932 is merged
     @Test
     fun testPushConcepts() {
         val (application, result) = createTranslationResult()
@@ -96,5 +99,4 @@ class Neo4JTest {
 
         application.pushToNeo4j(result)
     }
-     */
 }

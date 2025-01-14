@@ -43,6 +43,6 @@ dependencies {
         implementation(project(":cpg-language-ini"))
     }
     if (enableConcepts) {
-        api(project(":cpg-concepts"))
+        implementation(project(":cpg-concepts"))
     }
 }
