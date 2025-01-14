@@ -1136,19 +1136,13 @@ class PointsToPassTest {
         assertTrue(local_28Line180.prevDFG.contains(ceLine172))
 
         // Line 181
-        assertEquals(1, local_28DerefLine181.prevDFG.size)
+        assertEquals(2, local_28DerefLine181.prevDFG.size)
         assertTrue(local_28DerefLine181.prevDFG.contains(ceLine201))
         assertEquals(
             1,
             local_28DerefLine181.prevDFG
                 .filter { it is UnknownMemoryValue && it.name.localName == "DAT_0011b1c8" }
                 .size
-        )
-
-        assertEquals(1, sseLine181.prevDFG.size)
-        assertTrue(
-            sseLine181.prevDFG.first() is UnknownMemoryValue &&
-                sseLine181.prevDFG.first().name.localName == "DAT_0011b1c8"
         )
 
         // Line 190

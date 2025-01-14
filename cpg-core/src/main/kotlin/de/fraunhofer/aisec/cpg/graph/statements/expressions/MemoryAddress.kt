@@ -59,4 +59,19 @@ class ParameterMemoryValue(override var name: Name) : MemoryAddress(name) {
 }
 
 /** We don't know the value. It might be set somewhere else or not. No idea. */
-class UnknownMemoryValue(override var name: Name = Name("")) : MemoryAddress(name) {}
+class UnknownMemoryValue(override var name: Name = Name("")) : MemoryAddress(name) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) {
+            return true
+        }
+        if (other != null && other::class != this::class) {
+            return false
+        }
+        // TODO: What else do we need to compare?
+        return other is MemoryAddress && name == other.name
+    }
+
+    override fun hashCode(): Int {
+        return super.hashCode()
+    }
+}
