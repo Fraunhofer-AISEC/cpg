@@ -25,13 +25,10 @@
  */
 package de.fraunhofer.aisec.neo4j
 
-import de.fraunhofer.aisec.cpg.graph.calls
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
-import de.fraunhofer.aisec.cpg.graph.functions
-import de.fraunhofer.aisec.cpg.graph.get
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
-import de.fraunhofer.aisec.cpg.graph.variables
 import java.math.BigInteger
 import kotlin.test.Test
 import kotlin.test.assertEquals
