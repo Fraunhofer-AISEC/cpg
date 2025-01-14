@@ -177,10 +177,11 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                     it.name != param.name
                 }*/
             }
-            doubleState
-                .fetchElementFromDeclarationState(param.memoryValue)
-                // .filter { it is ParameterMemoryValue && it.name.parent == param.name }
-                .forEach { indexes.add(Pair(it, "")) }
+            // TODO
+            /*            doubleState
+            .fetchElementFromDeclarationState(param.memoryValue)
+            // .filter { it is ParameterMemoryValue && it.name.parent == param.name }
+            .forEach { indexes.add(Pair(it, "")) }*/
 
             indexes.forEach { (index, subAccessName) ->
                 /*                val finalValue =
@@ -334,16 +335,19 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                 if (arg.argumentIndex < invoke.parameters.size) {
                     // Create a DFG-Edge from the argument to the parameter's memoryValue
                     val p = invoke.parameters[arg.argumentIndex]
-                    doubleState =
-                        doubleState.push(
-                            p.memoryValue,
-                            TupleLattice(
-                                Pair(
-                                    PowersetLattice(identitySetOf(p.memoryValue)),
-                                    PowersetLattice(identitySetOf(arg))
+                    val pValue = doubleState.getValues(p)
+                    pValue.forEach { value ->
+                        doubleState =
+                            doubleState.push(
+                                value,
+                                TupleLattice(
+                                    Pair(
+                                        PowersetLattice(pValue),
+                                        PowersetLattice(identitySetOf(arg))
+                                    )
                                 )
                             )
-                        )
+                    }
                 }
             }
             // }
@@ -588,53 +592,33 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
         doubleState: PointsToState2
     ): PointsToState2 {
         var doubleState = doubleState
+        // Until which depth do we create ParameterMemoryValues
+        val depth = 2
         parameters.forEach { param ->
-            val addresses = doubleState.getAddresses(param)
-            param.memoryValue.name = Name("value", param.name)
-            // Since the ParameterDeclaration is never change, we map the ParameterMemoryValue to
-            // the same address
-            // TODO: It may be nicer to use the ParameterDeclaration itself, that could maybe also
-            // work
-            param.memoryValue.memoryAddress = param.memoryAddress
-            val paramState: LatticeElement<Pair<PowersetLatticeT<Node>, PowersetLatticeT<Node>>> =
-                TupleLattice(
-                    Pair(
-                        PowersetLattice(addresses),
-                        PowersetLattice(identitySetOf(param.memoryValue))
+            // In the first step, we have a triangle of ParameterDeclaration, the
+            // ParameterDeclaration's Memory Address and the ParameterMemoryValue
+            // Therefore, the src and the addresses are different. For all other depths, we set both
+            // to the ParameterMemoryValue we create in the first step
+            var src: Node = param
+            var addresses = doubleState.getAddresses(src)
+            for (i in 0..depth) {
+                val pmvName = "deref".repeat(i) + "value"
+                val pmv =
+                    ParameterMemoryValue(Name(pmvName)).apply {
+                        memoryAddress = addresses.first() /* TODO: might there also be more? */
+                    }
+                val state: LatticeElement<Pair<PowersetLatticeT<Node>, PowersetLatticeT<Node>>> =
+                    TupleLattice(
+                        Pair(PowersetLattice(addresses), PowersetLattice(identitySetOf(pmv)))
                     )
-                )
-            // We also need to track the MemoryValue of the dereference of the parameter, since that
-            // is what would have an influence outside the function
-            val paramDeref = ParameterMemoryValue(Name("derefvalue", param.name))
-            paramDeref.memoryAddress = param.memoryValue
-            val paramDerefState:
-                LatticeElement<Pair<PowersetLatticeT<Node>, PowersetLatticeT<Node>>> =
-                TupleLattice(
-                    Pair(
-                        PowersetLattice(identitySetOf(param.memoryValue)),
-                        PowersetLattice(identitySetOf(paramDeref))
-                    )
-                )
-            addresses.forEach { addr ->
-                doubleState = doubleState.pushToDeclarationsState(addr, paramState)
+                addresses.forEach { addr ->
+                    doubleState = doubleState.pushToDeclarationsState(addr, state)
+                }
+                doubleState = doubleState.push(src, state)
+                // prepare for next step
+                src = pmv
+                addresses = setOf(pmv)
             }
-            doubleState = doubleState.pushToDeclarationsState(param.memoryValue, paramDerefState)
-
-            doubleState = doubleState.push(param, paramState)
-
-            // In case the param is a pointer-to-pointer, we also need a dereference of the
-            // dereference
-            val paramDerefDeref = ParameterMemoryValue(Name("derefderefvalue", param.name))
-            paramDerefDeref.memoryAddress = paramDeref
-            val paramDerefDerefState:
-                LatticeElement<Pair<PowersetLatticeT<Node>, PowersetLatticeT<Node>>> =
-                TupleLattice(
-                    Pair(
-                        PowersetLattice(identitySetOf(paramDeref)),
-                        PowersetLattice(identitySetOf(paramDerefDeref))
-                    )
-                )
-            doubleState = doubleState.pushToDeclarationsState(paramDeref, paramDerefDerefState)
         }
         return doubleState
     }
