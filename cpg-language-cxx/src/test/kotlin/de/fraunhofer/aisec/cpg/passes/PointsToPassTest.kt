@@ -327,64 +327,20 @@ class PointsToPassTest {
 
         // Line 51
         assertEquals(1, saLine51.memoryAddress.size)
-        // TODO
-        /*        assertEquals(
-            ((saLine51.base as? Reference)?.memoryAddress?.firstOrNull() as? MemoryAddress)
-                ?.fieldAddresses
-                ?.filter { it.key == saLine51.refersTo?.name?.localName }
-                ?.entries
-                ?.firstOrNull()
-                ?.value
-                ?.firstOrNull(),
-            saLine51.memoryAddress.firstOrNull()
-        )*/
         assertEquals(1, saLine51.prevDFG.size)
         assertEquals(literal1, saLine51.prevDFG.firstOrNull())
 
         // Line 52
         assertEquals(1, sbLine52.memoryAddress.size)
-        // TODO
-        /*        assertEquals(
-            ((sbLine52.base as? Reference)?.memoryAddress?.firstOrNull() as? MemoryAddress)
-                ?.fieldAddresses
-                ?.filter { it.key == sbLine52.refersTo?.name?.localName }
-                ?.entries
-                ?.firstOrNull()
-                ?.value
-                ?.firstOrNull(),
-            sbLine52.memoryAddress.firstOrNull()
-        )*/
         assertEquals(1, sbLine52.prevDFG.size)
         assertEquals(literal2, sbLine52.prevDFG.firstOrNull())
 
         // Line 53
         assertEquals(1, saLine53.memoryAddress.size)
-        // TODO
-        /*        assertEquals(
-            ((saLine53.base as? Reference)?.memoryAddress?.firstOrNull() as? MemoryAddress)
-                ?.fieldAddresses
-                ?.filter { it.key == saLine53.refersTo?.name?.localName }
-                ?.entries
-                ?.firstOrNull()
-                ?.value
-                ?.firstOrNull(),
-            saLine53.memoryAddress.firstOrNull()
-        )*/
         assertEquals(1, saLine53.prevDFG.size)
         assertEquals(literal1, saLine53.prevDFG.firstOrNull())
 
         assertEquals(1, sbLine53.memoryAddress.size)
-        // TODO
-        /*        assertEquals(
-            ((sbLine53.base as? Reference)?.memoryAddress?.firstOrNull() as? MemoryAddress)
-                ?.fieldAddresses
-                ?.filter { it.key == sbLine53.refersTo?.name?.localName }
-                ?.entries
-                ?.firstOrNull()
-                ?.value
-                ?.firstOrNull(),
-            sbLine53.memoryAddress.firstOrNull()
-        )*/
         assertEquals(1, sbLine53.prevDFG.size)
         assertEquals(literal2, sbLine53.prevDFG.firstOrNull())
 
