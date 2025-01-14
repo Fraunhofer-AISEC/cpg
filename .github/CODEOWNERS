@@ -30,3 +30,4 @@ build.gradle.kts        @oxisto
 .github                 @oxisto
 
 cpg-language-ini        @maximiliankaul
+cpg-concepts   @maximiliankaul
