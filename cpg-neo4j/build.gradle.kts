@@ -81,6 +81,6 @@ dependencies {
     findProject(":cpg-language-cxx")?.also {
         integrationTestImplementation(it)
     }
-
     integrationTestImplementation(project(":cpg-concepts"))
+    implementation(project(":cpg-concepts"))
 }
