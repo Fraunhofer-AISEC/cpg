@@ -29,22 +29,25 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 
-val TranslationResult.conceptNodes: HashSet<Concept<*>>
-    get() =
-        this.nodes.flatMapTo(HashSet<Concept<*>>()) { it.overlays.filterIsInstance<Concept<*>>() }
-
-val TranslationResult.operationNodes: HashSet<Operation>
-    get() = this.nodes.flatMapTo(HashSet<Operation>()) { it.overlays.filterIsInstance<Operation>() }
+/**
+ * Retrieves a set of [Concept] nodes associated with this [TranslationResult].
+ *
+ * This property collects all overlay nodes of type [Concept] within the `Node`s of
+ * the [TranslationResult`, flattening and converting them into a unique set.
+ * *
+ *
+ * @return A set including all instances of [Concept] found in the overlays of the underlying nodes.
+ */
+val TranslationResult.conceptNodes: Set<Concept<*>>
+    get() = this.nodes.flatMapTo(mutableSetOf()) { it.overlays.filterIsInstance<Concept<*>>() }
 
 /**
- * This function recursively checks the current [Node] and its [Node.astParent] for [Node.overlays]
- * of type [Concept]. The first match is returned.
+ * A computed property that retrieves a set of all [Operation] nodes associated with this
+ * [TranslationResult]. It collects [Operation] instances from the overlays of the nodes contained
+ * in this result.
  *
- * TODO: Operation?
- * TODO: firstOrNull: what do we do with nodes belonging to multiple concepts? Or nodes belonging to
- *   concept A and their parents belonging to concept B?
+ * @return A set containing all [Operation] instances found in the overlays of the nodes in the
+ *   [TranslationResult].
  */
-val Node.belongsToConcept: Concept<*>?
-    get() =
-        this.overlays.filterIsInstance<Concept<*>>().firstOrNull()
-            ?: this.astParent?.belongsToConcept
+val TranslationResult.operationNodes: Set<Operation>
+    get() = this.nodes.flatMapTo(mutableSetOf()) { it.overlays.filterIsInstance<Operation>() }
