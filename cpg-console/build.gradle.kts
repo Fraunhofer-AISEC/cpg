@@ -68,4 +68,5 @@ dependencies {
 
     testImplementation(testFixtures(projects.cpgCore))
 
+    implementation(project(":cpg-concepts"))
 }
