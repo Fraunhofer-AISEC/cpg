@@ -29,12 +29,11 @@ import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 
 /**
- * Retrieves a set of [Concept] nodes associated with this [Node] and its AST children
+ * Retrieves a set of all [Concept] nodes associated with this [Node] and its AST children
  * ([Node.nodes]).
  *
- * This property collects all overlay nodes of type [Concept].
- *
- * @return A set containing all [Concept] nodes found in the overlays of the [Node].
+ * @return A set containing all [Concept] nodes found in the overlays of the [Node] and its
+ *   children.
  */
 val Node.conceptNodes: Set<Concept<*>>
     get() = this.nodes.flatMapTo(mutableSetOf()) { it.overlays.filterIsInstance<Concept<*>>() }
@@ -43,7 +42,8 @@ val Node.conceptNodes: Set<Concept<*>>
  * Retrieves a set of all [Operation] nodes associated with this [Node] and its AST children
  * ([Node.nodes]).
  *
- * @return A set containing all [Operation] nodes found in the overlays of the [Node].
+ * @return A set containing all [Operation] nodes found in the overlays of the [Node] and its
+ *   children.
  */
 val Node.operationNodes: Set<Operation>
     get() = this.nodes.flatMapTo(mutableSetOf()) { it.overlays.filterIsInstance<Operation>() }
