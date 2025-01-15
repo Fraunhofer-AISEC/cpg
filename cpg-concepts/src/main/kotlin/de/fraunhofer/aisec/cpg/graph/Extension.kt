@@ -32,8 +32,8 @@ import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 /**
  * Retrieves a set of [Concept] nodes associated with this [TranslationResult].
  *
- * This property collects all overlay nodes of type [Concept] within the `Node`s of
- * the [TranslationResult`, flattening and converting them into a unique set.
+ * This property collects all overlay nodes of type [Concept] within the `Node`s of the
+ * [TranslationResult], flattening and converting them into a unique set.
  * *
  *
  * @return A set including all instances of [Concept] found in the overlays of the underlying nodes.
