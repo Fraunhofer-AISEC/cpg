@@ -113,7 +113,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
             return
         }
 
-        log.trace("Handling {} (complexity: {})", node.name, c)
+        log.info("[PointsToPass] Analyzing function ${node.name}. Complexity: $c")
 
         var startState = PointsToState2()
         startState =
@@ -198,6 +198,10 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                             .add(FunctionDeclaration.FSEntry(true, value, true, subAccessName))
                     }
             }
+        }
+        // If we don't have anything to summarize, we add a dummy entry to the functionSummary
+        if (node.functionSummary.isEmpty()) {
+            node.functionSummary.computeIfAbsent(ReturnStatement()) { mutableSetOf() }
         }
     }
 
@@ -810,6 +814,19 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                 }
                 is MemoryAddress -> {
                     fetchElementFromDeclarationState(node).map { it.first }.toIdentitySet()
+                }
+                is MemberExpression -> {
+                    val (base, fieldName) = resolveMemberExpression(node)
+                    val baseAddresses = getAddresses(base).toIdentitySet()
+                    val fieldAddresses = getFieldAddresses(baseAddresses, fieldName)
+                    if (fieldAddresses.isNotEmpty()) {
+                        fieldAddresses
+                            .flatMap { fetchElementFromDeclarationState(it).map { it.first } }
+                            .toIdentitySet()
+                    } else
+                        identitySetOf(
+                            UnknownMemoryValue(Name(nodeNameToString(node).localName, base.name))
+                        )
                 }
                 is Reference -> {
                     /* For References, we have to look up the last value written to its declaration.
