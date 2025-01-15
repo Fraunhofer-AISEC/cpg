@@ -349,9 +349,9 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
         // Loop through the target variables (left-hand side)
         for ((idx, expr) in assign.lhs.withIndex()) {
             if (expr is Reference) {
-                // And try to resolve it
-                val ref = scopeManager.resolveReference(expr)
-                if (ref == null) {
+                // And try to resolve it as a variable
+                val ref = scopeManager.lookupSymbolByNameOfNode(expr) { it is VariableDeclaration }
+                if (ref.isEmpty()) {
                     // We need to implicitly declare it, if it's not declared before.
                     val decl = newVariableDeclaration(expr.name, expr.autoType())
                     decl.language = expr.language

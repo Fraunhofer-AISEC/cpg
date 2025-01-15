@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -140,9 +141,14 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             } else {
                 if (capture.isByReference) {
                     val valueDeclaration =
-                        frontend.scopeManager.resolveReference(
-                            newReference(capture?.identifier?.toString())
-                        )
+                        frontend.scopeManager
+                            .lookupSymbolByName(
+                                newName(capture.identifier?.toString() ?: ""),
+                                language = language,
+                            ) {
+                                it is ValueDeclaration
+                            }
+                            .singleOrNull() as? ValueDeclaration
                     valueDeclaration?.let { lambda.mutableVariables.add(it) }
                 }
             }
