@@ -25,24 +25,25 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 
 /**
- * Retrieves a set of [Concept] nodes associated with this [TranslationResult].
+ * Retrieves a set of [Concept] nodes associated with this [Node] and its AST children
+ * ([Node.nodes]).
  *
  * This property collects all overlay nodes of type [Concept].
  *
- * @return A set containing all [Concept] nodes found in the overlays of the [TranslationResult].
+ * @return A set containing all [Concept] nodes found in the overlays of the [Node].
  */
-val TranslationResult.conceptNodes: Set<Concept<*>>
+val Node.conceptNodes: Set<Concept<*>>
     get() = this.nodes.flatMapTo(mutableSetOf()) { it.overlays.filterIsInstance<Concept<*>>() }
 
 /**
- * Retrieves a set of all [Operation] nodes associated with this [TranslationResult].
+ * Retrieves a set of all [Operation] nodes associated with this [Node] and its AST children
+ * ([Node.nodes]).
  *
- * @return A set containing all [Operation] nodes found in the overlays of the [TranslationResult].
+ * @return A set containing all [Operation] nodes found in the overlays of the [Node].
  */
-val TranslationResult.operationNodes: Set<Operation>
+val Node.operationNodes: Set<Operation>
     get() = this.nodes.flatMapTo(mutableSetOf()) { it.overlays.filterIsInstance<Operation>() }

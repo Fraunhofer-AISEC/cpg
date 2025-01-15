@@ -98,10 +98,10 @@ class Neo4JTest {
 
         assertEquals(
             2,
-            result.conceptNodes.size,
+            tu.conceptNodes.size,
             "Expected to find the `Networking` and `FileHandling` concept.",
         )
-        assertEquals(1, result.operationNodes.size, "Expected to find the `Connect` operation.")
+        assertEquals(1, tu.operationNodes.size, "Expected to find the `Connect` operation.")
 
         application.pushToNeo4j(result)
     }
