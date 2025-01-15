@@ -29,7 +29,6 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import java.math.BigInteger
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -39,9 +38,6 @@ import org.junit.jupiter.api.Tag
 
 @Tag("integration")
 class Neo4JTest {
-    val problemDescription =
-        "This is a test for concepts. There is no underlying node available, thus we provide this dummy `ProblemExpression`."
-
     @Test
     fun testPush() {
         val (application, result) = createTranslationResult()
@@ -75,39 +71,27 @@ class Neo4JTest {
         val connectCall = result.calls["connect"]
         assertNotNull(connectCall)
 
-        abstract class NetworkingOperation(concept: Concept<out Operation>) :
-            Operation(
-                underlyingNode = ProblemExpression(problem = problemDescription),
-                concept = concept,
-            )
-        class Connect(concept: Concept<out Operation>) : NetworkingOperation(concept)
-        class Networking() :
-            Concept<NetworkingOperation>(
-                underlyingNode = ProblemExpression(problem = problemDescription)
-            )
+        abstract class NetworkingOperation(underlyingNode: Node, concept: Concept<out Operation>) :
+            Operation(underlyingNode = underlyingNode, concept = concept)
+        class Connect(underlyingNode: Node, concept: Concept<out Operation>) :
+            NetworkingOperation(underlyingNode = underlyingNode, concept = concept)
+        class Networking(underlyingNode: Node) :
+            Concept<NetworkingOperation>(underlyingNode = underlyingNode)
 
-        abstract class FileOperation(concept: Concept<out Operation>) :
-            Operation(
-                underlyingNode = ProblemExpression(problem = problemDescription),
-                concept = concept,
-            )
-        class FileHandling() :
-            Concept<FileOperation>(
-                underlyingNode = ProblemExpression(problem = problemDescription)
-            )
+        abstract class FileOperation(underlyingNode: Node, concept: Concept<out Operation>) :
+            Operation(underlyingNode = underlyingNode, concept = concept)
+        class FileHandling(underlyingNode: Node) :
+            Concept<FileOperation>(underlyingNode = underlyingNode)
 
-        val nw = Networking()
+        val nw = Networking(underlyingNode = tu)
         nw.name = Name("Networking")
-        nw.underlyingNode = tu
 
-        val connect = Connect(concept = nw)
-        connect.underlyingNode = connectCall
+        val connect = Connect(underlyingNode = connectCall, concept = nw)
         connect.name = Name("connect")
         nw.ops += connect
 
-        val f = FileHandling()
+        val f = FileHandling(underlyingNode = tu)
         f.name = Name("FileHandling")
-        f.underlyingNode = tu
 
         assertEquals(setOf<Node>(connect), connectCall.overlays)
         assertEquals(setOf<Node>(nw, f), tu.overlays)
