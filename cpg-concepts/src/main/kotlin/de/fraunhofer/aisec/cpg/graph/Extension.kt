@@ -36,7 +36,15 @@ val TranslationResult.conceptNodes: HashSet<Concept<*>>
 val TranslationResult.operationNodes: HashSet<Operation>
     get() = this.nodes.flatMapTo(HashSet<Operation>()) { it.overlays.filterIsInstance<Operation>() }
 
+/**
+ * This function recursively checks the current [Node] and its [Node.astParent] for [Node.overlays]
+ * of type [Concept]. The first match is returned.
+ *
+ * TODO: Operation?
+ * TODO: firstOrNull: what do we do with nodes belonging to multiple concepts? Or nodes belonging to
+ *   concept A and their parents belonging to concept B?
+ */
 val Node.belongsToConcept: Concept<*>?
-    get() = TODO()
-
-// TODO: belongs to concept -> check parent recursively
+    get() =
+        this.overlays.filterIsInstance<Concept<*>>().firstOrNull()
+            ?: this.astParent?.belongsToConcept
