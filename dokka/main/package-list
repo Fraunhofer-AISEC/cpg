@@ -7,6 +7,9 @@ de.fraunhofer.aisec.cpg.analysis.fsm
 de.fraunhofer.aisec.cpg.graph
 de.fraunhofer.aisec.cpg.passes
 de.fraunhofer.aisec.cpg.query
+module:cpg-concepts
+de.fraunhofer.aisec.cpg.graph
+de.fraunhofer.aisec.cpg.graph.concepts
 module:cpg-console
 de.fraunhofer.aisec.cpg.analysis
 de.fraunhofer.aisec.cpg.console
@@ -15,7 +18,6 @@ de.fraunhofer.aisec.cpg
 de.fraunhofer.aisec.cpg.frontends
 de.fraunhofer.aisec.cpg.graph
 de.fraunhofer.aisec.cpg.graph.builder
-de.fraunhofer.aisec.cpg.graph.concepts
 de.fraunhofer.aisec.cpg.graph.declarations
 de.fraunhofer.aisec.cpg.graph.edges
 de.fraunhofer.aisec.cpg.graph.edges.ast
