@@ -71,28 +71,37 @@ class Neo4JTest {
         val connectCall = result.calls["connect"]
         assertNotNull(connectCall)
 
-        abstract class NetworkingOperation(concept: Concept<out Operation>) : Operation(concept)
-        class Connect(concept: Concept<out Operation>) : NetworkingOperation(concept)
-        class Networking() : Concept<NetworkingOperation>()
+        abstract class NetworkingOperation(underlyingNode: Node, concept: Concept<out Operation>) :
+            Operation(underlyingNode = underlyingNode, concept = concept)
+        class Connect(underlyingNode: Node, concept: Concept<out Operation>) :
+            NetworkingOperation(underlyingNode = underlyingNode, concept = concept)
+        class Networking(underlyingNode: Node) :
+            Concept<NetworkingOperation>(underlyingNode = underlyingNode)
 
-        abstract class FileOperation(concept: Concept<out Operation>) : Operation(concept)
-        class FileHandling() : Concept<FileOperation>()
+        abstract class FileOperation(underlyingNode: Node, concept: Concept<out Operation>) :
+            Operation(underlyingNode = underlyingNode, concept = concept)
+        class FileHandling(underlyingNode: Node) :
+            Concept<FileOperation>(underlyingNode = underlyingNode)
 
-        val nw = Networking()
+        val nw = Networking(underlyingNode = tu)
         nw.name = Name("Networking")
-        nw.underlyingNode = tu
 
-        val connect = Connect(concept = nw)
-        connect.underlyingNode = connectCall
+        val connect = Connect(underlyingNode = connectCall, concept = nw)
         connect.name = Name("connect")
         nw.ops += connect
 
-        val f = FileHandling()
+        val f = FileHandling(underlyingNode = tu)
         f.name = Name("FileHandling")
-        f.underlyingNode = tu
 
         assertEquals(setOf<Node>(connect), connectCall.overlays)
         assertEquals(setOf<Node>(nw, f), tu.overlays)
+
+        assertEquals(
+            2,
+            tu.conceptNodes.size,
+            "Expected to find the `Networking` and `FileHandling` concept.",
+        )
+        assertEquals(1, tu.operationNodes.size, "Expected to find the `Connect` operation.")
 
         application.pushToNeo4j(result)
     }

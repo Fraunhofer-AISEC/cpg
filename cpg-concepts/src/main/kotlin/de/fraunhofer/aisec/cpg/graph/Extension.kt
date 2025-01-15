@@ -25,25 +25,25 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.frontends.NoLanguage
-import de.fraunhofer.aisec.cpg.graph.edges.overlay.OverlaySingleEdge
-import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
-import org.neo4j.ogm.annotation.Relationship
+import de.fraunhofer.aisec.cpg.graph.concepts.Concept
+import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 
 /**
- * Represents an extra node added to the CPG. These nodes can live next to the regular nodes,
- * typically having shared edges to extend the original graph.
+ * Retrieves a set of all [Concept] nodes associated with this [Node] and its AST children
+ * ([Node.nodes]).
+ *
+ * @return A set containing all [Concept] nodes found in the overlays of the [Node] and its
+ *   children.
  */
-abstract class OverlayNode() : Node() {
+val Node.conceptNodes: Set<Concept<*>>
+    get() = this.nodes.flatMapTo(mutableSetOf()) { it.overlays.filterIsInstance<Concept<*>>() }
 
-    init {
-        this.language = NoLanguage
-    }
-
-    @Relationship(value = "OVERLAY", direction = Relationship.Direction.INCOMING)
-    /** All [OverlayNode]s nodes are connected to an original cpg [Node] by this. */
-    val underlyingNodeEdge: OverlaySingleEdge =
-        OverlaySingleEdge(this, of = null, mirrorProperty = Node::overlayEdges, outgoing = false)
-
-    var underlyingNode by unwrapping(OverlayNode::underlyingNodeEdge)
-}
+/**
+ * Retrieves a set of all [Operation] nodes associated with this [Node] and its AST children
+ * ([Node.nodes]).
+ *
+ * @return A set containing all [Operation] nodes found in the overlays of the [Node] and its
+ *   children.
+ */
+val Node.operationNodes: Set<Operation>
+    get() = this.nodes.flatMapTo(mutableSetOf()) { it.overlays.filterIsInstance<Operation>() }

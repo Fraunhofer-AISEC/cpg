@@ -25,14 +25,19 @@
  */
 package de.fraunhofer.aisec.cpg.graph.concepts
 
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
 
 /**
- * Represents a new concept added to the CPG. This is intended for modelling "concepts" like
- * logging, files, databases. The relevant operations on this concept are modeled as [Operation]s
- * and stored in [ops].
+ * Represents an operation executed on/with a [Concept] (stored in [concept]). This is typically a
+ * `write` on a file or log object or an `execute` on a database.
  */
-abstract class Concept<T : Operation>() : OverlayNode() {
-    /** All [Operation]s belonging to this concept. */
-    val ops: MutableSet<T> = mutableSetOf()
+abstract class Operation(
+    underlyingNode: Node,
+    /** The [Concept] this operation belongs to. */
+    open val concept: Concept<*>,
+) : OverlayNode() {
+    init {
+        this.underlyingNode = underlyingNode
+    }
 }
