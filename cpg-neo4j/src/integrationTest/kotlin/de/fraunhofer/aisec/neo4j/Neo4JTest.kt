@@ -96,6 +96,13 @@ class Neo4JTest {
         assertEquals(setOf<Node>(connect), connectCall.overlays)
         assertEquals(setOf<Node>(nw, f), tu.overlays)
 
+        assertEquals(
+            2,
+            result.conceptNodes.size,
+            "Expected to find the `Networking` and `FileHandling` concept.",
+        )
+        assertEquals(1, result.operationNodes.size, "Expected to find the `Connect` operation.")
+
         application.pushToNeo4j(result)
     }
 }
