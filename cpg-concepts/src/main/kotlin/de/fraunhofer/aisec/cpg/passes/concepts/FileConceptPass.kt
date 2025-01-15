@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.passes.concepts
 
 import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.file.FileNode
@@ -41,20 +40,12 @@ import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLate
 @ExecuteLate
 class FileConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
     private val fileNodes = mutableMapOf<Node, FileNode>()
-    private lateinit var result: TranslationResult
 
     override fun cleanup() {
         // nothing to do
     }
 
     override fun accept(comp: Component) {
-        val parent = comp.astParent
-        if (parent is TranslationResult) {
-            result = parent
-        } else {
-            TODO("Failed to find a translation result.")
-        }
-
         val walker = SubgraphWalker.ScopedWalker(ctx.scopeManager)
         walker.registerHandler { _, _, currNode -> handle(currNode) }
 
@@ -80,7 +71,6 @@ class FileConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
             val newFileNode =
                 newFileNode(
                     underlyingNode = callExpression,
-                    result = result,
                     accessMode = getAccessMode(callExpression),
                     fileName = fileName,
                 )
@@ -109,18 +99,10 @@ class FileConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 val localName = name.localName.toString()
                 when (localName) {
                     "read" -> {
-                        newFileReadNode(
-                            underlyingNode = callExpression,
-                            result = result,
-                            fileNode = fileNode,
-                        )
+                        newFileReadNode(underlyingNode = callExpression, fileNode = fileNode)
                     }
                     "write" -> {
-                        newFileWriteNode(
-                            underlyingNode = callExpression,
-                            result = result,
-                            fileNode = fileNode,
-                        )
+                        newFileWriteNode(underlyingNode = callExpression, fileNode = fileNode)
                     }
                     else -> {}
                 }

@@ -25,10 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.graph.concepts.logging
 
-import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.*
 
-fun MetadataProvider.newLoggingNode(underlyingNode: Node, result: TranslationResult): LoggingNode {
+fun MetadataProvider.newLoggingNode(underlyingNode: Node): LoggingNode {
     val node = LoggingNode(underlyingNode = underlyingNode)
     node.codeAndLocationFrom(underlyingNode)
 
@@ -40,7 +39,6 @@ fun MetadataProvider.newLoggingNode(underlyingNode: Node, result: TranslationRes
 
 fun MetadataProvider.newLogOperationNode(
     underlyingNode: Node,
-    result: TranslationResult,
     level: String,
     logger: LoggingNode,
     logArguments: List<Node>,

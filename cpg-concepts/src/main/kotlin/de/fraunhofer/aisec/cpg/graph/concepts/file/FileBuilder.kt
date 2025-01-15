@@ -25,13 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.graph.concepts.file
 
-import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 
 fun MetadataProvider.newFileNode(
     underlyingNode: Node,
-    result: TranslationResult,
     fileName: String,
     accessMode: String,
 ): FileNode {
@@ -62,13 +60,13 @@ fun MetadataProvider.newFileNode(
     return node
 }
 
-fun MetadataProvider.newFileReadNode(
-    underlyingNode: Node,
-    result: TranslationResult,
-    fileNode: FileNode,
-): FileReadNode {
+fun MetadataProvider.newFileReadNode(underlyingNode: Node, fileNode: FileNode): FileReadNode {
     val node =
-        FileReadNode(underlyingNode = result, concept = fileNode, target = underlyingNode.nextDFG)
+        FileReadNode(
+            underlyingNode = underlyingNode,
+            concept = fileNode,
+            target = underlyingNode.nextDFG,
+        )
     node.codeAndLocationFrom(underlyingNode)
 
     node.name = Name("read") // to have a nice name in Neo4j
@@ -82,11 +80,7 @@ fun MetadataProvider.newFileReadNode(
     return node
 }
 
-fun MetadataProvider.newFileWriteNode(
-    underlyingNode: Node,
-    result: TranslationResult,
-    fileNode: FileNode,
-): FileWriteNode {
+fun MetadataProvider.newFileWriteNode(underlyingNode: Node, fileNode: FileNode): FileWriteNode {
     val node =
         FileWriteNode(
             underlyingNode = underlyingNode,
@@ -106,11 +100,7 @@ fun MetadataProvider.newFileWriteNode(
     return node
 }
 
-fun MetadataProvider.newFileAppendNode(
-    underlyingNode: Node,
-    result: TranslationResult,
-    fileNode: FileNode,
-): FileAppendNode {
+fun MetadataProvider.newFileAppendNode(underlyingNode: Node, fileNode: FileNode): FileAppendNode {
     val node =
         FileAppendNode(
             underlyingNode = underlyingNode,

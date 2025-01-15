@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.passes.concepts
 
 import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.logging.LoggingNode
@@ -44,20 +43,12 @@ class LoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
     /** A storage connecting CPG nodes with [LoggingNode]s. */
     private val loggers = mutableMapOf<Declaration, LoggingNode>()
-    private lateinit var result: TranslationResult
 
     override fun cleanup() {
         // nothing to do
     }
 
     override fun accept(comp: Component) {
-        val parent = comp.astParent
-        if (parent is TranslationResult) {
-            result = parent
-        } else {
-            TODO("Failed to find a translation result.")
-        }
-
         // Now we start with the real pass work
         val walker = SubgraphWalker.ScopedWalker(ctx.scopeManager)
 
@@ -82,7 +73,7 @@ class LoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
         if (
             importDeclaration.import.toString() == "logging"
         ) { // TODO what about import logging as foo
-            val newNode = newLoggingNode(underlyingNode = importDeclaration, result)
+            val newNode = newLoggingNode(underlyingNode = importDeclaration)
             loggers += importDeclaration to newNode
         }
     }
@@ -102,7 +93,7 @@ class LoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     .singleOrNull() ?: TODO("Did not find an `import logging` logger.")
             logOpHelper(callExpression = callExpression, logger = logger)
         } else if (callee.name.toString() == "logging.getLogger") {
-            val newNode = newLoggingNode(underlyingNode = callExpression, result)
+            val newNode = newLoggingNode(underlyingNode = callExpression)
 
             if (callExpression.astParent is AssignExpression) {
                 val assign = callExpression.astParent
@@ -133,7 +124,6 @@ class LoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
             "debug" -> {
                 newLogOperationNode(
                     underlyingNode = callExpression,
-                    result = result,
                     logger = logger,
                     logArguments = callExpression.arguments,
                     level = name,
