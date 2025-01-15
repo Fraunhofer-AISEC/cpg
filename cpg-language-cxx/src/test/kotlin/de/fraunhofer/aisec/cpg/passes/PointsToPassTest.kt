@@ -1144,6 +1144,13 @@ class PointsToPassTest {
                 .filter { it is UnknownMemoryValue && it.name.localName == "DAT_0011b1c8" }
                 .size
         )
+        assertEquals(1, sseLine181.prevDFG.size)
+        assertEquals(
+            1,
+            sseLine181.prevDFG
+                .filter { it is UnknownMemoryValue && it.name.localName == "DAT_0011b1c8" }
+                .size
+        )
 
         // Line 190
         // TODO: verify the memcpy in Line 183
