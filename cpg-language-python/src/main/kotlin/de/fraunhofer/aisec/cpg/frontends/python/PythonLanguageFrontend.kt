@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.types.AutoType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.CommentMatcher
 import de.fraunhofer.aisec.cpg.passes.PythonAddDeclarationsPass
+import de.fraunhofer.aisec.cpg.passes.UnreachableEOGPass
 import de.fraunhofer.aisec.cpg.passes.configuration.RegisterExtraPass
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
@@ -49,6 +50,27 @@ import kotlin.io.path.relativeToOrNull
 import kotlin.math.min
 
 @RegisterExtraPass(PythonAddDeclarationsPass::class)
+@RegisterExtraPass(UnreachableEOGPass::class)
+/**
+ * The [LanguageFrontend] for Python. It uses the JEP library to interact with Python's AST.
+ *
+ * It requires the Python interpreter (and the JEP library) to be installed on the system. The
+ * frontend registers two additional passes.
+ *
+ * ## Adding dynamic variable declarations
+ *
+ * The [PythonAddDeclarationsPass] adds dynamic declarations to the CPG. Python does not have the
+ * concept of a "declaration", but rather values are assigned to variables and internally variable
+ * are represented by a dictionary. This pass adds a declaration for each variable that is assigned
+ * a value (on the first assignment).
+ *
+ * ## Pruning unreachable code branches
+ *
+ * The [UnreachableEOGPass] marks unreachable code regions / branches. The reasoning behind this is
+ * that Python is a dynamically invoked language, and it is possible to declare symbols that are not
+ * present in one branch, but are present in another branch. By marking the unreachable code
+ * regions, we can avoid false positives in the analysis.
+ */
 class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: TranslationContext) :
     LanguageFrontend<Python.AST.AST, Python.AST.AST?>(language, ctx) {
     val lineSeparator = "\n" // TODO
@@ -67,6 +89,40 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
     private lateinit var fileContent: String
     private lateinit var uri: URI
 
+    /** Represents the contents of `sys.version_info` which contains the Python version. */
+    data class VersionInfo(
+        var major: Long? = null,
+        var minor: Long? = null,
+        var micro: Long? = null,
+    ) {
+        /**
+         * Returns the version info as a tuple (major, minor, micro). The length of the tuple
+         * depends on the information set, e.g., if only major version is set, then the tuple is 1
+         * element long.
+         */
+        fun toList(): List<Long> {
+            val list = mutableListOf<Long>()
+            major?.let { major ->
+                list += major
+                minor?.let { minor ->
+                    list += minor
+                    micro?.let { micro -> list += micro }
+                }
+            }
+
+            return list
+        }
+    }
+
+    /**
+     * Represents different system information that are used in the [PythonValueEvaluator] to
+     * evaluate expressions, such as `sys.platform` and `sys.version_info`.
+     */
+    object SysInfo {
+        var versionInfo: VersionInfo? = null
+        var platform: String? = null
+    }
+
     @Throws(TranslationException::class)
     override fun parse(file: File): TranslationUnitDeclaration {
         fileContent = file.readText(Charsets.UTF_8)
@@ -76,9 +132,23 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
             it.set("content", fileContent)
             it.set("filename", file.absolutePath)
             it.exec("import ast")
+            it.exec("import sys")
             it.exec("parsed = ast.parse(content, filename=filename, type_comments=True)")
 
             val pyAST = it.getValue("parsed") as PyObject
+
+            // Populate system information from defined symbols that represent our environment
+            SysInfo.platform = config.symbols["PYTHON_PLATFORM"] ?: SysInfo.platform
+            // We need to populate the version info "in-order", to ensure that we do not set the
+            // micro version if minor and major are not set, i.e., there must not be a "gap" in the
+            // granularity of version numbers
+            config.symbols["PYTHON_VERSION_MAJOR"]?.toLong()?.let { major ->
+                val minor = config.symbols["PYTHON_VERSION_MINOR"]?.toLong()
+                val micro =
+                    if (minor != null) config.symbols["PYTHON_VERSION_MICRO"]?.toLong() else null
+                SysInfo.versionInfo = VersionInfo(major, minor, micro)
+            }
+
             val tud = pythonASTtoCPG(pyAST, file.toPath())
 
             if (config.matchCommentsToNodes) {
@@ -96,6 +166,7 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
                     (it.getValue("tokenList") as? ArrayList<*>) ?: TODO("Cannot get tokens of $it")
                 addCommentsToCPG(tud, pyTokens, pyCommentCode)
             }
+
             return tud
         }
     }

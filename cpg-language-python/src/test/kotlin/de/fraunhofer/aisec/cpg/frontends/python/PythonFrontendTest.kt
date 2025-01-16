@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.InferenceConfiguration
-import de.fraunhofer.aisec.cpg.analysis.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
@@ -44,7 +43,6 @@ import de.fraunhofer.aisec.cpg.passes.ControlDependenceGraphPass
 import de.fraunhofer.aisec.cpg.sarif.Region
 import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
-import kotlin.math.pow
 import kotlin.test.*
 
 class PythonFrontendTest : BaseTest() {
@@ -1640,23 +1638,5 @@ class PythonFrontendTest : BaseTest() {
 
         val refs = tu.refs
         refs.forEach { assertIsNot<MemberExpression>(it) }
-    }
-
-    class PythonValueEvaluator : ValueEvaluator() {
-        override fun computeBinaryOpEffect(
-            lhsValue: Any?,
-            rhsValue: Any?,
-            has: HasOperatorCode?,
-        ): Any? {
-            return if (has?.operatorCode == "**") {
-                when {
-                    lhsValue is Number && rhsValue is Number ->
-                        lhsValue.toDouble().pow(rhsValue.toDouble())
-                    else -> cannotEvaluate(has as Node, this)
-                }
-            } else {
-                super.computeBinaryOpEffect(lhsValue, rhsValue, has)
-            }
-        }
     }
 }

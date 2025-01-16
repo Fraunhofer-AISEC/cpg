@@ -51,6 +51,13 @@ import kotlin.collections.plusAssign
 class StatementHandler(frontend: PythonLanguageFrontend) :
     PythonHandler<Statement, Python.AST.BaseStmt>(::ProblemExpression, frontend) {
 
+    /**
+     * A [PythonValueEvaluator] instance that is used to evaluate constant expressions in
+     * [handleIf]. Unfortunately, the value evaluator is not completely thread-safe, therefore we
+     * need to create a new instance for each handler.
+     */
+    var constEvaluator = PythonValueEvaluator()
+
     override fun handleNode(node: Python.AST.BaseStmt): Statement {
         return when (node) {
             is Python.AST.ClassDef -> handleClassDef(node)
@@ -728,6 +735,25 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     private fun handleIf(node: Python.AST.If): Statement {
         val ret = newIfStatement(rawNode = node)
         ret.condition = frontend.expressionHandler.handle(node.test)
+
+        // Since python is a dynamically invoked language, it would allow for different branches of
+        // the programs to declare different symbols. This is frequently used in the Python typeshed
+        // to declare different declarations based on the python version and the platform in a way
+        // that C/C++ would use preprocessor macro. Therefore, we replace occurrences of
+        // sys.platform and sys.version_info by their actual values when we encounter the
+        // expression.
+        //
+        // It would be too complex (=impossible) for _all_ if statements to be evaluated and decided
+        // which branch would be executed at runtime. But we can have a simple heuristic that
+        // evaluates simple constant expressions.
+        /*val constCondition = ret.condition?.evaluate(constEvaluator) as? Boolean
+        if (constCondition != null) {
+            return if (constCondition) {
+                makeBlock(node.body, parentNode = node)
+            } else {
+                makeBlock(node.orelse, parentNode = node)
+            }
+        } else {*/
         ret.thenStatement =
             if (node.body.isNotEmpty()) {
                 makeBlock(node.body, parentNode = node)
@@ -740,6 +766,8 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             } else {
                 null
             }
+        // }
+
         return ret
     }
 

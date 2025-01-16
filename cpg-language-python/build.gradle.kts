@@ -43,6 +43,9 @@ dependencies {
     // jep for python support
     implementation(libs.jep)
 
+    // we need the cpg-analysis project to dynamically invoke if-statements
+    implementation(projects.cpgAnalysis)
+
     // to evaluate some test cases
     testImplementation(project(":cpg-analysis"))
 }

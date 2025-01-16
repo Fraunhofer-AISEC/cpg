@@ -106,7 +106,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
             // Gather all resolution EOG starters; and make sure they really do not have a
             // predecessor, otherwise we might analyze a node multiple times
-            val nodes = it.allEOGStarters.filter { it.prevEOGEdges.isEmpty }
+            val nodes = it.allEOGStarters.filter { it.prevEOGEdges.isEmpty() }
 
             for (node in nodes) {
                 walker.iterate(node)
@@ -210,7 +210,21 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
         // Find a list of candidate symbols. Currently, this is only used the in the "next-gen" call
         // resolution, but in future this will also be used in resolving regular references.
-        ref.candidates = scopeManager.lookupSymbolByNameOfNode(ref).toSet()
+        // We can filter candidates whether they are unreachable. If the declaration has ONLY
+        // unreachable incoming EOG edges, we can ignore them
+        ref.candidates =
+            scopeManager
+                .lookupSymbolByNameOfNode(ref) {
+                    // Function declarations that are declared inline are not EOG-connected :(
+                    if (it is FunctionDeclaration) {
+                            it.astParent
+                        } else {
+                            it
+                        }
+                        ?.prevEOGEdges
+                        ?.all { edge -> !edge.unreachable } == true
+                }
+                .toSet()
 
         // We need to choose the best viable candidate out of the ones we have for our reference.
         // Hopefully we have only one, but there might be instances where more than one is a valid
@@ -241,7 +255,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         // percentage of references now.
         if (wouldResolveTo is FunctionDeclaration) {
             // We need to invoke the legacy resolver, just to be sure
-            var legacy = scopeManager.resolveReference(ref)
+            val legacy = scopeManager.resolveReference(ref)
 
             // This is just for us to catch these differences in symbol resolving in the future. The
             // difference is pretty much only that the legacy system takes parameters of the
@@ -535,11 +549,6 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 source.scope,
             )
         val language = source.language
-
-        if (language == null) {
-            result.success = PROBLEMATIC
-            return result
-        }
 
         // Set the start scope. This can either be the call's scope or a scope specified in an FQN
         val extractedScope = ctx.scopeManager.extractScope(source, source.scope)
