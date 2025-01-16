@@ -94,5 +94,4 @@ class SecurityGoalTest {
         assertNotNull(objective1)
         assertEquals(listOf(auth), objective1.components)
     }
-
 }

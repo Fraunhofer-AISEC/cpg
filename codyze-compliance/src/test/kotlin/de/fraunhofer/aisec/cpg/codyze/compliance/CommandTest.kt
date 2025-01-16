@@ -44,5 +44,4 @@ class CommandTest {
         assertEquals(0, result.statusCode)
         assertEquals("Goal1\n", result.stdout)
     }
-
 }
