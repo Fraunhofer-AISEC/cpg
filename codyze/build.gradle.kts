@@ -45,6 +45,6 @@ publishing {
 }
 
 dependencies {
+    implementation(projects.codyzeCompliance)
     implementation(libs.clikt)
-    implementation(project(":codyze-compliance"))
 }

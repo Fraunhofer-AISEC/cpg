@@ -24,29 +24,23 @@
  *
  */
 plugins {
-    id("codyze.module-conventions")
+    id("cpg.common-conventions")
 }
 
 publishing {
     publications {
-        named<MavenPublication>("codyze-compliance") {
+        named<MavenPublication>("codyze-core") {
             pom {
-                artifactId = "codyze-compliance"
-                name.set("Codyze - Compliance Module")
-                description.set("The compliance module of Codyze")
+                artifactId = "codyze-core"
+                name.set("Codyze - Core")
+                description.set("Core module of the Codyze static analysis tool.")
             }
         }
     }
 }
 
 dependencies {
-    implementation(libs.kaml)
-
-    // We depend on the Python frontend for the integration tests, but the frontend is only available if enabled.
-    // If it's not available, the integration tests fail (which is ok). But if we would directly reference the
-    // project here, the build system would fail any task since it will not find a non-enabled project.
-    findProject(":cpg-language-python")?.also {
-        integrationTestImplementation(it)
-    }
-    integrationTestImplementation(libs.clikt)
+    api(libs.sarif4k)
+    implementation(libs.clikt)
+    implementation(projects.cpgCore)
 }

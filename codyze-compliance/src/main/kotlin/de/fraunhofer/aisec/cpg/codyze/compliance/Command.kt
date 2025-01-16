@@ -27,16 +27,11 @@ package de.fraunhofer.aisec.cpg.codyze.compliance
 
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.subcommands
-import com.github.ajalt.clikt.parameters.groups.OptionGroup
 import com.github.ajalt.clikt.parameters.groups.provideDelegate
-import com.github.ajalt.clikt.parameters.options.default
-import com.github.ajalt.clikt.parameters.options.option
-import kotlin.io.path.Path
-
-/** Options common to all subcommands. */
-class ProjectOptions : OptionGroup("Project Options:") {
-    val directory by option("--project-dir", help = "The project directory").default(".")
-}
+import de.fraunhofer.aisec.cpg.codyze.ProjectOptions
+import de.fraunhofer.aisec.cpg.codyze.TranslationOptions
+import de.fraunhofer.aisec.cpg.codyze.analyze
+import de.fraunhofer.aisec.cpg.codyze.buildConfig
 
 /** The main `compliance` command. */
 class ComplianceCommand : CliktCommand() {
@@ -46,9 +41,11 @@ class ComplianceCommand : CliktCommand() {
 /** The `scan` command. This will scan the project for compliance violations in the future. */
 class ScanCommand : CliktCommand() {
     private val projectOptions by ProjectOptions()
+    private val translationOptions by TranslationOptions()
 
     override fun run() {
-        TODO()
+        val result = analyze(buildConfig(projectOptions, translationOptions))
+        result.run.results?.forEach { echo(it.message) }
     }
 }
 
@@ -63,7 +60,7 @@ class ListSecurityGoals : CliktCommand() {
     private val projectOptions by ProjectOptions()
 
     override fun run() {
-        val goals = loadSecurityGoals(Path(projectOptions.directory).resolve("security-goals"))
+        val goals = loadSecurityGoals(projectOptions.directory.resolve("security-goals"))
         goals.forEach { echo(it.name.localName) }
     }
 }
