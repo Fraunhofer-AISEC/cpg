@@ -40,7 +40,7 @@ publishing {
 }
 
 dependencies {
+    implementation(projects.cpgCore)
     implementation(libs.clikt)
-    implementation(project(":cpg-core"))
-    implementation("com.charleskorn.kaml:kaml:0.67.0")
+    implementation(libs.kaml)
 }
