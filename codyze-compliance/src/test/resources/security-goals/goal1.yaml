@@ -10,3 +10,5 @@ objectives:
     description: Encryption used is very good
     statements:
       - For each algorithm A, if A is used, then A must be a very good cryptographic algorithm
+    components:
+      - auth

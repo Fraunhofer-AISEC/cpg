@@ -34,14 +34,14 @@ class CommandTest {
     fun testComplianceCommand() {
         val command = ComplianceCommand()
         val result = command.test()
-        assertEquals(result.statusCode, 0)
+        assertEquals(0, result.statusCode)
     }
 
     @Test
     fun testListSecurityGoalsCommand() {
         val command = ListSecurityGoals()
         val result = command.test("--project-dir src/test/resources/")
-        assertEquals(result.statusCode, 0)
+        assertEquals(0, result.statusCode)
         assertEquals("Goal1\n", result.stdout)
     }
 
@@ -50,7 +50,7 @@ class CommandTest {
         val command = ScanCommand()
         val ex = assertFails {
             val result = command.test("--project-dir src/test/resources/")
-            assertEquals(result.statusCode, 0)
+            assertEquals(0, result.statusCode)
         }
         assertIs<NotImplementedError>(ex)
     }
