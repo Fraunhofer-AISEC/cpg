@@ -13,6 +13,9 @@ include(":cpg-neo4j")
 include(":cpg-console")
 include(":cpg-concepts")
 
+include(":codyze")
+include(":codyze-compliance")
+
 // this code block also exists in the root build.gradle.kts
 val enableJavaFrontend: Boolean by extra {
     val enableJavaFrontend: String? by settings
