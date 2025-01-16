@@ -6,7 +6,6 @@ plugins {
 
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
-include(":cpg-all")
 include(":cpg-core")
 include(":cpg-analysis")
 include(":cpg-neo4j")
