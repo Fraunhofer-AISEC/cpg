@@ -1,6 +1,10 @@
 $dokka.format:html-v1
 $dokka.linkExtension:html
 
+module:codyze
+de.fraunhofer.aisec.cpg.codyze
+module:codyze-compliance
+de.fraunhofer.aisec.cpg.codyze.compliance
 module:cpg-analysis
 de.fraunhofer.aisec.cpg.analysis
 de.fraunhofer.aisec.cpg.analysis.fsm
