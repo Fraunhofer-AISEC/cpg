@@ -29,8 +29,8 @@ import com.charleskorn.kaml.Yaml
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
+import java.io.File
 import java.nio.file.Path
-import kotlin.io.path.ExperimentalPathApi
 import kotlin.io.path.Path
 import kotlin.io.path.extension
 import kotlin.io.path.readText
@@ -96,10 +96,10 @@ class ComponentSerializer : KSerializer<Component?> {
 }
 
 /** Load all security goals from a directory. */
-@OptIn(ExperimentalPathApi::class)
-fun loadSecurityGoals(directory: String): List<SecurityGoal> {
+fun loadSecurityGoals(directory: Path): List<SecurityGoal> {
     // Walk the directory and load all YAML files
-    return Path(directory)
+    return directory
+        .toFile()
         .walk()
         .filter { it.extension == "yaml" }
         .toList()
@@ -107,6 +107,6 @@ fun loadSecurityGoals(directory: String): List<SecurityGoal> {
 }
 
 /** Load a single security goal from a file. */
-fun loadSecurityGoal(file: Path): SecurityGoal {
+fun loadSecurityGoal(file: File): SecurityGoal {
     return Yaml.default.decodeFromString<SecurityGoal>(file.readText())
 }

@@ -28,14 +28,11 @@ package de.fraunhofer.aisec.cpg.codyze
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.main
 import com.github.ajalt.clikt.core.subcommands
-import de.fraunhofer.aisec.cpg.codyze.compliance.ComplianceCommand
 
 class Codyze : CliktCommand() {
-    override fun run() {
-        echo("Hello, World!")
-    }
+    override fun run() {}
 }
 
 fun main(args: Array<String>) {
-    Codyze().subcommands(ComplianceCommand).main(args)
+    Codyze().subcommands(de.fraunhofer.aisec.cpg.codyze.compliance.Command).main(args)
 }

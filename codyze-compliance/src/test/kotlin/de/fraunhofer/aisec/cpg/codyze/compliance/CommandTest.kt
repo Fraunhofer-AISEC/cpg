@@ -25,18 +25,16 @@
  */
 package de.fraunhofer.aisec.cpg.codyze.compliance
 
-import kotlin.io.path.Path
-import kotlin.test.*
+import com.github.ajalt.clikt.testing.test
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
-class SecurityGoalTest {
+class CommandTest {
     @Test
-    fun testLoad() {
-        val goals = loadSecurityGoals(Path("src/test/resources/security-goals"))
-        val goal1 = goals.firstOrNull()
-        assertNotNull(goal1)
-
-        val objective1 = goal1.objectives.firstOrNull()
-        assertNotNull(objective1)
-        assertEquals("Good encryption", objective1.name.localName)
+    fun testListSecurityGoals() {
+        val command = ListSecurityGoals()
+        val result = command.test("--project-dir src/test/resources/")
+        assertEquals(result.statusCode, 0)
+        assertEquals("Goal1\n", result.stdout)
     }
 }
