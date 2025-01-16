@@ -34,9 +34,12 @@ class SecurityGoalTest {
         val goals = loadSecurityGoals(Path("src/test/resources/security-goals"))
         val goal1 = goals.firstOrNull()
         assertNotNull(goal1)
+        assertEquals("Goal1", goal1.name.localName)
+        assertEquals("Make it very secure", goal1.description)
 
         val objective1 = goal1.objectives.firstOrNull()
         assertNotNull(objective1)
         assertEquals("Good encryption", objective1.name.localName)
+        assertEquals("Encryption used is very good", objective1.description)
     }
 }

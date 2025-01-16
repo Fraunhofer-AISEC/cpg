@@ -26,15 +26,32 @@
 package de.fraunhofer.aisec.cpg.codyze.compliance
 
 import com.github.ajalt.clikt.testing.test
-import kotlin.test.Test
-import kotlin.test.assertEquals
+import kotlin.test.*
 
 class CommandTest {
+
     @Test
-    fun testListSecurityGoals() {
+    fun testComplianceCommand() {
+        val command = ComplianceCommand()
+        val result = command.test()
+        assertEquals(result.statusCode, 0)
+    }
+
+    @Test
+    fun testListSecurityGoalsCommand() {
         val command = ListSecurityGoals()
         val result = command.test("--project-dir src/test/resources/")
         assertEquals(result.statusCode, 0)
         assertEquals("Goal1\n", result.stdout)
+    }
+
+    @Test
+    fun testScanCommand() {
+        val command = ScanCommand()
+        val ex = assertFails {
+            val result = command.test("--project-dir src/test/resources/")
+            assertEquals(result.statusCode, 0)
+        }
+        assertIs<NotImplementedError>(ex)
     }
 }
