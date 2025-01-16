@@ -44,15 +44,12 @@ The most recent version is being published to Maven central and can be used as a
 
 ```kotlin
 dependencies {
-    val cpgVersion = "8.0.0"
+    val cpgVersion = "9.0.2"
 
-    // if you want to include all published cpg modules
-    implementation("de.fraunhofer.aisec", "cpg", cpgVersion)
-
-    // if you only want to use some of the cpg modules
     // use the 'cpg-core' module
-    // and then add the needed extra modules, such as Go and Python
     implementation("de.fraunhofer.aisec", "cpg-core", cpgVersion)
+
+    // and then add the needed extra modules, such as Go and Python
     implementation("de.fraunhofer.aisec", "cpg-language-go", cpgVersion)
     implementation("de.fraunhofer.aisec", "cpg-language-python", cpgVersion)
 }
