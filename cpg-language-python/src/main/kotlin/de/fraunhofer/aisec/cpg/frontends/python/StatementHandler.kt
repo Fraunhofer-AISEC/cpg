@@ -579,7 +579,12 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 }
             }
 
-            module = parent.fqn(module.localName)
+            module =
+                if (module.localName != "") {
+                    parent.fqn(module.localName)
+                } else {
+                    parent ?: Name("")
+                }
         }
 
         for (imp in node.names) {
