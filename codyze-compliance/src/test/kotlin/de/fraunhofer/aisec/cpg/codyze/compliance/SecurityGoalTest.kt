@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,27 +23,19 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph
+package de.fraunhofer.aisec.cpg.codyze.compliance
 
-import de.fraunhofer.aisec.cpg.frontends.NoLanguage
-import de.fraunhofer.aisec.cpg.graph.edges.overlay.OverlaySingleEdge
-import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
-import org.neo4j.ogm.annotation.Relationship
+import kotlin.test.*
 
-/**
- * Represents an extra node added to the CPG. These nodes can live next to the regular nodes,
- * typically having shared edges to extend the original graph.
- */
-abstract class OverlayNode : Node() {
+class SecurityGoalTest {
+    @Test
+    fun testLoad() {
+        val goals = loadSecurityGoals("src/test/resources/security-goals")
+        val goal1 = goals.firstOrNull()
+        assertNotNull(goal1)
 
-    init {
-        this.language = NoLanguage
+        val objective1 = goal1.objectives.firstOrNull()
+        assertNotNull(objective1)
+        assertEquals("Good encryption", objective1.name.localName)
     }
-
-    @Relationship(value = "OVERLAY", direction = Relationship.Direction.INCOMING)
-    /** All [OverlayNode]s nodes are connected to an original cpg [Node] by this. */
-    val underlyingNodeEdge: OverlaySingleEdge =
-        OverlaySingleEdge(this, of = null, mirrorProperty = Node::overlayEdges, outgoing = false)
-
-    var underlyingNode by unwrapping(OverlayNode::underlyingNodeEdge)
 }

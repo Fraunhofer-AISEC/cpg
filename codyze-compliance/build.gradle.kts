@@ -24,7 +24,7 @@
  *
  */
 plugins {
-    id("cpg.common-conventions")
+    id("cpg.frontend-conventions")
 }
 
 publishing {
