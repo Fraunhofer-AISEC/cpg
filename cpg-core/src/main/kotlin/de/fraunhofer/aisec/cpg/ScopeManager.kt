@@ -713,12 +713,24 @@ class ScopeManager : ScopeProvider {
      * A convenience function to call [lookupSymbolByName] with the properties of [node]. The
      * arguments [scope] and [predicate] are forwarded.
      */
-    fun lookupSymbolByNameOfNode(
+    fun lookupSymbolByNodeName(
         node: Node,
         scope: Scope? = node.scope,
         predicate: ((Declaration) -> Boolean)? = null,
     ): List<Declaration> {
         return lookupSymbolByName(node.name, node.language, node.location, scope, predicate)
+    }
+
+    /**
+     * A convenience function to call [lookupSymbolByName] with the properties of [node].
+     * Additionally, it adds a predicate to the search that the declaration must be of type [T].
+     */
+    inline fun <reified T : Declaration> lookupSymbolByNodeNameOfType(
+        node: Node,
+        scope: Scope? = node.scope,
+    ): List<T> {
+        return lookupSymbolByName(node.name, node.language, node.location, scope) { it is T }
+            .filterIsInstance<T>()
     }
 
     /**
