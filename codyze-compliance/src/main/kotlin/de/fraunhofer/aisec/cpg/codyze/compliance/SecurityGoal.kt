@@ -78,9 +78,7 @@ class NameSerializer : KSerializer<Name> {
     }
 }
 
-/**
- * A custom serializer for the [Component] class.
- */
+/** A custom serializer for the [Component] class. */
 class ComponentSerializer : KSerializer<Component?> {
     override val descriptor: SerialDescriptor =
         PrimitiveSerialDescriptor(Component::class.qualifiedName!!, PrimitiveKind.STRING)
@@ -97,9 +95,7 @@ class ComponentSerializer : KSerializer<Component?> {
     }
 }
 
-/**
- * Load all security goals from a directory.
- */
+/** Load all security goals from a directory. */
 @OptIn(ExperimentalPathApi::class)
 fun loadSecurityGoals(directory: String): List<SecurityGoal> {
     // Walk the directory and load all YAML files
