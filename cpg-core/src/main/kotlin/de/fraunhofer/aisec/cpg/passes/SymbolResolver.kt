@@ -126,7 +126,8 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * Determines if the [reference] refers to the super class and we have to start searching there.
+     * Determines if the [reference] refers to the super class, and we have to start searching
+     * there.
      */
     protected fun isSuperclassReference(reference: Reference): Boolean {
         val language = reference.language

@@ -1,20 +1,19 @@
 import org.gradle.accessors.dm.LibrariesForLibs
+import org.gradle.api.services.BuildServiceParameters.None
 import org.jetbrains.dokka.gradle.DokkaTask
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-import org.gradle.api.services.BuildService;
-import org.gradle.api.services.BuildServiceParameters;
-import org.gradle.api.services.BuildServiceParameters.None;
 
 plugins {
     id("cpg.formatting-conventions")
 
     `java-library`
+    `jvm-test-suite`
     jacoco
     signing
     `maven-publish`
     kotlin("jvm")
+    kotlin("plugin.serialization")
     id("org.jetbrains.dokka")
-    id("org.jetbrains.kotlinx.kover")
 }
 
 java {
@@ -112,59 +111,63 @@ tasks.withType<KotlinCompile> {
     }
 }
 
-//
-// common testing configuration
-//
-tasks.test {
-    useJUnitPlatform() {
-        excludeTags("integration")
-        excludeTags("performance")
+// Configure our test suites
+@Suppress("UnstableApiUsage")
+testing {
+    suites {
+        // The default unit-test suite
+        val test by getting(JvmTestSuite::class) {
+            useJUnitJupiter()
+        }
+
+        // Our integration tests
+        val integrationTest by registering(JvmTestSuite::class) {
+            description = "Runs the integration tests"
+            dependencies {
+                implementation(project())
+                implementation(testFixtures(project(":cpg-core")))
+            }
+
+            // For legacy reasons we also include the unit-test resources in the integration tests,
+            // because some of them are shared
+            sources {
+                resources {
+                    srcDirs("src/test/resources")
+                }
+            }
+
+            testType = TestSuiteType.INTEGRATION_TEST
+        }
+
+        // Our performance tests
+        val performanceTest by registering(JvmTestSuite::class) {
+            description = "Runs the performance tests"
+            dependencies {
+                implementation(project())
+                implementation(testFixtures(project(":cpg-core")))
+            }
+
+            testType = TestSuiteType.PERFORMANCE_TEST
+            targets {
+                all {
+                    testTask.configure {
+                        // do not parallelize tests within the task
+                        maxParallelForks = 1
+                        // make sure that several performance tests (e.g. in different frontends) also do NOT run in parallel
+                        usesService(serialExecutionService)
+                    }
+                }
+            }
+        }
     }
-
-    maxHeapSize = "4048m"
-}
-
-val integrationTest = tasks.register<Test>("integrationTest") {
-    description = "Runs integration tests."
-    group = "verification"
-    useJUnitPlatform() {
-        includeTags("integration")
-    }
-
-    maxHeapSize = "4048m"
-
-    shouldRunAfter(tasks.test)
-}
-
-val performanceTest = tasks.register<Test>("performanceTest") {
-    description = "Runs performance tests."
-    group = "verification"
-    useJUnitPlatform() {
-        includeTags("performance")
-    }
-
-    maxHeapSize = "4048m"
-
-    // do not parallelize tests within the task
-    maxParallelForks = 1
-    // make sure that several performance tests (e.g. in different frontends) also do NOT run in parallel
-    usesService(serialExecutionService)
 }
 
 // A build service that ensures serial execution of a group of tasks
-abstract class SerialExecutionService : BuildService<BuildServiceParameters.None>
+abstract class SerialExecutionService : BuildService<None>
 val serialExecutionService =
     gradle.sharedServices.registerIfAbsent("serialExecution", SerialExecutionService::class.java) {
         this.maxParallelUsages.set(1)
     }
-
-kover {
-    currentProject {
-        instrumentation {
-            disabledForTestTasks.add("performanceTest")
-        }
-    }
-}
 
 // Common dependencies that we need for all modules
 val libs = the<LibrariesForLibs>()  // necessary to be able to use the version catalog in buildSrc
@@ -173,3 +176,4 @@ dependencies {
     implementation(libs.neo4j.ogm.core)
     implementation(libs.jackson)
 }
+

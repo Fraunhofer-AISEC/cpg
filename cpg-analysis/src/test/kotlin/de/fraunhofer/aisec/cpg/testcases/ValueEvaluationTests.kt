@@ -56,17 +56,20 @@ class ValueEvaluationTests {
                                             this.initializer = newExpr
                                         }
                                     }
-                                    forStmt(
-                                        declare {
-                                            variable("i", t("int")) { literal(0, t("int")) }
-                                        },
-                                        ref("i") lt member("length", ref("array")),
-                                        ref("i").inc(),
-                                    ) {
-                                        subscriptExpr {
-                                            ref("array")
-                                            ref("i")
-                                        } assign ref("i")
+                                    forStmt {
+                                        loopBody {
+                                            subscriptExpr {
+                                                ref("array")
+                                                ref("i")
+                                            } assign ref("i")
+                                        }
+                                        forInitializer {
+                                            declare {
+                                                variable("i", t("int")) { literal(0, t("int")) }
+                                            }
+                                        }
+                                        forCondition { ref("i") lt member("length", ref("array")) }
+                                        forIteration { ref("i").inc() }
                                     }
                                     memberCall("println", member("out", ref("System"))) {
                                         subscriptExpr {
@@ -313,15 +316,18 @@ class ValueEvaluationTests {
                                     }
                                 }
 
-                                forStmt(
-                                    declareVar("i", t("int")) { literal(0, t("int")) },
-                                    ref("i") lt literal(6, t("int")),
-                                    ref("i").incNoContext(),
-                                ) {
-                                    subscriptExpr {
-                                        ref("array")
-                                        ref("i")
-                                    } assign ref("i")
+                                forStmt {
+                                    loopBody {
+                                        subscriptExpr {
+                                            ref("array")
+                                            ref("i")
+                                        } assign ref("i")
+                                    }
+                                    forInitializer {
+                                        declareVar("i", t("int")) { literal(0, t("int")) }
+                                    }
+                                    forCondition { ref("i") lt literal(6, t("int")) }
+                                    forIteration { ref("i").incNoContext() }
                                 }
                                 returnStmt { literal(0, t("int")) }
                             }
