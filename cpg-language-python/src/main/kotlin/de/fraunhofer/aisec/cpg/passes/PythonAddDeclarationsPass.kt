@@ -102,9 +102,9 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
             //   - to look for a local symbol, unless
             //   - a global keyword is present for this symbol and scope
             if (targetScope != null) {
-                scopeManager.lookupSymbolByNameOfNode(ref, targetScope)
+                scopeManager.lookupSymbolByNodeName(ref, targetScope)
             } else {
-                scopeManager.lookupSymbolByNameOfNode(ref) { it.scope == scopeManager.currentScope }
+                scopeManager.lookupSymbolByNodeName(ref) { it.scope == scopeManager.currentScope }
             }
 
         // Nothing to create

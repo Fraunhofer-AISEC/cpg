@@ -30,7 +30,6 @@ import de.fraunhofer.aisec.cpg.CallResolutionResult.SuccessKind.*
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
@@ -41,6 +40,7 @@ import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.inference.startInference
 import de.fraunhofer.aisec.cpg.passes.inference.tryFieldInference
 import de.fraunhofer.aisec.cpg.passes.inference.tryFunctionInference
+import de.fraunhofer.aisec.cpg.passes.inference.tryFunctionInferenceFromFunctionPointer
 import de.fraunhofer.aisec.cpg.passes.inference.tryVariableInference
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import org.slf4j.Logger
@@ -134,41 +134,6 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         return language is HasSuperClasses && reference.name.endsWith(language.superClassKeyword)
     }
 
-    /** This function seems to resolve function pointers pointing to a [MethodDeclaration]. */
-    protected fun resolveMethodFunctionPointer(
-        reference: Reference,
-        type: FunctionPointerType,
-    ): ValueDeclaration? {
-        var target = scopeManager.resolveReference(reference)
-
-        // If we didn't find anything, we create a new function or method declaration
-        if (target == null) {
-            // Determine the scope where we want to start our inference
-            val extractedScope = scopeManager.extractScope(reference)
-            if (extractedScope == null) {
-                return null
-            }
-
-            var scope = extractedScope.scope
-            if (scope !is NameScope) {
-                scope = null
-            }
-
-            target =
-                (scope?.astNode ?: reference.translationUnit)
-                    ?.startInference(ctx)
-                    ?.inferFunctionDeclaration(
-                        reference.name,
-                        null,
-                        false,
-                        type.parameters,
-                        type.returnType,
-                    )
-        }
-
-        return target
-    }
-
     /**
      * This function handles symbol resolving for a [Reference]. After a successful lookup of the
      * symbol contained in [Reference.name], the property [Reference.refersTo] is set to the best
@@ -193,6 +158,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
      */
     protected fun handleReference(currentClass: RecordDeclaration?, ref: Reference) {
         val language = ref.language
+        val helperType = ref.resolutionHelper?.type
 
         // Ignore references to anonymous identifiers, if the language supports it (e.g., the _
         // identifier in Go)
@@ -208,9 +174,27 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             return
         }
 
+        // If our resolution helper indicates that this reference is the target of a variable with a
+        // function pointer, we need to take the (return) type arguments of the function pointer
+        // into consideration
+        val predicate: ((Declaration) -> Boolean)? =
+            if (helperType is FunctionPointerType) {
+                { declaration ->
+                    if (declaration is FunctionDeclaration) {
+                        declaration.returnTypes == listOf(helperType.returnType) &&
+                            declaration.matchesSignature(helperType.parameters) !=
+                                IncompatibleSignature
+                    } else {
+                        false
+                    }
+                }
+            } else {
+                null
+            }
+
         // Find a list of candidate symbols. Currently, this is only used the in the "next-gen" call
         // resolution, but in future this will also be used in resolving regular references.
-        ref.candidates = scopeManager.lookupSymbolByNameOfNode(ref).toSet()
+        ref.candidates = scopeManager.lookupSymbolByNodeName(ref, predicate = predicate).toSet()
 
         // We need to choose the best viable candidate out of the ones we have for our reference.
         // Hopefully we have only one, but there might be instances where more than one is a valid
@@ -236,25 +220,6 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             }
         }
 
-        // Some stupid C++ workaround to use the legacy call resolver when we try to resolve targets
-        // for function pointers. At least we are only invoking the legacy resolver for a very small
-        // percentage of references now.
-        if (wouldResolveTo is FunctionDeclaration) {
-            // We need to invoke the legacy resolver, just to be sure
-            var legacy = scopeManager.resolveReference(ref)
-
-            // This is just for us to catch these differences in symbol resolving in the future. The
-            // difference is pretty much only that the legacy system takes parameters of the
-            // function-pointer-type into account and the new system does not (yet), because it just
-            // takes the first match. This will be needed to solve in the future.
-            if (legacy != wouldResolveTo) {
-                log.warn(
-                    "The legacy symbol resolution and the new system produced different results here. This needs to be investigated in the future. For now, we take the legacy result."
-                )
-                wouldResolveTo = legacy
-            }
-        }
-
         // Only consider resolving, if the language frontend did not specify a resolution. If we
         // already have populated the wouldResolveTo variable, we can re-use this instead of
         // resolving again
@@ -265,14 +230,16 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             recordDeclType = currentClass.toType()
         }
 
-        val helperType = ref.resolutionHelper?.type
-        if (helperType is FunctionPointerType && refersTo == null) {
-            refersTo = resolveMethodFunctionPointer(ref, helperType)
-        }
-
         // If we did not resolve the reference up to this point, we can try to infer the declaration
         if (refersTo == null) {
-            refersTo = tryVariableInference(ref)
+            // If its a function pointer, we can try to infer a function
+            refersTo =
+                if (helperType is FunctionPointerType) {
+                    tryFunctionInferenceFromFunctionPointer(ref, helperType)
+                } else {
+                    // Otherwise, we can try to infer a variable
+                    tryVariableInference(ref)
+                }
         }
 
         if (refersTo != null) {
