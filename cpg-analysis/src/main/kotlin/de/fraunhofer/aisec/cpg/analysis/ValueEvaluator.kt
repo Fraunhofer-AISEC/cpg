@@ -259,7 +259,7 @@ open class ValueEvaluator(
         }
     }
 
-    private fun handleGreater(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
+    protected open fun handleGreater(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
         return if (lhsValue is Number && rhsValue is Number) {
             lhsValue.compareTo(rhsValue) > 0
         } else {
@@ -267,7 +267,7 @@ open class ValueEvaluator(
         }
     }
 
-    private fun handleGEq(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
+    protected open fun handleGEq(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
         return if (lhsValue is Number && rhsValue is Number) {
             lhsValue.compareTo(rhsValue) >= 0
         } else {
@@ -275,7 +275,7 @@ open class ValueEvaluator(
         }
     }
 
-    private fun handleLess(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
+    protected open fun handleLess(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
         return if (lhsValue is Number && rhsValue is Number) {
             lhsValue.compareTo(rhsValue) < 0
         } else {
@@ -283,7 +283,7 @@ open class ValueEvaluator(
         }
     }
 
-    private fun handleLEq(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
+    protected open fun handleLEq(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
         return if (lhsValue is Number && rhsValue is Number) {
             lhsValue.compareTo(rhsValue) <= 0
         } else {
@@ -291,19 +291,31 @@ open class ValueEvaluator(
         }
     }
 
-    private fun handleEq(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
-        return if (lhsValue is Number && rhsValue is Number) {
-            lhsValue.compareTo(rhsValue) == 0
-        } else {
-            cannotEvaluate(expr, this)
+    protected open fun handleEq(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
+        return when {
+            lhsValue is Number && rhsValue is Number -> {
+                lhsValue.compareTo(rhsValue) == 0
+            }
+            lhsValue is String && rhsValue is String -> {
+                lhsValue == rhsValue
+            }
+            else -> {
+                cannotEvaluate(expr, this)
+            }
         }
     }
 
-    private fun handleNEq(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
-        return if (lhsValue is Number && rhsValue is Number) {
-            lhsValue.compareTo(rhsValue) != 0
-        } else {
-            cannotEvaluate(expr, this)
+    protected open fun handleNEq(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
+        return when {
+            lhsValue is Number && rhsValue is Number -> {
+                lhsValue.compareTo(rhsValue) != 0
+            }
+            lhsValue is String && rhsValue is String -> {
+                lhsValue != rhsValue
+            }
+            else -> {
+                cannotEvaluate(expr, this)
+            }
         }
     }
 
@@ -411,8 +423,6 @@ open class ValueEvaluator(
             )
             cannotEvaluate(expr, this)
         } else {
-            // No previous DFG node
-            log.warn("We cannot evaluate {}: It has no previous DFG edges.", expr)
             cannotEvaluate(expr, this)
         }
     }
@@ -434,7 +444,8 @@ open class ValueEvaluator(
         // - We now remove the statement where we already are (the "selfReference") to continue
         // before it (case 2)
 
-        // Determines if we are in case 2
+        // Determines if we are in case 2. Note: using path like this makes this evaluator not
+        // thread-safe!
         val isCase2 = path.size > 2 && ref in path.subList(0, path.size - 2)
 
         if (ref.access == AccessValues.READWRITE && isCase2) {
