@@ -118,6 +118,13 @@ testing {
         // The default unit-test suite
         val test by getting(JvmTestSuite::class) {
             useJUnitJupiter()
+            targets {
+                all {
+                    testTask.configure {
+                        maxHeapSize = "4048m"
+                    }
+                }
+            }
         }
 
         // Our integration tests
@@ -137,6 +144,14 @@ testing {
             }
 
             testType = TestSuiteType.INTEGRATION_TEST
+
+            targets {
+                all {
+                    testTask.configure {
+                        maxHeapSize = "4048m"
+                    }
+                }
+            }
         }
 
         // Our performance tests
