@@ -122,7 +122,7 @@ open class MapLattice<K, V>(elements: Map<K, LatticeElement<V>>) :
     }
 
     override fun compareTo(other: LatticeElement<Map<K, LatticeElement<V>>>): Int {
-        if (this.elements == other.elements) return 0
+        if (this == other) return 0
         if (
             this.elements.keys.containsAll(other.elements.keys) &&
                 this.elements.entries.all { (k, v) ->
@@ -134,7 +134,10 @@ open class MapLattice<K, V>(elements: Map<K, LatticeElement<V>>) :
     }
 
     override fun equals(other: Any?): Boolean {
-        return other is MapLattice<K, V> && this.elements == other.elements
+        return other is MapLattice<K, V> &&
+            this.elements.keys.size == other.elements.keys.size &&
+            this.elements.keys.containsAll(other.elements.keys) &&
+            this.elements.entries.all { (k, v) -> other.elements[k] == v }
     }
 
     override fun hashCode(): Int {
