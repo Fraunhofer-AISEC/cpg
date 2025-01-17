@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.passes.UnreachableEOGPass
 import de.fraunhofer.aisec.cpg.test.analyze
 import java.io.File
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -41,15 +42,28 @@ class ConstEvalIfTest {
             analyze(listOf(topLevel.resolve("platform.py")), topLevel.toPath(), true) {
                 it.registerLanguage<PythonLanguage>()
                 it.registerPass<UnreachableEOGPass>()
-                it.symbols(mapOf("PYTHON_PLATFORM" to "win32"))
+                it.symbols(
+                    mapOf(
+                        "PYTHON_PLATFORM" to "win32",
+                        "PYTHON_VERSION_MAJOR" to "3",
+                        "PYTHON_VERSION_MINOR" to "12",
+                        "PYTHON_VERSION_MICRO" to "0",
+                    )
+                )
             }
         assertNotNull(result)
 
         val ifs = result.ifs
         ifs.forEach {
-            val result = it.condition?.evaluate(PythonValueEvaluator()) as? Boolean
-            assertNotNull(result)
-            assertTrue(result)
+            val value = it.condition?.evaluate(PythonValueEvaluator()) as? Boolean
+            assertNotNull(value)
+            assertTrue(value)
+        }
+
+        val weirdCompares = result.variables["weird_compare"]?.assignments
+        weirdCompares?.forEach {
+            val value = it.value.evaluate(PythonValueEvaluator())
+            assertEquals("{==}", value)
         }
     }
 
