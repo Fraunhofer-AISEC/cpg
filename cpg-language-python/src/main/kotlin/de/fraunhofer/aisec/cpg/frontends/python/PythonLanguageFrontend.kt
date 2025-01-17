@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.python
 
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
@@ -80,40 +81,6 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
     private lateinit var fileContent: String
     private lateinit var uri: URI
 
-    /** Represents the contents of `sys.version_info` which contains the Python version. */
-    data class VersionInfo(
-        var major: Long? = null,
-        var minor: Long? = null,
-        var micro: Long? = null,
-    ) {
-        /**
-         * Returns the version info as a tuple (major, minor, micro). The length of the tuple
-         * depends on the information set, e.g., if only major version is set, then the tuple is 1
-         * element long.
-         */
-        fun toList(): List<Long> {
-            val list = mutableListOf<Long>()
-            major?.let { major ->
-                list += major
-                minor?.let { minor ->
-                    list += minor
-                    micro?.let { micro -> list += micro }
-                }
-            }
-
-            return list
-        }
-    }
-
-    /**
-     * Represents different system information that are used in the [PythonValueEvaluator] to
-     * evaluate expressions, such as `sys.platform` and `sys.version_info`.
-     */
-    object SysInfo {
-        var versionInfo: VersionInfo? = null
-        var platform: String? = null
-    }
-
     @Throws(TranslationException::class)
     override fun parse(file: File): TranslationUnitDeclaration {
         fileContent = file.readText(Charsets.UTF_8)
@@ -128,19 +95,8 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
 
             val pyAST = it.getValue("parsed") as PyObject
 
-            // Populate system information from defined symbols that represent our environment
-            SysInfo.platform = config.symbols["PYTHON_PLATFORM"] ?: SysInfo.platform
-            // We need to populate the version info "in-order", to ensure that we do not set the
-            // micro version if minor and major are not set, i.e., there must not be a "gap" in the
-            // granularity of version numbers
-            config.symbols["PYTHON_VERSION_MAJOR"]?.toLong()?.let { major ->
-                val minor = config.symbols["PYTHON_VERSION_MINOR"]?.toLong()
-                val micro =
-                    if (minor != null) config.symbols["PYTHON_VERSION_MICRO"]?.toLong() else null
-                SysInfo.versionInfo = VersionInfo(major, minor, micro)
-            }
-
             val tud = pythonASTtoCPG(pyAST, file.toPath())
+            populateSystemInformation(config, tud)
 
             if (config.matchCommentsToNodes) {
                 it.exec("import tokenize")
@@ -395,6 +351,39 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
             is Python.AST.USub -> "-"
         }
 }
+
+/**
+ * Populate system information from defined symbols that represent our environment. We add it as an
+ * overlay node to our [TranslationUnitDeclaration].
+ */
+fun populateSystemInformation(
+    config: TranslationConfiguration,
+    tu: TranslationUnitDeclaration,
+): SystemInformation {
+    var sysInfo =
+        SystemInformation(
+            platform = config.symbols["PYTHON_PLATFORM"],
+            // We need to populate the version info "in-order", to ensure that we do not
+            // set the micro version if minor and major are not set, i.e., there must not be a
+            // "gap" in the granularity of version numbers
+            versionInfo =
+                config.symbols["PYTHON_VERSION_MAJOR"]?.toLong()?.let { major ->
+                    val minor = config.symbols["PYTHON_VERSION_MINOR"]?.toLong()
+                    val micro =
+                        if (minor != null) config.symbols["PYTHON_VERSION_MICRO"]?.toLong()
+                        else null
+                    VersionInfo(major, minor, micro)
+                },
+        )
+    sysInfo.underlyingNode = tu
+    return sysInfo
+}
+
+/** Returns the system information overlay node from the [TranslationUnitDeclaration]. */
+val TranslationUnitDeclaration.sysInfo: SystemInformation?
+    get() {
+        return this.overlays.firstOrNull { it is SystemInformation } as? SystemInformation
+    }
 
 /**
  * This function maps Python's `ast` objects to out internal [Python] representation.

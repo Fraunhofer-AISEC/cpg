@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.translationUnit
 import de.fraunhofer.aisec.cpg.passes.reconstructedImportName
 import kotlin.math.pow
 
@@ -57,9 +58,9 @@ class PythonValueEvaluator : ValueEvaluator() {
         // have it). This allows us to dynamically prune if-branches based on constant evaluation.
         return when {
             expr.reconstructedImportName.toString() == "sys.platform" ->
-                PythonLanguageFrontend.SysInfo.platform ?: super.handleReference(expr, depth)
+                expr.translationUnit?.sysInfo?.platform ?: super.handleReference(expr, depth)
             expr.reconstructedImportName.toString() == "sys.version_info" -> {
-                return PythonLanguageFrontend.SysInfo.versionInfo?.toList()
+                return expr.translationUnit?.sysInfo?.versionInfo?.toList()
                     ?: super.handleReference(expr, depth)
             }
             else -> super.handleReference(expr, depth)
