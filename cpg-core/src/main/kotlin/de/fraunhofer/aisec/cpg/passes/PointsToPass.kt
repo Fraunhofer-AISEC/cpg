@@ -172,7 +172,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                 indexes.add(value)
                 // Also collect the ParameterMemoryValue, since there might have been writes to
                 // pointer-to-pointers
-                doubleState.getValues(value).filterIsInstance<ParameterMemoryValue>().map {
+                doubleState.getValues(value).map {
                     indexes.add(it)
                 }
             }
@@ -584,7 +584,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
         parameters: MutableList<ParameterDeclaration>,
         doubleState: PointsToState2,
         // Until which depth do we create ParameterMemoryValues
-        depth: Int = 3
+        depth: Int = 2
     ): PointsToState2 {
         var doubleState = doubleState
         parameters
@@ -597,7 +597,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                 // to the ParameterMemoryValue we create in the first step
                 var src: Node = param
                 var addresses = doubleState.getAddresses(src)
-                for (i in 0..(depth + 1)) {
+                for (i in 0..depth) {
                     val pmvName = "deref".repeat(i) + "value"
                     val pmv =
                         ParameterMemoryValue(Name(pmvName, param.name)).apply {
