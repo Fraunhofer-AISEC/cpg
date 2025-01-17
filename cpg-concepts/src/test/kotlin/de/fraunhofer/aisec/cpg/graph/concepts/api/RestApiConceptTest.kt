@@ -38,9 +38,13 @@ import de.fraunhofer.aisec.cpg.graph.builder.translationResult
 import de.fraunhofer.aisec.cpg.graph.builder.translationUnit
 import de.fraunhofer.aisec.cpg.graph.calls
 import de.fraunhofer.aisec.cpg.graph.conceptNodes
+import de.fraunhofer.aisec.cpg.graph.methods
 import de.fraunhofer.aisec.cpg.graph.operationNodes
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 
 class RestApiConceptTest {
@@ -54,10 +58,14 @@ class RestApiConceptTest {
         assertNotNull(concept)
         assertNotNull(operation)
 
+        val createMethod = result.methods.firstOrNull()
+        assertEquals(createMethod, concept.underlyingNode)
         assertEquals(operation.concept, concept)
         assertEquals("POST", operation.httpMethod.name)
         val memberCall = operation.underlyingNode
         assertNotNull(memberCall)
+        assertIs<MemberCallExpression>(memberCall)
+        assertIs<Reference>(memberCall.arguments.first())
     }
 }
 
@@ -74,9 +82,10 @@ fun getRestApiTranslationResult() =
                             }
                         }
 
+                    val createMethod = controller.methods.first()
                     val apiConcept =
                         this@translationResult.newRestApiConcept(
-                            underlyingNode = controller,
+                            underlyingNode = createMethod,
                             apiUrl = "/example/api/{id}",
                             role = ApiRole.CONSUMER,
                         )
