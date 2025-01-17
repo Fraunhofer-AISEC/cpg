@@ -809,10 +809,10 @@ class ScopeManager : ScopeProvider {
      * This function tries to look up the symbol contained in [name] (using [lookupSymbolByName])
      * and returns a [DeclaresType] node, if this name resolved to something which declares a type.
      *
-     * It is important to know that the lookup needs to be unique, so if multiple declarations match
-     * this symbol, a warning is triggered and null is returned.
+     * In case that the lookup returns more than one symbol, this function will emit a warning and
+     * return the first symbol found.
      */
-    fun lookupUniqueTypeSymbolByName(
+    fun lookupTypeSymbolByName(
         name: Name,
         language: Language<*>?,
         startScope: Scope?,
@@ -823,13 +823,15 @@ class ScopeManager : ScopeProvider {
                 }
                 .filterIsInstance<DeclaresType>()
 
-        // We need to have a single match, otherwise we have an ambiguous type, and we cannot
-        // normalize it.
+        // We need to have a single match, otherwise we have an ambiguous type. We emit a warning
+        // here, but we still have to take one of the symbols, because otherwise the type system
+        // things the type does not exist and tries to infer one.
         if (symbols.size > 1) {
             LOGGER.warn(
                 "Lookup of type {} returned more than one symbol which declares a type, this is an ambiguity and the following analysis might not be correct.",
                 name,
             )
+            return symbols.firstOrNull()
         }
 
         return symbols.singleOrNull()
