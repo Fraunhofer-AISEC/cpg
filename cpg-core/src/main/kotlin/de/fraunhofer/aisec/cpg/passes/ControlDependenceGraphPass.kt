@@ -283,23 +283,30 @@ fun handleEdge(
 ): LatticeElement<IdentityHashMap<Node, PrevEOGLattice>> {
     var newState = currentState as? PrevEOGState ?: return currentState
 
+    val currentStart = currentEdge.start
+
     // Check if we start in a branching node and if this edge leads to the conditional
     // branch. In this case, the next node will move "one layer downwards" in the CDG.
-    if (currentEdge.start is BranchingNode) { // && currentEdge.isConditionalBranch()) {
+    if (
+        currentStart is BranchingNode ||
+            currentStart is ComprehensionExpression ||
+            currentStart.astParent is ComprehensionExpression &&
+                currentStart == (currentStart.astParent as ComprehensionExpression).iterable
+    ) { // && currentEdge.isConditionalBranch()) {
         // We start in a branching node and end in one of the branches, so we have the
         // following state:
         // for the branching node "start", we have a path through "end".
         val prevPathLattice =
             PrevEOGLattice(
                 IdentityHashMap(
-                    newState.elements[currentEdge.start]
+                    newState.elements[currentStart]
                         ?.elements
-                        ?.filter { (k, _) -> k == currentEdge.start }
+                        ?.filter { (k, _) -> k == currentStart }
                         ?.mapValues { (_, v) -> PowersetLattice(v.elements) }
                 )
             )
         val map = IdentityHashMap<Node, PowersetLatticeT<Node>>()
-        map[currentEdge.start] = PowersetLattice(identitySetOf(currentEdge.end))
+        map[currentStart] = PowersetLattice(identitySetOf(currentEdge.end))
         val newPath = PrevEOGLattice(map).lub(prevPathLattice)
         newState = newState.push(currentEdge.end, newPath)
     } else {
@@ -311,11 +318,11 @@ fun handleEdge(
         val state =
             PrevEOGLattice(
                 IdentityHashMap(
-                    newState.elements[currentEdge.start]?.elements?.mapValues { (_, v) ->
+                    newState.elements[currentStart]?.elements?.mapValues { (_, v) ->
                         PowersetLattice(v.elements)
                     }
                         ?: mutableMapOf(
-                            Pair(currentEdge.start, PowersetLattice(identitySetOf(currentEdge.end)))
+                            Pair(currentStart, PowersetLattice(identitySetOf(currentEdge.end)))
                         )
                 )
             )
@@ -343,7 +350,8 @@ private fun EvaluationOrder.isConditionalBranch(): Boolean {
     } else
         (this.start is IfStatement ||
             this.start is ComprehensionExpression ||
-            this.start is CollectionComprehension ||
+            (this.start.astParent is ComprehensionExpression &&
+                this.start == (this.start.astParent as ComprehensionExpression).iterable) ||
             this.start is ConditionalExpression ||
             this.start is ShortCircuitOperator) && branch == false ||
             (this.start is IfStatement &&
