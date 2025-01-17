@@ -38,4 +38,7 @@ class TemplateArgument<NodeType : Node>(
 
 /** A container for [TemplateArgument] edges. */
 class TemplateArguments<NodeType : Node>(thisRef: Node) :
-    AstEdges<NodeType, TemplateArgument<NodeType>>(thisRef, init = ::TemplateArgument)
+    AstEdges<NodeType, TemplateArgument<NodeType>>(
+        thisRef,
+        init = { start, end -> TemplateArgument(start, end) },
+    )

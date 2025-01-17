@@ -148,7 +148,7 @@ context(ContextProvider)
 fun SubgraphWalker.ScopedWalker.replaceCallWithConstruct(
     type: ObjectType,
     parent: Node,
-    call: CallExpression
+    call: CallExpression,
 ) {
     val construct = newConstructExpression()
     construct.code = call.code

@@ -71,7 +71,7 @@ abstract class Edge<NodeType : Node> : Persistable, Cloneable {
         end = edge.end
     }
 
-    @Transient open val label: String = "EDGE"
+    abstract var labels: Set<String>
 
     /**
      * The index of this node, if it is stored in an
@@ -150,9 +150,7 @@ abstract class Edge<NodeType : Node> : Persistable, Cloneable {
     }
 
     @Transient
-    inner class Delegate<
-        ThisType : Node,
-    >() {
+    inner class Delegate<ThisType : Node>() {
         operator fun getValue(thisRef: ThisType, property: KProperty<*>): NodeType {
             var edge = this@Edge
             // We only support outgoing edges this way

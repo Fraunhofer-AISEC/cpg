@@ -79,12 +79,10 @@ class ScopeManager : ScopeProvider {
      */
     private val symbolTable = mutableMapOf<ReferenceTag, Pair<Reference, ValueDeclaration>>()
 
-    /** True, if the scope manager is currently in a [BlockScope]. */
-    val isInBlock: Boolean
-        get() = this.firstScopeOrNull { it is BlockScope } != null
     /** True, if the scope manager is currently in a [FunctionScope]. */
     val isInFunction: Boolean
         get() = this.firstScopeOrNull { it is FunctionScope } != null
+
     /** True, if the scope manager is currently in a [RecordScope], e.g. a class. */
     val isInRecord: Boolean
         get() = this.firstScopeOrNull { it is RecordScope } != null
@@ -92,12 +90,15 @@ class ScopeManager : ScopeProvider {
     val globalScope: GlobalScope?
         get() = scopeMap[null] as? GlobalScope
 
-    /** The current block, according to the scope that is currently active. */
-    val currentBlock: Block?
-        get() = this.firstScopeIsInstanceOrNull<BlockScope>()?.astNode as? Block
     /** The current function, according to the scope that is currently active. */
     val currentFunction: FunctionDeclaration?
         get() = this.firstScopeIsInstanceOrNull<FunctionScope>()?.astNode as? FunctionDeclaration
+
+    /** The current block, according to the scope that is currently active. */
+    val currentBlock: Block?
+        get() =
+            currentScope?.astNode as? Block
+                ?: currentScope?.astNode?.firstParentOrNull { it is Block } as? Block
 
     /**
      * The current method in the active scope tree, this ensures that 'this' keywords are mapped
@@ -107,12 +108,10 @@ class ScopeManager : ScopeProvider {
         get() =
             this.firstScopeOrNull { scope: Scope? -> scope?.astNode is MethodDeclaration }?.astNode
                 as? MethodDeclaration
+
     /** The current record, according to the scope that is currently active. */
     val currentRecord: RecordDeclaration?
         get() = this.firstScopeIsInstanceOrNull<RecordScope>()?.astNode as? RecordDeclaration
-
-    val currentTypedefs: Collection<TypedefDeclaration>
-        get() = this.getCurrentTypedefs(currentScope)
 
     val currentNamespace: Name?
         get() {
@@ -221,11 +220,11 @@ class ScopeManager : ScopeProvider {
      * new scope, this function needs to be called. Appropriate scopes will then be created
      * on-the-fly, if they do not exist.
      *
-     * The scope manager has an internal association between the type of scope, e.g. a [BlockScope]
+     * The scope manager has an internal association between the type of scope, e.g. a [LocalScope]
      * and the CPG node it represents, e.g. a [Block].
      *
-     * Afterwards, all calls to [addDeclaration] will be distributed to the
-     * [de.fraunhofer.aisec.cpg.graph.DeclarationHolder] that is currently in-scope.
+     * Afterward, all calls to [addDeclaration] will be distributed to the [DeclarationHolder] that
+     * is currently in-scope.
      */
     fun enterScope(nodeToScope: Node) {
         var newScope: Scope? = null
@@ -234,25 +233,25 @@ class ScopeManager : ScopeProvider {
         if (!scopeMap.containsKey(nodeToScope)) {
             newScope =
                 when (nodeToScope) {
-                    is Block -> BlockScope(nodeToScope)
                     is WhileStatement,
                     is DoStatement,
-                    is AssertStatement -> LoopScope(nodeToScope as Statement)
+                    is AssertStatement,
                     is ForStatement,
-                    is ForEachStatement -> LoopScope(nodeToScope as Statement)
-                    is SwitchStatement -> SwitchScope(nodeToScope)
+                    is ForEachStatement,
+                    is SwitchStatement,
+                    is TryStatement,
+                    is IfStatement,
+                    is CatchClause,
+                    is Block -> LocalScope(nodeToScope)
                     is FunctionDeclaration -> FunctionScope(nodeToScope)
-                    is IfStatement -> ValueDeclarationScope(nodeToScope)
-                    is CatchClause -> ValueDeclarationScope(nodeToScope)
                     is RecordDeclaration -> RecordScope(nodeToScope)
                     is TemplateDeclaration -> TemplateScope(nodeToScope)
-                    is TryStatement -> TryScope(nodeToScope)
                     is TranslationUnitDeclaration -> FileScope(nodeToScope)
-                    is NamespaceDeclaration -> newNameScopeIfNecessary(nodeToScope)
+                    is NamespaceDeclaration -> newNamespaceIfNecessary(nodeToScope)
                     else -> {
                         LOGGER.error(
                             "No known scope for AST node of type {}",
-                            nodeToScope.javaClass
+                            nodeToScope.javaClass,
                         )
                         return
                     }
@@ -269,7 +268,7 @@ class ScopeManager : ScopeProvider {
     }
 
     /**
-     * A small internal helper function used by [enterScope] to create a [NameScope].
+     * A small internal helper function used by [enterScope] to create a [NamespaceScope].
      *
      * The issue with name scopes, such as a namespace, is that it can exist across several files,
      * i.e. translation units, represented by different [NamespaceDeclaration] nodes. But, in order
@@ -277,15 +276,15 @@ class ScopeManager : ScopeProvider {
      * all declarations, such as classes, independently of the translation units. Therefore, we need
      * to check, whether such as node already exists. If it does already exist:
      * - we update the scope map so that the current [NamespaceDeclaration] points to the existing
-     *   [NameScope]
+     *   [NamespaceScope]
      * - we return null, indicating to [enterScope], that no new scope needs to be pushed by
      *   [enterScope].
      *
-     * Otherwise, we return a new name scope.
+     * Otherwise, we return a new namespace scope.
      */
-    private fun newNameScopeIfNecessary(nodeToScope: NamespaceDeclaration): NameScope? {
+    private fun newNamespaceIfNecessary(nodeToScope: NamespaceDeclaration): NamespaceScope? {
         val existingScope =
-            filterScopes { it is NameScope && it.name == nodeToScope.name }.firstOrNull()
+            filterScopes { it is NamespaceScope && it.name == nodeToScope.name }.firstOrNull()
 
         return if (existingScope != null) {
             // update the AST node to this namespace declaration
@@ -299,25 +298,7 @@ class ScopeManager : ScopeProvider {
             // does not need to push a new scope
             null
         } else {
-            NameScope(nodeToScope)
-        }
-    }
-
-    /**
-     * Similar to [enterScope], but does so in a "read-only" mode, e.g. it does not modify the scope
-     * tree and does not create new scopes on the fly, as [enterScope] does.
-     */
-    fun enterScopeIfExists(nodeToScope: Node?) {
-        if (scopeMap.containsKey(nodeToScope)) {
-            val scope = scopeMap[nodeToScope]
-
-            // we need a special handling of name spaces, because
-            // they are associated to more than one AST node
-            if (scope is NameScope) {
-                // update AST (see enterScope for an explanation)
-                scope.astNode = nodeToScope
-            }
-            currentScope = scope
+            NamespaceScope(nodeToScope)
         }
     }
 
@@ -343,14 +324,14 @@ class ScopeManager : ScopeProvider {
                     nodeToLeave,
                     LOGGER,
                     "Node of type {} has a scope but is not active in the moment.",
-                    nodeToLeave.javaClass
+                    nodeToLeave.javaClass,
                 )
             } else {
                 Util.errorWithFileLocation(
                     nodeToLeave,
                     LOGGER,
                     "Node of type {} is not associated with a scope.",
-                    nodeToLeave.javaClass
+                    nodeToLeave.javaClass,
                 )
             }
 
@@ -508,29 +489,6 @@ class ScopeManager : ScopeProvider {
         scope?.addTypedef(typedef)
     }
 
-    private fun getCurrentTypedefs(searchScope: Scope?): Collection<TypedefDeclaration> {
-        val typedefs = mutableMapOf<Name, TypedefDeclaration>()
-
-        val path = mutableListOf<ValueDeclarationScope>()
-        var current = searchScope
-
-        // We need to build a path from the current scope to the top most one
-        while (current != null) {
-            if (current is ValueDeclarationScope) {
-                path += current
-            }
-            current = current.parent
-        }
-
-        // And then follow the path in reverse. This ensures us that a local definition
-        // overwrites / shadows one that was there on a higher scope.
-        for (scope in path.reversed()) {
-            typedefs.putAll(scope.typedefs)
-        }
-
-        return typedefs.values
-    }
-
     /**
      * Resolves only references to Values in the current scope, static references to other visible
      * records are not resolved over the ScopeManager.
@@ -553,7 +511,14 @@ class ScopeManager : ScopeProvider {
             return pair.second
         }
 
-        var (scope, name) = extractScope(ref, startScope)
+        val extractedScope = extractScope(ref, startScope)
+        // If the scope extraction fails, we can only return here directly without any result
+        if (extractedScope == null) {
+            return null
+        }
+
+        var scope = extractedScope.scope
+        val name = extractedScope.adjustedName
         if (scope == null) {
             scope = startScope
         }
@@ -569,7 +534,8 @@ class ScopeManager : ScopeProvider {
                             helper?.type is FunctionPointerType && it is FunctionDeclaration -> {
                                 val fptrType = helper.type as FunctionPointerType
                                 // TODO(oxisto): Support multiple return values
-                                val returnType = it.returnTypes.firstOrNull() ?: IncompleteType()
+                                val returnType =
+                                    it.returnTypes.firstOrNull() ?: IncompleteType(ref.language)
                                 returnType == fptrType.returnType &&
                                     it.matchesSignature(fptrType.parameters) !=
                                         IncompatibleSignature
@@ -599,13 +565,21 @@ class ScopeManager : ScopeProvider {
     }
 
     /**
-     * This function extracts a scope for the [Name], e.g. if the name is fully qualified. `null` is
-     * returned, if no scope can be extracted.
+     * This class represents the result of the [extractScope] operation. It contains a [scope]
+     * object, if a scope was found and the [adjustedName] that is normalized if any aliases were
+     * found during scope extraction.
+     */
+    data class ScopeExtraction(val scope: Scope?, val adjustedName: Name)
+
+    /**
+     * This function extracts a scope for the [Name], e.g. if the name is fully qualified (wrapped
+     * in a [ScopeExtraction] object. `null` is returned if a scope was specified, but does not
+     * exist as a [Scope] object.
      *
-     * The pair returns the extracted scope and a name that is adjusted by possible import aliases.
-     * The extracted scope is "responsible" for the name (e.g. declares the parent namespace) and
-     * the returned name only differs from the provided name if aliasing was involved at the node
-     * location (e.g. because of imports).
+     * The returned object contains the extracted scope and a name that is adjusted by possible
+     * import aliases. The extracted scope is "responsible" for the name (e.g. declares the parent
+     * namespace) and the returned name only differs from the provided name if aliasing was involved
+     * at the node location (e.g. because of imports).
      *
      * Note: Currently only *fully* qualified names are properly resolved. This function will
      * probably return imprecise results for partially qualified names, e.g. if a name `A` inside
@@ -613,9 +587,9 @@ class ScopeManager : ScopeProvider {
      *
      * @param node the nodes name references a namespace constituted by a scope
      * @param scope the current scope relevant for the name resolution, e.g. parent of node
-     * @return a pair with the scope of node.name and the alias-adjusted name
+     * @return a [ScopeExtraction] object with the scope of node.name and the alias-adjusted name
      */
-    fun extractScope(node: HasNameAndLocation, scope: Scope? = currentScope): Pair<Scope?, Name> {
+    fun extractScope(node: HasNameAndLocation, scope: Scope? = currentScope): ScopeExtraction? {
         return extractScope(node.name, node.location, scope)
     }
 
@@ -640,7 +614,7 @@ class ScopeManager : ScopeProvider {
         name: Name,
         location: PhysicalLocation? = null,
         scope: Scope? = currentScope,
-    ): Pair<Scope?, Name> {
+    ): ScopeExtraction? {
         var n = name
         var s: Scope? = null
 
@@ -655,20 +629,18 @@ class ScopeManager : ScopeProvider {
 
             // this is a scoped call. we need to explicitly jump to that particular scope
             val scopes = filterScopes { (it is NameScope && it.name == scopeName) }
-            s =
-                if (scopes.isEmpty()) {
-                    Util.warnWithFileLocation(
-                        location,
-                        LOGGER,
-                        "Could not find the scope $scopeName needed to resolve $n"
-                    )
-                    null
-                } else {
-                    scopes[0]
-                }
+            if (scopes.isEmpty()) {
+                Util.warnWithFileLocation(
+                    location,
+                    LOGGER,
+                    "Could not find the scope $scopeName needed to resolve $n",
+                )
+                return null
+            }
+            s = scopes[0]
         }
 
-        return Pair(s, n)
+        return ScopeExtraction(s, n)
     }
 
     /**
@@ -764,7 +736,7 @@ class ScopeManager : ScopeProvider {
     internal inline fun <reified T : Declaration> resolve(
         searchScope: Scope?,
         stopIfFound: Boolean = false,
-        noinline predicate: (T) -> Boolean
+        noinline predicate: (T) -> Boolean,
     ): List<T> {
         return resolve(T::class.java, searchScope, stopIfFound, predicate)
     }
@@ -773,7 +745,7 @@ class ScopeManager : ScopeProvider {
         klass: Class<T>,
         searchScope: Scope?,
         stopIfFound: Boolean = false,
-        predicate: (T) -> Boolean
+        predicate: (T) -> Boolean,
     ): List<T> {
         var scope = searchScope
         val declarations = mutableListOf<T>()
@@ -826,7 +798,7 @@ class ScopeManager : ScopeProvider {
     @JvmOverloads
     fun resolveFunctionTemplateDeclaration(
         call: CallExpression,
-        scope: Scope? = currentScope
+        scope: Scope? = currentScope,
     ): List<FunctionTemplateDeclaration> {
         return resolve(scope, true) { c -> c.name.lastPartsMatch(call.name) }
     }
@@ -839,8 +811,10 @@ class ScopeManager : ScopeProvider {
      *
      * @return the declaration, or null if it does not exist
      */
-    fun getRecordForName(name: Name): RecordDeclaration? {
-        return lookupSymbolByName(name).filterIsInstance<RecordDeclaration>().singleOrNull()
+    fun getRecordForName(name: Name, language: Language<*>?): RecordDeclaration? {
+        return lookupSymbolByName(name, language)
+            .filterIsInstance<RecordDeclaration>()
+            .singleOrNull()
     }
 
     fun typedefFor(alias: Name, scope: Scope? = currentScope): Type? {
@@ -860,7 +834,7 @@ class ScopeManager : ScopeProvider {
                 // This process has several steps:
                 // First, do a quick local lookup, to see if we have a typedef our current scope
                 // (only do this if the name is not qualified)
-                if (!alias.isQualified() && current == currentScope) {
+                if (!alias.isQualified() && current == scope) {
                     val decl = current.typedefs[alias]
                     if (decl != null) {
                         return decl.type
@@ -901,6 +875,18 @@ class ScopeManager : ScopeProvider {
         get() = currentScope
 
     /**
+     * A convenience function to call [lookupSymbolByName] with the properties of [node]. The
+     * arguments [scope] and [predicate] are forwarded.
+     */
+    fun lookupSymbolByNameOfNode(
+        node: Node,
+        scope: Scope? = node.scope,
+        predicate: ((Declaration) -> Boolean)? = null,
+    ): List<Declaration> {
+        return lookupSymbolByName(node.name, node.language, node.location, scope, predicate)
+    }
+
+    /**
      * This function tries to convert a [Node.name] into a [Symbol] and then performs a lookup of
      * this symbol. This can either be an "unqualified lookup" if [name] is not qualified or a
      * "qualified lookup" if [Name.isQualified] is true. In the unqualified case the lookup starts
@@ -911,29 +897,50 @@ class ScopeManager : ScopeProvider {
      * function overloading. But it will only return list of declarations within the same scope; the
      * list cannot be spread across different scopes.
      *
-     * This means that as soon one or more declarations for the symbol are found in a "local" scope,
-     * these shadow all other occurrences of the same / symbol in a "higher" scope and only the ones
-     * from the lower ones will be returned.
+     * This means that as soon one or more declarations (of the matching [language]) for the symbol
+     * are found in a "local" scope, these shadow all other occurrences of the same / symbol in a
+     * "higher" scope and only the ones from the lower ones will be returned.
      */
     fun lookupSymbolByName(
         name: Name,
+        language: Language<*>?,
         location: PhysicalLocation? = null,
         startScope: Scope? = currentScope,
         predicate: ((Declaration) -> Boolean)? = null,
     ): List<Declaration> {
-        val (scope, n) = extractScope(name, location, startScope)
+        val extractedScope = extractScope(name, location, startScope)
+        val scope: Scope?
+        val n: Name
+        if (extractedScope == null) {
+            // the scope does not exist at all
+            return listOf()
+        } else {
+            scope = extractedScope.scope
+            n = extractedScope.adjustedName
+        }
 
         // We need to differentiate between a qualified and unqualified lookup. We have a qualified
         // lookup, if the scope is not null. In this case we need to stay within the specified scope
         val list =
-            if (scope != null) {
-                    scope.lookupSymbol(n.localName, thisScopeOnly = true, predicate = predicate)
-                } else {
+            when {
+                scope != null -> {
+                    scope
+                        .lookupSymbol(
+                            n.localName,
+                            languageOnly = language,
+                            thisScopeOnly = true,
+                            predicate = predicate,
+                        )
+                        .toMutableList()
+                }
+                else -> {
                     // Otherwise, we can look up the symbol alone (without any FQN) starting from
                     // the startScope
-                    startScope?.lookupSymbol(n.localName, predicate = predicate)
+                    startScope
+                        ?.lookupSymbol(n.localName, languageOnly = language, predicate = predicate)
+                        ?.toMutableList() ?: mutableListOf()
                 }
-                ?.toMutableList() ?: return listOf()
+            }
 
         // If we have both the definition and the declaration of a function declaration in our list,
         // we chose only the definition
@@ -958,9 +965,15 @@ class ScopeManager : ScopeProvider {
      * It is important to know that the lookup needs to be unique, so if multiple declarations match
      * this symbol, a warning is triggered and null is returned.
      */
-    fun lookupUniqueTypeSymbolByName(name: Name, startScope: Scope?): DeclaresType? {
+    fun lookupUniqueTypeSymbolByName(
+        name: Name,
+        language: Language<*>?,
+        startScope: Scope?,
+    ): DeclaresType? {
         var symbols =
-            lookupSymbolByName(name = name, startScope = startScope) { it is DeclaresType }
+            lookupSymbolByName(name = name, language = language, startScope = startScope) {
+                    it is DeclaresType
+                }
                 .filterIsInstance<DeclaresType>()
 
         // We need to have a single match, otherwise we have an ambiguous type, and we cannot
@@ -968,7 +981,7 @@ class ScopeManager : ScopeProvider {
         if (symbols.size > 1) {
             LOGGER.warn(
                 "Lookup of type {} returned more than one symbol which declares a type, this is an ambiguity and the following analysis might not be correct.",
-                name
+                name,
             )
         }
 
@@ -1111,7 +1124,7 @@ data class CallResolutionResult(
      * callee. This can differ from the original start scope parameter handed to
      * [SymbolResolver.resolveWithArguments] if the callee contains an FQN.
      */
-    var actualStartScope: Scope?
+    var actualStartScope: Scope?,
 ) {
     /**
      * This enum holds information about the kind of success this call resolution had. For example,
@@ -1154,6 +1167,6 @@ data class CallResolutionResult(
          *
          * [bestViable] is empty in this case.
          */
-        UNRESOLVED
+        UNRESOLVED,
     }
 }

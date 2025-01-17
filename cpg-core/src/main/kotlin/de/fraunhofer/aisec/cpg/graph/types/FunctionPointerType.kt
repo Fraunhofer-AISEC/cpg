@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.frontends.UnknownLanguage
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
@@ -48,8 +49,8 @@ class FunctionPointerType : Type {
 
     constructor(
         parameters: List<Type> = listOf(),
-        language: Language<*>? = null,
-        returnType: Type = UnknownType.getUnknownType(language)
+        language: Language<*>,
+        returnType: Type = UnknownType.getUnknownType(language),
     ) : super(EMPTY_NAME, language) {
         this.parameters = parameters
         this.returnType = returnType
@@ -58,8 +59,8 @@ class FunctionPointerType : Type {
     constructor(
         type: Type,
         parameters: List<Type> = listOf(),
-        language: Language<*>? = null,
-        returnType: Type = UnknownType.getUnknownType(language)
+        language: Language<*> = UnknownLanguage,
+        returnType: Type = UnknownType.getUnknownType(language),
     ) : super(type) {
         this.parameters = parameters
         this.returnType = returnType

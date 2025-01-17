@@ -165,9 +165,10 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     initializer.language = node.language
                     initializer.type = node.type
                     node.initializer = initializer
-                    node.templateParameters?.let {
-                        SymbolResolver.addImplicitTemplateParametersToCall(it, initializer)
-                    }
+                    SymbolResolver.addImplicitTemplateParametersToCall(
+                        node.templateParameters,
+                        initializer,
+                    )
                 } else if (
                     currInitializer !is ConstructExpression &&
                         currInitializer is CallExpression &&

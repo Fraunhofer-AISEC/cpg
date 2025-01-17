@@ -109,13 +109,12 @@ fun analyze(
     fileExtension: String?,
     topLevel: Path,
     usePasses: Boolean,
-    configModifier: Consumer<TranslationConfiguration.Builder>? = null
+    configModifier: Consumer<TranslationConfiguration.Builder>? = null,
 ): TranslationResult {
     val files =
         Files.walk(topLevel, Int.MAX_VALUE)
-            .map(Path::toFile)
-            .filter { it.isFile }
-            .filter { it.name.endsWith(fileExtension!!) }
+            .map { it.toFile() }
+            .filter { it.isFile && (fileExtension == null || it.name.endsWith(fileExtension)) }
             .sorted()
             .collect(Collectors.toList())
     return analyze(files, topLevel, usePasses, configModifier)
@@ -136,7 +135,7 @@ fun analyze(
     files: List<File>,
     topLevel: Path,
     usePasses: Boolean,
-    configModifier: Consumer<TranslationConfiguration.Builder>? = null
+    configModifier: Consumer<TranslationConfiguration.Builder>? = null,
 ): TranslationResult {
     val builder =
         TranslationConfiguration.builder()
@@ -180,7 +179,7 @@ fun analyzeAndGetFirstTU(
     files: List<File>,
     topLevel: Path,
     usePasses: Boolean,
-    configModifier: Consumer<TranslationConfiguration.Builder>? = null
+    configModifier: Consumer<TranslationConfiguration.Builder>? = null,
 ): TranslationUnitDeclaration {
     val result = analyze(files, topLevel, usePasses, configModifier)
     return result.components.flatMap { it.translationUnits }.first()
@@ -191,12 +190,12 @@ fun analyzeWithCompilationDatabase(
     jsonCompilationDatabase: File,
     usePasses: Boolean,
     filterComponents: List<String>? = null,
-    configModifier: Consumer<TranslationConfiguration.Builder>? = null
+    configModifier: Consumer<TranslationConfiguration.Builder>? = null,
 ): TranslationResult {
     return analyze(
         listOf(),
         jsonCompilationDatabase.parentFile.toPath().toAbsolutePath(),
-        usePasses
+        usePasses,
     ) {
         val db = CompilationDatabase.fromFile(jsonCompilationDatabase, filterComponents)
         if (db.isNotEmpty()) {
@@ -286,7 +285,7 @@ fun assertUsageOf(usingNode: Node?, usedNode: Node?) {
 fun assertUsageOfMemberAndBase(usingNode: Node?, usedBase: Node?, usedMember: Declaration?) {
     assertNotNull(usingNode)
     if (usingNode !is MemberExpression && !ENFORCE_MEMBER_EXPRESSION) {
-        // Assumtion here is that the target of the member portion of the expression and not the
+        // Assumption here is that the target of the member portion of the expression and not the
         // base is resolved
         assertUsageOf(usingNode, usedMember)
     } else {
@@ -301,7 +300,7 @@ fun assertUsageOfMemberAndBase(usingNode: Node?, usedBase: Node?, usedMember: De
 }
 
 fun assertFullName(fqn: String, node: Node?, message: String? = null) {
-    assertNotNull(node)
+    assertNotNull(node, message)
     assertEquals(fqn, node.name.toString(), message)
 }
 
@@ -318,7 +317,8 @@ fun <T : Any?> assertLiteralValue(expected: T, expr: Expression?, message: Strin
     assertEquals(expected, assertIs<Literal<T>>(expr).value, message)
 }
 
-fun ContextProvider.assertResolvedType(fqn: String, generics: List<Type>? = null): Type {
-    var type = ctx?.typeManager?.lookupResolvedType(fqn, generics)
+fun ContextProvider.assertResolvedType(fqn: String): Type {
+    var type =
+        ctx?.typeManager?.lookupResolvedType(fqn, language = (this as? LanguageProvider)?.language)
     return assertNotNull(type)
 }

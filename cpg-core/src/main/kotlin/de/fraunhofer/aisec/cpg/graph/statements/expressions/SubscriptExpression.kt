@@ -43,7 +43,7 @@ class SubscriptExpression : Expression(), HasBase, HasType.TypeObserver, Argumen
     var arrayExpressionEdge =
         astEdgeOf<Expression>(
             of = ProblemExpression("could not parse array expression"),
-            onChanged = ::exchangeTypeObserver
+            onChanged = ::exchangeTypeObserver,
         )
     /** The array on which the access is happening. This is most likely a [Reference]. */
     var arrayExpression by unwrapping(SubscriptExpression::arrayExpressionEdge)

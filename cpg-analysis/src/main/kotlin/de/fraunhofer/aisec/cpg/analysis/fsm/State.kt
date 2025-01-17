@@ -84,7 +84,7 @@ class State(name: Int, isStart: Boolean = false, isAcceptingState: Boolean = fal
     fun copy(
         name: Int = this.name,
         isStart: Boolean = this.isStart,
-        isAcceptingState: Boolean = this.isAcceptingState
+        isAcceptingState: Boolean = this.isAcceptingState,
     ) =
         State(name = name, isStart = isStart, isAcceptingState = isAcceptingState).apply {
             outgoingEdges.forEach { addEdge(it) }

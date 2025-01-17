@@ -116,7 +116,7 @@ interface HasType : ContextProvider, LanguageProvider {
     interface TypeObserver {
         enum class ChangeType {
             TYPE,
-            ASSIGNED_TYPE
+            ASSIGNED_TYPE,
         }
 
         /**
@@ -136,7 +136,7 @@ interface HasType : ContextProvider, LanguageProvider {
          */
         fun <NodeType : Node> exchangeTypeObserver(
             old: AstEdge<NodeType>?,
-            new: AstEdge<NodeType>?
+            new: AstEdge<NodeType>?,
         ) {
             (old?.end as? HasType)?.unregisterTypeObserver(this)
             (new?.end as? HasType)?.registerTypeObserver(this)

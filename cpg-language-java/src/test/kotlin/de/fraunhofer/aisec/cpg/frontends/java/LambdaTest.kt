@@ -106,7 +106,7 @@ class JavaLambdaTest {
             outerVar,
             (((returnStatement.returnValue as? BinaryOperator)?.lhs as? BinaryOperator)?.lhs
                     as? Reference)
-                ?.refersTo
+                ?.refersTo,
         )
     }
 }
