@@ -48,7 +48,8 @@ inline fun <reified V> iterateEOGClean(
         val newState = transformation(nextEdge, nextGlobal)
         nextEdge.end.nextEOGEdges.forEach {
             val oldGlobalIt = globalState[it]
-            val newGlobalIt = oldGlobalIt?.let { newState.lub(it) } ?: newState
+            val newGlobalIt =
+                (oldGlobalIt?.let { newState.lub(it) } ?: newState) as LatticeElement<V>
             globalState[it] = newGlobalIt
             if (it !in edgesList && (oldGlobalIt == null || newGlobalIt != oldGlobalIt))
                 edgesList.add(0, it)
@@ -56,6 +57,6 @@ inline fun <reified V> iterateEOGClean(
     }
 
     return globalState.values.fold(globalState.values.firstOrNull()) { state, value ->
-        state?.lub(value)
+        state?.lub(value) as LatticeElement<V>
     } ?: startState
 }

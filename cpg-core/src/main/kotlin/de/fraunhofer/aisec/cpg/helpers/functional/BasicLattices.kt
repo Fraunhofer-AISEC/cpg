@@ -158,7 +158,7 @@ open class TupleLattice<U : LatticeElement<S>, V : LatticeElement<T>, S, T>(
         return TupleLattice(
             Pair(
                 this.elements.first.lub(other.elements.first) as U,
-                this.elements.second.lub(other.elements.second) as V
+                this.elements.second.lub(other.elements.second) as V,
             )
         )
     }
@@ -196,35 +196,30 @@ open class TupleLattice<U : LatticeElement<S>, V : LatticeElement<T>, S, T>(
     operator fun component2() = this.elements.second
 }
 
-class TripleLattice<U, V, W>(
-    override val elements: Triple<LatticeElement<U>, LatticeElement<V>, LatticeElement<W>>
-) : LatticeElement<Triple<LatticeElement<U>, LatticeElement<V>, LatticeElement<W>>> {
-    override fun lub(
-        other: LatticeElement<out Triple<LatticeElement<U>, LatticeElement<V>, LatticeElement<W>>>
-    ): LatticeElement<Triple<LatticeElement<U>, LatticeElement<V>, LatticeElement<W>>> {
+class TripleLattice<U : LatticeElement<R>, V : LatticeElement<S>, W : LatticeElement<T>, R, S, T>(
+    override val elements: Triple<U, V, W>
+) : LatticeElement<Triple<U, V, W>> {
+    override fun lub(other: LatticeElement<out Triple<U, V, W>>): LatticeElement<Triple<U, V, W>> {
         return TripleLattice(
             Triple(
-                this.elements.first.lub(other.elements.first),
-                this.elements.second.lub(other.elements.second),
-                this.elements.third.lub(other.elements.third),
+                this.elements.first.lub(other.elements.first) as U,
+                this.elements.second.lub(other.elements.second) as V,
+                this.elements.third.lub(other.elements.third) as W,
             )
         )
     }
 
-    override fun duplicate():
-        LatticeElement<Triple<LatticeElement<U>, LatticeElement<V>, LatticeElement<W>>> {
+    override fun duplicate(): LatticeElement<Triple<U, V, W>> {
         return TripleLattice(
             Triple(
-                elements.first.duplicate(),
-                elements.second.duplicate(),
-                elements.third.duplicate(),
+                elements.first.duplicate() as U,
+                elements.second.duplicate() as V,
+                elements.third.duplicate() as W,
             )
         )
     }
 
-    override fun compareTo(
-        other: LatticeElement<Triple<LatticeElement<U>, LatticeElement<V>, LatticeElement<W>>>
-    ): Int {
+    override fun compareTo(other: LatticeElement<Triple<U, V, W>>): Int {
         if (
             this.elements.first == other.elements.first &&
                 this.elements.second == other.elements.second &&
@@ -241,7 +236,7 @@ class TripleLattice<U, V, W>(
     }
 
     override fun equals(other: Any?): Boolean {
-        if (other !is TripleLattice<U, V, W>) return false
+        if (other !is TripleLattice<U, V, W, R, S, T>) return false
         return other.elements.first == this.elements.first &&
             other.elements.second == this.elements.second &&
             other.elements.third == this.elements.third
