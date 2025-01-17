@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.passes.UnreachableEOGPass
 import de.fraunhofer.aisec.cpg.test.analyze
 import java.io.File
@@ -86,9 +87,25 @@ class ConstEvalIfTest {
 
         val ifs = result.ifs
         ifs.forEach {
-            val result = it.condition?.evaluate(PythonValueEvaluator()) as? Boolean
-            assertNotNull(result)
-            assertTrue(result)
+            val value = it.condition?.evaluate(PythonValueEvaluator()) as? Boolean
+            assertNotNull(value)
+            assertTrue(value)
+        }
+    }
+
+    @Test
+    fun testNullSysInfo() {
+        val topLevel = File("src/test/resources/python/consteval")
+        val result =
+            analyze(listOf(topLevel.resolve("version_info.py")), topLevel.toPath(), true) {
+                it.registerLanguage<PythonLanguage>()
+                it.registerPass<UnreachableEOGPass>()
+            }
+
+        val binOps = result.allChildren<BinaryOperator>()
+        binOps.forEach {
+            val value = it.evaluate(PythonValueEvaluator())
+            assertEquals("{${it.operatorCode}}", value)
         }
     }
 }
