@@ -223,7 +223,8 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 FunctionType(
                     funcTypeName(func.signatureTypes, func.returnTypes),
                     func.signatureTypes,
-                    func.returnTypes
+                    func.returnTypes,
+                    func.language,
                 )
             )
         scopeManager.addDeclaration(func)
@@ -389,7 +390,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
         // Try to see if we already know about this namespace somehow
         val namespace =
-            scopeManager.lookupSymbolByName(import.name, null).filter {
+            scopeManager.lookupSymbolByNameOfNode(import).filter {
                 it is NamespaceDeclaration && it.path == import.importURL
             }
 

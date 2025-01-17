@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.passes.configuration.*
 import de.fraunhofer.aisec.cpg.passes.inference.DFGFunctionSummaries
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import java.io.File
 import java.nio.file.Path
 import java.util.*
@@ -51,6 +52,7 @@ import org.slf4j.LoggerFactory
  * The configuration for the [TranslationManager] holds all information that is used during the
  * translation.
  */
+@DoNotPersist
 class TranslationConfiguration
 private constructor(
     /** Definition of additional symbols, mostly useful for C++. */
@@ -117,6 +119,10 @@ private constructor(
     matchCommentsToNodes: Boolean,
     addIncludesToGraph: Boolean,
     passConfigurations: Map<KClass<out Pass<*>>, PassConfiguration>,
+    /** A list of exclusion patterns used to filter files and directories. */
+    val exclusionPatternsByString: List<String>,
+    /** A list of exclusion patterns using regular expressions to filter files and directories. */
+    val exclusionPatternsByRegex: List<Regex>,
 ) {
     /** This list contains all languages which we want to translate. */
     val languages: List<Language<*>>
@@ -257,6 +263,8 @@ private constructor(
         private var useDefaultPasses = false
         private var passConfigurations: MutableMap<KClass<out Pass<*>>, PassConfiguration> =
             mutableMapOf()
+        private val exclusionPatternsByRegex = mutableListOf<Regex>()
+        private val exclusionPatternsByString = mutableListOf<String>()
 
         fun symbols(symbols: Map<String, String>): Builder {
             this.symbols = symbols
@@ -410,7 +418,7 @@ private constructor(
         inline fun <
             reified OldPass : Pass<*>,
             reified For : Language<*>,
-            reified With : Pass<*>
+            reified With : Pass<*>,
         > replacePass(): Builder {
             return replacePass(OldPass::class, For::class, With::class)
         }
@@ -418,7 +426,7 @@ private constructor(
         fun replacePass(
             passType: KClass<out Pass<*>>,
             forLanguage: KClass<out Language<*>>,
-            with: KClass<out Pass<*>>
+            with: KClass<out Pass<*>>,
         ): Builder {
             replacedPasses[Pair(passType, forLanguage)] = with
             return this
@@ -451,6 +459,32 @@ private constructor(
 
         inline fun <reified T : Pass<*>> configurePass(config: PassConfiguration): Builder {
             return this.configurePass(T::class, config)
+        }
+
+        /**
+         * Adds exclusion patterns using regular expressions for filtering files and directories.
+         *
+         * @param patterns Exclusion patterns. Example:
+         * ```
+         * exclusionPatterns(Regex(".*test(s)?"))
+         * ```
+         */
+        fun exclusionPatterns(vararg patterns: Regex): Builder {
+            exclusionPatternsByRegex.addAll(patterns)
+            return this
+        }
+
+        /**
+         * Adds exclusion patterns for filtering files and directories.
+         *
+         * @param patterns Exclusion patterns. Example:
+         * ```
+         * exclusionPatterns("tests")
+         * ```
+         */
+        fun exclusionPatterns(vararg patterns: String): Builder {
+            exclusionPatternsByString.addAll(patterns)
+            return this
         }
 
         /**
@@ -508,6 +542,7 @@ private constructor(
             registerPass<ControlFlowSensitiveDFGPass>()
             registerPass<FilenameMapper>()
             registerPass<ResolveCallExpressionAmbiguityPass>()
+            registerPass<ResolveMemberExpressionAmbiguityPass>()
             useDefaultPasses = true
             return this
         }
@@ -531,7 +566,7 @@ private constructor(
                         registerPass(p.value)
                         log.info(
                             "Registered an extra (frontend dependent) default dependency: {}",
-                            p.value
+                            p.value,
                         )
                     }
                 }
@@ -546,7 +581,7 @@ private constructor(
                         replacePass(p.old, p.lang, p.with)
                         log.info(
                             "Registered an extra (frontend dependent) default dependency, which replaced an existing pass: {}",
-                            p.old
+                            p.old,
                         )
                     }
                 }
@@ -647,7 +682,9 @@ private constructor(
                 compilationDatabase,
                 matchCommentsToNodes,
                 addIncludesToGraph,
-                passConfigurations
+                passConfigurations,
+                exclusionPatternsByString,
+                exclusionPatternsByRegex,
             )
         }
 

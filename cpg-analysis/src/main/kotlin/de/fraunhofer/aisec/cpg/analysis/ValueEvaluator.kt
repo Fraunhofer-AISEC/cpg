@@ -355,7 +355,7 @@ open class ValueEvaluator(
                             (expr.subscriptExpression as? Literal<*>)?.value
                     }
                     ?.value,
-                depth + 1
+                depth + 1,
             )
         }
         if (array?.initializer is Literal<*>) {
@@ -407,7 +407,7 @@ open class ValueEvaluator(
             // We cannot have more than ONE valid solution, so we need to abort
             log.warn(
                 "We cannot evaluate {}: It has more than 1 previous DFG edges, meaning that the value is probably affected by a branch.",
-                expr
+                expr,
             )
             cannotEvaluate(expr, this)
         } else {

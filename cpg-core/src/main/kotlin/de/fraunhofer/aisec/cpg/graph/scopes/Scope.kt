@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.scopes
 
 import com.fasterxml.jackson.annotation.JsonBackReference
-import de.fraunhofer.aisec.cpg.graph.Name
+import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.Node.Companion.TO_STRING_STYLE
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
@@ -34,13 +34,9 @@ import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.LabelStatement
 import de.fraunhofer.aisec.cpg.graph.statements.LookupScopeStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
-import de.fraunhofer.aisec.cpg.helpers.neo4j.NameConverter
 import org.apache.commons.lang3.builder.ToStringBuilder
-import org.neo4j.ogm.annotation.GeneratedValue
-import org.neo4j.ogm.annotation.Id
 import org.neo4j.ogm.annotation.NodeEntity
 import org.neo4j.ogm.annotation.Relationship
-import org.neo4j.ogm.annotation.typeconversion.Convert
 
 /**
  * A symbol is a simple, local name. It is valid within the scope that declares it and all of its
@@ -55,20 +51,14 @@ typealias SymbolMap = MutableMap<Symbol, MutableList<Declaration>>
  * restriction and can act as namespaces to avoid name collisions.
  */
 @NodeEntity
-abstract class Scope(
+sealed class Scope(
     @Relationship(value = "SCOPE", direction = Relationship.Direction.INCOMING)
     @JsonBackReference
     open var astNode: Node?
-) {
-
-    /** Required field for object graph mapping. It contains the scope id. */
-    @Id @GeneratedValue var id: Long? = null
+) : Node() {
 
     /** FQN Name currently valid */
     var scopedName: String? = null
-
-    /** The real new name */
-    @Convert(NameConverter::class) var name: Name? = null
 
     /**
      * Scopes are nested and therefore have a parent child relationship, this two members will help
@@ -131,19 +121,15 @@ abstract class Scope(
      */
     fun lookupSymbol(
         symbol: Symbol,
+        languageOnly: Language<*>? = null,
         thisScopeOnly: Boolean = false,
         replaceImports: Boolean = true,
-        predicate: ((Declaration) -> Boolean)? = null
+        predicate: ((Declaration) -> Boolean)? = null,
     ): List<Declaration> {
         // First, try to look for the symbol in the current scope (unless we have a predefined
         // search scope). In the latter case we also need to restrict the lookup to the search scope
         var modifiedScoped = this.predefinedLookupScopes[symbol]?.targetScope
-        var scope: Scope? =
-            if (modifiedScoped != null) {
-                modifiedScoped
-            } else {
-                this
-            }
+        var scope: Scope? = modifiedScoped ?: this
 
         var list: MutableList<Declaration>? = null
 
@@ -163,9 +149,14 @@ abstract class Scope(
                 list.replaceImports(symbol)
             }
 
+            // Filter according to the language
+            if (languageOnly != null) {
+                list.removeIf { it.language != languageOnly }
+            }
+
             // Filter the list according to the predicate, if we have any
             if (predicate != null) {
-                list = list.filter(predicate).toMutableList()
+                list.removeIf { !predicate.invoke(it) }
             }
 
             // If we have a hit, we can break the loop
@@ -187,14 +178,6 @@ abstract class Scope(
 
     fun addLabelStatement(labelStatement: LabelStatement) {
         labelStatement.label?.let { labelStatements[it] = labelStatement }
-    }
-
-    fun isBreakable(): Boolean {
-        return this is LoopScope || this is SwitchScope
-    }
-
-    fun isContinuable(): Boolean {
-        return this is LoopScope
     }
 
     override fun equals(other: Any?): Boolean {

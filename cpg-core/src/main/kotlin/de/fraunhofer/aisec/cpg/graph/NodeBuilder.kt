@@ -59,7 +59,7 @@ interface MetadataProvider
  * each [Node], but also transformation steps, such as [Handler].
  */
 interface LanguageProvider : MetadataProvider {
-    val language: Language<*>?
+    val language: Language<*>
 }
 
 /**
@@ -143,7 +143,7 @@ fun Node.applyMetadata(
     } else {
         LOGGER.warn(
             "No scope provider was provided when creating the node {}. This might be an error",
-            name
+            name,
         )
     }
 
@@ -165,7 +165,7 @@ fun Node.applyMetadata(
 fun LanguageProvider.newName(
     name: CharSequence,
     localNameOnly: Boolean = false,
-    namespace: Name? = null
+    namespace: Name? = null,
 ): Name {
     val language = this.language
 
@@ -217,7 +217,7 @@ fun MetadataProvider.newAnnotation(name: CharSequence?, rawNode: Any? = null): A
 fun MetadataProvider.newAnnotationMember(
     name: CharSequence?,
     value: Expression?,
-    rawNode: Any? = null
+    rawNode: Any? = null,
 ): AnnotationMember {
     val node = AnnotationMember()
     node.applyMetadata(this, name, rawNode, true)
@@ -299,14 +299,14 @@ fun <T : Node, AstNode> T.codeAndLocationFromOtherRawNode(rawNode: AstNode?): T 
  * are between the child nodes.
  *
  * @param parentNode Used to extract the code for this node.
- * @param newLineType The char(s) used to describe a new line, usually either "\n" or "\r\n". This
- *   is needed because the location block spanning the children usually comprises more than one
+ * @param lineBreakSequence The char(s) used to describe a new line, usually either "\n" or "\r\n".
+ *   This is needed because the location block spanning the children usually comprises more than one
  *   line.
  */
 context(CodeAndLocationProvider<AstNode>)
 fun <T : Node, AstNode> T.codeAndLocationFromChildren(
     parentNode: AstNode,
-    lineBreakSequence: CharSequence = "\n"
+    lineBreakSequence: CharSequence = "\n",
 ): T {
     var first: Node? = null
     var last: Node? = null
@@ -332,8 +332,8 @@ fun <T : Node, AstNode> T.codeAndLocationFromChildren(
                     current,
                     compareBy(
                         { it?.location?.region?.startLine },
-                        { it?.location?.region?.startColumn }
-                    )
+                        { it?.location?.region?.startColumn },
+                    ),
                 )
             last =
                 maxOf(
@@ -341,8 +341,8 @@ fun <T : Node, AstNode> T.codeAndLocationFromChildren(
                     current,
                     compareBy(
                         { it?.location?.region?.endLine },
-                        { it?.location?.region?.endColumn }
-                    )
+                        { it?.location?.region?.endColumn },
+                    ),
                 )
         }
     }
@@ -376,7 +376,7 @@ fun <T : Node, AstNode> T.codeAndLocationFromChildren(
  */
 private fun <AstNode> Node.setCodeAndLocation(
     provider: CodeAndLocationProvider<AstNode>,
-    rawNode: AstNode
+    rawNode: AstNode,
 ) {
     if (this.ctx?.config?.codeInNodes == true) {
         // only set code, if it's not already set or empty

@@ -34,7 +34,11 @@ import de.fraunhofer.aisec.cpg.graph.StatementHolder
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeCollection
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.passes.Pass
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
@@ -277,7 +281,7 @@ object SubgraphWalker {
 
         constructor(
             scopeManager: ScopeManager,
-            strategy: (Node) -> Iterator<Node> = Strategy::AST_FORWARD
+            strategy: (Node) -> Iterator<Node> = Strategy::AST_FORWARD,
         ) {
             this.scopeManager = scopeManager
             this.strategy = strategy
@@ -335,7 +339,7 @@ object SubgraphWalker {
         private fun handleNode(
             current: Node,
             parent: Node?,
-            handler: TriConsumer<RecordDeclaration?, Node?, Node?>
+            handler: TriConsumer<RecordDeclaration?, Node?, Node?>,
         ) {
             // Jump to the node's scope, if it is different from ours.
             if (scopeManager.currentScope != current.scope) {
@@ -350,14 +354,17 @@ object SubgraphWalker {
 /**
  * Tries to replace the [old] expression with a [new] one, given the [parent].
  *
- * There are three things to consider:
+ * There are different things to consider:
  * - First, this only works if [parent] is either an [ArgumentHolder] or [StatementHolder].
  *   Otherwise, we cannot instruct the parent to exchange the node
  * - Second, since exchanging the node has influence on their edges (such as EOG, DFG, etc.), we
  *   only support a replacement very early in the pass system. To be specific, we only allow
- *   replacement before any DFG edges are set. We are re-wiring EOG edges, but nothing else. If one
+ *   replacement BEFORE any DFG edges are set. We are re-wiring EOG edges, but nothing else. If one
  *   tries to replace a node with existing [Node.nextDFG] or [Node.prevDFG], we fail.
  * - We also migrate [HasType.typeObservers] from the [old] to the [new] node.
+ * - Lastly, if the [new] node is a [CallExpression.callee] of a [CallExpression] parent, and the
+ *   [old] and [new] expressions are of different types (e.g., exchanging a simple [Reference] for a
+ *   [MemberExpression]), we also replace the [CallExpression] with a [MemberCallExpression].
  */
 context(ContextProvider)
 fun SubgraphWalker.ScopedWalker.replace(parent: Node?, old: Expression, new: Expression): Boolean {
@@ -370,6 +377,25 @@ fun SubgraphWalker.ScopedWalker.replace(parent: Node?, old: Expression, new: Exp
 
     val success =
         when (parent) {
+            is CallExpression -> {
+                if (parent.callee == old) {
+                    // Now we are running into a problem. If the previous callee and the new callee
+                    // are of different types (ref/vs. member expression). We also need to replace
+                    // the whole call expression instead.
+                    if (parent is MemberCallExpression && new is Reference) {
+                        val newCall = parent.toCallExpression(new)
+                        return replace(parent.astParent, parent, newCall)
+                    } else if (new is MemberExpression) {
+                        val newCall = parent.toMemberCallExpression(new)
+                        return replace(parent.astParent, parent, newCall)
+                    } else {
+                        parent.callee = new
+                        true
+                    }
+                } else {
+                    parent.replace(old, new)
+                }
+            }
             is ArgumentHolder -> parent.replace(old, new)
             is StatementHolder -> parent.replace(old, new)
             else -> {
@@ -399,9 +425,45 @@ fun SubgraphWalker.ScopedWalker.replace(parent: Node?, old: Expression, new: Exp
             new.registerTypeObserver(it)
         }
 
+        old.astParent = null
+        new.astParent = parent
+
         // Make sure to inform the walker about our change
         this.registerReplacement(old, new)
     }
 
     return success
+}
+
+private fun CallExpression.duplicateTo(call: CallExpression, callee: Reference) {
+    call.ctx = this.ctx
+    call.language = this.language
+    call.scope = this.scope
+    call.arguments = this.arguments
+    call.type = this.type
+    call.assignedTypes = this.assignedTypes
+    call.code = this.code
+    call.location = this.location
+    call.argumentIndex = this.argumentIndex
+    call.annotations = this.annotations
+    call.comment = this.comment
+    call.file = this.file
+    call.callee = callee
+    callee.resolutionHelper = call
+    call.isImplicit = this.isImplicit
+    call.isInferred = this.isInferred
+}
+
+fun MemberCallExpression.toCallExpression(callee: Reference): CallExpression {
+    val call = CallExpression()
+    duplicateTo(call, callee)
+
+    return call
+}
+
+fun CallExpression.toMemberCallExpression(callee: MemberExpression): MemberCallExpression {
+    val call = MemberCallExpression()
+    duplicateTo(call, callee)
+
+    return call
 }

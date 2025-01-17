@@ -114,7 +114,7 @@ private val Map<String, String>.buildTags: Set<String>
                     "linux",
                     "netbsd",
                     "openbsd",
-                    "solaris"
+                    "solaris",
                 )
         ) {
             tags += "unix"
@@ -173,7 +173,7 @@ internal class Project {
             goos: String? = null,
             goarch: String? = null,
             goVersion: Int? = null,
-            tags: MutableList<String> = mutableListOf()
+            tags: MutableList<String> = mutableListOf(),
         ): Project {
             val project = Project()
             val symbols = mutableMapOf<String, String>()

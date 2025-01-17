@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.TypeManager
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.DeclaresType
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
@@ -104,7 +105,8 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         // filter for nodes that implement DeclaresType, because otherwise we will get a lot of
         // constructor declarations and such with the same name. It seems this is ok since most
         // languages will prefer structs/classes over functions when resolving types.
-        var declares = scopeManager.lookupUniqueTypeSymbolByName(type.name, type.scope)
+        var declares =
+            scopeManager.lookupUniqueTypeSymbolByName(type.name, type.language, type.scope)
 
         // If we did not find any declaration, we can try to infer a record declaration for it
         if (declares == null) {
@@ -119,7 +121,7 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 "Resolving type {} in {} scope to {}",
                 type.name,
                 type.scope,
-                declaredType.name
+                declaredType.name,
             )
             type.name = declaredType.name
             type.declaredFrom = declares
@@ -140,6 +142,10 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                     t.recordDeclaration = node
                 }
             }
+        } else if (node is ImportDeclaration) {
+            // Update the imports, as they might have changed because of symbols created by
+            // record/type inference
+            node.updateImportedSymbols()
         }
     }
 

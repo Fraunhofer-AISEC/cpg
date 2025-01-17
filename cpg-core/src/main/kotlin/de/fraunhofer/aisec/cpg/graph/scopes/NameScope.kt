@@ -25,18 +25,19 @@
  */
 package de.fraunhofer.aisec.cpg.graph.scopes
 
+import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 
 /**
  * A scope which acts as a namespace with a certain name, which is prefixed to all local names
- * declared in it. This could be a package or other structural elements, like a class. In the latter
- * case, the derived [RecordScope] should be used.
+ * declared in it. This could be a package or other structural elements, like a class. In the first
+ * case, the derived [NamespaceScope], in the latter case, the derived [RecordScope] should be used.
  */
-open class NameScope(node: Node?) : StructureDeclarationScope(node) {
+sealed class NameScope(node: Node?) : StructureDeclarationScope(node) {
 
     init {
         astNode = node
         // Set the name so that we can use it as a namespace later
-        name = node?.name
+        name = node?.name ?: Name(EMPTY_NAME)
     }
 }

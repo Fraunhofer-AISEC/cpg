@@ -1153,7 +1153,12 @@ interface Python {
          * ```
          */
         class MatchSingleton(pyObject: PyObject) : BasePattern(pyObject) {
-            val value: Any by lazy { "value" of pyObject }
+            /**
+             * [value] is not optional. We have to make it nullable though because the value will be
+             * set to `null` if the case matches on `None`. This is known behavior of jep (similar
+             * to literals/constants).
+             */
+            val value: Any? by lazy { "value" of pyObject }
         }
 
         /**

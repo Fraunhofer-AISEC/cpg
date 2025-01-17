@@ -30,9 +30,9 @@ import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
 import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.scopes.BlockScope
 import de.fraunhofer.aisec.cpg.graph.scopes.FunctionScope
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
+import de.fraunhofer.aisec.cpg.graph.scopes.LocalScope
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
@@ -97,22 +97,22 @@ class FluentTest {
         // First line should be a DeclarationStatement
         val declarationStatement = main[0] as? DeclarationStatement
         assertNotNull(declarationStatement)
-        assertTrue(declarationStatement.scope is BlockScope)
+        assertTrue(declarationStatement.scope is LocalScope)
 
         val variable = declarationStatement.singleDeclaration as? VariableDeclaration
         assertNotNull(variable)
-        assertTrue(variable.scope is BlockScope)
+        assertTrue(variable.scope is LocalScope)
         assertLocalName("a", variable)
 
         var lit1 = variable.initializer as? Literal<*>
         assertNotNull(lit1)
-        assertTrue(lit1.scope is BlockScope)
+        assertTrue(lit1.scope is LocalScope)
         assertEquals(1, lit1.value)
 
         // Second line should be an IfStatement
         val ifStatement = main[1] as? IfStatement
         assertNotNull(ifStatement)
-        assertTrue(ifStatement.scope is BlockScope)
+        assertTrue(ifStatement.scope is LocalScope)
 
         val condition = ifStatement.condition as? BinaryOperator
         assertNotNull(condition)

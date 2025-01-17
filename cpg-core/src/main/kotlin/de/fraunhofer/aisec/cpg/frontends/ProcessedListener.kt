@@ -102,7 +102,7 @@ open class ProcessedListener {
 
     open fun registerPredicateListener(
         predicate: BiPredicate<Any, Node>,
-        biConsumer: BiConsumer<Any, Node>
+        biConsumer: BiConsumer<Any, Node>,
     ) {
         val matchingEntries: MutableList<Map.Entry<Any, Node>> = ArrayList()
         for (mapping in processedMapping.entries) {

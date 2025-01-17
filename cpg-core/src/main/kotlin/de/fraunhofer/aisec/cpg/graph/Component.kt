@@ -26,6 +26,8 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.PopulatedByPass
+import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.frontends.multiLanguage
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
@@ -65,4 +67,10 @@ open class Component : Node() {
 
     /** All outgoing interactions such as sending data to the network or some kind of IPC. */
     val outgoingInteractions: MutableList<Node> = mutableListOf()
+
+    override var language: Language<*>
+        get() {
+            return multiLanguage()
+        }
+        set(_) {}
 }

@@ -49,6 +49,8 @@ class ControlDependence(
         dependence = DependenceType.CONTROL
     }
 
+    override var labels = setOf("CDG")
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is ControlDependence) return false
@@ -71,7 +73,7 @@ class ControlDependences<NodeType : Node> :
     constructor(
         thisRef: Node,
         mirrorProperty: KProperty<MutableCollection<ControlDependence>>,
-        outgoing: Boolean
+        outgoing: Boolean,
     ) : super(thisRef = thisRef, init = ::ControlDependence, outgoing = outgoing) {
         this.mirrorProperty = mirrorProperty
     }

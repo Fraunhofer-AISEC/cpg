@@ -63,7 +63,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
             this.newConstructorDeclaration(
                 resolvedConstructor.name,
                 currentRecordDecl,
-                rawNode = constructorDeclaration
+                rawNode = constructorDeclaration,
             )
         frontend.scopeManager.addDeclaration(declaration)
         frontend.scopeManager.enterScope(declaration)
@@ -79,7 +79,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                     parameter.nameAsString,
                     frontend.getTypeAsGoodAsPossible(parameter, parameter.resolve()),
                     parameter.isVarArgs,
-                    rawNode = parameter
+                    rawNode = parameter,
                 )
             declaration.parameterEdges += param
             frontend.scopeManager.addDeclaration(param)
@@ -112,7 +112,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                 resolvedMethod.name,
                 methodDecl.isStatic,
                 currentRecordDecl,
-                rawNode = methodDecl
+                rawNode = methodDecl,
             )
         frontend.scopeManager.enterScope(functionDeclaration)
         createMethodReceiver(currentRecordDecl, functionDeclaration)
@@ -123,7 +123,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
             var resolvedType: Type? =
                 frontend.typeManager.getTypeParameter(
                     functionDeclaration.recordDeclaration,
-                    parameter.type.toString()
+                    parameter.type.toString(),
                 )
             if (resolvedType == null) {
                 resolvedType = frontend.getTypeAsGoodAsPossible(parameter, parameter.resolve())
@@ -133,7 +133,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                     parameter.nameAsString,
                     resolvedType,
                     parameter.isVarArgs,
-                    rawNode = parameter
+                    rawNode = parameter,
                 )
             functionDeclaration.parameterEdges += param
             frontend.processAnnotations(param, parameter)
@@ -160,15 +160,11 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
 
     private fun createMethodReceiver(
         recordDeclaration: RecordDeclaration?,
-        functionDeclaration: de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
+        functionDeclaration: de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration,
     ) {
         // create the receiver
         val receiver =
-            this.newVariableDeclaration(
-                    "this",
-                    recordDeclaration?.toType() ?: unknownType(),
-                    false,
-                )
+            this.newVariableDeclaration("this", recordDeclaration?.toType() ?: unknownType(), false)
                 .implicit("this")
         functionDeclaration.receiver = receiver
         frontend.scopeManager.addDeclaration(receiver)
@@ -195,7 +191,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
 
         frontend.typeManager.addTypeParameter(
             recordDeclaration,
-            classInterDecl.typeParameters.map { ParameterizedType(it.nameAsString, language) }
+            classInterDecl.typeParameters.map { ParameterizedType(it.nameAsString, language) },
         )
 
         processImportDeclarations(recordDeclaration)
@@ -251,7 +247,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                 type =
                     frontend.typeManager.getTypeParameter(
                         frontend.scopeManager.currentRecord,
-                        variable.resolve().type.describe()
+                        variable.resolve().type.describe(),
                     ) ?: frontend.typeOf(variable.resolve().type)
             } catch (e: UnsolvedSymbolException) {
                 val t = frontend.recoverTypeFromUnsolvedException(e)
@@ -287,7 +283,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                     type,
                     modifiers,
                     initializer,
-                    rawNode = fieldDecl
+                    rawNode = fieldDecl,
                 )
             frontend.scopeManager.addDeclaration(fieldDeclaration)
             frontend.processAnnotations(fieldDeclaration, fieldDecl)
@@ -367,17 +363,14 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                             "Member {} of type {} is something that we do not parse yet: {}",
                             decl,
                             recordDeclaration.name,
-                            decl.javaClass.simpleName
+                            decl.javaClass.simpleName,
                         )
                     }
                 }
         }
         if (recordDeclaration.constructors.isEmpty()) {
             val constructorDeclaration =
-                this.newConstructorDeclaration(
-                        recordDeclaration.name.localName,
-                        recordDeclaration,
-                    )
+                this.newConstructorDeclaration(recordDeclaration.name.localName, recordDeclaration)
                     .implicit(recordDeclaration.name.localName)
             recordDeclaration.addConstructor(constructorDeclaration)
             frontend.scopeManager.addDeclaration(constructorDeclaration)
@@ -438,7 +431,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
     ): Declaration {
         return ProblemDeclaration(
             "AnnotationDeclaration not supported yet",
-            ProblemNode.ProblemType.TRANSLATION
+            ProblemNode.ProblemType.TRANSLATION,
         )
     }
 
@@ -447,7 +440,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
     ): Declaration {
         return ProblemDeclaration(
             "AnnotationMemberDeclaration not supported yet",
-            ProblemNode.ProblemType.TRANSLATION
+            ProblemNode.ProblemType.TRANSLATION,
         )
     }
 

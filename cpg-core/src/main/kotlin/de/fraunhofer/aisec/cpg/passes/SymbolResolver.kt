@@ -106,7 +106,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
             // Gather all resolution EOG starters; and make sure they really do not have a
             // predecessor, otherwise we might analyze a node multiple times
-            val nodes = it.allEOGStarters.filter { it.prevEOGEdges.isEmpty() }
+            val nodes = it.allEOGStarters.filter { it.prevEOGEdges.isEmpty }
 
             for (node in nodes) {
                 walker.iterate(node)
@@ -126,7 +126,8 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * Determines if the [reference] refers to the super class and we have to start searching there.
+     * Determines if the [reference] refers to the super class, and we have to start searching
+     * there.
      */
     protected fun isSuperclassReference(reference: Reference): Boolean {
         val language = reference.language
@@ -136,14 +137,19 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     /** This function seems to resolve function pointers pointing to a [MethodDeclaration]. */
     protected fun resolveMethodFunctionPointer(
         reference: Reference,
-        type: FunctionPointerType
+        type: FunctionPointerType,
     ): ValueDeclaration? {
         var target = scopeManager.resolveReference(reference)
 
         // If we didn't find anything, we create a new function or method declaration
         if (target == null) {
             // Determine the scope where we want to start our inference
-            var (scope, _) = scopeManager.extractScope(reference)
+            val extractedScope = scopeManager.extractScope(reference)
+            if (extractedScope == null) {
+                return null
+            }
+
+            var scope = extractedScope.scope
             if (scope !is NameScope) {
                 scope = null
             }
@@ -156,7 +162,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                         null,
                         false,
                         type.parameters,
-                        type.returnType
+                        type.returnType,
                     )
         }
 
@@ -204,12 +210,13 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
         // Find a list of candidate symbols. Currently, this is only used the in the "next-gen" call
         // resolution, but in future this will also be used in resolving regular references.
-        ref.candidates = scopeManager.lookupSymbolByName(ref.name, ref.location).toSet()
+        ref.candidates = scopeManager.lookupSymbolByNameOfNode(ref).toSet()
 
-        // Preparation for a future without legacy call resolving. Taking the first candidate is not
-        // ideal since we are running into an issue with function pointers here (see workaround
-        // below).
-        var wouldResolveTo = ref.candidates.singleOrNull()
+        // We need to choose the best viable candidate out of the ones we have for our reference.
+        // Hopefully we have only one, but there might be instances where more than one is a valid
+        // candidate. We let the language have a chance at overriding the default behaviour (which
+        // takes only a single one).
+        var wouldResolveTo = language.bestViableReferenceCandidate(ref)
 
         // For now, we need to ignore reference expressions that are directly embedded into call
         // expressions, because they are the "callee" property. In the future, we will use this
@@ -289,11 +296,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 base is Reference &&
                 base.name.endsWith(language.superClassKeyword)
         ) {
-            language.handleSuperExpression(
-                current,
-                curClass,
-                scopeManager,
-            )
+            language.handleSuperExpression(current, curClass, scopeManager)
         }
 
         // For legacy reasons, method and field resolving is split between the VariableUsageResolver
@@ -322,9 +325,38 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         }
     }
 
+    /**
+     * This function resolves a possible overloaded -> (arrow) operator, for languages which support
+     * operator overloading. The implicit call to the overloaded operator function is inserted as
+     * base for the MemberExpression. This can be the case for a [MemberExpression] or
+     * [MemberCallExpression]
+     */
+    private fun resolveOverloadedArrowOperator(ex: Expression): Type? {
+        var type: Type? = null
+        if (
+            ex.language is HasOperatorOverloading &&
+                ex is MemberExpression &&
+                ex.operatorCode == "->" &&
+                ex.base.type !is PointerType
+        ) {
+            val result = resolveOperator(ex)
+            val op = result?.bestViable?.singleOrNull()
+            if (result?.success == SUCCESSFUL && op is OperatorDeclaration) {
+                type = op.returnTypes.singleOrNull()?.root ?: unknownType()
+
+                // We need to insert a new operator call expression in between
+                val call = operatorCallFromDeclaration(op, ex)
+
+                // Make the call our new base
+                ex.base = call
+            }
+        }
+        return type
+    }
+
     protected fun resolveMember(
         containingClass: ObjectType,
-        reference: Reference
+        reference: Reference,
     ): ValueDeclaration? {
         if (isSuperclassReference(reference)) {
             // if we have a "super" on the member side, this is a member call. We need to resolve
@@ -334,25 +366,8 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         var member: ValueDeclaration? = null
         var type: Type = containingClass
 
-        // Check for a possible overloaded operator->
-        if (
-            reference.language is HasOperatorOverloading &&
-                reference is MemberExpression &&
-                reference.operatorCode == "->" &&
-                reference.base.type !is PointerType
-        ) {
-            val result = resolveOperator(reference)
-            val op = result?.bestViable?.singleOrNull()
-            if (result?.success == SUCCESSFUL && op is OperatorDeclaration) {
-                type = op.returnTypes.singleOrNull()?.root ?: unknownType()
-
-                // We need to insert a new operator call expression in between
-                val call = operatorCallFromDeclaration(op, reference)
-
-                // Make the call our new base
-                reference.base = call
-            }
-        }
+        // Handle a possible overloaded operator->
+        type = resolveOverloadedArrowOperator(reference) ?: type
 
         val record = type.recordDeclaration
         if (record != null) {
@@ -398,6 +413,9 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         val callee = call.callee
         val language = call.language
 
+        // Handle a possible overloaded operator->
+        resolveOverloadedArrowOperator(callee)
+
         // Dynamic function invokes (such as function pointers) are handled by extra pass, so we are
         // not resolving them here.
         //
@@ -423,7 +441,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                     true,
                     ctx,
                     call.translationUnit,
-                    false
+                    false,
                 )
             if (ok) {
                 call.invokes = candidates.toMutableList()
@@ -513,18 +531,26 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 setOf(),
                 mapOf(),
                 setOf(),
-                CallResolutionResult.SuccessKind.UNRESOLVED,
+                UNRESOLVED,
                 source.scope,
             )
         val language = source.language
 
         if (language == null) {
-            result.success = CallResolutionResult.SuccessKind.PROBLEMATIC
+            result.success = PROBLEMATIC
             return result
         }
 
         // Set the start scope. This can either be the call's scope or a scope specified in an FQN
-        val (scope, _) = ctx.scopeManager.extractScope(source, source.scope)
+        val extractedScope = ctx.scopeManager.extractScope(source, source.scope)
+
+        // If we could not extract the scope (even though one was specified), we can only return an
+        // empty result
+        if (extractedScope == null) {
+            return result
+        }
+
+        val scope = extractedScope.scope
         result.actualStartScope = scope ?: source.scope
 
         // If the function does not allow function overloading, and we have multiple candidate
@@ -545,7 +571,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                             arguments.map(Expression::type),
                             arguments,
                             source.language is HasDefaultArguments,
-                        )
+                        ),
                     )
                 }
                 .filter { it.second is SignatureMatches }
@@ -554,7 +580,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
         // If we have a "problematic" result, we can stop here. In this case we cannot really
         // determine anything more.
-        if (result.success == CallResolutionResult.SuccessKind.PROBLEMATIC) {
+        if (result.success == PROBLEMATIC) {
             result.bestViable = result.viableFunctions
             return result
         }
@@ -570,12 +596,14 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
     protected fun resolveMemberByName(
         symbol: String,
-        possibleContainingTypes: Set<Type>
+        possibleContainingTypes: Set<Type>,
     ): Set<Declaration> {
         var candidates = mutableSetOf<Declaration>()
         val records = possibleContainingTypes.mapNotNull { it.root.recordDeclaration }.toSet()
         for (record in records) {
-            candidates.addAll(ctx.scopeManager.lookupSymbolByName(record.name.fqn(symbol)))
+            candidates.addAll(
+                ctx.scopeManager.lookupSymbolByName(record.name.fqn(symbol), record.language)
+            )
         }
 
         // Find invokes by supertypes
@@ -617,13 +645,13 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                     val missingNewParams: List<Node?> =
                         template.parameterDefaults.subList(
                             constructExpression.templateArguments.size,
-                            template.parameterDefaults.size
+                            template.parameterDefaults.size,
                         )
                     for (missingParam in missingNewParams) {
                         if (missingParam != null) {
                             constructExpression.addTemplateParameter(
                                 missingParam,
-                                TemplateDeclaration.TemplateInitialization.DEFAULT
+                                TemplateDeclaration.TemplateInitialization.DEFAULT,
                             )
                         }
                     }
@@ -685,7 +713,11 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             listOf()
         } else {
             val firstLevelCandidates =
-                possibleTypes.map { scopeManager.lookupSymbolByName(it.name.fqn(name)) }.flatten()
+                possibleTypes
+                    .map { record ->
+                        scopeManager.lookupSymbolByName(record.name.fqn(name), record.language)
+                    }
+                    .flatten()
 
             // C++ does not allow overloading at different hierarchy levels. If we find a
             // FunctionDeclaration with the same name as the function in the CallExpression we have
@@ -713,7 +745,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
     protected fun getOverridingCandidates(
         possibleSubTypes: Set<Type>,
-        declaration: FunctionDeclaration
+        declaration: FunctionDeclaration,
     ): Set<FunctionDeclaration> {
         return declaration.overriddenBy
             .filter { f ->
@@ -731,7 +763,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
      */
     protected fun getConstructorDeclaration(
         constructExpression: ConstructExpression,
-        recordDeclaration: RecordDeclaration
+        recordDeclaration: RecordDeclaration,
     ): ConstructorDeclaration? {
         val signature = constructExpression.signature
         val constructorCandidate =
@@ -761,7 +793,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
          */
         fun addImplicitTemplateParametersToCall(
             templateParams: List<Node>,
-            constructExpression: ConstructExpression
+            constructExpression: ConstructExpression,
         ) {
             for (node in templateParams) {
                 if (node is TypeExpression) {
