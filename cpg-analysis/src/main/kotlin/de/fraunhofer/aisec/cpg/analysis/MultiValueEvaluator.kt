@@ -206,7 +206,7 @@ class MultiValueEvaluator : ValueEvaluator() {
     }
 
     /**
-     * Tries to compute the value of a reference. It therefore checks the incoming data flow edges.
+     * Tries to compute the value of a node based on its [Node.prevDFG].
      *
      * In contrast to the implementation of [ValueEvaluator], this one can handle more than one
      * value.
@@ -219,7 +219,7 @@ class MultiValueEvaluator : ValueEvaluator() {
             if (node is Reference) {
                 filterSelfReferences(node, node.prevDFG.toList())
             } else {
-                node.prevDFG.toList()
+                node.prevDFG
             }
 
         if (prevDFG.size == 1) {

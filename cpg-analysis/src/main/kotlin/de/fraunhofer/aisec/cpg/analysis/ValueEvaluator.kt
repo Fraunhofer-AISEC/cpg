@@ -74,7 +74,7 @@ open class ValueEvaluator(
     open fun evaluate(node: Any?): Any? {
         if (node !is Node) return node
 
-        return evaluateInternal(node as? Node, 0)
+        return evaluateInternal(node, 0)
     }
 
     fun clearPath() {
@@ -406,8 +406,7 @@ open class ValueEvaluator(
     }
 
     /**
-     * Tries to compute the constant value of a node based on its [Node.prevDFG]. It therefore
-     * checks the incoming data flow edges.
+     * Tries to compute the constant value of a node based on its [Node.prevDFG].
      */
     protected open fun handlePrevDFG(node: Node, depth: Int): Any? {
         // For a reference, we are interested into its last assignment into the reference
@@ -417,7 +416,7 @@ open class ValueEvaluator(
             if (node is Reference) {
                 filterSelfReferences(node, node.prevDFG.toList())
             } else {
-                node.prevDFG.toList()
+                node.prevDFG
             }
 
         return if (prevDFG.size == 1) {
