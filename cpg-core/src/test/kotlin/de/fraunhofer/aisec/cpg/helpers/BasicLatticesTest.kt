@@ -278,7 +278,7 @@ class BasicLatticesTest {
                 Triple(
                     emptyPowersetLattice<String>(),
                     emptyPowersetLattice<String>(),
-                    emptyPowersetLattice<String>()
+                    emptyPowersetLattice<String>(),
                 )
             )
         val emptyEmptyBla =
@@ -286,7 +286,7 @@ class BasicLatticesTest {
                 Triple(
                     emptyPowersetLattice<String>(),
                     emptyPowersetLattice<String>(),
-                    PowersetLattice<String>(setOf("bla"))
+                    PowersetLattice<String>(setOf("bla")),
                 )
             )
         val emptyBlaEmpty =
@@ -294,7 +294,7 @@ class BasicLatticesTest {
                 Triple(
                     emptyPowersetLattice<String>(),
                     PowersetLattice<String>(setOf("bla")),
-                    emptyPowersetLattice<String>()
+                    emptyPowersetLattice<String>(),
                 )
             )
         val blaEmptyEmpty =
@@ -302,7 +302,7 @@ class BasicLatticesTest {
                 Triple(
                     PowersetLattice<String>(setOf("bla")),
                     emptyPowersetLattice<String>(),
-                    emptyPowersetLattice<String>()
+                    emptyPowersetLattice<String>(),
                 )
             )
         val emptyEmptyBla2 = emptyEmptyBla.duplicate()
