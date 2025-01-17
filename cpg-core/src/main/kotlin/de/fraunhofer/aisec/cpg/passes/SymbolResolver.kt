@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.CallResolutionResult.SuccessKind.*
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
@@ -82,8 +83,15 @@ import org.slf4j.LoggerFactory
 @DependsOn(ImportResolver::class)
 open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
+    /** Configuration for the [SymbolResolver]. */
     class Configuration(
+        /** If set to true, the resolver will skip unreachable EOG edges. */
         val skipUnreachableEOG: Boolean = false,
+
+        /**
+         * If set to true, the resolver will ignore [Declaration] nodes that are on EOG paths that
+         * are [EvaluationOrder.unreachable].
+         */
         val ignoreUnreachableDeclarations: Boolean = false,
     ) : PassConfiguration()
 
@@ -91,11 +99,15 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
     protected val templateList = mutableListOf<TemplateDeclaration>()
 
+    /** Our configuration. */
     var passConfig = passConfig<Configuration>()
 
-    // We can filter candidates whether they are unreachable. If the declaration has ONLY
-    // unreachable incoming EOG edges, we can ignore them
-    val eogPredicate: ((Declaration) -> Boolean)? =
+    /**
+     * If [Configuration.ignoreUnreachableDeclarations] is enabled, this predicate will filter
+     * candidates whether they are [EvaluationOrder.unreachable]. If the declaration has ONLY
+     * unreachable incoming EOG edges, we ignore them.
+     */
+    private val eogPredicate: ((Declaration) -> Boolean)? =
         if (passConfig?.ignoreUnreachableDeclarations == true) {
             { declaration ->
                 if (declaration is FunctionDeclaration) {
