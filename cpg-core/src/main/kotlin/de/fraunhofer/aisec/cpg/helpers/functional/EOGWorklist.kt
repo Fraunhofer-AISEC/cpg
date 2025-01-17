@@ -25,7 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.helpers.functional
 
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
+import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import java.util.IdentityHashMap
 
 inline fun <reified V> iterateEOGClean(
@@ -51,12 +53,54 @@ inline fun <reified V> iterateEOGClean(
             val newGlobalIt =
                 (oldGlobalIt?.let { newState.lub(it) } ?: newState) as LatticeElement<V>
             globalState[it] = newGlobalIt
-            if (it !in edgesList && (oldGlobalIt == null || newGlobalIt != oldGlobalIt))
+            if (it !in edgesList && (oldGlobalIt == null || newGlobalIt != oldGlobalIt)) {
+                newGlobalIt.checkEqualitySummary(oldGlobalIt)
                 edgesList.add(0, it)
+            }
         }
     }
 
     return globalState.values.fold(globalState.values.firstOrNull()) { state, value ->
         state?.lub(value) as LatticeElement<V>
     } ?: startState
+}
+
+typealias specialLattice =
+    LatticeElement<
+        IdentityHashMap<
+            Node,
+            LatticeElement<IdentityHashMap<Node, LatticeElement<IdentitySet<Node>>>>,
+        >
+    >
+
+fun LatticeElement<*>.checkEqualitySummary(oldGlobalIt: LatticeElement<*>?) {
+    (this as? specialLattice)?.checkEqualitySummary2(oldGlobalIt as? specialLattice)
+    // Nothing to see here.
+}
+
+fun specialLattice.checkEqualitySummary2(oldGlobalIt: specialLattice?) {
+    val newGlobalIt = this
+    oldGlobalIt ?: return
+
+    val equalKeys =
+        newGlobalIt.elements.keys.containsAll(oldGlobalIt.elements.keys) &&
+            oldGlobalIt.elements.keys.containsAll(newGlobalIt.elements.keys)
+    val equalValuesPerKey =
+        oldGlobalIt.elements.entries.map { (key, value) ->
+            value.elements to newGlobalIt.elements[key]!!.elements
+        }
+    val equalValuesMap =
+        equalValuesPerKey.map { (old, new) ->
+            Triple(
+                old != new,
+                old.keys.containsAll(new.keys) && new.keys.containsAll(old.keys),
+                old.entries
+                    .map { (k, v) -> v.elements to new[k]?.elements }
+                    .filter { it.first != it.second },
+            )
+        }
+    val shouldBeEqual =
+        equalValuesMap.all { it.first == true && it.second == true && it.third.isEmpty() }
+    print(shouldBeEqual)
+    newGlobalIt != oldGlobalIt
 }
