@@ -56,11 +56,13 @@ class RestApiConceptTest {
 
         assertEquals(operation.concept, concept)
         assertEquals("POST", operation.httpMethod.name)
+        val memberCall = operation.underlyingNode
+        assertNotNull(memberCall)
     }
 }
 
 fun getRestApiTranslationResult() =
-    testFrontend { builder -> builder.defaultPasses().registerLanguage(TestLanguage(".")) }
+    testFrontend { builder -> builder.registerLanguage(TestLanguage(".")) }
         .build {
             translationResult {
                 translationUnit() {
