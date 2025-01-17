@@ -96,7 +96,7 @@ class UnreachableEOGPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
  */
 fun transfer(
     currentEdge: EvaluationOrder,
-    currentState: LatticeElement<Map<EvaluationOrder, LatticeElement<Reachability>>>
+    currentState: LatticeElement<Map<EvaluationOrder, LatticeElement<Reachability>>>,
 ): LatticeElement<Map<EvaluationOrder, LatticeElement<Reachability>>> {
     var newState = currentState as? UnreachabilityState ?: return currentState
     when (val currentNode = currentEdge.end) {
@@ -113,7 +113,7 @@ fun transfer(
                 newState =
                     newState.push(
                         it,
-                        newState.elements[currentEdge]?.elements ?: Reachability.BOTTOM
+                        newState.elements[currentEdge]?.elements ?: Reachability.BOTTOM,
                     )
             }
         }
@@ -131,7 +131,7 @@ fun transfer(
 private fun handleIfStatement(
     enteringEdge: Edge<Node>,
     n: IfStatement,
-    state: UnreachabilityState
+    state: UnreachabilityState,
 ): UnreachabilityState {
     var newState = state
     val evalResult = ValueEvaluator().evaluate(n.condition)
@@ -141,13 +141,13 @@ private fun handleIfStatement(
             // If the condition is always true, the "false" branch is always unreachable
             Pair(
                 n.nextEOGEdges.filter { e -> e.branch == false },
-                n.nextEOGEdges.filter { e -> e.branch != false }
+                n.nextEOGEdges.filter { e -> e.branch != false },
             )
         } else if (evalResult == false) {
             // If the condition is always false, the "true" branch is always unreachable
             Pair(
                 n.nextEOGEdges.filter { e -> e.branch == true },
-                n.nextEOGEdges.filter { e -> e.branch != true }
+                n.nextEOGEdges.filter { e -> e.branch != true },
             )
         } else {
             Pair(listOf(), n.nextEOGEdges)
@@ -175,7 +175,7 @@ private fun handleIfStatement(
 private fun handleWhileStatement(
     enteringEdge: Edge<Node>,
     n: WhileStatement,
-    state: UnreachabilityState
+    state: UnreachabilityState,
 ): UnreachabilityState {
     var newState = state
     /*
@@ -192,12 +192,12 @@ private fun handleWhileStatement(
         if (evalResult is Boolean && evalResult == true) {
             Pair(
                 n.nextEOGEdges.filter { e -> e.index == 1 },
-                n.nextEOGEdges.filter { e -> e.index != 1 }
+                n.nextEOGEdges.filter { e -> e.index != 1 },
             )
         } else if (evalResult is Boolean && evalResult == false) {
             Pair(
                 n.nextEOGEdges.filter { e -> e.index == 0 },
-                n.nextEOGEdges.filter { e -> e.index != 0 }
+                n.nextEOGEdges.filter { e -> e.index != 0 },
             )
         } else {
             Pair(listOf(), n.nextEOGEdges)
