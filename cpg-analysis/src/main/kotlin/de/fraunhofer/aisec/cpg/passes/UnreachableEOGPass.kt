@@ -243,7 +243,7 @@ class ReachabilityLattice(elements: Reachability) : LatticeElement<Reachability>
 enum class Reachability {
     BOTTOM,
     UNREACHABLE,
-    REACHABLE
+    REACHABLE,
 }
 
 /**

@@ -44,7 +44,7 @@ allprojects {
 
     val dokkaPlugin by configurations
     dependencies {
-        dokkaPlugin("org.jetbrains.dokka:versioning-plugin:1.9.0")
+        dokkaPlugin("org.jetbrains.dokka:versioning-plugin:2.0.0")
     }
 }
 
@@ -143,3 +143,9 @@ val enableJVMFrontend: Boolean by extra {
     enableJVMFrontend.toBoolean()
 }
 project.logger.lifecycle("JVM frontend is ${if (enableJVMFrontend) "enabled" else "disabled"}")
+
+val enableINIFrontend: Boolean by extra {
+    val enableINIFrontend: String? by project
+    enableINIFrontend.toBoolean()
+}
+project.logger.lifecycle("INI frontend is ${if (enableINIFrontend) "enabled" else "disabled"}")

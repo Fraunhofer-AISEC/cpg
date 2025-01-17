@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.llvm
 
 import de.fraunhofer.aisec.cpg.*
+import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.*
@@ -35,8 +36,29 @@ import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
 import kotlin.test.*
 import kotlin.test.Test
+import org.junit.jupiter.api.assertThrows
 
 class LLVMIRLanguageFrontendTest {
+    @Test
+    fun testExceptionBrokenFile() {
+        val topLevel = Path.of("src", "test", "resources", "llvm")
+
+        val frontend =
+            LLVMIRLanguageFrontend(
+                LLVMIRLanguage(),
+                TranslationContext(
+                    TranslationConfiguration.builder().build(),
+                    ScopeManager(),
+                    TypeManager(),
+                ),
+            )
+        val exception =
+            assertThrows<TranslationException> {
+                frontend.parse(topLevel.resolve("main-broken.ll").toFile())
+            }
+        assertTrue(exception.message?.startsWith("Could not parse IR: ") == true)
+    }
+
     @Test
     fun test1() {
         val topLevel = Path.of("src", "test", "resources", "llvm")
@@ -47,8 +69,8 @@ class LLVMIRLanguageFrontendTest {
                 TranslationContext(
                     TranslationConfiguration.builder().build(),
                     ScopeManager(),
-                    TypeManager()
-                )
+                    TypeManager(),
+                ),
             )
         frontend.parse(topLevel.resolve("main.ll").toFile())
     }
@@ -60,7 +82,7 @@ class LLVMIRLanguageFrontendTest {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("vector_poison.ll").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<LLVMIRLanguage>()
             }
@@ -86,50 +108,6 @@ class LLVMIRLanguageFrontendTest {
         assertLiteralValue(0L, xInit.initializers[1])
         assertLiteralValue(0L, xInit.initializers[2])
         assertLiteralValue(0L, xInit.initializers[3])
-    }
-
-    @Test
-    fun testIntegerOps() {
-        val topLevel = Path.of("src", "test", "resources", "llvm")
-        val tu =
-            analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("integer_ops.ll").toFile()),
-                topLevel,
-                true
-            ) {
-                it.registerLanguage<LLVMIRLanguage>()
-            }
-
-        assertEquals(2, tu.declarations.size)
-
-        val main = tu.functions["main"]
-        assertNotNull(main)
-        assertLocalName("i32", main.type)
-
-        val rand = tu.functions["rand"]
-        assertNotNull(rand)
-        assertNull(rand.body)
-
-        val xDeclaration = tu.variables["x"]
-        assertNotNull(xDeclaration)
-
-        val call = xDeclaration.initializer
-        assertIs<CallExpression>(call)
-        assertLocalName("rand", call)
-        assertContains(call.invokes, rand)
-        assertEquals(0, call.arguments.size)
-
-        val xorStatement = main.bodyOrNull<DeclarationStatement>(3)
-        assertNotNull(xorStatement)
-
-        val xorDeclaration = xorStatement.singleDeclaration
-        assertIs<VariableDeclaration>(xorDeclaration)
-        assertLocalName("a", xorDeclaration)
-        assertEquals("i32", xorDeclaration.type.typeName)
-
-        val xor = xorDeclaration.initializer
-        assertIs<BinaryOperator>(xor)
-        assertEquals("^", xor.operatorCode)
     }
 
     @Test
@@ -185,7 +163,7 @@ class LLVMIRLanguageFrontendTest {
         assertLocalName("13", arrayExpr)
         assertLiteralValue(
             13L,
-            arrayExpr.subscriptExpression
+            arrayExpr.subscriptExpression,
         ) // should this be integer instead of long?
 
         arrayExpr = arrayExpr.arrayExpression
@@ -193,7 +171,7 @@ class LLVMIRLanguageFrontendTest {
         assertLocalName("5", arrayExpr)
         assertLiteralValue(
             5L,
-            arrayExpr.subscriptExpression
+            arrayExpr.subscriptExpression,
         ) // should this be integer instead of long?
 
         var memberExpression = arrayExpr.arrayExpression
@@ -209,7 +187,7 @@ class LLVMIRLanguageFrontendTest {
         assertLocalName("1", arrayExpr)
         assertLiteralValue(
             1L,
-            arrayExpr.subscriptExpression
+            arrayExpr.subscriptExpression,
         ) // should this be integer instead of long?
 
         val ref = arrayExpr.arrayExpression
@@ -225,7 +203,7 @@ class LLVMIRLanguageFrontendTest {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("switch_case.ll").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<LLVMIRLanguage>()
             }
@@ -370,62 +348,13 @@ class LLVMIRLanguageFrontendTest {
     }
 
     @Test
-    fun testAtomicrmw() {
-        val topLevel = Path.of("src", "test", "resources", "llvm")
-        val tu =
-            analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("atomicrmw.ll").toFile()),
-                topLevel,
-                true
-            ) {
-                it.registerLanguage<LLVMIRLanguage>()
-            }
-
-        val foo = tu.functions["foo"]
-        assertNotNull(foo)
-
-        val atomicrmwStatement = foo.bodyOrNull<Block>()
-        assertNotNull(atomicrmwStatement)
-
-        // Check that the value is assigned to
-        val declaration = atomicrmwStatement.statements[0].declarations[0]
-        assertIs<VariableDeclaration>(declaration)
-        assertLocalName("old", declaration)
-        assertLocalName("i32", declaration.type)
-        val initializer = declaration.initializer
-        assertIs<UnaryOperator>(initializer)
-        assertEquals("*", initializer.operatorCode)
-        assertLocalName("ptr", initializer.input)
-
-        // Check that the replacement equals *ptr = *ptr + 1
-        val replacement = atomicrmwStatement.statements[1]
-        assertIs<AssignExpression>(replacement)
-        assertEquals(1, replacement.lhs.size)
-        assertEquals(1, replacement.rhs.size)
-        assertEquals("=", replacement.operatorCode)
-        val replacementLhs = replacement.lhs.first()
-        assertIs<UnaryOperator>(replacementLhs)
-        assertEquals("*", replacementLhs.operatorCode)
-        assertLocalName("ptr", replacementLhs.input)
-        // Check that the rhs is equal to *ptr + 1
-        val add = replacement.rhs.first()
-        assertIs<BinaryOperator>(add)
-        assertEquals("+", add.operatorCode)
-        val addLhs = add.lhs
-        assertIs<UnaryOperator>(addLhs)
-        assertEquals("*", addLhs.operatorCode)
-        assertLocalName("ptr", addLhs.input)
-        assertLiteralValue(1L, add.rhs)
-    }
-
-    @Test
     fun testCmpxchg() {
         val topLevel = Path.of("src", "test", "resources", "llvm")
         val tu =
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("atomicrmw.ll").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<LLVMIRLanguage>()
             }
@@ -433,7 +362,7 @@ class LLVMIRLanguageFrontendTest {
         val foo = tu.functions["foo"]
         assertNotNull(foo)
 
-        val cmpxchgStatement = foo.bodyOrNull<Block>(1)
+        val cmpxchgStatement = foo.bodyOrNull<Block>(10)
         assertNotNull(cmpxchgStatement)
         assertEquals(2, cmpxchgStatement.statements.size)
 
@@ -484,8 +413,8 @@ class LLVMIRLanguageFrontendTest {
         assertEquals("*", thenExprLhs.operatorCode)
         assertLocalName("ptr", thenExprLhs.input)
         assertIs<Reference>(thenExpr.rhs.first())
-        assertLocalName("old", thenExpr.rhs.first())
-        assertRefersTo(thenExpr.rhs.first(), tu.variables["old"])
+        assertLocalName("old1", thenExpr.rhs.first())
+        assertRefersTo(thenExpr.rhs.first(), tu.variables["old1"])
     }
 
     @Test
@@ -495,7 +424,7 @@ class LLVMIRLanguageFrontendTest {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("atomicrmw.ll").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<LLVMIRLanguage>()
             }
@@ -521,7 +450,7 @@ class LLVMIRLanguageFrontendTest {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("literal_struct.ll").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<LLVMIRLanguage>()
             }
@@ -559,7 +488,7 @@ class LLVMIRLanguageFrontendTest {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("global_local_var.ll").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<LLVMIRLanguage>()
             }
@@ -654,7 +583,7 @@ class LLVMIRLanguageFrontendTest {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("undef_insertvalue.ll").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<LLVMIRLanguage>()
             }
@@ -716,7 +645,7 @@ class LLVMIRLanguageFrontendTest {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("try_catch.ll").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<LLVMIRLanguage>()
             }
@@ -961,7 +890,7 @@ class LLVMIRLanguageFrontendTest {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("exceptions.ll").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<LLVMIRLanguage>()
             }

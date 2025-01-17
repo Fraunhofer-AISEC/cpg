@@ -57,7 +57,7 @@ class RubyLanguage() :
             "String" to StringType("String", this),
             // The bit width of Booleans is not defined in the specification and
             // implementation-dependant
-            "Boolean" to BooleanType("Boolean", null, this, NumericType.Modifier.NOT_APPLICABLE)
+            "Boolean" to BooleanType("Boolean", null, this, NumericType.Modifier.NOT_APPLICABLE),
         )
 
     override val compoundAssignmentOperators =
@@ -72,13 +72,13 @@ class RubyLanguage() :
             ">>=", // Right shift assignment
             "&=", // Bitwise AND assignment
             "|=", // Bitwise OR assignment
-            "^=" // Bitwise XOR assignment
+            "^=", // Bitwise XOR assignment
         )
 
     override fun handleSuperExpression(
         memberExpression: MemberExpression,
         curClass: RecordDeclaration,
-        scopeManager: ScopeManager
+        scopeManager: ScopeManager,
     ): Boolean {
         TODO("Not yet implemented")
     }

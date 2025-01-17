@@ -45,8 +45,8 @@ fun LanguageProvider.autoType(): Type {
     return AutoType(this.language)
 }
 
-fun MetadataProvider?.incompleteType(): Type {
-    return IncompleteType()
+fun LanguageProvider.incompleteType(): Type {
+    return IncompleteType(this.language)
 }
 
 /** Returns a [PointerType] that describes an array reference to the current type. */
@@ -97,7 +97,7 @@ fun Type.ref(): Type {
 fun LanguageProvider.objectType(
     name: CharSequence,
     generics: List<Type> = listOf(),
-    rawNode: Any? = null
+    rawNode: Any? = null,
 ): Type {
     // First, we check, whether this is a built-in type, to avoid necessary allocations of simple
     // types
@@ -113,34 +113,16 @@ fun LanguageProvider.objectType(
                 "Could not create type: translation context not available"
             )
 
-    val scope = c.scopeManager.currentScope
+    // Otherwise, we either need to create the type because of the generics or because we do not
+    // know the type yet.
+    var type = ObjectType(name, generics, false, language)
+    // Apply our usual metadata, such as scope, code, location, if we have any. Make sure only
+    // to refer by the local name because we will treat types as sort of references when
+    // creating them and resolve them later.
+    type.applyMetadata(this, name, rawNode = rawNode, localNameOnly = true)
 
-    synchronized(c.typeManager.firstOrderTypes) {
-        // We can try to look up the type by its name and return it, if it already exists.
-        var type =
-            c.typeManager.firstOrderTypes.firstOrNull {
-                it is ObjectType &&
-                    it.name == name &&
-                    it.scope == scope &&
-                    it.generics == generics &&
-                    it.language == language
-            }
-        if (type != null) {
-            return type
-        }
-
-        // Otherwise, we either need to create the type because of the generics or because we do not
-        // know the type yet.
-        type = ObjectType(name, generics, false, language)
-        // Apply our usual metadata, such as scope, code, location, if we have any. Make sure only
-        // to refer by the local name because we will treat types as sort of references when
-        // creating them and resolve them later.
-        type.applyMetadata(this, name, rawNode = rawNode, localNameOnly = true)
-
-        // Piping it through register type will ensure that in any case we return the one unique
-        // type object (per scope) for it.
-        return c.typeManager.registerType(type)
-    }
+    // Piping it through register type will ensure that we know the type and can resolve it later
+    return c.typeManager.registerType(type)
 }
 
 /**

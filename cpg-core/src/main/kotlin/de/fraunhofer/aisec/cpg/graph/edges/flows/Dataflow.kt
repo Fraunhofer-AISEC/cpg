@@ -91,9 +91,9 @@ open class Dataflow(
     /** The granularity of this dataflow. */
     @Convert(DataflowGranularityConverter::class)
     @JsonIgnore
-    var granularity: Granularity = default()
+    var granularity: Granularity = default(),
 ) : Edge<Node>(start, end) {
-    override val label: String = "DFG"
+    override var labels = setOf("DFG")
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -131,10 +131,10 @@ class ContextSensitiveDataflow(
     end: Node,
     /** The granularity of this dataflow. */
     granularity: Granularity = default(),
-    val callingContext: CallingContext
+    val callingContext: CallingContext,
 ) : Dataflow(start, end, granularity) {
 
-    override val label: String = "DFG"
+    override var labels = setOf("DFG")
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -165,7 +165,7 @@ class Dataflows<T : Node>(
     fun addContextSensitive(
         node: T,
         granularity: Granularity = default(),
-        callingContext: CallingContext
+        callingContext: CallingContext,
     ) {
         val edge =
             if (outgoing) {

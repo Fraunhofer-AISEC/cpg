@@ -52,7 +52,7 @@ class EvaluationOrder(
      * branch (expression evaluated to true) or the false branch (e.g. with an if/else condition).
      * Otherwise, this property is null.
      */
-    var branch: Boolean? = null
+    var branch: Boolean? = null,
 ) : Edge<Node>(start, end) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -68,6 +68,8 @@ class EvaluationOrder(
         result = 31 * result + branch.hashCode()
         return result
     }
+
+    override var labels = setOf("EOG")
 }
 
 /**
@@ -86,6 +88,6 @@ class EvaluationOrders<NodeType : Node>(
     EdgeList<Node, EvaluationOrder>(
         thisRef = thisRef,
         init = ::EvaluationOrder,
-        outgoing = outgoing
+        outgoing = outgoing,
     ),
     MirroredEdgeCollection<Node, EvaluationOrder>

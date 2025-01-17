@@ -58,7 +58,7 @@ class ReplaceTest {
         assertContains(config.replacedPasses.values, ReplacedPass::class)
         assertContains(
             config.replacedPasses.keys,
-            Pair(EvaluationOrderGraphPass::class, ReplaceTestLanguage::class)
+            Pair(EvaluationOrderGraphPass::class, ReplaceTestLanguage::class),
         )
 
         val cls =
@@ -77,7 +77,7 @@ class ReplaceTest {
         assertContains(config.replacedPasses.values, ReplacedPass::class)
         assertContains(
             config.replacedPasses.keys,
-            Pair(EvaluationOrderGraphPass::class, StructTestLanguage::class)
+            Pair(EvaluationOrderGraphPass::class, StructTestLanguage::class),
         )
 
         var cls = checkForReplacement(EvaluationOrderGraphPass::class, TestLanguage(), config)

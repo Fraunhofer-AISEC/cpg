@@ -176,14 +176,14 @@ sealed class Pass<T : Node>(final override val ctx: TranslationContext) :
         if (this::class.softExecuteBefore.isNotEmpty()) {
             builder.append(
                 "execute before (soft): ",
-                this::class.softExecuteBefore.map { it.simpleName }
+                this::class.softExecuteBefore.map { it.simpleName },
             )
         }
 
         if (this::class.hardExecuteBefore.isNotEmpty()) {
             builder.append(
                 "execute before (hard): ",
-                this::class.hardExecuteBefore.map { it.simpleName }
+                this::class.hardExecuteBefore.map { it.simpleName },
             )
         }
 
@@ -207,7 +207,7 @@ fun executePassesInParallel(
     classes: List<KClass<out Pass<*>>>,
     ctx: TranslationContext,
     result: TranslationResult,
-    executedFrontends: Collection<LanguageFrontend<*, *>>
+    executedFrontends: Collection<LanguageFrontend<*, *>>,
 ) {
     // Execute a single pass directly sequentially and return
     val pass = classes.singleOrNull()
@@ -222,7 +222,7 @@ fun executePassesInParallel(
             TranslationManager::class.java,
             "Executing Passes [${classes.map { it.simpleName }}] in parallel",
             false,
-            result
+            result,
         )
 
     val futures =
@@ -247,7 +247,7 @@ fun executePass(
     cls: KClass<out Pass<out Node>>,
     ctx: TranslationContext,
     result: TranslationResult,
-    executedFrontends: Collection<LanguageFrontend<*, *>>
+    executedFrontends: Collection<LanguageFrontend<*, *>>,
 ) {
     val bench = Benchmark(cls.java, "Executing Pass", false, result)
 
@@ -266,28 +266,28 @@ fun executePass(
                 (prototype as TranslationResultPass)::class,
                 ctx,
                 listOf(result),
-                executedFrontends
+                executedFrontends,
             )
         is ComponentPass ->
             consumeTargets(
                 (prototype as ComponentPass)::class,
                 ctx,
                 result.components,
-                executedFrontends
+                executedFrontends,
             )
         is TranslationUnitPass ->
             consumeTargets(
                 (prototype as TranslationUnitPass)::class,
                 ctx,
                 result.components.flatMap { it.translationUnits },
-                executedFrontends
+                executedFrontends,
             )
         is EOGStarterPass -> {
             consumeTargets(
                 (prototype as EOGStarterPass)::class,
                 ctx,
                 result.allEOGStarters,
-                executedFrontends
+                executedFrontends,
             )
         }
     }
@@ -306,7 +306,7 @@ private inline fun <reified T : Node> consumeTargets(
     cls: KClass<out Pass<T>>,
     ctx: TranslationContext,
     targets: Collection<T>,
-    executedFrontends: Collection<LanguageFrontend<*, *>>
+    executedFrontends: Collection<LanguageFrontend<*, *>>,
 ) {
     if (ctx.config.useParallelPasses) {
         val futures =
@@ -330,7 +330,7 @@ private inline fun <reified T : Node> consumeTarget(
     cls: KClass<out Pass<T>>,
     ctx: TranslationContext,
     target: T,
-    executedFrontends: Collection<LanguageFrontend<*, *>>
+    executedFrontends: Collection<LanguageFrontend<*, *>>,
 ): Pass<T>? {
     val language = target.language
 
@@ -357,7 +357,7 @@ private inline fun <reified T : Node> consumeTarget(
 fun <T : Node> checkForReplacement(
     cls: KClass<out Pass<T>>,
     language: Language<*>?,
-    config: TranslationConfiguration
+    config: TranslationConfiguration,
 ): KClass<out Pass<T>> {
     if (language == null) {
         return cls

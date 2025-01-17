@@ -31,6 +31,6 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 class BooleanType(
     typeName: CharSequence = "bool",
     bitWidth: Int? = 1,
-    language: Language<*>? = null,
-    modifier: Modifier = Modifier.NOT_APPLICABLE
+    language: Language<*>,
+    modifier: Modifier = Modifier.NOT_APPLICABLE,
 ) : NumericType(typeName, bitWidth, language, modifier)

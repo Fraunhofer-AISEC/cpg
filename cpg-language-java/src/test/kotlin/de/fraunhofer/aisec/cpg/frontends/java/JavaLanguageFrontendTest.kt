@@ -73,14 +73,14 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertNotNull(c)
         assertEquals(
             BigInteger("9223372036854775808"),
-            ((c.initializer as? UnaryOperator)?.input as? Literal<*>)?.value
+            ((c.initializer as? UnaryOperator)?.input as? Literal<*>)?.value,
         )
 
         val d = main.variables["d"]
         assertNotNull(d)
         assertEquals(
             9223372036854775807L,
-            ((d.initializer as? UnaryOperator)?.input as? Literal<*>)?.value
+            ((d.initializer as? UnaryOperator)?.input as? Literal<*>)?.value,
         )
     }
 
@@ -191,17 +191,17 @@ internal class JavaLanguageFrontendTest : BaseTest() {
             // first exception type was? resolved, so we can expect a FQN
             assertEquals(
                 assertResolvedType("java.lang.NumberFormatException"),
-                firstCatch.parameter?.type
+                firstCatch.parameter?.type,
             )
             // second one could not be resolved so we do not have an FQN
             assertEquals(
                 assertResolvedType("NotResolvableTypeException"),
-                catchClauses[1].parameter?.type
+                catchClauses[1].parameter?.type,
             )
             // third type should have been resolved through the import
             assertEquals(
                 assertResolvedType("some.ImportedException"),
-                (catchClauses[2].parameter)?.type
+                (catchClauses[2].parameter)?.type,
             )
         }
 
@@ -650,7 +650,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
                                 Name(
                                     "MySimpleClass",
                                     declaration.name.parent,
-                                    declaration.name.delimiter
+                                    declaration.name.delimiter,
                                 )
 
                             return declaration
@@ -660,16 +660,13 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         }
 
         class MyJavaLanguage : JavaLanguage() {
-            override val fileExtensions = listOf("java")
-            override val namespaceDelimiter = "."
-            override val superClassKeyword = "super"
             override val frontend = MyJavaLanguageFrontend::class
         }
 
         val file = File("src/test/resources/compiling/RecordDeclaration.java")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
-                it.registerLanguage(MyJavaLanguage())
+                it.registerLanguage<MyJavaLanguage>()
             }
 
         assertNotNull(tu)
@@ -872,7 +869,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
             1,
             ((entryOne?.initializer as? ConstructExpression)?.arguments?.singleOrNull()
                     as? Literal<*>)
-                ?.value
+                ?.value,
         )
         assertEquals(constructor, (entryOne?.initializer as? ConstructExpression)?.constructor)
         val entryTwo = enum.entries.singleOrNull { it.name.localName == "VALUE_TWO" }
@@ -880,7 +877,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
             2,
             ((entryTwo?.initializer as? ConstructExpression)?.arguments?.singleOrNull()
                     as? Literal<*>)
-                ?.value
+                ?.value,
         )
         assertEquals(constructor, (entryTwo?.initializer as? ConstructExpression)?.constructor)
 

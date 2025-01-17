@@ -233,7 +233,7 @@ interface GoStandardLibrary : Library {
                 FLOAT(6),
                 IMAG(7),
                 CHAR(8),
-                STRING(9)
+                STRING(9),
             }
 
             val value: String by lazy { INSTANCE.GetBasicLitValue(this) }
@@ -867,7 +867,7 @@ interface GoStandardLibrary : Library {
 // TODO: optimize to use iterators instead
 fun <T : PointerType, S : PointerType> T.list(
     numFunc: (T) -> Int,
-    itemFunc: (T, Int) -> S
+    itemFunc: (T, Int) -> S,
 ): MutableList<S> {
     val list = mutableListOf<S>()
     for (i in 0 until numFunc(this)) {

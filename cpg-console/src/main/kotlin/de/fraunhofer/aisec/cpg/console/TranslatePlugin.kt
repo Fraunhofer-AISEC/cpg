@@ -78,6 +78,7 @@ class TranslatePlugin : Plugin {
                         "                    .optionalLanguage(\"de.fraunhofer.aisec.cpg.frontends.golang.GoLanguage\")" +
                         "                    .optionalLanguage(\"de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguage\")" +
                         "                    .optionalLanguage(\"de.fraunhofer.aisec.cpg.frontends.ruby.RubyLanguage\")" +
+                        "                    .optionalLanguage(\"de.fraunhofer.aisec.cpg.frontends.ini.IniFileLanguage\")" +
                         "                    .defaultPasses()\n" +
                         "                    .useParallelPasses(false)\n" +
                         "                    .configurePass<de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass>(\n" +
@@ -89,7 +90,7 @@ class TranslatePlugin : Plugin {
                     "val analyzer = TranslationManager.builder().config(config).build()",
                     "val result = analyzer.analyze().get()",
                     // for convenience
-                    "val tu = result.translationUnits.first()"
+                    "val tu = result.translationUnits.first()",
                 )
             )
         }

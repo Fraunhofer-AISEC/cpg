@@ -60,7 +60,8 @@ class NFA(states: Set<State> = setOf()) : FSM(states) {
         val dfa = DFA() // new empty DFA which is incrementally extended
         val epsilonClosures =
             mutableMapOf<
-                Set<State>, State
+                Set<State>,
+                State,
             >() // used to remember which DFA state an ε-closure of NFA states maps to
         val statesToExplore =
             ArrayDeque<
@@ -74,7 +75,7 @@ class NFA(states: Set<State> = setOf()) : FSM(states) {
         var nextDfaState =
             dfa.addState(
                 isStart = startStateClosure.any { it.isStart },
-                isAcceptingState = startStateClosure.any { it.isAcceptingState }
+                isAcceptingState = startStateClosure.any { it.isAcceptingState },
             )
         epsilonClosures +=
             startStateClosure to
@@ -118,11 +119,7 @@ class NFA(states: Set<State> = setOf()) : FSM(states) {
                 }
                 // either way, we must create an edge connecting the states
                 currentDfaState.addEdge(
-                    Edge(
-                        base = transitionBase,
-                        op = transitionOp,
-                        nextState = nextDfaState,
-                    )
+                    Edge(base = transitionBase, op = transitionOp, nextState = nextDfaState)
                 )
             }
         }

@@ -75,7 +75,7 @@ class ArgumentsHandlerTest {
             if (list[name] == true) {
                 assertContains(
                     param.end.modifiers,
-                    PythonLanguage.Companion.MODIFIER_POSITIONAL_ONLY_ARGUMENT
+                    PythonLanguage.Companion.MODIFIER_POSITIONAL_ONLY_ARGUMENT,
                 )
             }
             assertEquals(idx, param.index)
@@ -121,7 +121,7 @@ class ArgumentsHandlerTest {
                 assertEquals(
                     expectedDefaultValue.toLong(),
                     param.default?.evaluate(),
-                    "Default value for parameter '$paramName' is incorrect"
+                    "Default value for parameter '$paramName' is incorrect",
                 )
             } else {
                 assertNull(param.default, "Parameter '$paramName' should not have a default value")
@@ -144,7 +144,7 @@ class ArgumentsHandlerTest {
             assertEquals(
                 expectedDefaultValue.toLong(),
                 param.default?.evaluate(),
-                "Default value for parameter '$paramName' is incorrect"
+                "Default value for parameter '$paramName' is incorrect",
             )
         }
     }
@@ -186,7 +186,7 @@ class ArgumentsHandlerTest {
         val parameterC = func.parameters["c"]
         assertNotNull(
             parameterA,
-            "Failed to find parameter `a` -> cannot test for non-existing default value."
+            "Failed to find parameter `a` -> cannot test for non-existing default value.",
         )
         assertNull(parameterA.default, "Expected the parameter `a` to not have a default value.")
 

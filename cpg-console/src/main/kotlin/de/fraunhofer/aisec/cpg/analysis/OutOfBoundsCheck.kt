@@ -74,7 +74,7 @@ class OutOfBoundsCheck {
                                 sb.append("--- FINDING: Out of bounds access in ")
                                 sb.append(
                                     it.javaClass.simpleName,
-                                    DEFAULT.foreground(AttributedStyle.GREEN)
+                                    DEFAULT.foreground(AttributedStyle.GREEN),
                                 )
                                 sb.append(
                                     " when accessing index ${AttributedString(""+resolvedIndex, DEFAULT.foreground(AttributedStyle.CYAN)).toAnsi()} of "
@@ -92,7 +92,7 @@ class OutOfBoundsCheck {
                                             AttributedString(
                                                 PhysicalLocation.locationLink(v.location), DEFAULT.foreground(
                                                     AttributedStyle.BLUE or AttributedStyle.BRIGHT
-                                                )).toAnsi()}: ${v.fancyCode(showNumbers = false)}"
+                                                ),).toAnsi()}: ${v.fancyCode(showNumbers = false)}"
                                 )
                                 println("")
                                 println(
@@ -107,13 +107,13 @@ class OutOfBoundsCheck {
                                         "${AttributedString(
                                                 PhysicalLocation.locationLink(p.location), DEFAULT.foreground(
                                                     AttributedStyle.BLUE or AttributedStyle.BRIGHT
-                                                )).toAnsi()}: ${p.fancyCode(showNumbers = false)}"
+                                                ),).toAnsi()}: ${p.fancyCode(showNumbers = false)}"
                                     )
                                 }
                             }
                         }
                     }
-                }
+                },
             )
         }
     }

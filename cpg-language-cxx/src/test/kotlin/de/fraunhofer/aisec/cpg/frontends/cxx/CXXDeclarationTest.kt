@@ -61,7 +61,7 @@ class CXXDeclarationTest {
             analyze(
                 listOf(topLevel.resolve("foo.c"), topLevel.resolve("bar.c")),
                 topLevel.toPath(),
-                true
+                true,
             ) {
                 it.registerLanguage<CLanguage>()
                 it.includePath("src/test/resources/c/foobar/std")
@@ -89,7 +89,7 @@ class CXXDeclarationTest {
             analyze(
                 listOf(topLevel.resolve("foo.c"), topLevel.resolve("bar.c")),
                 topLevel.toPath(),
-                true
+                true,
             ) {
                 it.registerLanguage<CLanguage>()
             }
@@ -301,6 +301,50 @@ class CXXDeclarationTest {
 
         // we should now have an implicit call to our operator in-between "p" and "size"
         val opCall = sizeRef.base
+        assertNotNull(opCall)
+        assertIs<OperatorCallExpression>(opCall)
+        assertEquals(p, opCall.base)
+        assertInvokes(opCall, op)
+    }
+
+    @Test
+    fun testCallExpressionOperator() {
+        val file = File("src/test/resources/cxx/operators/call_expression.cpp")
+        val result =
+            analyze(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
+        assertNotNull(result)
+
+        var proxy = result.records["Proxy"]
+        assertNotNull(proxy)
+
+        var funcBar = proxy.functions["bar"]
+        assertNotNull(funcBar)
+
+        var op = proxy.operators["operator->"]
+        assertNotNull(op)
+
+        var data = result.records["Data"]
+        assertNotNull(data)
+
+        var funcFoo = data.functions["foo"]
+        assertNotNull(funcFoo)
+
+        val p = result.refs["p"]
+        assertNotNull(p)
+        assertEquals(proxy.toType(), p.type)
+
+        var funcFooRef = result.memberExpressions["foo"]
+        assertNotNull(funcFooRef)
+        assertRefersTo(funcFooRef, funcFoo)
+
+        var funcBarRef = result.memberExpressions["bar"]
+        assertNotNull(funcBarRef)
+        assertRefersTo(funcBarRef, funcBar)
+
+        // we should now have an implicit call to our operator in-between "p" and "foo"
+        val opCall = funcFooRef.base
         assertNotNull(opCall)
         assertIs<OperatorCallExpression>(opCall)
         assertEquals(p, opCall.base)

@@ -42,7 +42,8 @@ class PythonLanguage :
     Language<PythonLanguageFrontend>(),
     HasShortCircuitOperators,
     HasOperatorOverloading,
-    HasFunctionStyleConstruction {
+    HasFunctionStyleConstruction,
+    HasMemberExpressionAmbiguity {
     override val fileExtensions = listOf("py", "pyi")
     override val namespaceDelimiter = "."
     @Transient
@@ -124,23 +125,47 @@ class PythonLanguage :
                     "int",
                     Integer.MAX_VALUE,
                     this,
-                    NumericType.Modifier.NOT_APPLICABLE
+                    NumericType.Modifier.NOT_APPLICABLE,
                 ), // Unlimited precision
             "float" to
                 FloatingPointType(
                     "float",
                     32,
                     this,
-                    NumericType.Modifier.NOT_APPLICABLE
+                    NumericType.Modifier.NOT_APPLICABLE,
                 ), // This depends on the implementation
             "complex" to
                 NumericType(
                     "complex",
                     null,
                     this,
-                    NumericType.Modifier.NOT_APPLICABLE
+                    NumericType.Modifier.NOT_APPLICABLE,
                 ), // It's two floats
-            "str" to StringType("str", this, listOf())
+            "str" to StringType("str", this, listOf()),
+            "list" to
+                ListType(
+                    typeName = "list",
+                    elementType = ObjectType("object", listOf(), false, this),
+                    language = this,
+                ),
+            "tuple" to
+                ListType(
+                    typeName = "tuple",
+                    elementType = ObjectType("object", listOf(), false, this),
+                    language = this,
+                ),
+            "dict" to
+                MapType(
+                    typeName = "dict",
+                    elementType = ObjectType("object", listOf(), false, this),
+                    language = this,
+                ),
+            "set" to
+                SetType(
+                    typeName = "set",
+                    elementType = ObjectType("object", listOf(), false, this),
+                    language = this,
+                ),
         )
 
     override fun propagateTypeOfBinaryOperation(operation: BinaryOperator): Type {

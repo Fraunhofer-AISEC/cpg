@@ -25,7 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
-import java.util.Objects
+import java.util.*
+import org.apache.commons.lang3.builder.ToStringBuilder
 
 class GotoStatement : Statement() {
     var labelName: String = ""
@@ -42,4 +43,12 @@ class GotoStatement : Statement() {
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), labelName, targetLabel)
+
+    override fun toString(): String {
+        return ToStringBuilder(this, TO_STRING_STYLE)
+            .append("labelName", labelName)
+            .append("targetName", targetLabel)
+            .append("location", location)
+            .toString()
+    }
 }

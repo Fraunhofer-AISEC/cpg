@@ -45,7 +45,7 @@ class CommentMatcher {
     fun getEnclosingChild(
         node: Node,
         location: Region,
-        artifactLocation: PhysicalLocation.ArtifactLocation?
+        artifactLocation: PhysicalLocation.ArtifactLocation?,
     ): Node {
         // If there's an ArtifactLocation specified, it should at least be in the same file.
         val children =
@@ -84,7 +84,7 @@ class CommentMatcher {
         comment: String,
         location: Region,
         tu: TranslationUnitDeclaration,
-        artifactLocation: PhysicalLocation.ArtifactLocation? = null
+        artifactLocation: PhysicalLocation.ArtifactLocation? = null,
     ) {
         var enclosingNode: Node = tu
         var smallestEnclosingNode: Node = getEnclosingChild(tu, location, artifactLocation)
@@ -134,7 +134,7 @@ class CommentMatcher {
                 .sortedWith(
                     compareBy(
                         { it.location?.region?.startLine ?: 0 },
-                        { it.location?.region?.startColumn ?: 0 }
+                        { it.location?.region?.startColumn ?: 0 },
                     )
                 )
                 .firstOrNull()
@@ -155,7 +155,7 @@ class CommentMatcher {
                     .sortedWith(
                         compareBy(
                             { it.location?.region?.endLine ?: 0 },
-                            { it.location?.region?.endColumn ?: 0 }
+                            { it.location?.region?.endColumn ?: 0 },
                         )
                     )
                     .lastOrNull()

@@ -40,7 +40,7 @@ class IntegrationTest {
 
     @Test
     fun testProject() {
-        val project = buildProject("src/test/resources/golang/buildtags", "darwin", "arm64")
+        val project = buildProject("src/test/resources/golang/integration", "darwin", "arm64")
 
         val app = project.components[APPLICATION_LOCAL_NAME]
         assertNotNull(app)

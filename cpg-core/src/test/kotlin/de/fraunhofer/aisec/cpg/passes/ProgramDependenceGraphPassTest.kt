@@ -94,7 +94,7 @@ class ProgramDependenceGraphPassTest {
                         t.prevPDGEdges.union(expectedPrevEdges) == t.prevPDGEdges
                     }
                 }
-            }
+            },
         )
     }
 
@@ -103,7 +103,7 @@ class ProgramDependenceGraphPassTest {
         fun provideTranslationResultForPDGTest() =
             Stream.of(
                 Arguments.of(getIfTest(), "if statement"),
-                Arguments.of(getWhileLoopTest(), "while loop")
+                Arguments.of(getWhileLoopTest(), "while loop"),
             )
 
         private fun getIfTest() =

@@ -42,12 +42,12 @@ class Name(
     /** The parent name, e.g., the namespace this name lives in. */
     val parent: Name? = null,
     /** A potential namespace delimiter, usually either `.` or `::`. */
-    val delimiter: String = "."
+    val delimiter: String = ".",
 ) : Cloneable, Comparable<Name>, CharSequence {
     constructor(
         localName: String,
         parent: Name? = null,
-        language: Language<*>?
+        language: Language<*>?,
     ) : this(localName, parent, language?.namespaceDelimiter ?: ".")
 
     companion object {
@@ -141,8 +141,9 @@ class Name(
  * (such as a [Node], a [Language], a [LanguageFrontend] or a [Handler]) to parse a fully qualified
  * name.
  */
-fun LanguageProvider?.parseName(fqn: CharSequence) =
-    parseName(fqn, this?.language?.namespaceDelimiter ?: ".")
+fun LanguageProvider.parseName(fqn: CharSequence): Name {
+    return parseName(fqn, this.language.namespaceDelimiter)
+}
 
 /** Tries to parse the given fully qualified name using the specified [delimiter] into a [Name]. */
 internal fun parseName(fqn: CharSequence, delimiter: String, vararg splitDelimiters: String): Name {
