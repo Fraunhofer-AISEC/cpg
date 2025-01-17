@@ -344,8 +344,8 @@ val Collection<Type>.commonType: Type?
  * passes that replace certain [Reference] nodes with other nodes, e.g., the
  * [ResolveCallExpressionAmbiguityPass].
  *
- * Note: This involves some symbol lookup (using [ScopeManager.lookupUniqueTypeSymbolByName]), so
- * this can only be used in passes.
+ * Note: This involves some symbol lookup (using [ScopeManager.lookupTypeSymbolByName]), so this can
+ * only be used in passes.
  */
 context(Pass<*>)
 fun Reference.nameIsType(): Type? {
@@ -362,5 +362,5 @@ fun Reference.nameIsType(): Type? {
     }
 
     // Lastly, check if the reference contains a symbol that points to type (declaration)
-    return scopeManager.lookupUniqueTypeSymbolByName(name, language, scope)?.declaredType
+    return scopeManager.lookupTypeSymbolByName(name, language, scope)?.declaredType
 }

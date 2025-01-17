@@ -52,6 +52,8 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         resolveFirstOrderTypes()
         refreshNames()
 
+        log.info("Updating imported symbols...")
+
         walker = SubgraphWalker.ScopedWalker(scopeManager)
         walker.registerHandler(::handleNode)
         walker.iterate(component)
@@ -94,7 +96,7 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
             var originDeclares = target.recordDeclaration
             var name = target.name
-            log.debug("Aliasing type {} in {} scope to {}", type.name, type.scope, name)
+            log.trace("Aliasing type {} in {} scope to {}", type.name, type.scope, name)
             type.declaredFrom = originDeclares
             type.recordDeclaration = originDeclares
             type.typeOrigin = Type.Origin.RESOLVED
@@ -105,8 +107,7 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         // filter for nodes that implement DeclaresType, because otherwise we will get a lot of
         // constructor declarations and such with the same name. It seems this is ok since most
         // languages will prefer structs/classes over functions when resolving types.
-        var declares =
-            scopeManager.lookupUniqueTypeSymbolByName(type.name, type.language, type.scope)
+        var declares = scopeManager.lookupTypeSymbolByName(type.name, type.language, type.scope)
 
         // If we did not find any declaration, we can try to infer a record declaration for it
         if (declares == null) {
@@ -117,7 +118,7 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         // and set the name to the declared type.
         if (declares != null) {
             var declaredType = declares.declaredType
-            log.debug(
+            log.trace(
                 "Resolving type {} in {} scope to {}",
                 type.name,
                 type.scope,
