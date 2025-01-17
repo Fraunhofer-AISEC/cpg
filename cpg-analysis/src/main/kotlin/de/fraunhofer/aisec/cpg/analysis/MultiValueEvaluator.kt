@@ -64,11 +64,9 @@ class MultiValueEvaluator : ValueEvaluator() {
         this.path += node
 
         when (node) {
-            is FieldDeclaration -> {
-                return evaluateInternal(node.initializer, depth + 1)
-            }
-            is NewArrayExpression -> return evaluateInternal(node.initializer, depth + 1)
-            is VariableDeclaration -> return handleVariableDeclaration(node, depth)
+            is FieldDeclaration -> return handleHasInitializer(node, depth)
+            is NewArrayExpression -> return handleHasInitializer(node, depth)
+            is VariableDeclaration -> return handleHasInitializer(node, depth)
             // For a literal, we can just take its value, and we are finished
             is Literal<*> -> return node.value
             is Reference -> return handlePrevDFG(node, depth)

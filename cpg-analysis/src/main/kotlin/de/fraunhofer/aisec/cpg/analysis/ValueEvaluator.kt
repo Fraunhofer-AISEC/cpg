@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.analysis
 
 import de.fraunhofer.aisec.cpg.graph.AccessValues
+import de.fraunhofer.aisec.cpg.graph.HasInitializer
 import de.fraunhofer.aisec.cpg.graph.HasOperatorCode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
@@ -87,8 +88,8 @@ open class ValueEvaluator(
         node?.let { this.path += it }
 
         when (node) {
-            is NewArrayExpression -> return evaluateInternal(node.initializer, depth)
-            is VariableDeclaration -> return handleVariableDeclaration(node, depth)
+            is NewArrayExpression -> return handleHasInitializer(node, depth)
+            is VariableDeclaration -> return handleHasInitializer(node, depth)
             // For a literal, we can just take its value, and we are finished
             is Literal<*> -> return node.value
             is Reference -> return handlePrevDFG(node, depth)
@@ -108,12 +109,16 @@ open class ValueEvaluator(
         return cannotEvaluate(node, this)
     }
 
-    protected fun handleVariableDeclaration(node: VariableDeclaration, depth: Int): Any? {
+    /**
+     * If a node declaration implements [HasInitializer], we can use the initializer to evaluate
+     * their value. If not, we can try to use [handlePrevDFG].
+     */
+    protected fun handleHasInitializer(node: HasInitializer, depth: Int): Any? {
         // If we have an initializer, we can use it. Otherwise, we can fall back to the prevDFG
         return if (node.initializer != null) {
             evaluateInternal(node.initializer, depth + 1)
         } else {
-            handlePrevDFG(node, depth)
+            handlePrevDFG(node as Node, depth)
         }
     }
 
@@ -405,9 +410,7 @@ open class ValueEvaluator(
         return cannotEvaluate(expr, this)
     }
 
-    /**
-     * Tries to compute the constant value of a node based on its [Node.prevDFG].
-     */
+    /** Tries to compute the constant value of a node based on its [Node.prevDFG]. */
     protected open fun handlePrevDFG(node: Node, depth: Int): Any? {
         // For a reference, we are interested into its last assignment into the reference
         // denoted by the previous DFG edge. We need to filter out any self-references for READWRITE
