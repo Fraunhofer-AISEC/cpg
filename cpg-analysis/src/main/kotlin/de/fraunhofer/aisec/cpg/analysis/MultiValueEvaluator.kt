@@ -71,7 +71,7 @@ class MultiValueEvaluator : ValueEvaluator() {
             is VariableDeclaration -> return handleVariableDeclaration(node, depth)
             // For a literal, we can just take its value, and we are finished
             is Literal<*> -> return node.value
-            is Reference -> return handleReference(node, depth)
+            is Reference -> return handlePrevDFG(node, depth)
             is UnaryOperator -> return handleUnaryOp(node, depth)
             is AssignExpression -> return handleAssignExpression(node, depth)
             is BinaryOperator -> return handleBinaryOperator(node, depth)
@@ -211,11 +211,16 @@ class MultiValueEvaluator : ValueEvaluator() {
      * In contrast to the implementation of [ValueEvaluator], this one can handle more than one
      * value.
      */
-    override fun handleReference(expr: Reference, depth: Int): Collection<Any?> {
+    override fun handlePrevDFG(node: Node, depth: Int): Collection<Any?> {
         // For a reference, we are interested in its last assignment into the reference
         // denoted by the previous DFG edge. We need to filter out any self-references for READWRITE
         // references.
-        val prevDFG = filterSelfReferences(expr, expr.prevDFG.toList())
+        val prevDFG =
+            if (node is Reference) {
+                filterSelfReferences(node, node.prevDFG.toList())
+            } else {
+                node.prevDFG.toList()
+            }
 
         if (prevDFG.size == 1) {
             // There's only one incoming DFG edge, so we follow this one.
@@ -223,8 +228,8 @@ class MultiValueEvaluator : ValueEvaluator() {
             return (internalRes as? Collection<*>) ?: mutableSetOf(internalRes)
         }
 
-        if (prevDFG.size == 2 && prevDFG.all(::isSimpleForLoop)) {
-            return handleSimpleLoopVariable(expr, depth)
+        if (node is Reference && prevDFG.size == 2 && prevDFG.all(::isSimpleForLoop)) {
+            return handleSimpleLoopVariable(node, depth)
         }
 
         val result = mutableSetOf<Any?>()

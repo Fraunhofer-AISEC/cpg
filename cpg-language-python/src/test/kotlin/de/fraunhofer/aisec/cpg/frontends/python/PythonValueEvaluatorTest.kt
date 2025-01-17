@@ -35,7 +35,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-class ConstEvalIfTest {
+class PythonValueEvaluatorTest {
     @Test
     fun testSysPlatform() {
         val topLevel = File("src/test/resources/python/consteval")
@@ -107,5 +107,27 @@ class ConstEvalIfTest {
             val value = it.evaluate(PythonValueEvaluator())
             assertEquals("{${it.operatorCode}}", value)
         }
+    }
+
+    @Test
+    fun testArithmetic() {
+        val topLevel = File("src/test/resources/python/consteval")
+        val result =
+            analyze(listOf(topLevel.resolve("arithmetic.py")), topLevel.toPath(), true) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(result)
+
+        val b = result.variables["b"]?.firstAssignment
+        assertNotNull(b)
+
+        var value = b.evaluate(PythonValueEvaluator())
+        assertEquals(12L, value)
+
+        val c = result.variables["c"]?.firstAssignment
+        assertNotNull(c)
+
+        value = c.evaluate(PythonValueEvaluator())
+        assertEquals(16.0, value)
     }
 }

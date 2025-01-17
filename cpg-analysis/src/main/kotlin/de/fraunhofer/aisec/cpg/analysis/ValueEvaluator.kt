@@ -91,7 +91,7 @@ open class ValueEvaluator(
             is VariableDeclaration -> return handleVariableDeclaration(node, depth)
             // For a literal, we can just take its value, and we are finished
             is Literal<*> -> return node.value
-            is Reference -> return handleReference(node, depth)
+            is Reference -> return handlePrevDFG(node, depth)
             is UnaryOperator -> return handleUnaryOp(node, depth)
             is BinaryOperator -> return handleBinaryOperator(node, depth)
             // Casts are just a wrapper in this case, we are interested in the inner expression
@@ -109,9 +109,12 @@ open class ValueEvaluator(
     }
 
     protected fun handleVariableDeclaration(node: VariableDeclaration, depth: Int): Any? {
-        // If we have an initializer, we can use it. However, we actually should just use the DFG
-        // instead and do something similar to handleReference
-        return evaluateInternal(node.initializer, depth + 1)
+        // If we have an initializer, we can use it. Otherwise, we can fall back to the prevDFG
+        return if (node.initializer != null) {
+            evaluateInternal(node.initializer, depth + 1)
+        } else {
+            handlePrevDFG(node, depth)
+        }
     }
 
     /** Under certain circumstances, an assignment can also be used as an expression. */
@@ -403,14 +406,19 @@ open class ValueEvaluator(
     }
 
     /**
-     * Tries to compute the constant value of a reference. It therefore checks the incoming data
-     * flow edges.
+     * Tries to compute the constant value of a node based on its [Node.prevDFG]. It therefore
+     * checks the incoming data flow edges.
      */
-    protected open fun handleReference(expr: Reference, depth: Int): Any? {
+    protected open fun handlePrevDFG(node: Node, depth: Int): Any? {
         // For a reference, we are interested into its last assignment into the reference
         // denoted by the previous DFG edge. We need to filter out any self-references for READWRITE
         // references.
-        val prevDFG = filterSelfReferences(expr, expr.prevDFG.toList())
+        val prevDFG =
+            if (node is Reference) {
+                filterSelfReferences(node, node.prevDFG.toList())
+            } else {
+                node.prevDFG.toList()
+            }
 
         return if (prevDFG.size == 1) {
             // There's only one incoming DFG edge, so we follow this one.
@@ -419,11 +427,13 @@ open class ValueEvaluator(
             // We cannot have more than ONE valid solution, so we need to abort
             log.warn(
                 "We cannot evaluate {}: It has more than 1 previous DFG edges, meaning that the value is probably affected by a branch.",
-                expr,
+                node,
             )
-            cannotEvaluate(expr, this)
+            cannotEvaluate(node, this)
         } else {
-            cannotEvaluate(expr, this)
+            // No previous DFG node
+            log.warn("We cannot evaluate {}: It has no previous DFG edges.", node)
+            cannotEvaluate(node, this)
         }
     }
 
@@ -444,8 +454,7 @@ open class ValueEvaluator(
         // - We now remove the statement where we already are (the "selfReference") to continue
         // before it (case 2)
 
-        // Determines if we are in case 2. Note: using path like this makes this evaluator not
-        // thread-safe!
+        // Determines if we are in case 2
         val isCase2 = path.size > 2 && ref in path.subList(0, path.size - 2)
 
         if (ref.access == AccessValues.READWRITE && isCase2) {
