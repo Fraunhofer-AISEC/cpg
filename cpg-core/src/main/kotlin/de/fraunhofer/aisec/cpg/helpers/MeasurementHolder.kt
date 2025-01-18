@@ -58,6 +58,7 @@ class BenchmarkResults(val entries: List<List<Any>>) {
 /** Interface definition to hold different statistics about the translation process. */
 interface StatisticsHolder {
     val translatedFiles: List<String>
+    val resolutionCacheResults: Int
     val benchmarks: Set<MeasurementHolder>
     val config: TranslationConfiguration
 
@@ -73,6 +74,7 @@ interface StatisticsHolder {
                         "Translated file(s)",
                         translatedFiles.map { relativeOrAbsolute(Path.of(it), config.topLevel) },
                     ),
+                    listOf("Resolution cache results", resolutionCacheResults),
                 )
 
             benchmarks.forEach {

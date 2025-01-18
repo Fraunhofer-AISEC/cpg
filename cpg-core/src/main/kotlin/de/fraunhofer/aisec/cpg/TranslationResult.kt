@@ -172,6 +172,9 @@ class TranslationResult(
             return result
         }
 
+    override val resolutionCacheResults: Int
+        get() = finalCtx.scopeManager.symbolCache.results.size
+
     override val config: TranslationConfiguration
         get() = finalCtx.config
 

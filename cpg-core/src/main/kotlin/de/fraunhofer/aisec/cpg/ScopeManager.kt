@@ -42,19 +42,23 @@ import org.slf4j.LoggerFactory
 
 class SymbolCache {
 
-    val entries = mutableListOf<SymbolResolutionResult>()
+    val results = mutableListOf<SymbolResolutionResult>()
 
     fun invalidate(symbol: Symbol, startScope: Scope) {
         // Look for all entries that have the same name and where the scope is in the path of the
         // entry
-        val entries = entries.filter { it.symbol == symbol && it.path.contains(startScope) }
+        val entries = results.filter { it.symbol == symbol && it.path.contains(startScope) }
 
         // Remove them from the cache
-        this.entries.removeAll(entries)
+        this.results.removeAll(entries)
     }
 
     fun lookup(symbol: Symbol, startScope: Scope): SymbolResolutionResult? {
-        return entries.firstOrNull { it.symbol == symbol && it.startScope == startScope }
+        return results.firstOrNull { it.symbol == symbol && it.startScope === startScope }
+    }
+
+    operator fun plusAssign(result: SymbolResolutionResult) {
+        results.add(result)
     }
 }
 
@@ -221,6 +225,8 @@ class ScopeManager : ScopeProvider {
             // anymore
             manager.fqnScopeMap.clear()
             manager.scopeMap.clear()
+
+            symbolCache.results += manager.symbolCache.results
         }
     }
 
@@ -815,44 +821,48 @@ class ScopeManager : ScopeProvider {
 
         // We need to differentiate between a qualified and unqualified lookup. We have a qualified
         // lookup, if the scope is not null. In this case we need to stay within the specified scope
-        val list =
+        val result =
             when {
                 scope != null -> {
-                    scope
-                        .lookupSymbol(
-                            n.localName,
-                            languageOnly = language,
-                            thisScopeOnly = true,
-                            predicate = predicate,
-                        )
-                        .candidates
+                    scope.lookupSymbol(
+                        n.localName,
+                        languageOnly = language,
+                        thisScopeOnly = true,
+                        predicate = predicate,
+                    )
                 }
                 else -> {
                     // Otherwise, we can look up the symbol alone (without any FQN) starting from
                     // the startScope
-                    startScope
-                        ?.lookupSymbol(n.localName, languageOnly = language, predicate = predicate)
-                        ?.candidates ?: mutableListOf()
+                    startScope?.lookupSymbol(
+                        n.localName,
+                        languageOnly = language,
+                        predicate = predicate,
+                    )
                 }
             }
 
+        if (result == null) {
+            return listOf()
+        }
+
         // If we have both the definition and the declaration of a function declaration in our list,
         // we chose only the definition
-        val it = list.iterator()
+        val it = result.candidates.iterator()
         while (it.hasNext()) {
             val decl = it.next()
             if (decl is FunctionDeclaration) {
                 val definition = decl.definition
-                if (!decl.isDefinition && definition != null && definition in list) {
+                if (!decl.isDefinition && definition != null && definition in result.candidates) {
                     it.remove()
                 }
             }
         }
 
         // Cache the result
-        // symbolCache.put(name, list)
+        symbolCache += result
 
-        return list
+        return result.candidates
     }
 
     /**
