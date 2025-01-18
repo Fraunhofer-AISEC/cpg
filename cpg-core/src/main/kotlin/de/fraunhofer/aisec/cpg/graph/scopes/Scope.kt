@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.scopes
 
 import com.fasterxml.jackson.annotation.JsonBackReference
+import de.fraunhofer.aisec.cpg.SymbolCache
 import de.fraunhofer.aisec.cpg.SymbolResolutionResult
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.Node
@@ -140,6 +141,10 @@ sealed class Scope(
         var scope: Scope? = modifiedScoped ?: this
 
         while (scope != null) {
+            // Add scope to path
+            result.path.add(scope)
+
+            // Fetch declarations with a matching symbol from the current scope
             scope.symbols[symbol]?.let { result.candidates += it }
 
             // Also add any wildcard imports that we have to the list
@@ -252,6 +257,14 @@ private fun MutableList<Declaration>.replaceImports(symbol: Symbol) {
 fun SymbolMap.mergeFrom(symbolMap: SymbolMap) {
     for (entry in symbolMap) {
         val list = this.computeIfAbsent(entry.key) { mutableListOf() }
+        list += entry.value
+    }
+}
+
+/** This function merges in all entries from the [symbolCache] into the current [SymbolCache]. */
+fun SymbolCache.mergeFrom(symbolCache: SymbolCache) {
+    for (entry in symbolCache.symbolMap) {
+        val list = this.symbolMap.computeIfAbsent(entry.key) { mutableListOf() }
         list += entry.value
     }
 }

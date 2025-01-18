@@ -42,23 +42,24 @@ import org.slf4j.LoggerFactory
 
 class SymbolCache {
 
-    val results = mutableListOf<SymbolResolutionResult>()
+    val symbolMap = mutableMapOf<Symbol, MutableList<SymbolResolutionResult>>()
 
     fun invalidate(symbol: Symbol, startScope: Scope) {
         // Look for all entries that have the same name and where the scope is in the path of the
         // entry
-        val entries = results.filter { it.symbol == symbol && it.path.contains(startScope) }
-
-        // Remove them from the cache
-        this.results.removeAll(entries)
+        val results = symbolMap[symbol]
+        results?.removeIf { it.startScope === startScope || it.path.contains(startScope) }
     }
 
     fun lookup(symbol: Symbol, startScope: Scope): SymbolResolutionResult? {
-        return results.firstOrNull { it.symbol == symbol && it.startScope === startScope }
+        return symbolMap[symbol]?.firstOrNull { it.startScope === startScope }
     }
 
     operator fun plusAssign(result: SymbolResolutionResult) {
-        results.add(result)
+        val results =
+            symbolMap.computeIfAbsent(result.symbol) { mutableListOf<SymbolResolutionResult>() }
+
+        results += results
     }
 }
 
@@ -99,6 +100,7 @@ data class SymbolResolutionResult(
  * registered in the scope map and can be resolved later.
  */
 class ScopeManager : ScopeProvider {
+    /** The symbol cache. */
     val symbolCache = SymbolCache()
 
     /**
@@ -226,7 +228,8 @@ class ScopeManager : ScopeProvider {
             manager.fqnScopeMap.clear()
             manager.scopeMap.clear()
 
-            symbolCache.results += manager.symbolCache.results
+            // merge cache results
+            symbolCache.mergeFrom(manager.symbolCache)
         }
     }
 
@@ -406,6 +409,9 @@ class ScopeManager : ScopeProvider {
         if (declaration != null) {
             // New stuff here
             currentScope?.addSymbol(declaration.symbol, declaration)
+
+            // Invalidate cache for this symbol
+            currentScope?.let { symbolCache.invalidate(declaration.symbol, it) }
         }
 
         // Legacy stuff here
@@ -817,6 +823,15 @@ class ScopeManager : ScopeProvider {
         } else {
             scope = extractedScope.scope
             n = extractedScope.adjustedName
+        }
+
+        // Check, if we have a cache hit. We can only do this (for now, if the predicate is null)
+        val cacheScope = scope ?: startScope
+        if (predicate == null && cacheScope != null) {
+            val cached = symbolCache.lookup(n.localName, cacheScope)
+            if (cached != null) {
+                return cached.candidates
+            }
         }
 
         // We need to differentiate between a qualified and unqualified lookup. We have a qualified

@@ -38,7 +38,6 @@ import de.fraunhofer.aisec.cpg.graph.newReference
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.translationUnit
-import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.replace
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
@@ -81,11 +80,6 @@ class ResolveMemberExpressionAmbiguityPass(ctx: TranslationContext) : Translatio
      * @param me The member expression to disambiguate and potentially replace.
      */
     private fun resolveAmbiguity(me: MemberExpression) {
-        // If our base type is an unknown type, we cannot resolve the ambiguity
-        if (me.base.type is UnknownType) {
-            return
-        }
-
         // We need to check, if our "base" (or our expression) is really a name that refers to an
         // import, because in this case we do not have a member expression, but a reference with a
         // qualified name
