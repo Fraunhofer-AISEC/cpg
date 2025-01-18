@@ -246,7 +246,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             // into account
             parentScope =
                 frontend.scopeManager.lookupScope(
-                    frontend.scopeManager.currentNamespace.fqn(parent.toString()).toString()
+                    frontend.scopeManager.currentNamespace.fqn(parent.toString())
                 )
 
             declaration = createAppropriateFunction(name, parentScope, ctx.parent)

@@ -61,8 +61,8 @@ class ScopeManager : ScopeProvider {
      */
     private val scopeMap: MutableMap<Node?, Scope> = IdentityHashMap()
 
-    /** A lookup map for each scope and its associated FQN. */
-    private val fqnScopeMap: MutableMap<String, NameScope> = mutableMapOf()
+    /** A lookup map for each [NameScope] and its associated FQN. */
+    private val fqnScopeMap: MutableMap<Name, NameScope> = mutableMapOf()
 
     /** The currently active scope. */
     var currentScope: Scope? = null
@@ -197,7 +197,10 @@ class ScopeManager : ScopeProvider {
         if (scope is NameScope) {
             // for this to work, it is essential that RecordDeclaration and NamespaceDeclaration
             // nodes have a FQN as their name.
-            fqnScopeMap[scope.astNode?.name.toString()] = scope
+            val name = scope.astNode?.name
+            if (name != null) {
+                fqnScopeMap[name] = scope
+            }
         }
         currentScope?.let {
             it.children.add(scope)
@@ -436,7 +439,7 @@ class ScopeManager : ScopeProvider {
     }
 
     /** This function looks up scope by its FQN. This only works for [NameScope]s */
-    fun lookupScope(fqn: String): NameScope? {
+    fun lookupScope(fqn: Name): NameScope? {
         return this.fqnScopeMap[fqn]
     }
 
@@ -545,7 +548,7 @@ class ScopeManager : ScopeProvider {
             val scopeName = n.parent
 
             // this is a scoped call. we need to explicitly jump to that particular scope
-            val nameScope = fqnScopeMap[scopeName.toString()]
+            val nameScope = fqnScopeMap[scopeName]
             if (nameScope == null) {
                 Util.warnWithFileLocation(
                     location,
