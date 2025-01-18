@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.scopes
 
 import de.fraunhofer.aisec.cpg.graph.Name
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.LookupScopeStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
@@ -51,7 +52,7 @@ class ScopeTest {
         // if we try to resolve "a" now, this should point to the local A since we start there and
         // move upwards
         var result = scope.lookupSymbol("a")
-        assertEquals(listOf(localA), result)
+        assertEquals(mutableListOf<Declaration>(localA), result.candidates)
 
         // now, we pretend to have a lookup scope modifier for a symbol, e.g. through "global" in
         // Python
@@ -62,6 +63,6 @@ class ScopeTest {
 
         // let's try the lookup again, this time it should point to the global A
         result = scope.lookupSymbol("a")
-        assertEquals(listOf(globalA), result)
+        assertEquals(mutableListOf<Declaration>(globalA), result.candidates)
     }
 }

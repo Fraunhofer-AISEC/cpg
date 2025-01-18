@@ -40,6 +40,47 @@ import java.util.*
 import java.util.function.Predicate
 import org.slf4j.LoggerFactory
 
+class SymbolCache {
+
+    val entries = mutableListOf<SymbolResolutionResult>()
+
+    fun invalidate(symbol: Symbol, startScope: Scope) {
+        // Look for all entries that have the same name and where the scope is in the path of the
+        // entry
+        val entries = entries.filter { it.symbol == symbol && it.path.contains(startScope) }
+
+        // Remove them from the cache
+        this.entries.removeAll(entries)
+    }
+
+    fun lookup(symbol: Symbol, startScope: Scope): SymbolResolutionResult? {
+        return entries.firstOrNull { it.symbol == symbol && it.startScope == startScope }
+    }
+}
+
+/**
+ * The result of a symbol resolution using [Scope.lookupSymbol]. It contains all the information
+ * that was used during symbol lookup, so that we can cache the result and retrieve it later.
+ */
+data class SymbolResolutionResult(
+    /** The [Scope] where the lookup was started. */
+    val startScope: Scope,
+
+    /**
+     * The "path" of scopes that were traversed during the lookup. We use this information in
+     * cache-invalidation. For example, if a new declaration is added to a scope that was traversed
+     * during the lookup, we need to invalidate all [SymbolResolutionResult]s with the name of the
+     * added declaration.
+     */
+    val path: MutableList<Scope>,
+
+    /** The [Symbol] that was looked up. */
+    val symbol: Symbol,
+
+    /** The list of [Declaration] candidates that were found during the lookup. */
+    val candidates: MutableList<Declaration>,
+)
+
 /**
  * The scope manager builds a multi-tree structure of nodes associated to a scope. These scopes
  * capture the validity of certain (Variable-, Field-, Record-)declarations but are also used to
@@ -54,6 +95,8 @@ import org.slf4j.LoggerFactory
  * registered in the scope map and can be resolved later.
  */
 class ScopeManager : ScopeProvider {
+    val symbolCache = SymbolCache()
+
     /**
      * A map associating each CPG node with its scope. The key type is intentionally a nullable
      * [Node] because the [GlobalScope] is not associated to a CPG node when it is first created. It
@@ -576,7 +619,7 @@ class ScopeManager : ScopeProvider {
                 name
             }
         var decl =
-            scope?.lookupSymbol(parentName.localName)?.singleOrNull {
+            scope?.lookupSymbol(parentName.localName)?.candidates?.singleOrNull {
                 it is NamespaceDeclaration || it is RecordDeclaration
             }
         if (decl != null && parentName != decl.name) {
@@ -589,7 +632,10 @@ class ScopeManager : ScopeProvider {
         // but we rather want its original type name.
         // TODO: This really needs to be handled better somehow, maybe a common interface for
         //  typedefs, namespaces and records that return the correct name?
-        decl = scope?.lookupSymbol(parentName.localName)?.singleOrNull { it is TypedefDeclaration }
+        decl =
+            scope?.lookupSymbol(parentName.localName)?.candidates?.singleOrNull {
+                it is TypedefDeclaration
+            }
         if ((decl as? TypedefDeclaration) != null) {
             return Name(newName.localName, decl.type.name, delimiter = newName.delimiter)
         }
@@ -602,6 +648,7 @@ class ScopeManager : ScopeProvider {
         decl =
             scope
                 ?.lookupSymbol(parentName.localName)
+                ?.candidates
                 ?.filterIsInstance<ImportDeclaration>()
                 ?.singleOrNull()
         if (decl != null && decl.importedSymbols.isEmpty() && parentName != decl.import) {
@@ -778,14 +825,14 @@ class ScopeManager : ScopeProvider {
                             thisScopeOnly = true,
                             predicate = predicate,
                         )
-                        .toMutableList()
+                        .candidates
                 }
                 else -> {
                     // Otherwise, we can look up the symbol alone (without any FQN) starting from
                     // the startScope
                     startScope
                         ?.lookupSymbol(n.localName, languageOnly = language, predicate = predicate)
-                        ?.toMutableList() ?: mutableListOf()
+                        ?.candidates ?: mutableListOf()
                 }
             }
 
@@ -801,6 +848,9 @@ class ScopeManager : ScopeProvider {
                 }
             }
         }
+
+        // Cache the result
+        // symbolCache.put(name, list)
 
         return list
     }

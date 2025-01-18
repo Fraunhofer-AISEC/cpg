@@ -26,9 +26,9 @@
 package de.fraunhofer.aisec.cpg.graph.scopes
 
 import com.fasterxml.jackson.annotation.JsonBackReference
+import de.fraunhofer.aisec.cpg.SymbolResolutionResult
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.Node.Companion.TO_STRING_STYLE
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.LabelStatement
@@ -125,42 +125,44 @@ sealed class Scope(
         thisScopeOnly: Boolean = false,
         replaceImports: Boolean = true,
         predicate: ((Declaration) -> Boolean)? = null,
-    ): List<Declaration> {
+    ): SymbolResolutionResult {
+        val result =
+            SymbolResolutionResult(
+                startScope = this,
+                symbol = symbol,
+                path = mutableListOf(),
+                candidates = mutableListOf(),
+            )
+
         // First, try to look for the symbol in the current scope (unless we have a predefined
         // search scope). In the latter case we also need to restrict the lookup to the search scope
         var modifiedScoped = this.predefinedLookupScopes[symbol]?.targetScope
         var scope: Scope? = modifiedScoped ?: this
 
-        var list: MutableList<Declaration>? = null
-
         while (scope != null) {
-            list = scope.symbols[symbol]?.toMutableList()
+            scope.symbols[symbol]?.let { result.candidates += it }
 
             // Also add any wildcard imports that we have to the list
             val wildcards = scope.wildcardImports
-            if (list == null) {
-                list = wildcards.toMutableList()
-            } else {
-                list.addAll(wildcards.toMutableList())
-            }
+            result.candidates += wildcards
 
             // We need to resolve any imported symbols
             if (replaceImports) {
-                list.replaceImports(symbol)
+                result.candidates.replaceImports(symbol)
             }
 
             // Filter according to the language
             if (languageOnly != null) {
-                list.removeIf { it.language != languageOnly }
+                result.candidates.removeIf { it.language != languageOnly }
             }
 
             // Filter the list according to the predicate, if we have any
             if (predicate != null) {
-                list.removeIf { !predicate.invoke(it) }
+                result.candidates.removeIf { !predicate.invoke(it) }
             }
 
             // If we have a hit, we can break the loop
-            if (list.isNotEmpty()) {
+            if (result.candidates.isNotEmpty()) {
                 break
             }
 
@@ -173,7 +175,7 @@ sealed class Scope(
             }
         }
 
-        return list ?: listOf()
+        return result
     }
 
     fun addLabelStatement(labelStatement: LabelStatement) {
