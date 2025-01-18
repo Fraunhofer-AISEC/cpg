@@ -545,8 +545,8 @@ class ScopeManager : ScopeProvider {
             val scopeName = n.parent
 
             // this is a scoped call. we need to explicitly jump to that particular scope
-            val scopes = filterScopes { (it is NameScope && it.name == scopeName) }
-            if (scopes.isEmpty()) {
+            val nameScope = fqnScopeMap[scopeName.toString()]
+            if (nameScope == null) {
                 Util.warnWithFileLocation(
                     location,
                     LOGGER,
@@ -554,7 +554,7 @@ class ScopeManager : ScopeProvider {
                 )
                 return null
             }
-            s = scopes[0]
+            s = nameScope
         }
 
         return ScopeExtraction(s, n)
