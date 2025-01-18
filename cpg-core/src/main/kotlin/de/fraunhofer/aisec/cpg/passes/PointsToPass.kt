@@ -29,6 +29,9 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
+import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
+import de.fraunhofer.aisec.cpg.graph.edges.flows.PointerDataflowGranularity
+import de.fraunhofer.aisec.cpg.graph.edges.flows.default
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
@@ -68,6 +71,16 @@ fun resolveMemberExpression(node: MemberExpression): Pair<Node, Name> {
 @DependsOn(EvaluationOrderGraphPass::class)
 @DependsOn(DFGPass::class)
 class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependencies = true) {
+
+    /**
+     * We use this map to store additional information on the DFG edges which we cannot keep in the
+     * state. This is for example the case to identify if the resulting edge will receive a
+     * context-sensitivity label (i.e., if the node used as key is somehow inside the called
+     * function and the next usage happens inside the function under analysis right now). The key of
+     * an entry works as follows: The 2nd item in the Pair is the prevDFG of the 1st item.
+     * Ultimately, it will be 1st -prevDFG-> 1st.
+     */
+    val edgePropertiesMap = mutableMapOf<Pair<Node, Node>, Any>()
 
     // For recursive creation of FunctionSummaries, we have to make sure that we don't run in
     // circles.
@@ -135,11 +148,18 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
         for ((key, value) in finalState.generalState.elements) {
             // All nodes in the state get new memoryValues, Expressions and Declarations
             // additionally get new MemoryAddresses
-            val newMemoryValues = value.elements.second.elements
+            val newPrevDFGs = value.elements.second.elements
             val newMemoryAddresses = value.elements.first.elements as Collection<Node>
-            if (newMemoryValues.isNotEmpty()) {
+            if (newPrevDFGs.isNotEmpty()) {
                 key.prevDFG.clear()
-                key.prevDFG.addAll(newMemoryValues)
+                newPrevDFGs.forEach { prev ->
+                    val granularity =
+                        edgePropertiesMap[Pair(key, prev)] as? PointerDataflowGranularity
+                            ?: default()
+                    //                    key.prevDFGEdges.add(prev) { this.granularity =
+                    // granularity }
+                    key.prevDFGEdges += Dataflow(key, prev, granularity)
+                }
             }
             if (newMemoryAddresses.isNotEmpty()) {
                 when (key) {
@@ -172,9 +192,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                 indexes.add(value)
                 // Also collect the ParameterMemoryValue, since there might have been writes to
                 // pointer-to-pointers
-                doubleState.getValues(value).map {
-                    indexes.add(it)
-                }
+                doubleState.getValues(value).map { indexes.add(it) }
             }
 
             indexes.forEach { index ->
@@ -544,6 +562,26 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                     currentNode,
                     TupleLattice(Pair(PowersetLattice(addresses), PowersetLattice(values)))
                 )
+
+            // If we have any information from the dereferenced value, we also store that in the
+            // generalState
+            val derefValues =
+                values
+                    .flatMap {
+                        doubleState.declarationsState.elements[it]?.elements?.second?.elements
+                            ?: emptySet()
+                    }
+                    .toIdentitySet()
+            doubleState =
+                doubleState.push(
+                    currentNode,
+                    TupleLattice(Pair(PowersetLattice(addresses), PowersetLattice(derefValues)))
+                )
+            // Store the information over the type of the edge in the edgePropertiesmap
+            derefValues.map {
+                edgePropertiesMap[Pair(currentNode, it)] =
+                    PointerDataflowGranularity(PointerAccess.currentDerefValue)
+            }
         }
         return doubleState
     }
