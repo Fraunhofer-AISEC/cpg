@@ -503,8 +503,8 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             )
         val language = source.language
 
-        if (language == null) {
-            result.success = PROBLEMATIC
+        // If there are no candidates, we can stop here
+        if (candidates.isEmpty()) {
             return result
         }
 
