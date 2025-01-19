@@ -544,11 +544,6 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             )
         val language = source.language
 
-        // If there are no candidates, we can stop here
-        if (candidates.isEmpty()) {
-            return result
-        }
-
         // Set the start scope. This can either be the call's scope or a scope specified in an FQN
         val extractedScope = ctx.scopeManager.extractScope(source, source.scope)
 
@@ -560,6 +555,11 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
         val scope = extractedScope.scope
         result.actualStartScope = scope ?: source.scope
+
+        // If there are no candidates, we can stop here
+        if (candidates.isEmpty()) {
+            return result
+        }
 
         // If the function does not allow function overloading, and we have multiple candidate
         // symbols, the result is "problematic"
