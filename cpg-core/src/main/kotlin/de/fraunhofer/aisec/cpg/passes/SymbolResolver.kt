@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.CallResolutionResult.SuccessKind.*
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
@@ -82,9 +83,44 @@ import org.slf4j.LoggerFactory
 @DependsOn(ImportResolver::class)
 open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
+    /** Configuration for the [SymbolResolver]. */
+    class Configuration(
+        /** If set to true, the resolver will skip unreachable EOG edges. */
+        val skipUnreachableEOG: Boolean = false,
+
+        /**
+         * If set to true, the resolver will ignore [Declaration] nodes that are on EOG paths that
+         * are [EvaluationOrder.unreachable].
+         */
+        val ignoreUnreachableDeclarations: Boolean = false,
+    ) : PassConfiguration()
+
     protected lateinit var walker: ScopedWalker
 
     protected val templateList = mutableListOf<TemplateDeclaration>()
+
+    /** Our configuration. */
+    var passConfig = passConfig<Configuration>()
+
+    /**
+     * If [Configuration.ignoreUnreachableDeclarations] is enabled, this predicate will filter
+     * candidates whether they are [EvaluationOrder.unreachable]. If the declaration has ONLY
+     * unreachable incoming EOG edges, we ignore them.
+     */
+    private val eogPredicate: ((Declaration) -> Boolean)? =
+        if (passConfig?.ignoreUnreachableDeclarations == true) {
+            { declaration ->
+                if (declaration is FunctionDeclaration) {
+                        declaration.astParent
+                    } else {
+                        declaration
+                    }
+                    ?.prevEOGEdges
+                    ?.all { edge -> !edge.unreachable } == true
+            }
+        } else {
+            null
+        }
 
     override fun accept(component: Component) {
         ctx.currentComponent = component
@@ -95,7 +131,12 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             walker.iterate(tu)
         }
 
-        walker.strategy = Strategy::EOG_FORWARD
+        walker.strategy =
+            if (passConfig?.skipUnreachableEOG == true) {
+                Strategy::REACHABLE_EOG_FORWARD
+            } else {
+                Strategy::EOG_FORWARD
+            }
         walker.clearCallbacks()
         walker.registerHandler(this::handle)
 
@@ -106,7 +147,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
             // Gather all resolution EOG starters; and make sure they really do not have a
             // predecessor, otherwise we might analyze a node multiple times
-            val nodes = it.allEOGStarters.filter { it.prevEOGEdges.isEmpty }
+            val nodes = it.allEOGStarters.filter { it.prevEOGEdges.isEmpty() }
 
             for (node in nodes) {
                 walker.iterate(node)
@@ -186,10 +227,10 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                                 IncompatibleSignature
                     } else {
                         false
-                    }
+                    } && eogPredicate?.invoke(declaration) != false
                 }
             } else {
-                null
+                eogPredicate
             }
 
         // Find a list of candidate symbols. Currently, this is only used the in the "next-gen" call
@@ -502,11 +543,6 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 source.scope,
             )
         val language = source.language
-
-        if (language == null) {
-            result.success = PROBLEMATIC
-            return result
-        }
 
         // Set the start scope. This can either be the call's scope or a scope specified in an FQN
         val extractedScope = ctx.scopeManager.extractScope(source, source.scope)
