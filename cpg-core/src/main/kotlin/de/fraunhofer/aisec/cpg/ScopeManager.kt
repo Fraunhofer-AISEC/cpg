@@ -61,8 +61,13 @@ class ScopeManager : ScopeProvider {
      */
     private val scopeMap: MutableMap<Node?, Scope> = IdentityHashMap()
 
-    /** A lookup map for each [NameScope] and its associated FQN. */
-    private val fqnScopeMap: MutableMap<Name, NameScope> = mutableMapOf()
+    /**
+     * A lookup map for each [NameScope] and its associated FQN (as a [Name]). This is mainly needed
+     * in the [lookupScope] method, which is extensively used by [extractScope] as a very fast
+     * lookup from a [Name] to its [NameScope]. Otherwise, we would need to iterate through all
+     * scopes, which can be quite slow.
+     */
+    private val nameScopeMap: MutableMap<Name, NameScope> = mutableMapOf()
 
     /** The currently active scope. */
     var currentScope: Scope? = null
@@ -137,8 +142,8 @@ class ScopeManager : ScopeProvider {
         for (manager in toMerge) {
             // loop through all scopes in the FQN map to check for potential duplicates we need to
             // merge
-            for (entry in manager.fqnScopeMap.entries) {
-                val existing = fqnScopeMap[entry.key]
+            for (entry in manager.nameScopeMap.entries) {
+                val existing = nameScopeMap[entry.key]
                 if (existing != null) {
                     // merge symbols
                     existing.symbols.mergeFrom(entry.value.symbols)
@@ -165,7 +170,7 @@ class ScopeManager : ScopeProvider {
                     keys.forEach { manager.scopeMap[it] = existing }
                 } else {
                     // this is the first we see for this particular FQN, so we add it to our map
-                    fqnScopeMap[entry.key] = entry.value
+                    nameScopeMap[entry.key] = entry.value
                 }
             }
 
@@ -176,7 +181,7 @@ class ScopeManager : ScopeProvider {
 
             // free the maps, just to clear up some things. this scope manager will not be used
             // anymore
-            manager.fqnScopeMap.clear()
+            manager.nameScopeMap.clear()
             manager.scopeMap.clear()
         }
     }
@@ -199,7 +204,7 @@ class ScopeManager : ScopeProvider {
             // nodes have a FQN as their name.
             val name = scope.astNode?.name
             if (name != null) {
-                fqnScopeMap[name] = scope
+                nameScopeMap[name] = scope
             }
         }
         currentScope?.let {
@@ -440,7 +445,7 @@ class ScopeManager : ScopeProvider {
 
     /** This function looks up scope by its FQN. This only works for [NameScope]s */
     fun lookupScope(fqn: Name): NameScope? {
-        return this.fqnScopeMap[fqn]
+        return this.nameScopeMap[fqn]
     }
 
     /**
@@ -548,7 +553,7 @@ class ScopeManager : ScopeProvider {
             val scopeName = n.parent
 
             // this is a scoped call. we need to explicitly jump to that particular scope
-            val nameScope = fqnScopeMap[scopeName]
+            val nameScope = nameScopeMap[scopeName]
             if (nameScope == null) {
                 Util.warnWithFileLocation(
                     location,
