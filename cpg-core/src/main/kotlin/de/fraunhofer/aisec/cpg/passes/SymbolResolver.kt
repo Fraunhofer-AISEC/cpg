@@ -133,7 +133,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
         walker.strategy =
             if (passConfig?.skipUnreachableEOG == true) {
-                Strategy::nextReachableEOG
+                Strategy::REACHABLE_EOG_FORWARD
             } else {
                 Strategy::EOG_FORWARD
             }

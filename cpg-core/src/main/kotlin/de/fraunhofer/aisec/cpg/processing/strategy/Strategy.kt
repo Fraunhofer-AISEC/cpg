@@ -51,7 +51,7 @@ object Strategy {
     }
 
     /** A strategy to traverse the EOG in forward direction, but only if the edge is reachable. */
-    fun nextReachableEOG(x: Node): Iterator<Node> {
+    fun REACHABLE_EOG_FORWARD(x: Node): Iterator<Node> {
         return x.nextEOGEdges.filter { !it.unreachable }.map { it.end }.iterator()
     }
 
