@@ -231,6 +231,7 @@ fun MetadataProvider.newTypedefDeclaration(
 
     node.type = targetType
     node.alias = alias
+
     // litle bit of a hack to make the type FQN
     node.alias.name = node.name
 
