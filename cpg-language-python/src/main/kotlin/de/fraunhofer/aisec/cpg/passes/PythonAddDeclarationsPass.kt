@@ -40,6 +40,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.InitializerTypePropagation
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 import de.fraunhofer.aisec.cpg.passes.configuration.RequiredFrontend
@@ -88,6 +89,12 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
      */
     private fun handleWriteToReference(ref: Reference): VariableDeclaration? {
         if (ref.access != AccessValues.WRITE) {
+            return null
+        }
+
+        // If this is a member expression, and we do not know the base's type, we cannot create a
+        // declaration
+        if (ref is MemberExpression && ref.base.type is UnknownType) {
             return null
         }
 
