@@ -34,6 +34,7 @@ inline fun <reified V> iterateEOGClean(
     transformation: (EvaluationOrder, LatticeElement<V>) -> LatticeElement<V>,
 ): LatticeElement<V> {
     val globalState = IdentityHashMap<EvaluationOrder, LatticeElement<V>>()
+    val finalState = IdentityHashMap<EvaluationOrder, LatticeElement<V>>()
     for (startEdge in startEdges) {
         globalState[startEdge] = startState
     }
@@ -46,9 +47,13 @@ inline fun <reified V> iterateEOGClean(
 
         val nextGlobal = globalState[nextEdge] ?: continue
         val newState = transformation(nextEdge, nextGlobal)
+        if (nextEdge.end.nextEOGEdges.isEmpty()) {
+            finalState[nextEdge] = newState
+        }
         nextEdge.end.nextEOGEdges.forEach {
             val oldGlobalIt = globalState[it]
-            val newGlobalIt = oldGlobalIt?.let { newState.lub(it) } ?: newState
+            val newGlobalIt =
+                (oldGlobalIt?.let { newState.lub(it) } ?: newState) as LatticeElement<V>
             globalState[it] = newGlobalIt
             if (it !in edgesList && (oldGlobalIt == null || newGlobalIt != oldGlobalIt)) {
                 edgesList.add(0, it)
@@ -56,7 +61,7 @@ inline fun <reified V> iterateEOGClean(
         }
     }
 
-    return globalState.values.fold(globalState.values.firstOrNull()) { state, value ->
-        state?.lub(value)
+    return finalState.values.fold(finalState.values.firstOrNull()) { state, value ->
+        state?.lub(value) as LatticeElement<V>
     } ?: startState
 }
