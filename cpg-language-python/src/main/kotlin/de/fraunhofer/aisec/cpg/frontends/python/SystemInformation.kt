@@ -32,7 +32,7 @@ data class VersionInfo(var major: Long? = null, var minor: Long? = null, var mic
     OverlayNode() {
     /**
      * Returns the version info as a tuple (major, minor, micro). The length of the tuple depends on
-     * the information set, e.g., if only major version is set, then the tuple is 1 element long.
+     * the information set, e.g., if only major version is set, then the list is 1 element long.
      */
     fun toList(): List<Long> {
         val list = mutableListOf<Long>()
