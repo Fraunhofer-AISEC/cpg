@@ -200,7 +200,15 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
             var values = doubleState.getAddresses(param)
 
             for (dereferenceDepth in 1..2) {
-                values = values.flatMap { doubleState.getValues(it) }.toIdentitySet()
+                val newValues = mutableSetOf<Node>()
+                values.forEach { value ->
+                    if (doubleState.hasDeclarationStateEntry(value)) {
+                        newValues.addAll(
+                            doubleState.fetchElementFromDeclarationState(value).map { it.first }
+                        )
+                    }
+                }
+                values = newValues
                 values.map { indexes.add(Pair(it, dereferenceDepth)) }
             }
 
@@ -779,6 +787,15 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                 other.elements.second == this.elements.second
         }
 
+        /** Check if `node` has an entry in the DeclarationState */
+        fun hasDeclarationStateEntry(node: Node): Boolean {
+            return (this.declarationsState.elements[node]
+                ?.elements
+                ?.second
+                ?.elements
+                ?.isNotEmpty() == true)
+        }
+
         /**
          * Fetch the entry for `node` from the DeclarationState. If there isn't any, create an
          * UnknownMemoryValue
@@ -809,12 +826,8 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                     }
                 val newElements = this.declarationsState.elements[node]?.elements?.second?.elements
                 (newElements as? IdentitySet<Node>)?.addAll(newEntry)
-                // return newEntry
-                //                ret.addAll(newEntry)
                 newEntry.map { ret.add(Pair(it, "")) }
-            } else // return elements.toIdentitySet()
-            //             ret.addAll(elements)
-            elements.map { ret.add(Pair(it, "")) }
+            } else elements.map { ret.add(Pair(it, "")) }
 
             // if fetchFields is true, we also fetch the values for fields
             if (fetchFields) {
@@ -824,7 +837,6 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                     }
                 fields?.forEach { field ->
                     this.declarationsState.elements[field]?.elements?.second?.elements?.let {
-                        //                        ret.addAll(it)
                         it.map { ret.add(Pair(it, field.name.localName)) }
                     }
                 }
@@ -894,14 +906,8 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                 is SubscriptExpression -> {
                     this.getAddresses(node).flatMap { this.getValues(it) }.toIdentitySet()
                 }
-                is CallExpression -> {
-                    identitySetOf(node)
-                }
-                /*is BinaryOperator -> identitySetOf(node)*/
                 /* In these cases, we simply have to fetch the current value for the MemoryAddress from the DeclarationState */
-                else -> /*fetchElementFromDeclarationState(node, true)
-                        .map { it.first }
-                        .toIdentitySet()*/ identitySetOf(node)
+                else -> identitySetOf(node)
             }
         }
 
