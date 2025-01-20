@@ -44,7 +44,16 @@ class ScanCommand : CliktCommand() {
     private val translationOptions by TranslationOptions()
 
     override fun run() {
+        // Load the security goals from the project
+        val goals = loadSecurityGoals(projectOptions.directory.resolve("security-goals"))
+
+        // Analyze the project
         val result = analyze(buildConfig(projectOptions, translationOptions))
+
+        // Connect the security goals to the translation result for now. Later we will add them to
+        // individual concepts
+        goals.forEach { goal -> goal.underlyingNode = result.translationResult }
+
         result.run.results?.forEach { echo(it.message) }
     }
 }
@@ -60,7 +69,10 @@ class ListSecurityGoals : CliktCommand() {
     private val projectOptions by ProjectOptions()
 
     override fun run() {
+        // Load the security goals from the project
         val goals = loadSecurityGoals(projectOptions.directory.resolve("security-goals"))
+
+        // Print the name of each security goal
         goals.forEach { echo(it.name.localName) }
     }
 }
