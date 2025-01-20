@@ -28,22 +28,31 @@ package de.fraunhofer.aisec.codyze.compliance
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.subcommands
 import com.github.ajalt.clikt.parameters.groups.provideDelegate
-import de.fraunhofer.aisec.cpg.codyze.ProjectOptions
-import de.fraunhofer.aisec.cpg.codyze.TranslationOptions
-import de.fraunhofer.aisec.cpg.codyze.analyze
-import de.fraunhofer.aisec.cpg.codyze.buildConfig
+import de.fraunhofer.aisec.cpg.codyze.*
 
 /** The main `compliance` command. */
 class ComplianceCommand : CliktCommand() {
     override fun run() {}
 }
 
-/** The `scan` command. This will scan the project for compliance violations in the future. */
-class ScanCommand : CliktCommand() {
+/**
+ * A command that operates on a project. This class provides the common options and functions for
+ * all commands.
+ */
+abstract class ProjectCommand : CliktCommand() {
     private val projectOptions by ProjectOptions()
     private val translationOptions by TranslationOptions()
 
-    override fun run() {
+    /** Loads the security goals from the project. */
+    fun loadSecurityGoals(): List<SecurityGoal> {
+        return loadSecurityGoals(projectOptions.directory.resolve("security-goals"))
+    }
+
+    /**
+     * This method is called by the `run` method to perform the actual analysis. It is separated to
+     * allow for easier access from overriding applications.
+     */
+    protected fun analyze(): AnalysisResult {
         // Load the security goals from the project
         val goals = loadSecurityGoals(projectOptions.directory.resolve("security-goals"))
 
@@ -60,6 +69,15 @@ class ScanCommand : CliktCommand() {
             }
         }
 
+        return result
+    }
+}
+
+/** The `scan` command. This will scan the project for compliance violations in the future. */
+open class ScanCommand : ProjectCommand() {
+    override fun run() {
+        val result = analyze()
+
         result.run.results?.forEach { echo(it.message) }
     }
 }
@@ -71,13 +89,9 @@ class ScanCommand : CliktCommand() {
  * This command assumes that the project contains a folder named `security-goals` that contains YAML
  * files with the security goals.
  */
-class ListSecurityGoals : CliktCommand() {
-    private val projectOptions by ProjectOptions()
-
+class ListSecurityGoals : ProjectCommand() {
     override fun run() {
-        // Load the security goals from the project
-        val goals = loadSecurityGoals(projectOptions.directory.resolve("security-goals"))
-
+        val goals = loadSecurityGoals()
         // Print the name of each security goal
         goals.forEach { echo(it.name.localName) }
     }
