@@ -39,6 +39,7 @@ import de.fraunhofer.aisec.cpg.helpers.functional.*
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass.Configuration
+import de.fraunhofer.aisec.cpg.passes.PointsToPass.PointsToState2
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 
 /**
@@ -46,7 +47,11 @@ import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
  * localName, but for Literals, it is their value
  */
 fun nodeNameToString(node: Node): Name {
-    return if (node is Literal<*>) Name((node as? Literal<*>)?.value.toString()) else node.name
+    return when (node) {
+        is Literal<*> -> Name((node as? Literal<*>)?.value.toString())
+        is UnknownMemoryValue -> Name(node.name.localName, Name("UnknownMemoryValue"))
+        else -> node.name
+    }
 }
 
 /**
@@ -126,7 +131,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
             return
         }
 
-        log.info("[PointsToPass] Analyzing function ${node.name}. Complexity: $c")
+        log.info("Analyzing function ${node.name}. Complexity: $c")
 
         var startState = PointsToState2()
         startState =
@@ -156,9 +161,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                     val granularity =
                         edgePropertiesMap[Pair(key, prev)] as? PointerDataflowGranularity
                             ?: default()
-                    //                    key.prevDFGEdges.add(prev) { this.granularity =
-                    // granularity }
-                    key.prevDFGEdges += Dataflow(key, prev, granularity)
+                    key.prevDFGEdges += Dataflow(prev, key, granularity)
                 }
             }
             if (newMemoryAddresses.isNotEmpty()) {
@@ -182,20 +185,26 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
     private fun storeFunctionSummary(node: FunctionDeclaration, doubleState: PointsToState2) {
         node.parameters.forEach { param ->
             // fetch the parameter's current address and value
-            val addresses = doubleState.getAddresses(param)
-            val values = addresses.flatMap { doubleState.getValues(it) }
-            val indexes = mutableSetOf<Node>()
+            //            val addresses = doubleState.getAddresses(param)
+            //            var values = addresses.flatMap { doubleState.getValues(it) }
 
             // Collect all addresses of the parameter that we can use as index to look up possible
             // new values
-            values.forEach { value ->
+            /*            values.forEach { value ->
                 indexes.add(value)
                 // Also collect the ParameterMemoryValue, since there might have been writes to
                 // pointer-to-pointers
                 doubleState.getValues(value).map { indexes.add(it) }
+            }*/
+            val indexes = mutableSetOf<Pair<Node, Int>>()
+            var values = doubleState.getAddresses(param)
+
+            for (dereferenceDepth in 1..2) {
+                values = values.flatMap { doubleState.getValues(it) }.toIdentitySet()
+                values.map { indexes.add(Pair(it, dereferenceDepth)) }
             }
 
-            indexes.forEach { index ->
+            indexes.forEach { (index, dereferenceDepth) ->
                 val stateEntries =
                     doubleState.fetchElementFromDeclarationState(index, true).filter {
                         it.first.name != param.name
@@ -213,7 +222,14 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                         // should we do something else?
                         node.functionSummary
                             .computeIfAbsent(param) { mutableSetOf() }
-                            .add(FunctionDeclaration.FSEntry(true, value, true, subAccessName))
+                            .add(
+                                FunctionDeclaration.FSEntry(
+                                    dereferenceDepth,
+                                    value,
+                                    true,
+                                    subAccessName
+                                )
+                            )
                     }
             }
         }
@@ -267,7 +283,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                         .computeIfAbsent(currentNode) { mutableSetOf() }
                         .addAll(
                             doubleState.getValues(retval).map {
-                                FunctionDeclaration.FSEntry(false, it, false, "")
+                                FunctionDeclaration.FSEntry(0, it, false, "")
                             }
                         )
                 }
@@ -321,7 +337,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                         )
                         val newValues: MutableSet<FunctionDeclaration.FSEntry> =
                             invoke.parameters
-                                .map { FunctionDeclaration.FSEntry(false, it, false, "") }
+                                .map { FunctionDeclaration.FSEntry(0, it, false, "") }
                                 .toMutableSet()
                         invoke.functionSummary[ReturnStatement()] = newValues
                     }
@@ -333,7 +349,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                     // case with a body, all returns flow to the FunctionDeclaration too?
                     val newValues: MutableSet<FunctionDeclaration.FSEntry> =
                         invoke.parameters
-                            .map { FunctionDeclaration.FSEntry(false, it, false, "") }
+                            .map { FunctionDeclaration.FSEntry(0, it, false, "") }
                             .toMutableSet()
                     invoke.functionSummary[ReturnStatement()] = newValues
                 }
@@ -373,14 +389,13 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                         else -> null
                     }
                 if (argument != null) {
-                    fsEntries.forEach { (derefDestination, value, derefSource, subAccessName) ->
+                    fsEntries.forEach { (destDerefDepth, value, derefSource, subAccessName) ->
                         val destination =
                             if (subAccessName.isNotEmpty()) {
                                 val fieldAddresses = identitySetOf<Node>()
                                 // Collect the fieldAddresses for each possible value
                                 val argumentValues =
-                                    if (derefDestination) doubleState.getValues(argument)
-                                    else doubleState.getAddresses(argument)
+                                    doubleState.dereferenceNode(argument, destDerefDepth)
                                 argumentValues.forEach { v ->
                                     val parentName = nodeNameToString(v)
                                     val newName = Name(subAccessName, parentName)
@@ -392,8 +407,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                                 }
                                 fieldAddresses
                             } else {
-                                if (derefDestination) doubleState.getValues(argument)
-                                else doubleState.getAddresses(argument)
+                                doubleState.dereferenceNode(argument, destDerefDepth)
                             }
                         when (value) {
                             is ParameterDeclaration ->
@@ -572,15 +586,17 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                             ?: emptySet()
                     }
                     .toIdentitySet()
-            doubleState =
-                doubleState.push(
-                    currentNode,
-                    TupleLattice(Pair(PowersetLattice(addresses), PowersetLattice(derefValues)))
-                )
-            // Store the information over the type of the edge in the edgePropertiesmap
-            derefValues.map {
-                edgePropertiesMap[Pair(currentNode, it)] =
-                    PointerDataflowGranularity(PointerAccess.currentDerefValue)
+            if (derefValues.isNotEmpty()) {
+                doubleState =
+                    doubleState.push(
+                        currentNode,
+                        TupleLattice(Pair(PowersetLattice(addresses), PowersetLattice(derefValues)))
+                    )
+                // Store the information over the type of the edge in the edgePropertiesmap
+                derefValues.map {
+                    edgePropertiesMap[Pair(currentNode, it)] =
+                        PointerDataflowGranularity(PointerAccess.currentDerefValue)
+                }
             }
         }
         return doubleState
@@ -883,7 +899,9 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                 }
                 /*is BinaryOperator -> identitySetOf(node)*/
                 /* In these cases, we simply have to fetch the current value for the MemoryAddress from the DeclarationState */
-                else -> /*fetchElementFromDeclarationState(node)*/ identitySetOf(node)
+                else -> /*fetchElementFromDeclarationState(node, true)
+                        .map { it.first }
+                        .toIdentitySet()*/ identitySetOf(node)
             }
         }
 
@@ -953,6 +971,17 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                         .toIdentitySet()
                 }
                 else -> identitySetOf(node)
+            }
+        }
+
+        fun dereferenceNode(node: Node, dereferenceDepth: Int): Set<Node> {
+            if (dereferenceDepth == 0) return this.getAddresses(node)
+            else {
+                var ret = identitySetOf(node)
+                for (i in 1..dereferenceDepth) {
+                    ret = ret.flatMap { this.getValues(it) }.toIdentitySet()
+                }
+                return ret
             }
         }
 

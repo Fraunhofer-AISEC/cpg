@@ -283,7 +283,7 @@ class DFGFunctionSummaries {
     ) {
         for (entry in dfgEntries) {
             var derefSource = false
-            var derefDestination = false
+            var destDerefDepth = 0
             val from =
                 if (entry.from.startsWith("param")) {
                     try {
@@ -315,7 +315,7 @@ class DFGFunctionSummaries {
                     try {
                         val e = entry.to.split(".")
                         val paramIndex = e.getOrNull(0)?.removePrefix("param")?.toInt()
-                        if (e.getOrNull(1) == "deref") derefDestination = true
+                        if (e.getOrNull(1) == "deref") destDerefDepth = 1
                         val paramTo =
                             paramIndex?.let { functionDeclaration.parameters.getOrNull(it) }
                         if (from != null && paramTo != null) {
@@ -323,7 +323,7 @@ class DFGFunctionSummaries {
                                 .computeIfAbsent(paramTo) { identitySetOf() }
                                 .add(
                                     FunctionDeclaration.FSEntry(
-                                        derefDestination,
+                                        destDerefDepth,
                                         from,
                                         derefSource,
                                         ""
@@ -342,7 +342,7 @@ class DFGFunctionSummaries {
                                 .computeIfAbsent(receiver) { identitySetOf() }
                                 .add(
                                     FunctionDeclaration.FSEntry(
-                                        derefDestination,
+                                        destDerefDepth,
                                         from,
                                         derefSource,
                                         ""
