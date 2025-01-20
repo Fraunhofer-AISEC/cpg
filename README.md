@@ -1,6 +1,6 @@
 # Code Property Graph 
 [![Actions Status](https://github.com/Fraunhofer-AISEC/cpg/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/Fraunhofer-AISEC/cpg/actions)
- [![codecov](https://codecov.io/gh/Fraunhofer-AISEC/cpg/graph/badge.svg?token=XBXZZOQIID)](https://codecov.io/gh/Fraunhofer-AISEC/cpg) [![](https://jitpack.io/v/Fraunhofer-AISEC/cpg.svg)](https://jitpack.io/#Fraunhofer-AISEC/cpg)
+ [![codecov](https://codecov.io/gh/Fraunhofer-AISEC/cpg/graph/badge.svg?token=XBXZZOQIID)](https://codecov.io/gh/Fraunhofer-AISEC/cpg)
 
 A simple library to extract a *code property graph* out of source code. It has support for multiple passes that can extend the analysis after the graph is constructed. It currently supports C/C++ (C17), Java (Java 13) and has experimental support for Golang, Python and TypeScript. Furthermore, it has support for the [LLVM IR](http://llvm.org/docs/LangRef.html) and thus, theoretically support for all languages that compile using LLVM. 
 
@@ -76,7 +76,9 @@ Beware, that the `cpg` module includes all optional features and might potential
 
 #### Development Builds
 
-A published artifact of every commit can be requested through [JitPack](https://jitpack.io/#Fraunhofer-AISEC/cpg). This is especially useful, if your external project makes use of a specific feature that is not yet merged in yet or not published as a version yet. Please follow the instructions on the JitPack page. Please be aware, that similar to release builds, the CDT repository needs to be added as well (see above).
+For all builds on the `main` branch, an artefact is published in the [GitHub Packages](https://github.com/orgs/Fraunhofer-AISEC/packages?repo_name=cpg) under the version `main-SNAPSHOT`. Additionally, selected PRs that have the `publish-to-github-packages` label will also be published there. This is useful if an important feature is not yet in main, but you want to test it. The version refers to the PR number, e.g. `1954-SNAPSHOT`.  
+
+To use the GitHub Gradle Registry, please refer to https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-gradle-registry#using-a-published-package
 
 ### On Command Line
 

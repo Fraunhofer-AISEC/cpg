@@ -18,6 +18,9 @@ on:
 jobs:
   build:
     runs-on: [self-hosted, Linux, ARM64]
+    permissions:
+      contents: read
+      packages: write
     steps:
       - uses: actions/checkout@v4
       - run: |
@@ -44,8 +47,8 @@ jobs:
           export VERSION=$(echo "${GITHUB_REF}" | cut -d "/" -f3)
           if [[ $VERSION != v* ]]
           then
-            export VERSION=""
-            echo "Building version-less (main or feature branch)"
+            export VERSION="${VERSION}-SNAPSHOT"
+            echo "Building as ${VERSION}"
           else
             # make version more Java-friendly by dropping the 'v'
             export VERSION=${VERSION:1:${#VERSION}}
@@ -91,6 +94,13 @@ jobs:
         with:
           name: reports
           path: reports.zip
+      - name: Publish to GitHub Packages
+        if: github.ref == 'refs/heads/main' || contains(github.event.pull_request.labels.*.name, 'publish-to-github-packages')
+        run: |
+          ./gradlew --parallel -Pversion=$VERSION publishAllPublicationsToGitHubPackagesRepository
+        env:
+          VERSION: ${{ env.version }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Publish to Maven Central
         if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, 'beta') && !contains(github.ref, 'alpha')
         run: |
