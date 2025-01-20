@@ -200,16 +200,16 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
             var values = doubleState.getAddresses(param)
 
             for (dereferenceDepth in 1..2) {
-                val newValues = mutableSetOf<Node>()
-                values.forEach { value ->
-                    if (doubleState.hasDeclarationStateEntry(value)) {
-                        newValues.addAll(
-                            doubleState.fetchElementFromDeclarationState(value).map { it.first }
-                        )
-                    }
-                }
-                values = newValues
-                values.map { indexes.add(Pair(it, dereferenceDepth)) }
+                values =
+                    values
+                        .filter { doubleState.hasDeclarationStateEntry(it) }
+                        .flatMap {
+                            doubleState.fetchElementFromDeclarationState(it, true).map { it.first }
+                        }
+                        .toIdentitySet()
+                values
+                    .filter { doubleState.hasDeclarationStateEntry(it) }
+                    .map { indexes.add(Pair(it, dereferenceDepth)) }
             }
 
             indexes.forEach { (index, dereferenceDepth) ->
