@@ -421,6 +421,16 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         val callee = call.callee
         val language = call.language
 
+        // If the base type is unknown, we cannot resolve the call
+        if (callee is MemberExpression && callee.base.type is UnknownType) {
+            Util.warnWithFileLocation(
+                call,
+                log,
+                "Cannot resolve call to ${callee.name} because the base type is unknown",
+            )
+            return
+        }
+
         // Handle a possible overloaded operator->
         resolveOverloadedArrowOperator(callee)
 
@@ -555,6 +565,11 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
         val scope = extractedScope.scope
         result.actualStartScope = scope ?: source.scope
+
+        // If there are no candidates, we can stop here
+        if (candidates.isEmpty()) {
+            return result
+        }
 
         // If the function does not allow function overloading, and we have multiple candidate
         // symbols, the result is "problematic"
