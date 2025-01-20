@@ -492,7 +492,6 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
             if (dstValues.all { it == dst })
                 doubleState = doubleState.updateValues(src, dstValues, setOf(dst))
             else doubleState = doubleState.updateValues(src, identitySetOf(), setOf(dst))
-            // doubleState = doubleState.updateValues(src, identitySetOf(), setOf(dst))
         }
 
         return doubleState
