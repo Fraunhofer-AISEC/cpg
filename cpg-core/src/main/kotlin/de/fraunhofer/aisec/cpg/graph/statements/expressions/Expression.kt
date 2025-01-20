@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.NodeEntity
+import org.neo4j.ogm.annotation.Relationship
 import org.neo4j.ogm.annotation.Transient
 
 /**
@@ -87,7 +88,7 @@ abstract class Expression : Statement(), HasType {
         }
 
     /** Each Expression also has a MemoryAddress. */
-    var memoryAddress = mutableSetOf<Node>()
+    @Relationship var memoryAddress = mutableSetOf<Node>()
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)

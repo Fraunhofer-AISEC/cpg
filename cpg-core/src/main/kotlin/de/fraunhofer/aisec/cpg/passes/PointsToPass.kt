@@ -873,8 +873,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                 is Declaration -> {
                     /* For Declarations, we have to look up the last value written to it.
                      */
-                    if (!node.memoryAddressIsInitialized())
-                        node.memoryAddress = MemoryAddress(node.name)
+                    if (node.memoryAddress == null) node.memoryAddress = MemoryAddress(node.name)
                     fetchElementFromDeclarationState(node).map { it.first }.toIdentitySet()
                 }
                 is MemoryAddress -> {
@@ -916,9 +915,8 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                     /*
                      * For declarations, we created a new MemoryAddress node, so that's the one we use here
                      */
-                    if (!node.memoryAddressIsInitialized())
-                        node.memoryAddress = MemoryAddress(node.name)
-                    identitySetOf(node.memoryAddress)
+                    if (node.memoryAddress == null) node.memoryAddress = MemoryAddress(node.name)
+                    identitySetOf(node.memoryAddress!!)
                 }
                 is ParameterMemoryValue -> {
                     if (node.memoryAddress != null) identitySetOf(node.memoryAddress!!)
@@ -952,10 +950,10 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                     */
                     node.refersTo?.let { refersTo ->
                         /* In some cases, the refersTo might not yet have an initialized MemoryAddress, for example if it's a FunctionDeclaration. So let's to this here */
-                        if (!refersTo.memoryAddressIsInitialized())
+                        if (refersTo.memoryAddress == null)
                             refersTo.memoryAddress = MemoryAddress(node.name)
 
-                        identitySetOf(refersTo.memoryAddress)
+                        identitySetOf(refersTo.memoryAddress!!)
                     } ?: identitySetOf()
                 }
                 is CastExpression -> {

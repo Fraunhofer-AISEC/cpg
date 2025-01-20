@@ -298,6 +298,7 @@ private fun isRelationship(property: KProperty1<out Persistable, *>): Boolean {
     val returnType = property.returnType.withNullability(false)
 
     return when {
+        property.name == "memoryAddress" -> true
         property.hasAnnotation<DoNotPersist>() -> false
         property.javaField?.type?.simpleName?.contains("Delegate") == true -> false
         property.javaField?.getAnnotation(Relationship::class.java)?.direction == INCOMING -> false

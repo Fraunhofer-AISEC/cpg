@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemoryAddress
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import org.neo4j.ogm.annotation.NodeEntity
+import org.neo4j.ogm.annotation.Relationship
 
 /**
  * Represents a single declaration or definition, i.e. of a variable ([VariableDeclaration]) or
@@ -52,7 +53,5 @@ abstract class Declaration : Node() {
      * Each Declaration allocates new memory, AKA a new address, so we create a new MemoryAddress
      * node
      */
-    open lateinit var memoryAddress: MemoryAddress
-
-    fun memoryAddressIsInitialized() = ::memoryAddress.isInitialized
+    @Relationship open var memoryAddress: MemoryAddress? = null
 }
