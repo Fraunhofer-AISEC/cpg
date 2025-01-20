@@ -8,5 +8,5 @@ plugins {
 val libs = the<LibrariesForLibs>()  // necessary to be able to use the version catalog in buildSrc
 dependencies {
     api(project(":codyze-core"))
-    implementation(libs.clikt)
+    api(libs.clikt)
 }
