@@ -52,7 +52,13 @@ class ScanCommand : CliktCommand() {
 
         // Connect the security goals to the translation result for now. Later we will add them to
         // individual concepts
-        goals.forEach { goal -> goal.underlyingNode = result.translationResult }
+        for (goal in goals) {
+            goal.underlyingNode = result.translationResult
+
+            for (objective in goal.objectives) {
+                objective.underlyingNode = result.translationResult
+            }
+        }
 
         result.run.results?.forEach { echo(it.message) }
     }
