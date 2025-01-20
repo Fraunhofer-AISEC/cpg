@@ -68,11 +68,13 @@ inline fun <reified V> emptyPowersetLattice() =
  * constructed by the powerset.
  */
 open class PowersetLattice<V : IdentitySet<T>, T>(override val elements: V) : LatticeElement<V> {
-    override fun lub(other: LatticeElement<out V>) =
-        PowersetLattice(this.elements.union(other.elements).toIdentitySet())
+    override fun lub(other: LatticeElement<out V>): PowersetLattice<in V, T> {
+        val newElements = this.elements.toIdentitySet()
+        newElements += other.elements
+        return PowersetLattice(newElements)
+    }
 
-    override fun duplicate(): LatticeElement<V> =
-        PowersetLattice(this.elements.toIdentitySet() as V)
+    override fun duplicate() = PowersetLattice(this.elements.toIdentitySet() as V)
 
     override fun compareTo(other: LatticeElement<V>): Int {
         return if (this.elements == other.elements) {
@@ -102,33 +104,30 @@ inline fun <reified K, V : LatticeElement<T>, T> emptyMapLattice() =
 open class MapLattice<K, V : LatticeElement<T>, T>(override val elements: IdentityHashMap<K, V>) :
     LatticeElement<IdentityHashMap<K, V>> {
 
-    override fun lub(
-        other: LatticeElement<out IdentityHashMap<K, V>>
-    ): LatticeElement<IdentityHashMap<K, V>> {
+    override fun lub(other: LatticeElement<out IdentityHashMap<K, V>>): MapLattice<K, V, T> {
         val allKeys = other.elements.keys.union(this.elements.keys)
         val newMap =
             allKeys.fold(IdentityHashMap<K, V>()) { current, key ->
                 val otherValue: V? = other.elements[key]
                 val thisValue: V? = this.elements[key]
                 val newValue =
-                    if (thisValue != null && otherValue != null) {
-                        thisValue.lub(otherValue)
+                    if (thisValue != null && otherValue != null && thisValue < otherValue) {
+                        thisValue.lub(otherValue) as? V
                     } else if (thisValue != null) {
                         thisValue
                     } else otherValue
-                (newValue as? V?)?.let { current[key] = it }
+                newValue?.let { current[key] = it }
                 current
             }
         return MapLattice(newMap)
     }
 
-    override fun duplicate(): LatticeElement<IdentityHashMap<K, V>> {
-        return MapLattice(
+    override fun duplicate() =
+        MapLattice(
             IdentityHashMap(
                 this.elements.map { (k, v) -> Pair<K, V>(k, v.duplicate() as V) }.toMap()
             )
         )
-    }
 
     override fun compareTo(other: LatticeElement<IdentityHashMap<K, V>>): Int {
         if (this == other) return 0
@@ -157,18 +156,16 @@ open class MapLattice<K, V : LatticeElement<T>, T>(override val elements: Identi
 open class TupleLattice<U : LatticeElement<S>, V : LatticeElement<T>, S, T>(
     override val elements: Pair<U, V>
 ) : LatticeElement<Pair<U, V>> {
-    override fun lub(other: LatticeElement<out Pair<U, V>>): LatticeElement<Pair<U, V>> {
-        return TupleLattice(
+    override fun lub(other: LatticeElement<out Pair<U, V>>) =
+        TupleLattice(
             Pair(
                 this.elements.first.lub(other.elements.first) as U,
                 this.elements.second.lub(other.elements.second) as V,
             )
         )
-    }
 
-    override fun duplicate(): LatticeElement<in Pair<U, V>> {
-        return TupleLattice(Pair(elements.first.duplicate() as U, elements.second.duplicate() as V))
-    }
+    override fun duplicate() =
+        TupleLattice(Pair(elements.first.duplicate() as U, elements.second.duplicate() as V))
 
     override fun compareTo(other: LatticeElement<Pair<U, V>>): Int {
         if (
@@ -202,25 +199,23 @@ open class TupleLattice<U : LatticeElement<S>, V : LatticeElement<T>, S, T>(
 class TripleLattice<U : LatticeElement<R>, V : LatticeElement<S>, W : LatticeElement<T>, R, S, T>(
     override val elements: Triple<U, V, W>
 ) : LatticeElement<Triple<U, V, W>> {
-    override fun lub(other: LatticeElement<out Triple<U, V, W>>): LatticeElement<Triple<U, V, W>> {
-        return TripleLattice(
+    override fun lub(other: LatticeElement<out Triple<U, V, W>>) =
+        TripleLattice(
             Triple(
                 this.elements.first.lub(other.elements.first) as U,
                 this.elements.second.lub(other.elements.second) as V,
                 this.elements.third.lub(other.elements.third) as W,
             )
         )
-    }
 
-    override fun duplicate(): LatticeElement<Triple<U, V, W>> {
-        return TripleLattice(
+    override fun duplicate() =
+        TripleLattice(
             Triple(
                 elements.first.duplicate() as U,
                 elements.second.duplicate() as V,
                 elements.third.duplicate() as W,
             )
         )
-    }
 
     override fun compareTo(other: LatticeElement<Triple<U, V, W>>): Int {
         if (
