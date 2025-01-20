@@ -396,11 +396,8 @@ class PrevEOGLattice(elements: IdentityHashMap<Node, PowersetLatticeT<Node>>) :
     override fun lub(
         other: LatticeElement<out IdentityHashMap<Node, PowersetLatticeT<Node>>>
     ): PrevEOGLattice {
-        val powerset = PowersetLattice(IdentitySet<Node>())
-        MapLattice<Node, PowersetLattice<IdentitySet<Node>, Node>, IdentitySet<Node>>(
-            IdentityHashMap()
-        )
-        val allKeys = other.elements.keys.union(this.elements.keys)
+        val allKeys = other.elements.keys.toMutableSet()
+        allKeys += elements.keys
         val newMap =
             allKeys.fold(IdentityHashMap<Node, PowersetLattice<IdentitySet<Node>, Node>>()) {
                 current,
@@ -408,11 +405,11 @@ class PrevEOGLattice(elements: IdentityHashMap<Node, PowersetLatticeT<Node>>) :
                 val otherValue = other.elements[key]
                 val thisValue = this.elements[key]
                 val newValue =
-                    if (thisValue != null && otherValue != null) {
+                    if (thisValue != null && otherValue != null && thisValue < otherValue) {
                         thisValue.lub(otherValue)
                     } else if (thisValue != null) {
-                        thisValue
-                    } else otherValue
+                        thisValue.duplicate()
+                    } else otherValue?.duplicate()
                 newValue?.let { current[key] = it }
                 current
             }
@@ -420,11 +417,7 @@ class PrevEOGLattice(elements: IdentityHashMap<Node, PowersetLatticeT<Node>>) :
     }
 
     override fun duplicate() =
-        PrevEOGLattice(
-            IdentityHashMap(
-                this.elements.mapValues { (_, v) -> PowersetLattice(v.elements) }.toMap()
-            )
-        )
+        PrevEOGLattice(IdentityHashMap(this.elements.mapValues { (_, v) -> v.duplicate() }))
 }
 
 /**
@@ -443,11 +436,11 @@ class PrevEOGState(elements: IdentityHashMap<Node, PrevEOGLattice>) :
                 val otherValue = other.elements[key]
                 val thisValue = this.elements[key]
                 val newValue =
-                    if (thisValue != null && otherValue != null) {
-                        thisValue.lub(otherValue) as PrevEOGLattice
+                    if (thisValue != null && otherValue != null && thisValue < otherValue) {
+                        thisValue.lub(otherValue)
                     } else if (thisValue != null) {
-                        thisValue
-                    } else otherValue
+                        thisValue.duplicate()
+                    } else otherValue?.duplicate()
                 newValue?.let { current[key] = it }
                 current
             }
