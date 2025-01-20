@@ -23,16 +23,17 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.codyze
+package de.fraunhofer.aisec.codyze
 
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.main
 import com.github.ajalt.clikt.core.subcommands
+import de.fraunhofer.aisec.codyze.compliance.Command
 
 class Codyze : CliktCommand() {
     override fun run() {}
 }
 
 fun main(args: Array<String>) {
-    Codyze().subcommands(de.fraunhofer.aisec.cpg.codyze.compliance.Command).main(args)
+    Codyze().subcommands(Command).main(args)
 }
