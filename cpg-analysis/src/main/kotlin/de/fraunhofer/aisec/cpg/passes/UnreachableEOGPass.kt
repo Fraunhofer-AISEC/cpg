@@ -39,6 +39,7 @@ import de.fraunhofer.aisec.cpg.helpers.functional.LatticeElement
 import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.iterateEOGClean
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
+import java.util.IdentityHashMap
 
 /**
  * A [Pass] which uses a simple logic to determine constant values and mark unreachable code regions
@@ -96,8 +97,8 @@ class UnreachableEOGPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
  */
 fun transfer(
     currentEdge: EvaluationOrder,
-    currentState: LatticeElement<Map<EvaluationOrder, LatticeElement<Reachability>>>,
-): LatticeElement<Map<EvaluationOrder, LatticeElement<Reachability>>> {
+    currentState: LatticeElement<IdentityHashMap<EvaluationOrder, ReachabilityLattice>>,
+): LatticeElement<IdentityHashMap<EvaluationOrder, ReachabilityLattice>> {
     var newState = currentState as? UnreachabilityState ?: return currentState
     when (val currentNode = currentEdge.end) {
         is IfStatement -> {
@@ -218,8 +219,8 @@ private fun handleWhileStatement(
 /**
  * Implements the [LatticeElement] over reachability properties: REACHABLE | UNREACHABLE | BOTTOM
  */
-class ReachabilityLattice(elements: Reachability) : LatticeElement<Reachability>(elements) {
-    override fun lub(other: LatticeElement<Reachability>) =
+class ReachabilityLattice(override val elements: Reachability) : LatticeElement<Reachability> {
+    override fun lub(other: LatticeElement<out Reachability>) =
         ReachabilityLattice(maxOf(this.elements, other.elements))
 
     override fun duplicate() = ReachabilityLattice(this.elements)
@@ -250,26 +251,33 @@ enum class Reachability {
  * A state which actually holds a state for all [Edge]s, one only for declarations and one for
  * ReturnStatements.
  */
-class UnreachabilityState(elements: Map<EvaluationOrder, ReachabilityLattice> = mapOf()) :
-    MapLattice<EvaluationOrder, Reachability>(elements) {
+class UnreachabilityState(
+    override val elements: IdentityHashMap<EvaluationOrder, ReachabilityLattice> = IdentityHashMap()
+) : MapLattice<EvaluationOrder, ReachabilityLattice, Reachability>(elements) {
+
     override fun lub(
-        other: LatticeElement<Map<EvaluationOrder, LatticeElement<Reachability>>>
+        other: LatticeElement<out IdentityHashMap<EvaluationOrder, ReachabilityLattice>>
     ): UnreachabilityState {
-        return UnreachabilityState(
-            this.elements.entries.fold(
-                other.elements.mapValues { ReachabilityLattice(it.value.elements) }
-            ) { current, (thisKey, thisValue) ->
-                val mutableMap = current.toMutableMap()
-                mutableMap.compute(thisKey) { k, v ->
-                    ReachabilityLattice(thisValue.elements)
-                        .lub(v ?: ReachabilityLattice(Reachability.BOTTOM))
-                }
-                mutableMap
+        val allKeys = other.elements.keys.union(this.elements.keys)
+        val newMap =
+            allKeys.fold(IdentityHashMap<EvaluationOrder, ReachabilityLattice>()) { current, key ->
+                val otherValue = other.elements[key]
+                val thisValue = this.elements[key]
+                val newValue =
+                    if (thisValue != null && otherValue != null && thisValue < otherValue) {
+                        thisValue.lub(otherValue)
+                    } else if (thisValue != null) {
+                        thisValue.duplicate()
+                    } else otherValue?.duplicate()
+                newValue?.let { current[key] = it }
+                current
             }
-        )
+        return UnreachabilityState(newMap)
     }
 
     fun push(newEdge: EvaluationOrder, newReachability: Reachability): UnreachabilityState {
-        return this.lub(MapLattice(mapOf(Pair(newEdge, ReachabilityLattice(newReachability)))))
+        return this.lub(
+            MapLattice(IdentityHashMap(mapOf(Pair(newEdge, ReachabilityLattice(newReachability)))))
+        )
     }
 }
