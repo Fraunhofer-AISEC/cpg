@@ -31,7 +31,7 @@ publishing {
     publications {
         named<MavenPublication>("codyze-compliance") {
             pom {
-                artifactId = "codyze"
+                artifactId = "codyze-compliance"
                 name.set("Codyze - Compliance Module")
                 description.set("The compliance module of Codyze")
             }
