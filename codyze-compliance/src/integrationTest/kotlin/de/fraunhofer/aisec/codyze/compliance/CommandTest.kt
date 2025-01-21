@@ -34,9 +34,7 @@ class CommandIntegrationTest {
     fun testScanCommand() {
         val command = ScanCommand()
         val result =
-            command.test(
-                "--project-dir src/integrationTest/resources/demo-app --sources src/integrationTest/resources/demo-app/main.py"
-            )
+            command.test("--project-dir src/integrationTest/resources/demo-app --components webapp")
         assertEquals(
             "Message(arguments=null, id=null, markdown=This is a **finding**, properties=null, text=null)\n",
             result.output,

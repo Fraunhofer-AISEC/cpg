@@ -34,6 +34,8 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.TranslationResult
 import io.github.detekt.sarif4k.*
+import java.io.File
+import java.nio.file.Path
 import kotlin.io.path.Path
 
 /** Options common to all subcommands dealing projects. */
@@ -44,7 +46,20 @@ class ProjectOptions : OptionGroup("Project Options:") {
 
 /** Options common to all subcommands dealing with CPG translation. */
 class TranslationOptions : OptionGroup("CPG Translation Options:") {
-    val sources by option("--sources", help = "The source files").path().multiple()
+    val sources: List<Path>? by
+        option(
+                "--sources",
+                help = "A list of source files. They will be all added to a single component 'app'.",
+            )
+            .path()
+            .multiple()
+    val components: List<String>? by
+        option(
+                "--components",
+                help =
+                    "The components to analyze. They must be located inside the 'components' folder inside the project directory. The 'components' folder will be taken as the topLevel property for the translation configuration.",
+            )
+            .multiple()
 }
 
 /**
@@ -81,10 +96,43 @@ fun buildConfig(
     projectOptions: ProjectOptions,
     translationOptions: TranslationOptions,
 ): TranslationConfiguration {
-    return TranslationConfiguration.builder()
-        .defaultPasses()
-        .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage")
-        .topLevel(projectOptions.directory.toFile())
-        .sourceLocations(translationOptions.sources.map { it.toFile() })
-        .build()
+    var builder =
+        TranslationConfiguration.builder()
+            .defaultPasses()
+            .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage")
+
+    // We can either have a single source (using --sources) or multiple components (using
+    // --components)
+    translationOptions.sources?.let {
+        builder =
+            builder
+                .sourceLocations(translationOptions.sources!!.map { it.toFile() })
+                .topLevel(projectOptions.directory.toFile())
+    }
+
+    translationOptions.components?.let {
+        val componentDir = projectOptions.directory.toFile().resolve("components")
+        val pairs =
+            it.map { component ->
+                Pair(component, mutableListOf<File>(componentDir.resolve(component)))
+            }
+        builder =
+            builder
+                .softwareComponents(
+                    pairs
+                        .groupingBy { it.first }
+                        .aggregate { _, accumulator: MutableList<File>?, element, _ ->
+                            if (accumulator != null) {
+                                accumulator.addAll(element.second)
+                                accumulator
+                            } else {
+                                element.second
+                            }
+                        }
+                        .toMutableMap()
+                )
+                .topLevel(componentDir)
+    }
+
+    return builder.build()
 }
