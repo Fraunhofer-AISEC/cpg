@@ -29,12 +29,12 @@ import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.TypeManager
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.DeclaresType
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.recordDeclaration
+import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.inference.tryRecordInference
@@ -52,11 +52,13 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         resolveFirstOrderTypes()
         refreshNames()
 
-        log.info("Updating imported symbols...")
-
-        walker = SubgraphWalker.ScopedWalker(scopeManager)
-        walker.registerHandler(::handleNode)
-        walker.iterate(component)
+        val b =
+            Benchmark(
+                TypeResolver::class.java,
+                "Updating imported symbols for ${component.imports.size} imports",
+            )
+        component.imports.forEach { it.updateImportedSymbols() }
+        b.stop()
     }
 
     private fun refreshNames() {
@@ -135,21 +137,6 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         return false
     }
 
-    private fun handleNode(node: Node?) {
-        if (node is RecordDeclaration) {
-            for (t in typeManager.firstOrderTypes) {
-                if (t.name == node.name && t is ObjectType) {
-                    // The node is the class of the type t
-                    t.recordDeclaration = node
-                }
-            }
-        } else if (node is ImportDeclaration) {
-            // Update the imports, as they might have changed because of symbols created by
-            // record/type inference
-            node.updateImportedSymbols()
-        }
-    }
-
     override fun cleanup() {
         // Nothing to do
     }
@@ -157,7 +144,10 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     /** Resolves all types in [TypeManager.firstOrderTypes] using [resolveType]. */
     fun resolveFirstOrderTypes() {
         for (type in typeManager.firstOrderTypes.sortedBy { it.name }) {
-            if (type is ObjectType && type.typeOrigin == Type.Origin.UNRESOLVED) {
+            if (
+                type is ObjectType && type.typeOrigin == Type.Origin.UNRESOLVED ||
+                    type.typeOrigin == Type.Origin.GUESSED
+            ) {
                 resolveType(type)
             }
         }
