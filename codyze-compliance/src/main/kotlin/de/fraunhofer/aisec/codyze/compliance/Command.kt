@@ -57,7 +57,8 @@ abstract class ProjectCommand : CliktCommand() {
         val goals = loadSecurityGoals(projectOptions.directory.resolve("security-goals"))
 
         // Analyze the project
-        val result = analyze(buildConfig(projectOptions, translationOptions))
+        val project = AnalysisProject.fromOptions(projectOptions, translationOptions)
+        val result = project.analyze()
         val tr = result.translationResult
 
         // Connect the security goals to the translation result for now. Later we will add them to

@@ -35,13 +35,19 @@ import kotlin.script.experimental.jvmhost.BasicJvmScriptingHost
 import kotlin.script.experimental.jvmhost.createJvmCompilationConfigurationFromTemplate
 import kotlin.script.experimental.jvmhost.createJvmEvaluationConfigurationFromTemplate
 
+/**
+ * Evaluates a query script with the given query function name on the [TranslationResult]. It uses
+ * the [BasicJvmScriptingHost] to execute the script. The function must be defined in the script
+ * file and take a single argument of type [TranslationResult].
+ *
+ * @param scriptFile The script file to evaluate
+ * @param queryFunc The name of the query function to call
+ * @return The result of the query function
+ */
 fun TranslationResult.evalQuery(scriptFile: File, queryFunc: String): Any? {
-    val evalCtx = QueryScriptContext(this)
-
     var b = Benchmark(TranslationResult::class.java, "Compiling query script $scriptFile")
     val compilationConfiguration = createJvmCompilationConfigurationFromTemplate<QueryScript>()
-    val evaluationConfiguration =
-        createJvmEvaluationConfigurationFromTemplate<QueryScript> { implicitReceivers(evalCtx) }
+    val evaluationConfiguration = createJvmEvaluationConfigurationFromTemplate<QueryScript>()
 
     val scriptResult =
         BasicJvmScriptingHost()

@@ -96,11 +96,8 @@ class ComponentSerializer(val result: TranslationResult?) : KSerializer<Componen
         // Use the context to find the component by name
         val componentName = decoder.decodeString()
 
-        return if (result != null) {
-            result.components.first { it.name.localName == componentName }
-        } else {
-            Component().also { it.name = Name(componentName) }
-        }
+        return result?.components?.first { it.name.localName == componentName }
+            ?: Component().also { it.name = Name(componentName) }
     }
 }
 

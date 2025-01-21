@@ -73,71 +73,116 @@ class TranslationOptions : OptionGroup("CPG Translation Options:") {
  */
 data class AnalysisResult(val translationResult: TranslationResult, val run: Run)
 
-/** Analyzes the project and returns the result. */
-fun analyze(config: TranslationConfiguration): AnalysisResult {
-    val run =
-        Run(
-            tool = Tool(driver = ToolComponent(name = "Codyze", version = "x.x.x")),
-            results =
-                listOf(
-                    Result(
-                        rule = ReportingDescriptorReference(id = "Rule1"),
-                        message = Message(markdown = "This is a **finding**"),
-                        level = Level.Note,
-                        locations = listOf(),
+/**
+ * Represents an analysis project. This class is responsible for translating the project to a CPG
+ * and analyzing it.
+ *
+ * This class is the base for all commands that analyze a project. It can either be represented by a
+ * directory structure or as an ad-hoc project, if we only analyze single source files. In any case,
+ * the project is the central entity for the analysis.
+ */
+class AnalysisProject(
+    /** The project name. */
+    var name: String,
+    /** The project directory, if it exists on file. Null if the project is an ad-hoc project. */
+    var projectDir: Path?,
+    /** The folder where the queries are located. */
+    var queriesFolder: Path? = projectDir?.resolve("queries"),
+    /** The folder where the security goals are located. */
+    var securityGoalsFolder: Path? = projectDir?.resolve("security-goals"),
+    /** The folder where the components are located. */
+    var componentsFolder: Path? = projectDir?.resolve("components"),
+    /** The translation configuration for the project. */
+    var config: TranslationConfiguration,
+) {
+
+    /** Analyzes the project and returns the result. */
+    fun analyze(): AnalysisResult {
+        // TODO(oxisto): Replace this mock run object with a real one later on.
+        //  Currently, this is only to show that we support SARIF
+        val run =
+            Run(
+                tool = Tool(driver = ToolComponent(name = "Codyze", version = "x.x.x")),
+                results =
+                    listOf(
+                        Result(
+                            rule = ReportingDescriptorReference(id = "Rule1"),
+                            message = Message(markdown = "This is a **finding**"),
+                            level = Level.Note,
+                            locations = listOf(),
+                        )
+                    ),
+            )
+
+        val result = TranslationManager.builder().config(config).build().analyze().get()
+
+        return AnalysisResult(run = run, translationResult = result)
+    }
+
+    companion object {
+        /** Builds a translation configuration from the given CLI options. */
+        fun fromOptions(
+            projectOptions: ProjectOptions,
+            translationOptions: TranslationOptions,
+        ): AnalysisProject {
+            var builder =
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage")
+                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage")
+                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage")
+                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.golang.GoLanguage")
+                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguage")
+                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage")
+                    .optionalLanguage(
+                        "de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguage"
                     )
-                ),
-        )
+                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.ruby.RubyLanguage")
+                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.jvm.JVMLanguage")
+                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.ini.IniFileLanguage")
 
-    val result = TranslationManager.builder().config(config).build().analyze().get()
-
-    return AnalysisResult(run = run, translationResult = result)
-}
-
-/** Builds a translation configuration from the given CLI options. */
-fun buildConfig(
-    projectOptions: ProjectOptions,
-    translationOptions: TranslationOptions,
-): TranslationConfiguration {
-    var builder =
-        TranslationConfiguration.builder()
-            .defaultPasses()
-            .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage")
-
-    // We can either have a single source (using --sources) or multiple components (using
-    // --components)
-    translationOptions.sources?.let {
-        builder =
-            builder
-                .sourceLocations(translationOptions.sources!!.map { it.toFile() })
-                .topLevel(projectOptions.directory.toFile())
-    }
-
-    translationOptions.components?.let {
-        val componentDir = projectOptions.directory.toFile().resolve("components")
-        val pairs =
-            it.map { component ->
-                Pair(component, mutableListOf<File>(componentDir.resolve(component)))
+            // We can either have a single source (using --sources) or multiple components (using
+            // --components)
+            translationOptions.sources?.let {
+                builder =
+                    builder
+                        .sourceLocations(it.map { source -> source.toFile() })
+                        .topLevel(projectOptions.directory.toFile())
             }
-        builder =
-            builder
-                .softwareComponents(
-                    pairs
-                        .groupingBy { it.first }
-                        .aggregate { _, accumulator: MutableList<File>?, element, _ ->
-                            if (accumulator != null) {
-                                accumulator.addAll(element.second)
-                                accumulator
-                            } else {
-                                element.second
-                            }
-                        }
-                        .toMutableMap()
-                )
-                .topLevel(componentDir)
+
+            translationOptions.components?.let {
+                val componentDir = projectOptions.directory.toFile().resolve("components")
+                val pairs =
+                    it.map { component ->
+                        Pair(component, mutableListOf<File>(componentDir.resolve(component)))
+                    }
+                builder =
+                    builder
+                        .softwareComponents(
+                            pairs
+                                .groupingBy { it.first }
+                                .aggregate { _, accumulator: MutableList<File>?, element, _ ->
+                                    if (accumulator != null) {
+                                        accumulator.addAll(element.second)
+                                        accumulator
+                                    } else {
+                                        element.second
+                                    }
+                                }
+                                .toMutableMap()
+                        )
+                        .topLevel(componentDir)
+            }
+
+            translationOptions.exclusionPatterns?.forEach {
+                builder = builder.exclusionPatterns(it)
+            }
+
+            return AnalysisProject(
+                config = builder.build(),
+                name = projectOptions.directory.fileName.toString(),
+                projectDir = projectOptions.directory,
+            )
+        }
     }
-
-    translationOptions.exclusionPatterns?.forEach { builder = builder.exclusionPatterns(it) }
-
-    return builder.build()
 }

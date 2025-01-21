@@ -33,6 +33,15 @@ import kotlin.script.experimental.jvm.updateClasspath
 import kotlin.script.experimental.jvm.util.classpathFromClassloader
 import kotlin.script.templates.ScriptTemplateDefinition
 
+/**
+ * Abstract base class for query scripts. Query scripts are Kotlin scripts that can be used to
+ * define queries on the CPG. The script must define one or more query functions that can be invoked
+ * by [TranslationResult.evalQuery]. Each function must take one argument (of type
+ * [TranslationResult]).
+ *
+ * This class is the scription definition (template) needed for the Kotlin compiler to recognize
+ * this as a script.
+ */
 @ScriptTemplateDefinition(scriptFilePattern = ".*\\.query\\.kts")
 @KotlinScript(
     // File extension for the script type
@@ -42,8 +51,11 @@ import kotlin.script.templates.ScriptTemplateDefinition
 )
 abstract class QueryScript
 
-open class QueryScriptContext(val result: TranslationResult)
-
+/**
+ * Configuration for the Kotlin compiler to compile query scripts.
+ *
+ * It configures the classpath and imports needed for the script to compile and run.
+ */
 object QueryScriptConfiguration :
     ScriptCompilationConfiguration({
         baseClass(QueryScript::class)
@@ -54,7 +66,6 @@ object QueryScriptConfiguration :
             checkNotNull(cp) { "Could not read classpath" }
             updateClasspath(cp.filter { element -> libraries.any { it in element.toString() } })
         }
-        implicitReceivers(QueryScriptContext::class)
         compilerOptions("-Xcontext-receivers", "-jvm-target=17")
         defaultImports.append(
             "de.fraunhofer.aisec.codyze.*",
