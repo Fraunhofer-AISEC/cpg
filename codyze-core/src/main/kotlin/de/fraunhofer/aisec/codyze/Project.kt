@@ -60,6 +60,9 @@ class TranslationOptions : OptionGroup("CPG Translation Options:") {
                     "The components to analyze. They must be located inside the 'components' folder inside the project directory. The 'components' folder will be taken as the topLevel property for the translation configuration.",
             )
             .multiple()
+
+    val exclusionPatterns: List<String>? by
+            option("--exclusion-patterns", help = "A pattern of files to exclude").multiple()
 }
 
 /**
@@ -132,6 +135,10 @@ fun buildConfig(
                         .toMutableMap()
                 )
                 .topLevel(componentDir)
+    }
+
+    translationOptions.exclusionPatterns?.forEach {
+        builder = builder.exclusionPatterns(it)
     }
 
     return builder.build()
