@@ -142,7 +142,7 @@ jobs:
         if: github.ref == 'refs/heads/main'
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          folder: build/dokkaCustomMultiModuleOutput/main
+          folder: build/dokkaCustomMultiModuleOutput/main-SNAPSHOT
           target-folder: dokka/main
       - name: Publish to GitHub Packages
         if: github.ref == 'refs/heads/main' || contains(github.event.pull_request.labels.*.name, 'publish-to-github-packages')
