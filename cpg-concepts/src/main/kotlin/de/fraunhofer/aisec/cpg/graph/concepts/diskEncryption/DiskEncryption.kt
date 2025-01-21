@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 class DiskEncryption(underlyingNode: Node) :
     Concept<DiskEncryptionOP>(underlyingNode = underlyingNode), IsDiskEncryption {
     /** The encryption target, i.e. the disk */
-    var target: BlockDevice? = null
+    var target: BlockStorage? = null
 
     /** The cipher suite used for disk encryption */
     var cipher: Cipher? = null

@@ -31,3 +31,5 @@ import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 /** Represents a "secret key", e.g. used in hard disk encryption. */
 class Secret(underlyingNode: Node) :
     Concept<SecretOp>(underlyingNode = underlyingNode), IsDiskEncryption
+
+// TODO: size
