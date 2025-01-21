@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.HasCallExpressionAmbiguity
 import de.fraunhofer.aisec.cpg.frontends.HasMemberExpressionAmbiguity
+import de.fraunhofer.aisec.cpg.graph.HasBase
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.codeAndLocationFrom
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
@@ -127,8 +128,8 @@ class ResolveMemberExpressionAmbiguityPass(ctx: TranslationContext) : Translatio
  */
 val Expression.reconstructedImportName: Name
     get() {
-        return if (this is MemberExpression) {
-            this.base.reconstructedImportName.fqn(this.name.localName)
+        return if (this is HasBase) {
+            this.base?.reconstructedImportName.fqn(this.name.localName)
         } else {
             this.name
         }

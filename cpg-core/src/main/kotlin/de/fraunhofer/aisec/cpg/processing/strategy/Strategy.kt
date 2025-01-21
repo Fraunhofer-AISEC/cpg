@@ -50,6 +50,11 @@ object Strategy {
         return x.nextEOG.iterator()
     }
 
+    /** A strategy to traverse the EOG in forward direction, but only if the edge is reachable. */
+    fun REACHABLE_EOG_FORWARD(x: Node): Iterator<Node> {
+        return x.nextEOGEdges.filter { !it.unreachable }.map { it.end }.iterator()
+    }
+
     /**
      * Traverse Evaluation Order Graph in backward direction.
      *

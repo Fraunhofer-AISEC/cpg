@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLatticeT
 import de.fraunhofer.aisec.cpg.helpers.functional.TripleLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.TupleLattice
-import de.fraunhofer.aisec.cpg.helpers.functional.emptyMapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.emptyPowersetLattice
 import java.util.IdentityHashMap
 import kotlin.test.Test
@@ -74,21 +73,19 @@ class BasicLatticesTest {
         assertEquals(emptyLattice1, emptyLattice2)
         assertNotSame(emptyLattice1.hashCode(), emptyLattice1.hashCode())
 
-        val blaLattice1 = PowersetLattice<IdentitySet<String>, String>(identitySetOf("bla"))
-        val blaLattice2 = PowersetLattice<IdentitySet<String>, String>(identitySetOf("bla"))
+        val blaLattice1 = PowersetLatticeT<String>(identitySetOf("bla"))
+        val blaLattice2 = PowersetLatticeT<String>(identitySetOf("bla"))
         assertEquals(0, blaLattice1.compareTo(blaLattice2))
         assertEquals(blaLattice1, blaLattice2)
 
-        val blaFooLattice =
-            PowersetLattice<IdentitySet<String>, String>(identitySetOf("bla", "foo"))
+        val blaFooLattice = PowersetLatticeT<String>(identitySetOf("bla", "foo"))
         assertEquals(1, blaFooLattice.compareTo(blaLattice1))
         assertNotEquals(blaFooLattice, blaLattice1)
 
         assertEquals(-1, blaLattice1.compareTo(blaFooLattice))
         assertNotEquals(blaLattice1, blaFooLattice)
 
-        val blaBlubLattice =
-            PowersetLattice<IdentitySet<String>, String>(identitySetOf("bla", "blub"))
+        val blaBlubLattice = PowersetLatticeT<String>(identitySetOf("bla", "blub"))
         assertEquals(-1, blaFooLattice.compareTo(blaBlubLattice))
         assertNotEquals(blaFooLattice, blaBlubLattice)
 
@@ -142,32 +139,42 @@ class BasicLatticesTest {
 
     @Test
     fun testMapLattice() {
-        val emptyLattice1 = emptyMapLattice<String, PowersetLatticeT<String>, String>()
-        val emptyLattice2 = emptyMapLattice<String, PowersetLatticeT<String>, String>()
+        val emptyLattice1 =
+            MapLattice<String, PowersetLatticeT<String>, IdentitySet<String>>(IdentityHashMap())
+        val emptyLattice2 =
+            MapLattice<String, PowersetLatticeT<String>, IdentitySet<String>>(IdentityHashMap())
         assertEquals(0, emptyLattice1.compareTo(emptyLattice2))
         assertEquals(emptyLattice1, emptyLattice2)
         assertNotSame(emptyLattice1.hashCode(), emptyLattice1.hashCode())
 
         val aBlaLattice1 =
-            MapStringLattice(IdentityHashMap("a" to PowersetLatticeT(identitySetOf("bla"))))
+            MapLattice<String, PowersetLatticeT<String>, IdentitySet<String>>(
+                IdentityHashMap(mapOf("a" to PowersetLatticeT(identitySetOf("bla"))))
+            )
         val aBlaLattice2 =
-            MapStringLattice(IdentityHashMap("a" to PowersetLatticeT(identitySetOf("bla"))))
+            MapLattice<String, PowersetLatticeT<String>, IdentitySet<String>>(
+                IdentityHashMap(mapOf("a" to PowersetLatticeT(identitySetOf("bla"))))
+            )
         assertEquals(0, aBlaLattice1.compareTo(aBlaLattice2))
         assertEquals(aBlaLattice1, aBlaLattice2)
         assertNotSame(aBlaLattice1, aBlaLattice2)
 
         val aBlaFooLattice =
-            MapStringLattice(IdentityHashMap("a" to PowersetLattice(identitySetOf("bla", "foo"))))
+            MapLattice<String, PowersetLatticeT<String>, IdentitySet<String>>(
+                IdentityHashMap(mapOf("a" to PowersetLatticeT(identitySetOf("bla", "foo"))))
+            )
         assertEquals(1, aBlaFooLattice.compareTo(aBlaLattice1))
         assertNotEquals(aBlaFooLattice, aBlaLattice1)
         assertEquals(-1, aBlaLattice1.compareTo(aBlaFooLattice))
         assertNotEquals(aBlaLattice1, aBlaFooLattice)
 
         val aBlaBFooLattice =
-            MapStringLattice(
+            MapLattice<String, PowersetLatticeT<String>, IdentitySet<String>>(
                 IdentityHashMap(
-                    "a" to PowersetLattice(identitySetOf("bla")),
-                    "b" to PowersetLattice(identitySetOf("foo")),
+                    mapOf(
+                        "a" to PowersetLattice(identitySetOf("bla")),
+                        "b" to PowersetLatticeT(identitySetOf("foo")),
+                    )
                 )
             )
         assertEquals(1, aBlaBFooLattice.compareTo(aBlaLattice1))
@@ -218,8 +225,10 @@ class BasicLatticesTest {
         val aFooBBlaLattice =
             MapLattice<String, PowersetLatticeT<String>, IdentitySet<String>>(
                 IdentityHashMap(
-                    "a" to PowersetLatticeT<String>(identitySetOf("foo")),
-                    "b" to PowersetLatticeT<String>(identitySetOf("bla")),
+                    mapOf(
+                        "a" to PowersetLatticeT(identitySetOf("foo")),
+                        "b" to PowersetLatticeT(identitySetOf("bla")),
+                    )
                 )
             )
         val aBlaFooBBla = aBlaFooLattice.lub(aFooBBlaLattice) // a to {"foo", "bla"}, b to {"bla"}
@@ -256,7 +265,7 @@ class BasicLatticesTest {
         assertNotEquals(aFooBBlaLattice, aBlaFooBBla)
         assertEquals(-1, aFooBBlaLattice.compareTo(aBlaFooBBla))
         assertEquals(1, aBlaFooBBla.compareTo(aFooBBlaLattice))
-        assertEquals(identitySetOf("a", "b"), aBlaFooBBla.elements.keys)
+        assertEquals(setOf("a", "b"), aBlaFooBBla.elements.keys)
         assertEquals(identitySetOf("bla", "foo"), aBlaFooBBla.elements["a"]?.elements)
         assertEquals(identitySetOf("bla"), aBlaFooBBla.elements["b"]?.elements)
 

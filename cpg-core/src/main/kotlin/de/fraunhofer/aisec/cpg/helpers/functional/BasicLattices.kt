@@ -60,8 +60,7 @@ interface LatticeElement<T> : Comparable<LatticeElement<T>> {
 
 typealias PowersetLatticeT<V> = PowersetLattice<IdentitySet<V>, V>
 
-inline fun <reified V> emptyPowersetLattice() =
-    PowersetLattice<IdentitySet<V>, V>(identitySetOf<V>())
+inline fun <reified V> emptyPowersetLattice() = PowersetLattice<IdentitySet<V>, V>(identitySetOf())
 
 /**
  * Implements the [LatticeElement] for a lattice over a set of nodes. The lattice itself is
@@ -88,6 +87,8 @@ open class PowersetLattice<V : IdentitySet<T>, T>(override val elements: V) : La
 
     override fun equals(other: Any?): Boolean {
         return other is PowersetLattice<V, T> && this.elements == other.elements
+        // The call of `toSet` ensures that we don't get stuck for different types of sets.
+        // return other is PowersetLattice<V, T> && this.elements.toSet() == other.elements.toSet()
     }
 
     override fun hashCode(): Int {
@@ -97,8 +98,7 @@ open class PowersetLattice<V : IdentitySet<T>, T>(override val elements: V) : La
 
 typealias MapLatticeT<K, V, T> = MapLattice<K, V, T>
 
-inline fun <reified K, V : LatticeElement<T>, T> emptyMapLattice() =
-    MapLattice<K, V, T>(IdentityHashMap<K, V>())
+inline fun <reified K, T> emptyMapLattice() = MapLattice<K, LatticeElement<T>, T>(IdentityHashMap())
 
 /** Implements the [LatticeElement] for a lattice over a map of nodes to another lattice. */
 open class MapLattice<K, V : LatticeElement<T>, T>(override val elements: IdentityHashMap<K, V>) :
@@ -108,8 +108,8 @@ open class MapLattice<K, V : LatticeElement<T>, T>(override val elements: Identi
         val allKeys = other.elements.keys.union(this.elements.keys)
         val newMap =
             allKeys.fold(IdentityHashMap<K, V>()) { current, key ->
-                val otherValue: V? = other.elements[key]
-                val thisValue: V? = this.elements[key]
+                val otherValue = other.elements[key]
+                val thisValue = this.elements[key]
                 val newValue =
                     if (thisValue != null && otherValue != null && thisValue < otherValue) {
                         thisValue.lub(otherValue) as? V
@@ -225,9 +225,9 @@ class TripleLattice<U : LatticeElement<R>, V : LatticeElement<S>, W : LatticeEle
         )
             return 0
         if (
-            this.elements.first >= other.elements.first &&
-                this.elements.second >= other.elements.second &&
-                this.elements.third >= other.elements.third
+            this.elements.first >= other.elements.first as U &&
+                this.elements.second >= other.elements.second as V &&
+                this.elements.third >= other.elements.third as W
         )
             return 1
         return -1
