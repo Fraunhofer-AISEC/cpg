@@ -270,7 +270,6 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             }
 
         templateDeclaration.location = frontend.locationOf(ctx)
-        frontend.scopeManager.addDeclaration(templateDeclaration)
         frontend.scopeManager.enterScope(templateDeclaration)
         addTemplateParameters(ctx, templateDeclaration)
 
@@ -286,6 +285,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             }
 
         addRealizationToScope(templateDeclaration)
+        frontend.scopeManager.addDeclaration(templateDeclaration)
 
         return templateDeclaration
     }

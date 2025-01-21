@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
+import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.passes.*
 import java.io.File
@@ -316,6 +317,12 @@ private constructor(
             }
         }
 
+        var b =
+            Benchmark(
+                TranslationManager::class.java,
+                "Merging type and scope information to final context",
+            )
+
         // We want to merge everything into the final scope manager of the result
         globalCtx.scopeManager.mergeFrom(parallelContexts.map { it.scopeManager })
 
@@ -323,13 +330,10 @@ private constructor(
         // TODO(oxisto): This is really messy and instead we should have ONE global scope
         //  and individual file scopes beneath it
         var newGlobalScope = globalCtx.scopeManager.globalScope
-        var types =
-            globalCtx.typeManager.firstOrderTypes.union(globalCtx.typeManager.secondOrderTypes)
-        types.forEach {
-            if (it.scope is GlobalScope) {
-                it.scope = newGlobalScope
-            }
-        }
+        globalCtx.typeManager.firstOrderTypes.updateGlobalScope(newGlobalScope)
+        globalCtx.typeManager.secondOrderTypes.updateGlobalScope(newGlobalScope)
+
+        b.stop()
 
         log.info("Parallel parsing completed")
 
@@ -469,6 +473,21 @@ private constructor(
         @JvmStatic
         fun builder(): Builder {
             return Builder()
+        }
+    }
+}
+
+/**
+ * This function loops through the list of [Type] nodes and updates the [Type.scope] of all nodes
+ * that have a [GlobalScope] as their scope to [newGlobalScope].
+ *
+ * This is needed because we currently have multiple global scopes (one per [ScopeManager]) and we
+ * need to update all types with the merged global scope.
+ */
+private fun MutableList<Type>.updateGlobalScope(newGlobalScope: GlobalScope?) {
+    for (type in this) {
+        if (type.scope is GlobalScope) {
+            type.scope = newGlobalScope
         }
     }
 }
