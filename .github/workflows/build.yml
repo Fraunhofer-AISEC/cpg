@@ -151,9 +151,8 @@ jobs:
       - name: Publish to GitHub Packages (as commit SHA)
         if: github.ref == 'refs/heads/main' || contains(github.event.pull_request.labels.*.name, 'publish-to-github-packages')
         run: |
-          ./gradlew --parallel -Pversion=$VERSION publishAllPublicationsToGitHubPackagesRepository
+          ./gradlew --parallel -Pversion=${GITHUB_SHA::7} publishAllPublicationsToGitHubPackagesRepository
         env:
-          VERSION: ${GITHUB_SHA::7}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Create Release
         if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, 'beta') && !contains(github.ref, 'alpha')
