@@ -58,14 +58,26 @@ abstract class ProjectCommand : CliktCommand() {
 
         // Analyze the project
         val result = analyze(buildConfig(projectOptions, translationOptions))
+        val tr = result.translationResult
 
         // Connect the security goals to the translation result for now. Later we will add them to
         // individual concepts
         for (goal in goals) {
-            goal.underlyingNode = result.translationResult
+            goal.underlyingNode = tr
 
+            // Load and execute queries associated to the goals
             for (objective in goal.objectives) {
-                objective.underlyingNode = result.translationResult
+                objective.underlyingNode = tr
+
+                val scriptFile =
+                    projectOptions.directory
+                        .resolve("queries")
+                        .resolve(
+                            "${objective.name.localName.lowercase().replace(" ", "-")}.query.kts"
+                        )
+                for (stmt in objective.statements.withIndex()) {
+                    tr.evalQuery(scriptFile.toFile(), "statement${stmt.index + 1}")
+                }
             }
         }
 
