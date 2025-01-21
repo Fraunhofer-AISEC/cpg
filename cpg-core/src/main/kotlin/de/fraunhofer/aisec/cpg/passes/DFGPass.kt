@@ -109,16 +109,18 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             // Expressions
             is CollectionComprehension -> handleCollectionComprehension(node)
             is ComprehensionExpression -> handleComprehensionExpression(node)
-            is CallExpression -> handleCallExpression(node, inferDfgForUnresolvedSymbols)
+            //            is CallExpression -> handleCallExpression(node,
+            // inferDfgForUnresolvedSymbols)
             is CastExpression -> handleCastExpression(node)
             is BinaryOperator -> handleBinaryOp(node, parent)
-            is AssignExpression -> handleAssignExpression(node)
+            // The PointsToPass will draw the DFG Edges for these
+            // is AssignExpression -> handleAssignExpression(node)
+            // is Reference -> handleReference(node)
+            // is VariableDeclaration -> handleVariableDeclaration(node)
+            // is SubscriptExpression -> handleSubscriptExpression(node)
             is NewArrayExpression -> handleNewArrayExpression(node)
-            is SubscriptExpression -> handleSubscriptExpression(node)
             is ConditionalExpression -> handleConditionalExpression(node)
             is MemberExpression -> handleMemberExpression(node)
-            // The ControlFlowSensitiveDFGPass will draw the DFG Edges for these
-            // is Reference -> handleReference(node)
             is ExpressionList -> handleExpressionList(node)
             is NewExpression -> handleNewExpression(node)
             is InitializerListExpression -> handleInitializerListExpression(node)
@@ -138,7 +140,6 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             is FieldDeclaration -> handleFieldDeclaration(node)
             is FunctionDeclaration -> handleFunctionDeclaration(node, functionSummaries)
             is TupleDeclaration -> handleTupleDeclaration(node)
-            is VariableDeclaration -> handleVariableDeclaration(node)
         }
     }
 
@@ -236,7 +237,8 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * variable.
      */
     protected fun handleVariableDeclaration(node: VariableDeclaration) {
-        node.initializer?.let { node.prevDFGEdges += it }
+        // Leave this to the PointsToPass
+        /*node.initializer?.let { node.prevDFGEdges += it }*/
     }
 
     /**
