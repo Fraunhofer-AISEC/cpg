@@ -139,6 +139,12 @@ private constructor(
         result: TranslationResult,
     ): Set<LanguageFrontend<*, *>> {
         val usedFrontends = mutableSetOf<LanguageFrontend<*, *>>()
+
+        // Todo create an external component to add all imports to
+        var externalSources: List<File> = listOf()
+
+        var useParallelFrontends = ctx.config.useParallelFrontends
+
         for (sc in ctx.config.softwareComponents.keys) {
             val component = Component()
             component.name = Name(sc)
@@ -146,7 +152,8 @@ private constructor(
 
             var sourceLocations: List<File> = ctx.config.softwareComponents[sc] ?: listOf()
 
-            var useParallelFrontends = ctx.config.useParallelFrontends
+            // Todo Here we need to dispatch to the correct frontend to do preproccessing
+
 
             val list =
                 sourceLocations.flatMap { file ->
@@ -170,6 +177,8 @@ private constructor(
                         files
                     } else {
                         val frontendClass = file.language?.frontend
+                        // Todo here we have the frontend class and can do language based retreaval of additional files as preprocessing
+                        frontendClass.gatterImportedSources(externalSources)
                         val supportsParallelParsing =
                             file.language
                                 ?.frontend
@@ -250,6 +259,20 @@ private constructor(
                     parseSequentially(component, result, ctx, sourceLocations)
                 }
             )
+        }
+        if(externalSources.isNotEmpty()){
+            val component = Component()
+            component.name = Name("External")
+            result.addComponent(component)
+
+            usedFrontends.addAll(
+                if (useParallelFrontends) {
+                    parseParallel(component, result, ctx, externalSources)
+                } else {
+                    parseSequentially(component, result, ctx, externalSources)
+                }
+            )
+
         }
 
         return usedFrontends
