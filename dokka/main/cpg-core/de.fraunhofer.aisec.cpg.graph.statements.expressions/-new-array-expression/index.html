@@ -95,7 +95,7 @@
   <div class="breadcrumbs"><a href="../../index.html">cpg-core</a><span class="delimiter">/</span><a href="../index.html">de.fraunhofer.aisec.cpg.graph.statements.expressions</a><span class="delimiter">/</span><span class="current">NewArrayExpression</span></div>
   <div class="cover ">
     <h1 class="cover"><span>New</span><wbr><span>Array</span><wbr><span><span>Expression</span></span></h1>
-    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="index.html">NewArrayExpression</a> : <a href="../-expression/index.html">Expression</a></div><p class="paragraph">Expressions of the form <code class="lang-kotlin">new Type[]</code> that represents the creation of an array, mostly used in combination with a <a href="../../de.fraunhofer.aisec.cpg.graph.declarations/-variable-declaration/index.html">VariableDeclaration</a>.</p></div></div>
+    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="index.html">NewArrayExpression</a> : <a href="../-expression/index.html">Expression</a>, <a href="../../de.fraunhofer.aisec.cpg.graph/-has-initializer/index.html">HasInitializer</a></div><p class="paragraph">Expressions of the form <code class="lang-kotlin">new Type[]</code> that represents the creation of an array, mostly used in combination with a <a href="../../de.fraunhofer.aisec.cpg.graph.declarations/-variable-declaration/index.html">VariableDeclaration</a>.</p></div></div>
   </div>
   <div class="tabbedcontent">
     <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="CONSTRUCTOR,TYPE,PROPERTY,FUNCTION">Members</button><button class="section-tab" data-togglable="CONSTRUCTOR,TYPE,PROPERTY,FUNCTION,EXTENSION_PROPERTY,EXTENSION_FUNCTION">Members &amp; Extensions</button></div>
@@ -207,6 +207,21 @@
               <div>
                 <div class="title">
                   <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">var </span><a href="../-expression/assigned-types.html">assignedTypes</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-set/index.html">Set</a><span class="token operator">&lt;</span><a href="../../de.fraunhofer.aisec.cpg.graph.types/-type/index.html">Type</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">This property refers to a list of <a href="../../de.fraunhofer.aisec.cpg.graph.types/-type/index.html">Type</a> nodes which are assigned to that <a href="../../de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a>. This could be different from the <a href="../../de.fraunhofer.aisec.cpg.graph.types/-has-type/type.html">HasType.type</a>. A common example is that a node could contain an interface as a <a href="../../de.fraunhofer.aisec.cpg.graph.types/-has-type/type.html">HasType.type</a>, but the actual implementation of the type as one of the <a href="../-expression/assigned-types.html">assignedTypes</a>. This could potentially also be empty, if we don't see any assignments to this expression.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1328438815%2FProperties%2F1556141526" anchor-label="assignments" id="-1328438815%2FProperties%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../../de.fraunhofer.aisec.cpg.graph/-has-initializer/assignments.html"><span><span>assignments</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1328438815%2FProperties%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">val </span><a href="../../de.fraunhofer.aisec.cpg.graph/-has-initializer/assignments.html">assignments</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><a href="../../de.fraunhofer.aisec.cpg.graph/-assignment/index.html">Assignment</a><span class="token operator">&gt;</span></div></div></div>
                 </div>
               </div>
             </div>
@@ -641,7 +656,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">var </span><a href="initializer.html">initializer</a><span class="token operator">: </span><a href="../-expression/index.html">Expression</a><span class="token operator">?</span></div><div class="brief "><p class="paragraph">The initializer of the expression, if present. Many languages, such as Java, either specify <a href="dimensions.html">dimensions</a> or an initializer.</p></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">var </span><a href="initializer.html">initializer</a><span class="token operator">: </span><a href="../-expression/index.html">Expression</a><span class="token operator">?</span></div><div class="brief "><p class="paragraph">The initializer of the expression, if present. Many languages, such as Java, either specify <a href="dimensions.html">dimensions</a> or an initializer.</p></div></div></div>
                 </div>
               </div>
             </div>
@@ -1490,6 +1505,21 @@
               </div>
             </div>
           </div>
+<a data-name="1475253696%2FFunctions%2F1556141526" anchor-label="addArgument" id="1475253696%2FFunctions%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../../de.fraunhofer.aisec.cpg.graph/-has-initializer/add-argument.html"><span>add</span><wbr><span><span>Argument</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1475253696%2FFunctions%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="../../de.fraunhofer.aisec.cpg.graph/-has-initializer/add-argument.html"><span class="token function">addArgument</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">expression<span class="token operator">: </span><a href="../-expression/index.html">Expression</a></span></span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">Adds the <a href="../../de.fraunhofer.aisec.cpg.graph/-has-initializer/add-argument.html">expression</a> to the list of arguments.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
 <a data-name="-319764970%2FFunctions%2F1556141526" anchor-label="addAssignedType" id="-319764970%2FFunctions%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
           <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
             <div class="main-subrow keyValue ">
@@ -2210,6 +2240,21 @@
               </div>
             </div>
           </div>
+<a data-name="-1523301447%2FFunctions%2F1556141526" anchor-label="hasArgument" id="-1523301447%2FFunctions%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../../de.fraunhofer.aisec.cpg.graph/-has-initializer/has-argument.html"><span>has</span><wbr><span><span>Argument</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1523301447%2FFunctions%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="../../de.fraunhofer.aisec.cpg.graph/-has-initializer/has-argument.html"><span class="token function">hasArgument</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">expression<span class="token operator">: </span><a href="../-expression/index.html">Expression</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a></div><div class="brief "><p class="paragraph">Checks, if <a href="../../de.fraunhofer.aisec.cpg.graph/-has-initializer/has-argument.html">expression</a> is part of the arguments.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
 <a data-name="144029894%2FFunctions%2F1556141526" anchor-label="hashCode" id="144029894%2FFunctions%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
           <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
             <div class="main-subrow keyValue ">
@@ -2371,6 +2416,21 @@
               <div>
                 <div class="title">
                   <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">operator </span><span class="token keyword">fun </span><a href="../-expression/index.html">Expression</a><span class="token punctuation">.</span><a href="../../de.fraunhofer.aisec.cpg.graph.builder/minus.html"><span class="token function">minus</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">rhs<span class="token operator">: </span><a href="../-expression/index.html">Expression</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../-binary-operator/index.html">BinaryOperator</a></div><div class="brief "><p class="paragraph">Creates a new <a href="../-binary-operator/index.html">BinaryOperator</a> with a <code class="lang-kotlin">-</code> <a href="../-binary-operator/operator-code.html">BinaryOperator.operatorCode</a> in the Fluent Node DSL and invokes <a href="../../de.fraunhofer.aisec.cpg.graph/-argument-holder/add-argument.html">ArgumentHolder.addArgument</a> of the nearest enclosing <a href="../../de.fraunhofer.aisec.cpg.graph/-argument-holder/index.html">ArgumentHolder</a>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-615003102%2FFunctions%2F1556141526" anchor-label="minusAssign" id="-615003102%2FFunctions%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../../de.fraunhofer.aisec.cpg.graph/-argument-holder/minus-assign.html"><span>minus</span><wbr><span><span>Assign</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-615003102%2FFunctions%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">operator </span><span class="token keyword">fun </span><a href="../../de.fraunhofer.aisec.cpg.graph/-argument-holder/minus-assign.html"><span class="token function">minusAssign</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">node<span class="token operator">: </span><a href="../-expression/index.html">Expression</a></span></span><span class="token punctuation">)</span></div></div></div>
                 </div>
               </div>
             </div>
@@ -3530,6 +3590,21 @@
               </div>
             </div>
           </div>
+<a data-name="28042238%2FFunctions%2F1556141526" anchor-label="plusAssign" id="28042238%2FFunctions%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../../de.fraunhofer.aisec.cpg.graph/-argument-holder/plus-assign.html"><span>plus</span><wbr><span><span>Assign</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="28042238%2FFunctions%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">operator override </span><span class="token keyword">fun </span><a href="../../de.fraunhofer.aisec.cpg.graph/-argument-holder/plus-assign.html"><span class="token function">plusAssign</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">node<span class="token operator">: </span><a href="../-expression/index.html">Expression</a></span></span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">Adds a <a href="../../de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a> to the list of "held" nodes.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
 <a data-name="-873042007%2FFunctions%2F1556141526" anchor-label="plusAssign" id="-873042007%2FFunctions%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
           <div class="table-row" data-togglable="EXTENSION_FUNCTION" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
             <div class="main-subrow keyValue ">
@@ -3631,6 +3706,51 @@
               <div>
                 <div class="title">
                   <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">operator </span><span class="token keyword">fun </span><a href="../-expression/index.html">Expression</a><span class="token punctuation">.</span><a href="../../de.fraunhofer.aisec.cpg.graph.builder/rem.html"><span class="token function">rem</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">rhs<span class="token operator">: </span><a href="../-expression/index.html">Expression</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../-binary-operator/index.html">BinaryOperator</a></div><div class="brief "><p class="paragraph">Creates a new <a href="../-binary-operator/index.html">BinaryOperator</a> with a <code class="lang-kotlin">+</code> <a href="../-binary-operator/operator-code.html">BinaryOperator.operatorCode</a> in the Fluent Node DSL and invokes <a href="../../de.fraunhofer.aisec.cpg.graph/-argument-holder/add-argument.html">ArgumentHolder.addArgument</a> of the nearest enclosing <a href="../../de.fraunhofer.aisec.cpg.graph/-argument-holder/index.html">ArgumentHolder</a>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1301382729%2FFunctions%2F1556141526" anchor-label="removeArgument" id="-1301382729%2FFunctions%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../../de.fraunhofer.aisec.cpg.graph/-has-initializer/remove-argument.html"><span>remove</span><wbr><span><span>Argument</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1301382729%2FFunctions%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="../../de.fraunhofer.aisec.cpg.graph/-has-initializer/remove-argument.html"><span class="token function">removeArgument</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">expression<span class="token operator">: </span><a href="../-expression/index.html">Expression</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a></div><div class="brief "><p class="paragraph">Removes the <a href="../../de.fraunhofer.aisec.cpg.graph/-has-initializer/remove-argument.html">expression</a> from the list of arguments.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="390526977%2FFunctions%2F1556141526" anchor-label="replace" id="390526977%2FFunctions%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../../de.fraunhofer.aisec.cpg.graph/-argument-holder/replace.html"><span><span>replace</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="390526977%2FFunctions%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="../../de.fraunhofer.aisec.cpg.graph/-argument-holder/replace.html"><span class="token function">replace</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">old<span class="token operator">: </span><a href="../-expression/index.html">Expression</a><span class="token punctuation">, </span></span><span class="parameter ">new<span class="token operator">: </span><a href="../-expression/index.html">Expression</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a></div><div class="brief "><p class="paragraph">Replaces the existing node specified in <a href="../../de.fraunhofer.aisec.cpg.graph/-argument-holder/replace.html">old</a> with the one in <a href="../../de.fraunhofer.aisec.cpg.graph/-argument-holder/replace.html">new</a>. Implementation how to do that might be specific to the holder.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1525846275%2FFunctions%2F1556141526" anchor-label="replaceArgument" id="-1525846275%2FFunctions%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../../de.fraunhofer.aisec.cpg.graph/-has-initializer/replace-argument.html"><span>replace</span><wbr><span><span>Argument</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1525846275%2FFunctions%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="../../de.fraunhofer.aisec.cpg.graph/-has-initializer/replace-argument.html"><span class="token function">replaceArgument</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">old<span class="token operator">: </span><a href="../-expression/index.html">Expression</a><span class="token punctuation">, </span></span><span class="parameter ">new<span class="token operator">: </span><a href="../-expression/index.html">Expression</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a></div><div class="brief "><p class="paragraph">Replaces the existing argument specified in <a href="../../de.fraunhofer.aisec.cpg.graph/-has-initializer/replace-argument.html">old</a> with the one in <a href="../../de.fraunhofer.aisec.cpg.graph/-has-initializer/replace-argument.html">new</a>. Implementation how to do that might be specific to the argument holder.</p></div></div></div>
                 </div>
               </div>
             </div>
