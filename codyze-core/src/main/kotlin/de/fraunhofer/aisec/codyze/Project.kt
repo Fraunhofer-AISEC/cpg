@@ -62,7 +62,7 @@ class TranslationOptions : OptionGroup("CPG Translation Options:") {
             .multiple()
 
     val exclusionPatterns: List<String>? by
-            option("--exclusion-patterns", help = "A pattern of files to exclude").multiple()
+        option("--exclusion-patterns", help = "A pattern of files to exclude").multiple()
 }
 
 /**
@@ -137,9 +137,7 @@ fun buildConfig(
                 .topLevel(componentDir)
     }
 
-    translationOptions.exclusionPatterns?.forEach {
-        builder = builder.exclusionPatterns(it)
-    }
+    translationOptions.exclusionPatterns?.forEach { builder = builder.exclusionPatterns(it) }
 
     return builder.build()
 }
