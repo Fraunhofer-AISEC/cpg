@@ -23,8 +23,12 @@
  *                    \______/ \__|       \______/
  *
  */
-import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.query.QueryTree
+import de.fraunhofer.aisec.cpg.query.allExtended
 
-val queryResult = result.allExtended<FunctionDeclaration>(mustSatisfy = { QueryTree(it.name.localName) eq "foo" })
-queryResult
+fun statement1(tr: TranslationResult): QueryTree<Boolean> {
+    val result = tr.allExtended<FunctionDeclaration>(mustSatisfy = { QueryTree(it.name.localName) eq "foo" })
+    return result
+}

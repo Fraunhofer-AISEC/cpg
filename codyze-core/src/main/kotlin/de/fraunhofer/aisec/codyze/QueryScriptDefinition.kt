@@ -28,9 +28,12 @@ package de.fraunhofer.aisec.codyze
 import de.fraunhofer.aisec.cpg.TranslationResult
 import kotlin.script.experimental.annotations.KotlinScript
 import kotlin.script.experimental.api.*
-import kotlin.script.experimental.jvm.dependenciesFromCurrentContext
 import kotlin.script.experimental.jvm.jvm
+import kotlin.script.experimental.jvm.updateClasspath
+import kotlin.script.experimental.jvm.util.classpathFromClassloader
+import kotlin.script.templates.ScriptTemplateDefinition
 
+@ScriptTemplateDefinition(scriptFilePattern = ".*\\.query\\.kts")
 @KotlinScript(
     // File extension for the script type
     fileExtension = "query.kts",
@@ -44,7 +47,13 @@ open class QueryScriptContext(val result: TranslationResult)
 object QueryScriptConfiguration :
     ScriptCompilationConfiguration({
         baseClass(QueryScript::class)
-        jvm { dependenciesFromCurrentContext(wholeClasspath = true) }
+        jvm {
+            val libraries =
+                setOf("codyze-core", "cpg-core", "cpg-analysis", "kotlin-stdlib", "kotlin-reflect")
+            val cp = classpathFromClassloader(QueryScript::class.java.classLoader)
+            checkNotNull(cp) { "Could not read classpath" }
+            updateClasspath(cp.filter { element -> libraries.any { it in element.toString() } })
+        }
         implicitReceivers(QueryScriptContext::class)
         compilerOptions("-Xcontext-receivers", "-jvm-target=17")
         defaultImports.append(

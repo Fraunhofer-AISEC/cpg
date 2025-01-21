@@ -32,8 +32,6 @@ import de.fraunhofer.aisec.cpg.query.QueryTree
 import de.fraunhofer.aisec.cpg.test.analyze
 import java.io.File
 import kotlin.io.path.Path
-import kotlin.script.experimental.api.ResultValue
-import kotlin.script.experimental.api.valueOrNull
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -46,9 +44,8 @@ class QueryHostTest {
             analyze(listOf(topLevel.resolve("simple.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
             }
-        val scriptResult = result.evalQuery(File("src/integrationTest/resources/simple.query.kts"))
-        val evalResult = (scriptResult.valueOrNull()?.returnValue as? ResultValue.Value)?.value
-
+        val evalResult =
+            result.evalQuery(File("src/integrationTest/resources/simple.query.kts"), "statement1")
         val queryTree = evalResult as? QueryTree<*>
         assertNotNull(queryTree)
         assertEquals(true, queryTree.value)

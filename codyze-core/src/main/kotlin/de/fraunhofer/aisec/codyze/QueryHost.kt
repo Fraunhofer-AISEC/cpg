@@ -26,24 +26,37 @@
 package de.fraunhofer.aisec.codyze
 
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import java.io.File
+import kotlin.reflect.full.functions
 import kotlin.script.experimental.api.*
 import kotlin.script.experimental.host.toScriptSource
 import kotlin.script.experimental.jvmhost.BasicJvmScriptingHost
 import kotlin.script.experimental.jvmhost.createJvmCompilationConfigurationFromTemplate
 import kotlin.script.experimental.jvmhost.createJvmEvaluationConfigurationFromTemplate
 
-fun TranslationResult.evalQuery(scriptFile: File): ResultWithDiagnostics<EvaluationResult> {
+fun TranslationResult.evalQuery(scriptFile: File, queryFunc: String): Any? {
     val evalCtx = QueryScriptContext(this)
 
+    var b = Benchmark(TranslationResult::class.java, "Compiling query script $scriptFile")
     val compilationConfiguration = createJvmCompilationConfigurationFromTemplate<QueryScript>()
     val evaluationConfiguration =
         createJvmEvaluationConfigurationFromTemplate<QueryScript> { implicitReceivers(evalCtx) }
+
     val scriptResult =
         BasicJvmScriptingHost()
             .eval(scriptFile.toScriptSource(), compilationConfiguration, evaluationConfiguration)
 
-    println(scriptResult)
+    val value = scriptResult.valueOrThrow()
+    val klass = value.returnValue.scriptClass
+    val func = klass?.functions?.firstOrNull { it.name == queryFunc }
+    if (func == null) {
+        throw IllegalArgumentException("Query function $queryFunc not found in script")
+    }
+    b.stop()
 
-    return scriptResult
+    b = Benchmark(TranslationResult::class.java, "Executing query function $queryFunc")
+    val ret = func.call(value.returnValue.scriptInstance, this)
+    b.stop()
+    return ret
 }
