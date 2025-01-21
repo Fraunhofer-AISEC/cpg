@@ -40,6 +40,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.InitializerTypePropagation
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 import de.fraunhofer.aisec.cpg.passes.configuration.RequiredFrontend
@@ -91,6 +92,12 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
             return null
         }
 
+        // If this is a member expression, and we do not know the base's type, we cannot create a
+        // declaration
+        if (ref is MemberExpression && ref.base.type is UnknownType) {
+            return null
+        }
+
         // Look for a potential scope modifier for this reference
         // lookupScope
         var targetScope =
@@ -102,9 +109,9 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
             //   - to look for a local symbol, unless
             //   - a global keyword is present for this symbol and scope
             if (targetScope != null) {
-                scopeManager.lookupSymbolByNameOfNode(ref, targetScope)
+                scopeManager.lookupSymbolByNodeName(ref, targetScope)
             } else {
-                scopeManager.lookupSymbolByNameOfNode(ref) { it.scope == scopeManager.currentScope }
+                scopeManager.lookupSymbolByNodeName(ref) { it.scope == scopeManager.currentScope }
             }
 
         // Nothing to create
