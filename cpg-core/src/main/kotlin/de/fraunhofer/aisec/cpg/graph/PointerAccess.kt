@@ -28,5 +28,6 @@ package de.fraunhofer.aisec.cpg.graph
 /** A Dataflow for a pointer can have different types: Either to its address, or to its value. */
 enum class PointerAccess {
     ADDRESS,
-    currentDerefValue
+    currentDerefValue,
+    currentDerefDerefValue
 }

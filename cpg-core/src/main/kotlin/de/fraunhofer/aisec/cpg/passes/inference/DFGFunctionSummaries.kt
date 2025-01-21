@@ -298,7 +298,7 @@ class DFGFunctionSummaries {
                         null
                     }
                 } else if (entry.from.startsWith("NewMemoryAddress")) {
-                    val memAddrName = Name(entry.from)
+                    val memAddrName = Name(entry.from, functionDeclaration.name)
                     functionDeclarationToMemAddrMap
                         .computeIfAbsent(
                             functionDeclaration,

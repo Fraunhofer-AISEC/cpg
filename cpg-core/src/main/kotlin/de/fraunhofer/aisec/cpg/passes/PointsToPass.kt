@@ -156,7 +156,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
             val newPrevDFGs = value.elements.second.elements
             val newMemoryAddresses = value.elements.first.elements as Collection<Node>
             if (newPrevDFGs.isNotEmpty()) {
-                key.prevDFG.clear()
+                //                key.prevDFG.clear()
                 newPrevDFGs.forEach { prev ->
                     val granularity =
                         edgePropertiesMap[Pair(key, prev)] as? PointerDataflowGranularity
@@ -309,7 +309,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
         val mapDstToSrc = mutableMapOf<Node, MutableSet<Node>>()
 
         // First, check if there are missing FunctionSummaries
-        currentNode.language?.let { language ->
+        /*        currentNode.language?.let { language ->
             currentNode.invokes.addAll(
                 ctx.config.functionSummaries.run {
                     this.functionToDFGEntryMap
@@ -325,7 +325,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                         .filter { it !in currentNode.invokes }
                 }
             )
-        }
+        }*/
         var i = 0
         val invokes = currentNode.invokes.toList()
         while (i < invokes.size) {
@@ -576,35 +576,39 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
             else null
         if (access == AccessValues.READ) {
             val addresses = doubleState.getAddresses(currentNode)
-            val values = doubleState.getValues(currentNode)
+            val finalValues = identitySetOf<Node>()
+            val values = doubleState.getValues(currentNode).toMutableSet()
+
+            finalValues.addAll(values)
+
+            // If we have any information from the dereferenced value, we also fetch that
+            values
+                .filter { doubleState.hasDeclarationStateEntry(it) }
+                .flatMap { doubleState.fetchElementFromDeclarationState(it) }
+                .map { it.first }
+                .forEach { derefValue ->
+                    values.add(derefValue)
+                    // Store the information over the type of the edge in the edgePropertiesMap
+                    edgePropertiesMap[Pair(currentNode, derefValue)] =
+                        PointerDataflowGranularity(PointerAccess.currentDerefValue)
+                    // Let's see if we can deref once more
+                    if (doubleState.hasDeclarationStateEntry(derefValue)) {
+                        doubleState
+                            .fetchElementFromDeclarationState(derefValue)
+                            .map { it.first }
+                            .forEach { derefDerefValue ->
+                                values.add(derefDerefValue)
+                                edgePropertiesMap[Pair(currentNode, derefDerefValue)] =
+                                    PointerDataflowGranularity(PointerAccess.currentDerefDerefValue)
+                            }
+                    }
+                }
 
             doubleState =
                 doubleState.push(
                     currentNode,
                     TupleLattice(Pair(PowersetLattice(addresses), PowersetLattice(values)))
                 )
-
-            // If we have any information from the dereferenced value, we also store that in the
-            // generalState
-            val derefValues =
-                values
-                    .flatMap {
-                        doubleState.declarationsState.elements[it]?.elements?.second?.elements
-                            ?: emptySet()
-                    }
-                    .toIdentitySet()
-            if (derefValues.isNotEmpty()) {
-                doubleState =
-                    doubleState.push(
-                        currentNode,
-                        TupleLattice(Pair(PowersetLattice(addresses), PowersetLattice(derefValues)))
-                    )
-                // Store the information over the type of the edge in the edgePropertiesmap
-                derefValues.map {
-                    edgePropertiesMap[Pair(currentNode, it)] =
-                        PointerDataflowGranularity(PointerAccess.currentDerefValue)
-                }
-            }
         }
         return doubleState
     }
