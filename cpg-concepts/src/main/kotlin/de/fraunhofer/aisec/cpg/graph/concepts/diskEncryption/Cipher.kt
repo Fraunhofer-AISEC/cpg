@@ -28,6 +28,15 @@ package de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 
-/** Represents a cipher suite. E.g. AES */
+/** Represents a cipher suite. E.g. `AES-XTS-plain64` */
 class Cipher(underlyingNode: Node) :
-    Concept<CipherOp>(underlyingNode = underlyingNode), IsDiskEncryption
+    Concept<CipherOp>(underlyingNode = underlyingNode), IsDiskEncryption {
+    /** A string representing the cipher used, e.g. `AES-XTS-plain64`. */
+    var cipherName: String? = null
+
+    /** Cipher block size. */
+    var blockSize: Int? = null
+
+    /** Key size. */
+    var keySize: Int? = null
+}
