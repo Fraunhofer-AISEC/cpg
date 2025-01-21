@@ -514,6 +514,8 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
         }
     }
 
+    override fun gatherExternalSources(source: File, externalSources: MutableList<File>, importedSources: MutableList<File>) {}
+
     companion object {
         const val THIS = "this"
         const val ANNOTATION_MEMBER_VALUE = "value"

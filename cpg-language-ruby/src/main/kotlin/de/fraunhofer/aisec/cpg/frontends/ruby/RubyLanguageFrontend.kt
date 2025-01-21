@@ -101,4 +101,6 @@ class RubyLanguageFrontend(language: RubyLanguage, ctx: TranslationContext) :
     override fun setComment(node: Node, astNode: org.jruby.ast.Node) {
         // not yet implemented
     }
+
+    override fun gatherExternalSources(source: File, externalSources: MutableList<File>, importedSources: MutableList<File>) {}
 }

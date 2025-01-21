@@ -308,6 +308,15 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
         return tud
     }
 
+    override fun gatherExternalSources(source: File, externalSources: MutableList<File>, importedSources: MutableList<File>) {
+
+        val importRe = "(?m)^(?:from[ ]+(\\S+)[ ]+)?import[ ]+(\\S+)[ ]*\$".toRegex()
+        importRe.findAll(source.readText()).forEach {
+            val importPQN = it.groupValues.get(1) + (if (it.groupValues.get(1).isEmpty()) "" else ".") +
+                    it.groupValues.get(2)
+        }
+    }
+
     fun operatorToString(op: Python.AST.BaseOperator) =
         when (op) {
             is Python.AST.Add -> "+"

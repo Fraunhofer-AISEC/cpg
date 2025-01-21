@@ -802,6 +802,8 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
         return type
     }
 
+    override fun gatherExternalSources(source: File, externalSources: MutableList<File>, importedSources: MutableList<File>) {}
+
     companion object {
         private val LOGGER = LoggerFactory.getLogger(CXXLanguageFrontend::class.java)
 

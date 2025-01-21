@@ -110,6 +110,8 @@ abstract class LanguageFrontend<AstNode, TypeNode>(
      */
     abstract override fun codeOf(astNode: AstNode): String?
 
+    abstract fun gatherExternalSources(source: File, externalSources: MutableList<File>, importedSources: MutableList<File>)
+
     /**
      * Returns the [Region] of the code with line and column, index starting at 1, generic for java
      * or c++ ast nodes.
