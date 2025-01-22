@@ -39,7 +39,6 @@ import de.fraunhofer.aisec.cpg.helpers.functional.*
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass.Configuration
-import de.fraunhofer.aisec.cpg.passes.PointsToPass.PointsToState2
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 
 /**
@@ -305,7 +304,6 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
         doubleState: PointsToPass.PointsToState2
     ): PointsToPass.PointsToState2 {
         var doubleState = doubleState
-
         val mapDstToSrc = mutableMapOf<Node, MutableSet<Node>>()
 
         // First, check if there are missing FunctionSummaries
@@ -326,6 +324,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                 }
             )
         }*/
+
         var i = 0
         val invokes = currentNode.invokes.toList()
         while (i < invokes.size) {
@@ -403,7 +402,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                                 val fieldAddresses = identitySetOf<Node>()
                                 // Collect the fieldAddresses for each possible value
                                 val argumentValues =
-                                    doubleState.dereferenceNode(argument, destDerefDepth)
+                                    doubleState.dereferenceNode(argument, destDerefDepth - 1)
                                 argumentValues.forEach { v ->
                                     val parentName = nodeNameToString(v)
                                     val newName = Name(subAccessName, parentName)
@@ -415,7 +414,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                                 }
                                 fieldAddresses
                             } else {
-                                doubleState.dereferenceNode(argument, destDerefDepth)
+                                doubleState.dereferenceNode(argument, destDerefDepth - 1)
                             }
                         when (value) {
                             is ParameterDeclaration ->
@@ -982,14 +981,15 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
         }
 
         fun dereferenceNode(node: Node, dereferenceDepth: Int): Set<Node> {
-            if (dereferenceDepth == 0) return this.getAddresses(node)
-            else {
-                var ret = identitySetOf(node)
-                for (i in 1..dereferenceDepth) {
-                    ret = ret.flatMap { this.getValues(it) }.toIdentitySet()
-                }
-                return ret
+            val addr = this.getAddresses(node)
+            var ret = addr
+            for (i in 0..dereferenceDepth) {
+                ret =
+                    ret.flatMap { this.fetchElementFromDeclarationState(it) }
+                        .map { it.first }
+                        .toIdentitySet()
             }
+            return ret
         }
 
         /**

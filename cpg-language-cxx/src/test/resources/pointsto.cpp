@@ -127,7 +127,7 @@ int memcpy() {
 
   printf("a : %d, %p; b : %d, %p, c : %d, %p, d : %d, %p, e : %d, %p, f : %d, %p\n", a, &a, b, &b, c, &c, d, &d, e, &e, f, &f);
   printf("pa: %d, %p; pb: %d, %p, pc: %d, %p, pd: %d, %p, pe: %d, %p, pf: %d, %p\n", *pa, pa, *pb, pb, *pc, pc, *pd, pd, *pe, pe, *pf, pf);
-}
+i}
 
 int pointertopointer(){
 
@@ -240,4 +240,23 @@ int testFunctionSummaries() {
   printf("i: %d j: %d *p: %d p: %p\n", i, j, *p, p);
 
   i = unknownFunc(i, p);
+}
+
+void changepointer(int **p, int newint, int *newp) {
+  // *p = newp;
+ //  **p = newint;
+    *p = 3;
+    **p = 4;
+}
+
+int testFunctionSummaries2() {
+   int a = 1;                                                                                                                                    
+   int *b = &a;
+   int **c = &b;
+   int d = 2;
+   int *e = &d;
+
+   printf("c: %x, *c: %x, **c: %d\n", c, *c, **c);
+   changepointer(c, d, e);
+   printf("c: %x, *c: %x, **c: %d\n", c, *c, **c); 
 } 

@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
@@ -1594,5 +1595,22 @@ class PointsToPassTest {
                 it.srcNode == literal7 && it.subAccessName == "session.l"
             } == true
         )
+    }
+
+    @Test
+    fun testPointerToPointerFunctionSummaries() {
+        val file = File("src/test/resources/pointsto.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+                it.registerPass<PointsToPass>()
+                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+            }
+        assertNotNull(tu)
+
+        // FunctionSummaries
+        val changepointerFS =
+            tu.functions.filter { it.name.localName == "changepointer" }.first().functionSummary
+        assertTrue(true)
     }
 }
