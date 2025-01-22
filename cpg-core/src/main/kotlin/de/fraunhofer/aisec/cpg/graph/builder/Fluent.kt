@@ -47,6 +47,7 @@ fun LanguageFrontend<*, *>.translationResult(
 ): TranslationResult {
     val node = TranslationResult(TranslationManager.builder().config(ctx.config).build(), ctx)
     val component = Component()
+    component.ctx = this.ctx
     node.addComponent(component)
     init(node)
 

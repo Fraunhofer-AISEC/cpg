@@ -127,20 +127,22 @@ class TranslationResult(
         } else if (components.isEmpty()) {
             // No component exists, so we create the new dummy component.
             swc = Component()
-            swc.name = Name(APPLICATION_LOCAL_NAME, null, "")
+            swc.ctx = this.ctx
+            swc.name = Name(DEFAULT_APPLICATION_NAME, null, "")
             components.add(swc)
         } else {
             // Multiple components exist. As we don't know where to put the tu, we check if we have
             // the component we created and add it there or create a new one.
             for (component in components) {
-                if (component.name.localName == APPLICATION_LOCAL_NAME) {
+                if (component.name.localName == DEFAULT_APPLICATION_NAME) {
                     swc = component
                     break
                 }
             }
             if (swc == null) {
                 swc = Component()
-                swc.name = Name(APPLICATION_LOCAL_NAME, null, "")
+                swc.ctx = this.ctx
+                swc.name = Name(DEFAULT_APPLICATION_NAME, null, "")
                 components.add(swc)
             }
         }
@@ -183,6 +185,6 @@ class TranslationResult(
 
     companion object {
         const val SOURCE_LOCATIONS_TO_FRONTEND = "sourceLocationsToFrontend"
-        const val APPLICATION_LOCAL_NAME = "application"
+        const val DEFAULT_APPLICATION_NAME = "application"
     }
 }

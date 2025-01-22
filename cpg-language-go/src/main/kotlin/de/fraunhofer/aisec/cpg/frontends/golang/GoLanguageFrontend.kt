@@ -147,7 +147,7 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
                     isDependency = true
                     dependency.toFile()
                 }
-                config.topLevel != null -> config.topLevel
+                ctx.currentComponent?.topLevel != null -> ctx.currentComponent?.topLevel
                 else -> file.parentFile
             }!!
 

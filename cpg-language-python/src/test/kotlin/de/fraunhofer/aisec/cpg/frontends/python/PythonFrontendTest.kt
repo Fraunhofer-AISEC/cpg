@@ -26,6 +26,8 @@
 package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.InferenceConfiguration
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
@@ -1656,4 +1658,64 @@ class PythonFrontendTest : BaseTest() {
         val inferred = functions.filter { it.isInferred }
         assertTrue(inferred.isEmpty())
     }
+
+    @Test
+    fun testMultiComponent() {
+        val projectRoot = Path.of("src", "test", "resources", "python", "big-project")
+
+        val config =
+            TranslationConfiguration.builder()
+                .softwareComponents(
+                    mutableMapOf(
+                        "component1" to listOf(projectRoot.resolve("component1").toFile()),
+                        "component2" to listOf(projectRoot.resolve("component2").toFile()),
+                        "stdlib" to listOf(projectRoot.resolve("stdlib").toFile()),
+                    )
+                )
+                .topLevels(
+                    mapOf(
+                        "component1" to projectRoot.resolve("component1").toFile(),
+                        "component2" to projectRoot.resolve("component2").toFile(),
+                        "stdlib" to projectRoot.resolve("stdlib").toFile(),
+                    )
+                )
+                .loadIncludes(true)
+                .disableCleanup()
+                .debugParser(true)
+                .failOnError(true)
+                .useParallelFrontends(true)
+                .defaultPasses()
+                .registerLanguage<PythonLanguage>()
+                .build()
+
+        val result = TranslationManager.builder().config(config).build().analyze().get()
+        assertEquals(3, result.components.size)
+
+        val stdlib = result.components["stdlib"]
+        assertNotNull(stdlib)
+        assertEquals(listOf("os"), stdlib.namespaces.map { it.name.toString() })
+        val osName = stdlib.namespaces["os"].variables["name"]
+        assertNotNull(osName)
+
+        val component1 = result.components["component1"]
+        assertNotNull(component1)
+        assertEquals(
+            listOf("mypackage", "mypackage.module"),
+            component1.namespaces.map { it.name.toString() },
+        )
+        val a = component1.variables["a"]
+        assertNotNull(a)
+        assertRefersTo(a.firstAssignment, osName)
+
+        val component2 = result.components["component2"]
+        assertNotNull(component2)
+        assertEquals(
+            listOf("otherpackage", "otherpackage.module"),
+            component2.namespaces.map { it.name.toString() },
+        )
+        val c = component2.variables["c"]
+        assertNotNull(c)
+        assertRefersTo(c.firstAssignment, a)
+    }
+
 }
