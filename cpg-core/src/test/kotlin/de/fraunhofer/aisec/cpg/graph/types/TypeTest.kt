@@ -80,8 +80,8 @@ class TypeTest {
     fun testDynamicType() {
         with(TestLanguageFrontend()) {
             var type = dynamicType()
-            assertFails { type.reference(PointerType.PointerOrigin.ARRAY) }
-            assertFails { type.dereference() }
+            assertIs<DynamicType>(type.reference(PointerType.PointerOrigin.ARRAY))
+            assertIs<DynamicType>(type.dereference())
         }
     }
 }

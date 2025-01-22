@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.graph.dynamicType
 
 /**
  * This type represents a [Type] that is dynamically determined at run-time. This is used for a
@@ -33,10 +34,10 @@ import de.fraunhofer.aisec.cpg.frontends.Language
  */
 class DynamicType(override var language: Language<*>) : Type("dynamic", language) {
     override fun reference(pointer: PointerType.PointerOrigin?): Type {
-        throw IllegalArgumentException("Cannot reference a dynamic type")
+        return dynamicType()
     }
 
     override fun dereference(): Type {
-        throw IllegalArgumentException("Cannot dereference a dynamic type")
+        return dynamicType()
     }
 }
