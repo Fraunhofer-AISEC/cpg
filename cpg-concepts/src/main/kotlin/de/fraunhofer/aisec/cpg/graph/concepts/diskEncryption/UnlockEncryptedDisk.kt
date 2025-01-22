@@ -23,35 +23,9 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.codyze.compliance
+package de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption
 
-import com.github.ajalt.clikt.testing.test
-import kotlin.test.*
+import de.fraunhofer.aisec.cpg.graph.Node
 
-class CommandTest {
-
-    @Test
-    fun testComplianceCommand() {
-        val command = ComplianceCommand()
-        val result = command.test()
-        assertEquals(0, result.statusCode)
-    }
-
-    @Test
-    fun testListSecurityGoalsCommand() {
-        val command = ListSecurityGoals()
-        val result = command.test("--project-dir src/test/resources/")
-        assertEquals(0, result.statusCode)
-        assertEquals("Goal1\n", result.stdout)
-    }
-
-    @Test
-    fun testScanCommand() {
-        val command = ScanCommand()
-        val ex = assertFails {
-            val result = command.test("--project-dir src/test/resources/")
-            assertEquals(0, result.statusCode)
-        }
-        assertIs<NotImplementedError>(ex)
-    }
-}
+class UnlockEncryptedDisk(underlyingNode: Node, concept: DiskEncryption) :
+    DiskEncryptionOperation(underlyingNode = underlyingNode, concept = concept)
