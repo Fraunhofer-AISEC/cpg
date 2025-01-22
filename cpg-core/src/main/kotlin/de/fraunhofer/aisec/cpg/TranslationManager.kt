@@ -45,7 +45,6 @@ import java.util.concurrent.ExecutionException
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.reflect.full.findAnnotation
 import org.slf4j.LoggerFactory
-import java.nio.file.Path
 
 /** Main entry point for all source code translation for all language front-ends. */
 class TranslationManager
@@ -141,9 +140,8 @@ private constructor(
     ): Set<LanguageFrontend<*, *>> {
         val usedFrontends = mutableSetOf<LanguageFrontend<*, *>>()
 
-
-
-        val externalSources: MutableList<File> = extractConfiguredSources("/somepathtolibs")
+        val externalSources: MutableList<File> =
+            extractConfiguredSources("/home/somepath")
         val importedSources: MutableList<File> = mutableListOf()
 
         var useParallelFrontends = ctx.config.useParallelFrontends
@@ -287,14 +285,10 @@ private constructor(
 
     private fun extractConfiguredSources(path: String): MutableList<File> {
         val rootFile = File(path)
-        return if(rootFile.exists())
-            (if (rootFile.isDirectory)
-                rootFile.walkTopDown().toMutableList()
-            else
-                mutableListOf(rootFile)
-                    )
-            else
-                mutableListOf()
+        return if (rootFile.exists())
+            (if (rootFile.isDirectory) rootFile.walkTopDown().toMutableList()
+            else mutableListOf(rootFile))
+        else mutableListOf()
     }
 
     private fun parseParallel(

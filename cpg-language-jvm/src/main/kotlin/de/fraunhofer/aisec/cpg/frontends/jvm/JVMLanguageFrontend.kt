@@ -187,5 +187,9 @@ class JVMLanguageFrontend(
         }
     }
 
-    override fun gatherExternalSources(source: File, externalSources: MutableList<File>, importedSources: MutableList<File>) {}
+    override fun gatherExternalSources(
+        source: File,
+        externalSources: MutableList<File>,
+        importedSources: MutableList<File>,
+    ) {}
 }
