@@ -27,18 +27,25 @@ package de.fraunhofer.aisec.cpg.graph.concepts.api
 
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
+import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 
-/**
- * Represents a REST API concept. This concept models an API endpoint with a specific role (e.g.,
- * consumer or provider).
- *
- * @param apiUrl The URL of the API endpoint.
- * @param role The role of the API either [ApiRole.CONSUMER] or [ApiRole.PROVIDER].
- */
-class RestApiConcept(underlyingNode: Node, val apiUrl: String, val role: ApiRole) :
-    Concept<RestApiOperation>(underlyingNode = underlyingNode)
+/** Represents a single HTTP endpoint on the server */
+class HttpEndpoint(
+    underlyingNode: Node,
+    val httpMethod: HttpMethod,
+    val path: String,
+    val arguments: List<Node>,
+) : Concept<HttpEndpointOperation>(underlyingNode = underlyingNode)
 
-enum class ApiRole {
-    PROVIDER,
-    CONSUMER,
+enum class HttpMethod {
+    GET,
+    POST,
+    PUT,
+    DELETE,
+    UNKNOWN,
 }
+
+abstract class HttpEndpointOperation(
+    underlyingNode: Node,
+    concept: Concept<HttpEndpointOperation>,
+) : Operation(underlyingNode, concept)

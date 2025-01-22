@@ -26,30 +26,26 @@
 package de.fraunhofer.aisec.cpg.graph.concepts.api
 
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 
 /**
- * Represents an operation performed on a [RestApiConcept]. This operation corresponds to an
- * [HttpMethod] and holds the method's [arguments].
- *
- * @param httpMethod HTTP method (e.g., GET, POST, PUT, DELETE).
- * @param arguments The arguments passed during the operation.
- * @param concept The [RestApiConcept] this operation is associated with.
- * @property invokes A list of other [RestApiOperation]s that this operation invokes.
+ * Represents a group of HTTP endpoints bundled together also known as Controller in some
+ * frameworks.
  */
-class RestApiOperation(
+class HttpRequestHandler(
     underlyingNode: Node,
-    val httpMethod: HttpMethod,
-    val arguments: List<Node>,
-    override val concept: RestApiConcept,
-) : Operation(underlyingNode = underlyingNode, concept = concept) {
-    val invokes: MutableList<RestApiOperation> = mutableListOf()
-}
+    val basePath: String,
+    val endpoints: MutableList<HttpEndpoint>,
+) : Concept<HttpRequestHandlerOperation>(underlyingNode = underlyingNode)
 
-enum class HttpMethod {
-    GET,
-    POST,
-    PUT,
-    DELETE,
-    UNKNOWN,
-}
+abstract class HttpRequestHandlerOperation(
+    underlyingNode: Node,
+    concept: Concept<HttpRequestHandlerOperation>,
+) : Operation(underlyingNode, concept) {}
+
+class RegisterHttpEndpoint(
+    underlyingNode: Node,
+    concept: Concept<HttpRequestHandlerOperation>,
+    val httpEndpoint: HttpEndpoint,
+) : HttpRequestHandlerOperation(underlyingNode, concept)
