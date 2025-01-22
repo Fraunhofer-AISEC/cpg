@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.analysis
 
 import de.fraunhofer.aisec.cpg.graph.AccessValues
+import de.fraunhofer.aisec.cpg.graph.HasInitializer
 import de.fraunhofer.aisec.cpg.graph.HasOperatorCode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
@@ -74,7 +75,7 @@ open class ValueEvaluator(
     open fun evaluate(node: Any?): Any? {
         if (node !is Node) return node
 
-        return evaluateInternal(node as? Node, 0)
+        return evaluateInternal(node, 0)
     }
 
     fun clearPath() {
@@ -87,11 +88,11 @@ open class ValueEvaluator(
         node?.let { this.path += it }
 
         when (node) {
-            is NewArrayExpression -> return evaluateInternal(node.initializer, depth)
-            is VariableDeclaration -> return handleVariableDeclaration(node, depth)
+            is NewArrayExpression -> return handleHasInitializer(node, depth)
+            is VariableDeclaration -> return handleHasInitializer(node, depth)
             // For a literal, we can just take its value, and we are finished
             is Literal<*> -> return node.value
-            is Reference -> return handleReference(node, depth)
+            is Reference -> return handlePrevDFG(node, depth)
             is UnaryOperator -> return handleUnaryOp(node, depth)
             is BinaryOperator -> return handleBinaryOperator(node, depth)
             // Casts are just a wrapper in this case, we are interested in the inner expression
@@ -108,10 +109,17 @@ open class ValueEvaluator(
         return cannotEvaluate(node, this)
     }
 
-    protected fun handleVariableDeclaration(node: VariableDeclaration, depth: Int): Any? {
-        // If we have an initializer, we can use it. However, we actually should just use the DFG
-        // instead and do something similar to handleReference
-        return evaluateInternal(node.initializer, depth + 1)
+    /**
+     * If a node declaration implements [HasInitializer], we can use the initializer to evaluate
+     * their value. If not, we can try to use [handlePrevDFG].
+     */
+    protected fun handleHasInitializer(node: HasInitializer, depth: Int): Any? {
+        // If we have an initializer, we can use it. Otherwise, we can fall back to the prevDFG
+        return if (node.initializer != null) {
+            evaluateInternal(node.initializer, depth + 1)
+        } else {
+            handlePrevDFG(node as Node, depth)
+        }
     }
 
     /** Under certain circumstances, an assignment can also be used as an expression. */
@@ -259,7 +267,7 @@ open class ValueEvaluator(
         }
     }
 
-    private fun handleGreater(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
+    protected open fun handleGreater(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
         return if (lhsValue is Number && rhsValue is Number) {
             lhsValue.compareTo(rhsValue) > 0
         } else {
@@ -267,7 +275,7 @@ open class ValueEvaluator(
         }
     }
 
-    private fun handleGEq(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
+    protected open fun handleGEq(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
         return if (lhsValue is Number && rhsValue is Number) {
             lhsValue.compareTo(rhsValue) >= 0
         } else {
@@ -275,7 +283,7 @@ open class ValueEvaluator(
         }
     }
 
-    private fun handleLess(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
+    protected open fun handleLess(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
         return if (lhsValue is Number && rhsValue is Number) {
             lhsValue.compareTo(rhsValue) < 0
         } else {
@@ -283,7 +291,7 @@ open class ValueEvaluator(
         }
     }
 
-    private fun handleLEq(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
+    protected open fun handleLEq(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
         return if (lhsValue is Number && rhsValue is Number) {
             lhsValue.compareTo(rhsValue) <= 0
         } else {
@@ -291,19 +299,31 @@ open class ValueEvaluator(
         }
     }
 
-    private fun handleEq(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
-        return if (lhsValue is Number && rhsValue is Number) {
-            lhsValue.compareTo(rhsValue) == 0
-        } else {
-            cannotEvaluate(expr, this)
+    protected open fun handleEq(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
+        return when {
+            lhsValue is Number && rhsValue is Number -> {
+                lhsValue.compareTo(rhsValue) == 0
+            }
+            lhsValue is String && rhsValue is String -> {
+                lhsValue == rhsValue
+            }
+            else -> {
+                cannotEvaluate(expr, this)
+            }
         }
     }
 
-    private fun handleNEq(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
-        return if (lhsValue is Number && rhsValue is Number) {
-            lhsValue.compareTo(rhsValue) != 0
-        } else {
-            cannotEvaluate(expr, this)
+    protected open fun handleNEq(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
+        return when {
+            lhsValue is Number && rhsValue is Number -> {
+                lhsValue.compareTo(rhsValue) != 0
+            }
+            lhsValue is String && rhsValue is String -> {
+                lhsValue != rhsValue
+            }
+            else -> {
+                cannotEvaluate(expr, this)
+            }
         }
     }
 
@@ -390,15 +410,17 @@ open class ValueEvaluator(
         return cannotEvaluate(expr, this)
     }
 
-    /**
-     * Tries to compute the constant value of a reference. It therefore checks the incoming data
-     * flow edges.
-     */
-    protected open fun handleReference(expr: Reference, depth: Int): Any? {
+    /** Tries to compute the constant value of a node based on its [Node.prevDFG]. */
+    protected open fun handlePrevDFG(node: Node, depth: Int): Any? {
         // For a reference, we are interested into its last assignment into the reference
         // denoted by the previous DFG edge. We need to filter out any self-references for READWRITE
         // references.
-        val prevDFG = filterSelfReferences(expr, expr.prevDFG.toList())
+        val prevDFG =
+            if (node is Reference) {
+                filterSelfReferences(node, node.prevDFG.toList())
+            } else {
+                node.prevDFG
+            }
 
         return if (prevDFG.size == 1) {
             // There's only one incoming DFG edge, so we follow this one.
@@ -407,13 +429,13 @@ open class ValueEvaluator(
             // We cannot have more than ONE valid solution, so we need to abort
             log.warn(
                 "We cannot evaluate {}: It has more than 1 previous DFG edges, meaning that the value is probably affected by a branch.",
-                expr,
+                node,
             )
-            cannotEvaluate(expr, this)
+            cannotEvaluate(node, this)
         } else {
             // No previous DFG node
-            log.warn("We cannot evaluate {}: It has no previous DFG edges.", expr)
-            cannotEvaluate(expr, this)
+            log.warn("We cannot evaluate {}: It has no previous DFG edges.", node)
+            cannotEvaluate(node, this)
         }
     }
 
