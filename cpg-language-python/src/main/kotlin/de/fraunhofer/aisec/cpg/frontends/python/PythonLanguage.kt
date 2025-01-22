@@ -195,6 +195,21 @@ class PythonLanguage :
         return super.propagateTypeOfBinaryOperation(operation)
     }
 
+    override fun tryCast(
+        type: Type,
+        targetType: Type,
+        hint: HasType?,
+        targetHint: HasType?,
+    ): CastResult {
+        // Parameters in python do not have a static type. Therefore, we need to match for all types
+        // when trying to cast one type to the type of a function parameter.
+        if (targetHint is ParameterDeclaration) {
+            return DirectMatch
+        }
+
+        return super.tryCast(type, targetType, hint, targetHint)
+    }
+
     companion object {
         /**
          * This is a "modifier" to differentiate parameters in functions that are "positional" only.

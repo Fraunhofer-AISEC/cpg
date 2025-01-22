@@ -951,8 +951,11 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         // both in positional and keyword style.
         var positionalArguments = args.posonlyargs + args.args
 
-        // Handle receiver if it exists
-        if (recordDeclaration != null) {
+        // Handle receiver if it exists and if it is not a static method
+        if (
+            recordDeclaration != null &&
+                result.annotations.none { it.name.localName == "staticmethod" }
+        ) {
             handleReceiverArgument(positionalArguments, args, result, recordDeclaration)
             // Skip the receiver argument for further processing
             positionalArguments = positionalArguments.drop(1)
