@@ -398,6 +398,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             is DefaultStatement -> handleDefault(node)
             is TypeIdExpression -> handleDefault(node)
             is Reference -> handleDefault(node)
+            is ImportDeclaration -> handleDefault(node)
             // These nodes are not added to the EOG
             is IncludeDeclaration -> doNothing()
             else -> LOGGER.info("Parsing of type ${node.javaClass} is not supported (yet)")
