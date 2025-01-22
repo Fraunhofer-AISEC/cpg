@@ -23,11 +23,11 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.concepts.api
+package de.fraunhofer.aisec.cpg.graph.concepts.http
 
 import de.fraunhofer.aisec.cpg.graph.Node
 
-/** Represents an HTTP call on the client side. */
+/** Represents an [HttpRequest] from the client. */
 class HttpRequest(
     underlyingNode: Node,
     val url: String,

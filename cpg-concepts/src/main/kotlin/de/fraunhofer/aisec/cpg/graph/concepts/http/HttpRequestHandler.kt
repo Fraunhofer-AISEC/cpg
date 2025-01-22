@@ -23,27 +23,26 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.concepts.api
+package de.fraunhofer.aisec.cpg.graph.concepts.http
 
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 
-/**
- * Represents a group of HTTP endpoints bundled together also known as Controller in some
- * frameworks.
- */
+/** Represents a group of [HttpEndpoint]'s, commonly known as a Controller in some frameworks. */
 class HttpRequestHandler(
     underlyingNode: Node,
     val basePath: String,
     val endpoints: MutableList<HttpEndpoint>,
 ) : Concept<HttpRequestHandlerOperation>(underlyingNode = underlyingNode)
 
+/** Base class for Http operations. */
 abstract class HttpRequestHandlerOperation(
     underlyingNode: Node,
     concept: Concept<HttpRequestHandlerOperation>,
 ) : Operation(underlyingNode, concept) {}
 
+/** Registers an [HttpEndpoint]. */
 class RegisterHttpEndpoint(
     underlyingNode: Node,
     concept: Concept<HttpRequestHandlerOperation>,

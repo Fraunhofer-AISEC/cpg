@@ -23,14 +23,29 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.concepts.api
+package de.fraunhofer.aisec.cpg.graph.concepts.http
 
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 
-class HttpClient(underlyingNode: Node) :
-    Concept<HttpClientOperation>(underlyingNode = underlyingNode)
+/** Represents a single [HttpEndpoint] on the server */
+class HttpEndpoint(
+    underlyingNode: Node,
+    val httpMethod: HttpMethod,
+    val path: String,
+    val arguments: List<Node>,
+) : Concept<HttpEndpointOperation>(underlyingNode = underlyingNode)
 
-abstract class HttpClientOperation(underlyingNode: Node, concept: Concept<HttpClientOperation>) :
-    Operation(underlyingNode = underlyingNode, concept = concept)
+enum class HttpMethod {
+    GET,
+    POST,
+    PUT,
+    DELETE,
+    UNKNOWN,
+}
+
+abstract class HttpEndpointOperation(
+    underlyingNode: Node,
+    concept: Concept<HttpEndpointOperation>,
+) : Operation(underlyingNode, concept)
