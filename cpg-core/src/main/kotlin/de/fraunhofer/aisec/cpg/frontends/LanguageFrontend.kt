@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
+import java.nio.file.Path
 import java.util.*
 import org.slf4j.LoggerFactory
 
@@ -110,7 +111,12 @@ abstract class LanguageFrontend<AstNode, TypeNode>(
      */
     abstract override fun codeOf(astNode: AstNode): String?
 
-    abstract fun gatherExternalSources(source: File, externalSources: MutableList<File>): List<File>
+    abstract fun gatherExternalSources(
+        rootPath: Path,
+        source: File,
+        externalSources: MutableList<File>,
+        processedImports: MutableList<String> = mutableListOf<String>(),
+    ): List<File>
 
     /**
      * Returns the [Region] of the code with line and column, index starting at 1, generic for java

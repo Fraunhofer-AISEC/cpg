@@ -43,10 +43,7 @@ import java.io.File
 import java.net.URI
 import java.nio.file.Path
 import jep.python.PyObject
-import kotlin.io.path.Path
-import kotlin.io.path.nameWithoutExtension
-import kotlin.io.path.pathString
-import kotlin.io.path.relativeToOrNull
+import kotlin.io.path.*
 import kotlin.math.min
 
 @RegisterExtraPass(PythonAddDeclarationsPass::class)
@@ -310,12 +307,13 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
     }
 
     override fun gatherExternalSources(
+        rootPath: Path,
         source: File,
         externalSources: MutableList<File>,
+        processedImports: MutableList<String>,
     ): List<File> {
 
-        val rootFile = externalSources.firstOrNull()
-        if (rootFile == null) return mutableListOf()
+        val rootFile = rootPath.toFile()
 
         val pythonExternalSources =
             externalSources
@@ -326,47 +324,81 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
 
         val importRe = "(?m)^(?:from[ ]+(\\S+)[ ]+)?import[ ]+(\\S+)[ ]*\$".toRegex()
         val allImportedSources: MutableList<File> = mutableListOf()
-        importRe.findAll(source.readText()).forEach { import ->
-            var importedSources: MutableList<File> = mutableListOf()
-            val importPQN =
-                import.groupValues.get(1) +
-                    (if (import.groupValues.get(1).isEmpty()) "" else language.namespaceDelimiter) +
-                    import.groupValues.get(2)
-            var importPath = importPQN.replace(language.namespaceDelimiter, "/")
-            language.fileExtensions.forEach { fileExtension ->
-                pythonExternalSources
-                    .firstOrNull {
-                        it.relativeTo(rootFile).path ==
-                            importPath + language.namespaceDelimiter + fileExtension
-                    }
-                    ?.let {
-                        importedSources += it
-                        // By removing the imported source from the list of available external
-                        // sources, we do not import interfaces twice
-                        pythonExternalSources.remove(it)
-                        println(import.groupValues.get(0) + " : " + it.path)
-                    }
-            }
-            // if we did not find a .py or .pyi we search for any folder matching the path and add
-            // all subfiles
-            if (importedSources.isEmpty()) {
-                pythonExternalSources
-                    .map { it.relativeTo(rootFile) }
-                    .filter { it.toPath().startsWith(Path(importPath)) }
-                    .forEach {
-                        importedSources += it
-                        // By removing the imported source from the list of available external
-                        // sources, we do not import interfaces twice
-                        pythonExternalSources.remove(it)
-                        println(import.groupValues.get(0) + " / " + it.path)
-                    }
-            }
-            if (importedSources.isEmpty()) {
-                if (!importPath.startsWith("barbican"))
-                    println(import.groupValues.get(0) + " Unresolved")
-            }
+        importRe.findAll(source.readText()).forEach { imp ->
 
-            allImportedSources += importedSources
+            // Only try to find file containing imports if we did not process this import so far
+            if (!processedImports.contains(imp.groupValues.get(0))) {
+                var importedSources: MutableList<File> = mutableListOf()
+
+                val fromPart = imp.groupValues.get(1)
+                var impPart = imp.groupValues.get(2)
+                impPart = if (impPart == "*") "" else impPart
+                val importPQN =
+                    fromPart +
+                        (if (fromPart.isEmpty() || impPart.isEmpty()) ""
+                        else language.namespaceDelimiter) +
+                        impPart
+                var importPath = importPQN.replace(language.namespaceDelimiter, "/")
+                language.fileExtensions.forEach { fileExtension ->
+                    pythonExternalSources
+                        .firstOrNull {
+                            it.relativeTo(rootFile).path ==
+                                importPath + language.namespaceDelimiter + fileExtension
+                        }
+                        ?.let {
+                            importedSources += it
+                            // By removing the imported source from the list of available external
+                            // sources, we do not import interfaces twice
+                            pythonExternalSources.remove(it)
+                        }
+                }
+                // if we did not find a .py or .pyi we search for any folder matching the path and
+                // add
+                // all subfiles
+                if (importedSources.isEmpty()) {
+                    pythonExternalSources
+                        .filter { it.relativeTo(rootFile).toPath().startsWith(Path(importPath)) }
+                        .forEach {
+                            importedSources += it
+                            // By removing the imported source from the list of available external
+                            // sources, we do not import interfaces twice
+                            pythonExternalSources.remove(it)
+                        }
+                }
+                if (importedSources.isEmpty()) {
+                    while (Path(importPath).parent != null && importedSources.isEmpty()) {
+                        importPath = Path(importPath).parent.toString()
+                        language.fileExtensions.forEach { fileExtension ->
+                            pythonExternalSources
+                                .firstOrNull {
+                                    it.relativeTo(rootFile).path ==
+                                        importPath + language.namespaceDelimiter + fileExtension
+                                }
+                                ?.let {
+                                    importedSources += it
+                                    // By removing the imported source from the list of available
+                                    // external
+                                    // sources, we do not import interfaces twice
+                                    pythonExternalSources.remove(it)
+                                }
+                        }
+                    }
+                }
+
+                processedImports.add(imp.groupValues.get(0))
+                allImportedSources +=
+                    importedSources +
+                        importedSources
+                            .flatMap {
+                                gatherExternalSources(
+                                    rootPath,
+                                    it,
+                                    pythonExternalSources,
+                                    processedImports,
+                                )
+                            }
+                            .toMutableList()
+            }
         }
         return allImportedSources
     }
