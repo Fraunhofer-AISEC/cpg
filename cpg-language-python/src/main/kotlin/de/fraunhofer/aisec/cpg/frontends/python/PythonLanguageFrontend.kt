@@ -311,16 +311,46 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
     override fun gatherExternalSources(
         source: File,
         externalSources: MutableList<File>,
-        importedSources: MutableList<File>,
-    ) {
+    ): List<File> {
+
+        val rootFile = externalSources.firstOrNull()
+        if (rootFile == null) return mutableListOf()
+
+        val pythonExternalSources =
+            externalSources
+                .filter { externalFile ->
+                    language.fileExtensions.any { externalFile.path.endsWith(it) }
+                }
+                .toMutableList()
 
         val importRe = "(?m)^(?:from[ ]+(\\S+)[ ]+)?import[ ]+(\\S+)[ ]*\$".toRegex()
+        val allImportedSources: MutableList<File> = mutableListOf()
         importRe.findAll(source.readText()).forEach {
+            var importedSources: MutableList<File> = mutableListOf()
             val importPQN =
                 it.groupValues.get(1) +
-                    (if (it.groupValues.get(1).isEmpty()) "" else ".") +
+                    (if (it.groupValues.get(1).isEmpty()) "" else language.namespaceDelimiter) +
                     it.groupValues.get(2)
+            var importPath = importPQN.replace(language.namespaceDelimiter, "/")
+            language.fileExtensions.forEach { fileExtension ->
+                pythonExternalSources
+                    .firstOrNull {
+                        it.relativeTo(rootFile).path ==
+                            importPath + language.namespaceDelimiter + fileExtension
+                    }
+                    ?.let {
+                        importedSources += it
+                        pythonExternalSources.remove(it)
+                        println(importPQN + ": " + it.path)
+                    }
+            }
+            // if we did not find a .py or .pyi we search for any folder matching the path and add
+            // all subfiles
+            if (importedSources.isEmpty()) {}
+
+            allImportedSources += importedSources
         }
+        return allImportedSources
     }
 
     fun operatorToString(op: Python.AST.BaseOperator) =

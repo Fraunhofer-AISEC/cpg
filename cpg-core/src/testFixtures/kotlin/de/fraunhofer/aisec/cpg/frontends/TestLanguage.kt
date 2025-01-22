@@ -102,6 +102,13 @@ open class TestLanguageFrontend(
     override fun setComment(node: Node, astNode: Any) {
         TODO("Not yet implemented")
     }
+
+    override fun gatherExternalSources(
+        source: File,
+        externalSources: MutableList<File>,
+    ): List<File> {
+        TODO("Not yet implemented")
+    }
 }
 
 class TestHandler(frontend: TestLanguageFrontend) :

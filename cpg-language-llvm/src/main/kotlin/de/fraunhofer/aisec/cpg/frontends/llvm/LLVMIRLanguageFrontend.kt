@@ -268,8 +268,9 @@ class LLVMIRLanguageFrontend(language: Language<LLVMIRLanguageFrontend>, ctx: Tr
     override fun gatherExternalSources(
         source: File,
         externalSources: MutableList<File>,
-        importedSources: MutableList<File>,
-    ) {}
+    ): List<File> {
+        return listOf()
+    }
 }
 
 /**

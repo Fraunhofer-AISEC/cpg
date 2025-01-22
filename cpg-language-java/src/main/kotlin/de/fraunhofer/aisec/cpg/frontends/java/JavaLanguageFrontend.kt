@@ -517,8 +517,9 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
     override fun gatherExternalSources(
         source: File,
         externalSources: MutableList<File>,
-        importedSources: MutableList<File>,
-    ) {}
+    ): List<File> {
+        return listOf()
+    }
 
     companion object {
         const val THIS = "this"

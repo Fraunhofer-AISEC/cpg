@@ -141,8 +141,7 @@ private constructor(
         val usedFrontends = mutableSetOf<LanguageFrontend<*, *>>()
 
         val externalSources: MutableList<File> =
-            extractConfiguredSources("/home/somepath")
-        val importedSources: MutableList<File> = mutableListOf()
+            extractConfiguredSources("/home/kweiss/coding/typeshed/stdlib")
 
         var useParallelFrontends = ctx.config.useParallelFrontends
 
@@ -151,7 +150,11 @@ private constructor(
             component.name = Name(sc)
             result.addComponent(component)
 
+            val externalSourcesInComponent: MutableList<File> = externalSources.toMutableList()
+
+            // Every Component needs to reprocess the sources
             var sourceLocations: List<File> = ctx.config.softwareComponents[sc] ?: listOf()
+            val importedSources: MutableList<File> = mutableListOf()
 
             // Todo Here we need to dispatch to the correct frontend to do preproccessing
 
@@ -255,27 +258,16 @@ private constructor(
                 .filter { it.language != null }
                 .forEach {
                     val frontend = it.language?.newFrontend(ctx)
-                    frontend?.gatherExternalSources(it, externalSources, importedSources)
+                    importedSources.addAll(
+                        frontend?.gatherExternalSources(it, externalSourcesInComponent) ?: listOf()
+                    )
                 }
 
             usedFrontends.addAll(
                 if (useParallelFrontends) {
-                    parseParallel(component, result, ctx, sourceLocations)
+                    parseParallel(component, result, ctx, sourceLocations + importedSources)
                 } else {
-                    parseSequentially(component, result, ctx, sourceLocations)
-                }
-            )
-        }
-        if (externalSources.isNotEmpty()) {
-            val component = Component()
-            component.name = Name("External")
-            result.addComponent(component)
-
-            usedFrontends.addAll(
-                if (useParallelFrontends) {
-                    parseParallel(component, result, ctx, externalSources)
-                } else {
-                    parseSequentially(component, result, ctx, externalSources)
+                    parseSequentially(component, result, ctx, sourceLocations + importedSources)
                 }
             )
         }

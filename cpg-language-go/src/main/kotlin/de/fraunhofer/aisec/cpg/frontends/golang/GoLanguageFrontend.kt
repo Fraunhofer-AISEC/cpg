@@ -422,8 +422,9 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
     override fun gatherExternalSources(
         source: File,
         externalSources: MutableList<File>,
-        importedSources: MutableList<File>,
-    ) {}
+    ): List<File> {
+        return listOf()
+    }
 
     companion object {
         /**
