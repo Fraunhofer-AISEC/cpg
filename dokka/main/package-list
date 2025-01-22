@@ -14,6 +14,7 @@ de.fraunhofer.aisec.cpg.query
 module:cpg-concepts
 de.fraunhofer.aisec.cpg.graph
 de.fraunhofer.aisec.cpg.graph.concepts
+de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption
 module:cpg-console
 de.fraunhofer.aisec.cpg.analysis
 de.fraunhofer.aisec.cpg.console
