@@ -30,8 +30,8 @@ import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.autoType
 import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
+import de.fraunhofer.aisec.cpg.graph.primitiveType
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
@@ -39,10 +39,10 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation
 import de.fraunhofer.aisec.cpg.helpers.neo4j.SimpleNameConverter
-import java.io.File
-import kotlin.reflect.KClass
 import org.neo4j.ogm.annotation.Transient
 import org.neo4j.ogm.annotation.typeconversion.Convert
+import java.io.File
+import kotlin.reflect.KClass
 
 /** The Python language. */
 class PythonLanguage(ctx: TranslationContext) :
@@ -181,14 +181,13 @@ class PythonLanguage(ctx: TranslationContext) :
         )
 
     override fun propagateTypeOfBinaryOperation(operation: BinaryOperator): Type {
-        val autoType = autoType()
         if (
             operation.operatorCode == "/" &&
                 operation.lhs.type is NumericType &&
                 operation.rhs.type is NumericType
         ) {
             // In Python, the / operation automatically casts the result to a float
-            return getSimpleTypeOf("float") ?: autoType
+            return primitiveType("float")
         } else if (
             operation.operatorCode == "//" &&
                 operation.lhs.type is NumericType &&
@@ -197,9 +196,9 @@ class PythonLanguage(ctx: TranslationContext) :
             return if (operation.lhs.type is IntegerType && operation.rhs.type is IntegerType) {
                 // In Python, the // operation keeps the type as an int if both inputs are integers
                 // or casts it to a float otherwise.
-                getSimpleTypeOf("int") ?: autoType
+                primitiveType("int")
             } else {
-                getSimpleTypeOf("float") ?: autoType
+                primitiveType("float")
             }
         }
 
