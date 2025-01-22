@@ -23,16 +23,31 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.codyze
+package codyze
 
-import com.github.ajalt.clikt.core.CliktCommand
-import com.github.ajalt.clikt.core.main
-import com.github.ajalt.clikt.core.subcommands
+import de.fraunhofer.aisec.codyze.evalQuery
+import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
+import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.query.QueryTree
+import de.fraunhofer.aisec.cpg.test.analyze
+import java.io.File
+import kotlin.io.path.Path
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 
-class Codyze : CliktCommand() {
-    override fun run() {}
-}
-
-fun main(args: Array<String>) {
-    Codyze().subcommands(de.fraunhofer.aisec.cpg.codyze.compliance.Command).main(args)
+class QueryHostTest {
+    @Test
+    fun testQuery() {
+        val topLevel = Path("src/integrationTest/resources")
+        val result =
+            analyze(listOf(topLevel.resolve("simple.py").toFile()), topLevel, true) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        val evalResult =
+            result.evalQuery(File("src/integrationTest/resources/simple.query.kts"), "statement1")
+        val queryTree = evalResult as? QueryTree<*>
+        assertNotNull(queryTree)
+        assertEquals(true, queryTree.value)
+    }
 }

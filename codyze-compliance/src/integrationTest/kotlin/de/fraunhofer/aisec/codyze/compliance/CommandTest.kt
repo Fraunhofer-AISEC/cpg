@@ -23,35 +23,23 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.codyze.compliance
+package de.fraunhofer.aisec.codyze.compliance
 
 import com.github.ajalt.clikt.testing.test
-import kotlin.test.*
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
-class CommandTest {
-
-    @Test
-    fun testComplianceCommand() {
-        val command = ComplianceCommand()
-        val result = command.test()
-        assertEquals(0, result.statusCode)
-    }
-
-    @Test
-    fun testListSecurityGoalsCommand() {
-        val command = ListSecurityGoals()
-        val result = command.test("--project-dir src/test/resources/")
-        assertEquals(0, result.statusCode)
-        assertEquals("Goal1\n", result.stdout)
-    }
-
+class CommandIntegrationTest {
     @Test
     fun testScanCommand() {
         val command = ScanCommand()
-        val ex = assertFails {
-            val result = command.test("--project-dir src/test/resources/")
-            assertEquals(0, result.statusCode)
-        }
-        assertIs<NotImplementedError>(ex)
+        val result =
+            command.test(
+                "--project-dir src/integrationTest/resources/demo-app --components webapp --components auth"
+            )
+        assertEquals(
+            "Message(arguments=null, id=null, markdown=This is a **finding**, properties=null, text=null)\n",
+            result.output,
+        )
     }
 }
