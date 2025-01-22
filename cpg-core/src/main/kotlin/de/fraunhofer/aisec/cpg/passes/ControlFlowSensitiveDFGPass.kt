@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContext
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
+import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Granularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.indexed
 import de.fraunhofer.aisec.cpg.graph.edges.flows.partial
@@ -124,25 +125,25 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                 }
             } else {
                 value.elements.forEach {
+                    var callingContext: CallingContext? = null
+                    var granularity: Granularity = FullDataflowGranularity
+                    edgePropertiesMap[Pair(it, key)]?.let {
+                        callingContext = it.filterIsInstance<CallingContext>().singleOrNull()
+                        granularity =
+                            it.filterIsInstance<Granularity>().singleOrNull()
+                                ?: FullDataflowGranularity
+                    }
+
                     if ((it is VariableDeclaration || it is ParameterDeclaration) && key == it) {
                         // Nothing to do
-                    } else if (
-                        Pair(it, key) in edgePropertiesMap &&
-                            edgePropertiesMap[Pair(it, key)] is CallingContext
-                    ) {
+                    } else if (callingContext != null) {
                         key.prevDFGEdges.addContextSensitive(
                             it,
-                            callingContext = (edgePropertiesMap[Pair(it, key)] as CallingContext),
+                            callingContext = callingContext,
+                            granularity = granularity,
                         )
-                    } else if (
-                        Pair(it, key) in edgePropertiesMap &&
-                            edgePropertiesMap[Pair(it, key)] is Granularity
-                    ) {
-                        key.prevDFGEdges.add(it) {
-                            granularity = edgePropertiesMap[Pair(it, key)] as Granularity
-                        }
                     } else {
-                        key.prevDFGEdges += it
+                        key.prevDFGEdges.add(it) { this.granularity = granularity }
                     }
                 }
             }
@@ -156,7 +157,11 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
     protected fun findAndSetProperties(from: Set<Node>, to: Node) {
         edgePropertiesMap
             .filter { it.key.first in from && it.key.second == null }
-            .forEach { edgePropertiesMap[Pair(it.key.first, to)] = it.value }
+            .forEach {
+                edgePropertiesMap
+                    .computeIfAbsent(Pair(it.key.first, to)) { mutableSetOf() }
+                    .addAll(it.value)
+            }
     }
 
     /**
@@ -304,10 +309,16 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                 // all...
                 if (assignment.target is InitializerListExpression) {
                     assignment.target.initializers.forEachIndexed { idx, initializer ->
-                        (initializer as? Reference)?.refersTo?.let {
-                            doubleState.declarationsState[it] =
-                                PowersetLattice(identitySetOf(assignment.target as Node))
-                            edgePropertiesMap[Pair(initializer, null)] = indexed(idx)
+                        (initializer as? Reference)?.let { ref ->
+                            ref.refersTo?.let {
+                                doubleState.declarationsState[it] =
+                                    PowersetLattice(identitySetOf(ref))
+                                doubleState.generalState[ref] =
+                                    PowersetLattice(identitySetOf(assignment.value as Node))
+                                edgePropertiesMap.computeIfAbsent(Pair(assignment.value, ref)) {
+                                    mutableSetOf<Any>()
+                                } += indexed(idx)
+                            }
                         }
                     }
                 } else {
@@ -509,7 +520,9 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                             }
                         doubleState.declarationsState[arg?.refersTo] =
                             PowersetLattice(identitySetOf(param))
-                        edgePropertiesMap[Pair(param, null)] = CallingContextOut(currentNode)
+                        edgePropertiesMap.computeIfAbsent(Pair(param, null)) {
+                            mutableSetOf<Any>()
+                        } += CallingContextOut(currentNode)
                     }
                 }
             } else {
@@ -536,7 +549,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
      * an entry works as follows: The 1st item in the pair is the prevDFG of the 2nd item. If the
      * 2nd item is null, it's obviously not relevant. Ultimately, it will be 2nd -prevDFG-> 1st.
      */
-    val edgePropertiesMap = mutableMapOf<Pair<Node, Node?>, Any>()
+    val edgePropertiesMap = mutableMapOf<Pair<Node, Node?>, MutableSet<Any>>()
 
     /**
      * Checks if the node performs an operation and an assignment at the same time e.g. with the

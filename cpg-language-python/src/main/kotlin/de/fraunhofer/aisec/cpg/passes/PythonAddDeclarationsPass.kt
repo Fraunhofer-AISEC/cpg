@@ -37,6 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.InitializerTypePropagation
@@ -198,6 +199,31 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
 
                     // Add it to our assign expression, so that we can find it in the AST
                     assignExpression.declarations += handled
+                }
+            }
+            (target as? InitializerListExpression)?.let {
+                it.initializers.forEach { initializer ->
+                    (initializer as? Reference)?.let {
+                        it.access = AccessValues.WRITE
+                        val handled = handleWriteToReference(initializer)
+                        if (handled is Declaration) {
+                            // We cannot assign an initializer here because this will lead to
+                            // duplicate
+                            // DFG edges, but we need to propagate the type information from our
+                            // value
+                            // to the declaration. We therefore add the declaration to the observers
+                            // of
+                            // the value's type, so that it gets informed and can change its own
+                            // type
+                            // accordingly.
+                            assignExpression
+                                .findValue(initializer)
+                                ?.registerTypeObserver(InitializerTypePropagation(handled))
+
+                            // Add it to our assign expression, so that we can find it in the AST
+                            assignExpression.declarations += handled
+                        }
+                    }
                 }
             }
         }
