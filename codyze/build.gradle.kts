@@ -32,7 +32,7 @@ plugins {
 }
 
 application {
-    mainClass.set("de.fraunhofer.aisec.cpg.codyze.ApplicationKt")
+    mainClass.set("de.fraunhofer.aisec.codyze.ApplicationKt")
 }
 
 publishing {
