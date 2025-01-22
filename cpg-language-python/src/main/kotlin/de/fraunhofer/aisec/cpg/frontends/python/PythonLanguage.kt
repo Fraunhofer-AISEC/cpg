@@ -27,8 +27,8 @@ package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
-import de.fraunhofer.aisec.cpg.graph.autoType
 import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
+import de.fraunhofer.aisec.cpg.graph.primitiveType
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
@@ -169,14 +169,13 @@ class PythonLanguage :
         )
 
     override fun propagateTypeOfBinaryOperation(operation: BinaryOperator): Type {
-        val autoType = autoType()
         if (
             operation.operatorCode == "/" &&
                 operation.lhs.type is NumericType &&
                 operation.rhs.type is NumericType
         ) {
             // In Python, the / operation automatically casts the result to a float
-            return getSimpleTypeOf("float") ?: autoType
+            return primitiveType("float")
         } else if (
             operation.operatorCode == "//" &&
                 operation.lhs.type is NumericType &&
@@ -185,9 +184,9 @@ class PythonLanguage :
             return if (operation.lhs.type is IntegerType && operation.rhs.type is IntegerType) {
                 // In Python, the // operation keeps the type as an int if both inputs are integers
                 // or casts it to a float otherwise.
-                getSimpleTypeOf("int") ?: autoType
+                primitiveType("int")
             } else {
-                getSimpleTypeOf("float") ?: autoType
+                primitiveType("float")
             }
         }
 
