@@ -28,6 +28,6 @@ package de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption
 import de.fraunhofer.aisec.cpg.graph.Node
 
 class CreateSecret(underlyingNode: Node, concept: Secret) :
-    SecretOp(underlyingNode = underlyingNode, concept = concept) {
+    SecretOperation(underlyingNode = underlyingNode, concept = concept) {
     // TODO: which secret? specs (key size, cipher suite, storage)?
 }

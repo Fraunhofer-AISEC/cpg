@@ -28,5 +28,5 @@ package de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 
-abstract class SecretOp(underlyingNode: Node, override val concept: Secret) :
+abstract class CipherOperation(underlyingNode: Node, override val concept: Cipher) :
     Operation(underlyingNode = underlyingNode, concept = concept), IsDiskEncryption

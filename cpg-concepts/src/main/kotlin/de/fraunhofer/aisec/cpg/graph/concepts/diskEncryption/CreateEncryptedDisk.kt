@@ -28,18 +28,4 @@ package de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption
 import de.fraunhofer.aisec.cpg.graph.Node
 
 class CreateEncryptedDisk(underlyingNode: Node, concept: DiskEncryption) :
-    DiskEncryptionOP(underlyingNode = underlyingNode, concept = concept) {
-    // TODO: duplicate of [DiskEncryption] fields
-
-    /** The encryption target, i.e. the disk */
-    var target: BlockStorage? = null
-
-    /** The cipher suite used for disk encryption */
-    var cipher: Cipher? = null
-
-    /** The bit size used for disk encryption */
-    var keySize: Int? = null
-
-    /** The encryption key used for disk encryption */
-    var key: Secret? = null
-}
+    DiskEncryptionOperation(underlyingNode = underlyingNode, concept = concept)

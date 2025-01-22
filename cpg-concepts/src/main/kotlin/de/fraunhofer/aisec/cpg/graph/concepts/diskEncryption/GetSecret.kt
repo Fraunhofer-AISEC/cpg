@@ -28,6 +28,4 @@ package de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption
 import de.fraunhofer.aisec.cpg.graph.Node
 
 class GetSecret(underlyingNode: Node, concept: Secret) :
-    SecretOp(underlyingNode = underlyingNode, concept = concept) {
-    // TODO: which secret?
-}
+    SecretOperation(underlyingNode = underlyingNode, concept = concept)
