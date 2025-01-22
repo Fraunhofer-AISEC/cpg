@@ -28,4 +28,4 @@ package de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption
 import de.fraunhofer.aisec.cpg.graph.Node
 
 class UnlockEncryptedDisk(underlyingNode: Node, concept: DiskEncryption) :
-    DiskEncryptionOperation(underlyingNode = underlyingNode, concept = concept) 
+    DiskEncryptionOperation(underlyingNode = underlyingNode, concept = concept)
