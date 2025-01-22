@@ -31,6 +31,8 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContext
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
+import de.fraunhofer.aisec.cpg.graph.edges.flows.Granularity
+import de.fraunhofer.aisec.cpg.graph.edges.flows.indexed
 import de.fraunhofer.aisec.cpg.graph.edges.flows.partial
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -132,6 +134,13 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                             it,
                             callingContext = (edgePropertiesMap[Pair(it, key)] as CallingContext),
                         )
+                    } else if (
+                        Pair(it, key) in edgePropertiesMap &&
+                            edgePropertiesMap[Pair(it, key)] is Granularity
+                    ) {
+                        key.prevDFGEdges.add(it) {
+                            granularity = edgePropertiesMap[Pair(it, key)] as Granularity
+                        }
                     } else {
                         key.prevDFGEdges += it
                     }
@@ -291,12 +300,25 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
             // The rhs can be anything. The rhs flows to the respective lhs. To identify the
             // correct mapping, we use the "assignments" property which already searches for us.
             currentNode.assignments.forEach { assignment ->
-                // This was the last write to the respective declaration.
-                (assignment.target as? Declaration ?: (assignment.target as? Reference)?.refersTo)
-                    ?.let {
-                        doubleState.declarationsState[it] =
-                            PowersetLattice(identitySetOf(assignment.target as Node))
+                // Sometimes, we have a InitializerListExpression on the lhs which is not good at
+                // all...
+                if (assignment.target is InitializerListExpression) {
+                    assignment.target.initializers.forEachIndexed { idx, initializer ->
+                        (initializer as? Reference)?.refersTo?.let {
+                            doubleState.declarationsState[it] =
+                                PowersetLattice(identitySetOf(assignment.target as Node))
+                            edgePropertiesMap[Pair(initializer, null)] = indexed(idx)
+                        }
                     }
+                } else {
+                    // This was the last write to the respective declaration.
+                    (assignment.target as? Declaration
+                            ?: (assignment.target as? Reference)?.refersTo)
+                        ?.let {
+                            doubleState.declarationsState[it] =
+                                PowersetLattice(identitySetOf(assignment.target as Node))
+                        }
+                }
             }
         } else if (isIncOrDec(currentNode)) {
             // Increment or decrement => Add the prevWrite of the input to the input. After the

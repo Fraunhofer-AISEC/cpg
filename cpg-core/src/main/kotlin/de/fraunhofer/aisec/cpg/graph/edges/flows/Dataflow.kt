@@ -63,6 +63,15 @@ class PartialDataflowGranularity(
     val partialTarget: Declaration?
 ) : Granularity
 
+/**
+ * This dataflow granularity denotes that not the "whole" object is flowing from [Dataflow.start] to
+ * [Dataflow.end] but only parts of it. Common examples include tuples or array indices.
+ */
+class IndexedDataflowGranularity(
+    /** The index that is affected by this partial dataflow. */
+    val index: Int
+) : Granularity
+
 /** Creates a new [FullDataflowGranularity]. */
 fun full(): Granularity {
     return FullDataflowGranularity
@@ -78,6 +87,14 @@ fun default() = full()
  */
 fun partial(target: Declaration?): PartialDataflowGranularity {
     return PartialDataflowGranularity(target)
+}
+
+/**
+ * Creates a new [IndexedDataflowGranularity]. The [idx] is the index that is used for the partial
+ * dataflow.
+ */
+fun indexed(idx: Int): IndexedDataflowGranularity {
+    return IndexedDataflowGranularity(idx)
 }
 
 /**
