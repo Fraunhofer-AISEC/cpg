@@ -39,13 +39,13 @@ import java.nio.file.Path
 import kotlin.io.path.Path
 
 /** Options common to all subcommands dealing projects. */
-class ProjectOptions : OptionGroup("Project Options:") {
+class ProjectOptions : OptionGroup("Project Options") {
     val directory by
         option("--project-dir", help = "The project directory").path().default(Path("."))
 }
 
 /** Options common to all subcommands dealing with CPG translation. */
-class TranslationOptions : OptionGroup("CPG Translation Options:") {
+class TranslationOptions : OptionGroup("CPG Translation Options") {
     val sources: List<Path>? by
         option(
                 "--sources",
