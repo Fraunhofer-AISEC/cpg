@@ -505,7 +505,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                 is Float,
                 is Double -> primitiveType("float")
                 else -> {
-                    autoType()
+                    unknownType()
                 }
             }
         return newLiteral(node.value, type = tpe, rawNode = node)

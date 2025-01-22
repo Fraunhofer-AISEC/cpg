@@ -1642,6 +1642,23 @@ class PythonFrontendTest : BaseTest() {
         refs.forEach { assertIsNot<MemberExpression>(it) }
     }
 
+    @Test
+    fun testFunctionResolution() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val tu =
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("foobar.py").toFile()), topLevel, true) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(tu)
+
+        // ensure, we only have two functions and no inferred ones
+        val functions = tu.functions
+        assertEquals(2, functions.size)
+
+        val inferred = functions.filter { it.isInferred }
+        assertTrue(inferred.isEmpty())
+    }
+
     class PythonValueEvaluator : ValueEvaluator() {
         override fun computeBinaryOpEffect(
             lhsValue: Any?,

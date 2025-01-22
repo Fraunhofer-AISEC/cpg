@@ -75,4 +75,13 @@ class TypeTest {
             assertLocalName("myNewClass***", type)
         }
     }
+
+    @Test
+    fun testDynamicType() {
+        with(TestLanguageFrontend()) {
+            var type = dynamicType()
+            assertIs<DynamicType>(type.reference(PointerType.PointerOrigin.ARRAY))
+            assertIs<DynamicType>(type.dereference())
+        }
+    }
 }
