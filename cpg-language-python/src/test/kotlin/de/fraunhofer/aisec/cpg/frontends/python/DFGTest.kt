@@ -1,0 +1,97 @@
+/*
+ * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ *                    $$$$$$\  $$$$$$$\   $$$$$$\
+ *                   $$  __$$\ $$  __$$\ $$  __$$\
+ *                   $$ /  \__|$$ |  $$ |$$ /  \__|
+ *                   $$ |      $$$$$$$  |$$ |$$$$\
+ *                   $$ |      $$  ____/ $$ |\_$$ |
+ *                   $$ |  $$\ $$ |      $$ |  $$ |
+ *                   \$$$$$   |$$ |      \$$$$$   |
+ *                    \______/ \__|       \______/
+ *
+ */
+package de.fraunhofer.aisec.cpg.frontends.python
+
+import de.fraunhofer.aisec.cpg.graph.edges.flows.IndexedDataflowGranularity
+import de.fraunhofer.aisec.cpg.graph.functions
+import de.fraunhofer.aisec.cpg.graph.get
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.variables
+import de.fraunhofer.aisec.cpg.test.analyze
+import de.fraunhofer.aisec.cpg.test.assertLocalName
+import java.nio.file.Path
+import kotlin.test.assertEquals
+import kotlin.test.assertIs
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
+import org.junit.jupiter.api.Test
+
+class DFGTest {
+    @Test
+    fun testListComprehensions() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val result =
+            analyze(listOf(topLevel.resolve("tuple_assign.py").toFile()), topLevel, true) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(result)
+        val getTuple = result.functions["getTuple"]
+        assertNotNull(getTuple)
+
+        val body = getTuple.body
+        assertIs<Block>(body)
+        val assignment = body.statements[0]
+        assertIs<AssignExpression>(assignment)
+        assertEquals(1, assignment.lhs.size)
+        assertEquals(1, assignment.rhs.size)
+        val lhsTuple = assignment.lhs[0]
+        assertIs<InitializerListExpression>(lhsTuple)
+        assertEquals(2, lhsTuple.initializers.size)
+
+        val cRef = lhsTuple.initializers[0]
+
+        assertIs<Reference>(cRef)
+        assertLocalName("c", cRef)
+        val cRefPrevDFG = cRef.prevDFG.singleOrNull()
+        assertIs<CallExpression>(cRefPrevDFG)
+        assertLocalName("returnTuple", cRefPrevDFG)
+        val cRefPrevDFGGranularity = cRef.prevDFGEdges.single().granularity
+        assertIs<IndexedDataflowGranularity>(cRefPrevDFGGranularity)
+        assertEquals(0, cRefPrevDFGGranularity.index)
+
+        val c = body.variables["c"]
+        assertNotNull(c)
+        assertTrue(c.prevDFG.isEmpty())
+
+        val dRef = lhsTuple.initializers[1]
+        assertIs<Reference>(dRef)
+        assertLocalName("d", dRef)
+        val dRefPrevDFG = dRef.prevDFG.singleOrNull()
+        assertIs<CallExpression>(dRefPrevDFG)
+        assertLocalName("returnTuple", dRefPrevDFG)
+        val dRefPrevDFGGranularity = dRefPrevDFG.prevDFGEdges.single().granularity
+        assertIs<IndexedDataflowGranularity>(dRefPrevDFGGranularity)
+        assertEquals(1, dRefPrevDFGGranularity.index)
+
+        val d = body.variables["d"]
+        assertNotNull(d)
+        assertTrue(d.prevDFG.isEmpty())
+    }
+}
