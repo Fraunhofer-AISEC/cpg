@@ -1717,5 +1717,4 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(c)
         assertRefersTo(c.firstAssignment, a)
     }
-
 }

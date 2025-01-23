@@ -28,9 +28,7 @@ package de.fraunhofer.aisec.cpg
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.multiLanguage
-import de.fraunhofer.aisec.cpg.graph.Component
-import de.fraunhofer.aisec.cpg.graph.Name
-import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
@@ -109,8 +107,11 @@ class TranslationResult(
         }
 
     /**
-     * If no component exists, it generates a [Component] called "application" and adds [tu]. If a
-     * component already exists, adds the tu to this component.
+     * Adds the [tu] to the component with the name of [DEFAULT_APPLICATION_NAME]. If no such
+     * component exists, it is generated.
+     *
+     * Note: In general, it is better idea to directly add the translation unit to the specific
+     * component.
      *
      * @param tu The translation unit to add.
      */
@@ -119,34 +120,17 @@ class TranslationResult(
         selected and the translation unit should be added there."""
     )
     @Synchronized
-    fun addTranslationUnit(tu: TranslationUnitDeclaration?) {
-        var swc: Component? = null
-        if (components.size == 1) {
-            // Only one component exists, so we take this one
-            swc = components[0]
-        } else if (components.isEmpty()) {
-            // No component exists, so we create the new dummy component.
-            swc = Component()
-            swc.ctx = this.ctx
-            swc.name = Name(DEFAULT_APPLICATION_NAME, null, "")
-            components.add(swc)
-        } else {
-            // Multiple components exist. As we don't know where to put the tu, we check if we have
-            // the component we created and add it there or create a new one.
-            for (component in components) {
-                if (component.name.localName == DEFAULT_APPLICATION_NAME) {
-                    swc = component
-                    break
-                }
-            }
-            if (swc == null) {
-                swc = Component()
-                swc.ctx = this.ctx
-                swc.name = Name(DEFAULT_APPLICATION_NAME, null, "")
-                components.add(swc)
-            }
+    fun addTranslationUnit(tu: TranslationUnitDeclaration) {
+        var application = components[DEFAULT_APPLICATION_NAME]
+        if (application == null) {
+            // No application component exists, so we create it
+            application = Component()
+            application.ctx = this.ctx
+            application.name = Name(DEFAULT_APPLICATION_NAME, null, "")
+            components.add(application)
         }
-        tu?.let { swc.addTranslationUnit(it) }
+
+        application.addTranslationUnit(tu)
     }
 
     /**
