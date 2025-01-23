@@ -96,9 +96,12 @@ inline fun <reified T> Node.existsExtended(
         nodes.map { n ->
             val res = mustSatisfy(n)
             res.stringRepresentation = "Starting at $n: " + res.stringRepresentation
+            if (n is Node) {
+                res.node = n
+            }
             res
         }
-    return QueryTree(queryChildren.any { it.value }, queryChildren.toMutableList(), "exists")
+    return QueryTree(queryChildren.any { it.value }, queryChildren.toMutableList(), "exists", this)
 }
 
 /**
@@ -123,7 +126,7 @@ inline fun <reified T> Node.exists(
  */
 fun sizeof(n: Node?, eval: ValueEvaluator = SizeEvaluator()): QueryTree<Int> {
     // The cast could potentially go wrong, but if it's not an int, it's not really a size
-    return QueryTree(eval.evaluate(n) as? Int ?: -1, mutableListOf(), "sizeof($n)")
+    return QueryTree(eval.evaluate(n) as? Int ?: -1, mutableListOf(), "sizeof($n)", n)
 }
 
 /**
@@ -134,10 +137,10 @@ fun sizeof(n: Node?, eval: ValueEvaluator = SizeEvaluator()): QueryTree<Int> {
 fun min(n: Node?, eval: ValueEvaluator = MultiValueEvaluator()): QueryTree<Number> {
     val evalRes = eval.evaluate(n)
     if (evalRes is Number) {
-        return QueryTree(evalRes, mutableListOf(QueryTree(n)), "min($n)")
+        return QueryTree(evalRes, mutableListOf(QueryTree(n)), "min($n)", n)
     }
     // Extend this when we have other evaluators.
-    return QueryTree((evalRes as? NumberSet)?.min() ?: -1, mutableListOf(), "min($n)")
+    return QueryTree((evalRes as? NumberSet)?.min() ?: -1, mutableListOf(), "min($n)", n)
 }
 
 /**
@@ -190,10 +193,10 @@ fun max(n: List<Node>?, eval: ValueEvaluator = MultiValueEvaluator()): QueryTree
 fun max(n: Node?, eval: ValueEvaluator = MultiValueEvaluator()): QueryTree<Number> {
     val evalRes = eval.evaluate(n)
     if (evalRes is Number) {
-        return QueryTree(evalRes, mutableListOf(QueryTree(n)))
+        return QueryTree(evalRes, mutableListOf(QueryTree(n)), node = n)
     }
     // Extend this when we have other evaluators.
-    return QueryTree((evalRes as? NumberSet)?.max() ?: -1, mutableListOf(), "max($n)")
+    return QueryTree((evalRes as? NumberSet)?.max() ?: -1, mutableListOf(), "max($n)", n)
 }
 
 /** Checks if a data flow is possible between the nodes [from] as a source and [to] as sink. */
@@ -211,6 +214,7 @@ fun dataFlow(
         evalRes.fulfilled.isNotEmpty(),
         allPaths.toMutableList(),
         "data flow from $from to $to",
+        from,
     )
 }
 
@@ -232,6 +236,7 @@ fun dataFlow(
         evalRes.fulfilled.isNotEmpty(),
         allPaths.toMutableList(),
         "data flow from $from to ${evalRes.fulfilled.map { it.last() }}",
+        from,
     )
 }
 
@@ -244,6 +249,7 @@ fun executionPath(from: Node, to: Node): QueryTree<Boolean> {
         evalRes.fulfilled.isNotEmpty(),
         allPaths.toMutableList(),
         "executionPath($from, $to)",
+        from,
     )
 }
 
@@ -259,6 +265,7 @@ fun executionPath(from: Node, predicate: (Node) -> Boolean): QueryTree<Boolean> 
         evalRes.fulfilled.isNotEmpty(),
         allPaths.toMutableList(),
         "executionPath($from, $predicate)",
+        from,
     )
 }
 
@@ -274,12 +281,13 @@ fun executionPathBackwards(to: Node, predicate: (Node) -> Boolean): QueryTree<Bo
         evalRes.fulfilled.isNotEmpty(),
         allPaths.toMutableList(),
         "executionPathBackwards($to, $predicate)",
+        to,
     )
 }
 
 /** Calls [ValueEvaluator.evaluate] for this expression, thus trying to resolve a constant value. */
 operator fun Expression?.invoke(): QueryTree<Any?> {
-    return QueryTree(this?.evaluate(), mutableListOf(QueryTree(this)))
+    return QueryTree(this?.evaluate(), mutableListOf(QueryTree(this)), node = this)
 }
 
 /**
@@ -297,7 +305,7 @@ fun maxSizeOfType(type: Type): QueryTree<Number> {
             "double" -> Double.MAX_VALUE
             else -> Long.MAX_VALUE
         }
-    return QueryTree(maxVal, mutableListOf(QueryTree(type)), "maxSizeOfType($type)")
+    return QueryTree(maxVal, mutableListOf(QueryTree(type)), "maxSizeOfType($type)", node = type)
 }
 
 /**
@@ -315,7 +323,7 @@ fun minSizeOfType(type: Type): QueryTree<Number> {
             "double" -> Double.MIN_VALUE
             else -> Long.MIN_VALUE
         }
-    return QueryTree(maxVal, mutableListOf(QueryTree(type)), "minSizeOfType($type)")
+    return QueryTree(maxVal, mutableListOf(QueryTree(type)), "minSizeOfType($type)", node = type)
 }
 
 /** The size of this expression. It uses the default argument for `eval` of [size] */
@@ -343,7 +351,7 @@ val Expression.max: QueryTree<Number>
 /** Calls [ValueEvaluator.evaluate] for this expression, thus trying to resolve a constant value. */
 val Expression.value: QueryTree<Any?>
     get() {
-        return QueryTree(evaluate(), mutableListOf(), "$this")
+        return QueryTree(evaluate(), mutableListOf(), "$this", this)
     }
 
 /**
@@ -376,10 +384,15 @@ fun allNonLiteralsFromFlowTo(from: Node, to: Node, allPaths: List<List<Node>>): 
             prevEdges.addAll(from.arguments)
             // For a call, we collect the incoming data flows (typically only the arguments)
             val prevQTs = prevEdges.map { allNonLiteralsFromFlowTo(it, to, allPaths) }
-            QueryTree(prevQTs.all { it.value }, prevQTs.toMutableList())
+            QueryTree(prevQTs.all { it.value }, prevQTs.toMutableList(), node = from)
         }
         is Literal<*> ->
-            QueryTree(true, mutableListOf(QueryTree(from)), "DF Irrelevant for Literal node")
+            QueryTree(
+                true,
+                mutableListOf(QueryTree(from)),
+                "DF Irrelevant for Literal node",
+                node = from,
+            )
         else -> {
             // We go one step back to see if that one goes into to but also check that no assignment
             // to from happens in the paths between from and to
@@ -407,7 +420,11 @@ fun allNonLiteralsFromFlowTo(from: Node, to: Node, allPaths: List<List<Node>>): 
                         }
                     }
                 }
-            QueryTree(prevQTs.all { it.value } && noAssignmentToFrom, prevQTs.toMutableList())
+            QueryTree(
+                prevQTs.all { it.value } && noAssignmentToFrom,
+                prevQTs.toMutableList(),
+                node = from,
+            )
         }
     }
 }
