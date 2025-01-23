@@ -201,7 +201,7 @@ fun LanguageProvider.newName(
 @JvmOverloads
 fun MetadataProvider.newAnnotation(name: CharSequence?, rawNode: Any? = null): Annotation {
     val node = Annotation()
-    node.applyMetadata(this, name, rawNode)
+    node.applyMetadata(this, name, rawNode, localNameOnly = true)
 
     log(node)
     return node

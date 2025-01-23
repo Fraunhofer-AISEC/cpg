@@ -245,7 +245,8 @@ class StatementHandlerTest : BaseTest() {
         // Our scopes do not match 1:1 to python scopes, but rather the python "global" scope is a
         // name space with the name of the file and the function scope is a block scope of the
         // function body
-        var pythonGlobalScope = result.finalCtx.scopeManager.lookupScope(file.nameWithoutExtension)
+        var pythonGlobalScope =
+            result.finalCtx.scopeManager.lookupScope(Name(file.nameWithoutExtension))
 
         var globalC = cVariables.firstOrNull { it.scope == pythonGlobalScope }
         assertNotNull(globalC)

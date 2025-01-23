@@ -81,7 +81,7 @@ fun generateDokkaWithVersionTag(dokkaMultiModuleTask: org.jetbrains.dokka.gradle
  */
 nexusPublishing {
     repositories {
-        sonatype() {
+        sonatype {
             val mavenCentralUsername: String? by project
             val mavenCentralPassword: String? by project
 

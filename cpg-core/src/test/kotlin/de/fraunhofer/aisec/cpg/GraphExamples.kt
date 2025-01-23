@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.autoType
 import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.newInitializerListExpression
-import de.fraunhofer.aisec.cpg.graph.newUnaryOperator
 import de.fraunhofer.aisec.cpg.graph.newVariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin.POINTER
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -166,30 +165,36 @@ class GraphExamples {
                         record("someRecord") {
                             method("func") {
                                 body {
-                                    forStmt(
-                                        initializer = declare { variable("a") },
-                                        condition = literal(true, t("bool")),
-                                        iteration = newUnaryOperator("++", true, false),
-                                        elseStmt = call("elseCall"),
-                                    ) {
-                                        ifStmt {
-                                            condition { literal(true, t("bool")) }
-                                            thenStmt { breakStmt() }
+                                    forStmt {
+                                        loopBody {
+                                            ifStmt {
+                                                condition { literal(true, t("bool")) }
+                                                thenStmt { breakStmt() }
+                                            }
+                                            call("postIf")
                                         }
-                                        call("postIf")
+                                        forInitializer {
+                                            declareVar("a", t("int")) { literal(0, t("int")) }
+                                        }
+                                        forCondition { literal(true, t("bool")) }
+                                        forIteration { ref("a").inc() }
+                                        loopElseStmt { call("elseCall") }
                                     }
                                     call("postFor")
-                                    forStmt(
-                                        initializer = declare { variable("a") },
-                                        condition = literal(true, t("bool")),
-                                        iteration = newUnaryOperator("++", true, false),
-                                        elseStmt = call("elseCall"),
-                                    ) {
-                                        ifStmt {
-                                            condition { literal(true, t("bool")) }
-                                            thenStmt { breakStmt() }
+                                    forStmt {
+                                        loopBody {
+                                            ifStmt {
+                                                condition { literal(true, t("bool")) }
+                                                thenStmt { breakStmt() }
+                                            }
+                                            call("postIf")
                                         }
-                                        call("postIf")
+                                        forInitializer {
+                                            declareVar("a", t("int")) { literal(0, t("int")) }
+                                        }
+                                        forCondition { literal(true, t("bool")) }
+                                        forIteration { ref("a").inc() }
+                                        loopElseStmt { call("elseCall") }
                                     }
                                 }
                             }

@@ -44,5 +44,6 @@ abstract class OverlayNode() : Node() {
     /** All [OverlayNode]s nodes are connected to an original cpg [Node] by this. */
     val underlyingNodeEdge: OverlaySingleEdge =
         OverlaySingleEdge(this, of = null, mirrorProperty = Node::overlayEdges, outgoing = false)
+
     var underlyingNode by unwrapping(OverlayNode::underlyingNodeEdge)
 }

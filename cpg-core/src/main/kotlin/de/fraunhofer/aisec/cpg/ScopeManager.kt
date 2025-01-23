@@ -32,10 +32,9 @@ import de.fraunhofer.aisec.cpg.graph.scopes.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.DeclaresType
-import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
-import de.fraunhofer.aisec.cpg.graph.types.IncompleteType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.Util
+import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.util.*
 import java.util.function.Predicate
@@ -62,8 +61,13 @@ class ScopeManager : ScopeProvider {
      */
     private val scopeMap: MutableMap<Node?, Scope> = IdentityHashMap()
 
-    /** A lookup map for each scope and its associated FQN. */
-    private val fqnScopeMap: MutableMap<String, NameScope> = mutableMapOf()
+    /**
+     * A lookup map for each [NameScope] and its associated FQN (as a [Name]). This is mainly needed
+     * in the [lookupScope] method, which is extensively used by [extractScope] as a very fast
+     * lookup from a [Name] to its [NameScope]. Otherwise, we would need to iterate through all
+     * scopes, which can be quite slow.
+     */
+    private val nameScopeMap: MutableMap<Name, NameScope> = mutableMapOf()
 
     /** The currently active scope. */
     var currentScope: Scope? = null
@@ -71,13 +75,6 @@ class ScopeManager : ScopeProvider {
 
     /** Represents an alias with the name [to] for the particular name [from]. */
     data class Alias(var from: Name, var to: Name)
-
-    /**
-     * A cache map of reference tags (computed with [Reference.referenceTag]) and their respective
-     * pair of original [Reference] and resolved [ValueDeclaration]. This is used by
-     * [resolveReference] as a caching mechanism.
-     */
-    private val symbolTable = mutableMapOf<ReferenceTag, Pair<Reference, ValueDeclaration>>()
 
     /** True, if the scope manager is currently in a [FunctionScope]. */
     val isInFunction: Boolean
@@ -145,8 +142,8 @@ class ScopeManager : ScopeProvider {
         for (manager in toMerge) {
             // loop through all scopes in the FQN map to check for potential duplicates we need to
             // merge
-            for (entry in manager.fqnScopeMap.entries) {
-                val existing = fqnScopeMap[entry.key]
+            for (entry in manager.nameScopeMap.entries) {
+                val existing = nameScopeMap[entry.key]
                 if (existing != null) {
                     // merge symbols
                     existing.symbols.mergeFrom(entry.value.symbols)
@@ -173,7 +170,7 @@ class ScopeManager : ScopeProvider {
                     keys.forEach { manager.scopeMap[it] = existing }
                 } else {
                     // this is the first we see for this particular FQN, so we add it to our map
-                    fqnScopeMap[entry.key] = entry.value
+                    nameScopeMap[entry.key] = entry.value
                 }
             }
 
@@ -184,7 +181,7 @@ class ScopeManager : ScopeProvider {
 
             // free the maps, just to clear up some things. this scope manager will not be used
             // anymore
-            manager.fqnScopeMap.clear()
+            manager.nameScopeMap.clear()
             manager.scopeMap.clear()
         }
     }
@@ -205,7 +202,10 @@ class ScopeManager : ScopeProvider {
         if (scope is NameScope) {
             // for this to work, it is essential that RecordDeclaration and NamespaceDeclaration
             // nodes have a FQN as their name.
-            fqnScopeMap[scope.astNode?.name.toString()] = scope
+            val name = scope.astNode?.name
+            if (name != null) {
+                nameScopeMap[name] = scope
+            }
         }
         currentScope?.let {
             it.children.add(scope)
@@ -444,8 +444,8 @@ class ScopeManager : ScopeProvider {
     }
 
     /** This function looks up scope by its FQN. This only works for [NameScope]s */
-    fun lookupScope(fqn: String): NameScope? {
-        return this.fqnScopeMap[fqn]
+    fun lookupScope(fqn: Name): NameScope? {
+        return this.nameScopeMap[fqn]
     }
 
     /**
@@ -487,81 +487,6 @@ class ScopeManager : ScopeProvider {
      */
     fun addTypedef(typedef: TypedefDeclaration, scope: ValueDeclarationScope? = globalScope) {
         scope?.addTypedef(typedef)
-    }
-
-    /**
-     * Resolves only references to Values in the current scope, static references to other visible
-     * records are not resolved over the ScopeManager.
-     *
-     * @param ref
-     * @return
-     */
-    fun resolveReference(ref: Reference): ValueDeclaration? {
-        val startScope = ref.scope
-
-        // Retrieve a unique tag for the particular reference based on the current scope
-        val tag = ref.referenceTag
-
-        // If we find a match in our symbol table, we can immediately return the declaration. We
-        // need to be careful about potential collisions in our tags, since they are based on the
-        // hash-code of the scope. We therefore take the extra precaution to compare the scope in
-        // case we get a hit. This should not take too much performance overhead.
-        val pair = symbolTable[tag]
-        if (pair != null && ref.scope == pair.first.scope) {
-            return pair.second
-        }
-
-        val extractedScope = extractScope(ref, startScope)
-        // If the scope extraction fails, we can only return here directly without any result
-        if (extractedScope == null) {
-            return null
-        }
-
-        var scope = extractedScope.scope
-        val name = extractedScope.adjustedName
-        if (scope == null) {
-            scope = startScope
-        }
-
-        // Try to resolve value declarations according to our criteria
-        val decl =
-            resolve<ValueDeclaration>(scope) {
-                    if (it.name.lastPartsMatch(name)) {
-                        val helper = ref.resolutionHelper
-                        return@resolve when {
-                            // If the reference seems to point to a function (using a function
-                            // pointer) the entire signature is checked for equality
-                            helper?.type is FunctionPointerType && it is FunctionDeclaration -> {
-                                val fptrType = helper.type as FunctionPointerType
-                                // TODO(oxisto): Support multiple return values
-                                val returnType =
-                                    it.returnTypes.firstOrNull() ?: IncompleteType(ref.language)
-                                returnType == fptrType.returnType &&
-                                    it.matchesSignature(fptrType.parameters) !=
-                                        IncompatibleSignature
-                            }
-                            // If our language has first-class functions, we can safely return them
-                            // as a reference
-                            ref.language is HasFirstClassFunctions -> {
-                                true
-                            }
-                            // Otherwise, we are not looking for functions here
-                            else -> {
-                                it !is FunctionDeclaration
-                            }
-                        }
-                    }
-
-                    return@resolve false
-                }
-                .firstOrNull()
-
-        // Update the symbol cache, if we found a declaration for the tag
-        if (decl != null) {
-            symbolTable[tag] = Pair(ref, decl)
-        }
-
-        return decl
     }
 
     /**
@@ -628,8 +553,8 @@ class ScopeManager : ScopeProvider {
             val scopeName = n.parent
 
             // this is a scoped call. we need to explicitly jump to that particular scope
-            val scopes = filterScopes { (it is NameScope && it.name == scopeName) }
-            if (scopes.isEmpty()) {
+            val nameScope = nameScopeMap[scopeName]
+            if (nameScope == null) {
                 Util.warnWithFileLocation(
                     location,
                     LOGGER,
@@ -637,7 +562,7 @@ class ScopeManager : ScopeProvider {
                 )
                 return null
             }
-            s = scopes[0]
+            s = nameScope
         }
 
         return ScopeExtraction(s, n)
@@ -722,88 +647,6 @@ class ScopeManager : ScopeProvider {
     }
 
     /**
-     * Traverses the scope upwards and looks for declarations of type [T] which matches the
-     * condition [predicate].
-     *
-     * It returns a list of all declarations that match the predicate, ordered by reachability in
-     * the scope stack. This means that "local" declarations will be in the list first, global items
-     * will be last.
-     *
-     * @param searchScope the scope to start the search in
-     * @param predicate predicate the element must match to
-     * @param <T>
-     */
-    internal inline fun <reified T : Declaration> resolve(
-        searchScope: Scope?,
-        stopIfFound: Boolean = false,
-        noinline predicate: (T) -> Boolean,
-    ): List<T> {
-        return resolve(T::class.java, searchScope, stopIfFound, predicate)
-    }
-
-    internal fun <T : Declaration> resolve(
-        klass: Class<T>,
-        searchScope: Scope?,
-        stopIfFound: Boolean = false,
-        predicate: (T) -> Boolean,
-    ): List<T> {
-        var scope = searchScope
-        val declarations = mutableListOf<T>()
-
-        while (scope != null) {
-            if (scope is ValueDeclarationScope) {
-                declarations.addAll(
-                    scope.valueDeclarations.filterIsInstance(klass).filter(predicate)
-                )
-            }
-
-            if (scope is StructureDeclarationScope) {
-                var list = scope.structureDeclarations.filterIsInstance(klass).filter(predicate)
-
-                // this was taken over from the old resolveStructureDeclaration.
-                // TODO(oxisto): why is this only when the list is empty?
-                if (list.isEmpty()) {
-                    for (declaration in scope.structureDeclarations) {
-                        if (declaration is RecordDeclaration) {
-                            list = declaration.templates.filterIsInstance(klass).filter(predicate)
-                        }
-                    }
-                }
-
-                declarations.addAll(list)
-            }
-
-            // some (all?) languages require us to stop immediately if we found something on this
-            // scope. This is the case where function overloading is allowed, but only within the
-            // same scope
-            if (stopIfFound && declarations.isNotEmpty()) {
-                return declarations
-            }
-
-            // go upwards in the scope tree
-            scope = scope.parent
-        }
-
-        return declarations
-    }
-
-    /**
-     * Resolves function templates of the given [CallExpression].
-     *
-     * @param scope where we are searching for the FunctionTemplateDeclarations
-     * @param call CallExpression we want to resolve an invocation target for
-     * @return List of FunctionTemplateDeclaration that match the name provided in the
-     *   CallExpression and therefore are invocation candidates
-     */
-    @JvmOverloads
-    fun resolveFunctionTemplateDeclaration(
-        call: CallExpression,
-        scope: Scope? = currentScope,
-    ): List<FunctionTemplateDeclaration> {
-        return resolve(scope, true) { c -> c.name.lastPartsMatch(call.name) }
-    }
-
-    /**
      * Retrieves the [RecordDeclaration] for the given name in the given scope.
      *
      * @param name the name
@@ -878,12 +721,24 @@ class ScopeManager : ScopeProvider {
      * A convenience function to call [lookupSymbolByName] with the properties of [node]. The
      * arguments [scope] and [predicate] are forwarded.
      */
-    fun lookupSymbolByNameOfNode(
+    fun lookupSymbolByNodeName(
         node: Node,
         scope: Scope? = node.scope,
         predicate: ((Declaration) -> Boolean)? = null,
     ): List<Declaration> {
         return lookupSymbolByName(node.name, node.language, node.location, scope, predicate)
+    }
+
+    /**
+     * A convenience function to call [lookupSymbolByName] with the properties of [node].
+     * Additionally, it adds a predicate to the search that the declaration must be of type [T].
+     */
+    inline fun <reified T : Declaration> lookupSymbolByNodeNameOfType(
+        node: Node,
+        scope: Scope? = node.scope,
+    ): List<T> {
+        return lookupSymbolByName(node.name, node.language, node.location, scope) { it is T }
+            .filterIsInstance<T>()
     }
 
     /**
@@ -962,10 +817,10 @@ class ScopeManager : ScopeProvider {
      * This function tries to look up the symbol contained in [name] (using [lookupSymbolByName])
      * and returns a [DeclaresType] node, if this name resolved to something which declares a type.
      *
-     * It is important to know that the lookup needs to be unique, so if multiple declarations match
-     * this symbol, a warning is triggered and null is returned.
+     * In case that the lookup returns more than one symbol, this function will emit a warning and
+     * return the first symbol found.
      */
-    fun lookupUniqueTypeSymbolByName(
+    fun lookupTypeSymbolByName(
         name: Name,
         language: Language<*>?,
         startScope: Scope?,
@@ -976,13 +831,15 @@ class ScopeManager : ScopeProvider {
                 }
                 .filterIsInstance<DeclaresType>()
 
-        // We need to have a single match, otherwise we have an ambiguous type, and we cannot
-        // normalize it.
+        // We need to have a single match, otherwise we have an ambiguous type. We emit a warning
+        // here, but we still have to take one of the symbols, because otherwise the type system
+        // things the type does not exist and tries to infer one.
         if (symbols.size > 1) {
             LOGGER.warn(
                 "Lookup of type {} returned more than one symbol which declares a type, this is an ambiguity and the following analysis might not be correct.",
                 name,
             )
+            return symbols.firstOrNull()
         }
 
         return symbols.singleOrNull()
