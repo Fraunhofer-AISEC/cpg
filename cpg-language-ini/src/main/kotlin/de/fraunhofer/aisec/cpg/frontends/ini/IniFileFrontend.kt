@@ -205,4 +205,13 @@ class IniFileFrontend(language: Language<IniFileFrontend>, ctx: TranslationConte
     override fun setComment(node: Node, astNode: Any) {
         return // not used as this function does not implement [Handler]
     }
+
+    override fun gatherExternalSources(
+        rootPaths: List<Path>,
+        source: File,
+        externalSources: MutableList<File>,
+        processedImports: MutableList<String>,
+    ): List<File> {
+        return listOf()
+    }
 }
