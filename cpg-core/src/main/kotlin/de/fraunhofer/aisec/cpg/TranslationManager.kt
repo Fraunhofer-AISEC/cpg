@@ -297,6 +297,7 @@ private constructor(
                 }
             if (filesInPath.isNotEmpty()) {
                 val component = Component()
+                component.ctx = ctx
                 component.name = Name(includePath.name)
                 result.addComponent(component)
 
