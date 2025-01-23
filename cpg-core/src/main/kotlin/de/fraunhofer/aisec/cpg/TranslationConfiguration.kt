@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase
 import de.fraunhofer.aisec.cpg.frontends.KClassSerializer
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.passes.configuration.*
@@ -273,14 +274,14 @@ private constructor(
         }
 
         /**
-         * Files or directories containing the source code to analyze. Generates a dummy software
-         * component called "application".
+         * Files or directories containing the source code to analyze. Generates a [Component] with
+         * the name of [DEFAULT_APPLICATION_NAME].
          *
          * @param sourceLocations The files with the source code
          * @return this
          */
         fun sourceLocations(vararg sourceLocations: File): Builder {
-            softwareComponents["application"] = sourceLocations.toMutableList()
+            softwareComponents[DEFAULT_APPLICATION_NAME] = sourceLocations.toMutableList()
             return this
         }
 
@@ -292,7 +293,7 @@ private constructor(
          * @return this
          */
         fun sourceLocations(sourceLocations: List<File>): Builder {
-            softwareComponents["application"] = sourceLocations.toMutableList()
+            softwareComponents[DEFAULT_APPLICATION_NAME] = sourceLocations.toMutableList()
             return this
         }
 

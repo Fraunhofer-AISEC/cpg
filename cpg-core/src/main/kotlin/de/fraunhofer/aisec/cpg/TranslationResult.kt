@@ -108,7 +108,7 @@ class TranslationResult(
 
     /**
      * Adds the [tu] to the component with the name of [DEFAULT_APPLICATION_NAME]. If no such
-     * component exists, it is generated.
+     * component exists, an error is displayed.
      *
      * Note: In general, it is better idea to directly add the translation unit to the specific
      * component.
@@ -123,14 +123,12 @@ class TranslationResult(
     fun addTranslationUnit(tu: TranslationUnitDeclaration) {
         var application = components[DEFAULT_APPLICATION_NAME]
         if (application == null) {
-            // No application component exists, so we create it
-            application = Component()
-            application.ctx = this.ctx
-            application.name = Name(DEFAULT_APPLICATION_NAME, null, "")
-            components.add(application)
+            // No application component exists, but it should be since it is automatically created
+            // by the configuration, so something is wrong
+            log.error("No application component found. This should not happen.")
+        } else {
+            application.addTranslationUnit(tu)
         }
-
-        application.addTranslationUnit(tu)
     }
 
     /**
