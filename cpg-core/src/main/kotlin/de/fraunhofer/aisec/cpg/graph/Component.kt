@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.PopulatedByPass
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.multiLanguage
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
@@ -33,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.passes.ImportDependencies
 import de.fraunhofer.aisec.cpg.passes.ImportResolver
+import java.io.File
 import org.neo4j.ogm.annotation.Relationship
 import org.neo4j.ogm.annotation.Transient
 
@@ -57,6 +59,15 @@ open class Component : Node() {
     fun addTranslationUnit(tu: TranslationUnitDeclaration) {
         translationUnits.add(tu)
     }
+
+    /**
+     * Returns the top-level directory of this component according to
+     * [TranslationConfiguration.topLevels]
+     */
+    val topLevel: File?
+        get() {
+            return ctx?.config?.topLevels?.get(this.name.localName)
+        }
 
     /**
      * All points where unknown data may enter this application, e.g., the main method, or other
