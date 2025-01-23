@@ -27,8 +27,11 @@ package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.flows.IndexedDataflowGranularity
+import de.fraunhofer.aisec.cpg.graph.followNextDFGEdgesUntilHit
+import de.fraunhofer.aisec.cpg.graph.followPrevDFGEdgesUntilHit
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.get
+import de.fraunhofer.aisec.cpg.graph.refs
 import de.fraunhofer.aisec.cpg.graph.returns
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
@@ -39,12 +42,12 @@ import de.fraunhofer.aisec.cpg.graph.variables
 import de.fraunhofer.aisec.cpg.test.analyze
 import de.fraunhofer.aisec.cpg.test.assertLocalName
 import java.nio.file.Path
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
-import org.junit.jupiter.api.Test
 
 class DFGTest {
     fun checkCallFlowsToTupleElements(body: Block, functionName: String) {
@@ -195,5 +198,35 @@ class DFGTest {
         val body = getTuple.body
         assertIs<Block>(body)
         checkCallFlowsToTupleElements(body, "returnTuple")
+    }
+
+    @Test
+    fun testFollowFunctions() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val result =
+            analyze(listOf(topLevel.resolve("tuple_assign.py").toFile()), topLevel, true) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(result)
+        val getTuple = result.functions["getTuple4"]
+        assertNotNull(getTuple)
+        val cRead = getTuple.refs["c"]
+        assertNotNull(cRead)
+
+        val returnTuple = result.functions["returnTuple"]
+        assertNotNull(returnTuple)
+        val aReturned = returnTuple.refs["a"]
+        assertNotNull(aReturned)
+        val bReturned = returnTuple.refs["b"]
+        assertNotNull(bReturned)
+        val backwardsPathCToA = cRead.followPrevDFGEdgesUntilHit { it == aReturned }.fulfilled
+        assertEquals(1, backwardsPathCToA.size)
+        val backwardsPathCToB = cRead.followPrevDFGEdgesUntilHit { it == bReturned }.fulfilled
+        assertEquals(0, backwardsPathCToB.size)
+
+        val forwardsPathAToC = aReturned.followNextDFGEdgesUntilHit { it == cRead }.fulfilled
+        assertEquals(1, forwardsPathAToC.size)
+        val forwardsPathBToC = bReturned.followNextDFGEdgesUntilHit { it == cRead }.fulfilled
+        assertEquals(0, forwardsPathBToC.size)
     }
 }

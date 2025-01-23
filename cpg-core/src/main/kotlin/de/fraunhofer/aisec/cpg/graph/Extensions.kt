@@ -28,10 +28,12 @@ package de.fraunhofer.aisec.cpg.graph
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
+import de.fraunhofer.aisec.cpg.graph.edges.flows.IndexedDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import java.util.ArrayDeque
 import kotlin.math.absoluteValue
 
 /**
@@ -226,6 +228,84 @@ fun Node.collectAllPrevFullDFGPaths(): List<List<Node>> {
             false
         }
         .failed
+}
+
+/**
+ * Returns an instance of [FulfilledAndFailedPaths] where [FulfilledAndFailedPaths.fulfilled]
+ * contains all possible shortest data flow paths (with any
+ * [de.fraunhofer.aisec.cpg.graph.edges.flows.Granularity]) between the end node [this] and the
+ * starting node fulfilling [predicate]. The paths are represented as lists of nodes. Paths which do
+ * not end at such a node are included in [FulfilledAndFailedPaths.failed].
+ *
+ * Hence, if "fulfilled" is a non-empty list, a data flow from [this] to such a node is **possible
+ * but not mandatory**. If the list "failed" is empty, the data flow is mandatory.
+ */
+fun Node.followPrevDFGEdgesUntilHit(
+    collectFailedPaths: Boolean = true,
+    findAllPossiblePaths: Boolean = true,
+    useIndexStack: Boolean = true,
+    predicate: (Node) -> Boolean,
+): FulfilledAndFailedPaths {
+    val indexStack = SimpleStack<IndexedDataflowGranularity>()
+
+    return followXUntilHit(
+        x = { currentNode ->
+            var filteredRound = false
+            currentNode.prevDFGEdges
+                .filter {
+                    if (!useIndexStack) return@filter true
+                    if (
+                        currentNode is InitializerListExpression &&
+                            it.start in currentNode.initializers &&
+                            it.granularity is IndexedDataflowGranularity
+                    ) {
+                        // currentNode is the ILE, it is the child and the prevDFG (e.g. read from).
+                        // We try to pop from the stack and only select the elements with the
+                        // matching index. If nothing is on the stack, we take everything.
+                        val matchingIndex =
+                            indexStack.checkAndPop(it.granularity as IndexedDataflowGranularity)
+                        if (matchingIndex) {
+                            // This is ugly. We use it to see if we have already filtered something
+                            // based on the index. Then, we don't accept the empty stack criterion.
+                            filteredRound = true
+                        }
+                        (indexStack.isEmpty() && !filteredRound) || matchingIndex
+                    } else if (
+                        it.start is InitializerListExpression &&
+                            it.granularity is IndexedDataflowGranularity
+                    ) {
+                        // CurrentNode is the child and prevDFG goes to ILE => currentNode's written
+                        // to. Push to stack
+                        indexStack.push(it.granularity as IndexedDataflowGranularity)
+                        true
+                    } else {
+                        true
+                    }
+                }
+                .map { it.start }
+        },
+        collectFailedPaths = collectFailedPaths,
+        findAllPossiblePaths = findAllPossiblePaths,
+        predicate = predicate,
+    )
+}
+
+class SimpleStack<T>() {
+    private val deque = kotlin.collections.ArrayDeque<T>()
+
+    fun isEmpty(): Boolean = deque.isEmpty()
+
+    fun push(newElem: T) {
+        deque.addFirst(newElem)
+    }
+
+    fun checkAndPop(elemToPop: T): Boolean {
+        if (deque.firstOrNull() == elemToPop) {
+            deque.removeFirst()
+            return true
+        }
+        return false
+    }
 }
 
 /**
@@ -471,7 +551,7 @@ fun Node.followPrevCDGUntilHit(
  * not mandatory**. If the list "failed" is empty, the path is mandatory.
  */
 fun Node.followXUntilHit(
-    x: (Node) -> List<Node>,
+    x: (Node) -> Collection<Node>,
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
     predicate: (Node) -> Boolean,
@@ -540,6 +620,65 @@ fun Node.followNextFullDFGEdgesUntilHit(
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
         x = { currentNode -> currentNode.nextFullDFG },
+        collectFailedPaths = collectFailedPaths,
+        findAllPossiblePaths = findAllPossiblePaths,
+        predicate = predicate,
+    )
+}
+
+/**
+ * Returns an instance of [FulfilledAndFailedPaths] where [FulfilledAndFailedPaths.fulfilled]
+ * contains all possible shortest data flow paths (with [FullDataflowGranularity]) between the
+ * starting node [this] and the end node fulfilling [predicate]. The paths are represented as lists
+ * of nodes. Paths which do not end at such a node are included in [FulfilledAndFailedPaths.failed].
+ *
+ * Hence, if "fulfilled" is a non-empty list, a data flow from [this] to such a node is **possible
+ * but not mandatory**. If the list "failed" is empty, the data flow is mandatory.
+ */
+fun Node.followNextDFGEdgesUntilHit(
+    collectFailedPaths: Boolean = true,
+    findAllPossiblePaths: Boolean = true,
+    useIndexStack: Boolean = true,
+    predicate: (Node) -> Boolean,
+): FulfilledAndFailedPaths {
+    val indexStack = SimpleStack<IndexedDataflowGranularity>()
+
+    return followXUntilHit(
+        x = { currentNode ->
+            var filteredRound = false
+            currentNode.nextDFGEdges
+                .filter {
+                    if (useIndexStack == false) return@filter true
+                    if (
+                        currentNode is InitializerListExpression &&
+                            it.end in currentNode.initializers &&
+                            it.granularity is IndexedDataflowGranularity
+                    ) {
+                        // currentNode is the ILE, it is the child and the next (e.g. read from).
+                        // We try to pop from the stack and only select the elements with the
+                        // matching index. If nothing is on the stack, we take everything.
+                        val matchingIndex =
+                            indexStack.checkAndPop(it.granularity as IndexedDataflowGranularity)
+                        if (matchingIndex) {
+                            // This is ugly. We use it to see if we have already filtered something
+                            // based on the index. Then, we don't accept the empty stack criterion.
+                            filteredRound = true
+                        }
+                        (indexStack.isEmpty() && !filteredRound) || matchingIndex
+                    } else if (
+                        it.end is InitializerListExpression &&
+                            it.granularity is IndexedDataflowGranularity
+                    ) {
+                        // CurrentNode is the child and nextDFG goes to ILE => currentNode's written
+                        // to. Push to stack
+                        indexStack.push(it.granularity as IndexedDataflowGranularity)
+                        true
+                    } else {
+                        true
+                    }
+                }
+                .map { it.end }
+        },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
         predicate = predicate,
@@ -664,24 +803,33 @@ fun Node.followPrevEOG(predicate: (Edge<*>) -> Boolean): List<Edge<*>>? {
  * It returns only a single possible path even if multiple paths are possible.
  */
 fun Node.followPrevFullDFG(predicate: (Node) -> Boolean): MutableList<Node>? {
-    val path = mutableListOf<Node>()
+    return followPrevFullDFGEdgesUntilHit(
+            collectFailedPaths = false,
+            findAllPossiblePaths = false,
+            predicate = predicate,
+        )
+        .fulfilled
+        .minByOrNull { it.size }
+        ?.toMutableList()
+}
 
-    for (prev in this.prevFullDFG) {
-        path.add(prev)
-
-        if (predicate(prev)) {
-            return path
-        }
-
-        val subPath = prev.followPrevFullDFG(predicate)
-        if (subPath != null) {
-            path.addAll(subPath)
-        }
-
-        return path
-    }
-
-    return null
+/**
+ * Returns a list of nodes which are a data flow path (with [FullDataflowGranularity]) between the
+ * starting node [this] and the end node fulfilling [predicate]. If the return value is not `null`,
+ * a data flow from [this] to such a node is **possible but not mandatory**.
+ *
+ * It returns only a single possible path even if multiple paths are possible.
+ */
+fun Node.followPrevDFG(predicate: (Node) -> Boolean): MutableList<Node>? {
+    return followPrevDFGEdgesUntilHit(
+            collectFailedPaths = false,
+            findAllPossiblePaths = false,
+            predicate = predicate,
+            useIndexStack = true,
+        )
+        .fulfilled
+        .minByOrNull { it.size }
+        ?.toMutableList()
 }
 
 /** Returns all [Node] children in this graph, starting with this [Node]. */
