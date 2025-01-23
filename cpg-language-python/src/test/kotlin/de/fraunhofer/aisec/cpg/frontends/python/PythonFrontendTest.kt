@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.edges.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ListType
@@ -1716,5 +1717,11 @@ class PythonFrontendTest : BaseTest() {
         val c = component2.variables["c"]
         assertNotNull(c)
         assertRefersTo(c.firstAssignment, a)
+
+        val fooCall = component2.calls["foo"]
+        assertNotNull(fooCall)
+
+        val barArgument = fooCall.argumentEdges["bar"]?.end
+        assertNotNull(barArgument)
     }
 }
