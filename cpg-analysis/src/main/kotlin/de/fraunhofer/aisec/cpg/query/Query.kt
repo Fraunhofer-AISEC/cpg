@@ -55,9 +55,12 @@ inline fun <reified T> Node.allExtended(
         nodes.map { n ->
             val res = mustSatisfy(n)
             res.stringRepresentation = "Starting at $n: " + res.stringRepresentation
+            if (n is Node) {
+                res.node = n
+            }
             res
         }
-    return QueryTree(queryChildren.all { it.value }, queryChildren.toMutableList(), "all")
+    return QueryTree(queryChildren.all { it.value }, queryChildren.toMutableList(), "all", this)
 }
 
 /**
@@ -350,7 +353,7 @@ val Expression.value: QueryTree<Any?>
 val Expression.intValue: QueryTree<Int>?
     get() {
         val evalRes = evaluate() as? Int ?: return null
-        return QueryTree(evalRes, mutableListOf(), "$this")
+        return QueryTree(evalRes, mutableListOf(), "$this", this)
     }
 
 /**
