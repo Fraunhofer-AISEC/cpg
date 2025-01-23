@@ -244,7 +244,6 @@ class TypeScriptLanguageFrontend(
     ): List<File> {
         return listOf()
     }
-
 }
 
 class Location(var file: String, var pos: Int, var end: Int)
