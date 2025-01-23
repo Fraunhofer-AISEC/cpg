@@ -70,7 +70,11 @@ class PartialDataflowGranularity(
 class IndexedDataflowGranularity(
     /** The index that is affected by this partial dataflow. */
     val index: Int
-) : Granularity
+) : Granularity {
+    override fun equals(other: Any?): Boolean {
+        return this.index == (other as? IndexedDataflowGranularity)?.index
+    }
+}
 
 /** Creates a new [FullDataflowGranularity]. */
 fun full(): Granularity {

@@ -33,7 +33,6 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContext
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
 import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Granularity
-import de.fraunhofer.aisec.cpg.graph.edges.flows.indexed
 import de.fraunhofer.aisec.cpg.graph.edges.flows.partial
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -313,11 +312,14 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                             ref.refersTo?.let {
                                 doubleState.declarationsState[it] =
                                     PowersetLattice(identitySetOf(ref))
+                                /*
+                                // This should not be used because the edges already exist
+                                val startOfDFG = assignment.target
                                 doubleState.generalState[ref] =
-                                    PowersetLattice(identitySetOf(assignment.value as Node))
-                                edgePropertiesMap.computeIfAbsent(Pair(assignment.value, ref)) {
+                                    PowersetLattice(identitySetOf(startOfDFG as Node))
+                                edgePropertiesMap.computeIfAbsent(Pair(startOfDFG, ref)) {
                                     mutableSetOf<Any>()
-                                } += indexed(idx)
+                                } += indexed(idx)*/
                             }
                         }
                     }

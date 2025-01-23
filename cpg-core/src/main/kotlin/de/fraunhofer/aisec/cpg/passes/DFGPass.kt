@@ -396,7 +396,16 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      */
     protected fun handleInitializerListExpression(node: InitializerListExpression) {
         node.initializers.forEachIndexed { idx, it ->
-            node.prevDFGEdges.add(it) { granularity = indexed(idx) }
+            if (
+                node.astParent is AssignExpression &&
+                    node in (node.astParent as AssignExpression).lhs
+            ) {
+                // If we're the target of an assignment, the DFG flows from the node to the
+                // initializers.
+                node.nextDFGEdges.add(it) { granularity = indexed(idx) }
+            } else {
+                node.prevDFGEdges.add(it) { granularity = indexed(idx) }
+            }
         }
     }
 

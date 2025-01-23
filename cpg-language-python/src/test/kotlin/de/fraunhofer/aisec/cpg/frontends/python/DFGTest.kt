@@ -42,6 +42,7 @@ import java.nio.file.Path
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
 
@@ -62,20 +63,21 @@ class DFGTest {
 
         assertLocalName("c", cRef)
         val cRefPrevDFG = cRef.prevDFG.singleOrNull()
-        assertIs<CallExpression>(cRefPrevDFG)
-        assertLocalName(functionName, cRefPrevDFG)
+        assertIs<InitializerListExpression>(cRefPrevDFG)
         val cRefPrevDFGGranularity = cRef.prevDFGEdges.single().granularity
         assertIs<IndexedDataflowGranularity>(cRefPrevDFGGranularity)
         assertEquals(0, cRefPrevDFGGranularity.index)
 
         assertLocalName("d", dRef)
         val dRefPrevDFG = dRef.prevDFG.singleOrNull()
-        assertIs<CallExpression>(dRefPrevDFG)
-        assertLocalName(functionName, dRefPrevDFG)
+        assertSame(cRefPrevDFG, dRefPrevDFG)
         val dRefPrevDFGGranularity = dRef.prevDFGEdges.single().granularity
-        dRef.prevFullDFG
         assertIs<IndexedDataflowGranularity>(dRefPrevDFGGranularity)
         assertEquals(1, dRefPrevDFGGranularity.index)
+
+        val tuplePrevDFG = cRefPrevDFG.prevDFG.singleOrNull()
+        assertIs<CallExpression>(tuplePrevDFG)
+        assertLocalName(functionName, tuplePrevDFG)
 
         val c = body.variables["c"]
         assertNotNull(c)
