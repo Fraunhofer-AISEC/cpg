@@ -803,7 +803,7 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
     }
 
     override fun gatherExternalSources(
-        rootPath: Path,
+        rootPaths: List<Path>,
         source: File,
         externalSources: MutableList<File>,
         processedImports: MutableList<String>,

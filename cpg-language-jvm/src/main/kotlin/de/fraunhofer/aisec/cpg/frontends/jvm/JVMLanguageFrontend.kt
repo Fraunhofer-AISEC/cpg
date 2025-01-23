@@ -189,7 +189,7 @@ class JVMLanguageFrontend(
     }
 
     override fun gatherExternalSources(
-        rootPath: Path,
+        rootPaths: List<Path>,
         source: File,
         externalSources: MutableList<File>,
         processedImports: MutableList<String>,

@@ -44,9 +44,9 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionException
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.io.path.Path
 import kotlin.reflect.full.findAnnotation
 import org.slf4j.LoggerFactory
+import kotlin.io.path.name
 
 /** Main entry point for all source code translation for all language front-ends. */
 class TranslationManager
@@ -142,8 +142,9 @@ private constructor(
     ): Set<LanguageFrontend<*, *>> {
         val usedFrontends = mutableSetOf<LanguageFrontend<*, *>>()
 
-        val externalRootPath = Path("/home/somepath")
-        val externalSources: MutableList<File> = extractConfiguredSources(externalRootPath)
+        val externalSources: MutableList<File> = mutableListOf()
+
+        ctx.config.includePaths.forEach { externalSources.addAll(extractConfiguredSources(it)) }
 
         var useParallelFrontends = ctx.config.useParallelFrontends
 
@@ -264,22 +265,51 @@ private constructor(
                     val frontend = it.language?.newFrontend(ctx)
                     importedSources.addAll(
                         frontend?.gatherExternalSources(
-                            externalRootPath,
+                            ctx.config.includePaths,
                             it,
                             externalSourcesInComponent,
                             processedImports,
                         ) ?: listOf()
                     )
                 }
-            log.info("Extending " + sourceLocations.size + " source files by " + importedSources.size + " interface files.")
+            log.info(
+                "Extending " +
+                    sourceLocations.size +
+                    " source files by " +
+                    importedSources.size +
+                    " interface files."
+            )
 
             usedFrontends.addAll(
                 if (useParallelFrontends) {
-                    parseParallel(component, result, ctx, sourceLocations + importedSources)
+                    parseParallel(component, result, ctx, sourceLocations)
                 } else {
-                    parseSequentially(component, result, ctx, sourceLocations + importedSources)
+                    parseSequentially(component, result, ctx, sourceLocations)
                 }
             )
+
+            // Distribute all files by there root path prefix, parse them in individual component
+            // named
+            // like their rootPath local name
+            ctx.config.includePaths.forEach { includePath ->
+                val filesInPath =
+                    importedSources.filter {
+                        it.path.removePrefix(includePath.toString()) != it.path.toString()
+                    }
+                if (filesInPath.isNotEmpty()) {
+                    val component = Component()
+                    component.name = Name(includePath.name)
+                    result.addComponent(component)
+
+                    usedFrontends.addAll(
+                        if (useParallelFrontends) {
+                            parseParallel(component, result, ctx, filesInPath)
+                        } else {
+                            parseSequentially(component, result, ctx, filesInPath)
+                        }
+                    )
+                }
+            }
         }
 
         return usedFrontends

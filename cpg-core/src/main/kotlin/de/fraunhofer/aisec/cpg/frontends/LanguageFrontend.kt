@@ -112,7 +112,7 @@ abstract class LanguageFrontend<AstNode, TypeNode>(
     abstract override fun codeOf(astNode: AstNode): String?
 
     abstract fun gatherExternalSources(
-        rootPath: Path,
+        rootPaths: List<Path>,
         source: File,
         externalSources: MutableList<File>,
         processedImports: MutableList<String> = mutableListOf<String>(),

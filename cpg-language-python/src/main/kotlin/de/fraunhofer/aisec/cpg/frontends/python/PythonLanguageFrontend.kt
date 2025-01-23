@@ -306,14 +306,19 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
         return tud
     }
 
+    private fun getRootPath(file: File, rootPaths: List<Path>): Path {
+        rootPaths.forEach {
+            if (file.path.removePrefix(it.toString()) != file.path.toString()) return it
+        }
+        return file.toPath().parent
+    }
+
     override fun gatherExternalSources(
-        rootPath: Path,
+        rootPaths: List<Path>,
         source: File,
         externalSources: MutableList<File>,
         processedImports: MutableList<String>,
     ): List<File> {
-
-        val rootFile = rootPath.toFile()
 
         val pythonExternalSources =
             externalSources
@@ -342,7 +347,7 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
                 language.fileExtensions.forEach { fileExtension ->
                     pythonExternalSources
                         .firstOrNull {
-                            it.relativeTo(rootFile).path ==
+                            it.relativeTo(getRootPath(it, rootPaths).toFile()).path ==
                                 importPath + language.namespaceDelimiter + fileExtension
                         }
                         ?.let {
@@ -357,7 +362,11 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
                 // all subfiles
                 if (importedSources.isEmpty()) {
                     pythonExternalSources
-                        .filter { it.relativeTo(rootFile).toPath().startsWith(Path(importPath)) }
+                        .filter {
+                            it.relativeTo(getRootPath(it, rootPaths).toFile())
+                                .toPath()
+                                .startsWith(Path(importPath))
+                        }
                         .forEach {
                             importedSources += it
                             // By removing the imported source from the list of available external
@@ -371,7 +380,7 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
                         language.fileExtensions.forEach { fileExtension ->
                             pythonExternalSources
                                 .firstOrNull {
-                                    it.relativeTo(rootFile).path ==
+                                    it.relativeTo(getRootPath(it, rootPaths).toFile()).path ==
                                         importPath + language.namespaceDelimiter + fileExtension
                                 }
                                 ?.let {
@@ -391,7 +400,7 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
                         importedSources
                             .flatMap {
                                 gatherExternalSources(
-                                    rootPath,
+                                    rootPaths,
                                     it,
                                     pythonExternalSources,
                                     processedImports,

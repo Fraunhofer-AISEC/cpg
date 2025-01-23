@@ -421,7 +421,7 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
     }
 
     override fun gatherExternalSources(
-        rootPath: Path,
+        rootPaths: List<Path>,
         source: File,
         externalSources: MutableList<File>,
         processedImports: MutableList<String>,
