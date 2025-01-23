@@ -86,7 +86,8 @@ class DFGTest {
         val dRefPrevDFG = dRef.prevDFG.singleOrNull()
         assertIs<CallExpression>(dRefPrevDFG)
         assertLocalName("returnTuple", dRefPrevDFG)
-        val dRefPrevDFGGranularity = dRefPrevDFG.prevDFGEdges.single().granularity
+        val dRefPrevDFGGranularity = dRef.prevDFGEdges.single().granularity
+        dRef.prevFullDFG
         assertIs<IndexedDataflowGranularity>(dRefPrevDFGGranularity)
         assertEquals(1, dRefPrevDFGGranularity.index)
 
