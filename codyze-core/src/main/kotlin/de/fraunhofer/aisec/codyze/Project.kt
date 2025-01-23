@@ -69,9 +69,13 @@ class TranslationOptions : OptionGroup("CPG Translation Options") {
  * Represents the result of the analysis.
  *
  * @param translationResult The result of the CPG translation.
- * @param run The SARIF run object, that contains findings.
+ * @param sarif The SARIF object, that contains findings.
  */
-data class AnalysisResult(val translationResult: TranslationResult, val run: Run)
+data class AnalysisResult(val translationResult: TranslationResult, val sarif: SarifSchema210) {
+    fun writeSarifJson(file: File) {
+        file.writeText(SarifSerializer.toJson(sarif))
+    }
+}
 
 /**
  * Represents an analysis project. This class is responsible for translating the project to a CPG
@@ -97,33 +101,37 @@ class AnalysisProject(
 ) {
 
     /** Analyzes the project and returns the result. */
-    fun analyze(): AnalysisResult {
-        // TODO(oxisto): Replace this mock run object with a real one later on.
-        //  Currently, this is only to show that we support SARIF
+    fun analyze(
+        postProcess: ((TranslationResult) -> Pair<List<ReportingDescriptor>, List<Result>>)? = null
+    ): AnalysisResult {
+        val tr = TranslationManager.builder().config(config).build().analyze().get()
+        val (rules, results) = postProcess?.invoke(tr) ?: Pair(emptyList(), emptyList())
+
+        // Create a new SARIF run, including a tool definition and rules corresponding to the
+        // individual security statements
         val run =
             Run(
-                tool = Tool(driver = ToolComponent(name = "Codyze", version = "x.x.x")),
-                results =
-                    listOf(
-                        Result(
-                            rule = ReportingDescriptorReference(id = "Rule1"),
-                            message = Message(markdown = "This is a **finding**"),
-                            level = Level.Note,
-                            locations = listOf(),
-                        )
-                    ),
+                tool =
+                    Tool(driver = ToolComponent(name = "Codyze", version = "x.x.x", rules = rules)),
+                results = results,
             )
 
-        val result = TranslationManager.builder().config(config).build().analyze().get()
-
-        return AnalysisResult(run = run, translationResult = result)
+        return AnalysisResult(
+            translationResult = tr,
+            sarif = SarifSchema210(version = Version.The210, runs = listOf(run)),
+        )
     }
 
     companion object {
-        /** Builds a translation configuration from the given CLI options. */
-        fun fromOptions(
-            projectOptions: ProjectOptions,
-            translationOptions: TranslationOptions,
+        /** Builds a translation configuration from the given project directory. */
+        fun from(
+            projectDir: Path,
+            sources: List<Path>? = null,
+            components: List<String>? = null,
+            exclusionPatterns: List<String>? = null,
+            configBuilder:
+                ((TranslationConfiguration.Builder) -> TranslationConfiguration.Builder)? =
+                null,
         ): AnalysisProject {
             var builder =
                 TranslationConfiguration.builder()
@@ -143,15 +151,15 @@ class AnalysisProject(
 
             // We can either have a single source (using --sources) or multiple components (using
             // --components)
-            translationOptions.sources?.let {
+            sources?.let {
                 builder =
                     builder
                         .sourceLocations(it.map { source -> source.toFile() })
-                        .topLevel(projectOptions.directory.toFile())
+                        .topLevel(projectDir.toFile())
             }
 
-            translationOptions.components?.let {
-                val componentDir = projectOptions.directory.toFile().resolve("components")
+            components?.let {
+                val componentDir = projectDir.toFile().resolve("components")
                 val pairs =
                     it.map { component ->
                         Pair(component, mutableListOf<File>(componentDir.resolve(component)))
@@ -174,14 +182,30 @@ class AnalysisProject(
                         .topLevel(componentDir)
             }
 
-            translationOptions.exclusionPatterns?.forEach {
-                builder = builder.exclusionPatterns(it)
-            }
+            exclusionPatterns?.forEach { builder = builder.exclusionPatterns(it) }
+            configBuilder?.invoke(builder)
 
             return AnalysisProject(
                 config = builder.build(),
-                name = projectOptions.directory.fileName.toString(),
-                projectDir = projectOptions.directory,
+                name = projectDir.fileName.toString(),
+                projectDir = projectDir,
+            )
+        }
+
+        /** Builds a translation configuration from the given CLI options. */
+        fun fromOptions(
+            projectOptions: ProjectOptions,
+            translationOptions: TranslationOptions,
+            configBuilder:
+                ((TranslationConfiguration.Builder) -> TranslationConfiguration.Builder)? =
+                null,
+        ): AnalysisProject {
+            return from(
+                projectOptions.directory,
+                translationOptions.sources,
+                translationOptions.components,
+                translationOptions.exclusionPatterns,
+                configBuilder,
             )
         }
     }

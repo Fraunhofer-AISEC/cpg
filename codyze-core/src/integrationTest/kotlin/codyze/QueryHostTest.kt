@@ -28,13 +28,11 @@ package codyze
 import de.fraunhofer.aisec.codyze.evalQuery
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.query.QueryTree
 import de.fraunhofer.aisec.cpg.test.analyze
 import java.io.File
 import kotlin.io.path.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
 
 class QueryHostTest {
     @Test
@@ -44,10 +42,12 @@ class QueryHostTest {
             analyze(listOf(topLevel.resolve("simple.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
             }
-        val evalResult =
-            result.evalQuery(File("src/integrationTest/resources/simple.query.kts"), "statement1")
-        val queryTree = evalResult as? QueryTree<*>
-        assertNotNull(queryTree)
-        assertEquals(true, queryTree.value)
+        val queryResult =
+            result.evalQuery(
+                File("src/integrationTest/resources/simple.query.kts"),
+                "statement1",
+                "statement1",
+            )
+        assertEquals(true, queryResult.tree.value)
     }
 }
