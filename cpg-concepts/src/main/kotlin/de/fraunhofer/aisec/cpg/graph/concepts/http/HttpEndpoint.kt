@@ -35,6 +35,7 @@ class HttpEndpoint(
     val httpMethod: HttpMethod,
     val path: String,
     val arguments: List<Node>,
+    val authentications: MutableList<String>,
 ) : Concept<HttpEndpointOperation>(underlyingNode = underlyingNode)
 
 enum class HttpMethod {

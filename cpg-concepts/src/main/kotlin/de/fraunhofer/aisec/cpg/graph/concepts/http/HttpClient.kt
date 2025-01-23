@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 
 /** Represents an [HttpClient]. */
-class HttpClient(underlyingNode: Node) :
+class HttpClient(underlyingNode: Node, val isSecure: Boolean) :
     Concept<HttpClientOperation>(underlyingNode = underlyingNode)
 
 abstract class HttpClientOperation(underlyingNode: Node, concept: Concept<HttpClientOperation>) :
