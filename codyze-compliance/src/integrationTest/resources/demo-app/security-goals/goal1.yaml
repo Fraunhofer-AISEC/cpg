@@ -6,7 +6,7 @@ components:
 assumptions:
   - Third party code is very good
 objectives:
-  - name: Good encryption
-    description: Encryption used is very good
+  - name: Proper handling of key material
+    description: Sensitive material, such as keys are handled properly
     statements:
-      - For each algorithm A, if A is used, then A must be a very good cryptographic algorithm
+      - For each key K, if K is used in encryption or decryption, it must be deleted after use

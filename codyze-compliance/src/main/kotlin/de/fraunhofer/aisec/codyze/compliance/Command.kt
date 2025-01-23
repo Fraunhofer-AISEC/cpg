@@ -40,58 +40,23 @@ class ComplianceCommand : CliktCommand() {
  * all commands.
  */
 abstract class ProjectCommand : CliktCommand() {
-    private val projectOptions by ProjectOptions()
-    private val translationOptions by TranslationOptions()
-
-    /** Loads the security goals from the project. */
-    fun loadSecurityGoals(): List<SecurityGoal> {
-        return loadSecurityGoals(projectOptions.directory.resolve("security-goals"))
-    }
-
-    /**
-     * This method is called by the `run` method to perform the actual analysis. It is separated to
-     * allow for easier access from overriding applications.
-     */
-    protected fun analyze(): AnalysisResult {
-        // Load the security goals from the project
-        val goals = loadSecurityGoals(projectOptions.directory.resolve("security-goals"))
-
-        // Analyze the project
-        val project = AnalysisProject.fromOptions(projectOptions, translationOptions)
-        val result = project.analyze()
-        val tr = result.translationResult
-
-        // Connect the security goals to the translation result for now. Later we will add them to
-        // individual concepts
-        for (goal in goals) {
-            goal.underlyingNode = tr
-
-            // Load and execute queries associated to the goals
-            for (objective in goal.objectives) {
-                objective.underlyingNode = tr
-
-                val scriptFile =
-                    projectOptions.directory
-                        .resolve("queries")
-                        .resolve(
-                            "${objective.name.localName.lowercase().replace(" ", "-")}.query.kts"
-                        )
-                for (stmt in objective.statements.withIndex()) {
-                    tr.evalQuery(scriptFile.toFile(), "statement${stmt.index + 1}")
-                }
-            }
-        }
-
-        return result
-    }
+    protected val projectOptions by ProjectOptions()
+    protected val translationOptions by TranslationOptions()
 }
 
 /** The `scan` command. This will scan the project for compliance violations in the future. */
 open class ScanCommand : ProjectCommand() {
     override fun run() {
-        val result = analyze()
+        val project =
+            AnalysisProject.fromOptions(projectOptions, translationOptions) {
+                // just to show that we can use a config build here
+                it
+            }
+        val result = project.analyzeWithGoals()
 
-        result.run.results?.forEach { echo(it.message) }
+        result.sarif.runs.forEach { run ->
+            run.results?.forEach { result -> echo(result.message.toString()) }
+        }
     }
 }
 
@@ -104,7 +69,9 @@ open class ScanCommand : ProjectCommand() {
  */
 class ListSecurityGoals : ProjectCommand() {
     override fun run() {
-        val goals = loadSecurityGoals()
+        val project = AnalysisProject.fromOptions(projectOptions, translationOptions)
+        val goals = project.loadSecurityGoals()
+
         // Print the name of each security goal
         goals.forEach { echo(it.name.localName) }
     }
