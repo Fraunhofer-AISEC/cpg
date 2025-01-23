@@ -124,6 +124,9 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                 }
             } else {
                 value.elements.forEach {
+                    // We currently support two properties here: The calling context and the
+                    // granularity of the edge. We get the information from the edgePropertiesMap or
+                    // use the defaults (no calling context => null and FullGranularity).
                     var callingContext: CallingContext? = null
                     var granularity: Granularity = FullDataflowGranularity
                     edgePropertiesMap[Pair(it, key)]?.let {
@@ -312,14 +315,6 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                             ref.refersTo?.let {
                                 doubleState.declarationsState[it] =
                                     PowersetLattice(identitySetOf(ref))
-                                /*
-                                // This should not be used because the edges already exist
-                                val startOfDFG = assignment.target
-                                doubleState.generalState[ref] =
-                                    PowersetLattice(identitySetOf(startOfDFG as Node))
-                                edgePropertiesMap.computeIfAbsent(Pair(startOfDFG, ref)) {
-                                    mutableSetOf<Any>()
-                                } += indexed(idx)*/
                             }
                         }
                     }
