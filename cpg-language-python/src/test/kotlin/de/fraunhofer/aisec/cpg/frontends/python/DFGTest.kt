@@ -95,4 +95,160 @@ class DFGTest {
         assertNotNull(d)
         assertTrue(d.prevDFG.isEmpty())
     }
+
+    @Test
+    fun testListComprehensions2() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val result =
+            analyze(listOf(topLevel.resolve("tuple_assign.py").toFile()), topLevel, true) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(result)
+        val getTuple = result.functions["getTuple2"]
+        assertNotNull(getTuple)
+
+        val body = getTuple.body
+        assertIs<Block>(body)
+        val assignment = body.statements[0]
+        assertIs<AssignExpression>(assignment)
+        assertEquals(1, assignment.lhs.size)
+        assertEquals(1, assignment.rhs.size)
+        val lhsTuple = assignment.lhs[0]
+        assertIs<InitializerListExpression>(lhsTuple)
+        assertEquals(2, lhsTuple.initializers.size)
+
+        val cRef = lhsTuple.initializers[0]
+
+        assertIs<Reference>(cRef)
+        assertLocalName("c", cRef)
+        val cRefPrevDFG = cRef.prevDFG.singleOrNull()
+        assertIs<CallExpression>(cRefPrevDFG)
+        assertLocalName("returnTuple2", cRefPrevDFG)
+        val cRefPrevDFGGranularity = cRef.prevDFGEdges.single().granularity
+        assertIs<IndexedDataflowGranularity>(cRefPrevDFGGranularity)
+        assertEquals(0, cRefPrevDFGGranularity.index)
+
+        val c = body.variables["c"]
+        assertNotNull(c)
+        assertTrue(c.prevDFG.isEmpty())
+
+        val dRef = lhsTuple.initializers[1]
+        assertIs<Reference>(dRef)
+        assertLocalName("d", dRef)
+        val dRefPrevDFG = dRef.prevDFG.singleOrNull()
+        assertIs<CallExpression>(dRefPrevDFG)
+        assertLocalName("returnTuple2", dRefPrevDFG)
+        val dRefPrevDFGGranularity = dRef.prevDFGEdges.single().granularity
+        dRef.prevFullDFG
+        assertIs<IndexedDataflowGranularity>(dRefPrevDFGGranularity)
+        assertEquals(1, dRefPrevDFGGranularity.index)
+
+        val d = body.variables["d"]
+        assertNotNull(d)
+        assertTrue(d.prevDFG.isEmpty())
+    }
+
+    @Test
+    fun testListComprehensions3() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val result =
+            analyze(listOf(topLevel.resolve("tuple_assign.py").toFile()), topLevel, true) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(result)
+        val getTuple = result.functions["getTuple3"]
+        assertNotNull(getTuple)
+
+        val body = getTuple.body
+        assertIs<Block>(body)
+        val assignment = body.statements[0]
+        assertIs<AssignExpression>(assignment)
+        assertEquals(1, assignment.lhs.size)
+        assertEquals(1, assignment.rhs.size)
+        val lhsTuple = assignment.lhs[0]
+        assertIs<InitializerListExpression>(lhsTuple)
+        assertEquals(2, lhsTuple.initializers.size)
+
+        val cRef = lhsTuple.initializers[0]
+
+        assertIs<Reference>(cRef)
+        assertLocalName("c", cRef)
+        val cRefPrevDFG = cRef.prevDFG.singleOrNull()
+        assertIs<CallExpression>(cRefPrevDFG)
+        assertLocalName("returnTuple2", cRefPrevDFG)
+        val cRefPrevDFGGranularity = cRef.prevDFGEdges.single().granularity
+        assertIs<IndexedDataflowGranularity>(cRefPrevDFGGranularity)
+        assertEquals(0, cRefPrevDFGGranularity.index)
+
+        val c = body.variables["c"]
+        assertNotNull(c)
+        assertTrue(c.prevDFG.isEmpty())
+
+        val dRef = lhsTuple.initializers[1]
+        assertIs<Reference>(dRef)
+        assertLocalName("d", dRef)
+        val dRefPrevDFG = dRef.prevDFG.singleOrNull()
+        assertIs<CallExpression>(dRefPrevDFG)
+        assertLocalName("returnTuple2", dRefPrevDFG)
+        val dRefPrevDFGGranularity = dRef.prevDFGEdges.single().granularity
+        dRef.prevFullDFG
+        assertIs<IndexedDataflowGranularity>(dRefPrevDFGGranularity)
+        assertEquals(1, dRefPrevDFGGranularity.index)
+
+        val d = body.variables["d"]
+        assertNotNull(d)
+        assertTrue(d.prevDFG.isEmpty())
+    }
+
+    @Test
+    fun testListComprehensions4() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val result =
+            analyze(listOf(topLevel.resolve("tuple_assign.py").toFile()), topLevel, true) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(result)
+        val getTuple = result.functions["getTuple4"]
+        assertNotNull(getTuple)
+
+        val body = getTuple.body
+        assertIs<Block>(body)
+        val assignment = body.statements[0]
+        assertIs<AssignExpression>(assignment)
+        assertEquals(1, assignment.lhs.size)
+        assertEquals(1, assignment.rhs.size)
+        val lhsTuple = assignment.lhs[0]
+        assertIs<InitializerListExpression>(lhsTuple)
+        assertEquals(2, lhsTuple.initializers.size)
+
+        val cRef = lhsTuple.initializers[0]
+
+        assertIs<Reference>(cRef)
+        assertLocalName("c", cRef)
+        val cRefPrevDFG = cRef.prevDFG.singleOrNull()
+        assertIs<CallExpression>(cRefPrevDFG)
+        assertLocalName("returnTuple", cRefPrevDFG)
+        val cRefPrevDFGGranularity = cRef.prevDFGEdges.single().granularity
+        assertIs<IndexedDataflowGranularity>(cRefPrevDFGGranularity)
+        assertEquals(0, cRefPrevDFGGranularity.index)
+
+        val c = body.variables["c"]
+        assertNotNull(c)
+        assertTrue(c.prevDFG.isEmpty())
+
+        val dRef = lhsTuple.initializers[1]
+        assertIs<Reference>(dRef)
+        assertLocalName("d", dRef)
+        val dRefPrevDFG = dRef.prevDFG.singleOrNull()
+        assertIs<CallExpression>(dRefPrevDFG)
+        assertLocalName("returnTuple", dRefPrevDFG)
+        val dRefPrevDFGGranularity = dRef.prevDFGEdges.single().granularity
+        dRef.prevFullDFG
+        assertIs<IndexedDataflowGranularity>(dRefPrevDFGGranularity)
+        assertEquals(1, dRefPrevDFGGranularity.index)
+
+        val d = body.variables["d"]
+        assertNotNull(d)
+        assertTrue(d.prevDFG.isEmpty())
+    }
 }
