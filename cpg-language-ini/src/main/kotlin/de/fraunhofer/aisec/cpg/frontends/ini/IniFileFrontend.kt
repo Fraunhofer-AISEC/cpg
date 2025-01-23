@@ -42,6 +42,7 @@ import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import java.io.FileInputStream
 import java.net.URI
+import java.nio.file.Path
 import org.ini4j.Ini
 import org.ini4j.Profile.Section
 
