@@ -49,7 +49,7 @@ publishing {
                     // Modify the XML to exclude dependencies that start with "cpg-language-".
                     // This is necessary because we do not want to "leak" the dependency to our dynamically activated
                     // frontends to the outside
-                    var dependenciesNode = asNode().children().filterIsInstance<Node>().firstOrNull { true && it.name().toString() == "{http://maven.apache.org/POM/4.0.0}dependencies" }
+                    val dependenciesNode = asNode().children().filterIsInstance<Node>().firstOrNull { it.name().toString() == "{http://maven.apache.org/POM/4.0.0}dependencies" }
                     dependenciesNode?.children()?.removeIf {
                         it is Node &&
                                 (it.name().toString() == "{http://maven.apache.org/POM/4.0.0}dependency") &&
@@ -74,4 +74,13 @@ dependencies {
     annotationProcessor(libs.picocli.codegen)
 
     integrationTestImplementation(libs.kotlin.reflect)
+
+    // We depend on the C++ frontend for the integration tests, but the frontend is only available if enabled.
+    // If it's not available, the integration tests fail (which is ok). But if we would directly reference the
+    // project here, the build system would fail any task since it will not find a non-enabled project.
+    findProject(":cpg-language-cxx")?.also {
+        integrationTestImplementation(it)
+    }
+    integrationTestImplementation(project(":cpg-concepts"))
+    implementation(project(":cpg-concepts"))
 }

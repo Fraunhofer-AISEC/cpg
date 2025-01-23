@@ -151,29 +151,37 @@ class EvaluationOrderGraphPassTest {
         val postFor = forTest.calls["postFor"]
         assertNotNull(postFor)
 
-        Util.eogConnect(
-            en = Util.Edge.ENTRIES,
-            n = elseCall,
-            refs = listOf(forStmt),
-            cr = Util.Connect.NODE,
+        assertTrue(
+            Util.eogConnect(
+                en = Util.Edge.ENTRIES,
+                n = elseCall,
+                refs = listOf(forStmt),
+                cr = Util.Connect.NODE,
+            )
         )
-        Util.eogConnect(
-            en = Util.Edge.ENTRIES,
-            n = postFor,
-            refs = listOf(forStmt.elseStatement, breakStmt),
-            cr = Util.Connect.NODE,
+        assertTrue(
+            Util.eogConnect(
+                en = Util.Edge.ENTRIES,
+                n = postFor,
+                refs = listOf(forStmt.elseStatement, breakStmt),
+                cr = Util.Connect.NODE,
+            )
         )
-        Util.eogConnect(
-            en = Util.Edge.EXITS,
-            n = forStmt.elseStatement,
-            refs = listOf(postFor),
-            cr = Util.Connect.SUBTREE,
+        assertTrue(
+            Util.eogConnect(
+                en = Util.Edge.EXITS,
+                n = forStmt.elseStatement,
+                refs = listOf(postFor),
+                cr = Util.Connect.SUBTREE,
+            )
         )
-        Util.eogConnect(
-            en = Util.Edge.EXITS,
-            n = breakStmt,
-            refs = listOf(postFor),
-            cr = Util.Connect.SUBTREE,
+        assertTrue(
+            Util.eogConnect(
+                en = Util.Edge.EXITS,
+                n = breakStmt,
+                refs = listOf(postFor),
+                cr = Util.Connect.SUBTREE,
+            )
         )
     }
 
@@ -193,29 +201,37 @@ class EvaluationOrderGraphPassTest {
         val postForEach = forTest.calls["postForEach"]
         assertNotNull(postForEach)
 
-        Util.eogConnect(
-            en = Util.Edge.ENTRIES,
-            n = elseCall,
-            refs = listOf(forEachStmt),
-            cr = Util.Connect.NODE,
+        assertTrue(
+            Util.eogConnect(
+                en = Util.Edge.ENTRIES,
+                n = elseCall,
+                refs = listOf(forEachStmt),
+                cr = Util.Connect.NODE,
+            )
         )
-        Util.eogConnect(
-            en = Util.Edge.ENTRIES,
-            n = postForEach,
-            refs = listOf(forEachStmt.elseStatement, breakStmt),
-            cr = Util.Connect.NODE,
+        assertTrue(
+            Util.eogConnect(
+                en = Util.Edge.ENTRIES,
+                n = postForEach,
+                refs = listOf(forEachStmt.elseStatement, breakStmt),
+                cr = Util.Connect.NODE,
+            )
         )
-        Util.eogConnect(
-            en = Util.Edge.EXITS,
-            n = forEachStmt.elseStatement,
-            refs = listOf(postForEach),
-            cr = Util.Connect.SUBTREE,
+        assertTrue(
+            Util.eogConnect(
+                en = Util.Edge.EXITS,
+                n = forEachStmt.elseStatement,
+                refs = listOf(postForEach),
+                cr = Util.Connect.SUBTREE,
+            )
         )
-        Util.eogConnect(
-            en = Util.Edge.EXITS,
-            n = breakStmt,
-            refs = listOf(postForEach),
-            cr = Util.Connect.SUBTREE,
+        assertTrue(
+            Util.eogConnect(
+                en = Util.Edge.EXITS,
+                n = breakStmt,
+                refs = listOf(postForEach),
+                cr = Util.Connect.SUBTREE,
+            )
         )
     }
 

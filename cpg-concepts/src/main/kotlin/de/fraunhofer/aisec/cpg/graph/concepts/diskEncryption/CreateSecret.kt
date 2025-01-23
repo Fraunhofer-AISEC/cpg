@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,16 +23,11 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.concepts
+package de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption
 
-import de.fraunhofer.aisec.cpg.graph.OverlayNode
+import de.fraunhofer.aisec.cpg.graph.Node
 
-/**
- * Represents a new concept added to the CPG. This is intended for modelling "concepts" like
- * logging, files, databases. The relevant operations on this concept are modeled as [Operation]s
- * and stored in [ops].
- */
-abstract class Concept<T : Operation>() : OverlayNode() {
-    /** All [Operation]s belonging to this concept. */
-    val ops: MutableSet<T> = mutableSetOf()
+class CreateSecret(underlyingNode: Node, concept: Secret) :
+    SecretOperation(underlyingNode = underlyingNode, concept = concept) {
+    // TODO: which secret? specs (key size, cipher suite, storage)?
 }

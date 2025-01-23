@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.builder
 
 import de.fraunhofer.aisec.cpg.*
+import de.fraunhofer.aisec.cpg.TranslationResult.Companion.DEFAULT_APPLICATION_NAME
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
@@ -47,6 +48,8 @@ fun LanguageFrontend<*, *>.translationResult(
 ): TranslationResult {
     val node = TranslationResult(TranslationManager.builder().config(ctx.config).build(), ctx)
     val component = Component()
+    component.name = Name(DEFAULT_APPLICATION_NAME)
+    component.ctx = this.ctx
     node.addComponent(component)
     init(node)
 
@@ -624,29 +627,65 @@ fun LanguageFrontend<*, *>.forEachStmt(init: ForEachStatement.() -> Unit): ForEa
  * used to create further sub-nodes as well as configuring the created node itself.
  */
 context(StatementHolder)
-fun LanguageFrontend<*, *>.forStmt(
-    initializer: DeclarationStatement,
-    condition: Expression,
-    iteration: Statement,
-    elseStmt: Statement? = null,
-    init: Block.() -> Unit,
-): ForStatement {
+fun LanguageFrontend<*, *>.forStmt(init: ForStatement.() -> Unit): ForStatement {
+
     val node = newForStatement()
-    node.initializerStatement = initializer
-    if (initializer.isSingleDeclaration()) {
 
-        scopeManager.addDeclaration(initializer.singleDeclaration, false)
-    }
-    node.condition = condition
-    node.iterationStatement = iteration
-
-    val body = newBlock()
-    init(body)
-    node.statement = body
-
-    elseStmt?.let { node.elseStatement = it }
+    init(node)
 
     (this@StatementHolder) += node
+
+    return node
+}
+
+/**
+ * Configures the [ForStatement.condition] in the Fluent Node DSL of the nearest enclosing
+ * [ForStatement]. The [init] block can be used to create further sub-nodes as well as configuring
+ * the created node itself.
+ */
+context(ForStatement)
+fun LanguageFrontend<*, *>.forCondition(init: ForStatement.() -> Expression): Expression {
+
+    var node = init(this@ForStatement)
+
+    condition = node
+
+    return node
+}
+
+/**
+ * Configures the [ForStatement.condition] in the Fluent Node DSL of the nearest enclosing
+ * [ForStatement]. The [init] block can be used to create further sub-nodes as well as configuring
+ * the created node itself.
+ */
+context(ForStatement)
+fun LanguageFrontend<*, *>.forInitializer(
+    init: ForStatement.() -> DeclarationStatement
+): DeclarationStatement {
+
+    var node = init(this@ForStatement)
+
+    initializerStatement = node
+
+    if (node.isSingleDeclaration()) {
+
+        scopeManager.addDeclaration(node.singleDeclaration, false)
+    }
+
+    return node
+}
+
+/**
+ * Configures the [ForStatement.iterationStatement] in the Fluent Node DSL of the nearest enclosing
+ * [ForStatement]. The [init] block can be used to create further sub-nodes as well as configuring
+ * the created node itself.
+ */
+context(ForStatement)
+fun LanguageFrontend<*, *>.forIteration(init: ForStatement.() -> Statement): Statement {
+
+    var node = init(this@ForStatement)
+
+    iterationStatement = node
 
     return node
 }

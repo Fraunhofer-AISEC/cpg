@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
+import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.passes.*
 import java.io.File
@@ -151,6 +152,7 @@ private constructor(
 
         for (sc in ctx.config.softwareComponents.keys) {
             val component = Component()
+            component.ctx = ctx
             component.name = Name(sc)
             result.addComponent(component)
 
@@ -218,39 +220,37 @@ private constructor(
                 tmpFile.deleteOnExit()
 
                 PrintWriter(tmpFile).use { writer ->
-                    list.forEach {
+                    list.forEach { file ->
                         val cxxExtensions = listOf("c", "cpp", "cc", "cxx")
-                        if (cxxExtensions.contains(it.extension)) {
-                            if (ctx.config.topLevel != null) {
-                                val topLevel = ctx.config.topLevel.toPath()
+                        if (cxxExtensions.contains(file.extension)) {
+                            ctx.config.topLevels[sc]?.let {
+                                val topLevel = it.toPath()
                                 writer.write(
                                     """
-#include "${topLevel.relativize(it.toPath())}"
-
-"""
-                                        .trimIndent()
-                                )
-                            } else {
-                                writer.write(
-                                    """
-#include "${it.absolutePath}"
+#include "${topLevel.relativize(file.toPath())}"
 
 """
                                         .trimIndent()
                                 )
                             }
+                                ?: {
+                                    writer.write(
+                                        """
+#include "${file.absolutePath}"
+
+"""
+                                            .trimIndent()
+                                    )
+                                }
                         }
                     }
                 }
 
                 sourceLocations = listOf(tmpFile)
-                if (ctx.config.compilationDatabase != null) {
-                    // merge include paths from all translation units
-                    ctx.config.compilationDatabase.addIncludePath(
-                        tmpFile,
-                        ctx.config.compilationDatabase.allIncludePaths,
-                    )
-                }
+                ctx.config.compilationDatabase?.addIncludePath(
+                    tmpFile,
+                    ctx.config.compilationDatabase.allIncludePaths,
+                )
             } else {
                 sourceLocations = list
             }
@@ -382,6 +382,12 @@ private constructor(
             }
         }
 
+        var b =
+            Benchmark(
+                TranslationManager::class.java,
+                "Merging type and scope information to final context",
+            )
+
         // We want to merge everything into the final scope manager of the result
         globalCtx.scopeManager.mergeFrom(parallelContexts.map { it.scopeManager })
 
@@ -389,13 +395,10 @@ private constructor(
         // TODO(oxisto): This is really messy and instead we should have ONE global scope
         //  and individual file scopes beneath it
         var newGlobalScope = globalCtx.scopeManager.globalScope
-        var types =
-            globalCtx.typeManager.firstOrderTypes.union(globalCtx.typeManager.secondOrderTypes)
-        types.forEach {
-            if (it.scope is GlobalScope) {
-                it.scope = newGlobalScope
-            }
-        }
+        globalCtx.typeManager.firstOrderTypes.updateGlobalScope(newGlobalScope)
+        globalCtx.typeManager.secondOrderTypes.updateGlobalScope(newGlobalScope)
+
+        b.stop()
 
         log.info("Parallel parsing completed")
 
@@ -535,6 +538,21 @@ private constructor(
         @JvmStatic
         fun builder(): Builder {
             return Builder()
+        }
+    }
+}
+
+/**
+ * This function loops through the list of [Type] nodes and updates the [Type.scope] of all nodes
+ * that have a [GlobalScope] as their scope to [newGlobalScope].
+ *
+ * This is needed because we currently have multiple global scopes (one per [ScopeManager]) and we
+ * need to update all types with the merged global scope.
+ */
+private fun MutableList<Type>.updateGlobalScope(newGlobalScope: GlobalScope?) {
+    for (type in this) {
+        if (type.scope is GlobalScope) {
+            type.scope = newGlobalScope
         }
     }
 }

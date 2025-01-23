@@ -260,7 +260,7 @@ internal class Project {
             files = files.filter { shouldBeBuild(it, symbols) }.toMutableList()
 
             // TODO(oxisto): look for binaries in cmd folder
-            project.components[TranslationResult.APPLICATION_LOCAL_NAME] = files
+            project.components[TranslationResult.DEFAULT_APPLICATION_NAME] = files
             project.symbols = symbols
             // TODO(oxisto): support vendor includes
             project.includePaths = listOf(stdLib, topLevel.resolve("vendor"))

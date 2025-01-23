@@ -12,6 +12,7 @@ plugins {
     signing
     `maven-publish`
     kotlin("jvm")
+    kotlin("plugin.serialization")
     id("org.jetbrains.dokka")
 }
 
@@ -81,6 +82,17 @@ publishing {
             }
         }
     }
+
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/Fraunhofer-AISEC/cpg")
+            credentials {
+                username = System.getenv("GITHUB_ACTOR")
+                password = System.getenv("GITHUB_TOKEN")
+            }
+        }
+    }
 }
 
 signing {
@@ -117,6 +129,13 @@ testing {
         // The default unit-test suite
         val test by getting(JvmTestSuite::class) {
             useJUnitJupiter()
+            targets {
+                all {
+                    testTask.configure {
+                        maxHeapSize = "4048m"
+                    }
+                }
+            }
         }
 
         // Our integration tests
@@ -136,6 +155,14 @@ testing {
             }
 
             testType = TestSuiteType.INTEGRATION_TEST
+
+            targets {
+                all {
+                    testTask.configure {
+                        maxHeapSize = "4048m"
+                    }
+                }
+            }
         }
 
         // Our performance tests

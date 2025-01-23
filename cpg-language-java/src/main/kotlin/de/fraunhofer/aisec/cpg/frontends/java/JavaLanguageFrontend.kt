@@ -532,7 +532,7 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
     init {
         val reflectionTypeSolver = ReflectionTypeSolver()
         nativeTypeResolver.add(reflectionTypeSolver)
-        var root = config.topLevel
+        var root = ctx.currentComponent?.topLevel
         if (root == null && config.softwareComponents.size == 1) {
             root =
                 config.softwareComponents[config.softwareComponents.keys.first()]?.let {
