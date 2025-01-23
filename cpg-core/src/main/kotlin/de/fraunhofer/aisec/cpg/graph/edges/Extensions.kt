@@ -80,3 +80,10 @@ fun <
     val edge = edgeProperty.call(this)
     return edge.delegate()
 }
+
+/** Returns the first edge with the given [name] or `null` if no such edge exists. */
+operator fun <NodeType : Node, EdgeType : Edge<NodeType>> EdgeList<NodeType, EdgeType>.get(
+    name: String
+): EdgeType? {
+    return this.firstOrNull { it.name == name }
+}
