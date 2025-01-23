@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.concepts.http
 
 import de.fraunhofer.aisec.cpg.graph.Node
 
-/** Represents an [HttpRequest] from the client. */
+/** Represents an [HttpRequest] from the [HttpClient]. */
 class HttpRequest(
     underlyingNode: Node,
     val url: String,
