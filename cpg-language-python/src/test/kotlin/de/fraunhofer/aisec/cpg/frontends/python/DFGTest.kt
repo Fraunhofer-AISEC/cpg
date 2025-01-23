@@ -25,9 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.python
 
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.flows.IndexedDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.get
+import de.fraunhofer.aisec.cpg.graph.returns
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
@@ -44,8 +46,66 @@ import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
 
 class DFGTest {
+    fun checkCallFlowsToTupleElements(body: Block, functionName: String) {
+        val assignment = body.statements[0]
+        assertIs<AssignExpression>(assignment)
+        assertEquals(1, assignment.lhs.size)
+        assertEquals(1, assignment.rhs.size)
+        val lhsTuple = assignment.lhs[0]
+        assertIs<InitializerListExpression>(lhsTuple)
+        assertEquals(2, lhsTuple.initializers.size)
+
+        val cRef = lhsTuple.initializers[0]
+        assertIs<Reference>(cRef)
+        val dRef = lhsTuple.initializers[1]
+        assertIs<Reference>(dRef)
+
+        assertLocalName("c", cRef)
+        val cRefPrevDFG = cRef.prevDFG.singleOrNull()
+        assertIs<CallExpression>(cRefPrevDFG)
+        assertLocalName(functionName, cRefPrevDFG)
+        val cRefPrevDFGGranularity = cRef.prevDFGEdges.single().granularity
+        assertIs<IndexedDataflowGranularity>(cRefPrevDFGGranularity)
+        assertEquals(0, cRefPrevDFGGranularity.index)
+
+        assertLocalName("d", dRef)
+        val dRefPrevDFG = dRef.prevDFG.singleOrNull()
+        assertIs<CallExpression>(dRefPrevDFG)
+        assertLocalName(functionName, dRefPrevDFG)
+        val dRefPrevDFGGranularity = dRef.prevDFGEdges.single().granularity
+        dRef.prevFullDFG
+        assertIs<IndexedDataflowGranularity>(dRefPrevDFGGranularity)
+        assertEquals(1, dRefPrevDFGGranularity.index)
+
+        val c = body.variables["c"]
+        assertNotNull(c)
+        assertTrue(c.prevDFG.isEmpty())
+
+        val d = body.variables["d"]
+        assertNotNull(d)
+        assertTrue(d.prevDFG.isEmpty())
+    }
+
+    fun checkReturnTuple(functionDeclaration: FunctionDeclaration) {
+        val returnStmt = functionDeclaration.returns.singleOrNull()
+        assertNotNull(returnStmt)
+        val returnVal = returnStmt.returnValue
+        assertIs<InitializerListExpression>(returnVal)
+        assertEquals(2, returnVal.initializers.size)
+        val a = returnVal.initializers[0]
+        assertIs<Reference>(a)
+        val b = returnVal.initializers[1]
+        assertIs<Reference>(b)
+        val aNextDFGGranularity = a.nextDFGEdges.singleOrNull()?.granularity
+        assertIs<IndexedDataflowGranularity>(aNextDFGGranularity)
+        assertEquals(0, aNextDFGGranularity.index)
+        val bNextDFGGranularity = b.nextDFGEdges.singleOrNull()?.granularity
+        assertIs<IndexedDataflowGranularity>(bNextDFGGranularity)
+        assertEquals(1, bNextDFGGranularity.index)
+    }
+
     @Test
-    fun testListComprehensions() {
+    fun testListComprehensionsBracketToBracket() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val result =
             analyze(listOf(topLevel.resolve("tuple_assign.py").toFile()), topLevel, true) {
@@ -57,47 +117,37 @@ class DFGTest {
 
         val body = getTuple.body
         assertIs<Block>(body)
-        val assignment = body.statements[0]
-        assertIs<AssignExpression>(assignment)
-        assertEquals(1, assignment.lhs.size)
-        assertEquals(1, assignment.rhs.size)
-        val lhsTuple = assignment.lhs[0]
-        assertIs<InitializerListExpression>(lhsTuple)
-        assertEquals(2, lhsTuple.initializers.size)
-
-        val cRef = lhsTuple.initializers[0]
-
-        assertIs<Reference>(cRef)
-        assertLocalName("c", cRef)
-        val cRefPrevDFG = cRef.prevDFG.singleOrNull()
-        assertIs<CallExpression>(cRefPrevDFG)
-        assertLocalName("returnTuple", cRefPrevDFG)
-        val cRefPrevDFGGranularity = cRef.prevDFGEdges.single().granularity
-        assertIs<IndexedDataflowGranularity>(cRefPrevDFGGranularity)
-        assertEquals(0, cRefPrevDFGGranularity.index)
-
-        val c = body.variables["c"]
-        assertNotNull(c)
-        assertTrue(c.prevDFG.isEmpty())
-
-        val dRef = lhsTuple.initializers[1]
-        assertIs<Reference>(dRef)
-        assertLocalName("d", dRef)
-        val dRefPrevDFG = dRef.prevDFG.singleOrNull()
-        assertIs<CallExpression>(dRefPrevDFG)
-        assertLocalName("returnTuple", dRefPrevDFG)
-        val dRefPrevDFGGranularity = dRef.prevDFGEdges.single().granularity
-        dRef.prevFullDFG
-        assertIs<IndexedDataflowGranularity>(dRefPrevDFGGranularity)
-        assertEquals(1, dRefPrevDFGGranularity.index)
-
-        val d = body.variables["d"]
-        assertNotNull(d)
-        assertTrue(d.prevDFG.isEmpty())
+        checkCallFlowsToTupleElements(body, "returnTuple")
     }
 
     @Test
-    fun testListComprehensions2() {
+    fun testListComprehensionsReturnBracket() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val result =
+            analyze(listOf(topLevel.resolve("tuple_assign.py").toFile()), topLevel, true) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(result)
+        val returnTuple = result.functions["returnTuple"]
+        assertNotNull(returnTuple)
+        checkReturnTuple(returnTuple)
+    }
+
+    @Test
+    fun testListComprehensionsReturnNoBracket() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val result =
+            analyze(listOf(topLevel.resolve("tuple_assign.py").toFile()), topLevel, true) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(result)
+        val returnTuple = result.functions["returnTuple2"]
+        assertNotNull(returnTuple)
+        checkReturnTuple(returnTuple)
+    }
+
+    @Test
+    fun testListComprehensionsNoBracketToNoBracket() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val result =
             analyze(listOf(topLevel.resolve("tuple_assign.py").toFile()), topLevel, true) {
@@ -109,47 +159,12 @@ class DFGTest {
 
         val body = getTuple.body
         assertIs<Block>(body)
-        val assignment = body.statements[0]
-        assertIs<AssignExpression>(assignment)
-        assertEquals(1, assignment.lhs.size)
-        assertEquals(1, assignment.rhs.size)
-        val lhsTuple = assignment.lhs[0]
-        assertIs<InitializerListExpression>(lhsTuple)
-        assertEquals(2, lhsTuple.initializers.size)
 
-        val cRef = lhsTuple.initializers[0]
-
-        assertIs<Reference>(cRef)
-        assertLocalName("c", cRef)
-        val cRefPrevDFG = cRef.prevDFG.singleOrNull()
-        assertIs<CallExpression>(cRefPrevDFG)
-        assertLocalName("returnTuple2", cRefPrevDFG)
-        val cRefPrevDFGGranularity = cRef.prevDFGEdges.single().granularity
-        assertIs<IndexedDataflowGranularity>(cRefPrevDFGGranularity)
-        assertEquals(0, cRefPrevDFGGranularity.index)
-
-        val c = body.variables["c"]
-        assertNotNull(c)
-        assertTrue(c.prevDFG.isEmpty())
-
-        val dRef = lhsTuple.initializers[1]
-        assertIs<Reference>(dRef)
-        assertLocalName("d", dRef)
-        val dRefPrevDFG = dRef.prevDFG.singleOrNull()
-        assertIs<CallExpression>(dRefPrevDFG)
-        assertLocalName("returnTuple2", dRefPrevDFG)
-        val dRefPrevDFGGranularity = dRef.prevDFGEdges.single().granularity
-        dRef.prevFullDFG
-        assertIs<IndexedDataflowGranularity>(dRefPrevDFGGranularity)
-        assertEquals(1, dRefPrevDFGGranularity.index)
-
-        val d = body.variables["d"]
-        assertNotNull(d)
-        assertTrue(d.prevDFG.isEmpty())
+        checkCallFlowsToTupleElements(body, "returnTuple2")
     }
 
     @Test
-    fun testListComprehensions3() {
+    fun testListComprehensionsNoBracketToBracket() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val result =
             analyze(listOf(topLevel.resolve("tuple_assign.py").toFile()), topLevel, true) {
@@ -161,47 +176,11 @@ class DFGTest {
 
         val body = getTuple.body
         assertIs<Block>(body)
-        val assignment = body.statements[0]
-        assertIs<AssignExpression>(assignment)
-        assertEquals(1, assignment.lhs.size)
-        assertEquals(1, assignment.rhs.size)
-        val lhsTuple = assignment.lhs[0]
-        assertIs<InitializerListExpression>(lhsTuple)
-        assertEquals(2, lhsTuple.initializers.size)
-
-        val cRef = lhsTuple.initializers[0]
-
-        assertIs<Reference>(cRef)
-        assertLocalName("c", cRef)
-        val cRefPrevDFG = cRef.prevDFG.singleOrNull()
-        assertIs<CallExpression>(cRefPrevDFG)
-        assertLocalName("returnTuple2", cRefPrevDFG)
-        val cRefPrevDFGGranularity = cRef.prevDFGEdges.single().granularity
-        assertIs<IndexedDataflowGranularity>(cRefPrevDFGGranularity)
-        assertEquals(0, cRefPrevDFGGranularity.index)
-
-        val c = body.variables["c"]
-        assertNotNull(c)
-        assertTrue(c.prevDFG.isEmpty())
-
-        val dRef = lhsTuple.initializers[1]
-        assertIs<Reference>(dRef)
-        assertLocalName("d", dRef)
-        val dRefPrevDFG = dRef.prevDFG.singleOrNull()
-        assertIs<CallExpression>(dRefPrevDFG)
-        assertLocalName("returnTuple2", dRefPrevDFG)
-        val dRefPrevDFGGranularity = dRef.prevDFGEdges.single().granularity
-        dRef.prevFullDFG
-        assertIs<IndexedDataflowGranularity>(dRefPrevDFGGranularity)
-        assertEquals(1, dRefPrevDFGGranularity.index)
-
-        val d = body.variables["d"]
-        assertNotNull(d)
-        assertTrue(d.prevDFG.isEmpty())
+        checkCallFlowsToTupleElements(body, "returnTuple2")
     }
 
     @Test
-    fun testListComprehensions4() {
+    fun testListComprehensionsBracketToNoBracket() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val result =
             analyze(listOf(topLevel.resolve("tuple_assign.py").toFile()), topLevel, true) {
@@ -213,42 +192,6 @@ class DFGTest {
 
         val body = getTuple.body
         assertIs<Block>(body)
-        val assignment = body.statements[0]
-        assertIs<AssignExpression>(assignment)
-        assertEquals(1, assignment.lhs.size)
-        assertEquals(1, assignment.rhs.size)
-        val lhsTuple = assignment.lhs[0]
-        assertIs<InitializerListExpression>(lhsTuple)
-        assertEquals(2, lhsTuple.initializers.size)
-
-        val cRef = lhsTuple.initializers[0]
-
-        assertIs<Reference>(cRef)
-        assertLocalName("c", cRef)
-        val cRefPrevDFG = cRef.prevDFG.singleOrNull()
-        assertIs<CallExpression>(cRefPrevDFG)
-        assertLocalName("returnTuple", cRefPrevDFG)
-        val cRefPrevDFGGranularity = cRef.prevDFGEdges.single().granularity
-        assertIs<IndexedDataflowGranularity>(cRefPrevDFGGranularity)
-        assertEquals(0, cRefPrevDFGGranularity.index)
-
-        val c = body.variables["c"]
-        assertNotNull(c)
-        assertTrue(c.prevDFG.isEmpty())
-
-        val dRef = lhsTuple.initializers[1]
-        assertIs<Reference>(dRef)
-        assertLocalName("d", dRef)
-        val dRefPrevDFG = dRef.prevDFG.singleOrNull()
-        assertIs<CallExpression>(dRefPrevDFG)
-        assertLocalName("returnTuple", dRefPrevDFG)
-        val dRefPrevDFGGranularity = dRef.prevDFGEdges.single().granularity
-        dRef.prevFullDFG
-        assertIs<IndexedDataflowGranularity>(dRefPrevDFGGranularity)
-        assertEquals(1, dRefPrevDFGGranularity.index)
-
-        val d = body.variables["d"]
-        assertNotNull(d)
-        assertTrue(d.prevDFG.isEmpty())
+        checkCallFlowsToTupleElements(body, "returnTuple")
     }
 }
