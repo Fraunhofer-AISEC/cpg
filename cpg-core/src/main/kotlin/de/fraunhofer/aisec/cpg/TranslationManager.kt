@@ -143,6 +143,7 @@ private constructor(
         val usedFrontends = mutableSetOf<LanguageFrontend<*, *>>()
 
         val externalSources: MutableList<File> = mutableListOf()
+        val importedSources: MutableSet<File> = mutableSetOf()
 
         ctx.config.includePaths.forEach { externalSources.addAll(extractConfiguredSources(it)) }
 
@@ -153,11 +154,8 @@ private constructor(
             component.name = Name(sc)
             result.addComponent(component)
 
-            val externalSourcesInComponent: MutableList<File> = externalSources.toMutableList()
-
             // Every Component needs to reprocess the sources
             var sourceLocations: List<File> = ctx.config.softwareComponents[sc] ?: listOf()
-            val importedSources: MutableSet<File> = mutableSetOf()
 
             // Todo Here we need to dispatch to the correct frontend to do preproccessing
 
@@ -267,7 +265,7 @@ private constructor(
                         frontend?.gatherExternalSources(
                             ctx.config.includePaths,
                             it,
-                            externalSourcesInComponent,
+                            externalSources,
                             processedImports,
                         ) ?: listOf()
                     )
@@ -287,28 +285,28 @@ private constructor(
                     parseSequentially(component, result, ctx, sourceLocations)
                 }
             )
+        }
 
-            // Distribute all files by there root path prefix, parse them in individual component
-            // named
-            // like their rootPath local name
-            ctx.config.includePaths.forEach { includePath ->
-                val filesInPath =
-                    importedSources.filter {
-                        it.path.removePrefix(includePath.toString()) != it.path.toString()
-                    }
-                if (filesInPath.isNotEmpty()) {
-                    val component = Component()
-                    component.name = Name(includePath.name)
-                    result.addComponent(component)
-
-                    usedFrontends.addAll(
-                        if (useParallelFrontends) {
-                            parseParallel(component, result, ctx, filesInPath)
-                        } else {
-                            parseSequentially(component, result, ctx, filesInPath)
-                        }
-                    )
+        // Distribute all files by there root path prefix, parse them in individual component
+        // named
+        // like their rootPath local name
+        ctx.config.includePaths.forEach { includePath ->
+            val filesInPath =
+                importedSources.filter {
+                    it.path.removePrefix(includePath.toString()) != it.path.toString()
                 }
+            if (filesInPath.isNotEmpty()) {
+                val component = Component()
+                component.name = Name(includePath.name)
+                result.addComponent(component)
+
+                usedFrontends.addAll(
+                    if (useParallelFrontends) {
+                        parseParallel(component, result, ctx, filesInPath)
+                    } else {
+                        parseSequentially(component, result, ctx, filesInPath)
+                    }
+                )
             }
         }
 
