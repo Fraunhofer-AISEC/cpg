@@ -44,9 +44,9 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionException
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.io.path.name
 import kotlin.reflect.full.findAnnotation
 import org.slf4j.LoggerFactory
-import kotlin.io.path.name
 
 /** Main entry point for all source code translation for all language front-ends. */
 class TranslationManager
