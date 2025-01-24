@@ -282,8 +282,8 @@ class DFGFunctionSummaries {
         dfgEntries: List<DFGEntry>
     ) {
         for (entry in dfgEntries) {
-            var derefSource = false
-            var destDerefDepth = 0
+            var srcValueDepth = 1
+            var destValueDepth = 1
             val from =
                 if (entry.from.startsWith("param")) {
                     try {
@@ -291,7 +291,7 @@ class DFGFunctionSummaries {
                         val paramIndex = e.getOrNull(0)?.removePrefix("param")?.toInt()
                         if (paramIndex != null) {
                             val foo = functionDeclaration.parameters.getOrNull(paramIndex)
-                            if (e.getOrNull(1) == "deref") derefSource = true
+                            if (e.getOrNull(1) == "deref") srcValueDepth = 2
                             foo
                         } else null
                     } catch (e: NumberFormatException) {
@@ -315,7 +315,8 @@ class DFGFunctionSummaries {
                     try {
                         val e = entry.to.split(".")
                         val paramIndex = e.getOrNull(0)?.removePrefix("param")?.toInt()
-                        if (e.getOrNull(1) == "deref") destDerefDepth = 1
+                        if (e.getOrNull(1) == "deref") destValueDepth = 2
+                        else if (e.getOrNull(1) == "address") destValueDepth = 0
                         val paramTo =
                             paramIndex?.let { functionDeclaration.parameters.getOrNull(it) }
                         if (from != null && paramTo != null) {
@@ -323,9 +324,9 @@ class DFGFunctionSummaries {
                                 .computeIfAbsent(paramTo) { identitySetOf() }
                                 .add(
                                     FunctionDeclaration.FSEntry(
-                                        destDerefDepth,
+                                        destValueDepth,
                                         from,
-                                        derefSource,
+                                        srcValueDepth,
                                         ""
                                     )
                                 )
@@ -342,9 +343,9 @@ class DFGFunctionSummaries {
                                 .computeIfAbsent(receiver) { identitySetOf() }
                                 .add(
                                     FunctionDeclaration.FSEntry(
-                                        destDerefDepth,
+                                        destValueDepth,
                                         from,
-                                        derefSource,
+                                        srcValueDepth,
                                         ""
                                     )
                                 )

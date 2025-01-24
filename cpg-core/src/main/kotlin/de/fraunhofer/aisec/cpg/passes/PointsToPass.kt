@@ -183,42 +183,34 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
 
     private fun storeFunctionSummary(node: FunctionDeclaration, doubleState: PointsToState2) {
         node.parameters.forEach { param ->
-            // fetch the parameter's current address and value
-            //            val addresses = doubleState.getAddresses(param)
-            //            var values = addresses.flatMap { doubleState.getValues(it) }
-
             // Collect all addresses of the parameter that we can use as index to look up possible
             // new values
-            /*            values.forEach { value ->
-                indexes.add(value)
-                // Also collect the ParameterMemoryValue, since there might have been writes to
-                // pointer-to-pointers
-                doubleState.getValues(value).map { indexes.add(it) }
-            }*/
             val indexes = mutableSetOf<Pair<Node, Int>>()
-            var values = doubleState.getAddresses(param)
+            var values = doubleState.getValues(param)
 
-            for (dereferenceDepth in 1..2) {
-                values =
-                    values
-                        .filter { doubleState.hasDeclarationStateEntry(it) }
-                        .flatMap {
-                            doubleState.fetchElementFromDeclarationState(it, true).map { it.first }
-                        }
-                        .toIdentitySet()
-                values
-                    .filter { doubleState.hasDeclarationStateEntry(it) }
-                    .map { indexes.add(Pair(it, dereferenceDepth)) }
-            }
+            // We look at the deref and the derefderef, hence for depth 2 and 3
+            // We have to look up the index of the ParameterMemoryValue to check out
+            // changes on the dereferences
+            values
+                .filter { doubleState.hasDeclarationStateEntry(it) }
+                .map { indexes.add(Pair(it, 2)) }
+            // Additionally, we can check out the dereference itself to look for derefdereferences
+            values
+                .filter { doubleState.hasDeclarationStateEntry(it) }
+                .flatMap { doubleState.getValues(it) }
+                .forEach { value ->
+                    if (doubleState.hasDeclarationStateEntry(value)) indexes.add(Pair(value, 3))
+                }
 
-            indexes.forEach { (index, dereferenceDepth) ->
+            indexes.forEach { (index, dstValueDepth) ->
                 val stateEntries =
                     doubleState.fetchElementFromDeclarationState(index, true).filter {
                         it.first.name != param.name
                     }
                 stateEntries
                     // See if we can find something that is different from the initial value
-                    .filter {
+                    .filter { // TODO: Add a check that this is not a dummy deref value of an int.
+                        // Or do not even create that dummy value in initializeParameters
                         !(it.first is ParameterMemoryValue &&
                             it.first.name.localName.contains("derefvalue") &&
                             it.first.name.parent == param.name)
@@ -230,12 +222,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                         node.functionSummary
                             .computeIfAbsent(param) { mutableSetOf() }
                             .add(
-                                FunctionDeclaration.FSEntry(
-                                    dereferenceDepth,
-                                    value,
-                                    true,
-                                    subAccessName
-                                )
+                                FunctionDeclaration.FSEntry(dstValueDepth, value, 2, subAccessName)
                             )
                     }
             }
@@ -290,7 +277,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                         .computeIfAbsent(currentNode) { mutableSetOf() }
                         .addAll(
                             doubleState.getValues(retval).map {
-                                FunctionDeclaration.FSEntry(0, it, false, "")
+                                FunctionDeclaration.FSEntry(0, it, 1, "")
                             }
                         )
                 }
@@ -344,7 +331,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                         )
                         val newValues: MutableSet<FunctionDeclaration.FSEntry> =
                             invoke.parameters
-                                .map { FunctionDeclaration.FSEntry(0, it, false, "") }
+                                .map { FunctionDeclaration.FSEntry(0, it, 1, "") }
                                 .toMutableSet()
                         invoke.functionSummary[ReturnStatement()] = newValues
                     }
@@ -356,7 +343,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                     // case with a body, all returns flow to the FunctionDeclaration too?
                     val newValues: MutableSet<FunctionDeclaration.FSEntry> =
                         invoke.parameters
-                            .map { FunctionDeclaration.FSEntry(0, it, false, "") }
+                            .map { FunctionDeclaration.FSEntry(0, it, 1, "") }
                             .toMutableSet()
                     invoke.functionSummary[ReturnStatement()] = newValues
                 }
@@ -396,58 +383,84 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                         else -> null
                     }
                 if (argument != null) {
-                    fsEntries.forEach { (destDerefDepth, value, derefSource, subAccessName) ->
-                        val destination =
-                            if (subAccessName.isNotEmpty()) {
-                                val fieldAddresses = identitySetOf<Node>()
-                                // Collect the fieldAddresses for each possible value
-                                val argumentValues =
-                                    doubleState.dereferenceNode(argument, destDerefDepth - 1)
-                                argumentValues.forEach { v ->
-                                    val parentName = nodeNameToString(v)
-                                    val newName = Name(subAccessName, parentName)
-                                    doubleState =
-                                        doubleState.createFieldAddresses(identitySetOf(v), newName)
-                                    fieldAddresses.addAll(
-                                        doubleState.getFieldAddresses(identitySetOf(v), newName)
-                                    )
-                                }
-                                fieldAddresses
-                            } else {
-                                doubleState.dereferenceNode(argument, destDerefDepth - 1)
+                    fsEntries
+                        .sortedBy { it.destValueDepth }
+                        .forEach { (dstValueDepth, value, srcValueDepth, subAccessName) ->
+                            var destAddrDepth = dstValueDepth - 1
+                            var a = identitySetOf<Node>(argument)
+                            // Is the destAddrDepth > 2? In this case, the DeclarationState
+                            // might be outdated. So check in the mapDstToSrc for updates
+                            val updatedAddresses =
+                                mapDstToSrc.entries
+                                    .filter { it.key in doubleState.getAddresses(argument) }
+                                    .flatMap { it.value }
+                                    .toIdentitySet()
+                            if (dstValueDepth > 2 && updatedAddresses.isNotEmpty()) {
+                                destAddrDepth--
+                                a = updatedAddresses
                             }
-                        when (value) {
-                            is ParameterDeclaration ->
-                                // Add the value of the respective argument in the CallExpression
-                                // Only dereference the parameter when we stored that in the
-                                // functionSummary
-                                if (value.argumentIndex < currentNode.arguments.size) {
-                                    if (derefSource) {
-                                        doubleState
-                                            .getValues(currentNode.arguments[value.argumentIndex])
-                                            .forEach { v ->
-                                                destination.forEach { d ->
-                                                    mapDstToSrc.computeIfAbsent(d) {
-                                                        mutableSetOf<Node>()
-                                                    } +=
-                                                        doubleState
-                                                            .fetchElementFromDeclarationState(v)
-                                                            .map { it.first }
+                            val destination =
+                                if (subAccessName.isNotEmpty()) {
+                                    val fieldAddresses = identitySetOf<Node>()
+                                    // Collect the fieldAddresses for each possible value
+                                    val argumentValues =
+                                        a.flatMap { doubleState.getNestedValues(it, destAddrDepth) }
+                                    //
+                                    // doubleState.dereferenceNode(a, updatedDepth - 1)
+                                    argumentValues.forEach { v ->
+                                        val parentName = nodeNameToString(v)
+                                        val newName = Name(subAccessName, parentName)
+                                        doubleState =
+                                            doubleState.createFieldAddresses(
+                                                identitySetOf(v),
+                                                newName
+                                            )
+                                        fieldAddresses.addAll(
+                                            doubleState.getFieldAddresses(identitySetOf(v), newName)
+                                        )
+                                    }
+                                    fieldAddresses
+                                } else {
+                                    //
+                                    // doubleState.dereferenceNode(a, updatedDepth - 1)
+                                    a.flatMap { doubleState.getNestedValues(it, destAddrDepth) }
+                                }
+                            when (value) {
+                                is ParameterDeclaration ->
+                                    // Add the value of the respective argument in the
+                                    // CallExpression
+                                    // Only dereference the parameter when we stored that in the
+                                    // functionSummary
+                                    if (value.argumentIndex < currentNode.arguments.size) {
+                                        // TODO
+                                        if (srcValueDepth == 2) {
+                                            doubleState
+                                                .getValues(
+                                                    currentNode.arguments[value.argumentIndex]
+                                                )
+                                                .forEach { v ->
+                                                    destination.forEach { d ->
+                                                        mapDstToSrc.computeIfAbsent(d) {
+                                                            mutableSetOf<Node>()
+                                                        } +=
+                                                            doubleState
+                                                                .fetchElementFromDeclarationState(v)
+                                                                .map { it.first }
+                                                    }
                                                 }
+                                        } else {
+                                            destination.forEach {
+                                                mapDstToSrc.computeIfAbsent(it) {
+                                                    mutableSetOf<Node>()
+                                                } += currentNode.arguments[value.argumentIndex]
                                             }
-                                    } else {
-                                        destination.forEach {
-                                            mapDstToSrc.computeIfAbsent(it) {
-                                                mutableSetOf<Node>()
-                                            } += currentNode.arguments[value.argumentIndex]
                                         }
                                     }
-                                }
-                            is ParameterMemoryValue -> {
-                                // In case the FunctionSummary says that we have to use the
-                                // dereferenced value here, we look up the argument, dereference it,
-                                // and then add it to the sources
-                                if (value.name.localName == "derefvalue") {
+                                is ParameterMemoryValue -> {
+                                    // In case the FunctionSummary says that we have to use the
+                                    // dereferenced value here, we look up the argument, dereference
+                                    // it,
+                                    // and then add it to the sources
                                     val p =
                                         currentNode.invokes
                                             .flatMap { it.parameters }
@@ -457,27 +470,26 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                                             val arg = currentNode.arguments[it.argumentIndex]
                                             destination.forEach { d ->
                                                 mapDstToSrc.computeIfAbsent(d) { mutableSetOf() } +=
-                                                    doubleState.getValues(arg).flatMap {
-                                                        doubleState.getValues(it)
-                                                    }
+                                                    doubleState.getNestedValues(arg, srcValueDepth)
                                             }
                                         }
                                     }
+                                    //                                    }
                                 }
-                            }
-                            is MemoryAddress -> {
-                                destination.forEach { d ->
-                                    mapDstToSrc.computeIfAbsent(d) { mutableSetOf() } += value
+                                is MemoryAddress -> {
+                                    destination.forEach { d ->
+                                        mapDstToSrc.computeIfAbsent(d) { mutableSetOf() } += value
+                                    }
                                 }
-                            }
-                            else -> {
-                                destination.forEach { d ->
-                                    mapDstToSrc.computeIfAbsent(d) { mutableSetOf<Node>() } +=
-                                        doubleState.getValues(value)
+                                else -> {
+                                    destination.forEach { d ->
+                                        mapDstToSrc.computeIfAbsent(d) { mutableSetOf<Node>() } +=
+                                            if (srcValueDepth == 0) identitySetOf(value)
+                                            else doubleState.getNestedValues(value, srcValueDepth)
+                                    }
                                 }
                             }
                         }
-                    }
                 }
             }
             i++
@@ -799,19 +811,19 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
         }
 
         /**
-         * Fetch the entry for `node` from the DeclarationState. If there isn't any, create an
+         * Fetch the entry for `addr` from the DeclarationState. If there isn't any, create an
          * UnknownMemoryValue
          */
         fun fetchElementFromDeclarationState(
-            node: Node,
+            addr: Node,
             fetchFields: Boolean = false
         ): IdentitySet<Pair<Node, String>> {
             val ret = identitySetOf<Pair<Node, String>>()
 
             // First, the main element
-            val elements = this.declarationsState.elements[node]?.elements?.second?.elements
+            val elements = this.declarationsState.elements[addr]?.elements?.second?.elements
             if (elements.isNullOrEmpty()) {
-                val newName = nodeNameToString(node)
+                val newName = nodeNameToString(addr)
                 val newEntry = identitySetOf<Node>(UnknownMemoryValue(newName))
                 (this.declarationsState.elements
                         as?
@@ -821,12 +833,12 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                                 Pair<LatticeElement<Set<Node>>, LatticeElement<Set<Node>>>
                             >
                         >)
-                    ?.computeIfAbsent(node) {
+                    ?.computeIfAbsent(addr) {
                         TupleLattice(
-                            Pair(PowersetLattice(identitySetOf(node)), PowersetLattice(newEntry))
+                            Pair(PowersetLattice(identitySetOf(addr)), PowersetLattice(newEntry))
                         )
                     }
-                val newElements = this.declarationsState.elements[node]?.elements?.second?.elements
+                val newElements = this.declarationsState.elements[addr]?.elements?.second?.elements
                 (newElements as? IdentitySet<Node>)?.addAll(newEntry)
                 newEntry.map { ret.add(Pair(it, "")) }
             } else elements.map { ret.add(Pair(it, "")) }
@@ -834,8 +846,8 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
             // if fetchFields is true, we also fetch the values for fields
             if (fetchFields) {
                 val fields =
-                    this.declarationsState.elements[node]?.elements?.first?.elements?.filter {
-                        it != node
+                    this.declarationsState.elements[addr]?.elements?.first?.elements?.filter {
+                        it != addr
                     }
                 fields?.forEach { field ->
                     this.declarationsState.elements[field]?.elements?.second?.elements?.let {
@@ -877,7 +889,9 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                     /* For Declarations, we have to look up the last value written to it.
                      */
                     if (node.memoryAddress == null) node.memoryAddress = MemoryAddress(node.name)
-                    fetchElementFromDeclarationState(node).map { it.first }.toIdentitySet()
+                    fetchElementFromDeclarationState(node.memoryAddress!!)
+                        .map { it.first }
+                        .toIdentitySet()
                 }
                 is MemoryAddress -> {
                     fetchElementFromDeclarationState(node).map { it.first }.toIdentitySet()
@@ -926,8 +940,6 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                     else identitySetOf()
                 }
                 is MemoryAddress -> {
-                    TODO()
-                    //                    fetchElementFromDeclarationState(node, useAddress = true)
                     identitySetOf(node)
                 }
                 is PointerReference -> {
@@ -980,14 +992,20 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
             }
         }
 
-        fun dereferenceNode(node: Node, dereferenceDepth: Int): Set<Node> {
-            val addr = this.getAddresses(node)
-            var ret = addr
-            for (i in 0..dereferenceDepth) {
-                ret =
-                    ret.flatMap { this.fetchElementFromDeclarationState(it) }
-                        .map { it.first }
-                        .toIdentitySet()
+        /**
+         * nestingDepth 0 gets the `node`'s address. 1 fetches the current value, 2 the dereference,
+         * 3 the derefdereference, etc...
+         */
+        fun getNestedValues(node: Node, nestingDepth: Int): Set<Node> {
+            if (nestingDepth == 0) return this.getAddresses(node)
+            //            else if (dereferenceDepth == 1) return addr.flatMap { getValues(it)
+            // }.toSet()
+            var ret = getValues(node)
+            for (i in 1 ..< nestingDepth) {
+                ret = ret.flatMap { getValues(it) }.toIdentitySet()
+                //                    ret.flatMap { this.fetchElementFromDeclarationState(it) }
+                //                        .map { it.first }
+                //                        .toIdentitySet()
             }
             return ret
         }

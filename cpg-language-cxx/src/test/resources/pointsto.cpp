@@ -85,7 +85,7 @@ int arrays() {
   memcpy(src,dst,dstlen);
 }*/
 
-int memcpy() {
+int testmemcpy() {
   long a=0;
   long b=1;
   long c=2;
@@ -243,18 +243,18 @@ int testFunctionSummaries() {
 }
 
 void changepointer(int **p, int newint, int *newp) {
-  // *p = newp;
- //  **p = newint;
-    *p = 3;
-    **p = 4;
+   *p = newp;
+   **p = newint;
+ //   *p = 3;
+ //   **p = 4;
 }
 
 int testFunctionSummaries2() {
    int a = 1;                                                                                                                                    
-   int *b = &a;
-   int **c = &b;
+   int* b = &a;
+   int** c = &b;
    int d = 2;
-   int *e = &d;
+   int* e = &d;
 
    printf("c: %x, *c: %x, **c: %d\n", c, *c, **c);
    changepointer(c, d, e);

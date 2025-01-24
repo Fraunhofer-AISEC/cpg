@@ -26,11 +26,13 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
+import de.fraunhofer.aisec.cpg.graph.PointerAccess
 import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.edges.flows.PointerDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -1611,6 +1613,86 @@ class PointsToPassTest {
         // FunctionSummaries
         val changepointerFS =
             tu.functions.filter { it.name.localName == "changepointer" }.first().functionSummary
-        assertTrue(true)
+
+        // References
+        val cLine261 =
+            tu.allChildren<Reference> {
+                    it.location?.region?.startLine == 261 &&
+                        it.location?.region?.startColumn == 39 &&
+                        it.name.localName == "c"
+                }
+                .first()
+        assertNotNull(cLine261)
+
+        // Declarations
+        val dDecl = tu.allChildren<Declaration> { it.location?.region?.startLine == 256 }.first()
+        assertNotNull(dDecl)
+        val eDecl =
+            tu.allChildren<Declaration> {
+                    it.name.localName == "e" && it.location?.region?.startLine == 257
+                }
+                .first()
+        assertNotNull(eDecl)
+
+        // Literals
+        val literal2 = tu.allChildren<Literal<*>> { it.location?.region?.startLine == 256 }.first()
+        assertNotNull(literal2)
+
+        // Test the FS of changepointer
+        assertEquals(
+            2,
+            changepointerFS.entries.filter { it.key.name.localName == "p" }.first().value.size
+        )
+        assertEquals(
+            1,
+            changepointerFS.entries.filter { it.key.name.localName == "newp" }.first().value.size
+        )
+
+        // Test the result on c
+        assertEquals(3, cLine261.prevDFGEdges.size)
+        assertEquals(1, cLine261.prevFullDFG.size)
+        assertEquals(eDecl.memoryAddress, cLine261.prevFullDFG.first() as MemoryAddress?)
+        assertEquals(
+            1,
+            cLine261.prevDFGEdges
+                .filter {
+                    it.granularity is PointerDataflowGranularity &&
+                        (it.granularity as PointerDataflowGranularity).pointerTarget ==
+                            PointerAccess.currentDerefValue
+                }
+                .size
+        )
+        assertEquals(
+            dDecl.memoryAddress,
+            cLine261.prevDFGEdges
+                .filter {
+                    it.granularity is PointerDataflowGranularity &&
+                        (it.granularity as PointerDataflowGranularity).pointerTarget ==
+                            PointerAccess.currentDerefValue
+                }
+                .first()
+                .start as MemoryAddress?
+        )
+        assertEquals(
+            1,
+            cLine261.prevDFGEdges
+                .filter {
+                    it.granularity is PointerDataflowGranularity &&
+                        (it.granularity as PointerDataflowGranularity).pointerTarget ==
+                            PointerAccess.currentDerefDerefValue
+                }
+                .size
+        )
+        assertEquals(
+            literal2,
+            cLine261.prevDFGEdges
+                .filter {
+                    it.granularity is PointerDataflowGranularity &&
+                        (it.granularity as PointerDataflowGranularity).pointerTarget ==
+                            PointerAccess.currentDerefDerefValue
+                }
+                .first()
+                .start
+        )
     }
 }

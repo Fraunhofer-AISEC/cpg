@@ -88,9 +88,10 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder, EOGStart
      * a struct or to array-expressions
      */
     data class FSEntry(
-        val destDerefDepth: Int = 1,
+        val destValueDepth: Int =
+            1, // 0: Address, 1: Value, 2: DerefValue, 3: DerefderefValue, ....
         val srcNode: Node,
-        val derefSource: Boolean,
+        val srcValueDepth: Int = 1, // 0: Address, 1: Value, 2: DerefValue, 3:
         val subAccessName: String
     )
 
