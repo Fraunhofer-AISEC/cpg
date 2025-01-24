@@ -78,7 +78,11 @@ class ScopeManager : ScopeProvider {
 
     /** True, if the scope manager is currently in a [FunctionScope]. */
     val isInFunction: Boolean
-        get() = this.firstScopeOrNull { it is FunctionScope } != null
+        get() = currentFunctionScope != null
+
+    /** Gets the closest [FunctionScope]. */
+    val currentFunctionScope: FunctionScope?
+        get() = this.firstScopeOrNull { it is FunctionScope } as? FunctionScope
 
     /** True, if the scope manager is currently in a [RecordScope], e.g. a class. */
     val isInRecord: Boolean

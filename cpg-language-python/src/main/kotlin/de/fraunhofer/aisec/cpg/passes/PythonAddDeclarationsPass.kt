@@ -85,10 +85,10 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
     }
 
     /**
-     * This function will create a new dynamic [VariableDeclaration] if there is a write access to
-     * the [ref].
+     * This function will create a new dynamic [Declaration] if there is a write access to the
+     * [ref].
      */
-    private fun handleWriteToReference(ref: Reference): VariableDeclaration? {
+    private fun handleWriteToReference(ref: Reference): Declaration? {
         if (ref.access != AccessValues.WRITE) {
             return null
         }
@@ -155,12 +155,28 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
         // If we didn't create any field up to this point and if we are still have not returned, we
         // can create a normal variable. We need to take scope modifications into account.
         var decl =
-            if (field == null && targetScope != null) {
-                scopeManager.withScope(targetScope) { newVariableDeclaration(ref.name) }
-            } else if (field == null) {
-                newVariableDeclaration(ref.name)
-            } else {
-                field
+            when {
+                field != null -> {
+                    field
+                }
+                targetScope != null -> {
+                    scopeManager.withScope(targetScope) { newVariableDeclaration(ref.name) }
+                }
+                scopeManager.isInFunction &&
+                    scopeManager
+                        .lookupSymbolByNodeName(ref) {
+                            it.scope == scopeManager.currentFunctionScope
+                        }
+                        .size == 1 -> {
+                    scopeManager
+                        .lookupSymbolByNodeName(ref) {
+                            it.scope == scopeManager.currentFunctionScope
+                        }
+                        .single()
+                }
+                else -> {
+                    newVariableDeclaration(ref.name)
+                }
             }
 
         decl.code = ref.code
@@ -203,7 +219,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
         (target as? Reference)?.let {
             if (setAccessValue) it.access = AccessValues.WRITE
             val handled = handleWriteToReference(target)
-            if (handled is Declaration) {
+            if (handled is VariableDeclaration) {
                 // We cannot assign an initializer here because this will lead to duplicate
                 // DFG edges, but we need to propagate the type information from our value
                 // to the declaration. We therefore add the declaration to the observers of
