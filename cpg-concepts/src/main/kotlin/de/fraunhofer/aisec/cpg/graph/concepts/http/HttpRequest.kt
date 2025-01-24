@@ -35,5 +35,5 @@ class HttpRequest(
     val httpMethod: HttpMethod,
     override val concept: HttpClient,
 ) : HttpClientOperation(underlyingNode = underlyingNode, concept = concept) {
-    val calls = mutableListOf<HttpEndpoint>()
+    val to = mutableListOf<HttpEndpoint>()
 }
