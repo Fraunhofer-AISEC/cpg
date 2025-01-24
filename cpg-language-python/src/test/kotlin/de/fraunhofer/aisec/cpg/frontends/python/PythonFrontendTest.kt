@@ -1724,4 +1724,31 @@ class PythonFrontendTest : BaseTest() {
         val barArgument = fooCall.argumentEdges["bar"]?.end
         assertNotNull(barArgument)
     }
+
+    @Test
+    fun testVariableInference() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("variable_inference.py").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(tu)
+
+        val someClass = tu.records["SomeClass"]
+        assertNotNull(someClass)
+        assertTrue(someClass.fields.isEmpty())
+
+        val staticMethod = tu.functions["static_method"]
+        assertNotNull(staticMethod)
+        // static_method has two local variables which are "b" and "x"
+        assertEquals(2, staticMethod.variables.size)
+        assertEquals(setOf("b", "x"), staticMethod.variables.map { it.name.localName }.toSet())
+
+        // There is no field called "b" in the result.
+        assertNull(tu.fields["b"])
+    }
 }
