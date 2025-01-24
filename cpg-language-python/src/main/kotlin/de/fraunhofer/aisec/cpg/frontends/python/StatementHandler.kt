@@ -33,7 +33,7 @@ import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage.Companion.MODIFIE
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.scopes.LocalScope
+import de.fraunhofer.aisec.cpg.graph.scopes.FunctionScope
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.NamespaceScope
 import de.fraunhofer.aisec.cpg.graph.statements.*
@@ -923,11 +923,10 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      * into a [LookupScopeStatement].
      */
     private fun handleNonLocal(global: Python.AST.Nonlocal): LookupScopeStatement {
-        // We need to find the first outer function scope, or rather the block scope belonging to
-        // the function
+        // We need to find the first outer function scope
         var outerFunctionScope =
             frontend.scopeManager.firstScopeOrNull {
-                it is LocalScope && it != frontend.scopeManager.currentScope
+                it is FunctionScope && it != frontend.scopeManager.currentScope
             }
 
         return newLookupScopeStatement(
