@@ -26,15 +26,9 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.analysis.ValueEvaluator
-import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewArrayExpression
 
-fun Expression.evaluate(evaluator: ValueEvaluator = ValueEvaluator()): Any? {
-    return evaluator.evaluate(this)
-}
-
-fun Declaration.evaluate(evaluator: ValueEvaluator = ValueEvaluator()): Any? {
+fun Node.evaluate(evaluator: ValueEvaluator = ValueEvaluator()): Any? {
     return evaluator.evaluate(this)
 }
 
