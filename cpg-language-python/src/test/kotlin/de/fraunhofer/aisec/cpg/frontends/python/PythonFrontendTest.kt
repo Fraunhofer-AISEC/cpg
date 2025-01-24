@@ -26,13 +26,15 @@
 package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.InferenceConfiguration
-import de.fraunhofer.aisec.cpg.analysis.ValueEvaluator
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.edges.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ListType
@@ -44,7 +46,6 @@ import de.fraunhofer.aisec.cpg.passes.ControlDependenceGraphPass
 import de.fraunhofer.aisec.cpg.sarif.Region
 import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
-import kotlin.math.pow
 import kotlin.test.*
 
 class PythonFrontendTest : BaseTest() {
@@ -1110,7 +1111,7 @@ class PythonFrontendTest : BaseTest() {
 
         val annotations = tu.allChildren<Annotation>()
         assertEquals(
-            listOf("app.route", "some.otherannotation", "annotations.other_func"),
+            listOf("app.route", "some.otherannotation", "other_func"),
             annotations.map { it.name.toString() },
         )
     }
@@ -1642,21 +1643,85 @@ class PythonFrontendTest : BaseTest() {
         refs.forEach { assertIsNot<MemberExpression>(it) }
     }
 
-    class PythonValueEvaluator : ValueEvaluator() {
-        override fun computeBinaryOpEffect(
-            lhsValue: Any?,
-            rhsValue: Any?,
-            has: HasOperatorCode?,
-        ): Any? {
-            return if (has?.operatorCode == "**") {
-                when {
-                    lhsValue is Number && rhsValue is Number ->
-                        lhsValue.toDouble().pow(rhsValue.toDouble())
-                    else -> cannotEvaluate(has as Node, this)
-                }
-            } else {
-                super.computeBinaryOpEffect(lhsValue, rhsValue, has)
+    @Test
+    fun testFunctionResolution() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val tu =
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("foobar.py").toFile()), topLevel, true) {
+                it.registerLanguage<PythonLanguage>()
             }
-        }
+        assertNotNull(tu)
+
+        // ensure, we have four functions and no inferred ones
+        val functions = tu.functions
+        assertEquals(4, functions.size)
+
+        val inferred = functions.filter { it.isInferred }
+        assertTrue(inferred.isEmpty())
+    }
+
+    @Test
+    fun testMultiComponent() {
+        val projectRoot = Path.of("src", "test", "resources", "python", "big-project")
+
+        val config =
+            TranslationConfiguration.builder()
+                .softwareComponents(
+                    mutableMapOf(
+                        "component1" to listOf(projectRoot.resolve("component1").toFile()),
+                        "component2" to listOf(projectRoot.resolve("component2").toFile()),
+                        "stdlib" to listOf(projectRoot.resolve("stdlib").toFile()),
+                    )
+                )
+                .topLevels(
+                    mapOf(
+                        "component1" to projectRoot.resolve("component1").toFile(),
+                        "component2" to projectRoot.resolve("component2").toFile(),
+                        "stdlib" to projectRoot.resolve("stdlib").toFile(),
+                    )
+                )
+                .loadIncludes(true)
+                .disableCleanup()
+                .debugParser(true)
+                .failOnError(true)
+                .useParallelFrontends(true)
+                .defaultPasses()
+                .registerLanguage<PythonLanguage>()
+                .build()
+
+        val result = TranslationManager.builder().config(config).build().analyze().get()
+        assertEquals(3, result.components.size)
+
+        val stdlib = result.components["stdlib"]
+        assertNotNull(stdlib)
+        assertEquals(listOf("os"), stdlib.namespaces.map { it.name.toString() })
+        val osName = stdlib.namespaces["os"].variables["name"]
+        assertNotNull(osName)
+
+        val component1 = result.components["component1"]
+        assertNotNull(component1)
+        assertEquals(
+            listOf("mypackage", "mypackage.module"),
+            component1.namespaces.map { it.name.toString() },
+        )
+        val a = component1.variables["a"]
+        assertNotNull(a)
+        assertRefersTo(a.firstAssignment, osName)
+
+        val component2 = result.components["component2"]
+        assertNotNull(component2)
+        assertEquals(
+            listOf("otherpackage", "otherpackage.module"),
+            component2.namespaces.map { it.name.toString() },
+        )
+        val c = component2.variables["c"]
+        assertNotNull(c)
+        assertRefersTo(c.firstAssignment, a)
+
+        val fooCall = component2.calls["foo"]
+        assertNotNull(fooCall)
+
+        val barArgument = fooCall.argumentEdges["bar"]?.end
+        assertNotNull(barArgument)
     }
 }

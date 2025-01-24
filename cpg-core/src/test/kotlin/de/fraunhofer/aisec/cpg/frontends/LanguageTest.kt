@@ -94,6 +94,7 @@ class LanguageTest {
             with(TestLanguageFrontend("::", language = otherLanguage)) {
                 val tu = newTranslationUnitDeclaration("tu-language-other")
                 val comp = Component()
+                comp.ctx = this.ctx
                 comp.addTranslationUnit(tu)
                 comp
             }
@@ -103,6 +104,7 @@ class LanguageTest {
             with(TestLanguageFrontend("::", language = testLanguage)) {
                 val tu = newTranslationUnitDeclaration("tu-language-test")
                 val comp = Component()
+                comp.ctx = this.ctx
                 comp.addTranslationUnit(tu)
                 comp
             }

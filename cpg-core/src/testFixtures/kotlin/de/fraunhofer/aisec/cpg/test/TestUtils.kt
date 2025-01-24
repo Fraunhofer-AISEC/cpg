@@ -192,16 +192,17 @@ fun analyzeWithCompilationDatabase(
     filterComponents: List<String>? = null,
     configModifier: Consumer<TranslationConfiguration.Builder>? = null,
 ): TranslationResult {
-    return analyze(
-        listOf(),
-        jsonCompilationDatabase.parentFile.toPath().toAbsolutePath(),
-        usePasses,
-    ) {
+    val top = jsonCompilationDatabase.parentFile.toPath().toAbsolutePath()
+    return analyze(listOf(), top, usePasses) {
         val db = CompilationDatabase.fromFile(jsonCompilationDatabase, filterComponents)
         if (db.isNotEmpty()) {
             it.useCompilationDatabase(db)
             @Suppress("UNCHECKED_CAST")
             it.softwareComponents(db.components as MutableMap<String, List<File>>)
+            // We need to set the top level for all components as well, since the compilation
+            // database might
+            // have relative paths based on our "top" location
+            it.topLevels(db.components.map { Pair(it.key, top.toFile()) }.toMap())
             configModifier?.accept(it)
         }
         configModifier?.accept(it)

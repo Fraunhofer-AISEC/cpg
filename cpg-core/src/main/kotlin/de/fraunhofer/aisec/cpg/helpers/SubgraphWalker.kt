@@ -439,7 +439,8 @@ private fun CallExpression.duplicateTo(call: CallExpression, callee: Reference) 
     call.ctx = this.ctx
     call.language = this.language
     call.scope = this.scope
-    call.arguments = this.arguments
+    call.argumentEdges.clear()
+    call.argumentEdges += this.argumentEdges
     call.type = this.type
     call.assignedTypes = this.assignedTypes
     call.code = this.code
