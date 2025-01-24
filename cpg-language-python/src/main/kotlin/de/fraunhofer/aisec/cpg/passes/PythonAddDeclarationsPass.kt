@@ -119,7 +119,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
         if (symbol.isNotEmpty()) return null
 
         // First, check if we need to create a field
-        var field: FieldDeclaration? =
+        var decl: VariableDeclaration? =
             when {
                 // Check, whether we are referring to a "self.X", which would create a field
                 scopeManager.isInRecord && scopeManager.isInFunction && ref.refersToReceiver -> {
@@ -134,15 +134,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
                     // creating fields, except if this is a receiver
                     return null
                 }
-                scopeManager.isInRecord &&
-                    scopeManager.isInFunction &&
-                    scopeManager.currentFunction?.annotations?.any {
-                        it.name.localName == "staticmethod"
-                    } == true -> {
-                    // If this is a static method, so we may need a local variable
-                    null
-                }
-                scopeManager.isInRecord -> {
+                scopeManager.isInRecord && !scopeManager.isInFunction -> {
                     // We end up here for fields declared directly in the class body. These are
                     // class attributes; more or less static fields.
                     newFieldDeclaration(ref.name)
@@ -152,16 +144,16 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
                 }
             }
 
-        // If we didn't create any field up to this point and if we are still have not returned, we
-        // can create a normal variable. We need to take scope modifications into account.
-        var decl =
-            if (field == null && targetScope != null) {
-                scopeManager.withScope(targetScope) { newVariableDeclaration(ref.name) }
-            } else if (field == null) {
-                newVariableDeclaration(ref.name)
-            } else {
-                field
-            }
+        // If we didn't create any declaration up to this point and are still here, we need to
+        // create a (local) variable. We need to take scope modifications into account.
+        if (decl == null) {
+            decl =
+                if (targetScope != null) {
+                    scopeManager.withScope(targetScope) { newVariableDeclaration(ref.name) }
+                } else {
+                    newVariableDeclaration(ref.name)
+                }
+        }
 
         decl.code = ref.code
         decl.location = ref.location
