@@ -56,7 +56,6 @@ tasks {
             "https://github.com/Fraunhofer-AISEC/libgoast/releases/download/${version}/libgoast-amd64.dylib",
             "https://github.com/Fraunhofer-AISEC/libgoast/releases/download/${version}/libgoast-arm64.so",
             "https://github.com/Fraunhofer-AISEC/libgoast/releases/download/${version}/libgoast-amd64.so",
-            "https://github.com/Fraunhofer-AISEC/libgoast/releases/download/${version}/libgoast-amd64.so",
             "https://github.com/Fraunhofer-AISEC/libgoast/releases/download/${version}/libgoast-amd64.dll"
         ))
         dest(projectDir.resolve("src/main/resources"))
