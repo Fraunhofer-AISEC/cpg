@@ -102,7 +102,7 @@ open class TestLanguageFrontend(
         externalSources: MutableList<File>,
         processedImports: MutableList<String>,
     ): List<File> {
-        TODO("Not yet implemented")
+        return listOf()
     }
 
     override fun locationOf(astNode: Any): PhysicalLocation? {
