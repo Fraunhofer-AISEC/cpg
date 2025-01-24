@@ -205,12 +205,13 @@ fun dataFlow(
     to: Node,
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
+    useIndexStack: Boolean = true,
 ): QueryTree<Boolean> {
     val evalRes =
         from.followNextDFGEdgesUntilHit(
             collectFailedPaths = collectFailedPaths,
             findAllPossiblePaths = findAllPossiblePaths,
-            useIndexStack = true,
+            useIndexStack = useIndexStack,
         ) {
             it == to
         }
@@ -233,12 +234,13 @@ fun dataFlow(
     predicate: (Node) -> Boolean,
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
+    useIndexStack: Boolean = true,
 ): QueryTree<Boolean> {
     val evalRes =
         from.followNextDFGEdgesUntilHit(
             collectFailedPaths = collectFailedPaths,
             findAllPossiblePaths = findAllPossiblePaths,
-            useIndexStack = true,
+            useIndexStack = useIndexStack,
             predicate = predicate,
         )
     val allPaths = evalRes.fulfilled.map { QueryTree(it) }.toMutableList()
