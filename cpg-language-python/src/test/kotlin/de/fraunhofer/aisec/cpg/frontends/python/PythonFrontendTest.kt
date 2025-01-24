@@ -1750,5 +1750,10 @@ class PythonFrontendTest : BaseTest() {
 
         // There is no field called "b" in the result.
         assertNull(tu.fields["b"])
+
+        val foo = tu.functions["foo"]
+        assertNotNull(foo)
+        val refersTo = foo.refs("fooA").map { it.refersTo }
+        refersTo.forEach { refersTo -> assertIs<ParameterDeclaration>(refersTo) }
     }
 }
