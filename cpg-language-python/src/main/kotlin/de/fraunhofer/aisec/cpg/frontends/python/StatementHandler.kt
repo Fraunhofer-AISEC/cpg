@@ -506,17 +506,18 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     private fun handleDelete(node: Python.AST.Delete): DeleteExpression {
         val delete = newDeleteExpression(rawNode = node)
         node.targets.forEach { target ->
-            if (target is Python.AST.Subscript) {
-                delete.operands.add(frontend.expressionHandler.handle(target))
-            } else {
+            delete.operands.add(frontend.expressionHandler.handle(target))
+
+            if (target !is Python.AST.Subscript) {
                 delete.additionalProblems +=
                     newProblemExpression(
                         problem =
-                            "handleDelete: 'Name' and 'Attribute' deletions are not supported, as they removes them from the scope.",
+                            "handleDelete: 'Name' and 'Attribute' deletions are not fully supported, as they remove variables from the scope.",
                         rawNode = target,
                     )
             }
         }
+
         return delete
     }
 

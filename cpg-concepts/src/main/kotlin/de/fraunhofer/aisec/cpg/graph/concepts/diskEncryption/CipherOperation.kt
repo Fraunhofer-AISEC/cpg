@@ -30,3 +30,10 @@ import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 
 abstract class CipherOperation(underlyingNode: Node, override val concept: Cipher) :
     Operation(underlyingNode = underlyingNode, concept = concept), IsDiskEncryption
+
+class Encrypt(
+    underlyingNode: Node,
+    concept: Cipher,
+    /** The key used for encryption */
+    val key: Secret,
+) : CipherOperation(underlyingNode = underlyingNode, concept = concept) {}
