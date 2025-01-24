@@ -68,7 +68,7 @@ abstract class MemoryOperation(underlyingNode: Node, concept: Concept<MemoryOper
 class Allocate(
     underlyingNode: Node,
     concept: Concept<MemoryOperation>,
-    /** A reference to [what] is de-allocated, e.g., a variable. */
+    /** A reference to [what] is allocated, e.g., a variable. */
     var what: Node?,
 ) : MemoryOperation(underlyingNode = underlyingNode, concept = concept)
 
