@@ -142,7 +142,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
                     // If this is a static method, so we may need a local variable
                     null
                 }
-                scopeManager.isInRecord -> {
+                scopeManager.isInRecord && !scopeManager.isInFunction -> {
                     // We end up here for fields declared directly in the class body. These are
                     // class attributes; more or less static fields.
                     newFieldDeclaration(ref.name)
