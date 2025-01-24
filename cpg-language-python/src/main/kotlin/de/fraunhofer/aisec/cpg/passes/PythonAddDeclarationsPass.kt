@@ -134,14 +134,6 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
                     // creating fields, except if this is a receiver
                     return null
                 }
-                scopeManager.isInRecord &&
-                    scopeManager.isInFunction &&
-                    scopeManager.currentFunction?.annotations?.any {
-                        it.name.localName == "staticmethod"
-                    } == true -> {
-                    // If this is a static method, so we may need a local variable
-                    null
-                }
                 scopeManager.isInRecord && !scopeManager.isInFunction -> {
                     // We end up here for fields declared directly in the class body. These are
                     // class attributes; more or less static fields.
