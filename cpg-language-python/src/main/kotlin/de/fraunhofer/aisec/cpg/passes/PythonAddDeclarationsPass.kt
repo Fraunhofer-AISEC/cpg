@@ -183,47 +183,42 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
                 this.base.name == scopeManager.currentMethod?.receiver?.name
         }
 
+    /**
+     * Generates a new [VariableDeclaration] if [target] is a [Reference] and there is no existing
+     * declaration yet.
+     */
+    private fun handleAssignmentToTarget(
+        assignExpression: AssignExpression,
+        target: Node,
+        setAccessValue: Boolean = false,
+    ) {
+        (target as? Reference)?.let {
+            if (setAccessValue) it.access = AccessValues.WRITE
+            val handled = handleWriteToReference(target)
+            if (handled is Declaration) {
+                // We cannot assign an initializer here because this will lead to duplicate
+                // DFG edges, but we need to propagate the type information from our value
+                // to the declaration. We therefore add the declaration to the observers of
+                // the value's type, so that it gets informed and can change its own type
+                // accordingly.
+                assignExpression
+                    .findValue(target)
+                    ?.registerTypeObserver(InitializerTypePropagation(handled))
+
+                // Add it to our assign expression, so that we can find it in the AST
+                assignExpression.declarations += handled
+            }
+        }
+    }
+
     private fun handleAssignExpression(assignExpression: AssignExpression) {
         for (target in assignExpression.lhs) {
-            (target as? Reference)?.let {
-                val handled = handleWriteToReference(target)
-                if (handled is Declaration) {
-                    // We cannot assign an initializer here because this will lead to duplicate
-                    // DFG edges, but we need to propagate the type information from our value
-                    // to the declaration. We therefore add the declaration to the observers of
-                    // the value's type, so that it gets informed and can change its own type
-                    // accordingly.
-                    assignExpression
-                        .findValue(target)
-                        ?.registerTypeObserver(InitializerTypePropagation(handled))
-
-                    // Add it to our assign expression, so that we can find it in the AST
-                    assignExpression.declarations += handled
-                }
-            }
+            handleAssignmentToTarget(assignExpression, target, setAccessValue = false)
+            // If the lhs is an InitializerListExpression, we have to handle the individual elements
+            // in the initializers.
             (target as? InitializerListExpression)?.let {
                 it.initializers.forEach { initializer ->
-                    (initializer as? Reference)?.let {
-                        it.access = AccessValues.WRITE
-                        val handled = handleWriteToReference(initializer)
-                        if (handled is Declaration) {
-                            // We cannot assign an initializer here because this will lead to
-                            // duplicate
-                            // DFG edges, but we need to propagate the type information from our
-                            // value
-                            // to the declaration. We therefore add the declaration to the observers
-                            // of
-                            // the value's type, so that it gets informed and can change its own
-                            // type
-                            // accordingly.
-                            assignExpression
-                                .findValue(initializer)
-                                ?.registerTypeObserver(InitializerTypePropagation(handled))
-
-                            // Add it to our assign expression, so that we can find it in the AST
-                            assignExpression.declarations += handled
-                        }
-                    }
+                    handleAssignmentToTarget(assignExpression, initializer, setAccessValue = true)
                 }
             }
         }
