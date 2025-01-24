@@ -41,7 +41,7 @@ publishing {
 
 dependencies {
     // to evaluate some test cases
-    testImplementation(project(":cpg-analysis"))
+    testImplementation(projects.cpgAnalysis)
 
     // We depend on the Python frontend for the integration tests, but the frontend is only available if enabled.
     // If it's not available, the integration tests fail (which is ok). But if we would directly reference the
@@ -49,4 +49,5 @@ dependencies {
     findProject(":cpg-language-python")?.also {
         integrationTestImplementation(it)
     }
+    integrationTestImplementation(projects.cpgAnalysis)
 }
