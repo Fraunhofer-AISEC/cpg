@@ -18,6 +18,7 @@ de.fraunhofer.aisec.cpg.graph
 de.fraunhofer.aisec.cpg.graph.concepts
 de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption
 de.fraunhofer.aisec.cpg.graph.concepts.http
+de.fraunhofer.aisec.cpg.graph.concepts.memory
 module:cpg-console
 de.fraunhofer.aisec.cpg.analysis
 de.fraunhofer.aisec.cpg.console
