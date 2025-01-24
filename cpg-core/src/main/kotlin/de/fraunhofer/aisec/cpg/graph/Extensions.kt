@@ -54,6 +54,26 @@ inline fun <reified T> Node?.allChildren(noinline predicate: ((T) -> Boolean)? =
 }
 
 /**
+ * Flattens the AST beginning with this node and returns all nodes of type [T]. For convenience, an
+ * optional predicate function [predicate] can be supplied, which will be applied via
+ * [Collection.filter]
+ */
+@JvmOverloads
+inline fun <reified T> Node?.allChildrenWithOverlays(
+    noinline predicate: ((T) -> Boolean)? = null
+): List<T> {
+    val nodes = SubgraphWalker.flattenAST(this)
+    val nodesWithOverlays = nodes + nodes.flatMap { it.overlays }
+    val filtered = nodesWithOverlays.filterIsInstance<T>()
+
+    return if (predicate != null) {
+        filtered.filter(predicate)
+    } else {
+        filtered
+    }
+}
+
+/**
  * Returns a list of all [Node]s, starting from the current [Node], which are the beginning of an
  * EOG path created by the [EvaluationOrderGraphPass]. Typical examples include all top-level
  * declarations, such as functions and variables. For a more detailed explanation, see
