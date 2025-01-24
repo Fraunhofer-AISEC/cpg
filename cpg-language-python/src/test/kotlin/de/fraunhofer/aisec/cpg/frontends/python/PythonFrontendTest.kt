@@ -1740,13 +1740,26 @@ class PythonFrontendTest : BaseTest() {
 
         val someClass = tu.records["SomeClass"]
         assertNotNull(someClass)
-        assertTrue(someClass.fields.isEmpty())
 
+        val fieldX = someClass.fields["x"]
+        assertNotNull(fieldX)
+
+        val method = tu.functions["method"]
+        assertNotNull(method)
+        // method has a local variables "b".
+        val variableB = method.variables["b"]
+        assertNotNull(variableB)
+        assertIsNot<FieldDeclaration>(variableB)
+        assertEquals(1, someClass.fields.size)
+
+        val someClass2 = tu.records["SomeClass2"]
+        assertNotNull(someClass2)
         val staticMethod = tu.functions["static_method"]
         assertNotNull(staticMethod)
         // static_method has two local variables which are "b" and "x"
-        assertEquals(2, staticMethod.variables.size)
+        assertEquals(2, staticMethod.variables.filter { it !is FieldDeclaration }.size)
         assertEquals(setOf("b", "x"), staticMethod.variables.map { it.name.localName }.toSet())
+        assertTrue(someClass2.fields.isEmpty())
 
         // There is no field called "b" in the result.
         assertNull(tu.fields["b"])
