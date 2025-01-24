@@ -114,7 +114,6 @@ open class CLanguage :
         hint: HasType?,
         targetHint: HasType?,
     ): CastResult {
-        return DirectMatch
         val match = super.tryCast(type, targetType, hint, targetHint)
         if (match != CastNotPossible) {
             return match
