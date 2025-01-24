@@ -49,7 +49,7 @@ inline fun <reified T> Node.allExtended(
     noinline sel: ((T) -> Boolean)? = null,
     noinline mustSatisfy: (T) -> QueryTree<Boolean>,
 ): QueryTree<Boolean> {
-    val nodes = this.allChildren(sel)
+    val nodes = this.allChildrenWithOverlays(sel)
 
     val queryChildren =
         nodes.map { n ->
@@ -73,7 +73,7 @@ inline fun <reified T> Node.all(
     noinline sel: ((T) -> Boolean)? = null,
     noinline mustSatisfy: (T) -> Boolean,
 ): Pair<Boolean, List<T>> {
-    val nodes = this.allChildren(sel)
+    val nodes = this.allChildrenWithOverlays(sel)
 
     val failedNodes = nodes.filterNot(mustSatisfy)
     return Pair(failedNodes.isEmpty(), failedNodes)
@@ -90,7 +90,7 @@ inline fun <reified T> Node.existsExtended(
     noinline sel: ((T) -> Boolean)? = null,
     noinline mustSatisfy: (T) -> QueryTree<Boolean>,
 ): QueryTree<Boolean> {
-    val nodes = this.allChildren(sel)
+    val nodes = this.allChildrenWithOverlays(sel)
 
     val queryChildren =
         nodes.map { n ->
@@ -113,7 +113,7 @@ inline fun <reified T> Node.exists(
     noinline sel: ((T) -> Boolean)? = null,
     noinline mustSatisfy: (T) -> Boolean,
 ): Pair<Boolean, List<T>> {
-    val nodes = this.allChildren(sel)
+    val nodes = this.allChildrenWithOverlays(sel)
 
     val queryChildren = nodes.filter(mustSatisfy)
     return Pair(queryChildren.isNotEmpty(), queryChildren)
