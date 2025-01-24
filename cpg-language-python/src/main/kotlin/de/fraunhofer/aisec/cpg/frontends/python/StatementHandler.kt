@@ -512,7 +512,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 delete.additionalProblems +=
                     newProblemExpression(
                         problem =
-                            "handleDelete: 'Name' and 'Attribute' deletions are not fully supported, as they removes variables from the scope.",
+                            "handleDelete: 'Name' and 'Attribute' deletions are not fully supported, as they remove variables from the scope.",
                         rawNode = target,
                     )
             }
