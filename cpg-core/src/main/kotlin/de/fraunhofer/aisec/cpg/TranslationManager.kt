@@ -301,6 +301,8 @@ private constructor(
                 component.name = Name(includePath.name)
                 result.addComponent(component)
 
+                ctx.config.topLevels.put(includePath.toString(), includePath.toFile())
+
                 usedFrontends.addAll(
                     if (useParallelFrontends) {
                         parseParallel(component, result, ctx, filesInPath)
