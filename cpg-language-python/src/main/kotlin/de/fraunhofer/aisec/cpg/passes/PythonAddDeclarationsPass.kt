@@ -119,7 +119,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
         if (symbol.isNotEmpty()) return null
 
         // First, check if we need to create a field
-        var field: FieldDeclaration? =
+        var decl: VariableDeclaration? =
             when {
                 // Check, whether we are referring to a "self.X", which would create a field
                 scopeManager.isInRecord && scopeManager.isInFunction && ref.refersToReceiver -> {
@@ -144,16 +144,16 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
                 }
             }
 
-        // If we didn't create any field up to this point and if we are still have not returned, we
-        // can create a normal variable. We need to take scope modifications into account.
-        var decl =
-            if (field == null && targetScope != null) {
-                scopeManager.withScope(targetScope) { newVariableDeclaration(ref.name) }
-            } else if (field == null) {
-                newVariableDeclaration(ref.name)
-            } else {
-                field
-            }
+        // If we didn't create any declaration up to this point and are still here, we need to
+        // create a (local) variable. We need to take scope modifications into account.
+        if (decl == null) {
+            decl =
+                if (targetScope != null) {
+                    scopeManager.withScope(targetScope) { newVariableDeclaration(ref.name) }
+                } else {
+                    newVariableDeclaration(ref.name)
+                }
+        }
 
         decl.code = ref.code
         decl.location = ref.location
