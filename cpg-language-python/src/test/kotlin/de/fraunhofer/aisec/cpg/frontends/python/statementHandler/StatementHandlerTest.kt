@@ -195,7 +195,7 @@ class StatementHandlerTest : BaseTest() {
 
         // Test for `del a`
         val deleteStmt1 = deleteExpressions[0]
-        assertEquals(0, deleteStmt1.operands.size)
+        assertEquals(1, deleteStmt1.operands.size)
         assertEquals(1, deleteStmt1.additionalProblems.size)
 
         // Test for `del my_list[2]`
@@ -212,7 +212,7 @@ class StatementHandlerTest : BaseTest() {
 
         // Test for `del obj.d`
         val deleteStmt4 = deleteExpressions[3]
-        assertEquals(0, deleteStmt4.operands.size)
+        assertEquals(1, deleteStmt4.operands.size)
         assertEquals(1, deleteStmt4.additionalProblems.size)
     }
 
