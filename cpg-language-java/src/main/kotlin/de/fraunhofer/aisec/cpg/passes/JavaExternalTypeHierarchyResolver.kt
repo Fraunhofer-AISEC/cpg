@@ -55,7 +55,7 @@ class JavaExternalTypeHierarchyResolver(ctx: TranslationContext) : ComponentPass
         val resolver = CombinedTypeSolver()
 
         resolver.add(ReflectionTypeSolver())
-        var root = config.topLevel
+        var root = ctx.currentComponent?.topLevel
         if (root == null && config.softwareComponents.size == 1) {
             root =
                 config.softwareComponents[config.softwareComponents.keys.first()]?.let {

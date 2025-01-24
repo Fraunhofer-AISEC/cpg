@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.builder
 
 import de.fraunhofer.aisec.cpg.*
+import de.fraunhofer.aisec.cpg.TranslationResult.Companion.DEFAULT_APPLICATION_NAME
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
@@ -47,6 +48,8 @@ fun LanguageFrontend<*, *>.translationResult(
 ): TranslationResult {
     val node = TranslationResult(TranslationManager.builder().config(ctx.config).build(), ctx)
     val component = Component()
+    component.name = Name(DEFAULT_APPLICATION_NAME)
+    component.ctx = this.ctx
     node.addComponent(component)
     init(node)
 
