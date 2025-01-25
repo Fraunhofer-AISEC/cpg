@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.frontends.HasMemberExpressionAmbiguity
 import de.fraunhofer.aisec.cpg.graph.HasBase
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.codeAndLocationFrom
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.fqn
@@ -56,6 +57,7 @@ import de.fraunhofer.aisec.cpg.passes.configuration.RequiresLanguageTrait
  * @constructor Initializes the pass with the provided translation context.
  */
 @ExecuteBefore(EvaluationOrderGraphPass::class)
+@ExecuteBefore(ResolveCallExpressionAmbiguityPass::class)
 @DependsOn(ImportResolver::class)
 @RequiresLanguageTrait(HasMemberExpressionAmbiguity::class)
 class ResolveMemberExpressionAmbiguityPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
@@ -85,17 +87,18 @@ class ResolveMemberExpressionAmbiguityPass(ctx: TranslationContext) : Translatio
         // import, because in this case we do not have a member expression, but a reference with a
         // qualified name
         val baseName = me.base.reconstructedImportName
-        var isImportedNamespace = isImportedNamespace(baseName, me)
+        val (isImportedNamespace, declaration) = isImportedNamespace(baseName, me)
 
-        if (isImportedNamespace) {
+        if (isImportedNamespace && declaration != null) {
             with(me) {
-                val ref = newReference(baseName.fqn(me.name.localName)).codeAndLocationFrom(this)
+                val ref =
+                    newReference(declaration.name.fqn(me.name.localName)).codeAndLocationFrom(this)
                 walker.replace(me.astParent, me, ref)
             }
         }
     }
 
-    private fun isImportedNamespace(name: Name, hint: Expression): Boolean {
+    private fun isImportedNamespace(name: Name, hint: Expression): Pair<Boolean, Declaration?> {
         val resolved =
             scopeManager.lookupSymbolByName(
                 name,
@@ -103,17 +106,20 @@ class ResolveMemberExpressionAmbiguityPass(ctx: TranslationContext) : Translatio
                 location = hint.location,
                 startScope = hint.scope,
             )
-        var isImportedNamespace = resolved.singleOrNull() is NamespaceDeclaration
+        var declaration = resolved.singleOrNull()
+        var isImportedNamespace = declaration is NamespaceDeclaration
         if (!isImportedNamespace) {
             // It still could be an imported namespace of an imported package that we do not know.
             // The problem is that we do not really know at this point whether we import a
             // (sub)module or a global variable of the namespace. We tend to assume that this is a
             // namespace
             val imports = hint.translationUnit.imports
-            isImportedNamespace =
-                imports.any { it.name.lastPartsMatch(name) || it.name.startsWith(name) }
+            declaration =
+                imports.firstOrNull { it.name.lastPartsMatch(name) || it.name.startsWith(name) }
+            isImportedNamespace = declaration != null
         }
-        return isImportedNamespace
+
+        return Pair(isImportedNamespace, declaration)
     }
 
     override fun cleanup() {
