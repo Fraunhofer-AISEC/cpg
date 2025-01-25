@@ -46,7 +46,7 @@ class PythonLanguage :
     HasOperatorOverloading,
     HasFunctionStyleConstruction,
     HasMemberExpressionAmbiguity,
-    HasExplicitMemberAccess {
+    HasExplicitReceiverOnly {
     override val fileExtensions = listOf("py", "pyi")
     override val namespaceDelimiter = "."
     @Transient

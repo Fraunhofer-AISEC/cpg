@@ -282,14 +282,18 @@ interface HasOperatorOverloading : LanguageTrait {
 }
 
 /**
- * A language trait that specifies that this language has explicit member access, meaning that
- * fields (and methods) of a class need to be accessed with a dot operator and cannot be accessed in
- * an unqualified lookup.
+ * A language trait that specifies that this language has only explicit member access, meaning that
+ * fields (and methods) of a class need to be accessed with a dot operator (or an equivalent) and
+ * cannot be accessed with an implicit receiver.
  *
  * Examples include Python and Go where the name of the receiver such as `self` is always required
  * to access a field or method.
+ *
+ * We need this information to make a decision which symbols or scopes to consider when doing an
+ * unqualified lookup of a symbol in [Scope.lookupSymbol]. More specifically, we need to skip the
+ * symbols of a [RecordScope] if the language has explicit member access only.
  */
-interface HasExplicitMemberAccess : LanguageTrait
+interface HasExplicitReceiverOnly : LanguageTrait
 
 /**
  * Creates a [Pair] of class and operator code used in
