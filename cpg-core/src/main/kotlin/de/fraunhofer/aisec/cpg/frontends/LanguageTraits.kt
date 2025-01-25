@@ -282,6 +282,16 @@ interface HasOperatorOverloading : LanguageTrait {
 }
 
 /**
+ * A language trait that specifies that this language has explicit member access, meaning that
+ * fields (and methods) of a class need to be accessed with a dot operator and cannot be accessed in
+ * an unqualified lookup.
+ *
+ * Examples include Python and Go where the name of the receiver such as `self` is always required
+ * to access a field or method.
+ */
+interface HasExplicitMemberAccess : LanguageTrait
+
+/**
  * Creates a [Pair] of class and operator code used in
  * [HasOperatorOverloading.overloadedOperatorNames].
  */

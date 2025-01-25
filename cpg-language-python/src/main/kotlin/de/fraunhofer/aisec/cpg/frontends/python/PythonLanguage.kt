@@ -45,7 +45,8 @@ class PythonLanguage :
     HasShortCircuitOperators,
     HasOperatorOverloading,
     HasFunctionStyleConstruction,
-    HasMemberExpressionAmbiguity {
+    HasMemberExpressionAmbiguity,
+    HasExplicitMemberAccess {
     override val fileExtensions = listOf("py", "pyi")
     override val namespaceDelimiter = "."
     @Transient

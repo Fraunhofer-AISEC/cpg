@@ -726,7 +726,13 @@ class ScopeManager : ScopeProvider {
         scope: Scope? = node.scope,
         predicate: ((Declaration) -> Boolean)? = null,
     ): List<Declaration> {
-        return lookupSymbolByName(node.name, node.language, node.location, scope, predicate)
+        return lookupSymbolByName(
+            node.name,
+            node.language,
+            node.location,
+            scope,
+            predicate = predicate,
+        )
     }
 
     /**

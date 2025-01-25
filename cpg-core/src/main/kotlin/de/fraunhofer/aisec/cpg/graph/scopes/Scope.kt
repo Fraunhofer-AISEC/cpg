@@ -26,11 +26,12 @@
 package de.fraunhofer.aisec.cpg.graph.scopes
 
 import com.fasterxml.jackson.annotation.JsonBackReference
+import de.fraunhofer.aisec.cpg.frontends.HasExplicitMemberAccess
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.Node.Companion.TO_STRING_STYLE
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
+import de.fraunhofer.aisec.cpg.graph.firstParentOrNull
 import de.fraunhofer.aisec.cpg.graph.statements.LabelStatement
 import de.fraunhofer.aisec.cpg.graph.statements.LookupScopeStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
@@ -169,7 +170,17 @@ sealed class Scope(
             if (thisScopeOnly || modifiedScoped != null) {
                 break
             } else {
-                scope = scope.parent
+                // If our language needs explicit lookup for fields (and other class members), we
+                // need to skip record scopes unless we are in a qualified lookup
+                if (
+                    languageOnly is HasExplicitMemberAccess &&
+                        !thisScopeOnly &&
+                        scope.parent is RecordScope
+                ) {
+                    scope = scope.firstParentOrNull { it !is RecordScope }
+                } else {
+                    scope = scope.parent
+                }
             }
         }
 
@@ -226,6 +237,20 @@ sealed class Scope(
             val list = this.symbols.computeIfAbsent(key) { mutableListOf() }
             list += value
         }
+    }
+
+    fun firstParentOrNull(predicate: (Scope) -> Boolean): Scope? {
+        var scope = this.parent
+        while (scope != null) {
+            if (predicate(scope)) {
+                return scope
+            }
+
+            // go upwards in the scope tree
+            scope = scope.parent
+        }
+
+        return null
     }
 }
 
