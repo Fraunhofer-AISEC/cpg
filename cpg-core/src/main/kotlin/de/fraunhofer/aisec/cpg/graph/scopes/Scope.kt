@@ -176,9 +176,7 @@ sealed class Scope(
                 } else {
                     // If our language needs explicit lookup for fields (and other class members),
                     // we need to skip record scopes unless we are in a qualified lookup
-                    if (
-                        languageOnly is HasExplicitReceiverOnly && scope.parent is RecordScope
-                    ) {
+                    if (languageOnly is HasExplicitReceiverOnly && scope.parent is RecordScope) {
                         scope.firstParentOrNull { it !is RecordScope }
                     } else {
                         // Otherwise, we can just go to the next parent
