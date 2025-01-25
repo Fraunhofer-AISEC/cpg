@@ -221,7 +221,7 @@ private constructor(
                                         .trimIndent()
                                 )
                             }
-                                ?: {
+                                ?: run {
                                     writer.write(
                                         """
 #include "${file.absolutePath}"
