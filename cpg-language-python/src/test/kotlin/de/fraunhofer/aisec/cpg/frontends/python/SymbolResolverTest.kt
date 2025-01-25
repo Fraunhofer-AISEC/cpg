@@ -33,6 +33,8 @@ import de.fraunhofer.aisec.cpg.test.assertRefersTo
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
+import kotlin.test.assertIsNot
 import kotlin.test.assertNotNull
 
 class SymbolResolverTest {
@@ -56,10 +58,15 @@ class SymbolResolverTest {
         aRefs.filterIsInstance<MemberExpression>().forEach { assertRefersTo(it, fieldA) }
         aRefs.filter { it !is MemberExpression }.forEach { assertRefersTo(it, a) }
 
+        // We should only have one reference to "os" -> the member expression "self.os"
         val osRefs = result.refs("os")
         assertEquals(1, osRefs.size)
+        assertIs<MemberExpression>(osRefs.singleOrNull())
 
+        // "os.name" is not a member expression but a reference to the field "name" of the "os"
+        // module, therefore it is a reference
         val osNameRefs = result.refs("os.name")
         assertEquals(1, osNameRefs.size)
+        assertIsNot<MemberExpression>(osNameRefs.singleOrNull())
     }
 }

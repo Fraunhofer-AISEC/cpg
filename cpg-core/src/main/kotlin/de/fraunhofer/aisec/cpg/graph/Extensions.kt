@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.flows.*
+import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
@@ -1062,10 +1063,8 @@ val Node?.assigns: List<AssignExpression>
 
 /**
  * This function tries to find the first parent node that satisfies the condition specified in
- * [predicate]. It starts searching in the [searchNode], moving up-wards using the [Node.astParent]
- * attribute.
+ * [predicate]. It starts searching in [this], moving upwards using the [Node.astParent] attribute.
  *
- * @param searchNode the child node that we start the search from
  * @param predicate the search predicate
  */
 fun Node.firstParentOrNull(predicate: (Node) -> Boolean): Node? {
@@ -1080,6 +1079,26 @@ fun Node.firstParentOrNull(predicate: (Node) -> Boolean): Node? {
 
         // go upwards in the ast tree
         node = node.astParent
+    }
+
+    return null
+}
+
+/**
+ * This function returns the first parent scope that matches the given [predicate]. If no parent
+ * scope matches the predicate, null is returned.
+ *
+ * @param predicate The predicate to match the parent scope against
+ */
+fun Scope.firstScopeParentOrNull(predicate: (Scope) -> Boolean): Scope? {
+    var scope = this.parent
+    while (scope != null) {
+        if (predicate(scope)) {
+            return scope
+        }
+
+        // go upwards in the scope tree
+        scope = scope.parent
     }
 
     return null

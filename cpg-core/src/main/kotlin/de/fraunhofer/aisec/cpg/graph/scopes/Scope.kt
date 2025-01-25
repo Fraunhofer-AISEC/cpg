@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
+import de.fraunhofer.aisec.cpg.graph.firstScopeParentOrNull
 import de.fraunhofer.aisec.cpg.graph.statements.LabelStatement
 import de.fraunhofer.aisec.cpg.graph.statements.LookupScopeStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
@@ -177,7 +178,7 @@ sealed class Scope(
                     // If our language needs explicit lookup for fields (and other class members),
                     // we need to skip record scopes unless we are in a qualified lookup
                     if (languageOnly is HasExplicitReceiverOnly && scope.parent is RecordScope) {
-                        scope.firstParentOrNull { it !is RecordScope }
+                        scope.firstScopeParentOrNull { it !is RecordScope }
                     } else {
                         // Otherwise, we can just go to the next parent
                         scope.parent
@@ -238,20 +239,6 @@ sealed class Scope(
             val list = this.symbols.computeIfAbsent(key) { mutableListOf() }
             list += value
         }
-    }
-
-    fun firstParentOrNull(predicate: (Scope) -> Boolean): Scope? {
-        var scope = this.parent
-        while (scope != null) {
-            if (predicate(scope)) {
-                return scope
-            }
-
-            // go upwards in the scope tree
-            scope = scope.parent
-        }
-
-        return null
     }
 }
 
