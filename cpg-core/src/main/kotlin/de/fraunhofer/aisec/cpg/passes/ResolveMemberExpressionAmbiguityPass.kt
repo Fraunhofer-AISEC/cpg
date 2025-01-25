@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.frontends.HasMemberExpressionAmbiguity
 import de.fraunhofer.aisec.cpg.graph.HasBase
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.codeAndLocationFrom
-import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.fqn
@@ -87,18 +87,34 @@ class ResolveMemberExpressionAmbiguityPass(ctx: TranslationContext) : Translatio
         // import, because in this case we do not have a member expression, but a reference with a
         // qualified name
         val baseName = me.base.reconstructedImportName
-        val (isImportedNamespace, declaration) = isImportedNamespace(baseName, me)
+        val importName = referredImportName(baseName, me)
 
-        if (isImportedNamespace && declaration != null) {
+        if (importName != null) {
             with(me) {
-                val ref =
-                    newReference(declaration.name.fqn(me.name.localName)).codeAndLocationFrom(this)
+                val ref = newReference(importName.fqn(me.name.localName)).codeAndLocationFrom(this)
                 walker.replace(me.astParent, me, ref)
             }
         }
     }
 
-    private fun isImportedNamespace(name: Name, hint: Expression): Pair<Boolean, Declaration?> {
+    /**
+     * This function checks if the given name refers to an import, e.g., because it directly has the
+     * name of an import or if its parent name does. If it does refer to an import, then the
+     * function returns the fully qualified name of the import. If the name does not refer to an
+     * import, returns null.
+     *
+     * The check happens in two stages:
+     * - First, the function looks up the name in the current scope. If a symbol is found that
+     *   represents a [NamespaceDeclaration], the name of the declaration is returned.
+     * - Second, if no symbol is found in the current scope, the function looks up the name in the
+     *   list of [ImportDeclaration]s of the translation unit. If an import is found that matches
+     *   the name, the name of the import is returned.
+     *
+     * @param name The name to check for an import.
+     * @param hint The expression that hints at the language and location.
+     * @return The fully qualified name of the import if the name refers to an import, or null
+     */
+    private fun referredImportName(name: Name, hint: Expression): Name? {
         val resolved =
             scopeManager.lookupSymbolByName(
                 name,
@@ -119,7 +135,7 @@ class ResolveMemberExpressionAmbiguityPass(ctx: TranslationContext) : Translatio
             isImportedNamespace = declaration != null
         }
 
-        return Pair(isImportedNamespace, declaration)
+        return declaration?.name
     }
 
     override fun cleanup() {
