@@ -11,7 +11,7 @@ class EncryptionManager:
         return (hex_key, key_id)
 
     def encryt_data(self, data):
-        (key, key_id) = setup_new_key()
+        (key, key_id) = self.setup_new_key()
 
         if some_decision():
             very_good_key = "very_good" + key
