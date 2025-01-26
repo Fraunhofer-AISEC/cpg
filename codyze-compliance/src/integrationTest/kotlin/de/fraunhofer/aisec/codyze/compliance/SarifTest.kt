@@ -26,9 +26,11 @@
 package de.fraunhofer.aisec.codyze.compliance
 
 import de.fraunhofer.aisec.codyze.AnalysisProject
+import de.fraunhofer.aisec.cpg.graph.*
 import java.io.File
 import kotlin.io.path.Path
 import kotlin.test.Test
+import kotlin.test.assertNotNull
 
 class SarifTest {
     @Test
@@ -40,6 +42,10 @@ class SarifTest {
             )
 
         val result = project.analyzeWithGoals()
+        val tr = result.translationResult
+        val webappMain = tr.namespaces["webapp.main"]
+        assertNotNull(webappMain)
+
         result.writeSarifJson(File("findings.sarif"))
     }
 }
