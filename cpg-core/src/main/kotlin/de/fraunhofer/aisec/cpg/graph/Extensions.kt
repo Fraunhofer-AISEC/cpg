@@ -580,7 +580,7 @@ fun Node.followPrevCDGUntilHit(
  * not mandatory**. If the list "failed" is empty, the path is mandatory.
  */
 inline fun <reified T> Node.followXUntilHit(
-    x: (Node, SimpleStack<T>?) -> Collection<Node>,
+    noinline x: (Node, SimpleStack<T>?) -> Collection<Node>,
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
     stack: SimpleStack<T>? = null,
@@ -672,7 +672,7 @@ fun Node.followNextDFGEdgesUntilHit(
     useIndexStack: Boolean = true,
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
-
+    val callingStack = SimpleStack<CallExpression>()
     return followXUntilHit(
         stack = SimpleStack<IndexedDataflowGranularity>(),
         x = { currentNode, indexStack ->
@@ -700,9 +700,13 @@ fun Node.followNextDFGEdgesUntilHit(
                     }
                     .map { it.end }
             } else {
-                // We don't have to care about poping stuff from the stack. Maybe we can push
-                // something but we accept everything.
+                // First, let's take care of pushing any information on the stacks (index, calling
+                // context)
                 currentNode.nextDFGEdges.forEach {
+                    if (it is ContextSensitiveDataflow && it.callingContext is CallingContextIn) {
+                        // Push the call of our calling context to the stack
+                        callingStack.push(it.callingContext.call)
+                    }
                     if (
                         it.end is InitializerListExpression &&
                             it.granularity is IndexedDataflowGranularity
@@ -712,7 +716,23 @@ fun Node.followNextDFGEdgesUntilHit(
                         indexStack?.push(it.granularity as IndexedDataflowGranularity)
                     }
                 }
-                currentNode.nextDFG
+
+                // We need to filter out the edges which based on the stack
+                currentNode.nextDFGEdges
+                    .filter {
+                        if (callingStack.isEmpty()) {
+                            true
+                        } else if (
+                            it is ContextSensitiveDataflow && it.callingContext is CallingContextOut
+                        ) {
+                            // We are only interested in outgoing edges from our current "call-in".
+                            // If we found it, we can pop it.
+                            callingStack.checkAndPop(it.callingContext.call)
+                        } else {
+                            true
+                        }
+                    }
+                    .map { it.end }
             }
         },
         collectFailedPaths = collectFailedPaths,
