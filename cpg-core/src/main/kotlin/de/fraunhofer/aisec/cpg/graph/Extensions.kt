@@ -34,7 +34,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
-import java.util.ArrayDeque
 import kotlin.math.absoluteValue
 
 /**
@@ -227,7 +226,7 @@ fun Node.followPrevFullDFGEdgesUntilHit(
     findAllPossiblePaths: Boolean = true,
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
-    return followXUntilHit<Any?>(
+    return followXUntilHit(
         x = { currentNode, _ -> currentNode.prevFullDFG },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
@@ -268,12 +267,11 @@ fun Node.followPrevDFGEdgesUntilHit(
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
-        stack = SimpleStack<IndexedDataflowGranularity>(),
-        x = { currentNode, indexStack ->
+        x = { currentNode, ctx ->
             if (
                 useIndexStack &&
                     currentNode is InitializerListExpression &&
-                    indexStack?.isEmpty() != true
+                    ctx.indexStack.isEmpty() != true
             ) {
                 // There's something on the stack. Get the relevant parts
                 currentNode.prevDFGEdges
@@ -286,8 +284,9 @@ fun Node.followPrevDFGEdgesUntilHit(
                             // from).
                             // We try to pop from the stack and only select the elements with the
                             // matching index.
-                            indexStack?.checkAndPop(it.granularity as IndexedDataflowGranularity) ==
-                                true
+                            ctx.indexStack.checkAndPop(
+                                it.granularity as IndexedDataflowGranularity
+                            ) == true
                         } else {
                             true
                         }
@@ -303,7 +302,7 @@ fun Node.followPrevDFGEdgesUntilHit(
                     ) {
                         // CurrentNode is the child and nextDFG goes to ILE => currentNode's written
                         // to. Push to stack
-                        indexStack?.push(it.granularity as IndexedDataflowGranularity)
+                        ctx.indexStack.push(it.granularity as IndexedDataflowGranularity)
                     }
                 }
                 currentNode.prevDFG
@@ -315,8 +314,25 @@ fun Node.followPrevDFGEdgesUntilHit(
     )
 }
 
+/**
+ * This class holds the context for the [followXUntilHit] function. It is used to keep track of the
+ * current index stack and call stack.
+ *
+ * This class supports copying to allow for cloning the context when needed. This is needed when we
+ * need to follow more than one path at a time, otherwise the different branches would override the
+ * stacks.
+ */
+class Context(
+    val indexStack: SimpleStack<IndexedDataflowGranularity> = SimpleStack(),
+    val callStack: SimpleStack<CallExpression> = SimpleStack(),
+) {
+    fun clone(): Context {
+        return Context(indexStack.clone(), callStack.clone())
+    }
+}
+
 class SimpleStack<T>() {
-    private val deque = kotlin.collections.ArrayDeque<T>()
+    private val deque = ArrayDeque<T>()
 
     fun isEmpty(): Boolean = deque.isEmpty()
 
@@ -458,7 +474,7 @@ fun Node.followNextPDGUntilHit(
     interproceduralAnalysis: Boolean = false,
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
-    return followXUntilHit<Any?>(
+    return followXUntilHit(
         x = { currentNode, _ ->
             val nextNodes = currentNode.nextPDG.toMutableList()
             if (interproceduralAnalysis) {
@@ -487,7 +503,7 @@ fun Node.followNextCDGUntilHit(
     interproceduralAnalysis: Boolean = false,
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
-    return followXUntilHit<Any?>(
+    return followXUntilHit(
         x = { currentNode, _ ->
             val nextNodes = currentNode.nextCDG.toMutableList()
             if (interproceduralAnalysis) {
@@ -517,7 +533,7 @@ fun Node.followPrevPDGUntilHit(
     interproceduralAnalysis: Boolean = false,
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
-    return followXUntilHit<Any?>(
+    return followXUntilHit(
         x = { currentNode, _ ->
             val nextNodes = currentNode.prevPDG.toMutableList()
             if (interproceduralAnalysis) {
@@ -551,7 +567,7 @@ fun Node.followPrevCDGUntilHit(
     interproceduralAnalysis: Boolean = false,
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
-    return followXUntilHit<Any?>(
+    return followXUntilHit(
         x = { currentNode, _ ->
             val nextNodes = currentNode.prevCDG.toMutableList()
             if (interproceduralAnalysis) {
@@ -579,11 +595,11 @@ fun Node.followPrevCDGUntilHit(
  * Hence, if "fulfilled" is a non-empty list, a path from [this] to such a node is **possible but
  * not mandatory**. If the list "failed" is empty, the path is mandatory.
  */
-inline fun <reified T> Node.followXUntilHit(
-    noinline x: (Node, SimpleStack<T>?) -> Collection<Node>,
+inline fun Node.followXUntilHit(
+    noinline x: (Node, Context) -> Collection<Node>,
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
-    stack: SimpleStack<T>? = null,
+    context: Context = Context(),
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     // Looks complicated but at least it's not recursive...
@@ -592,8 +608,8 @@ inline fun <reified T> Node.followXUntilHit(
     // failedPaths: All the paths which do not satisfy "predicate"
     val failedPaths = mutableListOf<List<Node>>()
     // The list of paths where we're not done yet.
-    val worklist = mutableSetOf<Pair<List<Node>, SimpleStack<T>?>>()
-    worklist.add(Pair(listOf(this), stack)) // We start only with the "from" node (=this)
+    val worklist = mutableSetOf<Pair<List<Node>, Context>>()
+    worklist.add(Pair(listOf(this), context)) // We start only with the "from" node (=this)
 
     val alreadySeenNodes = mutableSetOf<Node>()
 
@@ -601,11 +617,11 @@ inline fun <reified T> Node.followXUntilHit(
         val currentPath = worklist.maxBy { it.first.size }
         worklist.remove(currentPath)
         val currentNode = currentPath.first.last()
-        val currentStack = currentPath.second
+        val currentContext = currentPath.second
         alreadySeenNodes.add(currentNode)
         // The last node of the path is where we continue. We get all of its outgoing CDG edges and
         // follow them
-        var nextNodes = x(currentNode, currentStack)
+        var nextNodes = x(currentNode, currentContext)
 
         // No further nodes in the path and the path criteria are not satisfied.
         if (nextNodes.isEmpty() && collectFailedPaths) failedPaths.add(currentPath.first)
@@ -627,7 +643,13 @@ inline fun <reified T> Node.followXUntilHit(
                     (findAllPossiblePaths ||
                         (next !in alreadySeenNodes && worklist.none { next in it.first }))
             ) {
-                worklist.add(Pair(nextPath, stack?.clone()))
+                val newContext =
+                    if (nextPath.size > 1) {
+                        currentContext.clone()
+                    } else {
+                        currentContext
+                    }
+                worklist.add(Pair(nextPath, newContext))
             }
         }
     }
@@ -649,7 +671,7 @@ fun Node.followNextFullDFGEdgesUntilHit(
     findAllPossiblePaths: Boolean = true,
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
-    return followXUntilHit<Any?>(
+    return followXUntilHit(
         x = { currentNode, _ -> currentNode.nextFullDFG },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
@@ -672,14 +694,12 @@ fun Node.followNextDFGEdgesUntilHit(
     useIndexStack: Boolean = true,
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
-    val callingStack = SimpleStack<CallExpression>()
     return followXUntilHit(
-        stack = SimpleStack<IndexedDataflowGranularity>(),
-        x = { currentNode, indexStack ->
+        x = { currentNode, ctx ->
             if (
                 useIndexStack &&
                     currentNode is InitializerListExpression &&
-                    indexStack?.isEmpty() != true
+                    ctx.indexStack.isEmpty() != true
             ) {
                 // There's something on the stack. Get the relevant parts
                 currentNode.nextDFGEdges
@@ -692,8 +712,9 @@ fun Node.followNextDFGEdgesUntilHit(
                             // from).
                             // We try to pop from the stack and only select the elements with the
                             // matching index.
-                            indexStack?.checkAndPop(it.granularity as IndexedDataflowGranularity) ==
-                                true
+                            ctx.indexStack.checkAndPop(
+                                it.granularity as IndexedDataflowGranularity
+                            ) == true
                         } else {
                             true
                         }
@@ -705,7 +726,7 @@ fun Node.followNextDFGEdgesUntilHit(
                 currentNode.nextDFGEdges.forEach {
                     if (it is ContextSensitiveDataflow && it.callingContext is CallingContextIn) {
                         // Push the call of our calling context to the stack
-                        callingStack.push(it.callingContext.call)
+                        ctx.callStack.push(it.callingContext.call)
                     }
                     if (
                         it.end is InitializerListExpression &&
@@ -713,21 +734,21 @@ fun Node.followNextDFGEdgesUntilHit(
                     ) {
                         // CurrentNode is the child and nextDFG goes to ILE => currentNode's written
                         // to. Push to stack
-                        indexStack?.push(it.granularity as IndexedDataflowGranularity)
+                        ctx.indexStack.push(it.granularity as IndexedDataflowGranularity)
                     }
                 }
 
                 // We need to filter out the edges which based on the stack
                 currentNode.nextDFGEdges
                     .filter {
-                        if (callingStack.isEmpty()) {
+                        if (ctx.callStack.isEmpty()) {
                             true
                         } else if (
                             it is ContextSensitiveDataflow && it.callingContext is CallingContextOut
                         ) {
                             // We are only interested in outgoing edges from our current "call-in".
                             // If we found it, we can pop it.
-                            callingStack.checkAndPop(it.callingContext.call)
+                            ctx.callStack.checkAndPop(it.callingContext.call)
                         } else {
                             true
                         }
@@ -756,7 +777,7 @@ fun Node.followNextEOGEdgesUntilHit(
     findAllPossiblePaths: Boolean = true,
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
-    return followXUntilHit<Any?>(
+    return followXUntilHit(
         x = { currentNode, _ ->
             currentNode.nextEOGEdges.filter { it.unreachable != true }.map { it.end }
         },
@@ -781,7 +802,7 @@ fun Node.followPrevEOGEdgesUntilHit(
     findAllPossiblePaths: Boolean = true,
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
-    return followXUntilHit<Any?>(
+    return followXUntilHit(
         x = { currentNode, _ ->
             currentNode.prevEOGEdges.filter { it.unreachable != true }.map { it.start }
         },
