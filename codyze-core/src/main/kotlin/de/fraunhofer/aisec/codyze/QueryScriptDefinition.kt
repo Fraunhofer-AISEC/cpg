@@ -61,7 +61,14 @@ object QueryScriptConfiguration :
         baseClass(QueryScript::class)
         jvm {
             val libraries =
-                setOf("codyze-core", "cpg-core", "cpg-analysis", "kotlin-stdlib", "kotlin-reflect")
+                setOf(
+                    "codyze-core",
+                    "cpg-core",
+                    "cpg-concepts",
+                    "cpg-analysis",
+                    "kotlin-stdlib",
+                    "kotlin-reflect",
+                )
             val cp = classpathFromClassloader(QueryScript::class.java.classLoader)
             checkNotNull(cp) { "Could not read classpath" }
             updateClasspath(cp.filter { element -> libraries.any { it in element.toString() } })
