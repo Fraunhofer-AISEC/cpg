@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import kotlin.collections.firstOrNull
 import kotlin.math.absoluteValue
 
 /**
@@ -229,7 +230,7 @@ fun Node.followPrevFullDFGEdgesUntilHit(
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
-        x = { currentNode, _ -> currentNode.prevFullDFG },
+        x = { currentNode, _, _ -> currentNode.prevFullDFG },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
         predicate = predicate,
@@ -269,7 +270,7 @@ fun Node.followPrevDFGEdgesUntilHit(
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
-        x = { currentNode, ctx ->
+        x = { currentNode, ctx, path ->
             if (
                 useIndexStack &&
                     currentNode is InitializerListExpression &&
@@ -326,10 +327,10 @@ fun Node.followPrevDFGEdgesUntilHit(
  */
 class Context(
     val indexStack: SimpleStack<IndexedDataflowGranularity> = SimpleStack(),
-    val callStack: SimpleStack<CallExpression> = SimpleStack(),
+    val callStack: ArrayDeque<CallExpression> = ArrayDeque<CallExpression>(),
 ) {
     fun clone(): Context {
-        return Context(indexStack.clone(), callStack.clone())
+        return Context(indexStack.clone(), ArrayDeque(callStack))
     }
 }
 
@@ -341,6 +342,9 @@ class SimpleStack<T>() {
     fun push(newElem: T) {
         deque.addFirst(newElem)
     }
+
+    val current: T?
+        get() = deque.firstOrNull()
 
     fun checkAndPop(elemToPop: T): Boolean {
         if (deque.firstOrNull() == elemToPop) {
@@ -477,7 +481,7 @@ fun Node.followNextPDGUntilHit(
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
-        x = { currentNode, _ ->
+        x = { currentNode, _, _ ->
             val nextNodes = currentNode.nextPDG.toMutableList()
             if (interproceduralAnalysis) {
                 nextNodes.addAll((currentNode as? CallExpression)?.calls ?: listOf())
@@ -506,7 +510,7 @@ fun Node.followNextCDGUntilHit(
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
-        x = { currentNode, _ ->
+        x = { currentNode, _, _ ->
             val nextNodes = currentNode.nextCDG.toMutableList()
             if (interproceduralAnalysis) {
                 nextNodes.addAll((currentNode as? CallExpression)?.calls ?: listOf())
@@ -536,7 +540,7 @@ fun Node.followPrevPDGUntilHit(
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
-        x = { currentNode, _ ->
+        x = { currentNode, _, _ ->
             val nextNodes = currentNode.prevPDG.toMutableList()
             if (interproceduralAnalysis) {
                 nextNodes.addAll(
@@ -570,7 +574,7 @@ fun Node.followPrevCDGUntilHit(
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
-        x = { currentNode, _ ->
+        x = { currentNode, _, _ ->
             val nextNodes = currentNode.prevCDG.toMutableList()
             if (interproceduralAnalysis) {
                 nextNodes.addAll(
@@ -598,7 +602,7 @@ fun Node.followPrevCDGUntilHit(
  * not mandatory**. If the list "failed" is empty, the path is mandatory.
  */
 inline fun Node.followXUntilHit(
-    noinline x: (Node, Context) -> Collection<Node>,
+    noinline x: (Node, Context, List<Node>) -> Collection<Node>,
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
     context: Context = Context(),
@@ -623,7 +627,7 @@ inline fun Node.followXUntilHit(
         alreadySeenNodes.add(currentNode)
         // The last node of the path is where we continue. We get all of its outgoing CDG edges and
         // follow them
-        var nextNodes = x(currentNode, currentContext)
+        var nextNodes = x(currentNode, currentContext, currentPath.first)
 
         // No further nodes in the path and the path criteria are not satisfied.
         if (nextNodes.isEmpty() && collectFailedPaths) failedPaths.add(currentPath.first)
@@ -674,7 +678,7 @@ fun Node.followNextFullDFGEdgesUntilHit(
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
-        x = { currentNode, _ -> currentNode.nextFullDFG },
+        x = { currentNode, _, _ -> currentNode.nextFullDFG },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
         predicate = predicate,
@@ -697,7 +701,7 @@ fun Node.followNextDFGEdgesUntilHit(
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
-        x = { currentNode, ctx ->
+        x = { currentNode, ctx, path ->
             if (
                 useIndexStack &&
                     currentNode is InitializerListExpression &&
@@ -728,7 +732,7 @@ fun Node.followNextDFGEdgesUntilHit(
                 currentNode.nextDFGEdges.forEach {
                     if (it is ContextSensitiveDataflow && it.callingContext is CallingContextIn) {
                         // Push the call of our calling context to the stack
-                        ctx.callStack.push(it.callingContext.call)
+                        ctx.callStack.addFirst(it.callingContext.call)
                     }
                     if (
                         it.end is InitializerListExpression &&
@@ -741,21 +745,33 @@ fun Node.followNextDFGEdgesUntilHit(
                 }
 
                 // We need to filter out the edges which based on the stack
-                currentNode.nextDFGEdges
-                    .filter {
-                        if (ctx.callStack.isEmpty()) {
-                            true
-                        } else if (
-                            it is ContextSensitiveDataflow && it.callingContext is CallingContextOut
-                        ) {
-                            // We are only interested in outgoing edges from our current "call-in".
-                            // If we found it, we can pop it.
-                            ctx.callStack.checkAndPop(it.callingContext.call)
-                        } else {
-                            true
+                val selected =
+                    currentNode.nextDFGEdges
+                        .filter {
+                            if (ctx.callStack.isEmpty()) {
+                                true
+                            } else if (
+                                it is ContextSensitiveDataflow &&
+                                    it.callingContext is CallingContextOut
+                            ) {
+                                // We are only interested in outgoing edges from our current
+                                // "call-in", i.e., the call expression that is on the stack.
+                                ctx.callStack.firstOrNull() == it.callingContext.call
+                            } else {
+                                true
+                            }
                         }
+                        .map { it.end }
+
+                // Let's do any remaining pop'ing
+                currentNode.nextDFGEdges.forEach {
+                    if (it is ContextSensitiveDataflow && it.callingContext is CallingContextOut) {
+                        // Pop the current call, if it's on top
+                        ctx.callStack.removeIfFirst<CallExpression>(it.callingContext.call)
                     }
-                    .map { it.end }
+                }
+
+                selected
             }
         },
         collectFailedPaths = collectFailedPaths,
@@ -780,7 +796,7 @@ fun Node.followNextEOGEdgesUntilHit(
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
-        x = { currentNode, _ ->
+        x = { currentNode, _, _ ->
             currentNode.nextEOGEdges.filter { it.unreachable != true }.map { it.end }
         },
         collectFailedPaths = collectFailedPaths,
@@ -805,7 +821,7 @@ fun Node.followPrevEOGEdgesUntilHit(
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
-        x = { currentNode, _ ->
+        x = { currentNode, _, _ ->
             currentNode.prevEOGEdges.filter { it.unreachable != true }.map { it.start }
         },
         collectFailedPaths = collectFailedPaths,
@@ -1275,3 +1291,12 @@ val Expression.isImported: Boolean
     get() {
         return this.importedFrom.isNotEmpty()
     }
+
+private fun <T> ArrayDeque<T>.removeIfFirst(element: T): Boolean {
+    return if (firstOrNull() == element) {
+        removeFirst()
+        true
+    } else {
+        false
+    }
+}
