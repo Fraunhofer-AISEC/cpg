@@ -179,7 +179,7 @@ class AnalysisProject(
                                 }
                                 .toMutableMap()
                         )
-                        .topLevel(componentDir)
+                        .topLevels(it.associate { Pair(it, componentDir.resolve(it)) })
             }
 
             exclusionPatterns?.forEach { builder = builder.exclusionPatterns(it) }
