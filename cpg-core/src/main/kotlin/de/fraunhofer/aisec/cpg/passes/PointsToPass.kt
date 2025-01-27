@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.PointerDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.default
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.types.NumericType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.functional.*
@@ -324,7 +325,8 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
         }*/
 
         var i = 0
-        val invokes = currentNode.invokes.toList()
+        // The toIdentitySet avoids having the same elements multiple times
+        val invokes = currentNode.invokes.toIdentitySet().toList()
         while (i < invokes.size) {
             val invoke = invokes[i]
             if (invoke.functionSummary.isEmpty()) {
@@ -403,38 +405,47 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                             // might be outdated. So check in the mapDstToSrc for updates
                             val updatedAddresses =
                                 mapDstToSrc.entries
-                                    .filter { it.key in doubleState.getAddresses(argument) }
+                                    .filter {
+                                        it.key in /*doubleState.getAddresses(argument)*/
+                                            doubleState.getValues(argument)
+                                    }
                                     .flatMap { it.value }
                                     .toIdentitySet()
-                            if (dstValueDepth > 2 && updatedAddresses.isNotEmpty()) {
-                                destAddrDepth--
-                                a = updatedAddresses
-                            }
                             val destination =
-                                if (subAccessName.isNotEmpty()) {
-                                    val fieldAddresses = identitySetOf<Node>()
-                                    // Collect the fieldAddresses for each possible value
-                                    val argumentValues =
-                                        a.flatMap { doubleState.getNestedValues(it, destAddrDepth) }
-                                    //
-                                    // doubleState.dereferenceNode(a, updatedDepth - 1)
-                                    argumentValues.forEach { v ->
-                                        val parentName = nodeNameToString(v)
-                                        val newName = Name(subAccessName, parentName)
-                                        doubleState =
-                                            doubleState.createFieldAddresses(
-                                                identitySetOf(v),
-                                                newName
-                                            )
-                                        fieldAddresses.addAll(
-                                            doubleState.getFieldAddresses(identitySetOf(v), newName)
-                                        )
-                                    }
-                                    fieldAddresses
+                                if (dstValueDepth > 2 && updatedAddresses.isNotEmpty()) {
+                                    //                                    destAddrDepth--
+                                    /*a = */ updatedAddresses
                                 } else {
-                                    //
-                                    // doubleState.dereferenceNode(a, updatedDepth - 1)
-                                    a.flatMap { doubleState.getNestedValues(it, destAddrDepth) }
+                                    if (subAccessName.isNotEmpty()) {
+                                        val fieldAddresses = identitySetOf<Node>()
+                                        // Collect the fieldAddresses for each possible value
+                                        val argumentValues =
+                                            a.flatMap {
+                                                doubleState.getNestedValues(it, destAddrDepth)
+                                            }
+                                        //
+                                        // doubleState.dereferenceNode(a, updatedDepth - 1)
+                                        argumentValues.forEach { v ->
+                                            val parentName = nodeNameToString(v)
+                                            val newName = Name(subAccessName, parentName)
+                                            doubleState =
+                                                doubleState.createFieldAddresses(
+                                                    identitySetOf(v),
+                                                    newName
+                                                )
+                                            fieldAddresses.addAll(
+                                                doubleState.getFieldAddresses(
+                                                    identitySetOf(v),
+                                                    newName
+                                                )
+                                            )
+                                        }
+                                        fieldAddresses
+                                    } else {
+                                        //
+                                        // doubleState.dereferenceNode(a, updatedDepth - 1)
+                                        a.flatMap { doubleState.getNestedValues(it, destAddrDepth) }
+                                    }
                                 }
                             when (value) {
                                 is ParameterDeclaration ->
@@ -476,6 +487,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                                         currentNode.invokes
                                             .flatMap { it.parameters }
                                             .filter { it.name == value.name.parent }
+                                            .toIdentitySet()
                                     p.forEach {
                                         if (it.argumentIndex < currentNode.arguments.size) {
                                             val arg = currentNode.arguments[it.argumentIndex]
@@ -686,7 +698,10 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                 var addresses = doubleState.getAddresses(src)
                 // If we have a Pointer as param, we initialize all levels, otherwise, only the
                 // first one
-                var paramDepth = if (param.type !is PointerType) 0 else depth
+                val paramDepth =
+                    if (param.type is PointerType || (param.type as? NumericType)?.bitWidth == 64)
+                        depth
+                    else 0
                 for (i in 0..paramDepth) {
                     val pmvName = "deref".repeat(i) + "value"
                     val pmv =
