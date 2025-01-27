@@ -119,7 +119,7 @@ fun LanguageProvider.objectType(
     // Apply our usual metadata, such as scope, code, location, if we have any. Make sure only
     // to refer by the local name because we will treat types as sort of references when
     // creating them and resolve them later.
-    type.applyMetadata(this, name, rawNode = rawNode, localNameOnly = true)
+    type.applyMetadata(this, name, rawNode = rawNode, doNotPrependNamespace = true)
 
     // Piping it through register type will ensure that we know the type and can resolve it later
     return c.typeManager.registerType(type)
