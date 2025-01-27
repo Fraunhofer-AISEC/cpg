@@ -399,8 +399,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                     fsEntries
                         .sortedBy { it.destValueDepth }
                         .forEach { (dstValueDepth, value, srcValueDepth, subAccessName) ->
-                            var destAddrDepth = dstValueDepth - 1
-                            var a = identitySetOf<Node>(argument)
+                            val destAddrDepth = dstValueDepth - 1
                             // Is the destAddrDepth > 2? In this case, the DeclarationState
                             // might be outdated. So check in the mapDstToSrc for updates
                             val updatedAddresses =
@@ -413,18 +412,13 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                                     .toIdentitySet()
                             val destination =
                                 if (dstValueDepth > 2 && updatedAddresses.isNotEmpty()) {
-                                    //                                    destAddrDepth--
-                                    /*a = */ updatedAddresses
+                                    updatedAddresses
                                 } else {
                                     if (subAccessName.isNotEmpty()) {
                                         val fieldAddresses = identitySetOf<Node>()
                                         // Collect the fieldAddresses for each possible value
                                         val argumentValues =
-                                            a.flatMap {
-                                                doubleState.getNestedValues(it, destAddrDepth)
-                                            }
-                                        //
-                                        // doubleState.dereferenceNode(a, updatedDepth - 1)
+                                            doubleState.getNestedValues(argument, destAddrDepth)
                                         argumentValues.forEach { v ->
                                             val parentName = nodeNameToString(v)
                                             val newName = Name(subAccessName, parentName)
@@ -442,9 +436,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                                         }
                                         fieldAddresses
                                     } else {
-                                        //
-                                        // doubleState.dereferenceNode(a, updatedDepth - 1)
-                                        a.flatMap { doubleState.getNestedValues(it, destAddrDepth) }
+                                        doubleState.getNestedValues(argument, destAddrDepth)
                                     }
                                 }
                             when (value) {
@@ -481,22 +473,25 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                                 is ParameterMemoryValue -> {
                                     // In case the FunctionSummary says that we have to use the
                                     // dereferenced value here, we look up the argument, dereference
-                                    // it,
-                                    // and then add it to the sources
-                                    val p =
-                                        currentNode.invokes
-                                            .flatMap { it.parameters }
-                                            .filter { it.name == value.name.parent }
-                                            .toIdentitySet()
-                                    p.forEach {
-                                        if (it.argumentIndex < currentNode.arguments.size) {
-                                            val arg = currentNode.arguments[it.argumentIndex]
-                                            destination.forEach { d ->
-                                                mapDstToSrc.computeIfAbsent(d) { mutableSetOf() } +=
-                                                    doubleState.getNestedValues(arg, srcValueDepth)
+                                    // it, and then add it to the sources
+                                    currentNode.invokes
+                                        .flatMap { it.parameters }
+                                        .filter { it.name == value.name.parent }
+                                        .toIdentitySet()
+                                        .forEach {
+                                            if (it.argumentIndex < currentNode.arguments.size) {
+                                                val arg = currentNode.arguments[it.argumentIndex]
+                                                destination.forEach { d ->
+                                                    mapDstToSrc.computeIfAbsent(d) {
+                                                        mutableSetOf()
+                                                    } +=
+                                                        doubleState.getNestedValues(
+                                                            arg,
+                                                            srcValueDepth
+                                                        )
+                                                }
                                             }
                                         }
-                                    }
                                     //                                    }
                                 }
                                 is MemoryAddress -> {
@@ -1031,10 +1026,10 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
             // }.toSet()
             var ret = getValues(node)
             for (i in 1 ..< nestingDepth) {
-                ret = ret.flatMap { getValues(it) }.toIdentitySet()
-                //                    ret.flatMap { this.fetchElementFromDeclarationState(it) }
-                //                        .map { it.first }
-                //                        .toIdentitySet()
+                ret = // ret.flatMap { getValues(it) }.toIdentitySet()
+                    ret.flatMap { this.fetchElementFromDeclarationState(it) }
+                        .map { it.first }
+                        .toIdentitySet()
             }
             return ret
         }
