@@ -52,7 +52,7 @@ import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
  */
 fun nodeNameToString(node: Node): Name {
     return when (node) {
-        is Literal<*> -> Name(node.value.toString())
+        is Literal<*> -> Name((node as? Literal<*>)?.value.toString())
         is UnknownMemoryValue -> Name(node.name.localName, Name("UnknownMemoryValue"))
         else -> node.name
     }
@@ -298,7 +298,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
     private fun handleReturnStatement(
         currentNode: ReturnStatement,
-        doubleState: PointsToState2,
+        doubleState: PointsToState2
     ): PointsToState2 {
         /* For Return Statements, all we really want to do is to collect their return values
         to add them to the FunctionSummary */
@@ -462,6 +462,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                             .getNestedValues(
                                                 currentNode.arguments[srcNode.argumentIndex],
                                                 srcValueDepth,
+                                                fetchFields = true
                                             )
                                             .forEach { value ->
                                                 destination.forEach { d ->
@@ -470,29 +471,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                                     } += value
                                                 }
                                             }
-                                        /*                                       // TODO
-                                        if (srcValueDepth == 2) {
-                                            doubleState
-                                                .getValues(
-                                                    currentNode.arguments[value.argumentIndex]
-                                                )
-                                                .forEach { v ->
-                                                    destination.forEach { d ->
-                                                        mapDstToSrc.computeIfAbsent(d) {
-                                                            mutableSetOf<Node>()
-                                                        } +=
-                                                            doubleState
-                                                                .fetchElementFromDeclarationState(v)
-                                                                .map { it.first }
-                                                    }
-                                                }
-                                        } else {
-                                            destination.forEach {
-                                                mapDstToSrc.computeIfAbsent(it) {
-                                                    mutableSetOf<Node>()
-                                                } += currentNode.arguments[value.argumentIndex]
-                                            }
-                                        }*/
                                     }
                                 is ParameterMemoryValue -> {
                                     // In case the FunctionSummary says that we have to use the
@@ -1040,14 +1018,18 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
          * nestingDepth 0 gets the `node`'s address. 1 fetches the current value, 2 the dereference,
          * 3 the derefdereference, etc...
          */
-        fun getNestedValues(node: Node, nestingDepth: Int): Set<Node> {
+        fun getNestedValues(
+            node: Node,
+            nestingDepth: Int,
+            fetchFields: Boolean = false
+        ): Set<Node> {
             if (nestingDepth == 0) return this.getAddresses(node)
             //            else if (dereferenceDepth == 1) return addr.flatMap { getValues(it)
             // }.toSet()
             var ret = getValues(node)
             for (i in 1..<nestingDepth) {
                 ret = // ret.flatMap { getValues(it) }.toIdentitySet()
-                    ret.flatMap { this.fetchElementFromDeclarationState(it) }
+                    ret.flatMap { this.fetchElementFromDeclarationState(it, fetchFields) }
                         .map { it.first }
                         .toIdentitySet()
             }
@@ -1127,7 +1109,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             }
             var doubleState = PointsToState2(MapLattice(newGenState), MapLattice(newDeclState))
 
-            /* When we are dealing with SubscriptExpression, we also have to initialise the arrayExpression
+            /* When we are dealing with SubscriptExpression, we also have to initialize the arrayExpression
             , since that hasn't been done yet */
             destinations.filterIsInstance<SubscriptExpression>().forEach { d ->
                 val aEaddresses = this.getAddresses(d.arrayExpression)
