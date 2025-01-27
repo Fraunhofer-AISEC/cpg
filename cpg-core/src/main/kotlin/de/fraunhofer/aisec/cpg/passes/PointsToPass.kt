@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
 import de.fraunhofer.aisec.cpg.graph.edges.flows.PointerDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.default
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.NumericType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
@@ -77,6 +78,16 @@ fun resolveMemberExpression(node: MemberExpression): Pair<Node, Name> {
 @DependsOn(EvaluationOrderGraphPass::class)
 @DependsOn(DFGPass::class)
 class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependencies = true) {
+    class Configuration(
+        /**
+         * This specifies the maximum complexity (as calculated per [Statement.cyclomaticComplexity]
+         * a [FunctionDeclaration] must have in order to be considered.
+         */
+        var maxComplexity: Int? = null,
+
+        /** This specifies the address length (usually 64bit) */
+        var addressLength: Int = 64
+    ) : PassConfiguration()
 
     /**
      * We use this map to store additional information on the DFG edges which we cannot keep in the
@@ -704,7 +715,11 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                 // If we have a Pointer as param, we initialize all levels, otherwise, only the
                 // first one
                 val paramDepth =
-                    if (param.type is PointerType || (param.type as? NumericType)?.bitWidth == 64)
+                    if (
+                        param.type is PointerType ||
+                            (param.type as? NumericType)?.bitWidth ==
+                                passConfig<Configuration>()?.addressLength
+                    )
                         depth
                     else 0
                 for (i in 0..paramDepth) {
