@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.PointerDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.default
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.functional.*
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
@@ -209,8 +210,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                     }
                 stateEntries
                     // See if we can find something that is different from the initial value
-                    .filter { // TODO: Add a check that this is not a dummy deref value of an int.
-                        // Or do not even create that dummy value in initializeParameters
+                    .filter {
                         !(it.first is ParameterMemoryValue &&
                             it.first.name.localName.contains("derefvalue") &&
                             it.first.name.parent == param.name)
@@ -219,10 +219,19 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                     .forEach { (value, subAccessName) ->
                         // TODO: Do we also map the writes of pointer-to-pointer to the param or
                         // should we do something else?
+                        // If the value is the derefderefvalue, we store in the FS that it's the
+                        // deref-deref, AKA depth 3. Otherwise, it should be the derefvalue, so 2 is
+                        // fine
+                        val srcValueDepth = if (value.name.localName == "derefderefvalue") 3 else 2
                         node.functionSummary
                             .computeIfAbsent(param) { mutableSetOf() }
                             .add(
-                                FunctionDeclaration.FSEntry(dstValueDepth, value, 2, subAccessName)
+                                FunctionDeclaration.FSEntry(
+                                    dstValueDepth,
+                                    value,
+                                    srcValueDepth,
+                                    subAccessName
+                                )
                             )
                     }
             }
@@ -673,7 +682,10 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                 // to the ParameterMemoryValue we create in the first step
                 var src: Node = param
                 var addresses = doubleState.getAddresses(src)
-                for (i in 0..depth) {
+                // If we have a Pointer as param, we initialize all levels, otherwise, only the
+                // first one
+                var paramDepth = if (param.type !is PointerType) 0 else depth
+                for (i in 0..paramDepth) {
                     val pmvName = "deref".repeat(i) + "value"
                     val pmv =
                         ParameterMemoryValue(Name(pmvName, param.name)).apply {
