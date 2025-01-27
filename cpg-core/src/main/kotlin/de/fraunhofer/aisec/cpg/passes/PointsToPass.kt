@@ -217,12 +217,14 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                     }
                     // If so, store the last write for the parameter in the FunctionSummary
                     .forEach { (value, subAccessName) ->
-                        // TODO: Do we also map the writes of pointer-to-pointer to the param or
-                        // should we do something else?
-                        // If the value is the derefderefvalue, we store in the FS that it's the
-                        // deref-deref, AKA depth 3. Otherwise, it should be the derefvalue, so 2 is
-                        // fine
-                        val srcValueDepth = if (value.name.localName == "derefderefvalue") 3 else 2
+                        // Extract the value depth from the value's localName
+                        val srcValueDepth =
+                            when (value.name.localName) {
+                                "value" -> 1
+                                "derefvalue" -> 2
+                                "derefderefvalue" -> 3
+                                else -> 0
+                            }
                         node.functionSummary
                             .computeIfAbsent(param) { mutableSetOf() }
                             .add(

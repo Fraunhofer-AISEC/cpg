@@ -249,14 +249,17 @@ void changepointer(int **p, int newint, int *newp) {
  //   **p = 4;
 }
 
+// Sample output: 
+// p2p: 4adb5408, &p_oldval: 4adb5408, &p_newval: 4adb53f8, *p2p: 4adb5414, &oldval: 4adb5414, &newval: 4adb5404, **p2p: 1
+// p2p: 4adb5408, &p_oldval: 4adb5408, &p_newval: 4adb53f8, *p2p: 4adb5404, &oldval: 4adb5414, &newval: 4adb5404, **p2p: 2
 int testFunctionSummaries2() {
-   int a = 1;                                                                                                                                    
-   int* b = &a;
-   int** c = &b;
-   int d = 2;
-   int* e = &d;
+   int oldval = 1;                                                                                                                                    
+   int* p_oldval = &oldval;
+   int** p2p = &p_oldval;
+   int newval = 2;
+   int* p_newval = &newval;
 
-   printf("c: %x, *c: %x, **c: %d\n", c, *c, **c);
-   changepointer(c, d, e);
-   printf("c: %x, *c: %x, **c: %d\n", c, *c, **c); 
-} 
+   printf("p2p: %x, &p_oldval: %x, &p_newval: %x, *p2p: %x, &oldval: %x, &newval: %x, **p2p: %d\n", p2p, &p_oldval, &p_newval, *p2p, &oldval, &newval, **p2p);
+   changepointer(p2p, newval, p_newval);
+   printf("p2p: %x, &p_oldval: %x, &p_newval: %x, *p2p: %x, &oldval: %x, &newval: %x, **p2p: %d\n", p2p, &p_oldval, &p_newval, *p2p, &oldval, &newval, **p2p);
+}
