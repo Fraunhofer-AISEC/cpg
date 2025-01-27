@@ -610,12 +610,14 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                     fieldName
                 )
         } else if (currentNode is SubscriptExpression) {
-            val fieldName = nodeNameToString(currentNode.subscriptExpression)
-            doubleState =
-                doubleState.createFieldAddresses(
-                    doubleState.getValues(currentNode.base).toIdentitySet(),
-                    Name(fieldName.localName, currentNode.base.name)
-                )
+            doubleState.getValues(currentNode.base).toIdentitySet().forEach { value ->
+                val fieldName = nodeNameToString(currentNode.subscriptExpression)
+                doubleState =
+                    doubleState.createFieldAddresses(
+                        identitySetOf(value),
+                        Name(fieldName.localName, nodeNameToString(value))
+                    )
+            }
         }
 
         /* If we have an Expression that is written to, we handle it later and ignore it now */
@@ -718,7 +720,8 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                     if (
                         param.type is PointerType ||
                             (param.type as? NumericType)?.bitWidth ==
-                                passConfig<Configuration>()?.addressLength
+                                // TODO: passConfig<Configuration> should never be null?
+                                (passConfig<Configuration>()?.addressLength ?: 64)
                     )
                         depth
                     else 0
@@ -1089,9 +1092,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
             return doubleState
         }
 
-        /**
-         * Lookup the field `nodeName` at the addresses in `baseAddresses` and return their values
-         */
+        /** Lookup the field `nodeName` at the addresses in `baseAddresses` and return them */
         fun getFieldAddresses(baseAddresses: IdentitySet<Node>, nodeName: Name): Set<Node> {
             val fieldAddresses = identitySetOf<Node>()
 

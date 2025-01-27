@@ -1480,6 +1480,7 @@ class PointsToPassTest {
                 it.registerLanguage<CPPLanguage>()
                 it.registerPass<PointsToPass>()
                 it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+                it.configurePass<PointsToPass>(PointsToPass.Configuration(addressLength = 64))
             }
         assertNotNull(tu)
 
