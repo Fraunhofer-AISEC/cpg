@@ -398,7 +398,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                 if (argument != null) {
                     fsEntries
                         .sortedBy { it.destValueDepth }
-                        .forEach { (dstValueDepth, value, srcValueDepth, subAccessName) ->
+                        .forEach { (dstValueDepth, srcNode, srcValueDepth, subAccessName) ->
                             val destAddrDepth = dstValueDepth - 1
                             // Is the destAddrDepth > 2? In this case, the DeclarationState
                             // might be outdated. So check in the mapDstToSrc for updates
@@ -439,14 +439,24 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                                         doubleState.getNestedValues(argument, destAddrDepth)
                                     }
                                 }
-                            when (value) {
+                            when (srcNode) {
                                 is ParameterDeclaration ->
-                                    // Add the value of the respective argument in the
-                                    // CallExpression
-                                    // Only dereference the parameter when we stored that in the
-                                    // functionSummary
-                                    if (value.argumentIndex < currentNode.arguments.size) {
-                                        // TODO
+                                    // Add the (dereferenced) value of the respective argument in
+                                    // the CallExpression
+                                    if (srcNode.argumentIndex < currentNode.arguments.size) {
+                                        doubleState
+                                            .getNestedValues(
+                                                currentNode.arguments[srcNode.argumentIndex],
+                                                srcValueDepth
+                                            )
+                                            .forEach { value ->
+                                                destination.forEach { d ->
+                                                    mapDstToSrc.computeIfAbsent(d) {
+                                                        mutableSetOf<Node>()
+                                                    } += value
+                                                }
+                                            }
+                                        /*                                       // TODO
                                         if (srcValueDepth == 2) {
                                             doubleState
                                                 .getValues(
@@ -468,7 +478,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                                                     mutableSetOf<Node>()
                                                 } += currentNode.arguments[value.argumentIndex]
                                             }
-                                        }
+                                        }*/
                                     }
                                 is ParameterMemoryValue -> {
                                     // In case the FunctionSummary says that we have to use the
@@ -476,7 +486,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                                     // it, and then add it to the sources
                                     currentNode.invokes
                                         .flatMap { it.parameters }
-                                        .filter { it.name == value.name.parent }
+                                        .filter { it.name == srcNode.name.parent }
                                         .toIdentitySet()
                                         .forEach {
                                             if (it.argumentIndex < currentNode.arguments.size) {
@@ -496,14 +506,14 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                                 }
                                 is MemoryAddress -> {
                                     destination.forEach { d ->
-                                        mapDstToSrc.computeIfAbsent(d) { mutableSetOf() } += value
+                                        mapDstToSrc.computeIfAbsent(d) { mutableSetOf() } += srcNode
                                     }
                                 }
                                 else -> {
                                     destination.forEach { d ->
                                         mapDstToSrc.computeIfAbsent(d) { mutableSetOf<Node>() } +=
-                                            if (srcValueDepth == 0) identitySetOf(value)
-                                            else doubleState.getNestedValues(value, srcValueDepth)
+                                            if (srcValueDepth == 0) identitySetOf(srcNode)
+                                            else doubleState.getNestedValues(srcNode, srcValueDepth)
                                     }
                                 }
                             }

@@ -1468,8 +1468,8 @@ class PointsToPassTest {
         assertEquals(1, iRefLine242Left.prevFullDFG.size)
         assertEquals(ceLine242, iRefLine242Left.prevFullDFG.firstOrNull())
         assertEquals(2, ceLine242.prevFullDFG.size)
-        assertTrue(ceLine242.prevFullDFG.contains(iRefLine242Right))
-        assertTrue(ceLine242.prevFullDFG.contains(pRefLine242))
+        assertTrue(ceLine242.prevFullDFG.contains(iDecl.memoryAddress!!))
+        assertTrue(ceLine242.prevFullDFG.contains(binOpLine212))
     }
 
     @Test
