@@ -311,13 +311,18 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             language.handleSuperExpression(current, curClass, scopeManager)
         }
 
-        // For legacy reasons, method and field resolving is split between the VariableUsageResolver
-        // and the CallResolver. Since we are trying to merge these two, the first step was to have
-        // the callee/member field of a MemberCallExpression set to a MemberExpression. This means
-        // however, that these will show up in this callback function. To not mess with legacy code
-        // (yet), we are ignoring all MemberExpressions whose parents are MemberCallExpressions in
-        // this function for now.
-        if (current.resolutionHelper is MemberCallExpression) {
+        // Handle a possible overloaded operator->
+        val baseType = resolveOverloadedArrowOperator(current) ?: base.type.root
+
+        // For legacy reasons, resolving of simple variable references (including fields) is
+        // separated from call resolving. Therefore, we need to stop here if we are the callee of a
+        // member call and continue in handleCallExpression. But we can already make
+        // handleCallExpression a bit cleaner, if we set the candidates here, similar to what we do
+        // in handleReference.
+        val helper = current.resolutionHelper
+        if (helper is MemberCallExpression) {
+            val (possibleTypes, _) = getPossibleContainingTypes(helper)
+            current.candidates = resolveMemberByName(helper.name.localName, possibleTypes).toSet()
             return
         }
 
@@ -331,7 +336,6 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             }
         }
 
-        val baseType = base.type.root
         if (baseType is ObjectType) {
             current.refersTo = resolveMember(baseType, current)
         }
@@ -377,9 +381,6 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         }
         var member: ValueDeclaration? = null
         var type: Type = containingClass
-
-        // Handle a possible overloaded operator->
-        type = resolveOverloadedArrowOperator(reference) ?: type
 
         val record = type.recordDeclaration
         if (record != null) {
@@ -459,9 +460,6 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             return
         }
 
-        // Handle a possible overloaded operator->
-        resolveOverloadedArrowOperator(callee)
-
         // Dynamic function invokes (such as function pointers) are handled by extra pass, so we are
         // not resolving them here.
         //
@@ -499,14 +497,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         // all nodes yet, so we need to use legacy resolution for some
         val isSpecialCXXCase =
             call.language.isCPP && scopeManager.currentRecord != null && !callee.name.isQualified()
-        val useLegacyResolution =
-            when {
-                isSpecialCXXCase -> true
-                call is MemberCallExpression -> true
-                else -> {
-                    false
-                }
-            }
+        val useLegacyResolution = isSpecialCXXCase
 
         // Retrieve a list of candidates; either from the "legacy" system or directly from our
         // callee
