@@ -889,7 +889,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         )
                     }
                 val newElements = this.declarationsState.elements[addr]?.elements?.second?.elements
-                (newElements as? IdentitySet<Node>)?.addAll(newEntry)
+                (newElements as? MutableSet<Node>)?.addAll(newEntry)
                 newEntry.map { ret.add(Pair(it, "")) }
             } else elements.map { ret.add(Pair(it, "")) }
 
@@ -925,7 +925,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         when (node.input) {
                             is Reference -> this.getValues(node.input)
                             else -> // TODO: How can we handle other cases?
-                            identitySetOf(UnknownMemoryValue(node.name))
+                            this.getValues(node.input)
                         }
                     val retVal = identitySetOf<Node>()
                     inputVal.forEach { input ->
@@ -949,6 +949,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 is MemberExpression -> {
                     val (base, fieldName) = resolveMemberExpression(node)
                     val baseAddresses = getAddresses(base).toIdentitySet()
+                    // TODO: Check if we can/should use createFieldAddresses instead of this magic
+                    // but we can't for magic reasons :(
                     val fieldAddresses = getFieldAddresses(baseAddresses, fieldName)
                     if (fieldAddresses.isNotEmpty()) {
                         fieldAddresses
@@ -970,6 +972,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 is UnaryOperator -> this.getValues(node.input)
                 is SubscriptExpression -> {
                     this.getAddresses(node).flatMap { this.getValues(it) }.toIdentitySet()
+                }
+                is BinaryOperator -> {
+                    fetchElementFromDeclarationState(node, true).map { it.first }.toIdentitySet()
                 }
                 /* In these cases, we simply have to fetch the current value for the MemoryAddress from the DeclarationState */
                 else -> identitySetOf(node)
