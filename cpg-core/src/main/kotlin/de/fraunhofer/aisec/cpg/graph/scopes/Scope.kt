@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.scopes
 
 import com.fasterxml.jackson.annotation.JsonBackReference
-import de.fraunhofer.aisec.cpg.frontends.HasExplicitReceiverOnly
+import de.fraunhofer.aisec.cpg.frontends.HasImplicitReceiver
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
@@ -113,9 +113,9 @@ sealed class Scope(
      * current scope. This behaviour can be turned off with [thisScopeOnly]. This is useful for
      * qualified lookups, where we want to stay in our lookup-scope.
      *
-     * We need to consider the language trait [HasExplicitReceiverOnly] here as well. If the
-     * language requires explicit member access, we must not consider symbols from record scopes
-     * unless we are in a qualified lookup.
+     * We need to consider the language trait [HasImplicitReceiver] here as well. If the language
+     * requires explicit member access, we must not consider symbols from record scopes unless we
+     * are in a qualified lookup.
      *
      * @param symbol the symbol to lookup
      * @param thisScopeOnly whether we should stay in the current scope for lookup or traverse to
@@ -177,7 +177,7 @@ sealed class Scope(
                 } else {
                     // If our language needs explicit lookup for fields (and other class members),
                     // we need to skip record scopes unless we are in a qualified lookup
-                    if (languageOnly is HasExplicitReceiverOnly && scope.parent is RecordScope) {
+                    if (languageOnly !is HasImplicitReceiver && scope.parent is RecordScope) {
                         scope.firstScopeParentOrNull { it !is RecordScope }
                     } else {
                         // Otherwise, we can just go to the next parent
