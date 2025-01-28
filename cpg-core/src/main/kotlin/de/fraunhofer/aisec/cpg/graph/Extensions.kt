@@ -284,9 +284,7 @@ fun Node.followPrevDFGEdgesUntilHit(
                             // from).
                             // We try to pop from the stack and only select the elements with the
                             // matching index.
-                            ctx.indexStack.popIfOnTop(
-                                it.granularity as IndexedDataflowGranularity
-                            ) == true
+                            ctx.indexStack.popIfOnTop(it.granularity as IndexedDataflowGranularity)
                         } else {
                             true
                         }
@@ -327,7 +325,7 @@ class Context(
     val callStack: SimpleStack<CallExpression> = SimpleStack(),
 ) {
     fun clone(): Context {
-        return Context(indexStack.clone(), callStack.clone())
+        return Context(indexStack = indexStack.clone(), callStack = callStack.clone())
     }
 }
 
@@ -359,6 +357,9 @@ class SimpleStack<T> {
         }
         return false
     }
+
+    /** Pops the top element from the stack. */
+    fun pop(): T = deque.removeFirst()
 
     /** Clones the stack. */
     fun clone(): SimpleStack<T> {
@@ -798,11 +799,27 @@ fun Node.followNextDFGEdgesUntilHit(
 fun Node.followNextEOGEdgesUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
+    interproceduralAnalysis: Boolean = true,
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
-        x = { currentNode, _, _ ->
-            currentNode.nextEOGEdges.filter { it.unreachable != true }.map { it.end }
+        x = { currentNode, ctx, _ ->
+            if (interproceduralAnalysis && currentNode is CallExpression) {
+                ctx.callStack.push(currentNode)
+                currentNode.invokes.flatMap { it.eogStarters }
+            } else if (interproceduralAnalysis && currentNode is ReturnStatement) {
+                if (ctx.callStack.isEmpty()) {
+                    (currentNode.firstParentOrNull { it is FunctionDeclaration }
+                            as? FunctionDeclaration)
+                        ?.usages
+                        ?.mapNotNull { (it.astParent as? CallExpression)?.nextEOG }
+                        ?.flatten() ?: setOf()
+                } else {
+                    ctx.callStack.pop().nextEOG
+                }
+            } else {
+                currentNode.nextEOGEdges.filter { it.unreachable != true }.map { it.end }
+            }
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
