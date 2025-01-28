@@ -186,7 +186,7 @@ fun Node?.toSarifLocation(
 /** Converts a [de.fraunhofer.aisec.cpg.sarif.PhysicalLocation] to a [PhysicalLocation]. */
 fun de.fraunhofer.aisec.cpg.sarif.PhysicalLocation.toSarif(): PhysicalLocation {
     return PhysicalLocation(
-        artifactLocation = ArtifactLocation(uri = this.artifactLocation.uri.toString()),
+        artifactLocation = ArtifactLocation(uri = "file://${this.artifactLocation.uri.path}"),
         region =
             Region(
                 startLine = this.region.startLine.toLong(),
