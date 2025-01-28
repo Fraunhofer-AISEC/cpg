@@ -67,17 +67,23 @@ fun QueryTree<Boolean>.toSarif(ruleID: String): List<Result> {
             locations = listOfNotNull(it.node?.toSarifLocation()),
             stacks = it.node?.toSarifCallStack(),
             codeFlows =
-                it.children.map { child ->
-                    @Suppress("UNCHECKED_CAST") val list = (child.value as? List<Node>)
-                    CodeFlow(
-                        threadFlows =
-                            listOf(
-                                ThreadFlow(
-                                    message = Message(text = "Thread flow"),
-                                    locations = list.toSarifThreadFlowLocation(),
+                it.children.mapNotNull { child ->
+                    if (child.value is List<*>) {
+                        CodeFlow(
+                            threadFlows =
+                                listOf(
+                                    ThreadFlow(
+                                        message = Message(text = "Thread flow"),
+                                        locations =
+                                            (child.value as List<*>)
+                                                .filterIsInstance<Node>()
+                                                .toSarifThreadFlowLocation(),
+                                    )
                                 )
-                            )
-                    )
+                        )
+                    } else {
+                        null
+                    }
                 },
         )
     }
@@ -135,10 +141,7 @@ fun Node?.toSarifLocation(
      */
     onlyFunctionHeader: Boolean = false,
 ): Location? {
-    val location = this?.location
-    if (location == null) {
-        return null
-    }
+    val location = this?.location ?: return null
 
     return if (this is FunctionDeclaration && this.body != null && onlyFunctionHeader) {
             // Try to calculate the end of the header by using the beginning of the body. This is
