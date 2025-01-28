@@ -160,7 +160,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /** Caches all TemplateDeclarations in [templateList] */
-    protected fun findTemplates(node: Node?) {
+    private fun findTemplates(node: Node?) {
         if (node is TemplateDeclaration) {
             templateList.add(node)
         }
@@ -170,7 +170,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
      * Determines if the [reference] refers to the super class, and we have to start searching
      * there.
      */
-    protected fun isSuperclassReference(reference: Reference): Boolean {
+    private fun isSuperclassReference(reference: Reference): Boolean {
         val language = reference.language
         return language is HasSuperClasses && reference.name.endsWith(language.superClassKeyword)
     }
@@ -197,7 +197,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
      *   once the EOG reaches the appropriate [CallExpression] (which should actually be just be the
      *   next EOG node).
      */
-    protected fun handleReference(currentClass: RecordDeclaration?, ref: Reference) {
+    protected open fun handleReference(currentClass: RecordDeclaration?, ref: Reference) {
         val language = ref.language
         val helperType = ref.resolutionHelper?.type
 
@@ -241,7 +241,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         // Hopefully we have only one, but there might be instances where more than one is a valid
         // candidate. We let the language have a chance at overriding the default behaviour (which
         // takes only a single one).
-        var wouldResolveTo = language.bestViableReferenceCandidate(ref)
+        val wouldResolveTo = language.bestViableReferenceCandidate(ref)
 
         // For now, we need to ignore reference expressions that are directly embedded into call
         // expressions, because they are the "callee" property. In the future, we will use this
@@ -290,10 +290,14 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         }
     }
 
-    protected fun handleMemberExpression(curClass: RecordDeclaration?, current: MemberExpression) {
+    /** This function handles resolving of a [MemberExpression] in the [curClass] */
+    protected open fun handleMemberExpression(
+        curClass: RecordDeclaration?,
+        current: MemberExpression,
+    ) {
         // Some locals for easier smart casting
-        var base = current.base
-        var language = current.language
+        val base = current.base
+        val language = current.language
 
         // We need to adjust certain types of the base in case of a "super" expression, and we
         // delegate this to the language. If that is successful, we can continue with regular
@@ -362,7 +366,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         return type
     }
 
-    protected fun resolveMember(
+    private fun resolveMember(
         containingClass: ObjectType,
         reference: Reference,
     ): ValueDeclaration? {
@@ -406,7 +410,11 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         return member
     }
 
-    protected fun handle(node: Node?, currClass: RecordDeclaration?) {
+    /**
+     * The central entry-point for all symbol-resolving. It dispatches the handling of the node to
+     * the appropriate function based on the node type.
+     */
+    protected open fun handle(node: Node?, currClass: RecordDeclaration?) {
         when (node) {
             is MemberExpression -> handleMemberExpression(currClass, node)
             is Reference -> handleReference(currClass, node)
@@ -416,7 +424,27 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         }
     }
 
-    protected fun handleCallExpression(call: CallExpression) {
+    /**
+     * This function handles the resolution of a [CallExpression] based on a list of candidates. We
+     * currently need to differentiate between two scenarios:
+     * - For a regular [CallExpression], we try to resolve it according to its
+     *   [CallExpression.callee] (which is then a [Reference]). In a previous step,
+     *   [handleReference] sets [Reference.candidates] to the appropriate candidates based on
+     *   resolving the symbol using [ScopeManager.lookupSymbolByName].
+     * - For [MemberCallExpression] we use our "legacy" system, which invokes [resolveMemberByName]
+     *   and the result of this is used as candidates.
+     *
+     * In any case, the candidates are then resolved with the arguments of the call expression using
+     * [resolveWithArguments]. The result of this resolution is stored in [CallExpression.invokes]
+     * and depending on [CallResolutionResult.SuccessKind] are warning is emitted if resolution was
+     * erroneous or ambiguous.
+     *
+     * In addition to that, this function also invokes [resolveOverloadedArrowOperator] in case we
+     * have a language that allows to overload the arrow operator.
+     *
+     * @param call The [CallExpression] to resolve.
+     */
+    protected open fun handleCallExpression(call: CallExpression) {
         // Some local variables for easier smart casting
         val callee = call.callee
         val language = call.language
@@ -612,7 +640,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         return result
     }
 
-    protected fun resolveMemberByName(
+    private fun resolveMemberByName(
         symbol: String,
         possibleContainingTypes: Set<Type>,
     ): Set<Declaration> {
@@ -641,7 +669,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         return candidates
     }
 
-    protected fun handleConstructExpression(constructExpression: ConstructExpression) {
+    protected open fun handleConstructExpression(constructExpression: ConstructExpression) {
         if (constructExpression.instantiates != null && constructExpression.constructor != null)
             return
         val recordDeclaration = constructExpression.type.root.recordDeclaration
@@ -684,7 +712,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         }
     }
 
-    private fun handleOverloadedOperator(op: HasOverloadedOperation) {
+    protected open fun handleOverloadedOperator(op: HasOverloadedOperation) {
         val result = resolveOperator(op)
         val decl = result?.bestViable?.singleOrNull() ?: return
 
@@ -722,7 +750,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         return resolveWithArguments(candidates, op.operatorArguments, op as Expression)
     }
 
-    protected fun getInvocationCandidatesFromParents(
+    private fun getInvocationCandidatesFromParents(
         name: Symbol,
         possibleTypes: Set<RecordDeclaration>,
     ): List<Declaration> {
@@ -761,7 +789,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             return this != null && this::class.simpleName == "CPPLanguage"
         }
 
-    protected fun getOverridingCandidates(
+    private fun getOverridingCandidates(
         possibleSubTypes: Set<Type>,
         declaration: FunctionDeclaration,
     ): Set<FunctionDeclaration> {
@@ -779,7 +807,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
      *   there is no valid ConstructDeclaration we will create an implicit ConstructDeclaration that
      *   matches the ConstructExpression.
      */
-    protected fun getConstructorDeclaration(
+    private fun getConstructorDeclaration(
         constructExpression: ConstructExpression,
         recordDeclaration: RecordDeclaration,
     ): ConstructorDeclaration? {
