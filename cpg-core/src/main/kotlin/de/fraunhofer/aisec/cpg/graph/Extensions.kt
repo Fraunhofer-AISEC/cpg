@@ -28,10 +28,7 @@ package de.fraunhofer.aisec.cpg.graph
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
-import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextIn
-import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
-import de.fraunhofer.aisec.cpg.graph.edges.flows.ContextSensitiveDataflow
-import de.fraunhofer.aisec.cpg.graph.edges.flows.IndexedDataflowGranularity
+import de.fraunhofer.aisec.cpg.graph.edges.flows.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
@@ -287,7 +284,7 @@ fun Node.followPrevDFGEdgesUntilHit(
                             // from).
                             // We try to pop from the stack and only select the elements with the
                             // matching index.
-                            ctx.indexStack.checkAndPop(
+                            ctx.indexStack.popIfOnTop(
                                 it.granularity as IndexedDataflowGranularity
                             ) == true
                         } else {
@@ -327,26 +324,35 @@ fun Node.followPrevDFGEdgesUntilHit(
  */
 class Context(
     val indexStack: SimpleStack<IndexedDataflowGranularity> = SimpleStack(),
-    val callStack: ArrayDeque<CallExpression> = ArrayDeque<CallExpression>(),
+    val callStack: SimpleStack<CallExpression> = SimpleStack(),
 ) {
     fun clone(): Context {
-        return Context(indexStack.clone(), ArrayDeque(callStack))
+        return Context(indexStack.clone(), callStack.clone())
     }
 }
 
-class SimpleStack<T>() {
+/** Implementation of a simple stack, based on an [ArrayDeque] */
+class SimpleStack<T> {
     private val deque = ArrayDeque<T>()
 
+    /** Returns true if the stack is empty. */
     fun isEmpty(): Boolean = deque.isEmpty()
 
+    /** Pushes a new element onto the stack. */
     fun push(newElem: T) {
         deque.addFirst(newElem)
     }
 
-    val current: T?
+    /** Returns the top element from the stack, without popping it. */
+    val top: T?
         get() = deque.firstOrNull()
 
-    fun checkAndPop(elemToPop: T): Boolean {
+    /**
+     * Pops the top element from the stack, if [elemToPop] is the top element.
+     *
+     * @return true if the element was popped, false otherwise
+     */
+    fun popIfOnTop(elemToPop: T): Boolean {
         if (deque.firstOrNull() == elemToPop) {
             deque.removeFirst()
             return true
@@ -354,6 +360,7 @@ class SimpleStack<T>() {
         return false
     }
 
+    /** Clones the stack. */
     fun clone(): SimpleStack<T> {
         return SimpleStack<T>().apply { deque.addAll(this@SimpleStack.deque) }
     }
@@ -627,7 +634,7 @@ inline fun Node.followXUntilHit(
         alreadySeenNodes.add(currentNode)
         // The last node of the path is where we continue. We get all of its outgoing CDG edges and
         // follow them
-        var nextNodes = x(currentNode, currentContext, currentPath.first)
+        val nextNodes = x(currentNode, currentContext, currentPath.first)
 
         // No further nodes in the path and the path criteria are not satisfied.
         if (nextNodes.isEmpty() && collectFailedPaths) failedPaths.add(currentPath.first)
@@ -701,11 +708,11 @@ fun Node.followNextDFGEdgesUntilHit(
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
-        x = { currentNode, ctx, path ->
+        x = { currentNode, ctx, _ ->
             if (
                 useIndexStack &&
                     currentNode is InitializerListExpression &&
-                    ctx.indexStack.isEmpty() != true
+                    !ctx.indexStack.isEmpty()
             ) {
                 // There's something on the stack. Get the relevant parts
                 currentNode.nextDFGEdges
@@ -718,9 +725,7 @@ fun Node.followNextDFGEdgesUntilHit(
                             // from).
                             // We try to pop from the stack and only select the elements with the
                             // matching index.
-                            ctx.indexStack.checkAndPop(
-                                it.granularity as IndexedDataflowGranularity
-                            ) == true
+                            ctx.indexStack.popIfOnTop(it.granularity as IndexedDataflowGranularity)
                         } else {
                             true
                         }
@@ -732,7 +737,7 @@ fun Node.followNextDFGEdgesUntilHit(
                 currentNode.nextDFGEdges.forEach {
                     if (it is ContextSensitiveDataflow && it.callingContext is CallingContextIn) {
                         // Push the call of our calling context to the stack
-                        ctx.callStack.addFirst(it.callingContext.call)
+                        ctx.callStack.push(it.callingContext.call)
                     }
                     if (
                         it.end is InitializerListExpression &&
@@ -756,7 +761,7 @@ fun Node.followNextDFGEdgesUntilHit(
                             ) {
                                 // We are only interested in outgoing edges from our current
                                 // "call-in", i.e., the call expression that is on the stack.
-                                ctx.callStack.firstOrNull() == it.callingContext.call
+                                ctx.callStack.top == it.callingContext.call
                             } else {
                                 true
                             }
@@ -767,7 +772,7 @@ fun Node.followNextDFGEdgesUntilHit(
                 currentNode.nextDFGEdges.forEach {
                     if (it is ContextSensitiveDataflow && it.callingContext is CallingContextOut) {
                         // Pop the current call, if it's on top
-                        ctx.callStack.removeIfFirst<CallExpression>(it.callingContext.call)
+                        ctx.callStack.popIfOnTop(it.callingContext.call)
                     }
                 }
 
@@ -1291,12 +1296,3 @@ val Expression.isImported: Boolean
     get() {
         return this.importedFrom.isNotEmpty()
     }
-
-private fun <T> ArrayDeque<T>.removeIfFirst(element: T): Boolean {
-    return if (firstOrNull() == element) {
-        removeFirst()
-        true
-    } else {
-        false
-    }
-}
