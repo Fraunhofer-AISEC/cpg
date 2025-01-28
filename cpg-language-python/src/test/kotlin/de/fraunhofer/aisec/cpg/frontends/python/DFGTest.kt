@@ -25,20 +25,16 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.python
 
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.flows.IndexedDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.followNextDFGEdgesUntilHit
 import de.fraunhofer.aisec.cpg.graph.followPrevDFGEdgesUntilHit
-import de.fraunhofer.aisec.cpg.graph.functions
-import de.fraunhofer.aisec.cpg.graph.get
-import de.fraunhofer.aisec.cpg.graph.refs
-import de.fraunhofer.aisec.cpg.graph.returns
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
-import de.fraunhofer.aisec.cpg.graph.variables
 import de.fraunhofer.aisec.cpg.test.analyze
 import de.fraunhofer.aisec.cpg.test.assertLocalName
 import java.nio.file.Path
@@ -228,5 +224,32 @@ class DFGTest {
         assertEquals(1, forwardsPathAToC.size)
         val forwardsPathBToC = bReturned.followNextDFGEdgesUntilHit { it == cRead }.fulfilled
         assertEquals(0, forwardsPathBToC.size)
+    }
+
+    @Test
+    fun testContextSensitive() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val result =
+            analyze(listOf(topLevel.resolve("context_sensitive.py").toFile()), topLevel, true) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(result)
+
+        val keyStartRef = result.calls["retrieve_key_from_server"]?.nextDFG?.first()
+        assertNotNull(keyStartRef)
+
+        val paths =
+            keyStartRef.followNextDFGEdgesUntilHit(
+                useIndexStack = true,
+                collectFailedPaths = false,
+            ) {
+                it is CallExpression &&
+                    it.name.localName == "cipher_operation" &&
+                    it.arguments[0].evaluate() == "encrypt"
+            }
+        assertNotNull(paths)
+        assertEquals(1, paths.fulfilled.size)
+        val path = paths.fulfilled.first()
+        assertEquals(22, path.size)
     }
 }
