@@ -167,15 +167,6 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * Determines if the [reference] refers to the super class, and we have to start searching
-     * there.
-     */
-    private fun isSuperclassReference(reference: Reference): Boolean {
-        val language = reference.language
-        return language is HasSuperClasses && reference.name.endsWith(language.superClassKeyword)
-    }
-
-    /**
      * This function handles symbol resolving for a [Reference]. After a successful lookup of the
      * symbol contained in [Reference.name], the property [Reference.refersTo] is set to the best
      * (or only) candidate.
@@ -308,7 +299,14 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         }
     }
 
-    /** This function handles resolving of a [MemberExpression] in the [curClass] */
+    /**
+     * This function handles resolving of a [MemberExpression] in the [curClass]. This works similar
+     * to [handleReference]. First, we set the [MemberExpression.candidates] based on
+     * [resolveMemberByName], which internally calls [ScopeManager.lookupSymbolByName] based on the
+     * current class and its parent classes. Then, if we resolve a [MemberCallExpression], we abort
+     * (and later pick up resolving in [handleCallExpression]). In case of a field access, we set
+     * the [MemberExpression.refersTo] based on [Language.bestViableReferenceCandidate].
+     */
     protected open fun handleMemberExpression(
         curClass: RecordDeclaration?,
         current: MemberExpression,
@@ -346,19 +344,19 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             return
         }
 
-        if (base is Reference) {
-            // The base has been resolved by now. Maybe we have some other clue about
-            // this base from the type system, so we can set the declaration accordingly.
-            // TODO(oxisto): It is actually not really a good approach, but it is currently
-            //  needed to make the java frontend happy, but this needs to be removed at some point
-            if (base.refersTo == null) {
-                base.refersTo = base.type.recordDeclaration
-            }
+        // We need to choose the best viable candidate out of the ones we have for our reference.
+        // Hopefully we have only one, but there might be instances where more than one is a valid
+        // candidate. We let the language have a chance at overriding the default behaviour (which
+        // takes only a single one).
+        val wouldResolveTo = language.bestViableReferenceCandidate(current)
+
+        var refersTo = current.refersTo ?: wouldResolveTo
+
+        if (refersTo == null && baseType is ObjectType) {
+            refersTo = tryFieldInference(current, baseType)
         }
 
-        if (baseType is ObjectType) {
-            current.refersTo = resolveMember(baseType, current)
-        }
+        current.refersTo = refersTo
     }
 
     /**
@@ -388,47 +386,6 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             }
         }
         return type
-    }
-
-    private fun resolveMember(
-        containingClass: ObjectType,
-        reference: Reference,
-    ): ValueDeclaration? {
-        if (isSuperclassReference(reference)) {
-            // if we have a "super" on the member side, this is a member call. We need to resolve
-            // this in the call resolver instead
-            return null
-        }
-        var member: ValueDeclaration? = null
-        var type: Type = containingClass
-
-        val record = type.recordDeclaration
-        if (record != null) {
-            // TODO(oxisto): This should use symbols rather than the AST fields
-            member =
-                record.fields
-                    .filter { it.name.lastPartsMatch(reference.name) }
-                    .map { it.definition }
-                    .firstOrNull()
-        }
-        if (member == null) {
-            member =
-                type.superTypes
-                    .flatMap { it.recordDeclaration?.fields ?: listOf() }
-                    .filter { it.name.localName == reference.name.localName }
-                    .map { it.definition }
-                    .firstOrNull()
-        }
-
-        if (member == null && record is EnumDeclaration) {
-            member = record.entries[reference.name.localName]
-        }
-
-        if (member == null) {
-            member = tryFieldInference(reference, containingClass)
-        }
-
-        return member
     }
 
     /**
