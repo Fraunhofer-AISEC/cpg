@@ -233,9 +233,27 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 eogPredicate
             }
 
-        // Find a list of candidate symbols. Currently, this is only used the in the "next-gen" call
-        // resolution, but in future this will also be used in resolving regular references.
-        ref.candidates = scopeManager.lookupSymbolByNodeName(ref, predicate = predicate).toSet()
+        // Find a list of candidate symbols. In most cases, we can just perform a lookup by name
+        // which either performs an unqualified lookup beginning from the current scope "up-wards",
+        // or a qualified lookup starting from the scope specified in the name.
+        var candidates = scopeManager.lookupSymbolByNodeName(ref, predicate = predicate).toSet()
+
+        // but we have to consider one special case:
+        // For languages, that support implicit receivers, this reference might be a member access
+        // of either the current class or a parent class. While a regular lookup would only consider
+        // the current scope, we have to consider the parent classes as well, which is exactly what
+        // resolveMemberByName does.
+        if (
+            candidates.isEmpty() &&
+                language is HasImplicitReceiver &&
+                currentClass != null &&
+                !ref.name.isQualified()
+        ) {
+            candidates =
+                resolveMemberByName(ref.name.localName, setOf(currentClass.toType())).toSet()
+        }
+
+        ref.candidates = candidates
 
         // We need to choose the best viable candidate out of the ones we have for our reference.
         // Hopefully we have only one, but there might be instances where more than one is a valid
@@ -273,7 +291,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
         // If we did not resolve the reference up to this point, we can try to infer the declaration
         if (refersTo == null) {
-            // If its a function pointer, we can try to infer a function
+            // If it's a function pointer, we can try to infer a function
             refersTo =
                 if (helperType is FunctionPointerType) {
                     tryFunctionInferenceFromFunctionPointer(ref, helperType)
@@ -426,22 +444,19 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * This function handles the resolution of a [CallExpression] based on a list of candidates. We
-     * currently need to differentiate between two scenarios:
-     * - For a regular [CallExpression], we try to resolve it according to its
-     *   [CallExpression.callee] (which is then a [Reference]). In a previous step,
-     *   [handleReference] sets [Reference.candidates] to the appropriate candidates based on
-     *   resolving the symbol using [ScopeManager.lookupSymbolByName].
-     * - For [MemberCallExpression] we use our "legacy" system, which invokes [resolveMemberByName]
-     *   and the result of this is used as candidates.
+     * This function handles the resolution of a [CallExpression] based on a list of candidates. The
+     * candidates are taken from [CallExpression.callee] which are set either in [handleReference]
+     * or [handleMemberExpression], depending on the type.
      *
      * In any case, the candidates are then resolved with the arguments of the call expression using
      * [resolveWithArguments]. The result of this resolution is stored in [CallExpression.invokes]
      * and depending on [CallResolutionResult.SuccessKind] are warning is emitted if resolution was
-     * erroneous or ambiguous.
+     * erroneous or ambiguous. Furthermore, the [CallExpression.callee]'s [Reference.refersTo] is
+     * also set.
      *
-     * In addition to that, this function also invokes [resolveOverloadedArrowOperator] in case we
-     * have a language that allows to overload the arrow operator.
+     * If the resolution was unsuccessful, we try to infer the function based on the information
+     * provided in the [CallResolutionResult] and the [CallExpression]. This is done in
+     * [tryFunctionInference].
      *
      * @param call The [CallExpression] to resolve.
      */
@@ -493,32 +508,8 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             }
         }
 
-        // We are moving towards a new approach to call resolution. However, we cannot use this for
-        // all nodes yet, so we need to use legacy resolution for some
-        val isSpecialCXXCase =
-            call.language.isCPP && scopeManager.currentRecord != null && !callee.name.isQualified()
-        val useLegacyResolution = isSpecialCXXCase
-
-        // Retrieve a list of candidates; either from the "legacy" system or directly from our
-        // callee
-        var candidates =
-            if (useLegacyResolution) {
-                val (possibleTypes, _) = getPossibleContainingTypes(call)
-                resolveMemberByName(callee.name.localName, possibleTypes).toSet()
-            } else {
-                callee.candidates
-            }
-
-        // There seems to be one more special case and that is a regular function within a record.
-        // This could either be a member call with an omitted "this" or a regular call. The problem
-        // is that the legacy system can now only resolve member calls but not regular calls
-        // (anymore). So if we have this special case and the legacy system does not return any
-        // candidates, we need to switch to the new system.
-        if (isSpecialCXXCase && candidates.isEmpty()) {
-            candidates = callee.candidates
-        }
-
-        val result = resolveWithArguments(candidates, call.arguments, call)
+        // Try to resolve the best viable function based on the candidates and the arguments
+        val result = resolveWithArguments(callee.candidates, call.arguments, call)
         when (result.success) {
             PROBLEMATIC -> {
                 log.error(
