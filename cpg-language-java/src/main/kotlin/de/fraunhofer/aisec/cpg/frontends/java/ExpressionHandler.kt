@@ -333,7 +333,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
     private fun handleThisExpression(expr: Expression): Reference {
         val thisExpr = expr.asThisExpr()
         val qualifiedName = frontend.scopeManager.currentRecord?.name.toString()
-        val type = this.objectType(qualifiedName)
+        var type = this.objectType(qualifiedName)
         var name = thisExpr.toString()
 
         // If the typeName is specified, then this a "qualified this" and we need to handle it
@@ -344,6 +344,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         val typeName = thisExpr.typeName
         if (typeName.isPresent) {
             name = "this$" + typeName.get().identifier
+            type = unknownType() // will be filled later by the symbol resolver
         }
         val thisExpression = newReference(name, type, rawNode = expr)
         return thisExpression
