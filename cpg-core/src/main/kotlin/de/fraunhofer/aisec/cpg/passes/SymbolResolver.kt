@@ -332,6 +332,10 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         // Handle a possible overloaded operator->
         val baseType = resolveOverloadedArrowOperator(current) ?: base.type.root
 
+        // Find candidates based on possible base types
+        val (possibleTypes, _) = getPossibleContainingTypes(current)
+        current.candidates = resolveMemberByName(current.name.localName, possibleTypes).toSet()
+
         // For legacy reasons, resolving of simple variable references (including fields) is
         // separated from call resolving. Therefore, we need to stop here if we are the callee of a
         // member call and continue in handleCallExpression. But we can already make
@@ -339,8 +343,6 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         // in handleReference.
         val helper = current.resolutionHelper
         if (helper is MemberCallExpression) {
-            val (possibleTypes, _) = getPossibleContainingTypes(helper)
-            current.candidates = resolveMemberByName(helper.name.localName, possibleTypes).toSet()
             return
         }
 
@@ -835,19 +837,18 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 }
 
 /**
- * Returns a set of types in which the callee of our [call] could reside in. More concretely, it
- * returns a [Pair], where the first element is the set of types and the second is our best guess.
+ * Returns a set of types in which the [CallExpression.callee] (which is a [Reference]) could reside
+ * in. More concretely, it returns a [Pair], where the first element is the set of types and the
+ * second is our best guess.
  */
-internal fun Pass<*>.getPossibleContainingTypes(call: CallExpression): Pair<Set<Type>, Type?> {
+internal fun Pass<*>.getPossibleContainingTypes(ref: Reference): Pair<Set<Type>, Type?> {
     val possibleTypes = mutableSetOf<Type>()
     var bestGuess: Type? = null
-    if (call is MemberCallExpression) {
-        call.base?.let { base ->
-            bestGuess = base.type
-            possibleTypes.add(base.type)
-            possibleTypes.addAll(base.assignedTypes)
-        }
-    } else if (call.language is HasImplicitReceiver) {
+    if (ref is MemberExpression) {
+        bestGuess = ref.base.type
+        possibleTypes.add(ref.base.type)
+        possibleTypes.addAll(ref.base.assignedTypes)
+    } else if (ref.language is HasImplicitReceiver) {
         // This could be a member call with an implicit receiver, so let's add the current class
         // to the possible list
         scopeManager.currentRecord?.toType()?.let {
