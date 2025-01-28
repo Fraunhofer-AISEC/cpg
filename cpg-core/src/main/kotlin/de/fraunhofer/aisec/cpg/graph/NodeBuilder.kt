@@ -159,8 +159,8 @@ fun Node.applyMetadata(
 }
 
 /**
- * Generates a [Name] object from the given [name]. If [doNotPrependNamespace] is set, only the supplied name is
- * used, otherwise the [namespace] is prepended to the name.
+ * Generates a [Name] object from the given [name]. If [doNotPrependNamespace] is set, only the
+ * supplied name is used, otherwise the [namespace] is prepended to the name.
  */
 fun LanguageProvider.newName(
     name: CharSequence,
