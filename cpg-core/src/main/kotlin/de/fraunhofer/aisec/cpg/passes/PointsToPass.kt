@@ -41,7 +41,6 @@ import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.functional.*
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
-import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass.Configuration
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 
 /**
@@ -50,7 +49,7 @@ import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
  */
 fun nodeNameToString(node: Node): Name {
     return when (node) {
-        is Literal<*> -> Name((node as? Literal<*>)?.value.toString())
+        is Literal<*> -> Name(node.value.toString())
         is UnknownMemoryValue -> Name(node.name.localName, Name("UnknownMemoryValue"))
         else -> node.name
     }
@@ -77,11 +76,12 @@ fun resolveMemberExpression(node: MemberExpression): Pair<Node, Name> {
 @DependsOn(SymbolResolver::class)
 @DependsOn(EvaluationOrderGraphPass::class)
 @DependsOn(DFGPass::class)
-class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependencies = true) {
+open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependencies = true) {
     class Configuration(
         /**
-         * This specifies the maximum complexity (as calculated per [Statement.cyclomaticComplexity]
-         * a [FunctionDeclaration] must have in order to be considered.
+         * This specifies the maximum complexity (as calculated per
+         * [Statement.cyclomaticComplexity]) a [FunctionDeclaration] must have in order to be
+         * considered.
          */
         var maxComplexity: Int? = null,
 
@@ -286,8 +286,8 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
 
     private fun handleReturnStatement(
         currentNode: ReturnStatement,
-        doubleState: PointsToPass.PointsToState2
-    ): PointsToPass.PointsToState2 {
+        doubleState: PointsToState2
+    ): PointsToState2 {
         /* For Return Statements, all we really want to do is to collect their return values
         to add them to the FunctionSummary */
         var doubleState = doubleState
@@ -311,8 +311,8 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
 
     private fun handleCallExpression(
         currentNode: CallExpression,
-        doubleState: PointsToPass.PointsToState2
-    ): PointsToPass.PointsToState2 {
+        doubleState: PointsToState2
+    ): PointsToState2 {
         var doubleState = doubleState
         val mapDstToSrc = mutableMapOf<Node, MutableSet<Node>>()
 
@@ -539,9 +539,10 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
             // CallExpression), we also add destinations to update the generalState, otherwise, the
             // destinationAddresses for the DeclarationState are enough
             val dstValues = doubleState.getValues(dst)
-            if (dstValues.all { it == dst })
-                doubleState = doubleState.updateValues(src, dstValues, setOf(dst))
-            else doubleState = doubleState.updateValues(src, identitySetOf(), setOf(dst))
+            doubleState =
+                if (dstValues.all { it == dst })
+                    doubleState.updateValues(src, dstValues, setOf(dst))
+                else doubleState.updateValues(src, identitySetOf(), setOf(dst))
         }
 
         return doubleState
@@ -549,8 +550,8 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
 
     private fun handleUnaryOperator(
         currentNode: UnaryOperator,
-        doubleState: PointsToPass.PointsToState2
-    ): PointsToPass.PointsToState2 {
+        doubleState: PointsToState2
+    ): PointsToState2 {
         var doubleState = doubleState
         /* For UnaryOperators, we have to update the value if it's a ++ or -- operator
          */
@@ -579,8 +580,8 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
 
     private fun handleAssignExpression(
         currentNode: AssignExpression,
-        doubleState: PointsToPass.PointsToState2
-    ): PointsToPass.PointsToState2 {
+        doubleState: PointsToState2
+    ): PointsToState2 {
         var doubleState = doubleState
         /* For AssignExpressions, we update the value of the rhs with the lhs
          * In C(++), both the lhs and the rhs should only have one element
@@ -598,8 +599,8 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
 
     private fun handleExpression(
         currentNode: Expression,
-        doubleState: PointsToPass.PointsToState2
-    ): PointsToPass.PointsToState2 {
+        doubleState: PointsToState2
+    ): PointsToState2 {
         var doubleState = doubleState
         /* For MemberExpressions and SubscriptExpressions, we may have to create a memoryAddress first */
         if (currentNode is MemberExpression) {
@@ -665,10 +666,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
         return doubleState
     }
 
-    private fun handleDeclaration(
-        currentNode: Node,
-        doubleState: PointsToPass.PointsToState2
-    ): PointsToState2 {
+    private fun handleDeclaration(currentNode: Node, doubleState: PointsToState2): PointsToState2 {
         /* No need to set the address, this already happens in the constructor */
         val addresses = doubleState.getAddresses(currentNode)
 
@@ -1074,7 +1072,7 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
                 val addrState = declarationsState.elements[addr]
                 if (
                     addrState == null ||
-                        addrState.elements.first.elements.filter { it.name == nodeName }.isEmpty()
+                        addrState.elements.first.elements.none { it.name == nodeName }
                 ) {
                     val fieldAddress = MemoryAddress(nodeName)
                     doubleState =
@@ -1140,13 +1138,13 @@ class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependenc
             /* When we are dealing with SubscriptExpression, we also have to initialise the arrayExpression
             , since that hasn't been done yet */
             destinations.filterIsInstance<SubscriptExpression>().forEach { d ->
-                val AEaddresses = this.getAddresses(d.arrayExpression)
-                val AEvalues = this.getValues(d.arrayExpression)
+                val aEaddresses = this.getAddresses(d.arrayExpression)
+                val aEvalues = this.getValues(d.arrayExpression)
 
                 doubleState =
                     doubleState.push(
                         d.arrayExpression,
-                        TupleLattice(Pair(PowersetLattice(AEaddresses), PowersetLattice(AEvalues)))
+                        TupleLattice(Pair(PowersetLattice(aEaddresses), PowersetLattice(aEvalues)))
                     )
             }
 
