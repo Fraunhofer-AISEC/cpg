@@ -27,16 +27,20 @@ package de.fraunhofer.aisec.cpg.frontends
 
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.graph.HasOperatorCode
-import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
-import de.fraunhofer.aisec.cpg.graph.LanguageProvider
-import de.fraunhofer.aisec.cpg.graph.Name
+import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.scopes.*
+import de.fraunhofer.aisec.cpg.graph.edges.flows.*
+import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
+import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
+import de.fraunhofer.aisec.cpg.graph.scopes.Scope
+import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.passes.*
+import de.fraunhofer.aisec.cpg.passes.ResolveCallExpressionAmbiguityPass
+import de.fraunhofer.aisec.cpg.passes.ResolveMemberExpressionAmbiguityPass
+import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import kotlin.reflect.KClass
 
 /**
@@ -296,6 +300,26 @@ inline infix fun <reified T : HasOverloadedOperation> KClass<T>.of(
     operatorCode: String
 ): Pair<KClass<T>, String> {
     return Pair(T::class, operatorCode)
+}
+
+/**
+ * A language trait that specifies that this language has dynamic declarations, meaning that
+ * declarations can be added to the symbol table at runtime. Since we are a static analysis tools,
+ * we can only deliver an approximation to the actual behaviour.
+ */
+interface HasDynamicDeclarations : LanguageTrait {
+
+    /**
+     * A callback that can be used by a language to provide a declaration for a reference. The
+     * language is responsible for
+     * - Adding the declaration to the symbol table (using [ScopeManager.addDeclaration]; as well as
+     *   adding it to the AST
+     * - Injecting the declaration into the EOG path (if necessary). Since this reference might be
+     *   part of different AST expressions different approaches might be necessary. The utility
+     *   functions [Node.insertNodeBeforeInEOGPath] and [Node.insertNodeAfterwardInEOGPath] should
+     *   be used.
+     */
+    fun SymbolResolver.provideDeclaration(ref: Reference): Declaration?
 }
 
 /** Checks whether the name for a function (as [CharSequence]) is a known operator name. */

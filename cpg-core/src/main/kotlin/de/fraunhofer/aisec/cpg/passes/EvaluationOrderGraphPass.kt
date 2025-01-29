@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.StatementHolder
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
+import de.fraunhofer.aisec.cpg.graph.edges.flows.insertNodeBeforeInEOGPath
 import de.fraunhofer.aisec.cpg.graph.firstParentOrNull
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -1481,4 +1482,29 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         }
         nextEdgeBranch = tmpBranchLabel
     }
+}
+
+/**
+ * This adds an extra declaration (see [AssignExpression.declarations] to the EOG of the
+ * [AssignExpression]. This is needed if we somehow add the declaration after the pass has initially
+ * run.
+ *
+ * This mimics the behaviour in [EvaluationOrderGraphPass.handleAssignExpression].
+ */
+fun AssignExpression.addDeclarationToEOG(decl: Declaration): Boolean? {
+    // We need to insert the declaration before the first lhs ref
+    return this.lhs.firstOrNull()?.insertNodeBeforeInEOGPath(decl)
+}
+
+/**
+ * This adds an extra local declaration (see [ForEachStatement.locals]) to the EOG of the
+ * [ForEachStatement]. This is needed if we somehow add the declaration after the pass has initially
+ * run.
+ *
+ * This mimics the behaviour in [EvaluationOrderGraphPass.handleForEachStatement].
+ */
+fun ForEachStatement.addDeclarationToEOG(decl: Declaration): Boolean? {
+    // Actually, it seems like we are not adding the declaration of a local variable to the EOG of
+    // the ForEachStatement at all.
+    return true
 }
