@@ -31,12 +31,15 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.autoType
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
+import de.fraunhofer.aisec.cpg.graph.imports
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.translationUnit
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
+import de.fraunhofer.aisec.cpg.passes.updateImportedSymbols
 import kotlin.reflect.KClass
 import org.neo4j.ogm.annotation.Transient
 
@@ -250,6 +253,13 @@ class PythonLanguage :
                 handled.let { (ref.astParent as ForEachStatement).addDeclaration(it) }
             }
         }
+
+        // Completely stupid, but needed, definitely needs a better solution, but we need to update
+        // the imports if we create variables here. Instead it would be very nice, if we could
+        // trigger an update from a namespace record to the import declarations that import it
+        // (which the import resolver could build). Then we can see whether we updated a symbol in a
+        // namespace and update its imports.
+        ref.translationUnit.imports.forEach { it.updateImportedSymbols() }
 
         return null
     }
