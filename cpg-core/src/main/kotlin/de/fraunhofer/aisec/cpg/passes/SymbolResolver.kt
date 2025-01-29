@@ -319,6 +319,13 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         val base = current.base
         val language = current.language
 
+        // Before we resolve anything, we give languages with dynamic declarations a chance to
+        // declare any variables they need. This is most likely only needed for WRITE references,
+        // but we let the language decide that
+        if (language is HasDynamicDeclarations) {
+            with(language) { provideDeclaration(current) }
+        }
+
         // We need to adjust certain types of the base in case of a "super" expression, and we
         // delegate this to the language. If that is successful, we can continue with regular
         // resolving.

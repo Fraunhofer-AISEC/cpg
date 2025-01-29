@@ -169,6 +169,7 @@ open class RecordDeclaration :
         get() {
             val list = mutableListOf<Node>()
 
+            // list += statements
             list += fields
             list += methods
             list += constructors

@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.InitializerTypePropagation
+import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.passes.Pass
 import de.fraunhofer.aisec.cpg.passes.Pass.Companion.log
@@ -93,15 +94,19 @@ internal fun Pass<*>.handleWriteToReference(ref: Reference): VariableDeclaration
                     newFieldDeclaration(ref.name)
                 }
             }
-            scopeManager.isInRecord && scopeManager.isInFunction && ref is MemberExpression -> {
-                // If this is any other member expression, we are usually not interested in
-                // creating fields, except if this is a receiver
-                return null
-            }
-            scopeManager.isInRecord && !scopeManager.isInFunction -> {
+            scopeManager.isInRecord && !scopeManager.isInFunction && ref !is MemberExpression -> {
                 // We end up here for fields declared directly in the class body. These are
                 // class attributes; more or less static fields.
                 newFieldDeclaration(scopeManager.currentNamespace.fqn(ref.name.localName))
+            }
+            ref is MemberExpression && ref.base.type is ObjectType -> {
+                // If this is a member expression for a known object type, we can create a field for
+                // the type
+                (ref.base.type as ObjectType).recordDeclaration?.let {
+                    scopeManager.withScope(scopeManager.lookupScope(it)) {
+                        newFieldDeclaration(ref.name)
+                    }
+                }
             }
             else -> {
                 null
