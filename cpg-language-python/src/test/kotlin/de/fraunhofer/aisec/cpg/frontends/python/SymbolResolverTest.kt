@@ -27,15 +27,14 @@ package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.test.analyze
+import de.fraunhofer.aisec.cpg.test.assertNotRefersTo
 import de.fraunhofer.aisec.cpg.test.assertRefersTo
 import java.io.File
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertIs
-import kotlin.test.assertIsNot
-import kotlin.test.assertNotNull
+import kotlin.test.*
 
 class SymbolResolverTest {
     @Test
@@ -68,5 +67,24 @@ class SymbolResolverTest {
         val osNameRefs = result.refs("os.name")
         assertEquals(1, osNameRefs.size)
         assertIsNot<MemberExpression>(osNameRefs.singleOrNull())
+
+        // Same tests but for fields declared at the record level.
+        // A variable "declared" inside a class is considered a field in Python.
+        val fieldCopyA = result.records["MyClass"]?.fields["copyA"]
+        assertIs<FieldDeclaration>(fieldCopyA)
+        val baz = result.records["MyClass"]?.methods["baz"]
+        assertIs<MethodDeclaration>(baz)
+        val bazPrint = baz.calls("print").singleOrNull()
+        assertIs<CallExpression>(bazPrint)
+        val bazPrintArgument = bazPrint.arguments.firstOrNull()
+        assertRefersTo(bazPrintArgument, fieldCopyA)
+
+        // make sure, that this does not work without the receiver
+        val bazDoesNotWork = baz.calls("doesNotWork").singleOrNull()
+        assertIs<CallExpression>(bazDoesNotWork)
+        val bazDoesNotWorkArgument = bazDoesNotWork.arguments.firstOrNull()
+        assertNotNull(bazDoesNotWorkArgument)
+        assertTrue(bazDoesNotWorkArgument.isImplicit)
+        assertNotRefersTo(bazDoesNotWorkArgument, fieldCopyA)
     }
 }

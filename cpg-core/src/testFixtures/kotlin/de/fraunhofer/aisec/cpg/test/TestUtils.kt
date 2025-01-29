@@ -29,10 +29,13 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase
-import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.ContextProvider
+import de.fraunhofer.aisec.cpg.graph.LanguageProvider
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.get
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.test.TestUtils.ENFORCE_MEMBER_EXPRESSION
@@ -43,16 +46,7 @@ import java.nio.file.Path
 import java.util.function.Consumer
 import java.util.function.Predicate
 import java.util.stream.Collectors
-import kotlin.collections.filter
-import kotlin.collections.first
-import kotlin.collections.firstOrNull
-import kotlin.collections.flatMap
-import kotlin.collections.isNotEmpty
-import kotlin.collections.joinToString
-import kotlin.jvm.Throws
 import kotlin.test.*
-import kotlin.text.endsWith
-import kotlin.toString
 
 object TestUtils {
 
@@ -232,6 +226,15 @@ fun compareLineFromLocationIfExists(n: Node, startLine: Boolean, toCompare: Int)
 fun assertRefersTo(expression: Expression?, b: Declaration?) {
     if (expression is Reference) {
         assertEquals(b, (expression as Reference?)?.refersTo)
+    } else {
+        fail("not a reference")
+    }
+}
+
+/** Asserts, that the expression given in [expression] does not refer to the declaration [b]. */
+fun assertNotRefersTo(expression: Expression?, b: Declaration?) {
+    if (expression is Reference) {
+        assertNotEquals(b, (expression as Reference?)?.refersTo)
     } else {
         fail("not a reference")
     }
