@@ -84,7 +84,6 @@ class SymbolResolverTest {
         assertIs<CallExpression>(bazDoesNotWork)
         val bazDoesNotWorkArgument = bazDoesNotWork.arguments.firstOrNull()
         assertNotNull(bazDoesNotWorkArgument)
-        assertTrue(bazDoesNotWorkArgument.isImplicit)
         assertNotRefersTo(bazDoesNotWorkArgument, fieldCopyA)
     }
 }

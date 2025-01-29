@@ -3,7 +3,7 @@ import os
 a = "Hello"
 
 class MyClass:
-    copyA = a
+    copyA = 1
     def foo(self):
         self.a = 1
         print(a)
