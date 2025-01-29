@@ -40,6 +40,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.tryCast
 import java.util.*
 import org.slf4j.LoggerFactory
@@ -119,6 +120,8 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
      * the next target of an EOG edge.
      */
     protected val intermediateNodes = mutableListOf<Node>()
+
+    val alreadySeen = identitySetOf<Node>()
 
     protected fun doNothing() {
         // Nothing to do for this node type
@@ -341,9 +344,12 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
      * e.g. [LoopStatement]s or [BreakStatement].
      */
     protected fun handleEOG(node: Node?) {
-        if (node == null) {
+        if (node == null || alreadySeen.contains(node)) {
             return
         }
+
+        alreadySeen.add(node)
+
         intermediateNodes.add(node)
 
         when (node) {

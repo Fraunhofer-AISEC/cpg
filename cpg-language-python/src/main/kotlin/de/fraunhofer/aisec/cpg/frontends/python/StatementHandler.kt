@@ -1218,7 +1218,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      */
     private fun wrapDeclarationToStatement(decl: Declaration): DeclarationStatement {
         val declStmt = newDeclarationStatement().codeAndLocationFrom(decl)
-        declStmt.addDeclaration(decl)
+        declStmt.declarations += decl
         return declStmt
     }
 
