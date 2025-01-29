@@ -807,7 +807,12 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
         for (s in stmt.body) {
             when (s) {
-                is Python.AST.FunctionDef -> handleFunctionDef(s, cls)
+                is Python.AST.FunctionDef -> {
+                    val stmt = handleFunctionDef(s, cls)
+                    // We need to manually set the astParent because we are not assigning it to our
+                    // statements and therefore are not triggering our automagic parent setter
+                    stmt.astParent = cls
+                }
                 else -> cls.statements += handleNode(s)
             }
         }

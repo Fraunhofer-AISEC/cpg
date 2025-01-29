@@ -100,22 +100,33 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
         }
 
         // Look for a potential scope modifier for this reference
-        // lookupScope
         var targetScope =
             scopeManager.currentScope?.predefinedLookupScopes[ref.name.toString()]?.targetScope
 
-        // There are a couple of things to consider now
+        // Try to see whether our symbol already exists. There are basically three rules to follow
+        // here.
         var symbol =
-            // Since this is a WRITE access, we need
-            //   - to look for a local symbol, unless
-            //   - a global keyword is present for this symbol and scope
-            if (targetScope != null) {
-                scopeManager.lookupSymbolByNodeName(ref, targetScope)
-            } else {
-                scopeManager.lookupSymbolByNodeName(ref) { it.scope == scopeManager.currentScope }
+            when {
+                // When a target scope is set, then we have a `global` or `nonlocal` keyword for
+                // this symbol, and we need to start looking in this scope
+                targetScope != null -> scopeManager.lookupSymbolByNodeName(ref, targetScope)
+                // When we have a qualified reference (such as `self.a`), we do not have any
+                // specific restrictions, because the lookup will anyway be a qualified lookup,
+                // and it will consider only the scope of `self`.
+                ref.name.isQualified() -> scopeManager.lookupSymbolByNodeName(ref)
+                // In any other case, we need to restrict the lookup to the current scope. The
+                // main reason for this is that Python requires the `global` keyword in functions
+                // for assigning to global variables. See
+                // https://docs.python.org/3/reference/simple_stmts.html#the-global-statement. So
+                // basically we need to ignore all global variables at this point and only look
+                // for local ones.
+                else ->
+                    scopeManager.lookupSymbolByNodeName(ref) {
+                        it.scope == scopeManager.currentScope
+                    }
             }
 
-        // Nothing to create
+        // If the symbol is already defined in the designed scope, there is nothing to create
         if (symbol.isNotEmpty()) return null
 
         // First, check if we need to create a field
@@ -137,7 +148,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
                 scopeManager.isInRecord && !scopeManager.isInFunction -> {
                     // We end up here for fields declared directly in the class body. These are
                     // class attributes; more or less static fields.
-                    newFieldDeclaration(ref.name)
+                    newFieldDeclaration(scopeManager.currentNamespace.fqn(ref.name.localName))
                 }
                 else -> {
                     null
