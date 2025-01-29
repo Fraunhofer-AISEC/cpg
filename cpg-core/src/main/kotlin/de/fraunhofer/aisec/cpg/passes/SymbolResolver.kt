@@ -229,21 +229,23 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         // or a qualified lookup starting from the scope specified in the name.
         var candidates = scopeManager.lookupSymbolByNodeName(ref, predicate = predicate).toSet()
 
-        // but we have to consider one special case:
-        // For languages, that support implicit receivers, this reference might be a member access
-        // of either the current class or a parent class. While a regular lookup would only consider
-        // the current scope, we have to consider the parent classes as well, which is exactly what
-        // resolveMemberByName does.
+        // But we have to consider one special case: For languages, that support implicit receivers,
+        // this reference might be a member access of either the current class or a parent class.
+        // While a regular lookup would only consider the current scope, we have to consider the
+        // parent classes as well, which is exactly what resolveMemberByName does. We could probably
+        // get around this if we would include the symbols of the parent class somehow in the child
+        // class as a sort of "sibling" scope, but we do not have that (yet).
         if (
-            candidates.isEmpty() &&
-                language is HasImplicitReceiver &&
-                currentClass != null &&
-                !ref.name.isQualified()
+            language is HasImplicitReceiver &&
+                candidates.isEmpty() &&
+                !ref.name.isQualified() &&
+                currentClass != null
         ) {
             candidates =
                 resolveMemberByName(ref.name.localName, setOf(currentClass.toType())).toSet()
         }
 
+        // Store the candidates in the reference
         ref.candidates = candidates
 
         // We need to choose the best viable candidate out of the ones we have for our reference.
@@ -252,33 +254,26 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         // takes only a single one).
         val wouldResolveTo = language.bestViableReferenceCandidate(ref)
 
-        // For now, we need to ignore reference expressions that are directly embedded into call
-        // expressions, because they are the "callee" property. In the future, we will use this
-        // property to actually resolve the function call. However, there is a special case that
-        // we want to catch already, that is if we are "calling" a reference to a variable. This
-        // can be done in several languages, e.g., in C/C++ as function pointers or in Go as
-        // function references. In this case, we want to resolve the declared reference expression
-        // of this call expression back to its original variable declaration. In the future, we want
-        // to extend this particular code to resolve all callee references to their declarations,
-        // i.e., their function definitions and get rid of the separate CallResolver.
-        if (ref.resolutionHelper is CallExpression) {
-            // Peek into the declaration, and if it is only one declaration and a variable, we can
-            // proceed normally, as we are running into the special case explained above. Otherwise,
-            // we abort here (for now).
-            if (wouldResolveTo !is VariableDeclaration && wouldResolveTo !is ParameterDeclaration) {
-                return
-            }
+        // For now, we still separate the resolving of simple variable references from call
+        // resolving. Therefore, we need to stop here if we are the callee of a call and continue in
+        // handleCallExpression.
+        //
+        // However, there is a special case that we want to catch, that is if we are "calling" a
+        // reference to a variable (or parameter). This can be done in several languages, e.g., in
+        // C/C++ as function pointers or in Go as function references. In this case, we want to
+        // resolve the reference of this call expression back to its original declaration, and then
+        // we later continue in the DynamicInvokeResolver, which sets the invokes edge.
+        if (
+            ref.resolutionHelper is CallExpression &&
+                (wouldResolveTo !is VariableDeclaration && wouldResolveTo !is ParameterDeclaration)
+        ) {
+            return
         }
 
         // Only consider resolving, if the language frontend did not specify a resolution. If we
         // already have populated the wouldResolveTo variable, we can re-use this instead of
         // resolving again
         var refersTo = ref.refersTo ?: wouldResolveTo
-
-        var recordDeclType: Type? = null
-        if (currentClass != null) {
-            recordDeclType = currentClass.toType()
-        }
 
         // If we did not resolve the reference up to this point, we can try to infer the declaration
         if (refersTo == null) {
@@ -327,7 +322,9 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             language.handleSuperExpression(current, curClass, scopeManager)
         }
 
-        // Handle a possible overloaded operator->
+        // Handle a possible overloaded operator->. If we find an overloaded operator, this inserts
+        // an additional operator expression in-between the existing member expression and the base
+        // and also affects the base type.
         val baseType = resolveOverloadedArrowOperator(current) ?: base.type.root
 
         // Find candidates based on possible base types
@@ -385,6 +382,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 ex.base = call
             }
         }
+
         return type
     }
 
@@ -434,12 +432,13 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             return
         }
 
-        // Dynamic function invokes (such as function pointers) are handled by extra pass, so we are
+        // Dynamic function invokes (such as function pointers) are handled by an extra pass, so we
+        // are
         // not resolving them here.
         //
         // We have a dynamic invoke in two cases:
         // a) our calleee is not a reference
-        // b) our reference refers to a variable rather than a function
+        // b) our reference already refers to a variable rather than a function
         if (
             callee !is Reference ||
                 callee.refersTo is VariableDeclaration ||
@@ -653,6 +652,17 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         }
     }
 
+    /**
+     * This function handles all nodes that have the [HasOverloadedOperation] trait. It tries to
+     * resolve the overloaded operator and replace the node with the resolved operator expression.
+     *
+     * Which overloads are possible, is depending on whether the language implements
+     * [HasOperatorOverloading] and can be specified in
+     * [HasOperatorOverloading.overloadedOperatorNames].
+     *
+     * Internally, it takes the result of [resolveOperator] and if successful, replaces the node
+     * with the resolved [OperatorCallExpression].
+     */
     protected open fun handleOverloadedOperator(op: HasOverloadedOperation) {
         val result = resolveOperator(op)
         val decl = result?.bestViable?.singleOrNull() ?: return
@@ -664,6 +674,19 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         }
     }
 
+    /**
+     * This function tries to resolve an overloaded operator based on the
+     * [HasOverloadedOperation.operatorCode] of the [op] (if the [HasOverloadedOperation.language]
+     * allows it). It first lookups the corresponding symbol in the
+     * [HasOperatorOverloading.overloadedOperatorNames] of the language, for example `add` for a `+`
+     * operator. In then tries to find the matching method candidates in the base class of the [op]
+     * (using [resolveMemberByName]) and returns the result of the resolution. The base depends on
+     * the individual operator / expression and is specified in
+     * [HasOverloadedOperation.operatorBase].
+     *
+     * Finally, the candidates are resolved with the arguments of the operator expression using
+     * [resolveWithArguments].
+     */
     private fun resolveOperator(op: HasOverloadedOperation): CallResolutionResult? {
         val language = op.language
         val base = op.operatorBase
