@@ -29,13 +29,14 @@ import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.autoType
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
+import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation
+import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import kotlin.reflect.KClass
 import org.neo4j.ogm.annotation.Transient
 
@@ -45,7 +46,8 @@ class PythonLanguage :
     HasShortCircuitOperators,
     HasOperatorOverloading,
     HasFunctionStyleConstruction,
-    HasMemberExpressionAmbiguity {
+    HasMemberExpressionAmbiguity,
+    HasDynamicDeclarations {
     override val fileExtensions = listOf("py", "pyi")
     override val namespaceDelimiter = "."
     @Transient
@@ -226,6 +228,30 @@ class PythonLanguage :
         }
 
         return super.tryCast(type, targetType, hint, targetHint)
+    }
+
+    override fun SymbolResolver.provideDeclaration(ref: Reference): Declaration? {
+        // Completely hacky
+        if (ref.astParent is AssignExpression) {
+            handleAssignmentToTarget(
+                ref.astParent!! as AssignExpression,
+                ref,
+                setAccessValue = false,
+            )
+        } else if (ref.astParent is InitializerListExpression) {
+            handleAssignmentToTarget(
+                ref.astParent!!.astParent as AssignExpression,
+                ref,
+                setAccessValue = false,
+            )
+        } else if (ref.astParent is ForEachStatement) {
+            val handled = handleWriteToReference(ref)
+            if (handled is Declaration) {
+                handled.let { (ref.astParent as ForEachStatement).addDeclaration(it) }
+            }
+        }
+
+        return null
     }
 
     companion object {

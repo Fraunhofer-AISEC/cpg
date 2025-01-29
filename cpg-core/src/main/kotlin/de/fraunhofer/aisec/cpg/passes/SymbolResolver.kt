@@ -194,6 +194,13 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         val language = ref.language
         val helperType = ref.resolutionHelper?.type
 
+        // Before we resolve anything, we give languages with dynamic declarations a chance to
+        // declare any variables they need. This is most likely only needed for WRITE references,
+        // but we let the language decide that
+        if (language is HasDynamicDeclarations) {
+            with(language) { provideDeclaration(ref) }
+        }
+
         // Ignore references to anonymous identifiers, if the language supports it (e.g., the _
         // identifier in Go)
         if (

@@ -36,8 +36,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.AutoType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.CommentMatcher
-import de.fraunhofer.aisec.cpg.passes.PythonAddDeclarationsPass
-import de.fraunhofer.aisec.cpg.passes.configuration.RegisterExtraPass
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
@@ -62,7 +60,6 @@ import kotlin.math.min
  * are represented by a dictionary. This pass adds a declaration for each variable that is assigned
  * a value (on the first assignment).
  */
-@RegisterExtraPass(PythonAddDeclarationsPass::class)
 class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: TranslationContext) :
     LanguageFrontend<Python.AST.AST, Python.AST.AST?>(language, ctx) {
     val lineSeparator = "\n" // TODO

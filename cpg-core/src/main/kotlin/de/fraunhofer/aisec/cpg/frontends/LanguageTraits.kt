@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.HasOperatorCode
 import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
 import de.fraunhofer.aisec.cpg.graph.LanguageProvider
 import de.fraunhofer.aisec.cpg.graph.Name
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
@@ -296,6 +297,16 @@ inline infix fun <reified T : HasOverloadedOperation> KClass<T>.of(
     operatorCode: String
 ): Pair<KClass<T>, String> {
     return Pair(T::class, operatorCode)
+}
+
+/**
+ * A language trait that specifies that this language has dynamic declarations, meaning that
+ * declarations can be added to the symbol table at runtime. Since we are a static analysis tools,
+ * we can only deliver an approximation to the actual behaviour.
+ */
+interface HasDynamicDeclarations : LanguageTrait {
+
+    fun SymbolResolver.provideDeclaration(ref: Reference): Declaration?
 }
 
 /** Checks whether the name for a function (as [CharSequence]) is a known operator name. */
