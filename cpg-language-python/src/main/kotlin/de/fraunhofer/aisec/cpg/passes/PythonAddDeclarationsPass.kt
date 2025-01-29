@@ -110,7 +110,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
             //   - a global keyword is present for this symbol and scope
             //   - the name is qualified
             if (targetScope != null) {
-                // When a target scope is set, then we have a "global" or "non local" keyword for
+                // When a target scope is set, then we have a `global` or `nonlocal` keyword for
                 // this symbol, and we need to start looking in this scope
                 scopeManager.lookupSymbolByNodeName(ref, targetScope)
             } else {
