@@ -11,6 +11,7 @@ class MyClass:
     def bar(self):
         self.os = 1
         print(os.name)
+        self.a = 1
 
     def baz(self):
         print(self.copyA)

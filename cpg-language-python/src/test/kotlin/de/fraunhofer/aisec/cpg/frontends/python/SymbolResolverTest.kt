@@ -50,7 +50,9 @@ class SymbolResolverTest {
                 .variables[{ it.name.localName == "a" && it !is FieldDeclaration }]
         assertNotNull(globalA)
 
-        val fieldA = result.records["MyClass"]?.fields["a"]
+        // Make sure, we only have one (!) field a
+        val fieldsA = result.records["MyClass"]?.fields("a")
+        val fieldA = fieldsA?.singleOrNull()
         assertNotNull(fieldA)
 
         val aRefs = result.refs("a")

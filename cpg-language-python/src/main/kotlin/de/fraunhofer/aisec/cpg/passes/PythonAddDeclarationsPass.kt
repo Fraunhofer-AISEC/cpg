@@ -106,13 +106,18 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
 
         // There are a couple of things to consider now
         var symbol =
-            // Since this is a WRITE access, we need
-            //   - to look for a local symbol, unless
+            // Since this is a WRITE access, we need to look for a local symbol, unless
             //   - a global keyword is present for this symbol and scope
+            //   - the name is qualified
             if (targetScope != null) {
+                // When a target scope is set, then we have a "global" or "non local" keyword for
+                // this symbol, and we need to start looking in this scope
                 scopeManager.lookupSymbolByNodeName(ref, targetScope)
             } else {
-                scopeManager.lookupSymbolByNodeName(ref) { it.scope == scopeManager.currentScope }
+                scopeManager.lookupSymbolByNodeName(ref) {
+                    // Otherwise, we need to stick to the current scope unless the name is qualified
+                    it.scope == scopeManager.currentScope || ref.name.isQualified()
+                }
             }
 
         // Nothing to create
