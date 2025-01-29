@@ -45,17 +45,17 @@ class SymbolResolverTest {
                 it.registerLanguage<PythonLanguage>()
             }
 
-        val a =
+        val globalA =
             result.namespaces["fields"]
                 .variables[{ it.name.localName == "a" && it !is FieldDeclaration }]
-        assertNotNull(a)
+        assertNotNull(globalA)
 
         val fieldA = result.records["MyClass"]?.fields["a"]
         assertNotNull(fieldA)
 
         val aRefs = result.refs("a")
         aRefs.filterIsInstance<MemberExpression>().forEach { assertRefersTo(it, fieldA) }
-        aRefs.filter { it !is MemberExpression }.forEach { assertRefersTo(it, a) }
+        aRefs.filter { it !is MemberExpression }.forEach { assertRefersTo(it, globalA) }
 
         // We should only have one reference to "os" -> the member expression "self.os"
         val osRefs = result.refs("os")
