@@ -807,7 +807,11 @@ fun Node.followNextEOGEdgesUntilHit(
             if (interproceduralAnalysis && currentNode is CallExpression) {
                 ctx.callStack.push(currentNode)
                 currentNode.invokes.flatMap { it.eogStarters }
-            } else if (interproceduralAnalysis && currentNode is ReturnStatement) {
+            } else if (
+                interproceduralAnalysis &&
+                    (currentNode is ReturnStatement ||
+                        currentNode is FunctionDeclaration && currentNode.nextEOG.isEmpty())
+            ) {
                 if (ctx.callStack.isEmpty()) {
                     (currentNode.firstParentOrNull { it is FunctionDeclaration }
                             as? FunctionDeclaration)
