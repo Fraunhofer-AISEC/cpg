@@ -81,7 +81,7 @@ import org.slf4j.LoggerFactory
 @DependsOn(TypeHierarchyResolver::class)
 @DependsOn(EvaluationOrderGraphPass::class)
 @DependsOn(ImportResolver::class)
-open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
+open class SymbolResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
 
     /** Configuration for the [SymbolResolver]. */
     class Configuration(
@@ -122,8 +122,8 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             null
         }
 
-    override fun accept(component: Component) {
-        ctx.currentComponent = component
+    override fun accept(component: TranslationResult) {
+        //        ctx.currentComponent = component
         walker = ScopedWalker(scopeManager)
 
         cacheTemplates(component)
