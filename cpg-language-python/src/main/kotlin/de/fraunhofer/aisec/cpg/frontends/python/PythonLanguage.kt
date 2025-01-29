@@ -241,11 +241,14 @@ class PythonLanguage :
                 ref,
                 setAccessValue = false,
             )
-        } else if (ref.astParent is InitializerListExpression) {
+        } else if (
+            ref.astParent is InitializerListExpression &&
+                ref.astParent?.astParent is AssignExpression
+        ) {
             handleAssignmentToTarget(
                 ref.astParent!!.astParent as AssignExpression,
                 ref,
-                setAccessValue = false,
+                setAccessValue = true,
             )
         } else if (ref.astParent is ForEachStatement) {
             val handled = handleWriteToReference(ref)
