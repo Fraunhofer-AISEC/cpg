@@ -882,7 +882,9 @@ fun Node.followPrevEOGEdgesUntilHit(
                         // back there.
                         ctx.callStack.pop().prevEOGEdges
                     }
-                    interproceduralAnalysis && currentNode is CallExpression -> {
+                    interproceduralAnalysis &&
+                        currentNode is CallExpression &&
+                        currentNode.invokes.isNotEmpty() -> {
                         // We're in the call expression. Push it on the stack, go to all last EOG
                         // nodes in the functions which are invoked and continue there.
                         ctx.callStack.push(currentNode)
