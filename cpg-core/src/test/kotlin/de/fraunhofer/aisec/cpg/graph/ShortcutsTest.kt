@@ -204,46 +204,66 @@ class ShortcutsTest {
         val magic = classDecl.methods["magic"]
         assertNotNull(magic)
 
-        val ifStatement = (magic.body as Block).statements[0] as IfStatement
+        val magicBody = magic.body
+        assertIs<Block>(magicBody)
+        val ifStatement = magicBody.statements[0]
+        assertIs<IfStatement>(ifStatement)
 
         val actual = ifStatement.controls()
-        ifStatement.thenStatement?.let { expected.add(it) }
-        val thenStatement = (ifStatement.thenStatement as Block).statements[0] as IfStatement
-        expected.add(thenStatement)
-        thenStatement.condition?.let { expected.add(it) }
-        expected.add((thenStatement.condition as BinaryOperator).lhs)
-        expected.add(((thenStatement.condition as BinaryOperator).lhs as MemberExpression).base)
-        expected.add((thenStatement.condition as BinaryOperator).rhs)
-        val nestedThen = thenStatement.thenStatement as Block
+        val thenStmt = ifStatement.thenStatement
+        assertIs<Block>(thenStmt)
+        expected.add(thenStmt)
+        val innerIfStmt = thenStmt.statements[0]
+        assertIs<IfStatement>(innerIfStmt)
+        expected.add(innerIfStmt)
+        val condition = innerIfStmt.condition
+        assertIs<BinaryOperator>(condition)
+        expected.add(condition)
+        val conditionLhs = condition.lhs
+        assertIs<MemberExpression>(conditionLhs)
+        expected.add(conditionLhs)
+        expected.add(conditionLhs.base)
+        expected.add(condition.rhs)
+        val nestedThen = innerIfStmt.thenStatement
+        assertIs<Block>(nestedThen)
         expected.add(nestedThen)
-        expected.add(nestedThen.statements[0])
-        expected.add((nestedThen.statements[0] as AssignExpression).lhs.first())
-        expected.add(
-            ((nestedThen.statements[0] as AssignExpression).lhs.first() as MemberExpression).base
-        )
-        expected.add((nestedThen.statements[0] as AssignExpression).rhs.first())
-        val nestedElse = thenStatement.elseStatement as Block
-        expected.add(nestedElse)
-        expected.add(nestedElse.statements[0])
-        expected.add((nestedElse.statements[0] as AssignExpression).lhs.first())
-        expected.add(
-            ((nestedElse.statements[0] as AssignExpression).lhs.first() as MemberExpression).base
-        )
-        expected.add((nestedElse.statements[0] as AssignExpression).rhs.first())
+        val nestedThenStmt0 = nestedThen.statements[0]
+        assertIs<AssignExpression>(nestedThenStmt0)
+        expected.add(nestedThenStmt0)
+        val nestedThenStmt0Lhs = nestedThenStmt0.lhs.singleOrNull()
+        assertIs<MemberExpression>(nestedThenStmt0Lhs)
+        expected.add(nestedThenStmt0Lhs)
+        expected.add(nestedThenStmt0Lhs.base)
 
-        ifStatement.elseStatement?.let { expected.add(it) }
-        expected.add((ifStatement.elseStatement as Block).statements[0])
-        expected.add(
-            ((ifStatement.elseStatement as Block).statements[0] as AssignExpression).lhs.first()
-        )
-        expected.add(
-            (((ifStatement.elseStatement as Block).statements[0] as AssignExpression).lhs.first()
-                    as MemberExpression)
-                .base
-        )
-        expected.add(
-            ((ifStatement.elseStatement as Block).statements[0] as AssignExpression).rhs.first()
-        )
+        val nestedThenStmt0Rhs = nestedThenStmt0.rhs.singleOrNull()
+        assertNotNull(nestedThenStmt0Rhs)
+        expected.add(nestedThenStmt0Rhs)
+        val nestedElse = innerIfStmt.elseStatement as Block
+        expected.add(nestedElse)
+        val nestedElseStmt0 = nestedElse.statements[0]
+        assertIs<AssignExpression>(nestedElseStmt0)
+        expected.add(nestedElseStmt0)
+        val nestedElseStmt0Lhs = nestedElseStmt0.lhs.singleOrNull()
+        assertIs<MemberExpression>(nestedElseStmt0Lhs)
+        expected.add(nestedElseStmt0Lhs)
+        expected.add(nestedElseStmt0Lhs.base)
+        val nestedElseStmt0Rhs = nestedElseStmt0.rhs.singleOrNull()
+        assertNotNull(nestedElseStmt0Rhs)
+        expected.add(nestedElseStmt0Rhs)
+
+        val outerElse = ifStatement.elseStatement
+        assertIs<Block>(outerElse)
+        expected.add(outerElse)
+        val outerElseStmt0 = outerElse.statements[0]
+        assertIs<AssignExpression>(outerElseStmt0)
+        expected.add(outerElseStmt0)
+        val outerElseStmt0Lhs = outerElseStmt0.lhs.singleOrNull()
+        assertIs<MemberExpression>(outerElseStmt0Lhs)
+        expected.add(outerElseStmt0Lhs)
+        expected.add(outerElseStmt0Lhs.base)
+        val outerElseStmt0Rhs = outerElseStmt0.rhs.singleOrNull()
+        assertNotNull(outerElseStmt0Rhs)
+        expected.add(outerElseStmt0Rhs)
 
         assertTrue(expected.containsAll(actual))
         assertTrue(actual.containsAll(expected))
