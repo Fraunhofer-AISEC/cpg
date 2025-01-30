@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import kotlin.collections.filter
 import kotlin.collections.firstOrNull
 import kotlin.math.absoluteValue
 
@@ -846,8 +847,18 @@ val FunctionDeclaration.callSites: Collection<CallExpression>
     // no reverse edge of invokes?! See issue 2011
     get() = this.usages.mapNotNull { it.astParent as? CallExpression }
 
-val FunctionDeclaration.lastEOGEdges: Collection<EvaluationOrder>
-    get() = collectAllNextEOGPaths(false).flatMap { it.last().prevEOGEdges }
+val FunctionDeclaration.lastEOGNode: Collection<Node>
+    get() {
+        val lastEOG = collectAllNextEOGPaths(false).flatMap { it.last().prevEOGEdges }
+        return if (lastEOG.isEmpty()) {
+            // In some cases, we have no body, so we have to jump directly to the function
+            // declaration.
+            listOf(this)
+        } else lastEOG.filter { it.unreachable != true }.map { it.start }
+    }
+
+val Node.reachablePrevEOG: Collection<Node>
+    get() = this.prevEOGEdges.filter { it.unreachable != true }.map { it.start }
 
 /**
  * Returns an instance of [FulfilledAndFailedPaths] where [FulfilledAndFailedPaths.fulfilled]
@@ -869,34 +880,32 @@ fun Node.followPrevEOGEdgesUntilHit(
     return followXUntilHit(
         x = { currentNode, ctx, _ ->
             when {
-                    interproceduralAnalysis &&
-                        currentNode is FunctionDeclaration &&
-                        ctx.callStack.isEmpty() -> {
-                        // We're at the beginning of a function. If the stack is empty, we jump to
-                        // all calls of this function.
-                        currentNode.callSites.flatMap { it.prevEOGEdges }
-                    }
-                    interproceduralAnalysis && currentNode is FunctionDeclaration -> {
-                        // We're at the beginning of a function. If there's something on the stack,
-                        // we ended up here by following the respective call expression, and we jump
-                        // back there.
-                        ctx.callStack.pop().prevEOGEdges
-                    }
-                    interproceduralAnalysis &&
-                        currentNode is CallExpression &&
-                        currentNode.invokes.isNotEmpty() -> {
-                        // We're in the call expression. Push it on the stack, go to all last EOG
-                        // nodes in the functions which are invoked and continue there.
-                        ctx.callStack.push(currentNode)
-
-                        currentNode.invokes.flatMap { it.lastEOGEdges }
-                    }
-                    else -> {
-                        currentNode.prevEOGEdges
-                    }
+                interproceduralAnalysis &&
+                    currentNode is FunctionDeclaration &&
+                    ctx.callStack.isEmpty() -> {
+                    // We're at the beginning of a function. If the stack is empty, we jump to
+                    // all calls of this function.
+                    currentNode.callSites.flatMap { it.reachablePrevEOG }
                 }
-                .filter { it.unreachable != true }
-                .map { it.start }
+                interproceduralAnalysis && currentNode is FunctionDeclaration -> {
+                    // We're at the beginning of a function. If there's something on the stack,
+                    // we ended up here by following the respective call expression, and we jump
+                    // back there.
+                    ctx.callStack.pop().reachablePrevEOG
+                }
+                interproceduralAnalysis &&
+                    currentNode is CallExpression &&
+                    currentNode.invokes.isNotEmpty() -> {
+                    // We're in the call expression. Push it on the stack, go to all last EOG
+                    // nodes in the functions which are invoked and continue there.
+                    ctx.callStack.push(currentNode)
+
+                    currentNode.invokes.flatMap { it.lastEOGNode }
+                }
+                else -> {
+                    currentNode.reachablePrevEOG
+                }
+            }
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
