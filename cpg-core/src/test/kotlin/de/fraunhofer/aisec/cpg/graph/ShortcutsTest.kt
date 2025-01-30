@@ -327,15 +327,33 @@ class ShortcutsTest {
         val ifCondition =
             ((magic.body as Block).statements[0] as IfStatement).condition as BinaryOperator
 
-        val paramPassed =
-            ifCondition.followNextEOGEdgesUntilHit {
+        // There are the following paths:
+        // - the else branch (which fulfills the requirement)
+        // - the then/then (fails)
+        // - the then/else (fails)
+        val paramPassedIntraproceduralOnly =
+            ifCondition.followNextEOGEdgesUntilHit(interproceduralAnalysis = false) {
                 it is AssignExpression &&
                     it.operatorCode == "=" &&
                     (it.rhs.first() as? Reference)?.refersTo ==
                         (ifCondition.lhs as Reference).refersTo
             }
-        assertEquals(1, paramPassed.fulfilled.size)
-        assertEquals(2, paramPassed.failed.size)
+        assertEquals(1, paramPassedIntraproceduralOnly.fulfilled.size)
+        assertEquals(2, paramPassedIntraproceduralOnly.failed.size)
+
+        // There are the following paths:
+        // - the else branch (which fulfills the requirement)
+        // - the then/then and 3 paths when we enter magic2 through this path (=> 3 fails)
+        // - the then/else and 3 paths when we enter magic2 through this path (=> 3 fails)
+        val paramPassedInterprocedural =
+            ifCondition.followNextEOGEdgesUntilHit(interproceduralAnalysis = true) {
+                it is AssignExpression &&
+                    it.operatorCode == "=" &&
+                    (it.rhs.first() as? Reference)?.refersTo ==
+                        (ifCondition.lhs as Reference).refersTo
+            }
+        assertEquals(1, paramPassedInterprocedural.fulfilled.size)
+        assertEquals(6, paramPassedInterprocedural.failed.size)
     }
 
     @Test
