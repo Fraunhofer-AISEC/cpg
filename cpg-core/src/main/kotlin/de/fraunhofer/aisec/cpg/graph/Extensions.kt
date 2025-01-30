@@ -805,13 +805,16 @@ fun Node.followNextEOGEdgesUntilHit(
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
         x = { currentNode, ctx, _ ->
-            if (interproceduralAnalysis && currentNode is CallExpression) {
+            if (
+                interproceduralAnalysis &&
+                    currentNode is CallExpression &&
+                    currentNode.invokes.isNotEmpty()
+            ) {
                 ctx.callStack.push(currentNode)
                 currentNode.invokes.flatMap { it.eogStarters }
             } else if (
                 interproceduralAnalysis &&
-                    (currentNode is ReturnStatement ||
-                        currentNode is FunctionDeclaration && currentNode.nextEOG.isEmpty())
+                    (currentNode is ReturnStatement || currentNode.nextEOG.isEmpty())
             ) {
                 if (ctx.callStack.isEmpty()) {
                     (currentNode.firstParentOrNull { it is FunctionDeclaration }
