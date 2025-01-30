@@ -52,9 +52,10 @@ open class Component : Node() {
     /** All translation units belonging to this application. */
     val translationUnits by unwrapping(Component::translationUnitEdges)
 
+    /** The import dependencies of [TranslationUnitDeclaration] nodes of this component. */
     @Transient
     @PopulatedByPass(ImportResolver::class)
-    var importDependencies = ImportDependencies(translationUnits)
+    var translationUnitDependencies: ImportDependencies<TranslationUnitDeclaration>? = null
 
     @Synchronized
     fun addTranslationUnit(tu: TranslationUnitDeclaration) {

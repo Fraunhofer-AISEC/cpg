@@ -113,7 +113,7 @@ class ImportResolverTest {
 
         // a has 0 dependencies
         var a =
-            app.importDependencies.entries
+            app.translationUnitDependencies.entries
                 .filter { it.key.name.toString() == "file.a" }
                 .firstOrNull()
         assertNotNull(a)
@@ -121,7 +121,7 @@ class ImportResolverTest {
 
         // c has 0 dependencies
         var c =
-            app.importDependencies.entries
+            app.translationUnitDependencies.entries
                 .filter { it.key.name.toString() == "file.c" }
                 .firstOrNull()
         assertNotNull(c)
@@ -129,7 +129,7 @@ class ImportResolverTest {
 
         // b has two dependencies (a, c)
         var b =
-            app.importDependencies.entries
+            app.translationUnitDependencies.entries
                 .filter { it.key.name.toString() == "file.b" }
                 .firstOrNull()
         assertNotNull(b)

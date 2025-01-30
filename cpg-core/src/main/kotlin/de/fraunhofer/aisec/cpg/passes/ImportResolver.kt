@@ -26,8 +26,11 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Name
+import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.component
 import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
@@ -36,45 +39,45 @@ import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.translationUnit
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation
 import de.fraunhofer.aisec.cpg.passes.Pass.Companion.log
 
 /**
- * This class holds the information about import dependencies between [TranslationUnitDeclaration]
- * nodes. The dependency is based on which translation unit imports symbols of another translation
- * unit (usually in the form of a [NamespaceDeclaration]). The idea is to provide a sorted list of
- * TUs in which to resolve symbols and imports ideally. This is stored in [sortedTranslationUnits]
- * and is automatically computed the fist time someone accesses the property.
+ * This class holds the information about import dependencies between nodes that represent some kind
+ * of "module" (usually either a [TranslationUnitDeclaration] or a [Component]). The dependency is
+ * based on which module imports symbols of another module (usually in the form of a
+ * [NamespaceDeclaration]). The idea is to provide a sorted list of modules in which to resolve
+ * symbols and imports ideally. This is stored in [sorted] and is automatically computed the fist
+ * time someone accesses the property.
  */
-class ImportDependencies(tus: MutableList<TranslationUnitDeclaration>) :
-    HashMap<TranslationUnitDeclaration, MutableSet<TranslationUnitDeclaration>>() {
+class ImportDependencies<T : Node>(modules: MutableList<T>) : HashMap<T, MutableSet<T>>() {
 
     init {
-        // Populate the map with all translation units so that we have an entry in our list
+        // Populate the map with all modules so that we have an entry in our list
         // for all
-        this += tus.map { Pair(it, mutableSetOf()) }
+        this += modules.map { Pair(it, mutableSetOf()) }
     }
 
     /**
-     * The list of [TranslationUnitDeclaration] nodes, sorted by their position in the dependency
-     * graph. TUs without dependencies are first in the list, following by TUs that import TUs
-     * without dependencies, and so on.
+     * The list of [T] module nodes, sorted by their position in the dependency graph. Nodes without
+     * dependencies are first in the list, following by nodes that import nodes without
+     * dependencies, and so on.
      */
-    val sortedTranslationUnits: List<TranslationUnitDeclaration> by lazy {
-        WorkList(this).resolveDependencies()
-    }
+    val sorted: List<T> by lazy { WorkList(this).resolveDependencies() }
 
     /** Adds a dependency from [importer] to [imported]. */
-    fun add(importer: TranslationUnitDeclaration, imported: TranslationUnitDeclaration): Boolean {
-        var list = this.computeIfAbsent(importer) { mutableSetOf<TranslationUnitDeclaration>() }
-        return list.add(imported)
+    fun add(importer: T, imported: T): Boolean {
+        var list = this.computeIfAbsent(importer) { mutableSetOf<T>() }
+        var added = list.add(imported)
+
+        return added
     }
 
     /**
      * A work-list, which contains a local copy of our dependency map, so that we can remove items
      * from it while determining the order.
      */
-    class WorkList(start: ImportDependencies) :
-        HashMap<TranslationUnitDeclaration, MutableSet<TranslationUnitDeclaration>>() {
+    class WorkList<T : Node>(start: ImportDependencies<T>) : HashMap<T, MutableSet<T>>() {
 
         init {
             // Populate the work-list with a copy of the import dependency map
@@ -82,36 +85,36 @@ class ImportDependencies(tus: MutableList<TranslationUnitDeclaration>) :
         }
 
         /**
-         * Resolves the import dependencies and returns the list in which translation units should
-         * be processed. The algorithm is as follows:
-         * - We loop through all translation units in the map
-         * - We try to fetch the next translation unit without any dependencies
-         * - If there is one, we add it to the list and call [markAsDone]. This will remove the TU
-         *   as dependency from the map
-         * - If there is none, we are either finished (if no TUs are left) -- or we ran into a
+         * Resolves the import dependencies and returns the list in which modules should be
+         * processed. The algorithm is as follows:
+         * - We loop through all modules in the map
+         * - We try to fetch the next modules without any dependencies
+         * - If there is one, we add it to the list and call [markAsDone]. This will remove the
+         *   module as dependency from the map
+         * - If there is none, we are either finished (if no modules are left) -- or we ran into a
          *   problem
-         * - If we ran into a problem, we add all leftover TUs in a nondeterministic order to the
-         *   list
+         * - If we ran into a problem, we add all leftover modules in a nondeterministic order to
+         *   the list
          */
-        fun resolveDependencies(): List<TranslationUnitDeclaration> {
-            var list = mutableListOf<TranslationUnitDeclaration>()
+        fun resolveDependencies(): List<T> {
+            var list = mutableListOf<T>()
 
             while (true) {
-                // Try to get the next TU
-                var tu = nextTranslationUnitWithoutDependencies()
+                // Try to get the next module
+                var tu = nextWithoutDependencies()
                 if (tu == null) {
                     var remaining = keys
-                    // No translation units without dependencies found. If there are no translation
-                    // units left, this means we are done
+                    // No modules without dependencies found. If there are no modules left, this
+                    // means we are done
                     if (remaining.isEmpty()) {
                         break
                     } else {
-                        // If there are still translation units left, we have a problem. This might
+                        // If there are still modules left, we have a problem. This might
                         // be cyclic imports or other cases we did not think of yet. We still want
-                        // to handle all the TUs, so we pick the one with the least dependencies,
-                        // hoping that this could unlock more
+                        // to handle all the modules, so we pick the one with the least
+                        // dependencies, hoping that this could unlock more
                         log.warn(
-                            "We still have {} translation units with import dependency problems. We will just pick the one with the least dependencies",
+                            "We still have {} items with import dependency problems. We will just pick the one with the least dependencies",
                             remaining.size,
                         )
                         tu = remaining.sortedBy { this[it]?.size }.firstOrNull()
@@ -123,7 +126,7 @@ class ImportDependencies(tus: MutableList<TranslationUnitDeclaration>) :
 
                 // Add tu
                 list += tu
-                // Mark it as done, this will remove any dependencies to this TU from the map
+                // Mark it as done, this will remove any dependencies to this module from the map
                 markAsDone(tu)
             }
 
@@ -131,10 +134,10 @@ class ImportDependencies(tus: MutableList<TranslationUnitDeclaration>) :
         }
 
         /**
-         * Retrieves the next [TranslationUnitDeclaration] without any dependencies to others.
-         * Returns null if only translation units WITH dependencies are left.
+         * Retrieves the next [T] without any dependencies to others. Returns null if only modules
+         * WITH dependencies are left.
          */
-        fun nextTranslationUnitWithoutDependencies(): TranslationUnitDeclaration? {
+        fun nextWithoutDependencies(): T? {
             // Loop through all entries to find one without a dependency
             for (entry in entries) {
                 if (entry.value.isEmpty()) {
@@ -146,11 +149,11 @@ class ImportDependencies(tus: MutableList<TranslationUnitDeclaration>) :
         }
 
         /**
-         * Marks the processing of this [TranslationUnitDeclaration] as done. It removes it from the
-         * map and also removes it from the dependencies of all other TUs.
+         * Marks the processing of this [T] as done. It removes it from the map and also removes it
+         * from the dependencies of all other modules.
          */
-        private fun markAsDone(tu: TranslationUnitDeclaration) {
-            log.debug("Next suitable translation unit is {}", tu.name)
+        private fun markAsDone(tu: T) {
+            log.debug("Next suitable item is {}", tu.name)
             // Remove it from the map
             remove(tu)
 
@@ -165,37 +168,46 @@ class ImportDependencies(tus: MutableList<TranslationUnitDeclaration>) :
  * It does so by first building a dependency map between [TranslationUnitDeclaration] nodes, based
  * on their [ImportDeclaration] nodes.
  */
-class ImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
+class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
 
     lateinit var walker: SubgraphWalker.ScopedWalker
-    lateinit var currentComponent: Component
+    lateinit var tr: TranslationResult
 
-    override fun accept(t: Component) {
-        currentComponent = t
+    override fun accept(tr: TranslationResult) {
+        this.tr = tr
 
-        t.importDependencies = ImportDependencies(t.translationUnits)
+        // Create a new import dependency object for the result, to make sure that all components
+        // are included.
+        tr.componentDependencies = ImportDependencies(tr.components)
 
         // In order to resolve imports as good as possible, we need the information which namespace
         // does an import on which other
         walker = SubgraphWalker.ScopedWalker(scopeManager)
         walker.registerHandler { node ->
-            if (node is ImportDeclaration) {
+            if (node is Component) {
+                // Create a new import dependency object for the component, to make sure that all
+                // TUs are included.
+                node.translationUnitDependencies = ImportDependencies(node.translationUnits)
+            } else if (node is ImportDeclaration) {
                 collectImportDependencies(node)
             }
         }
-        walker.iterate(t)
+        walker.iterate(tr)
 
-        // Now we need to iterate through all translation units
+        // Now we need to iterate through all modules
         walker.clearCallbacks()
         walker.registerHandler { node ->
             if (node is ImportDeclaration) {
                 handleImportDeclaration(node)
             }
         }
-        t.importDependencies.sortedTranslationUnits.forEach {
-            log.debug("Resolving imports for translation unit {}", it.name)
-            walker.iterate(it)
-        }
+        tr.componentDependencies
+            ?.sorted
+            ?.flatMap { it.translationUnitDependencies?.sorted ?: listOf() }
+            ?.forEach {
+                log.debug("Resolving imports for translation unit {}", it.name)
+                walker.iterate(it)
+            }
     }
 
     /**
@@ -203,6 +215,12 @@ class ImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
      * [ImportDeclaration].
      */
     private fun collectImportDependencies(import: ImportDeclaration) {
+        val currentComponent = import.component
+        if (currentComponent == null) {
+            errorWithFileLocation(import, log, "Cannot determine component of import node")
+            return
+        }
+
         // Let's look for imported namespaces
         // First, we collect the individual parts of the name
         var parts = mutableListOf<Name>()
@@ -238,22 +256,39 @@ class ImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                     it.namespaces.size == 1
                 }
 
-            // Next, we loop through all namespaces in order to "connect" them to our current TU
+            // Next, we loop through all namespaces in order to "connect" them to our current module
             for (declaration in namespaces) {
-                // Retrieve the TU of the declarations
+                // Retrieve the module of the declarations
                 var namespaceTu = declaration.translationUnit
+                var namespaceComponent = declaration.component
                 var importTu = import.translationUnit
-                // Skip, if we cannot find the TU or if they belong to the same TU (we do not want
-                // self-references)
-                if (namespaceTu == null || importTu == null || namespaceTu == importTu) {
+                // Skip, if we cannot find the module or if they belong to the same module (we do
+                // not want self-references)
+                if (
+                    namespaceTu == null ||
+                        namespaceComponent == null ||
+                        importTu == null ||
+                        namespaceTu == importTu
+                ) {
                     continue
                 }
 
-                // Lastly, store the namespace TU as an import dependency of the TU where the import
-                // was
-                var added = currentComponent.importDependencies.add(importTu, namespaceTu)
+                // Lastly, store the namespace module as an import dependency of the module where
+                // the import was
+                var added =
+                    currentComponent.translationUnitDependencies?.add(importTu, namespaceTu) == true
                 if (added) {
                     log.debug("Added {} as an dependency of {}", namespaceTu.name, importTu.name)
+                }
+
+                // Add it on translation result level as well
+                added = tr.componentDependencies?.add(currentComponent, namespaceComponent) == true
+                if (added) {
+                    log.debug(
+                        "Added {} as an dependency of {}",
+                        namespaceTu.component?.name,
+                        currentComponent.name,
+                    )
                 }
             }
 

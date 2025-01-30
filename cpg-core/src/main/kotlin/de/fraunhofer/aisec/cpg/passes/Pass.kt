@@ -272,14 +272,17 @@ fun executePass(
             consumeTargets(
                 (prototype as ComponentPass)::class,
                 ctx,
-                result.components,
+                // Execute them in the "sorted" order (if available)
+                result.componentDependencies?.sorted ?: result.components,
                 executedFrontends,
             )
         is TranslationUnitPass ->
             consumeTargets(
                 (prototype as TranslationUnitPass)::class,
                 ctx,
-                result.components.flatMap { it.translationUnits },
+                // Execute them in the "sorted" order (if available)
+                result.componentDependencies?.sorted?.flatMap { it.translationUnits }
+                    ?: result.components.flatMap { it.translationUnits },
                 executedFrontends,
             )
         is EOGStarterPass -> {
