@@ -349,20 +349,23 @@ class ShortcutsTest {
         val magic = classDecl.methods["magic"]
         assertNotNull(magic)
 
-        val attrAssignment =
-            ((((magic.body as Block).statements[0] as IfStatement).elseStatement as Block)
-                    .statements[0]
-                    as AssignExpression)
-                .lhs
-                .first()
+        val magicBody = magic.body
+        assertIs<Block>(magicBody)
+        val ifStatement = magicBody.statements[0]
+        assertIs<IfStatement>(ifStatement)
+        val elseStmt = ifStatement.elseStatement
+        assertIs<Block>(elseStmt)
+        val assignExpr = elseStmt.statements[0]
+        assertIs<AssignExpression>(assignExpr)
+
+        val attrAssignment = assignExpr.lhs.first()
 
         val paramPassed = attrAssignment.followPrevEOGEdgesUntilHit { it is Literal<*> }
         assertEquals(1, paramPassed.fulfilled.size)
         assertEquals(0, paramPassed.failed.size)
-        assertEquals(
-            5,
-            (paramPassed.fulfilled[0].last() as? Literal<*>)?.value,
-        ) // It's the comparison
+        val lastFulfiled = paramPassed.fulfilled[0].last()
+        assertIs<Literal<*>>(lastFulfiled)
+        assertLiteralValue(5, lastFulfiled) // It's the comparison
     }
 
     @Test
@@ -373,7 +376,9 @@ class ShortcutsTest {
         val magic = classDecl.methods["magic"]
         assertNotNull(magic)
 
-        val ifStatement = (magic.body as Block).statements[0]
+        val magicBody = magic.body
+        assertIs<Block>(magicBody)
+        val ifStatement = magicBody.statements[0]
         assertIs<IfStatement>(ifStatement)
         val ifCondition = ifStatement.condition
         assertIs<BinaryOperator>(ifCondition)
