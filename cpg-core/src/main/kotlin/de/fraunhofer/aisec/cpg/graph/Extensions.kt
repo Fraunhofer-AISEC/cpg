@@ -388,10 +388,14 @@ fun Node.collectAllNextFullDFGPaths(): List<List<Node>> {
  * Iterates the next EOG edges until there are no more edges available (or until a loop is
  * detected). Returns a list of possible paths (each path is represented by a list of nodes).
  */
-fun Node.collectAllNextEOGPaths(): List<List<Node>> {
+fun Node.collectAllNextEOGPaths(interproceduralAnalysis: Boolean = true): List<List<Node>> {
     // We make everything fail to reach the end of the CDG. Then, we use the stuff collected in the
     // failed paths (everything)
-    return this.followNextEOGEdgesUntilHit(collectFailedPaths = true, findAllPossiblePaths = true) {
+    return this.followNextEOGEdgesUntilHit(
+            collectFailedPaths = true,
+            findAllPossiblePaths = true,
+            interproceduralAnalysis = interproceduralAnalysis,
+        ) {
             false
         }
         .failed
@@ -821,9 +825,8 @@ fun Node.followNextEOGEdgesUntilHit(
                 if (ctx.callStack.isEmpty()) {
                     (currentNode.firstParentOrNull { it is FunctionDeclaration }
                             as? FunctionDeclaration)
-                        ?.usages
-                        ?.mapNotNull { (it.astParent as? CallExpression)?.nextEOG }
-                        ?.flatten() ?: setOf()
+                        ?.callSites
+                        ?.flatMap { it.nextEOG } ?: setOf()
                 } else {
                     ctx.callStack.pop().nextEOG
                 }
@@ -836,6 +839,15 @@ fun Node.followNextEOGEdgesUntilHit(
         predicate = predicate,
     )
 }
+
+/** Returns a collection of all [CallExpression]s which call this [FunctionDeclaration]. */
+val FunctionDeclaration.callSites: Collection<CallExpression>
+    // TODO: This may not account for multiple invokes edges from one [CallExpression] but we have
+    // no reverse edge of invokes?! See issue 2011
+    get() = this.usages.mapNotNull { it.astParent as? CallExpression }
+
+val FunctionDeclaration.lastEOGEdges: Collection<EvaluationOrder>
+    get() = collectAllNextEOGPaths(false).flatMap { it.last().prevEOGEdges }
 
 /**
  * Returns an instance of [FulfilledAndFailedPaths] where [FulfilledAndFailedPaths.fulfilled]
@@ -850,11 +862,39 @@ fun Node.followNextEOGEdgesUntilHit(
 fun Node.followPrevEOGEdgesUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
+    interproceduralAnalysis: Boolean = true,
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
+
     return followXUntilHit(
-        x = { currentNode, _, _ ->
-            currentNode.prevEOGEdges.filter { it.unreachable != true }.map { it.start }
+        x = { currentNode, ctx, _ ->
+            when {
+                    interproceduralAnalysis &&
+                        currentNode is FunctionDeclaration &&
+                        ctx.callStack.isEmpty() -> {
+                        // We're at the beginning of a function. If the stack is empty, we jump to
+                        // all calls of this function.
+                        currentNode.callSites.flatMap { it.prevEOGEdges }
+                    }
+                    interproceduralAnalysis && currentNode is FunctionDeclaration -> {
+                        // We're at the beginning of a function. If there's something on the stack,
+                        // we ended up here by following the respective call expression, and we jump
+                        // back there.
+                        ctx.callStack.pop().prevEOGEdges
+                    }
+                    interproceduralAnalysis && currentNode is CallExpression -> {
+                        // We're in the call expression. Push it on the stack, go to all last EOG
+                        // nodes in the functions which are invoked and continue there.
+                        ctx.callStack.push(currentNode)
+
+                        currentNode.invokes.flatMap { it.lastEOGEdges }
+                    }
+                    else -> {
+                        currentNode.prevEOGEdges
+                    }
+                }
+                .filter { it.unreachable != true }
+                .map { it.start }
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
