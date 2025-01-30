@@ -826,7 +826,7 @@ fun Node.followNextEOGEdgesUntilHit(
                 if (ctx.callStack.isEmpty()) {
                     (currentNode.firstParentOrNull { it is FunctionDeclaration }
                             as? FunctionDeclaration)
-                        ?.callSites
+                        ?.calledBy
                         ?.flatMap { it.nextEOG } ?: setOf()
                 } else {
                     ctx.callStack.pop().nextEOG
@@ -840,12 +840,6 @@ fun Node.followNextEOGEdgesUntilHit(
         predicate = predicate,
     )
 }
-
-/** Returns a collection of all [CallExpression]s which call this [FunctionDeclaration]. */
-val FunctionDeclaration.callSites: Collection<CallExpression>
-    // TODO: This may not account for multiple invokes edges from one [CallExpression] but we have
-    // no reverse edge of invokes?! See issue 2011
-    get() = this.usages.mapNotNull { it.astParent as? CallExpression }
 
 val FunctionDeclaration.lastEOGNode: Collection<Node>
     get() {
@@ -885,7 +879,7 @@ fun Node.followPrevEOGEdgesUntilHit(
                     ctx.callStack.isEmpty() -> {
                     // We're at the beginning of a function. If the stack is empty, we jump to
                     // all calls of this function.
-                    currentNode.callSites.flatMap { it.reachablePrevEOG }
+                    currentNode.calledBy.flatMap { it.reachablePrevEOG }
                 }
                 interproceduralAnalysis && currentNode is FunctionDeclaration -> {
                     // We're at the beginning of a function. If there's something on the stack,
