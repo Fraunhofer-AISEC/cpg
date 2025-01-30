@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.newReference
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertSame
 
 class InvokeTest {
     @Test
@@ -45,13 +46,14 @@ class InvokeTest {
 
             val edge = func.calledByEdges.firstOrNull()
             assertNotNull(edge)
-            assertEquals(call, edge.start)
-            assertEquals(func, edge.end)
+            assertSame(call, edge.start)
+            assertSame(func, edge.end)
 
-            val test = func.calledBy
-            assertNotNull(test)
-            val test1 = test.firstOrNull()
-            assertNotNull(test1)
+            assertEquals(1, func.calledBy.size)
+            assertSame(call, func.calledBy.firstOrNull())
+
+            func.calledBy.clear()
+            assertEquals(0, call.invokes.size)
         }
     }
 }
