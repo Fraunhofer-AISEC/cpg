@@ -1447,7 +1447,7 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(call)
         assertInvokes(call, cCompletelyDifferentFunc)
 
-        call = result.calls["different.completely_different_func"]
+        call = result.calls["c.completely_different_func"]
         assertNotNull(call)
         assertInvokes(call, cCompletelyDifferentFunc)
         assertTrue(call.isImported)
@@ -1630,7 +1630,7 @@ class PythonFrontendTest : BaseTest() {
         val refs = tu.refs
         refs.forEach { assertIsNot<MemberExpression>(it, "{${it.name}} is a member expression") }
         assertEquals(
-            setOf("a", "b", "pkg.module.foo", "another_module.foo"),
+            setOf("a", "b", "pkg.module.foo", "pkg.another_module.foo"),
             refs.map { it.name.toString() }.toSet(),
         )
     }
