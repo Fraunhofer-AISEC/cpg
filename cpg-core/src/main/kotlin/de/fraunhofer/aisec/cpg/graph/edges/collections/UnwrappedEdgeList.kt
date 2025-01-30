@@ -207,6 +207,7 @@ class UnwrappedEdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
      * parameter for the [Edge.end] property, but not for the [Edge.start] property. This is why we
      * need to cast the underlying [Edge.start] property to the incoming type.
      */
+    @Transient
     inner class IncomingDelegate<ThisType : Node, IncomingType>() {
         operator fun getValue(
             thisRef: ThisType,

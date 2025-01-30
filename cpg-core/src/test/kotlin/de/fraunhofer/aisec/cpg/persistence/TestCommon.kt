@@ -62,7 +62,6 @@ class TestCommon {
                 "ASSIGNED_TYPES",
                 "AST",
                 "BODY",
-                "CALLED_BY",
                 "CDG",
                 "DEFINES",
                 "DFG",

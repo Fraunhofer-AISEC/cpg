@@ -68,6 +68,7 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder, EOGStart
      * The mirror property for [CallExpression.invokeEdges]. This holds all incoming [Invokes] edges
      * from [CallExpression] nodes to this function.
      */
+    @Relationship(value = "INVOKES", direction = Relationship.Direction.INCOMING)
     val calledByEdges: Invokes<FunctionDeclaration> =
         Invokes<FunctionDeclaration>(this, CallExpression::invokeEdges, outgoing = false)
 
