@@ -238,7 +238,8 @@ class ShortcutsTest {
         val nestedThenStmt0Rhs = nestedThenStmt0.rhs.singleOrNull()
         assertNotNull(nestedThenStmt0Rhs)
         expected.add(nestedThenStmt0Rhs)
-        val nestedElse = innerIfStmt.elseStatement as Block
+        val nestedElse = innerIfStmt.elseStatement
+        assertIs<Block>(nestedElse)
         expected.add(nestedElse)
         val nestedElseStmt0 = nestedElse.statements[0]
         assertIs<AssignExpression>(nestedElseStmt0)
@@ -287,7 +288,9 @@ class ShortcutsTest {
         assertNotNull(magic)
 
         // get the statement attr = 3;
-        val ifStatement = (magic.body as Block).statements[0]
+        val magicBody = magic.body
+        assertIs<Block>(magicBody)
+        val ifStatement = magicBody.statements[0]
         assertIs<IfStatement>(ifStatement)
         val thenStmt = ifStatement.thenStatement
         assertIs<Block>(thenStmt)
@@ -400,7 +403,7 @@ class ShortcutsTest {
                 it is AssignExpression &&
                     it.operatorCode == "=" &&
                     (it.rhs.first() as? Reference)?.refersTo ==
-                        (ifCondition.lhs as Reference).refersTo
+                        (ifCondition.lhs as? Reference)?.refersTo
             }
         assertEquals(1, paramPassed.fulfilled.size)
         assertEquals(2, paramPassed.failed.size)
