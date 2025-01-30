@@ -25,7 +25,15 @@
  */
 package de.fraunhofer.aisec.cpg.frontends
 
+import de.fraunhofer.aisec.cpg.ScopeManager
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.TranslationManager
+import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.TypeManager
+import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.newRecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.newTranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.objectType
 import de.fraunhofer.aisec.cpg.graph.pointer
 import de.fraunhofer.aisec.cpg.tryCast
@@ -62,5 +70,51 @@ class LanguageTest {
             matches = myType.tryCast(baseType)
             assertIs<ImplicitCast>(matches)
         }
+    }
+
+    @Test
+    fun testMultiLanguage() {
+        class OtherLanguage : TestLanguage()
+
+        val otherLanguage = OtherLanguage()
+        val testLanguage = TestLanguage()
+
+        val result =
+            TranslationResult(
+                translationManager = TranslationManager.builder().build(),
+                finalCtx =
+                    TranslationContext(
+                        config = TranslationConfiguration.builder().build(),
+                        scopeManager = ScopeManager(),
+                        typeManager = TypeManager(),
+                    ),
+            )
+
+        val comp1 =
+            with(TestLanguageFrontend("::", language = otherLanguage)) {
+                val tu = newTranslationUnitDeclaration("tu-language-other")
+                val comp = Component()
+                comp.ctx = this.ctx
+                comp.addTranslationUnit(tu)
+                comp
+            }
+        result.components += comp1
+
+        val comp2 =
+            with(TestLanguageFrontend("::", language = testLanguage)) {
+                val tu = newTranslationUnitDeclaration("tu-language-test")
+                val comp = Component()
+                comp.ctx = this.ctx
+                comp.addTranslationUnit(tu)
+                comp
+            }
+        result.components += comp2
+
+        val language = result.language
+        assertIs<MultipleLanguages>(language)
+        assertEquals(setOf(otherLanguage, testLanguage), language.languages)
+
+        assertEquals(otherLanguage, result.components.getOrNull(0)?.language)
+        assertEquals(testLanguage, result.components.getOrNull(1)?.language)
     }
 }

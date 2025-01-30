@@ -281,7 +281,7 @@ object SubgraphWalker {
 
         constructor(
             scopeManager: ScopeManager,
-            strategy: (Node) -> Iterator<Node> = Strategy::AST_FORWARD
+            strategy: (Node) -> Iterator<Node> = Strategy::AST_FORWARD,
         ) {
             this.scopeManager = scopeManager
             this.strategy = strategy
@@ -339,7 +339,7 @@ object SubgraphWalker {
         private fun handleNode(
             current: Node,
             parent: Node?,
-            handler: TriConsumer<RecordDeclaration?, Node?, Node?>
+            handler: TriConsumer<RecordDeclaration?, Node?, Node?>,
         ) {
             // Jump to the node's scope, if it is different from ours.
             if (scopeManager.currentScope != current.scope) {
@@ -439,7 +439,8 @@ private fun CallExpression.duplicateTo(call: CallExpression, callee: Reference) 
     call.ctx = this.ctx
     call.language = this.language
     call.scope = this.scope
-    call.arguments = this.arguments
+    call.argumentEdges.clear()
+    call.argumentEdges += this.argumentEdges
     call.type = this.type
     call.assignedTypes = this.assignedTypes
     call.code = this.code

@@ -252,7 +252,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
                     // Map this branching node to its merging points
                     Pair(branchingNode, mergingPoints)
                 }
-                .toTypedArray()
+                .toTypedArray(),
         )
 }
 
@@ -270,7 +270,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
  */
 fun handleEdge(
     currentEdge: Edge<Node>,
-    currentState: State<Node, IdentityHashMap<Node, IdentitySet<Node>>>
+    currentState: State<Node, IdentityHashMap<Node, IdentitySet<Node>>>,
 ): State<Node, IdentityHashMap<Node, IdentitySet<Node>>> {
     // Check if we start in a branching node and if this edge leads to the conditional
     // branch. In this case, the next node will move "one layer downwards" in the CDG.

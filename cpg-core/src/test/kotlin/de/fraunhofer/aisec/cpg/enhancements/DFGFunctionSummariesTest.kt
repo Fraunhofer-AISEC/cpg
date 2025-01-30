@@ -91,10 +91,7 @@ class DFGFunctionSummariesTest {
                                 val listType = t("test.List")
                                 ctx?.let {
                                     val recordDecl =
-                                        startInference(it)
-                                            ?.inferRecordDeclaration(
-                                                listType,
-                                            )
+                                        startInference(it)?.inferRecordDeclaration(listType)
                                     listType.recordDeclaration = recordDecl
                                     recordDecl?.addSuperClass(objectType)
                                     listType.superTypes.add(objectType)
@@ -103,10 +100,7 @@ class DFGFunctionSummariesTest {
                                 val specialListType = t("test.SpecialList")
                                 ctx?.let {
                                     val recordDecl =
-                                        startInference(it)
-                                            ?.inferRecordDeclaration(
-                                                specialListType,
-                                            )
+                                        startInference(it)?.inferRecordDeclaration(specialListType)
                                     specialListType.recordDeclaration = recordDecl
                                     recordDecl?.addSuperClass(listType)
                                     specialListType.superTypes.add(listType)
@@ -116,9 +110,7 @@ class DFGFunctionSummariesTest {
                                 ctx?.let {
                                     val recordDecl =
                                         startInference(it)
-                                            ?.inferRecordDeclaration(
-                                                verySpecialListType,
-                                            )
+                                            ?.inferRecordDeclaration(verySpecialListType)
                                     verySpecialListType.recordDeclaration = recordDecl
                                     recordDecl?.addSuperClass(specialListType)
                                     verySpecialListType.superTypes.add(listType)
@@ -171,7 +163,7 @@ class DFGFunctionSummariesTest {
         assertEquals(2, listAddAllTwoArgs.parameters.size)
         assertEquals(
             setOf<Node>(listAddAllTwoArgs.receiver!!),
-            listAddAllTwoArgs.parameters[1].nextDFG
+            listAddAllTwoArgs.parameters[1].nextDFG,
         )
         // No flow from param0 or receiver specified => Should be empty and differ from default
         // behavior
@@ -188,7 +180,7 @@ class DFGFunctionSummariesTest {
         assertEquals(2, specialListAddAllTwoArgs.parameters.size)
         assertEquals(
             setOf<Node>(specialListAddAllTwoArgs.receiver!!),
-            specialListAddAllTwoArgs.parameters[1].nextDFG
+            specialListAddAllTwoArgs.parameters[1].nextDFG,
         )
         // No flow from param0 or receiver specified => Should be empty and differ from default
         // behavior
@@ -206,11 +198,11 @@ class DFGFunctionSummariesTest {
         // Very weird data flow specified: receiver to param0 and param1 to return.
         assertEquals(
             setOf<Node>(specialListAddAllSpecializedArgs.parameters[0]),
-            specialListAddAllSpecializedArgs.receiver?.nextDFG ?: setOf()
+            specialListAddAllSpecializedArgs.receiver?.nextDFG ?: setOf(),
         )
         assertEquals(
             setOf<Node>(specialListAddAllSpecializedArgs),
-            specialListAddAllSpecializedArgs.parameters[1].nextDFG
+            specialListAddAllSpecializedArgs.parameters[1].nextDFG,
         )
 
         // Specified by VerySpecialList.addAll(int, Object), overrides List.addAll(int, Object).
@@ -222,11 +214,11 @@ class DFGFunctionSummariesTest {
         // Very weird data flow specified: receiver to param0 and param1 to return.
         assertEquals(
             setOf<Node>(verySpecialListAddAllSpecializedArgs.parameters[0]),
-            verySpecialListAddAllSpecializedArgs.receiver?.nextDFG ?: setOf()
+            verySpecialListAddAllSpecializedArgs.receiver?.nextDFG ?: setOf(),
         )
         assertEquals(
             setOf<Node>(verySpecialListAddAllSpecializedArgs),
-            verySpecialListAddAllSpecializedArgs.parameters[1].nextDFG
+            verySpecialListAddAllSpecializedArgs.parameters[1].nextDFG,
         )
 
         // Not specified => Default behavior (param0 and param1 and receiver to method declaration).
@@ -237,9 +229,9 @@ class DFGFunctionSummariesTest {
             setOf<Node>(
                 randomTypeAddAllTwoArgs.parameters[1],
                 randomTypeAddAllTwoArgs.parameters[0],
-                randomTypeAddAllTwoArgs.receiver!!
+                randomTypeAddAllTwoArgs.receiver!!,
             ),
-            randomTypeAddAllTwoArgs.prevDFG
+            randomTypeAddAllTwoArgs.prevDFG,
         )
     }
 
@@ -272,7 +264,7 @@ class DFGFunctionSummariesTest {
         val nextDfg = argA.nextDFGEdges.single()
         assertEquals(
             call,
-            ((nextDfg as? ContextSensitiveDataflow)?.callingContext as? CallingContextIn)?.call
+            ((nextDfg as? ContextSensitiveDataflow)?.callingContext as? CallingContextIn)?.call,
         )
         assertEquals(param0, nextDfg.end)
 

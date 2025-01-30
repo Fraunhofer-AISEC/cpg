@@ -95,7 +95,7 @@ class ThrowExpressionTest {
         assertLocalName("SomeError2", throwCallParent)
         assertEquals(
             setOf<Node>(throwCallException, throwCallParent),
-            throwWithExcAndParent.prevDFG.toSet()
+            throwWithExcAndParent.prevDFG.toSet(),
         )
     }
 }

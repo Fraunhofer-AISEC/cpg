@@ -181,7 +181,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         declaration.isDefinition = true
 
         // We also need to set the return type, based on the function type.
-        declaration.returnTypes = type?.returnTypes ?: listOf(IncompleteType())
+        declaration.returnTypes = type?.returnTypes ?: listOf(incompleteType())
 
         // We want to determine, whether this is a function definition that is external to its
         // scope. This is a usual case in C++, where the named scope, such as a record or namespace
@@ -270,7 +270,6 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             }
 
         templateDeclaration.location = frontend.locationOf(ctx)
-        frontend.scopeManager.addDeclaration(templateDeclaration)
         frontend.scopeManager.enterScope(templateDeclaration)
         addTemplateParameters(ctx, templateDeclaration)
 
@@ -286,6 +285,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             }
 
         addRealizationToScope(templateDeclaration)
+        frontend.scopeManager.addDeclaration(templateDeclaration)
 
         return templateDeclaration
     }
@@ -298,7 +298,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
      */
     private fun addTemplateParameters(
         ctx: CPPASTTemplateDeclaration,
-        templateDeclaration: TemplateDeclaration
+        templateDeclaration: TemplateDeclaration,
     ) {
         for (templateParameter in ctx.templateParameters) {
             if (templateParameter is CPPASTSimpleTypeTemplateParameter) {
@@ -309,7 +309,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                     frontend.typeManager.createOrGetTypeParameter(
                         templateDeclaration,
                         templateParameter.name.toString(),
-                        language
+                        language,
                     )
                 typeParamDecl.type = parameterizedType
                 if (templateParameter.defaultType != null) {
@@ -363,12 +363,12 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
      */
     private fun addParameterizedTypesToRecord(
         templateDeclaration: TemplateDeclaration,
-        innerDeclaration: RecordDeclaration
+        innerDeclaration: RecordDeclaration,
     ) {
         val parameterizedTypes = frontend.typeManager.getAllParameterizedType(templateDeclaration)
 
         // Loop through all the methods and adjust their receiver types
-        for (method in (innerDeclaration as? RecordDeclaration)?.methods ?: listOf()) {
+        for (method in innerDeclaration.methods) {
             // Add ParameterizedTypes to type
             method.receiver?.let {
                 it.type = addParameterizedTypesToType(it.type, parameterizedTypes)
@@ -389,6 +389,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                     constructor.type.typeName,
                     (constructor.type as? FunctionType)?.parameters ?: listOf(),
                     constructor.returnTypes,
+                    this.language,
                 )
         }
     }
@@ -401,7 +402,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
      */
     private fun addParameterizedTypesToType(
         type: Type,
-        parameterizedTypes: List<ParameterizedType>
+        parameterizedTypes: List<ParameterizedType>,
     ): Type {
         if (type is ObjectType) {
             // Because we cannot mutate the existing type (otherwise this will affect ALL usages of
@@ -464,7 +465,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 // [handleFunctionDefinition].
                 if (declaration is FunctionDeclaration) {
                     declaration.returnTypes =
-                        (type as? FunctionType)?.returnTypes ?: listOf(IncompleteType())
+                        (type as? FunctionType)?.returnTypes ?: listOf(incompleteType())
                 }
 
                 // We also need to set the type, based on the declarator type.
@@ -521,7 +522,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     private fun handleDeclarationSpecifier(
         declSpecifier: IASTDeclSpecifier?,
         ctx: IASTSimpleDeclaration,
-        sequence: DeclarationSequence
+        sequence: DeclarationSequence,
     ): Pair<Declaration?, Boolean> {
         var primaryDeclaration: Declaration? = null
         var useNameOfDeclarator = false
@@ -642,7 +643,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
     private fun handleEnum(
         ctx: IASTSimpleDeclaration,
-        declSpecifier: IASTEnumerationSpecifier
+        declSpecifier: IASTEnumerationSpecifier,
     ): EnumDeclaration {
         val entries = mutableListOf<EnumConstantDeclaration>()
         val enum = newEnumDeclaration(name = declSpecifier.name.toString(), rawNode = ctx)
@@ -656,10 +657,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             // put the symbol both in the outer scope as well as the enum's scope.
             frontend.scopeManager.enterScope(enum)
             val enumConst =
-                newEnumConstantDeclaration(
-                    enumerator.name.toString(),
-                    rawNode = enumerator,
-                )
+                newEnumConstantDeclaration(enumerator.name.toString(), rawNode = enumerator)
             frontend.scopeManager.addDeclaration(enumConst)
             frontend.scopeManager.leaveScope(enum)
 
@@ -707,7 +705,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
     private fun parseInclusions(
         includes: Array<IASTInclusionNode>?,
-        allIncludes: HashMap<String, HashSet<String?>>
+        allIncludes: HashMap<String, HashSet<String?>>,
     ) {
         if (includes != null) {
             for (n in includes) {
@@ -761,7 +759,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     private fun addIncludes(
         translationUnit: IASTTranslationUnit,
         problematicIncludes: Map<String?, Set<ProblemDeclaration>>,
-        node: TranslationUnitDeclaration
+        node: TranslationUnitDeclaration,
     ) {
         // TODO: Remark CB: I am not quite sure, what the point of the code beyond this line is.
         // Probably needs to be refactored

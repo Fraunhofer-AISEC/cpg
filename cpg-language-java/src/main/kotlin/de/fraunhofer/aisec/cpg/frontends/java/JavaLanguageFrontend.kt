@@ -63,6 +63,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.CommonPath
 import de.fraunhofer.aisec.cpg.passes.JavaExternalTypeHierarchyResolver
+import de.fraunhofer.aisec.cpg.passes.JavaExtraPass
 import de.fraunhofer.aisec.cpg.passes.JavaImportResolver
 import de.fraunhofer.aisec.cpg.passes.configuration.RegisterExtraPass
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -78,6 +79,7 @@ import kotlin.jvm.optionals.getOrNull
     JavaExternalTypeHierarchyResolver::class
 ) // this pass is always required for Java
 @RegisterExtraPass(JavaImportResolver::class)
+@RegisterExtraPass(JavaExtraPass::class)
 open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: TranslationContext) :
     LanguageFrontend<Node, Type>(language, ctx) {
 
@@ -141,6 +143,12 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
                 scopeManager.addDeclaration(incl)
             }
 
+            // We create an implicit import for "java.lang.*"
+            val decl =
+                newImportDeclaration(parseName("java.lang"), wildcardImport = true)
+                    .implicit("import java.lang.*")
+            scopeManager.addDeclaration(decl)
+
             if (namespaceDeclaration != null) {
                 scopeManager.leaveScope(namespaceDeclaration)
             }
@@ -199,7 +207,7 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
                     r.begin.line,
                     r.begin.column,
                     r.end.line,
-                    r.end.column + 1
+                    r.end.column + 1,
                 ) // +1 for SARIF compliance
             return PhysicalLocation(storage.path.toUri(), region)
         }
@@ -208,7 +216,7 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
 
     fun <N : Node, T : Type> getTypeAsGoodAsPossible(
         nodeWithType: NodeWithType<N, T>,
-        resolved: ResolvedValueDeclaration
+        resolved: ResolvedValueDeclaration,
     ): de.fraunhofer.aisec.cpg.graph.types.Type {
         return try {
             val type = nodeWithType.typeAsString
@@ -342,14 +350,14 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
 
     fun <N : Node, T : Type> getReturnTypeAsGoodAsPossible(
         nodeWithType: NodeWithType<N, T>,
-        resolved: ResolvedMethodDeclaration
+        resolved: ResolvedMethodDeclaration,
     ): de.fraunhofer.aisec.cpg.graph.types.Type {
         return try {
             // Resolve type first with ParameterizedType
             var type: de.fraunhofer.aisec.cpg.graph.types.Type? =
                 typeManager.getTypeParameter(
                     scopeManager.currentRecord,
-                    resolved.returnType.describe()
+                    resolved.returnType.describe(),
                 )
             if (type == null) {
                 type = typeOf(resolved.returnType)
@@ -437,7 +445,7 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
      */
     fun processAnnotations(
         node: de.fraunhofer.aisec.cpg.graph.Node,
-        owner: NodeWithAnnotations<*>
+        owner: NodeWithAnnotations<*>,
     ) {
         if (config.processAnnotations) {
             node.annotations += handleAnnotations(owner)
@@ -457,7 +465,7 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
                         newAnnotationMember(
                             pair.nameAsString,
                             expressionHandler.handle(pair.value) as Expression,
-                            rawNode = pair.value
+                            rawNode = pair.value,
                         )
                     members.add(member)
                 }
@@ -469,7 +477,7 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
                         newAnnotationMember(
                             ANNOTATION_MEMBER_VALUE,
                             expressionHandler.handle(value) as Expression,
-                            rawNode = value
+                            rawNode = value,
                         )
                     members.add(member)
                 }
@@ -488,7 +496,7 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
             is ClassOrInterfaceType ->
                 objectType(
                     type.nameWithScope,
-                    type.typeArguments.getOrNull()?.map { this.typeOf(it) } ?: listOf()
+                    type.typeArguments.getOrNull()?.map { this.typeOf(it) } ?: listOf(),
                 )
             is ReferenceType -> objectType(type.asString())
             else -> objectType(type.asString())
@@ -514,7 +522,7 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
     init {
         val reflectionTypeSolver = ReflectionTypeSolver()
         nativeTypeResolver.add(reflectionTypeSolver)
-        var root = config.topLevel
+        var root = ctx.currentComponent?.topLevel
         if (root == null && config.softwareComponents.size == 1) {
             root =
                 config.softwareComponents[config.softwareComponents.keys.first()]?.let {

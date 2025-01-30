@@ -47,7 +47,7 @@ class RunPlugin : Plugin {
                     "import de.fraunhofer.aisec.cpg.analysis.NullPointerCheck",
                     // run it
                     "OutOfBoundsCheck().run(result)",
-                    "NullPointerCheck().run(result)"
+                    "NullPointerCheck().run(result)",
                 )
             )
         }

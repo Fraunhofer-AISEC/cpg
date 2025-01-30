@@ -389,7 +389,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                 )
             assertEquals(
                 assertResolvedType("SSL_CTX").pointer(),
-                declFromMultiplicateExpression.type
+                declFromMultiplicateExpression.type,
             )
             assertLocalName("ptr", declFromMultiplicateExpression)
 
@@ -713,9 +713,9 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                 "(int)void*",
                 listOf(tu.primitiveType("int")),
                 listOf(tu.incompleteType().reference(POINTER)),
-                CPPLanguage()
+                CPPLanguage(),
             ),
-            methodWithParam.type
+            methodWithParam.type,
         )
         assertFalse(methodWithParam.hasBody())
 
@@ -732,9 +732,9 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                 "()void*",
                 listOf(),
                 listOf(tu.incompleteType().reference(POINTER)),
-                CPPLanguage()
+                CPPLanguage(),
             ),
-            inlineMethod.type
+            inlineMethod.type,
         )
         assertTrue(inlineMethod.hasBody())
 
@@ -745,9 +745,9 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                 "()SomeClass",
                 listOf(),
                 listOf(tu.objectType("SomeClass")),
-                CPPLanguage()
+                CPPLanguage(),
             ),
-            inlineConstructor.type
+            inlineConstructor.type,
         )
         assertTrue(inlineConstructor.hasBody())
 
@@ -760,9 +760,9 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                 "(int)SomeClass",
                 listOf(tu.primitiveType("int")),
                 listOf(tu.objectType("SomeClass")),
-                CPPLanguage()
+                CPPLanguage(),
             ),
-            constructorDefinition.type
+            constructorDefinition.type,
         )
         assertTrue(constructorDefinition.hasBody())
 
@@ -1206,7 +1206,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertEquals(1, annotation.members.size)
         assertEquals(
             "SomeCategory, SomeOtherThing",
-            (annotation.members[0].value as Literal<*>).value
+            (annotation.members[0].value as Literal<*>).value,
         )
     }
 
@@ -1256,7 +1256,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                     println(t)
                     eogEdges.add(t)
                 }
-            }
+            },
         )
         assertTrue(eogEdges.contains(returnStatement))
     }
@@ -1680,7 +1680,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             analyze(
                 listOf(file.resolve("main1.cpp"), file.resolve("main2.cpp")),
                 file.toPath(),
-                true
+                true,
             ) {
                 it.registerLanguage<CPPLanguage>()
             }

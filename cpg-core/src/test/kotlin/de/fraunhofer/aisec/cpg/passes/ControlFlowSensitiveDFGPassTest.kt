@@ -96,7 +96,7 @@ class ControlFlowSensitiveDFGPassTest {
             assertIs<MemberExpression>(baseOfMemberWrite13.astParent)
             assertEquals(
                 AccessValues.READ,
-                baseOfMemberWrite13.access
+                baseOfMemberWrite13.access,
             ) // the base of the member write is still a read, since the READ is only applying to
             // "FULL" flows
 
@@ -118,7 +118,7 @@ class ControlFlowSensitiveDFGPassTest {
                     mutableListOf<Node>(field1),
                     me.prevDFGEdges
                         .filter { it.granularity is FullDataflowGranularity }
-                        .map(Dataflow::start)
+                        .map(Dataflow::start),
                 )
                 // ... and only have one outgoing DFG edge to the "i" parameter of doSomething
                 assertEquals(mutableSetOf<Node>(i), me.nextDFG)
@@ -155,7 +155,7 @@ class ControlFlowSensitiveDFGPassTest {
                 val memberRead15 =
                     assertSinglePartialEdgeFrom<MemberExpression>(
                         baseOfMemberRead15,
-                        partialTarget = field1
+                        partialTarget = field1,
                     )
                 assertEquals(15, memberRead15.location?.region?.startLine)
 
@@ -168,7 +168,7 @@ class ControlFlowSensitiveDFGPassTest {
                     listOf<Node>(memberWrite13),
                     memberRead15.prevDFGEdges
                         .filter { it.granularity is FullDataflowGranularity }
-                        .map(Dataflow::start)
+                        .map(Dataflow::start),
                 )
             }
         }
@@ -236,7 +236,7 @@ class ControlFlowSensitiveDFGPassTest {
         assertNotNull(edge)
         assertEquals(
             partialTarget,
-            (edge.granularity as? PartialDataflowGranularity)?.partialTarget
+            (edge.granularity as? PartialDataflowGranularity)?.partialTarget,
         )
     }
 
@@ -245,13 +245,13 @@ class ControlFlowSensitiveDFGPassTest {
             from.nextDFGEdges
                 .filter { it.granularity is FullDataflowGranularity }
                 .map(Dataflow::end),
-            to
+            to,
         )
     }
 
     private inline fun <reified T : Node> assertSinglePartialEdgeFrom(
         from: Node,
-        partialTarget: Declaration?
+        partialTarget: Declaration?,
     ): T {
         val partialEdge =
             assertNotNull(
@@ -259,14 +259,14 @@ class ControlFlowSensitiveDFGPassTest {
             )
         assertEquals(
             partialTarget,
-            (partialEdge.granularity as? PartialDataflowGranularity)?.partialTarget
+            (partialEdge.granularity as? PartialDataflowGranularity)?.partialTarget,
         )
         return assertIs<T>(partialEdge.end)
     }
 
     private inline fun <reified T : Node> assertSinglePartialEdgeTo(
         to: Node,
-        partialTarget: Declaration?
+        partialTarget: Declaration?,
     ): T {
         val partialEdge =
             assertNotNull(
@@ -274,7 +274,7 @@ class ControlFlowSensitiveDFGPassTest {
             )
         assertEquals(
             partialTarget,
-            (partialEdge.granularity as? PartialDataflowGranularity)?.partialTarget
+            (partialEdge.granularity as? PartialDataflowGranularity)?.partialTarget,
         )
         return assertIs<T>(partialEdge.start)
     }

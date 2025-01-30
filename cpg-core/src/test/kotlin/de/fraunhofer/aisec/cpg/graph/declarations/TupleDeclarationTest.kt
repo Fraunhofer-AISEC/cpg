@@ -52,7 +52,7 @@ class TupleDeclarationTest {
                     TranslationContext(
                         TranslationConfiguration.builder().defaultPasses().build(),
                         ScopeManager(),
-                        TypeManager()
+                        TypeManager(),
                     )
             )
         ) {
@@ -61,7 +61,7 @@ class TupleDeclarationTest {
                     translationUnit {
                         function(
                             "func",
-                            returnTypes = listOf(objectType("MyClass"), objectType("error"))
+                            returnTypes = listOf(objectType("MyClass"), objectType("error")),
                         )
 
                         // I fear this is too complex for the fluent DSL; so we just use the node
@@ -69,7 +69,7 @@ class TupleDeclarationTest {
                         val tuple =
                             newTupleDeclaration(
                                 listOf(newVariableDeclaration("a"), newVariableDeclaration("b")),
-                                newCallExpression(newReference("func"))
+                                newCallExpression(newReference("func")),
                             )
                         scopeManager.addDeclaration(tuple)
                         tuple.elements.forEach { scopeManager.addDeclaration(it) }
@@ -120,7 +120,7 @@ class TupleDeclarationTest {
                     TranslationContext(
                         TranslationConfiguration.builder().defaultPasses().build(),
                         ScopeManager(),
-                        TypeManager()
+                        TypeManager(),
                     )
             )
         ) {
@@ -129,7 +129,7 @@ class TupleDeclarationTest {
                     translationUnit {
                         function(
                             "func",
-                            returnTypes = listOf(objectType("MyClass"), objectType("error"))
+                            returnTypes = listOf(objectType("MyClass"), objectType("error")),
                         )
 
                         function("main") {
@@ -142,9 +142,9 @@ class TupleDeclarationTest {
                                         newTupleDeclaration(
                                             listOf(
                                                 newVariableDeclaration("a"),
-                                                newVariableDeclaration("b")
+                                                newVariableDeclaration("b"),
                                             ),
-                                            newCallExpression(newReference("func"))
+                                            newCallExpression(newReference("func")),
                                         )
                                     this.declarationEdges += tuple
                                     scopeManager.addDeclaration(tuple)

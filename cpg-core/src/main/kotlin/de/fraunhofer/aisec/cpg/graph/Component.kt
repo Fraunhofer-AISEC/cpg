@@ -26,11 +26,16 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.PopulatedByPass
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.frontends.multiLanguage
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.passes.ImportDependencies
 import de.fraunhofer.aisec.cpg.passes.ImportResolver
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
+import java.io.File
 import org.neo4j.ogm.annotation.Relationship
 import org.neo4j.ogm.annotation.Transient
 
@@ -57,6 +62,16 @@ open class Component : Node() {
     }
 
     /**
+     * Returns the top-level directory of this component according to
+     * [TranslationConfiguration.topLevels]
+     */
+    @DoNotPersist
+    val topLevel: File?
+        get() {
+            return ctx?.config?.topLevels?.get(this.name.localName)
+        }
+
+    /**
      * All points where unknown data may enter this application, e.g., the main method, or other
      * targets such as listeners to external events such as HTTP requests. This also includes the
      * list of possible entry points.
@@ -65,4 +80,10 @@ open class Component : Node() {
 
     /** All outgoing interactions such as sending data to the network or some kind of IPC. */
     val outgoingInteractions: MutableList<Node> = mutableListOf()
+
+    override var language: Language<*>
+        get() {
+            return multiLanguage()
+        }
+        set(_) {}
 }

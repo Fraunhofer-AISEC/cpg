@@ -114,7 +114,7 @@ private val Map<String, String>.buildTags: Set<String>
                     "linux",
                     "netbsd",
                     "openbsd",
-                    "solaris"
+                    "solaris",
                 )
         ) {
             tags += "unix"
@@ -173,7 +173,7 @@ internal class Project {
             goos: String? = null,
             goarch: String? = null,
             goVersion: Int? = null,
-            tags: MutableList<String> = mutableListOf()
+            tags: MutableList<String> = mutableListOf(),
         ): Project {
             val project = Project()
             val symbols = mutableMapOf<String, String>()
@@ -260,7 +260,7 @@ internal class Project {
             files = files.filter { shouldBeBuild(it, symbols) }.toMutableList()
 
             // TODO(oxisto): look for binaries in cmd folder
-            project.components[TranslationResult.APPLICATION_LOCAL_NAME] = files
+            project.components[TranslationResult.DEFAULT_APPLICATION_NAME] = files
             project.symbols = symbols
             // TODO(oxisto): support vendor includes
             project.includePaths = listOf(stdLib, topLevel.resolve("vendor"))

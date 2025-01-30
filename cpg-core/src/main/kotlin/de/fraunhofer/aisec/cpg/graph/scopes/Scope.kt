@@ -26,11 +26,12 @@
 package de.fraunhofer.aisec.cpg.graph.scopes
 
 import com.fasterxml.jackson.annotation.JsonBackReference
+import de.fraunhofer.aisec.cpg.frontends.HasImplicitReceiver
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.Node.Companion.TO_STRING_STYLE
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
+import de.fraunhofer.aisec.cpg.graph.firstScopeParentOrNull
 import de.fraunhofer.aisec.cpg.graph.statements.LabelStatement
 import de.fraunhofer.aisec.cpg.graph.statements.LookupScopeStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
@@ -112,6 +113,10 @@ sealed class Scope(
      * current scope. This behaviour can be turned off with [thisScopeOnly]. This is useful for
      * qualified lookups, where we want to stay in our lookup-scope.
      *
+     * We need to consider the language trait [HasImplicitReceiver] here as well. If the language
+     * requires explicit member access, we must not consider symbols from record scopes unless we
+     * are in a qualified lookup.
+     *
      * @param symbol the symbol to lookup
      * @param thisScopeOnly whether we should stay in the current scope for lookup or traverse to
      *   its parents if no match was found.
@@ -124,7 +129,7 @@ sealed class Scope(
         languageOnly: Language<*>? = null,
         thisScopeOnly: Boolean = false,
         replaceImports: Boolean = true,
-        predicate: ((Declaration) -> Boolean)? = null
+        predicate: ((Declaration) -> Boolean)? = null,
     ): List<Declaration> {
         // First, try to look for the symbol in the current scope (unless we have a predefined
         // search scope). In the latter case we also need to restrict the lookup to the search scope
@@ -166,11 +171,19 @@ sealed class Scope(
 
             // If we do not have a hit, we can go up one scope, unless thisScopeOnly is set to true
             // (or we had a modified scope)
-            if (thisScopeOnly || modifiedScoped != null) {
-                break
-            } else {
-                scope = scope.parent
-            }
+            scope =
+                if (thisScopeOnly || modifiedScoped != null) {
+                    break
+                } else {
+                    // If our language needs explicit lookup for fields (and other class members),
+                    // we need to skip record scopes unless we are in a qualified lookup
+                    if (languageOnly !is HasImplicitReceiver && scope.parent is RecordScope) {
+                        scope.firstScopeParentOrNull { it !is RecordScope }
+                    } else {
+                        // Otherwise, we can just go to the next parent
+                        scope.parent
+                    }
+                }
         }
 
         return list ?: listOf()

@@ -54,7 +54,7 @@ class RubyLanguageFrontend(language: RubyLanguage, ctx: TranslationContext) :
                 file.path,
                 file.inputStream(),
                 null,
-                ParserConfiguration(ruby, 0, false, true, false)
+                ParserConfiguration(ruby, 0, false, true, false),
             ) as RootNode
 
         return handleRootNode(node)

@@ -79,6 +79,19 @@ data class PartialDataflowGranularity(
     val partialTarget: Declaration?
 ) : Granularity
 
+/**
+ * This dataflow granularity denotes that not the "whole" object is flowing from [Dataflow.start] to
+ * [Dataflow.end] but only parts of it. Common examples include tuples or array indices.
+ */
+class IndexedDataflowGranularity(
+    /** The index that is affected by this partial dataflow. */
+    val index: Int
+) : Granularity {
+    override fun equals(other: Any?): Boolean {
+        return this.index == (other as? IndexedDataflowGranularity)?.index
+    }
+}
+
 /** Creates a new [FullDataflowGranularity]. */
 fun full(): Granularity {
     return FullDataflowGranularity
@@ -105,6 +118,14 @@ fun pointer(access: PointerAccess): PointerDataflowGranularity {
 }
 
 /**
+ * Creates a new [IndexedDataflowGranularity]. The [idx] is the index that is used for the partial
+ * dataflow.
+ */
+fun indexed(idx: Int): IndexedDataflowGranularity {
+    return IndexedDataflowGranularity(idx)
+}
+
+/**
  * This edge class defines a flow of data between [start] and [end]. The flow can have a certain
  * [granularity].
  */
@@ -115,7 +136,7 @@ open class Dataflow(
     /** The granularity of this dataflow. */
     @Convert(DataflowGranularityConverter::class)
     @JsonIgnore
-    var granularity: Granularity = default()
+    var granularity: Granularity = default(),
 ) : Edge<Node>(start, end) {
     override var labels = setOf("DFG")
 
@@ -155,7 +176,7 @@ class ContextSensitiveDataflow(
     end: Node,
     /** The granularity of this dataflow. */
     granularity: Granularity = default(),
-    val callingContext: CallingContext
+    val callingContext: CallingContext,
 ) : Dataflow(start, end, granularity) {
 
     override var labels = setOf("DFG")
@@ -189,7 +210,7 @@ class Dataflows<T : Node>(
     fun addContextSensitive(
         node: T,
         granularity: Granularity = default(),
-        callingContext: CallingContext
+        callingContext: CallingContext,
     ) {
         val edge =
             if (outgoing) {

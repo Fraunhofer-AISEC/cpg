@@ -23,8 +23,11 @@
  *                    \______/ \__|       \______/
  *
  */
+import de.undercouch.gradle.tasks.download.Download
+
 plugins {
     id("cpg.frontend-conventions")
+    alias(libs.plugins.download)
 }
 
 publishing {
@@ -40,20 +43,30 @@ publishing {
 }
 
 dependencies {
-    implementation("net.java.dev.jna:jna:5.15.0")
+    implementation("net.java.dev.jna:jna:5.16.0")
     testImplementation(project(":cpg-analysis"))
 }
 
-val downloadLibGoAST = tasks.register("downloadLibGoAST") {
-    doLast {
-        project.exec {
-            commandLine("./download.sh")
-                .setStandardOutput(System.out)
-                .workingDir("src/main/resources")
-        }
-    }
-}
+tasks {
+    val downloadLibGoAST by registering(Download::class) {
+        val version = "v0.0.5"
 
-tasks.processResources {
-    dependsOn(downloadLibGoAST)
+        src(listOf(
+            "https://github.com/Fraunhofer-AISEC/libgoast/releases/download/${version}/libgoast-arm64.dylib",
+            "https://github.com/Fraunhofer-AISEC/libgoast/releases/download/${version}/libgoast-amd64.dylib",
+            "https://github.com/Fraunhofer-AISEC/libgoast/releases/download/${version}/libgoast-arm64.so",
+            "https://github.com/Fraunhofer-AISEC/libgoast/releases/download/${version}/libgoast-amd64.so",
+            "https://github.com/Fraunhofer-AISEC/libgoast/releases/download/${version}/libgoast-amd64.dll"
+        ))
+        dest(projectDir.resolve("src/main/resources"))
+        onlyIfModified(true)
+    }
+
+    processResources {
+        dependsOn(downloadLibGoAST)
+    }
+
+    sourcesJar {
+        dependsOn(downloadLibGoAST)
+    }
 }

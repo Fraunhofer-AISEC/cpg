@@ -47,9 +47,9 @@ class TestCommon {
                 "isImplicit",
                 "isInferred",
                 "location",
-                "name"
+                "name",
             ),
-            properties.keys
+            properties.keys,
         )
     }
 
@@ -67,6 +67,7 @@ class TestCommon {
                 "DFG",
                 "EOG",
                 "LANGUAGE",
+                "OVERLAY",
                 "OVERRIDES",
                 "PARAMETERS",
                 "PDG",
@@ -77,7 +78,7 @@ class TestCommon {
                 "TYPE",
                 "USAGE",
             ),
-            relationships.keys.sorted()
+            relationships.keys.sorted(),
         )
 
         relationships = TranslationResult::class.schemaRelationships
@@ -91,10 +92,11 @@ class TestCommon {
                 "DFG",
                 "EOG",
                 "LANGUAGE",
+                "OVERLAY",
                 "PDG",
                 "SCOPE",
             ),
-            relationships.keys.sorted()
+            relationships.keys.sorted(),
         )
     }
 }

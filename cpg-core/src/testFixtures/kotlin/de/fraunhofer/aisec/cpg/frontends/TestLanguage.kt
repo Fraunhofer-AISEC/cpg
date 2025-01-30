@@ -42,7 +42,7 @@ import kotlin.reflect.KClass
  * a specific one.
  */
 open class TestLanguage(final override var namespaceDelimiter: String = "::") :
-    Language<TestLanguageFrontend>() {
+    Language<TestLanguageFrontend>(), HasImplicitReceiver {
     override val fileExtensions: List<String> = listOf()
     override val frontend: KClass<out TestLanguageFrontend> = TestLanguageFrontend::class
     override val compoundAssignmentOperators =
@@ -60,6 +60,8 @@ open class TestLanguage(final override var namespaceDelimiter: String = "::") :
             "double" to FloatingPointType("double", 64, this, NumericType.Modifier.SIGNED),
             "string" to StringType("string", this),
         )
+    override val receiverName: String
+        get() = "this"
 }
 
 class StructTestLanguage(namespaceDelimiter: String = "::") :
@@ -79,7 +81,7 @@ open class TestLanguageFrontend(
         TranslationContext(
             TranslationConfiguration.builder().build(),
             ScopeManager(),
-            TypeManager()
+            TypeManager(),
         ),
 ) : LanguageFrontend<Any, Any>(language, ctx) {
     override fun parse(file: File): TranslationUnitDeclaration {

@@ -49,7 +49,7 @@ class Neo4jPlugin : Plugin {
             val commands =
                 mutableListOf(
                     "import de.fraunhofer.aisec.cpg_vis_neo4j.Application",
-                    "val neo4j = Application()"
+                    "val neo4j = Application()",
                 )
 
             if (input.size == 4) {

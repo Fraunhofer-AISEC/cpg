@@ -147,7 +147,7 @@ class DFGFunctionSummaries {
         if (functionToDFGEntryMap.isEmpty()) return null
 
         val language = functionDecl.language
-        val languageName = language?.javaClass?.name
+        val languageName = language.javaClass.name
         val methodName = functionDecl.name
         val typeManager = functionDecl.ctx?.typeManager ?: return null
 
@@ -163,7 +163,7 @@ class DFGFunctionSummaries {
                         entryMethodName.parent?.let {
                             typeManager.lookupResolvedType(
                                 entryMethodName.parent,
-                                language = language
+                                language = language,
                             )
                         }
                     methodName.lastPartsMatch(
@@ -184,7 +184,7 @@ class DFGFunctionSummaries {
                                 it.signature.map { signatureType ->
                                     typeManager.lookupResolvedType(
                                         signatureType,
-                                        language = language
+                                        language = language,
                                     ) ?: functionDecl.unknownType()
                                 }
                             ) != IncompatibleSignature)
@@ -198,7 +198,7 @@ class DFGFunctionSummaries {
             matchingEntries.size,
             functionDecl.name,
             functionDecl.signatureTypes.map(Node::name),
-            functionDecl.scope
+            functionDecl.scope,
         )
 
         return if (matchingEntries.size == 1) {
@@ -223,7 +223,7 @@ class DFGFunctionSummaries {
                             language.parseName(it.methodName).parent?.let { it1 ->
                                 typeManager.lookupResolvedType(it1, language = language)
                             } ?: language.unknownType(),
-                            it
+                            it,
                         )
                     }
             val uniqueTypes = typeEntryList.map { it.first }.distinct()
@@ -252,7 +252,7 @@ class DFGFunctionSummaries {
                                     typeManager.lookupResolvedType(it, language = language)
                                         ?: language.unknownType()
                                 } ?: listOf()
-                            )
+                            ),
                         )
                     }
                     .filter { it.second is SignatureMatches }
@@ -279,7 +279,7 @@ class DFGFunctionSummaries {
      */
     fun applyDfgEntryToFunctionDeclaration(
         functionDeclaration: FunctionDeclaration,
-        dfgEntries: List<DFGEntry>
+        dfgEntries: List<DFGEntry>,
     ) {
         for (entry in dfgEntries) {
             var srcValueDepth = 1
@@ -373,7 +373,7 @@ class DFGFunctionSummaries {
      */
     private data class DataflowEntry(
         val functionDeclaration: FunctionDeclarationEntry,
-        val dataFlows: List<DFGEntry>
+        val dataFlows: List<DFGEntry>,
     )
 
     /**
@@ -389,7 +389,7 @@ class DFGFunctionSummaries {
          * parameter. This is optional and if not specified, we perform the matching only based on
          * the [methodName].
          */
-        val signature: List<String>? = null
+        val signature: List<String>? = null,
     )
 
     /** Represents a data flow entry. */
@@ -407,7 +407,7 @@ class DFGFunctionSummaries {
          * A property which can give us more information. Currently, it's ignored, but it would make
          * sense to add e.g. partial flows based on PR 1421.
          */
-        val dfgType: String
+        val dfgType: String,
     )
 
     companion object {

@@ -76,7 +76,7 @@ interface HasTemplates : HasGenerics {
         applyInference: Boolean,
         ctx: TranslationContext,
         currentTU: TranslationUnitDeclaration?,
-        needsExactMatch: Boolean
+        needsExactMatch: Boolean,
     ): Pair<Boolean, List<FunctionDeclaration>>
 }
 
@@ -125,7 +125,14 @@ interface HasSuperClasses : LanguageTrait {
 
 /**
  * A language trait, that specifies that this language has support for implicit receiver, e.g., that
- * one can omit references to a base such as `this`.
+ * one can omit references to a base such as `this`. Common examples are C++ and Java.
+ *
+ * This is contrast to languages such as Python and Go where the name of the receiver such as `self`
+ * is always required to access a field or method.
+ *
+ * We need this information to make a decision which symbols or scopes to consider when doing an
+ * unqualified lookup of a symbol in [Scope.lookupSymbol]. More specifically, we need to skip the
+ * symbols of a [RecordScope] if the language does NOT have this trait.
  */
 interface HasImplicitReceiver : LanguageTrait {
 

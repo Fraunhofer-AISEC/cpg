@@ -100,7 +100,7 @@ fun MetadataProvider.newUnaryOperator(
     operatorCode: String,
     postfix: Boolean,
     prefix: Boolean,
-    rawNode: Any? = null
+    rawNode: Any? = null,
 ): UnaryOperator {
     val node = UnaryOperator()
     node.applyMetadata(this, operatorCode, rawNode, true)
@@ -125,7 +125,7 @@ fun MetadataProvider.newAssignExpression(
     operatorCode: String = "=",
     lhs: List<Expression> = listOf(),
     rhs: List<Expression> = listOf(),
-    rawNode: Any? = null
+    rawNode: Any? = null,
 ): AssignExpression {
     val node = AssignExpression()
     node.applyMetadata(this, operatorCode, rawNode, true)
@@ -147,7 +147,7 @@ fun MetadataProvider.newAssignExpression(
 @JvmOverloads
 fun MetadataProvider.newNewExpression(
     type: Type = unknownType(),
-    rawNode: Any? = null
+    rawNode: Any? = null,
 ): NewExpression {
     val node = NewExpression()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
@@ -167,7 +167,7 @@ fun MetadataProvider.newNewExpression(
 @JvmOverloads
 fun MetadataProvider.newConstructExpression(
     name: CharSequence? = EMPTY_NAME,
-    rawNode: Any? = null
+    rawNode: Any? = null,
 ): ConstructExpression {
     val node = ConstructExpression()
     node.applyMetadata(this, name, rawNode, true)
@@ -188,7 +188,7 @@ fun MetadataProvider.newConditionalExpression(
     thenExpression: Expression? = null,
     elseExpression: Expression? = null,
     type: Type = unknownType(),
-    rawNode: Any? = null
+    rawNode: Any? = null,
 ): ConditionalExpression {
     val node = ConditionalExpression()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
@@ -212,7 +212,7 @@ fun MetadataProvider.newConditionalExpression(
 fun MetadataProvider.newKeyValueExpression(
     key: Expression,
     value: Expression,
-    rawNode: Any? = null
+    rawNode: Any? = null,
 ): KeyValueExpression {
     val node = KeyValueExpression()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
@@ -264,7 +264,7 @@ fun MetadataProvider.newCallExpression(
     callee: Expression? = null,
     fqn: CharSequence? = null,
     template: Boolean = false,
-    rawNode: Any? = null
+    rawNode: Any? = null,
 ): CallExpression {
     val node = CallExpression()
     node.applyMetadata(this, fqn, rawNode, true)
@@ -293,7 +293,7 @@ fun MetadataProvider.newCallExpression(
 fun MetadataProvider.newOperatorCallExpression(
     operatorCode: String,
     callee: Expression?,
-    rawNode: Any? = null
+    rawNode: Any? = null,
 ): OperatorCallExpression {
     val node = OperatorCallExpression()
     node.applyMetadata(this, operatorCode, rawNode)
@@ -317,13 +317,13 @@ fun MetadataProvider.newOperatorCallExpression(
 fun MetadataProvider.newMemberCallExpression(
     callee: Expression?,
     isStatic: Boolean = false,
-    rawNode: Any? = null
+    rawNode: Any? = null,
 ): MemberCallExpression {
     val node = MemberCallExpression()
     node.applyMetadata(
         this,
         null, // the name will be updated later based on the callee
-        rawNode
+        rawNode,
     )
 
     // Set the call expression as resolution helper for the callee
@@ -352,7 +352,7 @@ fun MetadataProvider.newMemberExpression(
     base: Expression,
     memberType: Type = unknownType(),
     operatorCode: String? = ".",
-    rawNode: Any? = null
+    rawNode: Any? = null,
 ): MemberExpression {
     val node = MemberExpression()
     node.applyMetadata(this, name, rawNode, true)
@@ -391,7 +391,7 @@ fun MetadataProvider.newTypeIdExpression(
     operatorCode: String,
     type: Type = unknownType(),
     referencedType: Type = unknownType(),
-    rawNode: Any? = null
+    rawNode: Any? = null,
 ): TypeIdExpression {
     val node = TypeIdExpression()
     node.applyMetadata(this, operatorCode, rawNode, true)
@@ -429,7 +429,7 @@ fun MetadataProvider.newSubscriptExpression(rawNode: Any? = null): SubscriptExpr
 fun MetadataProvider.newRangeExpression(
     floor: Expression? = null,
     ceiling: Expression? = null,
-    rawNode: Any? = null
+    rawNode: Any? = null,
 ): RangeExpression {
     val node = RangeExpression()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
@@ -466,7 +466,7 @@ fun MetadataProvider.newNewArrayExpression(rawNode: Any? = null): NewArrayExpres
 fun MetadataProvider.newReference(
     name: CharSequence?,
     type: Type = unknownType(),
-    rawNode: Any? = null
+    rawNode: Any? = null,
 ): Reference {
     val node = Reference()
     node.applyMetadata(this, name, rawNode, true)
@@ -559,7 +559,7 @@ fun MetadataProvider.newExpressionList(rawNode: Any? = null): ExpressionList {
 @JvmOverloads
 fun MetadataProvider.newInitializerListExpression(
     targetType: Type = unknownType(),
-    rawNode: Any? = null
+    rawNode: Any? = null,
 ): InitializerListExpression {
     val node = InitializerListExpression()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
@@ -598,7 +598,7 @@ fun MetadataProvider.newCollectionComprehension(rawNode: Any? = null): Collectio
 fun MetadataProvider.newTypeExpression(
     name: CharSequence?,
     type: Type = unknownType(),
-    rawNode: Any? = null
+    rawNode: Any? = null,
 ): TypeExpression {
     val node = TypeExpression()
     node.applyMetadata(this, name, rawNode)
@@ -634,7 +634,7 @@ fun MetadataProvider.newThrowExpression(rawNode: Any? = null): ThrowExpression {
 fun MetadataProvider.newProblemExpression(
     problem: String = "",
     type: ProblemNode.ProblemType = ProblemNode.ProblemType.PARSING,
-    rawNode: Any? = null
+    rawNode: Any? = null,
 ): ProblemExpression {
     val node = ProblemExpression(problem, type)
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
@@ -671,7 +671,7 @@ fun <T> Literal<T>.duplicate(implicit: Boolean): Literal<T> {
             duplicate.nextDFGEdges.addContextSensitive(
                 edge.end,
                 edge.granularity,
-                edge.callingContext
+                edge.callingContext,
             )
         } else {
             duplicate.nextDFGEdges += edge
@@ -682,7 +682,7 @@ fun <T> Literal<T>.duplicate(implicit: Boolean): Literal<T> {
             duplicate.prevDFGEdges.addContextSensitive(
                 edge.start,
                 edge.granularity,
-                edge.callingContext
+                edge.callingContext,
             )
         } else {
             duplicate.prevDFGEdges += edge

@@ -91,7 +91,7 @@ class IniFileFrontend(language: Language<IniFileFrontend>, ctx: TranslationConte
          * [de.fraunhofer.aisec.cpg.TranslationConfiguration.topLevel] using
          * [Language.namespaceDelimiter] as a separator
          */
-        val topLevel = config.topLevel?.let { file.relativeToOrNull(it) } ?: file
+        val topLevel = ctx.currentComponent?.topLevel?.let { file.relativeToOrNull(it) } ?: file
         val parentDir = topLevel.parent
 
         val namespace =
@@ -197,7 +197,7 @@ class IniFileFrontend(language: Language<IniFileFrontend>, ctx: TranslationConte
     override fun locationOf(astNode: Any): PhysicalLocation? {
         return PhysicalLocation(
             uri,
-            region
+            region,
         ) // currently, the line number / column cannot be accessed given an Ini object -> we only
         // provide a precise uri
     }

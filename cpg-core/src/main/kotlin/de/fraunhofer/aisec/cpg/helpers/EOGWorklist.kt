@@ -242,7 +242,7 @@ class Worklist<K : Any, N : Any, V>() {
 inline fun <reified K : Node, V> iterateEOG(
     startNode: K,
     startState: State<K, V>,
-    transformation: (K, State<K, V>) -> State<K, V>
+    transformation: (K, State<K, V>) -> State<K, V>,
 ): State<K, V>? {
     return iterateEOG(startNode, startState) { k, s, _ -> transformation(k, s) }
 }
@@ -260,7 +260,7 @@ inline fun <reified K : Node, V> iterateEOG(
 inline fun <reified K : Node, V> iterateEOG(
     startNode: K,
     startState: State<K, V>,
-    transformation: (K, State<K, V>, Worklist<K, K, V>) -> State<K, V>
+    transformation: (K, State<K, V>, Worklist<K, K, V>) -> State<K, V>,
 ): State<K, V>? {
     val initialState = IdentityHashMap<K, State<K, V>>()
     initialState[startNode] = startState
@@ -294,7 +294,7 @@ inline fun <reified K : Node, V> iterateEOG(
 inline fun <reified K : Edge<Node>, N : Any, V> iterateEOG(
     startEdges: List<K>,
     startState: State<N, V>,
-    transformation: (K, State<N, V>) -> State<N, V>
+    transformation: (K, State<N, V>) -> State<N, V>,
 ): State<N, V>? {
     return iterateEOG(startEdges, startState) { k, s, _ -> transformation(k, s) }
 }
@@ -302,7 +302,7 @@ inline fun <reified K : Edge<Node>, N : Any, V> iterateEOG(
 inline fun <reified K : Edge<Node>, N : Any, V> iterateEOG(
     startEdges: List<K>,
     startState: State<N, V>,
-    transformation: (K, State<N, V>, Worklist<K, N, V>) -> State<N, V>
+    transformation: (K, State<N, V>, Worklist<K, N, V>) -> State<N, V>,
 ): State<N, V>? {
     val globalState = IdentityHashMap<K, State<N, V>>()
     for (startEdge in startEdges) {

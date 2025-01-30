@@ -400,6 +400,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             is PointerDereference -> handlePointerDereference(node)
             is PointerReference -> handlePointerReference(node)
             is Reference -> handleDefault(node)
+            is ImportDeclaration -> handleDefault(node)
             // These nodes are not added to the EOG
             is IncludeDeclaration -> doNothing()
             else -> LOGGER.info("Parsing of type ${node.javaClass} is not supported (yet)")
@@ -592,8 +593,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         // value. If the language has the trait of short-circuit evaluation, we check if the
         // operatorCode is amongst the operators that lead to such an evaluation.
         if (
-            lang != null &&
-                lang is HasShortCircuitOperators &&
+            lang is HasShortCircuitOperators &&
                 (lang.conjunctiveOperators.contains(node.operatorCode) ||
                     lang.disjunctiveOperators.contains(node.operatorCode))
         ) {
@@ -1302,7 +1302,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             throwExpression,
             throwExpression.exception?.type,
             throwExpression.exception,
-            throwExpression.parentException
+            throwExpression.parentException,
         )
     }
 
@@ -1317,7 +1317,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     protected fun handleThrowOperator(
         throwExpression: Node,
         throwType: Type?,
-        vararg inputs: Expression?
+        vararg inputs: Expression?,
     ) {
         inputs.filterNotNull().forEach { handleEOG(it) }
         attachToEOG(throwExpression)
@@ -1438,7 +1438,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
                 else -> {
                     LOGGER.error(
                         "Currently the component {} does not have a defined loop start.",
-                        this.javaClass
+                        this.javaClass,
                     )
                     ArrayList()
                 }
@@ -1461,7 +1461,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
                 else -> {
                     LOGGER.error(
                         "Currently the component {} does not have defined conditions",
-                        this.javaClass
+                        this.javaClass,
                     )
                     mutableListOf()
                 }

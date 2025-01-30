@@ -73,7 +73,7 @@ class ControlDependences<NodeType : Node> :
     constructor(
         thisRef: Node,
         mirrorProperty: KProperty<MutableCollection<ControlDependence>>,
-        outgoing: Boolean
+        outgoing: Boolean,
     ) : super(thisRef = thisRef, init = ::ControlDependence, outgoing = outgoing) {
         this.mirrorProperty = mirrorProperty
     }

@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.graph.Persistable
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeCollection
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeList
 import de.fraunhofer.aisec.cpg.helpers.neo4j.NameConverter
-import java.math.BigInteger
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 import kotlin.reflect.KTypeProjection
@@ -110,7 +109,7 @@ fun Persistable.properties(): Map<String, Any?> {
  */
 fun Any.convert(
     entry: Map.Entry<String, KProperty1<out Persistable, *>>,
-    properties: MutableMap<String, Any?>
+    properties: MutableMap<String, Any?>,
 ) {
     val originalKey = entry.key
 
@@ -123,7 +122,7 @@ fun Any.convert(
         } else if (converter is AttributeConverter<*, *>) {
             properties.put(
                 originalKey,
-                (converter as AttributeConverter<Any, Any>).toGraphProperty(this)
+                (converter as AttributeConverter<Any, Any>).toGraphProperty(this),
             )
         }
     } else if (this is Name && originalKey == "name") {
@@ -133,8 +132,6 @@ fun Any.convert(
     } else if (this is Enum<*>) {
         properties.put(originalKey, this.name)
     } else if (this is Uuid) {
-        properties.put(originalKey, this.toString())
-    } else if (this is BigInteger) {
         properties.put(originalKey, this.toString())
     } else {
         properties.put(originalKey, this)

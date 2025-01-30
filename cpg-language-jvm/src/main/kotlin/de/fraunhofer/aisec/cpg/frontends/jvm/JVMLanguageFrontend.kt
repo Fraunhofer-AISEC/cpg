@@ -52,7 +52,7 @@ typealias SootType = sootup.core.types.Type
 
 class JVMLanguageFrontend(
     language: Language<out LanguageFrontend<Any, SootType>>,
-    ctx: TranslationContext
+    ctx: TranslationContext,
 ) : LanguageFrontend<Any, SootType>(language, ctx) {
 
     val declarationHandler = DeclarationHandler(this)
@@ -78,7 +78,7 @@ class JVMLanguageFrontend(
                 "class" -> {
                     JavaView(
                         JavaClassPathAnalysisInputLocation(
-                            ctx.config.topLevel!!.path,
+                            ctx.currentComponent?.topLevel?.path!!,
                             SourceType.Library,
                             listOf(
                                 NopEliminator(),
@@ -89,8 +89,8 @@ class JVMLanguageFrontend(
                                 // ConditionalBranchFolder(),
                                 EmptySwitchEliminator(),
                                 TypeAssigner(),
-                                LocalNameStandardizer()
-                            )
+                                LocalNameStandardizer(),
+                            ),
                         )
                     )
                 }
@@ -108,16 +108,20 @@ class JVMLanguageFrontend(
                                 // ConditionalBranchFolder(),
                                 EmptySwitchEliminator(),
                                 TypeAssigner(),
-                                LocalNameStandardizer()
-                            )
+                                LocalNameStandardizer(),
+                            ),
                         )
                     )
                 }
                 "java" -> {
-                    JavaView(JavaSourcePathAnalysisInputLocation(ctx.config.topLevel!!.path))
+                    JavaView(
+                        JavaSourcePathAnalysisInputLocation(ctx.currentComponent?.topLevel?.path!!)
+                    )
                 }
                 "jimple" -> {
-                    JimpleView(JimpleAnalysisInputLocation(ctx.config.topLevel!!.toPath()))
+                    JimpleView(
+                        JimpleAnalysisInputLocation(ctx.currentComponent?.topLevel?.toPath()!!)
+                    )
                 }
                 else -> {
                     throw TranslationException("unsupported file")

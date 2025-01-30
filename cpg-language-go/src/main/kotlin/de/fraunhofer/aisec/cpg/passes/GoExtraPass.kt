@@ -223,7 +223,8 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 FunctionType(
                     funcTypeName(func.signatureTypes, func.returnTypes),
                     func.signatureTypes,
-                    func.returnTypes
+                    func.returnTypes,
+                    func.language,
                 )
             )
         scopeManager.addDeclaration(func)
@@ -348,9 +349,9 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
         // Loop through the target variables (left-hand side)
         for ((idx, expr) in assign.lhs.withIndex()) {
             if (expr is Reference) {
-                // And try to resolve it
-                val ref = scopeManager.resolveReference(expr)
-                if (ref == null) {
+                // And try to resolve it as a variable
+                val ref = scopeManager.lookupSymbolByNodeNameOfType<VariableDeclaration>(expr)
+                if (ref.isEmpty()) {
                     // We need to implicitly declare it, if it's not declared before.
                     val decl = newVariableDeclaration(expr.name, expr.autoType())
                     decl.language = expr.language
@@ -389,7 +390,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
         // Try to see if we already know about this namespace somehow
         val namespace =
-            scopeManager.lookupSymbolByNameOfNode(import).filter {
+            scopeManager.lookupSymbolByNodeName(import) {
                 it is NamespaceDeclaration && it.path == import.importURL
             }
 

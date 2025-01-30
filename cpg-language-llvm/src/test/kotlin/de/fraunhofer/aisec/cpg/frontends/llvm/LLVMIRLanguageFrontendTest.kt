@@ -49,8 +49,8 @@ class LLVMIRLanguageFrontendTest {
                 TranslationContext(
                     TranslationConfiguration.builder().build(),
                     ScopeManager(),
-                    TypeManager()
-                )
+                    TypeManager(),
+                ),
             )
         val exception =
             assertThrows<TranslationException> {
@@ -69,8 +69,8 @@ class LLVMIRLanguageFrontendTest {
                 TranslationContext(
                     TranslationConfiguration.builder().build(),
                     ScopeManager(),
-                    TypeManager()
-                )
+                    TypeManager(),
+                ),
             )
         frontend.parse(topLevel.resolve("main.ll").toFile())
     }
@@ -82,7 +82,7 @@ class LLVMIRLanguageFrontendTest {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("vector_poison.ll").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<LLVMIRLanguage>()
             }
@@ -163,7 +163,7 @@ class LLVMIRLanguageFrontendTest {
         assertLocalName("13", arrayExpr)
         assertLiteralValue(
             13L,
-            arrayExpr.subscriptExpression
+            arrayExpr.subscriptExpression,
         ) // should this be integer instead of long?
 
         arrayExpr = arrayExpr.arrayExpression
@@ -171,7 +171,7 @@ class LLVMIRLanguageFrontendTest {
         assertLocalName("5", arrayExpr)
         assertLiteralValue(
             5L,
-            arrayExpr.subscriptExpression
+            arrayExpr.subscriptExpression,
         ) // should this be integer instead of long?
 
         var memberExpression = arrayExpr.arrayExpression
@@ -187,7 +187,7 @@ class LLVMIRLanguageFrontendTest {
         assertLocalName("1", arrayExpr)
         assertLiteralValue(
             1L,
-            arrayExpr.subscriptExpression
+            arrayExpr.subscriptExpression,
         ) // should this be integer instead of long?
 
         val ref = arrayExpr.arrayExpression
@@ -203,7 +203,7 @@ class LLVMIRLanguageFrontendTest {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("switch_case.ll").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<LLVMIRLanguage>()
             }
@@ -354,7 +354,7 @@ class LLVMIRLanguageFrontendTest {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("atomicrmw.ll").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<LLVMIRLanguage>()
             }
@@ -424,7 +424,7 @@ class LLVMIRLanguageFrontendTest {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("atomicrmw.ll").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<LLVMIRLanguage>()
             }
@@ -450,7 +450,7 @@ class LLVMIRLanguageFrontendTest {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("literal_struct.ll").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<LLVMIRLanguage>()
             }
@@ -488,7 +488,7 @@ class LLVMIRLanguageFrontendTest {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("global_local_var.ll").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<LLVMIRLanguage>()
             }
@@ -583,7 +583,7 @@ class LLVMIRLanguageFrontendTest {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("undef_insertvalue.ll").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<LLVMIRLanguage>()
             }
@@ -645,7 +645,7 @@ class LLVMIRLanguageFrontendTest {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("try_catch.ll").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<LLVMIRLanguage>()
             }
@@ -890,7 +890,7 @@ class LLVMIRLanguageFrontendTest {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("exceptions.ll").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<LLVMIRLanguage>()
             }

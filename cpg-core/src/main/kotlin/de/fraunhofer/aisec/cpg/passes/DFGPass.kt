@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
+import de.fraunhofer.aisec.cpg.graph.edges.flows.indexed
 import de.fraunhofer.aisec.cpg.graph.edges.flows.partial
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -46,7 +47,7 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     override fun accept(component: Component) {
         log.info(
             "Function summaries database has {} entries",
-            config.functionSummaries.functionToDFGEntryMap.size
+            config.functionSummaries.functionToDFGEntryMap.size,
         )
 
         val inferDfgForUnresolvedCalls = config.inferenceConfiguration.inferDfgForUnresolvedSymbols
@@ -81,7 +82,7 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                         val arg = call.arguments[param.argumentIndex]
                         arg.prevDFGEdges.addContextSensitive(
                             param,
-                            callingContext = CallingContextOut(call)
+                            callingContext = CallingContextOut(call),
                         )
                         (arg as? Reference)?.let {
                             // The access value stays on READ. Even if it's a pointer, only the
@@ -103,7 +104,7 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         node: Node?,
         parent: Node?,
         inferDfgForUnresolvedSymbols: Boolean,
-        functionSummaries: DFGFunctionSummaries
+        functionSummaries: DFGFunctionSummaries,
     ) {
         when (node) {
             // Expressions
@@ -247,7 +248,7 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      */
     protected open fun handleFunctionDeclaration(
         node: FunctionDeclaration,
-        functionSummaries: DFGFunctionSummaries
+        functionSummaries: DFGFunctionSummaries,
     ) {
         if (node.isInferred) {
             val summaryExists = functionSummaries.addFlowsToFunctionDeclaration(node)
@@ -320,7 +321,7 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
             node,
             node.condition,
-            node.conditionDeclaration
+            node.conditionDeclaration,
         )
     }
 
@@ -333,7 +334,7 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
             node,
             node.condition,
-            node.conditionDeclaration
+            node.conditionDeclaration,
         )
     }
 
@@ -346,7 +347,7 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
             node,
             node.selector,
-            node.selectorDeclaration
+            node.selectorDeclaration,
         )
     }
 
@@ -359,7 +360,7 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
             node,
             node.condition,
-            node.conditionDeclaration
+            node.conditionDeclaration,
         )
     }
 
@@ -400,7 +401,18 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * this expression.
      */
     protected fun handleInitializerListExpression(node: InitializerListExpression) {
-        node.initializers.forEach { node.prevDFGEdges += it }
+        node.initializers.forEachIndexed { idx, it ->
+            if (
+                node.astParent is AssignExpression &&
+                    node in (node.astParent as AssignExpression).lhs
+            ) {
+                // If we're the target of an assignment, the DFG flows from the node to the
+                // initializers.
+                node.nextDFGEdges.add(it) { granularity = indexed(idx) }
+            } else {
+                node.prevDFGEdges.add(it) { granularity = indexed(idx) }
+            }
+        }
     }
 
     /**
@@ -477,7 +489,7 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     node.rhs.nextDFGEdges += node
                 }
             }
-            in node.language?.compoundAssignmentOperators ?: setOf() -> {
+            in node.language.compoundAssignmentOperators -> {
                 node.lhs.let {
                     node.prevDFGEdges += it
                     node.nextDFGEdges += it

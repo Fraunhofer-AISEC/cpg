@@ -98,7 +98,7 @@ class LLVMIRLanguageFrontend(language: Language<LLVMIRLanguageFrontend>, ctx: Tr
             LLVMCreateMemoryBufferWithContentsOfFile(
                 BytePointer(file.toPath().toString()),
                 buf,
-                errorMessage
+                errorMessage,
             )
         if (result != 0) {
             // something went wrong
@@ -183,7 +183,7 @@ class LLVMIRLanguageFrontend(language: Language<LLVMIRLanguageFrontend>, ctx: Tr
 
     internal fun typeOf(
         typeRef: LLVMTypeRef,
-        alreadyVisited: MutableMap<LLVMTypeRef, Type?> = mutableMapOf()
+        alreadyVisited: MutableMap<LLVMTypeRef, Type?> = mutableMapOf(),
     ): Type {
         val typeStr = LLVMPrintTypeToString(typeRef).string
         if (typeStr in typeCache) {

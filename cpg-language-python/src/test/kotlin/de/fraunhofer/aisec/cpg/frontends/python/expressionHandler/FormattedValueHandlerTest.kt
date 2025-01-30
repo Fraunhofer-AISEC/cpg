@@ -60,7 +60,7 @@ class FormattedValueHandlerTest {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("formatted_values.py").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<PythonLanguage>()
             }

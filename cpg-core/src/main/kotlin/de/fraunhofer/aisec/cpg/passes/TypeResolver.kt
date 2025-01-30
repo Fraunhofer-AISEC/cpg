@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.types.DeclaresType
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.recordDeclaration
+import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.inference.tryRecordInference
@@ -51,9 +52,13 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         resolveFirstOrderTypes()
         refreshNames()
 
-        walker = SubgraphWalker.ScopedWalker(scopeManager)
-        walker.registerHandler(::handleNode)
-        walker.iterate(component)
+        val b =
+            Benchmark(
+                TypeResolver::class.java,
+                "Updating imported symbols for ${component.imports.size} imports",
+            )
+        component.imports.forEach { it.updateImportedSymbols() }
+        b.stop()
     }
 
     private fun refreshNames() {
@@ -93,7 +98,7 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
             var originDeclares = target.recordDeclaration
             var name = target.name
-            log.debug("Aliasing type {} in {} scope to {}", type.name, type.scope, name)
+            log.trace("Aliasing type {} in {} scope to {}", type.name, type.scope, name)
             type.declaredFrom = originDeclares
             type.recordDeclaration = originDeclares
             type.typeOrigin = Type.Origin.RESOLVED
@@ -104,8 +109,7 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         // filter for nodes that implement DeclaresType, because otherwise we will get a lot of
         // constructor declarations and such with the same name. It seems this is ok since most
         // languages will prefer structs/classes over functions when resolving types.
-        var declares =
-            scopeManager.lookupUniqueTypeSymbolByName(type.name, type.language, type.scope)
+        var declares = scopeManager.lookupTypeSymbolByName(type.name, type.language, type.scope)
 
         // If we did not find any declaration, we can try to infer a record declaration for it
         if (declares == null) {
@@ -116,11 +120,11 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         // and set the name to the declared type.
         if (declares != null) {
             var declaredType = declares.declaredType
-            log.debug(
+            log.trace(
                 "Resolving type {} in {} scope to {}",
                 type.name,
                 type.scope,
-                declaredType.name
+                declaredType.name,
             )
             type.name = declaredType.name
             type.declaredFrom = declares
@@ -133,17 +137,6 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         return false
     }
 
-    private fun handleNode(node: Node?) {
-        if (node is RecordDeclaration) {
-            for (t in typeManager.firstOrderTypes) {
-                if (t.name == node.name && t is ObjectType) {
-                    // The node is the class of the type t
-                    t.recordDeclaration = node
-                }
-            }
-        }
-    }
-
     override fun cleanup() {
         // Nothing to do
     }
@@ -151,7 +144,10 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     /** Resolves all types in [TypeManager.firstOrderTypes] using [resolveType]. */
     fun resolveFirstOrderTypes() {
         for (type in typeManager.firstOrderTypes.sortedBy { it.name }) {
-            if (type is ObjectType && type.typeOrigin == Type.Origin.UNRESOLVED) {
+            if (
+                type is ObjectType && type.typeOrigin == Type.Origin.UNRESOLVED ||
+                    type.typeOrigin == Type.Origin.GUESSED
+            ) {
                 resolveType(type)
             }
         }

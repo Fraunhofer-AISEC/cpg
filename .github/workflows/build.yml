@@ -17,7 +17,7 @@ on:
 
 jobs:
   build:
-    runs-on: self-hosted
+    runs-on: [self-hosted, Linux, ARM64]
     steps:
       - uses: actions/checkout@v4
       - run: |
@@ -28,14 +28,13 @@ jobs:
           java-version: "17"
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: "3.12"
       - uses: actions/setup-node@v4
         with:
           node-version: "18"
-      - name: Setup Go
-        uses: actions/setup-go@v5
+      - uses: actions/setup-go@v5
         with:
-          go-version: 1.21
+          go-version-file: cpg-language-go/src/test/resources/golang/integration/go.mod
       - name: Setup neo4j
         run: |
           docker run -d --env NEO4J_AUTH=neo4j/password -p7474:7474 -p7687:7687 -e NEO4JLABS_PLUGINS='["apoc"]' neo4j:5 || true
@@ -45,8 +44,8 @@ jobs:
           export VERSION=$(echo "${GITHUB_REF}" | cut -d "/" -f3)
           if [[ $VERSION != v* ]]
           then
-            export VERSION=""
-            echo "Building version-less (main or feature branch)"
+            export VERSION="${VERSION}-SNAPSHOT"
+            echo "Building as ${VERSION}"
           else
             # make version more Java-friendly by dropping the 'v'
             export VERSION=${VERSION:1:${#VERSION}}
@@ -56,10 +55,9 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_ENV
       - name: Install JEP
         run: |
+          python3 -m venv ~/.virtualenvs/cpg
+          source ~/.virtualenvs/cpg/bin/activate
           pip3 install jep==$(grep "black.ninia:jep" gradle/libs.versions.toml | grep -o -E "[0-9]\d*(\.[0-9]\d*)*")
-          if [ -d "/opt/hostedtoolcache/Python" ]; then
-            find /opt/hostedtoolcache/Python/ -name libjep.so -exec sudo cp '{}' /usr/lib/ \;
-          fi
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
       - name: Build ${{ env.version }}
@@ -74,13 +72,13 @@ jobs:
           # See https://github.com/codecov/feedback/issues/564 and https://github.com/Kotlin/kotlinx-kover/issues/699.
           # Actually these lines should just not exist in the coverage XML file, since they are only structural elements, such
           # as brackets.
-          cat cpg-all/build/reports/kover/report.xml | grep -v 'mi="0" ci="0" mb="0" cb="0"' > cpg-all/build/reports/kover/report-codecov.xml
-          rm cpg-all/build/reports/kover/report.xml
+          cat ./build/reports/kover/report.xml | grep -v 'mi="0" ci="0" mb="0" cb="0"' > ./build/reports/kover/report-codecov.xml
+          rm ./build/reports/kover/report.xml
       - name: Upload Code Coverage
         uses: codecov/codecov-action@v5
         with:
           fail_ci_if_error: true
-          files: ./cpg-all/build/reports/kover/report-codecov.xml
+          files: ./build/reports/kover/report-codecov.xml
           token: ${{ secrets.CODECOV_TOKEN }}
           verbose: true
       - name: Prepare test and coverage reports
@@ -141,8 +139,21 @@ jobs:
         if: github.ref == 'refs/heads/main'
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          folder: build/dokkaCustomMultiModuleOutput/main
+          folder: build/dokkaCustomMultiModuleOutput/main-SNAPSHOT
           target-folder: dokka/main
+      - name: Publish to GitHub Packages (as snapshot)
+        if: github.ref == 'refs/heads/main' || contains(github.event.pull_request.labels.*.name, 'publish-to-github-packages')
+        run: |
+          ./gradlew --parallel -Pversion=$VERSION publishAllPublicationsToGitHubPackagesRepository
+        env:
+          VERSION: ${{ env.version }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish to GitHub Packages (as commit SHA)
+        if: github.ref == 'refs/heads/main' || contains(github.event.pull_request.labels.*.name, 'publish-to-github-packages')
+        run: |
+          ./gradlew --parallel -Pversion=${GITHUB_SHA::7} publishAllPublicationsToGitHubPackagesRepository
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Create Release
         if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, 'beta') && !contains(github.ref, 'alpha')
         id: create_release

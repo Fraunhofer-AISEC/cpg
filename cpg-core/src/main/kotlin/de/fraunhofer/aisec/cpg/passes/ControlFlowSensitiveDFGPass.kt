@@ -30,6 +30,9 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
+import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
+import de.fraunhofer.aisec.cpg.graph.edges.flows.Granularity
+import de.fraunhofer.aisec.cpg.graph.edges.flows.partial
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.*
@@ -103,7 +106,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
             node,
             finalState.returnStatements.values.flatMap {
                 it.elements.filterIsInstance<ReturnStatement>()
-            }
+            },
         )
 
         for ((key, value) in finalState.generalState) {
@@ -123,23 +126,31 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                 }
             } else {
                 value.elements.forEach {
-                    val edgePropertyMapElement = edgePropertiesMap[Triple(it, key, true)]
+                    // We currently support two properties here: The calling context and the
+                    // granularity of the edge. We get the information from the edgePropertiesMap or
+                    // use the defaults (no calling context => null and FullGranularity).
+                    var callingContext: CallingContext? = null
+                    var granularity: Granularity = FullDataflowGranularity
+                    edgePropertiesMap[Triple(it, key, true)]?.let {
+                        callingContext = it.filterIsInstance<CallingContext>().singleOrNull()
+                        granularity =
+                            it.filterIsInstance<Granularity>().singleOrNull()
+                                ?: FullDataflowGranularity
+                    }
+
                     if ((it is VariableDeclaration || it is ParameterDeclaration) && key == it) {
                         // Nothing to do
-                    } else if (edgePropertyMapElement is CallingContext) {
+                    } else if (callingContext != null) {
                         key.prevDFGEdges.addContextSensitive(
                             it,
-                            callingContext = edgePropertyMapElement
+                            callingContext = callingContext,
+                            granularity = granularity,
                         )
                     } else if (edgePropertyMapElement is PointerDataflowGranularity) {
                         key.prevDFGEdges +=
                             Dataflow(start = it, end = key, granularity = edgePropertyMapElement)
                     } else {
-                        key.prevDFGEdges +=
-                            Dataflow(
-                                start = it,
-                                end = key,
-                            ) // TODO: seriously think about this and re-write the api
+                        key.prevDFGEdges.add(it) { this.granularity = granularity }
                     }
                 }
             }
@@ -155,7 +166,12 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
             .filter { entry ->
                 entry.key.first in from && (to as? Reference)?.refersTo == entry.key.second
             }
-            .forEach { edgePropertiesMap[Triple(it.key.first, to, true)] = it.value }
+            .filter { it.key.first in from && it.key.second == null }
+            .forEach {
+                edgePropertiesMap
+                    .computeIfAbsent(Triple(it.key.first, to, true)) { mutableSetOf() }
+                    .addAll(it.value)
+            }
     }
 
     /**
@@ -191,7 +207,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
     protected open fun transfer(
         currentEdge: Edge<Node>,
         state: State<Node, Set<Node>>,
-        worklist: Worklist<Edge<Node>, Node, Set<Node>>
+        worklist: Worklist<Edge<Node>, Node, Set<Node>>,
     ): State<Node, Set<Node>> {
         log.debug("In transfer")
         // We will set this if we write to a variable
@@ -218,7 +234,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                 // We also wrote something to this variable declaration here.
                 doubleState.pushToDeclarationsState(
                     currentNode,
-                    PowersetLattice(identitySetOf(currentNode))
+                    PowersetLattice(identitySetOf(currentNode)),
                 )
             }
         } else if (currentNode is MemberExpression && currentNode.access == AccessValues.WRITE) {
@@ -324,6 +340,26 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                 declPair?.let { (decl, target) ->
                     if (target != null) {
                         doubleState.declarationsState[decl] = PowersetLattice(identitySetOf(target))
+                    }
+                // Sometimes, we have a InitializerListExpression on the lhs which is not good at
+                // all...
+                if (target is InitializerListExpression) {
+                    target.initializers.forEachIndexed { idx, initializer ->
+                        (initializer as? Reference)?.let { ref ->
+                            ref.refersTo?.let {
+                                doubleState.declarationsState[it] =
+                                    PowersetLattice(identitySetOf(ref))
+                            }
+                        }
+                    }
+                } else {
+                    // This was the last write to the respective declaration.
+                    (target as? Declaration
+                            ?: (target as? Reference)?.refersTo)
+                        ?.let {
+                            doubleState.declarationsState[it] =
+                                PowersetLattice(identitySetOf(target as Node))
+                        }
                     }
                 }
             }
@@ -515,7 +551,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
         } else if (currentNode is ReturnStatement) {
             doubleState.returnStatements.push(
                 currentNode,
-                PowersetLattice(identitySetOf(currentNode))
+                PowersetLattice(identitySetOf(currentNode)),
             )
         } else if (currentNode is CallExpression) {
             // If the CallExpression invokes a function for which we have a function summary, we use
@@ -545,7 +581,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                             PowersetLattice(identitySetOf(param))
 
                         if (arg != null) {
-                            edgePropertiesMap[Triple(param, arg.refersTo, false)] =
+                            edgePropertiesMap[Triple(param, arg.refersTo, false)] +=
                                 CallingContextOut(currentNode)
                         }
                     }
@@ -554,13 +590,13 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                 // The default behavior so we continue with the next EOG thing.
                 doubleState.declarationsState.push(
                     currentNode,
-                    doubleState.declarationsState[currentEdge.start]
+                    doubleState.declarationsState[currentEdge.start],
                 )
             }
         } else {
             doubleState.declarationsState.push(
                 currentNode,
-                doubleState.declarationsState[currentEdge.start]
+                doubleState.declarationsState[currentEdge.start],
             )
         }
         return state
@@ -575,7 +611,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
      * 2nd item is null, it's obviously not relevant. Ultimately, it will be 2nd -prevDFG-> 1st. If
      * the third item is false, we also don't consider it.
      */
-    val edgePropertiesMap = mutableMapOf<Triple<Node, Node?, Boolean>, Any>()
+    val edgePropertiesMap = mutableMapOf<Triple<Node, Node?, Boolean>, MutableSet<Any>>()
 
     /**
      * Checks if the node performs an operation and an assignment at the same time e.g. with the
@@ -584,8 +620,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
     protected fun isCompoundAssignment(currentNode: Node): Boolean {
         contract { returns(true) implies (currentNode is AssignExpression) }
         return currentNode is AssignExpression &&
-            currentNode.operatorCode in
-                (currentNode.language?.compoundAssignmentOperators ?: setOf()) &&
+            currentNode.operatorCode in currentNode.language.compoundAssignmentOperators &&
             (currentNode.lhs.singleOrNull() as? Reference)?.refersTo != null
     }
 
@@ -606,7 +641,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
      */
     protected fun removeUnreachableImplicitReturnStatement(
         node: Node,
-        reachableReturnStatements: Collection<ReturnStatement>
+        reachableReturnStatements: Collection<ReturnStatement>,
     ) {
         val lastStatement =
             ((node as? FunctionDeclaration)?.body as? Block)?.statements?.lastOrNull()
@@ -638,7 +673,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
         var declarationsState: State<Any?, V> = State(),
 
         /** The [returnStatements] which are reachable. */
-        var returnStatements: State<Node, V> = State()
+        var returnStatements: State<Node, V> = State(),
     ) : State<Node, V>() {
         override fun duplicate(): DFGPassState<V> {
             return DFGPassState(generalState.duplicate(), declarationsState.duplicate())
@@ -670,7 +705,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
 
         override fun push(
             newNode: de.fraunhofer.aisec.cpg.graph.Node,
-            newLatticeElement: LatticeElement<V>?
+            newLatticeElement: LatticeElement<V>?,
         ): Boolean {
             return generalState.push(newNode, newLatticeElement)
         }

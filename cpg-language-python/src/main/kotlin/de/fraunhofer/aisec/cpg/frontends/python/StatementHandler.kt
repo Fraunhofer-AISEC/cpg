@@ -33,7 +33,7 @@ import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage.Companion.MODIFIE
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.scopes.LocalScope
+import de.fraunhofer.aisec.cpg.graph.scopes.FunctionScope
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.NamespaceScope
 import de.fraunhofer.aisec.cpg.graph.statements.*
@@ -82,7 +82,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             is Python.AST.TryStar ->
                 newProblemExpression(
                     problem = "The statement of class ${node.javaClass} is not supported yet",
-                    rawNode = node
+                    rawNode = node,
                 )
         }
     }
@@ -118,7 +118,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     operatorCode = "or",
                     nodes = node.patterns.map { handlePattern(node = it, subject = subject) },
                     rawNode = node,
-                    isImplicit = false
+                    isImplicit = false,
                 )
             is Python.AST.MatchSequence,
             is Python.AST.MatchMapping,
@@ -127,12 +127,12 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             is Python.AST.MatchAs ->
                 newProblemExpression(
                     problem = "Cannot handle of type ${node::class} yet",
-                    rawNode = node
+                    rawNode = node,
                 )
             else ->
                 newProblemExpression(
                     problem = "Cannot handle of type ${node::class} yet",
-                    rawNode = node
+                    rawNode = node,
                 )
         }
     }
@@ -164,7 +164,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                         newBinaryOperator(operatorCode = "and")
                             .implicit(
                                 code = frontend.codeOf(astNode = node),
-                                location = frontend.locationOf(astNode = node)
+                                location = frontend.locationOf(astNode = node),
                             )
                             .apply {
                                 this.lhs = handlePattern(node = node.pattern, subject = subject)
@@ -184,7 +184,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             newBreakStatement()
                 .implicit(
                     code = frontend.codeOf(astNode = node),
-                    location = frontend.locationOf(astNode = node)
+                    location = frontend.locationOf(astNode = node),
                 )
         return statements
     }
@@ -270,7 +270,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 newAssignExpression(
                         operatorCode = "=",
                         lhs = listOf(manager),
-                        rhs = listOf(contextExpr)
+                        rhs = listOf(contextExpr),
                     )
                     .implicit()
             return Pair(managerAssignment, managerName)
@@ -279,17 +279,17 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         /** Prepares the `manager.__exit__(None, None, None)` call for the else-block. */
         fun generateExitCallWithNone(
             managerName: Name,
-            withItem: Python.AST.withitem
+            withItem: Python.AST.withitem,
         ): MemberCallExpression {
             val exitCallWithNone =
                 newMemberCallExpression(
                         callee =
                             newMemberExpression(
                                     name = "__exit__",
-                                    base = newReference(name = managerName).implicit()
+                                    base = newReference(name = managerName).implicit(),
                                 )
                                 .implicit(),
-                        rawNode = node
+                        rawNode = node,
                     )
                     .implicit()
             exitCallWithNone.addArgument(newLiteral(null).implicit())
@@ -304,17 +304,17 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
          */
         fun generateExitCallWithSysExcInfo(
             managerName: Name,
-            withItem: Python.AST.withitem
+            withItem: Python.AST.withitem,
         ): IfStatement {
             val exitCallWithSysExec =
                 newMemberCallExpression(
                         callee =
                             newMemberExpression(
                                     name = "__exit__",
-                                    base = newReference(name = managerName).implicit()
+                                    base = newReference(name = managerName).implicit(),
                                 )
                                 .implicit(),
-                        rawNode = node
+                        rawNode = node,
                     )
                     .implicit()
             val starOp = newUnaryOperator("*", false, false)
@@ -340,7 +340,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
          */
         fun generateEnterCallAndAssignment(
             managerName: Name,
-            withItem: Python.AST.withitem
+            withItem: Python.AST.withitem,
         ): Pair<AssignExpression, Name> {
             val tmpValName = Name.random(prefix = WITH_TMP_VAL)
             val enterVar = newReference(name = tmpValName).implicit()
@@ -349,10 +349,10 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                         callee =
                             newMemberExpression(
                                     name = "__enter__",
-                                    base = newReference(name = managerName).implicit()
+                                    base = newReference(name = managerName).implicit(),
                                 )
                                 .implicit(),
-                        rawNode = node
+                        rawNode = node,
                     )
                     .implicit()
 
@@ -360,10 +360,10 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 newAssignExpression(
                         operatorCode = "=",
                         lhs = listOf(enterVar),
-                        rhs = listOf(enterCall)
+                        rhs = listOf(enterCall),
                     )
                     .implicit(),
-                tmpValName
+                tmpValName,
             )
         }
         val result =
@@ -409,7 +409,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                                                         listOf(
                                                             newReference(name = tmpValName)
                                                                 .implicit()
-                                                        )
+                                                        ),
                                                 )
                                                 .implicit()
                                         )
@@ -471,7 +471,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                         newVariableDeclaration(
                             name = node.name ?: "",
                             type = frontend.typeOf(node.type),
-                            rawNode = node
+                            rawNode = node,
                         )
                 }
                 catchClause
@@ -506,17 +506,18 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     private fun handleDelete(node: Python.AST.Delete): DeleteExpression {
         val delete = newDeleteExpression(rawNode = node)
         node.targets.forEach { target ->
-            if (target is Python.AST.Subscript) {
-                delete.operands.add(frontend.expressionHandler.handle(target))
-            } else {
+            delete.operands.add(frontend.expressionHandler.handle(target))
+
+            if (target !is Python.AST.Subscript) {
                 delete.additionalProblems +=
                     newProblemExpression(
                         problem =
-                            "handleDelete: 'Name' and 'Attribute' deletions are not supported, as they removes them from the scope.",
-                        rawNode = target
+                            "handleDelete: 'Name' and 'Attribute' deletions are not fully supported, as they remove variables from the scope.",
+                        rawNode = target,
                     )
             }
         }
+
         return delete
     }
 
@@ -543,7 +544,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                         parseName(imp.name),
                         false,
                         parseName(alias),
-                        rawNode = imp
+                        rawNode = imp,
                     )
                 } else {
                     newImportDeclaration(parseName(imp.name), false, rawNode = imp)
@@ -579,7 +580,12 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 }
             }
 
-            module = parent.fqn(module.localName)
+            module =
+                if (module.localName != "") {
+                    parent.fqn(module.localName)
+                } else {
+                    parent ?: Name("")
+                }
         }
 
         for (imp in node.names) {
@@ -660,7 +666,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 val body = makeBlock(node.body, parentNode = node)
                 body.statements.add(
                     0,
-                    unpackingAssignment
+                    unpackingAssignment,
                 ) // add the unpacking instruction to the top of the loop body
                 ret.statement = body
             }
@@ -673,7 +679,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     newProblemExpression(
                         problem =
                             "handleFor: cannot handle loop variable of type ${loopVar::class.simpleName}.",
-                        rawNode = node.target
+                        rawNode = node.target,
                     )
                 ret.statement = makeBlock(node.body, parentNode = node)
             }
@@ -703,7 +709,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             newAssignExpression(
                     operatorCode = "=",
                     lhs = (loopVar).initializers,
-                    rhs = listOf(tempRef)
+                    rhs = listOf(tempRef),
                 )
                 .implicit()
                 .codeAndLocationFrom(loopVar)
@@ -768,10 +774,10 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                         (it as? Expression)
                             ?: newProblemExpression(
                                 "There was an issue with an argument.",
-                                rawNode = node
+                                rawNode = node,
                             )
                     },
-                rawNode = node
+                rawNode = node,
             )
         return newAssignExpression(lhs = lhs, rhs = listOf(rhs), rawNode = node)
     }
@@ -784,7 +790,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             operatorCode = op,
             lhs = listOf(lhs),
             rhs = listOf(rhs),
-            rawNode = node
+            rawNode = node,
         )
     }
 
@@ -801,7 +807,12 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
         for (s in stmt.body) {
             when (s) {
-                is Python.AST.FunctionDef -> handleFunctionDef(s, cls)
+                is Python.AST.FunctionDef -> {
+                    val stmt = handleFunctionDef(s, cls)
+                    // We need to manually set the astParent because we are not assigning it to our
+                    // statements and therefore are not triggering our automagic parent setter
+                    stmt.astParent = cls
+                }
                 else -> cls.statements += handleNode(s)
             }
         }
@@ -827,7 +838,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      */
     private fun handleFunctionDef(
         s: Python.AST.NormalOrAsyncFunctionDef,
-        recordDeclaration: RecordDeclaration? = null
+        recordDeclaration: RecordDeclaration? = null,
     ): DeclarationStatement {
         val language = language
         val result =
@@ -836,7 +847,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     newConstructorDeclaration(
                         name = s.name,
                         recordDeclaration = recordDeclaration,
-                        rawNode = s
+                        rawNode = s,
                     )
                 } else if (language is HasOperatorOverloading && s.name.isKnownOperatorName) {
                     var decl =
@@ -844,14 +855,14 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                             name = s.name,
                             recordDeclaration = recordDeclaration,
                             operatorCode = language.operatorCodeFor(s.name) ?: "",
-                            rawNode = s
+                            rawNode = s,
                         )
                     if (decl.operatorCode == "") {
                         Util.warnWithFileLocation(
                             decl,
                             log,
                             "Could not find operator code for operator {}. This will most likely result in a failure",
-                            s.name
+                            s.name,
                         )
                     }
                     decl
@@ -860,7 +871,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                         name = s.name,
                         recordDeclaration = recordDeclaration,
                         isStatic = false,
-                        rawNode = s
+                        rawNode = s,
                     )
                 }
             } else {
@@ -885,11 +896,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         handleArguments(s.args, result, recordDeclaration)
 
         if (s.body.isNotEmpty()) {
-            // Make sure we open a new (block) scope for the function body. This is not a 1:1
-            // mapping to python scopes, since python only has a "function scope", but in the CPG
-            // the function scope only comprises the function arguments, and we need a block scope
-            // to hold all local variables within the function body.
-            result.body = makeBlock(s.body, parentNode = s, enterScope = true)
+            result.body = makeBlock(s.body, parentNode = s)
         }
 
         frontend.scopeManager.leaveScope(result)
@@ -912,7 +919,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         return newLookupScopeStatement(
             global.names.map { parseName(it).localName },
             pythonGlobalScope,
-            rawNode = global
+            rawNode = global,
         )
     }
 
@@ -921,17 +928,16 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      * into a [LookupScopeStatement].
      */
     private fun handleNonLocal(global: Python.AST.Nonlocal): LookupScopeStatement {
-        // We need to find the first outer function scope, or rather the block scope belonging to
-        // the function
+        // We need to find the first outer function scope
         var outerFunctionScope =
             frontend.scopeManager.firstScopeOrNull {
-                it is LocalScope && it != frontend.scopeManager.currentScope
+                it is FunctionScope && it != frontend.scopeManager.currentScope
             }
 
         return newLookupScopeStatement(
             global.names.map { parseName(it).localName },
             outerFunctionScope,
-            rawNode = global
+            rawNode = global,
         )
     }
 
@@ -939,15 +945,18 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     private fun handleArguments(
         args: Python.AST.arguments,
         result: FunctionDeclaration,
-        recordDeclaration: RecordDeclaration?
+        recordDeclaration: RecordDeclaration?,
     ) {
         // We can merge posonlyargs and args because both are positional arguments. We do not
         // enforce that posonlyargs can ONLY be used in a positional style, whereas args can be used
         // both in positional and keyword style.
         var positionalArguments = args.posonlyargs + args.args
 
-        // Handle receiver if it exists
-        if (recordDeclaration != null) {
+        // Handle receiver if it exists and if it is not a static method
+        if (
+            recordDeclaration != null &&
+                result.annotations.none { it.name.localName == "staticmethod" }
+        ) {
             handleReceiverArgument(positionalArguments, args, result, recordDeclaration)
             // Skip the receiver argument for further processing
             positionalArguments = positionalArguments.drop(1)
@@ -973,7 +982,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         positionalArguments: List<Python.AST.arg>,
         args: Python.AST.arguments,
         result: FunctionDeclaration,
-        recordDeclaration: RecordDeclaration
+        recordDeclaration: RecordDeclaration,
     ) {
         // first argument is the receiver
         val recvPythonNode = positionalArguments.firstOrNull()
@@ -986,7 +995,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     name = recvPythonNode.arg,
                     type = tpe,
                     implicitInitializerAllowed = false,
-                    rawNode = recvPythonNode
+                    rawNode = recvPythonNode,
                 )
 
             // If the number of defaults equals the number of positional arguments, the receiver has
@@ -1009,7 +1018,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                         newProblemExpression(
                             problem =
                                 "Expected a constructor or method declaration. Got something else.",
-                            rawNode = result
+                            rawNode = result,
                         )
             }
         }
@@ -1032,7 +1041,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      */
     private fun handlePositionalArguments(
         positionalArguments: List<Python.AST.arg>,
-        args: Python.AST.arguments
+        args: Python.AST.arguments,
     ) {
         val nonDefaultArgsCount = positionalArguments.size - args.defaults.size
 
@@ -1063,7 +1072,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 arg,
                 isPosOnly = false,
                 isKwoOnly = true,
-                defaultValue = default?.let { frontend.expressionHandler.handle(it) }
+                defaultValue = default?.let { frontend.expressionHandler.handle(it) },
             )
         }
     }
@@ -1076,7 +1085,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
     fun handleDeclaratorList(
         node: Python.AST.WithLocation,
-        decoratorList: List<Python.AST.BaseExpr>
+        decoratorList: List<Python.AST.BaseExpr>,
     ): List<Annotation> {
         val annotations = mutableListOf<Annotation>()
         for (decorator in decoratorList) {
@@ -1111,7 +1120,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                                 newAnnotationMember(
                                     "annotationArg" + decorator.args.indexOf(arg), // TODO
                                     argParsed,
-                                    rawNode = arg
+                                    rawNode = arg,
                                 )
                         }
                         for (keyword in decorator.keywords) {
@@ -1119,7 +1128,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                                 newAnnotationMember(
                                     name = keyword.arg,
                                     value = frontend.expressionHandler.handle(keyword.value),
-                                    rawNode = keyword
+                                    rawNode = keyword,
                                 )
                         }
                         annotation
@@ -1129,7 +1138,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                             frontend,
                             decorator,
                             log,
-                            "Decorator is of type ${decorator::class}, cannot handle this (yet)."
+                            "Decorator is of type ${decorator::class}, cannot handle this (yet).",
                         )
                         continue
                     }
@@ -1145,27 +1154,15 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      * This function "wraps" a list of [Python.AST.BaseStmt] nodes into a [Block]. Since the list
      * itself does not have a code/location, we need to employ [codeAndLocationFromChildren] on the
      * [parentNode].
-     *
-     * Optionally, a new scope will be opened when [enterScope] is specified. This should be done
-     * VERY carefully, as Python has a very limited set of scopes and is most likely only to be used
-     * by [handleFunctionDef].
      */
     private fun makeBlock(
         stmts: List<Python.AST.BaseStmt>,
         parentNode: Python.AST.WithLocation,
-        enterScope: Boolean = false,
     ): Block {
         val result = newBlock()
-        if (enterScope) {
-            frontend.scopeManager.enterScope(result)
-        }
 
         for (stmt in stmts) {
             result.statements += handle(stmt)
-        }
-
-        if (enterScope) {
-            frontend.scopeManager.leaveScope(result)
         }
 
         // Try to retrieve the code and location from the parent node, if it is a base stmt
@@ -1191,7 +1188,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         isPosOnly: Boolean = false,
         isVariadic: Boolean = false,
         isKwoOnly: Boolean = false,
-        defaultValue: Expression? = null
+        defaultValue: Expression? = null,
     ) {
         val type = frontend.typeOf(node.annotation)
         val arg =
@@ -1199,7 +1196,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 name = node.arg,
                 type = type,
                 variadic = isVariadic,
-                rawNode = node
+                rawNode = node,
             )
         defaultValue?.let { arg.default = it }
         if (isPosOnly) {
@@ -1235,7 +1232,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 newProblemDeclaration(
                     problem = "The \"async\" keyword is not yet supported.",
                     problemType = ProblemNode.ProblemType.TRANSLATION,
-                    rawNode = mightBeAsync
+                    rawNode = mightBeAsync,
                 )
         }
     }

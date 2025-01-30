@@ -43,7 +43,7 @@ class UnaryOperator :
             onChanged = { old, new ->
                 exchangeTypeObserver(old, new)
                 changeExpressionAccess()
-            }
+            },
         )
     /** The expression on which the operation is applied. */
     var input by unwrapping(UnaryOperator::inputEdge)

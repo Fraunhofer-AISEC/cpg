@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.frontends.UnknownLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.types.*
@@ -50,11 +51,11 @@ import org.neo4j.ogm.annotation.Transient
 abstract class Expression : Statement(), HasType {
     @Transient override val typeObservers: MutableSet<HasType.TypeObserver> = identitySetOf()
 
-    override var language: Language<*>? = null
+    override var language: Language<*> = UnknownLanguage
         set(value) {
             // We need to adjust an eventual unknown type, once we know the language
             field = value
-            if (value != null && type is UnknownType) {
+            if (type is UnknownType) {
                 type = UnknownType.getUnknownType(value)
             }
         }

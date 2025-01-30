@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.python
 
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
@@ -48,6 +49,19 @@ import kotlin.io.path.pathString
 import kotlin.io.path.relativeToOrNull
 import kotlin.math.min
 
+/**
+ * The [LanguageFrontend] for Python. It uses the JEP library to interact with Python's AST.
+ *
+ * It requires the Python interpreter (and the JEP library) to be installed on the system. The
+ * frontend registers two additional passes.
+ *
+ * ## Adding dynamic variable declarations
+ *
+ * The [PythonAddDeclarationsPass] adds dynamic declarations to the CPG. Python does not have the
+ * concept of a "declaration", but rather values are assigned to variables and internally variable
+ * are represented by a dictionary. This pass adds a declaration for each variable that is assigned
+ * a value (on the first assignment).
+ */
 @RegisterExtraPass(PythonAddDeclarationsPass::class)
 class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: TranslationContext) :
     LanguageFrontend<Python.AST.AST, Python.AST.AST?>(language, ctx) {
@@ -76,10 +90,13 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
             it.set("content", fileContent)
             it.set("filename", file.absolutePath)
             it.exec("import ast")
+            it.exec("import sys")
             it.exec("parsed = ast.parse(content, filename=filename, type_comments=True)")
 
             val pyAST = it.getValue("parsed") as PyObject
+
             val tud = pythonASTtoCPG(pyAST, file.toPath())
+            populateSystemInformation(config, tud)
 
             if (config.matchCommentsToNodes) {
                 it.exec("import tokenize")
@@ -96,6 +113,7 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
                     (it.getValue("tokenList") as? ArrayList<*>) ?: TODO("Cannot get tokens of $it")
                 addCommentsToCPG(tud, pyTokens, pyCommentCode)
             }
+
             return tud
         }
     }
@@ -103,7 +121,7 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
     private fun addCommentsToCPG(
         tud: TranslationUnitDeclaration,
         pyTokens: ArrayList<*>,
-        pyCommentCode: Long
+        pyCommentCode: Long,
     ) {
         val commentMatcher = CommentMatcher()
         for (token in pyTokens) {
@@ -126,9 +144,9 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
                             startLine.toInt(),
                             (startCol + 1).toInt(),
                             endLine.toInt(),
-                            (endCol + 1).toInt()
+                            (endCol + 1).toInt(),
                         ),
-                        tud
+                        tud,
                     )
                 }
             }
@@ -208,7 +226,7 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
 
     private fun fixStartColumn(
         location: PhysicalLocation,
-        lines: MutableList<String>
+        lines: MutableList<String>,
     ): MutableList<String> {
         for (idx in lines.indices) {
             // -1 to equalize for +1 in sarif
@@ -222,7 +240,7 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
 
     private fun removeExtraAtEnd(
         location: PhysicalLocation,
-        lines: MutableList<String>
+        lines: MutableList<String>,
     ): MutableList<String> {
         val lastLineIdx = lines.lastIndex
         val lastLineLength = lines[lastLineIdx].length
@@ -243,7 +261,7 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
                     endLine = astNode.end_lineno,
                     startColumn = astNode.col_offset + 1,
                     endColumn = astNode.end_col_offset + 1,
-                )
+                ),
             )
         } else {
             null
@@ -255,7 +273,7 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
     }
 
     private fun pythonASTtoCPG(pyAST: PyObject, path: Path): TranslationUnitDeclaration {
-        var topLevel = config.topLevel ?: path.parent.toFile()
+        var topLevel = ctx.currentComponent?.topLevel ?: path.parent.toFile()
 
         val pythonASTModule =
             fromPython(pyAST) as? Python.AST.Module
@@ -333,6 +351,39 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
             is Python.AST.USub -> "-"
         }
 }
+
+/**
+ * Populate system information from defined symbols that represent our environment. We add it as an
+ * overlay node to our [TranslationUnitDeclaration].
+ */
+fun populateSystemInformation(
+    config: TranslationConfiguration,
+    tu: TranslationUnitDeclaration,
+): SystemInformation {
+    var sysInfo =
+        SystemInformation(
+            platform = config.symbols["PYTHON_PLATFORM"],
+            // We need to populate the version info "in-order", to ensure that we do not
+            // set the micro version if minor and major are not set, i.e., there must not be a
+            // "gap" in the granularity of version numbers
+            versionInfo =
+                config.symbols["PYTHON_VERSION_MAJOR"]?.toLong()?.let { major ->
+                    val minor = config.symbols["PYTHON_VERSION_MINOR"]?.toLong()
+                    val micro =
+                        if (minor != null) config.symbols["PYTHON_VERSION_MICRO"]?.toLong()
+                        else null
+                    VersionInfo(major, minor, micro)
+                },
+        )
+    sysInfo.underlyingNode = tu
+    return sysInfo
+}
+
+/** Returns the system information overlay node from the [TranslationUnitDeclaration]. */
+val TranslationUnitDeclaration.sysInfo: SystemInformation?
+    get() {
+        return this.overlays.firstOrNull { it is SystemInformation } as? SystemInformation
+    }
 
 /**
  * This function maps Python's `ast` objects to out internal [Python] representation.

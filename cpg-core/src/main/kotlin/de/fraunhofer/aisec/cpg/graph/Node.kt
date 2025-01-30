@@ -32,15 +32,17 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.TypeManager
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.edges.*
+import de.fraunhofer.aisec.cpg.frontends.UnknownLanguage
+import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
-import de.fraunhofer.aisec.cpg.graph.edges.flows.ControlDependences
-import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflows
-import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrders
-import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
-import de.fraunhofer.aisec.cpg.graph.edges.flows.ProgramDependences
-import de.fraunhofer.aisec.cpg.graph.scopes.*
+import de.fraunhofer.aisec.cpg.graph.edges.flows.*
+import de.fraunhofer.aisec.cpg.graph.edges.overlay.*
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
+import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
+import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.neo4j.LocationConverter
 import de.fraunhofer.aisec.cpg.helpers.neo4j.NameConverter
@@ -52,7 +54,10 @@ import java.util.*
 import kotlin.uuid.Uuid
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.apache.commons.lang3.builder.ToStringStyle
-import org.neo4j.ogm.annotation.*
+import org.neo4j.ogm.annotation.GeneratedValue
+import org.neo4j.ogm.annotation.Id
+import org.neo4j.ogm.annotation.Relationship
+import org.neo4j.ogm.annotation.Transient
 import org.neo4j.ogm.annotation.typeconversion.Convert
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -89,7 +94,7 @@ abstract class Node :
      */
     @Relationship(value = "LANGUAGE", direction = Relationship.Direction.OUTGOING)
     @JsonBackReference
-    override var language: Language<*>? = null
+    override var language: Language<*> = UnknownLanguage
 
     /**
      * The scope this node "lives" in / in which it is defined. This property is set in
@@ -273,6 +278,11 @@ abstract class Node :
      * a node (i.e. only partially processed).
      */
     val additionalProblems: MutableSet<ProblemNode> = mutableSetOf()
+
+    @Relationship(value = "OVERLAY", direction = Relationship.Direction.OUTGOING)
+    val overlayEdges: Overlays =
+        Overlays(this, mirrorProperty = OverlayNode::underlyingNodeEdge, outgoing = true)
+    var overlays by unwrapping(Node::overlayEdges)
 
     /**
      * If a node should be removed from the graph, just removing it from the AST is not enough (see

@@ -118,7 +118,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                     unknownType(), // Type will be filled out later by
                     // handleSimpleDeclaration
                     implicitInitializerAllowed = implicitInitializerAllowed,
-                    rawNode = ctx
+                    rawNode = ctx,
                 )
 
             // Add this declaration to the current scope
@@ -144,7 +144,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                 emptyList(),
                 initializer = initializer,
                 implicitInitializerAllowed = true,
-                rawNode = ctx
+                rawNode = ctx,
             )
 
         frontend.scopeManager.addDeclaration(declaration)
@@ -246,7 +246,11 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             // into account
             parentScope =
                 frontend.scopeManager.lookupScope(
-                    frontend.scopeManager.currentNamespace.fqn(parent.toString()).toString()
+                    parseName(
+                        frontend.scopeManager.currentNamespace
+                            .fqn(parent.toString(), delimiter = parent.delimiter)
+                            .toString()
+                    )
                 )
 
             declaration = createAppropriateFunction(name, parentScope, ctx.parent)
@@ -311,7 +315,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                         Util.warnWithFileLocation(
                             declaration,
                             log,
-                            "Named parameter cannot have void type"
+                            "Named parameter cannot have void type",
                         )
                     } else {
                         // specifying void as first parameter is ok and means that the function has
@@ -322,7 +326,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                             Util.warnWithFileLocation(
                                 declaration,
                                 log,
-                                "void parameter must be the first and only parameter"
+                                "void parameter must be the first and only parameter",
                             )
                         }
                     }
@@ -415,7 +419,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                     name,
                     unknownType(),
                     implicitInitializerAllowed = true,
-                    rawNode = ctx
+                    rawNode = ctx,
                 )
         } else {
             // field
@@ -426,7 +430,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                     emptyList(),
                     initializer = null,
                     implicitInitializerAllowed = false,
-                    rawNode = ctx
+                    rawNode = ctx,
                 )
         }
 
@@ -444,12 +448,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                 else -> "struct"
             }
 
-        val recordDeclaration =
-            newRecordDeclaration(
-                ctx.name.toString(),
-                kind,
-                rawNode = ctx,
-            )
+        val recordDeclaration = newRecordDeclaration(ctx.name.toString(), kind, rawNode = ctx)
 
         // Handle C++ classes
         if (ctx is CPPASTCompositeTypeSpecifier) {
@@ -468,10 +467,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         if (recordDeclaration.constructors.isEmpty()) {
             // create an implicit constructor declaration with the same name as the record
             val constructorDeclaration =
-                newConstructorDeclaration(
-                        recordDeclaration.name.localName,
-                        recordDeclaration,
-                    )
+                newConstructorDeclaration(recordDeclaration.name.localName, recordDeclaration)
                     .implicit(code = recordDeclaration.name.localName)
 
             createMethodReceiver(constructorDeclaration)

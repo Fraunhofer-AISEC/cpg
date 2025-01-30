@@ -92,7 +92,7 @@ fun TranslationResult.persist() {
         "Persisting {} nodes: AST nodes ({}), other nodes ({})",
         nodes.size,
         astNodes.size,
-        connected.size
+        connected.size,
     )
     nodes.persist()
 
@@ -132,7 +132,7 @@ private fun List<Node>.persist() {
                    CALL apoc.create.node(map.labels, properties) YIELD node
                    RETURN node
                    """,
-                    params
+                    params,
                 )
                 .consume()
         }
@@ -186,7 +186,7 @@ private fun Collection<Edge<*>>.persistEdgesOld() {
                     mapOf(
                         "startId" to edge.start.id.toString(),
                         "endId" to edge.end.id.toString(),
-                        "type" to label
+                        "type" to label,
                     ) + edge.properties()
                 }
             }
@@ -202,9 +202,7 @@ private fun Collection<Edge<*>>.persistEdgesOld() {
  *   connect, while `type` defines the type of the relationship. Additional properties for the
  *   relationship can also be included in the map.
  */
-private fun Session.createRelationships(
-    props: List<Relationship>,
-) {
+private fun Session.createRelationships(props: List<Relationship>) {
     val b = Benchmark(Persistable::class.java, "Persisting chunk of ${props.size} relationships")
     val params = mapOf("props" to props)
     executeWrite { tx ->
@@ -218,7 +216,7 @@ private fun Session.createRelationships(
             RETURN rel
             """
                     .trimIndent(),
-                params
+                params,
             )
             .consume()
     }
@@ -259,7 +257,7 @@ private fun List<Node>.collectRelationships(): List<Relationship> {
                         mapOf(
                             "startId" to edge.start.id.toString(),
                             "endId" to edge.end.id.toString(),
-                            "type" to entry.key
+                            "type" to entry.key,
                         ) + edge.properties()
                     }
             } else if (value is List<*>) {
@@ -268,7 +266,7 @@ private fun List<Node>.collectRelationships(): List<Relationship> {
                         mapOf(
                             "startId" to node.id.toString(),
                             "endId" to end.id.toString(),
-                            "type" to entry.key
+                            "type" to entry.key,
                         )
                     }
             } else if (value is Node) {
@@ -276,7 +274,7 @@ private fun List<Node>.collectRelationships(): List<Relationship> {
                     mapOf(
                         "startId" to node.id.toString(),
                         "endId" to value.id.toString(),
-                        "type" to entry.key
+                        "type" to entry.key,
                     )
             }
         }

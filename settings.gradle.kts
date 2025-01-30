@@ -1,12 +1,20 @@
 rootProject.name = "cpg"
 
+plugins {
+    id("org.jetbrains.kotlinx.kover.aggregation") version "0.9.0"
+}
+
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
-include(":cpg-all")
 include(":cpg-core")
 include(":cpg-analysis")
 include(":cpg-neo4j")
 include(":cpg-console")
+include(":cpg-concepts")
+
+include(":codyze")
+include(":codyze-core")
+include(":codyze-compliance")
 
 // this code block also exists in the root build.gradle.kts
 val enableJavaFrontend: Boolean by extra {
@@ -55,3 +63,7 @@ if (enableTypeScriptFrontend) include(":cpg-language-typescript")
 if (enableRubyFrontend) include(":cpg-language-ruby")
 if (enableJVMFrontend) include(":cpg-language-jvm")
 if (enableINIFrontend) include(":cpg-language-ini")
+
+kover {
+    enableCoverage()
+}

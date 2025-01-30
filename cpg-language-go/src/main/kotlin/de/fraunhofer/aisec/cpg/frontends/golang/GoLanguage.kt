@@ -102,7 +102,7 @@ class GoLanguage :
                     "uintptr",
                     null /* depends on the architecture, so we don't know */,
                     this,
-                    NumericType.Modifier.UNSIGNED
+                    NumericType.Modifier.UNSIGNED,
                 ),
             // https://pkg.go.dev/builtin#float32
             "float32" to FloatingPointType("float32", 32, this, NumericType.Modifier.SIGNED),
@@ -124,14 +124,14 @@ class GoLanguage :
             // https://go.dev/ref/spec#Package_unsafe
             "unsafe.ArbitraryType" to ObjectType("unsafe.ArbitraryType", listOf(), false, this),
             // https://go.dev/ref/spec#Package_unsafe
-            "unsafe.IntegerType" to ObjectType("unsafe.IntegerType", listOf(), false, this)
+            "unsafe.IntegerType" to ObjectType("unsafe.IntegerType", listOf(), false, this),
         )
 
     override fun tryCast(
         type: Type,
         targetType: Type,
         hint: HasType?,
-        targetHint: HasType?
+        targetHint: HasType?,
     ): CastResult {
         val match = super.tryCast(type, targetType, hint, targetHint)
         if (match != CastNotPossible) {

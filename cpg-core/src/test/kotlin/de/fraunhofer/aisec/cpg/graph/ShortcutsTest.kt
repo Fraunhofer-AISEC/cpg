@@ -89,7 +89,7 @@ class ShortcutsTest {
 
         assertEquals(
             listOf((main.body as Block).statements[1] as MemberCallExpression),
-            expected("print")
+            expected("print"),
         )
     }
 
@@ -312,7 +312,7 @@ class ShortcutsTest {
         assertEquals(0, paramPassed.failed.size)
         assertEquals(
             5,
-            (paramPassed.fulfilled[0].last() as? Literal<*>)?.value
+            (paramPassed.fulfilled[0].last() as? Literal<*>)?.value,
         ) // It's the comparison
     }
 

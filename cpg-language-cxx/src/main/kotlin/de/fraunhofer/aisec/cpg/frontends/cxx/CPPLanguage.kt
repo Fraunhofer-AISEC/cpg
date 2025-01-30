@@ -130,7 +130,7 @@ open class CPPLanguage :
                 IntegerType("unsigned long long int", 64, this, NumericType.Modifier.UNSIGNED),
 
             // Boolean type
-            "bool" to BooleanType("bool"),
+            "bool" to BooleanType("bool", language = this),
 
             // Character types
             "signed char" to IntegerType("signed char", 8, this, NumericType.Modifier.SIGNED),
@@ -168,7 +168,7 @@ open class CPPLanguage :
         type: Type,
         targetType: Type,
         hint: HasType?,
-        targetHint: HasType?
+        targetHint: HasType?,
     ): CastResult {
         val match = super.tryCast(type, targetType, hint, targetHint)
         if (match != CastNotPossible) {
@@ -241,10 +241,10 @@ open class CPPLanguage :
         applyInference: Boolean,
         ctx: TranslationContext,
         currentTU: TranslationUnitDeclaration?,
-        needsExactMatch: Boolean
+        needsExactMatch: Boolean,
     ): Pair<Boolean, List<FunctionDeclaration>> {
         val instantiationCandidates =
-            ctx.scopeManager.resolveFunctionTemplateDeclaration(templateCall)
+            ctx.scopeManager.lookupSymbolByNodeNameOfType<FunctionTemplateDeclaration>(templateCall)
         for (functionTemplateDeclaration in instantiationCandidates) {
             val initializationType =
                 mutableMapOf<Node?, TemplateDeclaration.TemplateInitialization?>()
@@ -262,7 +262,7 @@ open class CPPLanguage :
                         templateCall,
                         initializationType,
                         orderedInitializationSignature,
-                        explicitInstantiation
+                        explicitInstantiation,
                     )
                 val function = functionTemplateDeclaration.realization[0]
                 if (
@@ -274,11 +274,11 @@ open class CPPLanguage :
                                 getParameterizedSignaturesFromInitialization(
                                     initializationSignature
                                 ),
-                                initializationSignature
+                                initializationSignature,
                             ),
                             templateCall,
                             explicitInstantiation,
-                            needsExactMatch
+                            needsExactMatch,
                         )
                 ) {
                     // Valid Target -> Apply invocation
@@ -289,7 +289,7 @@ open class CPPLanguage :
                             function,
                             initializationSignature,
                             initializationType,
-                            orderedInitializationSignature
+                            orderedInitializationSignature,
                         )
                     return Pair(true, candidates)
                 }
