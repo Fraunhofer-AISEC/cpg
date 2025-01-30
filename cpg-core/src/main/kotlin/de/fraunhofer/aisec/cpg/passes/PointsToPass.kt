@@ -27,7 +27,10 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.cyclomaticComplexity
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
 import de.fraunhofer.aisec.cpg.graph.edges.flows.PointerDataflowGranularity
@@ -382,18 +385,20 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
                     // Create a DFG-Edge from the argument to the parameter's memoryValue
                     val p = invoke.parameters[arg.argumentIndex]
-                    if (!p.memoryValueIsInitialized())
+                    if (p.memoryValue == null)
                         initializeParameters(mutableListOf(p), doubleState, 1)
-                    doubleState =
-                        doubleState.push(
-                            p.memoryValue,
-                            TupleLattice(
-                                Pair(
-                                    PowersetLattice(identitySetOf(p.memoryValue)),
-                                    PowersetLattice(identitySetOf(arg)),
-                                )
-                            ),
-                        )
+                    p.memoryValue?.let {
+                        doubleState =
+                            doubleState.push(
+                                it,
+                                TupleLattice(
+                                    Pair(
+                                        PowersetLattice(identitySetOf(it)),
+                                        PowersetLattice(identitySetOf(arg)),
+                                    )
+                                ),
+                            )
+                    }
                 }
             }
             // }
@@ -683,7 +688,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     ): PointsToState2 {
         var doubleState = doubleState
         parameters
-            .filter { !it.memoryValueIsInitialized() }
+            .filter { it.memoryValue == null }
             .forEach { param ->
                 // In the first step, we have a triangle of ParameterDeclaration, the
                 // ParameterDeclaration's Memory Address and the ParameterMemoryValue

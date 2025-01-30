@@ -37,9 +37,7 @@ import org.neo4j.ogm.annotation.Relationship
 class ParameterDeclaration : ValueDeclaration(), HasDefault<Expression?> {
     // We use the memoryValue to link the ParameterDeclaration to the ParameterMemoryValue when we
     // don't have a declarationState (outside of the function)
-    lateinit var memoryValue: ParameterMemoryValue
-
-    fun memoryValueIsInitialized() = ::memoryValue.isInitialized
+    var memoryValue: ParameterMemoryValue? = null
 
     var isVariadic = false
 
