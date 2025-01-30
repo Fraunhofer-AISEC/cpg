@@ -373,8 +373,10 @@ class ShortcutsTest {
         val magic = classDecl.methods["magic"]
         assertNotNull(magic)
 
-        val ifCondition =
-            ((magic.body as Block).statements[0] as IfStatement).condition as BinaryOperator
+        val ifStatement = (magic.body as Block).statements[0]
+        assertIs<IfStatement>(ifStatement)
+        val ifCondition = ifStatement.condition
+        assertIs<BinaryOperator>(ifCondition)
 
         val paramPassed =
             ifCondition.followNextEOGEdgesUntilHit {
