@@ -234,6 +234,7 @@ fun dataFlow(
     predicate: (Node) -> Boolean,
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
+    continueAfterHit: Boolean = false,
     useIndexStack: Boolean = true,
 ): QueryTree<Boolean> {
     val evalRes =

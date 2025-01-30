@@ -183,13 +183,13 @@ abstract class Node :
 
     /** Incoming data flow edges */
     @Relationship(value = "DFG", direction = Relationship.Direction.INCOMING)
-    @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
+    @PopulatedByPass(DFGPass::class, PointsToPass::class)
     var prevDFGEdges: Dataflows<Node> =
         Dataflows<Node>(this, mirrorProperty = Node::nextDFGEdges, outgoing = false)
         protected set
 
     /** Virtual property for accessing [prevDFGEdges] without property edges. */
-    @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
+    @PopulatedByPass(DFGPass::class, PointsToPass::class)
     var prevDFG by unwrapping(Node::prevDFGEdges)
 
     /**
@@ -197,7 +197,7 @@ abstract class Node :
      * [de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity].
      */
     @DoNotPersist
-    @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
+    @PopulatedByPass(DFGPass::class, PointsToPass::class, ControlFlowSensitiveDFGPass::class)
     val prevFullDFG: List<Node>
         get() {
             return prevDFGEdges
@@ -206,14 +206,14 @@ abstract class Node :
         }
 
     /** Outgoing data flow edges */
-    @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
+    @PopulatedByPass(DFGPass::class, PointsToPass::class)
     @Relationship(value = "DFG", direction = Relationship.Direction.OUTGOING)
     var nextDFGEdges: Dataflows<Node> =
         Dataflows<Node>(this, mirrorProperty = Node::prevDFGEdges, outgoing = true)
         protected set
 
     /** Virtual property for accessing [nextDFGEdges] without property edges. */
-    @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
+    @PopulatedByPass(DFGPass::class, PointsToPass::class)
     var nextDFG by unwrapping(Node::nextDFGEdges)
 
     /**
@@ -221,7 +221,7 @@ abstract class Node :
      * [de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity].
      */
     @DoNotPersist
-    @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
+    @PopulatedByPass(DFGPass::class, PointsToPass::class, ControlFlowSensitiveDFGPass::class)
     val nextFullDFG: List<Node>
         get() {
             return nextDFGEdges.filter { it.granularity is FullDataflowGranularity }.map { it.end }

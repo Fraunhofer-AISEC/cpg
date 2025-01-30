@@ -613,6 +613,7 @@ inline fun Node.followXUntilHit(
     noinline x: (Node, Context, List<Node>) -> Collection<Node>,
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
+    continueAfterHit: Boolean = false,
     context: Context = Context(),
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
@@ -652,10 +653,21 @@ inline fun Node.followXUntilHit(
             }
             // The next node is new in the current path (i.e., there's no loop), so we add the path
             // with the next step to the worklist.
+            // For our daily dose of special magic, we check that the path reaching the next node
+            // differs. If the path is different, we do accept seeing the same node multiple times.
+            val indexedPath =
+                currentPath.first
+                    .mapIndexed { index, node -> if (node == next) Pair(index, node) else null }
+                    .filterNotNull()
             if (
-                next !in currentPath.first &&
-                    (findAllPossiblePaths ||
-                        (next !in alreadySeenNodes && worklist.none { next in it.first }))
+                (indexedPath.isEmpty() ||
+                    indexedPath.all {
+                        it.first == 0 || currentNode != currentPath.first[it.first - 1]
+                    }) &&
+                    ((findAllPossiblePaths && currentPath.first.count { it == next } <= 2) ||
+                        (next !in currentPath.first &&
+                            (findAllPossiblePaths ||
+                                (next !in alreadySeenNodes && worklist.none { next in it.first }))))
             ) {
                 val newContext =
                     if (nextPath.size > 1) {
@@ -683,6 +695,7 @@ inline fun Node.followXUntilHit(
 fun Node.followNextFullDFGEdgesUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
+    continueAfterHit: Boolean = true,
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
@@ -706,6 +719,7 @@ fun Node.followNextDFGEdgesUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
     useIndexStack: Boolean = true,
+    continueAfterHit: Boolean = true,
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
@@ -782,6 +796,7 @@ fun Node.followNextDFGEdgesUntilHit(
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
+        continueAfterHit = continueAfterHit,
         predicate = predicate,
     )
 }
@@ -1262,8 +1277,8 @@ private fun Node.eogDistanceTo(to: Node): Int {
 fun Expression?.unwrapReference(): Reference? {
     return when {
         this is Reference -> this
-        this is UnaryOperator && (this.operatorCode == "*" || this.operatorCode == "&") ->
-            this.input.unwrapReference()
+        this is PointerReference -> this
+        this is PointerDereference -> this
         this is CastExpression -> this.expression.unwrapReference()
         else -> null
     }
