@@ -101,7 +101,7 @@ class DFGFunctionSummaries {
         contextProvider: ContextProvider,
         language: Language<*>,
         declEntry: FunctionDeclarationEntry,
-        summary: List<DFGEntry>
+        summary: List<DFGEntry>,
     ): FunctionDeclaration {
         val inferredFunction =
             contextProvider.newFunctionDeclaration(language.parseName(declEntry.methodName))
@@ -302,7 +302,7 @@ class DFGFunctionSummaries {
                     functionDeclarationToMemAddrMap
                         .computeIfAbsent(
                             functionDeclaration,
-                            { mutableMapOf<Name, MemoryAddress>() }
+                            { mutableMapOf<Name, MemoryAddress>() },
                         )
                         .computeIfAbsent(memAddrName, { MemoryAddress(memAddrName) })
                 } else if (entry.from == "base") {
@@ -327,7 +327,7 @@ class DFGFunctionSummaries {
                                         destValueDepth,
                                         from,
                                         srcValueDepth,
-                                        ""
+                                        "",
                                     )
                                 )
                         }
@@ -346,7 +346,7 @@ class DFGFunctionSummaries {
                                         destValueDepth,
                                         from,
                                         srcValueDepth,
-                                        ""
+                                        "",
                                     )
                                 )
                         }

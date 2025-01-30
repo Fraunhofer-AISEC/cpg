@@ -29,5 +29,5 @@ package de.fraunhofer.aisec.cpg.graph
 enum class PointerAccess {
     ADDRESS,
     currentDerefValue,
-    currentDerefDerefValue
+    currentDerefDerefValue,
 }

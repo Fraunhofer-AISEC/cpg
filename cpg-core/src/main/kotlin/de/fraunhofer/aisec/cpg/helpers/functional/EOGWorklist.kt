@@ -31,7 +31,7 @@ import java.util.IdentityHashMap
 inline fun <reified V> iterateEOGClean(
     startEdges: List<EvaluationOrder>,
     startState: LatticeElement<V>,
-    transformation: (EvaluationOrder, LatticeElement<V>) -> LatticeElement<V>
+    transformation: (EvaluationOrder, LatticeElement<V>) -> LatticeElement<V>,
 ): LatticeElement<V> {
     val globalState = IdentityHashMap<EvaluationOrder, LatticeElement<V>>()
     val finalState = IdentityHashMap<EvaluationOrder, LatticeElement<V>>()

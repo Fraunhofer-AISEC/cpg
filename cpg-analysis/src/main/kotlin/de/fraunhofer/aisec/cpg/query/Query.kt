@@ -243,7 +243,6 @@ fun dataFlow(
             findAllPossiblePaths = findAllPossiblePaths,
             useIndexStack = useIndexStack,
             predicate = predicate,
-
         )
     val allPaths = evalRes.fulfilled.map { QueryTree(it) }.toMutableList()
     if (collectFailedPaths) allPaths.addAll(evalRes.failed.map { QueryTree(it) })

@@ -86,7 +86,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         var maxComplexity: Int? = null,
 
         /** This specifies the address length (usually 64bit) */
-        var addressLength: Int = 64
+        var addressLength: Int = 64,
     ) : PassConfiguration()
 
     /**
@@ -160,7 +160,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 node,
                 TupleLattice(
                     Pair(PowersetLattice(identitySetOf()), PowersetLattice(identitySetOf()))
-                )
+                ),
             )
 
         startState = initializeParameters(node.parameters, startState)
@@ -253,7 +253,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                     dstValueDepth,
                                     value,
                                     srcValueDepth,
-                                    subAccessName
+                                    subAccessName,
                                 )
                             )
                     }
@@ -275,7 +275,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             doubleState.pushToDeclarationsState(
                 currentNode,
                 doubleState.getFromDecl(currentEdge.end)
-                    ?: TupleLattice(Pair(emptyPowersetLattice(), emptyPowersetLattice()))
+                    ?: TupleLattice(Pair(emptyPowersetLattice(), emptyPowersetLattice())),
             )
 
         doubleState =
@@ -295,7 +295,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
     private fun handleReturnStatement(
         currentNode: ReturnStatement,
-        doubleState: PointsToState2
+        doubleState: PointsToState2,
     ): PointsToState2 {
         /* For Return Statements, all we really want to do is to collect their return values
         to add them to the FunctionSummary */
@@ -320,7 +320,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
     private fun handleCallExpression(
         currentNode: CallExpression,
-        doubleState: PointsToState2
+        doubleState: PointsToState2,
     ): PointsToState2 {
         var doubleState = doubleState
         val mapDstToSrc = mutableMapOf<Node, MutableSet<Node>>()
@@ -390,9 +390,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             TupleLattice(
                                 Pair(
                                     PowersetLattice(identitySetOf(p.memoryValue)),
-                                    PowersetLattice(identitySetOf(arg))
+                                    PowersetLattice(identitySetOf(arg)),
                                 )
-                            )
+                            ),
                         )
                 }
             }
@@ -440,7 +440,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                             val newName = Name(subAccessName, parentName)
                                             doubleState.fetchFieldAddresses(
                                                 identitySetOf(v),
-                                                newName
+                                                newName,
                                             )
                                         }
                                         fieldAddresses
@@ -456,7 +456,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                         doubleState
                                             .getNestedValues(
                                                 currentNode.arguments[srcNode.argumentIndex],
-                                                srcValueDepth
+                                                srcValueDepth,
                                             )
                                             .forEach { value ->
                                                 destination.forEach { d ->
@@ -506,7 +506,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                                     } +=
                                                         doubleState.getNestedValues(
                                                             arg,
-                                                            srcValueDepth
+                                                            srcValueDepth,
                                                         )
                                                 }
                                             }
@@ -548,7 +548,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
     private fun handleUnaryOperator(
         currentNode: UnaryOperator,
-        doubleState: PointsToState2
+        doubleState: PointsToState2,
     ): PointsToState2 {
         var doubleState = doubleState
         /* For UnaryOperators, we have to update the value if it's a ++ or -- operator
@@ -564,9 +564,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     TupleLattice(
                         Pair(
                             PowersetLattice(addresses),
-                            PowersetLattice(identitySetOf(currentNode))
+                            PowersetLattice(identitySetOf(currentNode)),
                         )
-                    )
+                    ),
                 )
             }
             // TODO: Should we already update the input's value in the generalState, or is it
@@ -578,7 +578,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
     private fun handleAssignExpression(
         currentNode: AssignExpression,
-        doubleState: PointsToState2
+        doubleState: PointsToState2,
     ): PointsToState2 {
         var doubleState = doubleState
         /* For AssignExpressions, we update the value of the rhs with the lhs
@@ -597,7 +597,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
     private fun handleExpression(
         currentNode: Expression,
-        doubleState: PointsToState2
+        doubleState: PointsToState2,
     ): PointsToState2 {
         var doubleState = doubleState
 
@@ -640,7 +640,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             doubleState =
                 doubleState.push(
                     currentNode,
-                    TupleLattice(Pair(PowersetLattice(addresses), PowersetLattice(values)))
+                    TupleLattice(Pair(PowersetLattice(addresses), PowersetLattice(values))),
                 )
         }
         return doubleState
@@ -660,7 +660,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         var doubleState =
             doubleState.push(
                 currentNode,
-                TupleLattice(Pair(PowersetLattice(addresses), PowersetLattice(values)))
+                TupleLattice(Pair(PowersetLattice(addresses), PowersetLattice(values))),
             )
         /* In the DeclarationsState, we save the address which we wrote to the value for easier work with pointers
          * */
@@ -668,7 +668,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             doubleState =
                 doubleState.pushToDeclarationsState(
                     addr,
-                    TupleLattice(Pair(PowersetLattice(addresses), PowersetLattice(values)))
+                    TupleLattice(Pair(PowersetLattice(addresses), PowersetLattice(values))),
                 )
         }
         return doubleState
@@ -679,7 +679,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         parameters: MutableList<ParameterDeclaration>,
         doubleState: PointsToState2,
         // Until which depth do we create ParameterMemoryValues
-        depth: Int = 2
+        depth: Int = 2,
     ): PointsToState2 {
         var doubleState = doubleState
         parameters
@@ -735,21 +735,23 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         generalState:
             LatticeElement<
                 Map<
-                    Node, LatticeElement<Pair<LatticeElement<Set<Node>>, LatticeElement<Set<Node>>>>
+                    Node,
+                    LatticeElement<Pair<LatticeElement<Set<Node>>, LatticeElement<Set<Node>>>>,
                 >
             > =
             MapLattice(mutableMapOf()),
         declarationsState:
             LatticeElement<
                 Map<
-                    Node, LatticeElement<Pair<LatticeElement<Set<Node>>, LatticeElement<Set<Node>>>>
+                    Node,
+                    LatticeElement<Pair<LatticeElement<Set<Node>>, LatticeElement<Set<Node>>>>,
                 >
             > =
-            MapLattice(mutableMapOf())
+            MapLattice(mutableMapOf()),
     ) :
         TupleLattice<
             Map<Node, LatticeElement<Pair<LatticeElement<Set<Node>>, LatticeElement<Set<Node>>>>>,
-            Map<Node, LatticeElement<Pair<LatticeElement<Set<Node>>, LatticeElement<Set<Node>>>>>
+            Map<Node, LatticeElement<Pair<LatticeElement<Set<Node>>, LatticeElement<Set<Node>>>>>,
         >(Pair(generalState, declarationsState)) {
         override fun lub(
             other:
@@ -759,20 +761,20 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             Node,
                             LatticeElement<
                                 Pair<LatticeElement<Set<Node>>, LatticeElement<Set<Node>>>
-                            >
+                            >,
                         >,
                         MapLatticeT<
                             Node,
                             LatticeElement<
                                 Pair<LatticeElement<Set<Node>>, LatticeElement<Set<Node>>>
-                            >
-                        >
+                            >,
+                        >,
                     >
                 >
         ) =
             PointsToState2(
                 this.generalState.lub(other.elements.first),
-                this.elements.second.lub(other.elements.second)
+                this.elements.second.lub(other.elements.second),
             )
 
         override fun duplicate() =
@@ -780,13 +782,15 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
         val generalState:
             MapLatticeT<
-                Node, LatticeElement<Pair<LatticeElement<Set<Node>>, LatticeElement<Set<Node>>>>
+                Node,
+                LatticeElement<Pair<LatticeElement<Set<Node>>, LatticeElement<Set<Node>>>>,
             >
             get() = this.elements.first
 
         val declarationsState:
             MapLatticeT<
-                Node, LatticeElement<Pair<LatticeElement<Set<Node>>, LatticeElement<Set<Node>>>>
+                Node,
+                LatticeElement<Pair<LatticeElement<Set<Node>>, LatticeElement<Set<Node>>>>,
             >
             get() = this.elements.second
 
@@ -805,7 +809,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         fun push(
             newNode: Node,
             newLatticeElement:
-                LatticeElement<Pair<LatticeElement<Set<Node>>, LatticeElement<Set<Node>>>>
+                LatticeElement<Pair<LatticeElement<Set<Node>>, LatticeElement<Set<Node>>>>,
         ): PointsToState2 {
             val newGeneralState =
                 this.generalState.lub(MapLattice(mutableMapOf(Pair(newNode, newLatticeElement))))
@@ -816,7 +820,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         fun pushToDeclarationsState(
             newNode: Node,
             newLatticeElement:
-                LatticeElement<Pair<LatticeElement<Set<Node>>, LatticeElement<Set<Node>>>>
+                LatticeElement<Pair<LatticeElement<Set<Node>>, LatticeElement<Set<Node>>>>,
         ): PointsToState2 {
             val newDeclarationsState =
                 this.declarationsState.lub(
@@ -846,7 +850,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
          */
         fun fetchElementFromDeclarationState(
             addr: Node,
-            fetchFields: Boolean = false
+            fetchFields: Boolean = false,
         ): IdentitySet<Pair<Node, String>> {
             val ret = identitySetOf<Pair<Node, String>>()
 
@@ -861,7 +865,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             Node,
                             LatticeElement<
                                 Pair<LatticeElement<Set<Node>>, LatticeElement<Set<Node>>>
-                            >
+                            >,
                         >)
                     ?.computeIfAbsent(addr) {
                         TupleLattice(
@@ -1018,7 +1022,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         .flatMap {
                             fetchFieldAddresses(
                                 identitySetOf(it),
-                                Name(localName.localName, nodeNameToString(it))
+                                Name(localName.localName, nodeNameToString(it)),
                             )
                         }
                         .toIdentitySet()
@@ -1036,7 +1040,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             //            else if (dereferenceDepth == 1) return addr.flatMap { getValues(it)
             // }.toSet()
             var ret = getValues(node)
-            for (i in 1 ..< nestingDepth) {
+            for (i in 1..<nestingDepth) {
                 ret = // ret.flatMap { getValues(it) }.toIdentitySet()
                     ret.flatMap { this.fetchElementFromDeclarationState(it) }
                         .map { it.first }
@@ -1066,13 +1070,13 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 Node,
                                 LatticeElement<
                                     Pair<LatticeElement<Set<Node>>, LatticeElement<Set<Node>>>
-                                >
+                                >,
                             >)
                         ?.computeIfAbsent(addr) {
                             TupleLattice(
                                 Pair(
                                     PowersetLattice(identitySetOf(addr, *newEntry.toTypedArray())),
-                                    PowersetLattice(identitySetOf())
+                                    PowersetLattice(identitySetOf()),
                                 )
                             )
                         }
@@ -1095,7 +1099,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         fun updateValues(
             sources: Set<Node>,
             destinations: Set<Node>,
-            destinationAddresses: Set<Node>
+            destinationAddresses: Set<Node>,
         ): PointsToState2 {
             val currentEntries =
                 this.declarationsState.elements[destinationAddresses.first()]
@@ -1127,7 +1131,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 doubleState =
                     doubleState.push(
                         d.arrayExpression,
-                        TupleLattice(Pair(PowersetLattice(aEaddresses), PowersetLattice(aEvalues)))
+                        TupleLattice(Pair(PowersetLattice(aEaddresses), PowersetLattice(aEvalues))),
                     )
             }
 

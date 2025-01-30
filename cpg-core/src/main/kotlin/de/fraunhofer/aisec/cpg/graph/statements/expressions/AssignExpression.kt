@@ -101,7 +101,7 @@ class AssignExpression :
                         Util.warnWithFileLocation(
                             this,
                             log,
-                            "Assignment is neither a simple nor a compound assignment. This is suspicious."
+                            "Assignment is neither a simple nor a compound assignment. This is suspicious.",
                         )
                     }
                 }

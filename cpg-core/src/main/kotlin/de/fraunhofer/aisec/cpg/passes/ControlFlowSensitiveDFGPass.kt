@@ -30,9 +30,6 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
-import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
-import de.fraunhofer.aisec.cpg.graph.edges.flows.Granularity
-import de.fraunhofer.aisec.cpg.graph.edges.flows.partial
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.*
@@ -60,7 +57,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
          * considered.
          */
         var maxComplexity: Int? = null,
-        val parallel: Boolean = true
+        val parallel: Boolean = true,
     ) : PassConfiguration()
 
     override fun cleanup() {
@@ -341,22 +338,21 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                     if (target != null) {
                         doubleState.declarationsState[decl] = PowersetLattice(identitySetOf(target))
                     }
-                // Sometimes, we have a InitializerListExpression on the lhs which is not good at
-                // all...
-                if (target is InitializerListExpression) {
-                    target.initializers.forEachIndexed { idx, initializer ->
-                        (initializer as? Reference)?.let { ref ->
-                            ref.refersTo?.let {
-                                doubleState.declarationsState[it] =
-                                    PowersetLattice(identitySetOf(ref))
+                    // Sometimes, we have a InitializerListExpression on the lhs which is not good
+                    // at
+                    // all...
+                    if (target is InitializerListExpression) {
+                        target.initializers.forEachIndexed { idx, initializer ->
+                            (initializer as? Reference)?.let { ref ->
+                                ref.refersTo?.let {
+                                    doubleState.declarationsState[it] =
+                                        PowersetLattice(identitySetOf(ref))
+                                }
                             }
                         }
-                    }
-                } else {
-                    // This was the last write to the respective declaration.
-                    (target as? Declaration
-                            ?: (target as? Reference)?.refersTo)
-                        ?.let {
+                    } else {
+                        // This was the last write to the respective declaration.
+                        (target as? Declaration ?: (target as? Reference)?.refersTo)?.let {
                             doubleState.declarationsState[it] =
                                 PowersetLattice(identitySetOf(target as Node))
                         }

@@ -380,6 +380,7 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             }
         }
     }
+
     /**
      * Adds the DFG edge for a [LambdaExpression]. The data flow from the function representing the
      * lambda to the expression.

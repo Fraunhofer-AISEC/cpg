@@ -92,7 +92,7 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder, EOGStart
             1, // 0: Address, 1: Value, 2: DerefValue, 3: DerefderefValue, ....
         val srcNode: Node,
         val srcValueDepth: Int = 1, // 0: Address, 1: Value, 2: DerefValue, 3:
-        val subAccessName: String
+        val subAccessName: String,
     )
 
     var functionSummary = mutableMapOf<Node, MutableSet<FSEntry>>()

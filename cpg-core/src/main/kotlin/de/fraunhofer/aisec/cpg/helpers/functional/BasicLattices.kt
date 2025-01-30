@@ -150,7 +150,7 @@ open class TupleLattice<U, V>(elements: Pair<LatticeElement<U>, LatticeElement<V
         return TupleLattice(
             Pair(
                 this.elements.first.lub(other.elements.first),
-                this.elements.second.lub(other.elements.second)
+                this.elements.second.lub(other.elements.second),
             )
         )
     }
@@ -198,7 +198,7 @@ class TripleLattice<U, V, W>(
             Triple(
                 this.elements.first.lub(other.elements.first),
                 this.elements.second.lub(other.elements.second),
-                this.elements.third.lub(other.elements.third)
+                this.elements.third.lub(other.elements.third),
             )
         )
     }
@@ -209,7 +209,7 @@ class TripleLattice<U, V, W>(
             Triple(
                 elements.first.duplicate(),
                 elements.second.duplicate(),
-                elements.third.duplicate()
+                elements.third.duplicate(),
             )
         )
     }

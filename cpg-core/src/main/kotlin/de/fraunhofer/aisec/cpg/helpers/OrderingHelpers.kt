@@ -42,7 +42,7 @@ import kotlin.collections.iterator
  */
 fun addFunctionsWithoutDependency(
     orderedList: MutableList<Node>,
-    dependencies: IdentityHashMap<FunctionDeclaration, IdentitySet<FunctionDeclaration>>
+    dependencies: IdentityHashMap<FunctionDeclaration, IdentitySet<FunctionDeclaration>>,
 ) {
     // All functions which do not have a dependency will never get one.
     // We already remove them to save a bit of time in the subsequent really slow part...

@@ -666,8 +666,8 @@ inline fun Node.followXUntilHit(
                     }) &&
                     ((findAllPossiblePaths && currentPath.count { it == next } <= 2) ||
                         (next !in currentPath.first &&
-                    (findAllPossiblePaths ||
-                        (next !in alreadySeenNodes && worklist.none { next in it.first }))))
+                            (findAllPossiblePaths ||
+                                (next !in alreadySeenNodes && worklist.none { next in it.first }))))
             ) {
                 val newContext =
                     if (nextPath.size > 1) {

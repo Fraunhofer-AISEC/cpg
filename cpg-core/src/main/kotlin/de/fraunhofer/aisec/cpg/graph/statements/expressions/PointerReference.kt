@@ -38,7 +38,7 @@ open class PointerReference : Reference() {
     var inputEdge =
         astEdgeOf<Expression>(
             of = ProblemExpression("could not parse input"),
-            onChanged = { old, new -> exchangeTypeObserver(old, new) }
+            onChanged = { old, new -> exchangeTypeObserver(old, new) },
         )
     /** The expression on which the operation is applied. */
     var input by unwrapping(PointerReference::inputEdge)

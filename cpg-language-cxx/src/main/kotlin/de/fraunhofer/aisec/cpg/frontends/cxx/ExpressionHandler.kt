@@ -437,7 +437,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                     operatorCode,
                     ctx.isPostfixOperator,
                     !ctx.isPostfixOperator,
-                    rawNode = ctx
+                    rawNode = ctx,
                 )
             if (input != null) {
                 unaryOperator.input = input

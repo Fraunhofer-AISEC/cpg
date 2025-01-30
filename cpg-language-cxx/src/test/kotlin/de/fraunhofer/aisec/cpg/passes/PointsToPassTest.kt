@@ -159,7 +159,7 @@ class PointsToPassTest {
         assertEquals(1, aPointerDerefLine12.memoryAddress.size)
         assertEquals(
             iDecl.memoryAddress,
-            aPointerDerefLine12.memoryAddress.first() as MemoryAddress?
+            aPointerDerefLine12.memoryAddress.first() as MemoryAddress?,
         )
         assertEquals(1, aPointerDerefLine12.prevFullDFG.size)
         assertTrue(aPointerDerefLine12.prevFullDFG.filterIsInstance<BinaryOperator>().isNotEmpty())
@@ -169,7 +169,7 @@ class PointsToPassTest {
         assertEquals(1, aPointerDerefLine14.memoryAddress.size)
         assertEquals(
             iDecl.memoryAddress,
-            aPointerDerefLine14.memoryAddress.first() as MemoryAddress?
+            aPointerDerefLine14.memoryAddress.first() as MemoryAddress?,
         )
         assertEquals(1, aPointerDerefLine14.prevFullDFG.size)
         assertEquals(iUO, aPointerDerefLine14.prevFullDFG.first())
@@ -187,7 +187,7 @@ class PointsToPassTest {
         assertEquals(1, aPointerDerefLine16.memoryAddress.size)
         assertEquals(
             jDecl.memoryAddress,
-            aPointerDerefLine16.memoryAddress.first() as MemoryAddress?
+            aPointerDerefLine16.memoryAddress.first() as MemoryAddress?,
         )
         assertEquals(1, aPointerDerefLine16.prevFullDFG.size)
         assertEquals(literal1, aPointerDerefLine16.prevFullDFG.first())
@@ -196,7 +196,7 @@ class PointsToPassTest {
         assertEquals(1, aPointerDerefLine17.memoryAddress.size)
         assertEquals(
             jDecl.memoryAddress,
-            aPointerDerefLine17.memoryAddress.first() as MemoryAddress?
+            aPointerDerefLine17.memoryAddress.first() as MemoryAddress?,
         )
         assertEquals(1, aPointerDerefLine17.prevFullDFG.size)
         assertEquals(literal3, aPointerDerefLine17.prevFullDFG.first())
@@ -205,7 +205,7 @@ class PointsToPassTest {
         assertEquals(1, bPointerDerefLine18.memoryAddress.size)
         assertEquals(
             iDecl.memoryAddress,
-            bPointerDerefLine18.memoryAddress.first() as MemoryAddress?
+            bPointerDerefLine18.memoryAddress.first() as MemoryAddress?,
         )
         assertEquals(1, bPointerDerefLine18.prevFullDFG.size)
         assertEquals(iUO, bPointerDerefLine18.prevFullDFG.first())
@@ -874,7 +874,7 @@ class PointsToPassTest {
         assertEquals(1, bPointerDerefLine138.memoryAddress.size)
         assertEquals(
             aDecl.memoryAddress,
-            bPointerDerefLine138.memoryAddress.first() as MemoryAddress?
+            bPointerDerefLine138.memoryAddress.first() as MemoryAddress?,
         )
         assertEquals(1, bPointerDerefLine138.prevFullDFG.size)
         assertEquals(literal10, bPointerDerefLine138.prevFullDFG.first())
@@ -893,19 +893,19 @@ class PointsToPassTest {
         assertEquals(1, cPointerDerefLine139.memoryAddress.size)
         assertEquals(
             bDecl.memoryAddress,
-            cPointerDerefLine139.memoryAddress.first() as MemoryAddress?
+            cPointerDerefLine139.memoryAddress.first() as MemoryAddress?,
         )
         assertEquals(1, cPointerDerefLine139.prevFullDFG.size)
         assertEquals(
             aDecl.memoryAddress,
-            cPointerDerefLine139.prevFullDFG.first() as MemoryAddress?
+            cPointerDerefLine139.prevFullDFG.first() as MemoryAddress?,
         )
 
         // Line 140
         assertEquals(1, cPointerDerefLine140.memoryAddress.size)
         assertEquals(
             aDecl.memoryAddress,
-            cPointerDerefLine140.memoryAddress.first() as MemoryAddress?
+            cPointerDerefLine140.memoryAddress.first() as MemoryAddress?,
         )
         assertEquals(1, cPointerDerefLine140.prevFullDFG.size)
         assertEquals(literal10, cPointerDerefLine140.prevFullDFG.first())
@@ -1132,7 +1132,7 @@ class PointsToPassTest {
         assertTrue(local_30Line165.prevFullDFG.first() is ParameterMemoryValue)
         assertEquals(
             "param_1.derefvalue",
-            local_30Line165.prevFullDFG.firstOrNull()?.name.toString()
+            local_30Line165.prevFullDFG.firstOrNull()?.name.toString(),
         )
 
         // Line 165
@@ -1140,7 +1140,7 @@ class PointsToPassTest {
         assertTrue(local_18Line165.prevFullDFG.first() is ParameterMemoryValue)
         assertEquals(
             "param_1.derefvalue",
-            local_18Line165.prevFullDFG.firstOrNull()?.name.toString()
+            local_18Line165.prevFullDFG.firstOrNull()?.name.toString(),
         )
 
         // Line 167
@@ -1163,7 +1163,7 @@ class PointsToPassTest {
             local_28DerefLine179.prevDFG
                 .filterIsInstance<UnknownMemoryValue>()
                 .filter { it.name.localName == "0" }
-                .size
+                .size,
         )
         assertTrue(local_28DerefLine179.prevFullDFG.contains(literal0Line177))
         assertEquals(2, local_28DerefLine179.memoryAddress.size)
@@ -1182,14 +1182,14 @@ class PointsToPassTest {
             1,
             local_28DerefLine181.prevDFG
                 .filter { it is UnknownMemoryValue && it.name.localName == "DAT_0011b1c8" }
-                .size
+                .size,
         )
         assertEquals(1, sseLine181.prevFullDFG.size)
         assertEquals(
             1,
             sseLine181.prevDFG
                 .filter { it is UnknownMemoryValue && it.name.localName == "DAT_0011b1c8" }
-                .size
+                .size,
         )
 
         // Line 190
@@ -1208,7 +1208,7 @@ class PointsToPassTest {
             1,
             local_18DerefLine190.prevDFG
                 .filter { it is ParameterMemoryValue && it.name.localName == "derefderefvalue" }
-                .size
+                .size,
         )
 
         // Line 201
@@ -1244,7 +1244,7 @@ class PointsToPassTest {
         )
         assertLocalName(
             "param_1",
-            fssgxecallkeytoout.filter { it.key !is ReturnStatement }.entries.firstOrNull()?.key
+            fssgxecallkeytoout.filter { it.key !is ReturnStatement }.entries.firstOrNull()?.key,
         )
         assertEquals(
             1,
@@ -1254,7 +1254,7 @@ class PointsToPassTest {
                 .firstOrNull()
                 ?.value
                 ?.filter { it.srcNode == ceLine201 }
-                ?.size
+                ?.size,
         )
         assertEquals(
             1,
@@ -1266,7 +1266,7 @@ class PointsToPassTest {
                 ?.filter {
                     it.srcNode is UnknownMemoryValue && it.srcNode.name.localName == "DAT_0011b1c8"
                 }
-                ?.size
+                ?.size,
         )
     }
 
@@ -1658,11 +1658,11 @@ class PointsToPassTest {
         // Test the FS of changepointer
         assertEquals(
             2,
-            changepointerFS.entries.filter { it.key.name.localName == "p" }.first().value.size
+            changepointerFS.entries.filter { it.key.name.localName == "p" }.first().value.size,
         )
         assertEquals(
             1,
-            changepointerFS.entries.filter { it.key.name.localName == "newp" }.first().value.size
+            changepointerFS.entries.filter { it.key.name.localName == "newp" }.first().value.size,
         )
 
         // p2p before the call in Line 262
@@ -1677,7 +1677,7 @@ class PointsToPassTest {
                         (it.granularity as PointerDataflowGranularity).pointerTarget ==
                             PointerAccess.currentDerefValue
                 }
-                .size
+                .size,
         )
         assertEquals(
             oldvalDecl.memoryAddress,
@@ -1688,7 +1688,7 @@ class PointsToPassTest {
                             PointerAccess.currentDerefValue
                 }
                 .first()
-                .start as MemoryAddress?
+                .start as MemoryAddress?,
         )
         assertEquals(
             1,
@@ -1698,7 +1698,7 @@ class PointsToPassTest {
                         (it.granularity as PointerDataflowGranularity).pointerTarget ==
                             PointerAccess.currentDerefDerefValue
                 }
-                .size
+                .size,
         )
         assertEquals(
             literal1,
@@ -1709,7 +1709,7 @@ class PointsToPassTest {
                             PointerAccess.currentDerefDerefValue
                 }
                 .first()
-                .start
+                .start,
         )
 
         // Test the result on p2p
@@ -1724,7 +1724,7 @@ class PointsToPassTest {
                         (it.granularity as PointerDataflowGranularity).pointerTarget ==
                             PointerAccess.currentDerefValue
                 }
-                .size
+                .size,
         )
         assertEquals(
             newvalDecl.memoryAddress,
@@ -1735,7 +1735,7 @@ class PointsToPassTest {
                             PointerAccess.currentDerefValue
                 }
                 .first()
-                .start as MemoryAddress?
+                .start as MemoryAddress?,
         )
         assertEquals(
             1,
@@ -1745,7 +1745,7 @@ class PointsToPassTest {
                         (it.granularity as PointerDataflowGranularity).pointerTarget ==
                             PointerAccess.currentDerefDerefValue
                 }
-                .size
+                .size,
         )
         assertEquals(
             literal2,
@@ -1756,7 +1756,7 @@ class PointsToPassTest {
                             PointerAccess.currentDerefDerefValue
                 }
                 .first()
-                .start
+                .start,
         )
     }
 }
