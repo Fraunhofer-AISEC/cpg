@@ -577,8 +577,9 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                             PowersetLattice(identitySetOf(param))
 
                         if (arg != null) {
-                            edgePropertiesMap[Triple(param, arg.refersTo, false)] +=
+                            edgePropertiesMap[Triple(param, arg.refersTo, false)]?.add(
                                 CallingContextOut(currentNode)
+                            )
                         }
                     }
                 }

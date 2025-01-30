@@ -656,15 +656,15 @@ inline fun Node.followXUntilHit(
             // For our daily dose of special magic, we check that the path reaching the next node
             // differs. If the path is different, we do accept seeing the same node multiple times.
             val indexedPath =
-                currentPath
+                currentPath.first
                     .mapIndexed { index, node -> if (node == next) Pair(index, node) else null }
                     .filterNotNull()
             if (
                 (indexedPath.isEmpty() ||
                     indexedPath.all {
-                        it.first == 0 || currentNode != currentPath[it.first - 1]
+                        it.first == 0 || currentNode != currentPath.first[it.first - 1]
                     }) &&
-                    ((findAllPossiblePaths && currentPath.count { it == next } <= 2) ||
+                    ((findAllPossiblePaths && currentPath.first.count { it == next } <= 2) ||
                         (next !in currentPath.first &&
                             (findAllPossiblePaths ||
                                 (next !in alreadySeenNodes && worklist.none { next in it.first }))))

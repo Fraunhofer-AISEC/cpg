@@ -116,7 +116,7 @@ class DFGFunctionSummaries {
                     // to refer by the local name because we will treat types as sort of references
                     // when
                     // creating them and resolve them later.
-                    type.applyMetadata(contextProvider, typeName, localNameOnly = true)
+                    type.applyMetadata(contextProvider, typeName, doNotPrependNamespace = true)
 
                     // Piping it through register type will ensure that we know the type and can
                     // resolve it later
