@@ -119,7 +119,11 @@ class ShortcutsTest {
 
         val main = classDecl.methods["main"]
         assertNotNull(main)
-        expected.add((main.body as Block).statements[1] as MemberCallExpression)
+        val mainBody = main.body
+        assertIs<Block>(mainBody)
+        val stmt1 = mainBody.statements[1]
+        assertIs<MemberCallExpression>(stmt1)
+        expected.add(stmt1)
         assertTrue(expected.containsAll(actual))
         assertTrue(actual.containsAll(expected))
     }
