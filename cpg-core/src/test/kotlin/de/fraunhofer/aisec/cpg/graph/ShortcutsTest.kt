@@ -69,28 +69,42 @@ class ShortcutsTest {
 
         val main = classDecl.methods["main"]
         assertNotNull(main)
-        expected.add(
-            ((((main.body as Block).statements[0] as DeclarationStatement).declarations[0]
-                        as VariableDeclaration)
-                    .initializer as NewExpression)
-                .initializer as ConstructExpression
-        )
-        expected.add((main.body as Block).statements[1] as MemberCallExpression)
-        expected.add((main.body as Block).statements[2] as MemberCallExpression)
-        expected.add((main.body as Block).statements[3] as MemberCallExpression)
+        val mainBody = main.body
+        assertIs<Block>(mainBody)
+        val declarationStatement = mainBody.statements[0]
+        assertIs<DeclarationStatement>(declarationStatement)
+        val variable = declarationStatement.declarations[0]
+        assertIs<VariableDeclaration>(variable)
+        val newExpr = variable.initializer
+        assertIs<NewExpression>(newExpr)
+        val constructExpr = newExpr.initializer
+        assertIs<ConstructExpression>(constructExpr)
+        expected.add(constructExpr)
+        val memberCall1 = mainBody.statements[1]
+        assertIs<MemberCallExpression>(memberCall1)
+        expected.add(memberCall1)
+        val memberCall2 = mainBody.statements[2]
+        assertIs<MemberCallExpression>(memberCall2)
+        expected.add(memberCall2)
+        val memberCall3 = mainBody.statements[3]
+        assertIs<MemberCallExpression>(memberCall3)
+        expected.add(memberCall3)
 
         val print = classDecl.methods["print"]
         assertNotNull(print)
-        expected.add(print.bodyOrNull(0)!!)
-        expected.add(print.bodyOrNull<CallExpression>(0)?.arguments?.get(0) as CallExpression)
+        val printBody0 = print.bodyOrNull<CallExpression>(0)
+        assertNotNull(printBody0)
+        expected.add(printBody0)
+        val printArg = printBody0.arguments[0]
+        assertIs<CallExpression>(printArg)
+        expected.add(printArg)
 
         assertTrue(expected.containsAll(actual))
         assertTrue(actual.containsAll(expected))
 
-        assertEquals(
-            listOf((main.body as Block).statements[1] as MemberCallExpression),
-            expected("print"),
-        )
+        val body1Stmt = mainBody.statements[1]
+        assertIs<MemberCallExpression>(body1Stmt)
+        assertEquals(listOf(body1Stmt), expected("print"))
     }
 
     @Test
