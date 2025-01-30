@@ -150,13 +150,19 @@ class ShortcutsTest {
         assertNotNull(main)
         val actual = main.callees
 
-        expected.add(
-            (((((main.body as Block).statements[0] as DeclarationStatement).declarations[0]
-                            as VariableDeclaration)
-                        .initializer as NewExpression)
-                    .initializer as ConstructExpression)
-                .constructor!!
-        )
+        val mainBody = main.body
+        assertIs<Block>(mainBody)
+        val stmt0 = mainBody.statements[0]
+        assertIs<DeclarationStatement>(stmt0)
+        val variable = stmt0.declarations[0]
+        assertIs<VariableDeclaration>(variable)
+        val newExpr = variable.initializer
+        assertIs<NewExpression>(newExpr)
+        val constructExpr = newExpr.initializer
+        assertIs<ConstructExpression>(constructExpr)
+        val constructor = constructExpr.constructor
+        assertNotNull(constructor)
+        expected.add(constructor)
 
         assertTrue(expected.containsAll(actual))
         assertTrue(actual.containsAll(expected))
