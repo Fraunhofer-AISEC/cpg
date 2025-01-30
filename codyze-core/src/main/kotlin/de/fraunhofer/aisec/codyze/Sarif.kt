@@ -31,10 +31,10 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.firstParentOrNull
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.query.QueryTree
 import io.github.detekt.sarif4k.*
 
@@ -95,7 +95,7 @@ fun QueryTree<Boolean>.toSarif(ruleID: String): List<Result> {
  * overlay nodes that better describe the node semantically.
  */
 private fun Node?.toSarifMessage(): Message? {
-    return Message(text = "${this?.javaClass?.simpleName}[name=${this?.name}]")
+    return this?.let { Message(text = "${it.javaClass.simpleName}[name=${it.name}]") }
 }
 
 /**
@@ -148,21 +148,17 @@ fun Node?.toSarifLocation(
             // not entirely correct since in some programming languages we need to start the body
             // location at the first statement, since we are missing location information for the
             // body "block", but it's the best we can do
-            val location =
-                de.fraunhofer.aisec.cpg.sarif.PhysicalLocation(
-                    uri = location.artifactLocation.uri,
-                    region =
-                        de.fraunhofer.aisec.cpg.sarif.Region(
-                            startLine = location.region.startLine,
-                            startColumn = location.region.startColumn,
-                            endLine =
-                                this.body?.location?.region?.startLine ?: location.region.endLine,
-                            endColumn =
-                                this.body?.location?.region?.startColumn
-                                    ?: location.region.endColumn,
-                        ),
-                )
-            location
+            de.fraunhofer.aisec.cpg.sarif.PhysicalLocation(
+                uri = location.artifactLocation.uri,
+                region =
+                    de.fraunhofer.aisec.cpg.sarif.Region(
+                        startLine = location.region.startLine,
+                        startColumn = location.region.startColumn,
+                        endLine = this.body?.location?.region?.startLine ?: location.region.endLine,
+                        endColumn =
+                            this.body?.location?.region?.startColumn ?: location.region.endColumn,
+                    ),
+            )
         } else {
             this.location
         }
@@ -205,12 +201,11 @@ private fun Node.toSarifKind(): String? {
     return when (this) {
         is FunctionDeclaration -> "function"
         is FieldDeclaration -> "member"
+        is TranslationUnitDeclaration -> "module"
         is NamespaceDeclaration -> "namespace"
         is ParameterDeclaration -> "parameter"
         is VariableDeclaration -> "variable"
-        is Declaration -> "declaration"
-        is Reference -> "object"
-        is Literal<*> -> "value"
+        is Type -> "type"
         else -> null
     }
 }

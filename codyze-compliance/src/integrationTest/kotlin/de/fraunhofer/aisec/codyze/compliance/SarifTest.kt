@@ -27,10 +27,11 @@ package de.fraunhofer.aisec.codyze.compliance
 
 import de.fraunhofer.aisec.codyze.AnalysisProject
 import de.fraunhofer.aisec.cpg.graph.*
-import java.io.File
 import kotlin.io.path.Path
+import kotlin.io.path.createTempFile
 import kotlin.test.Test
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 class SarifTest {
     @Test
@@ -46,6 +47,10 @@ class SarifTest {
         val webappMain = tr.namespaces["webapp.main"]
         assertNotNull(webappMain)
 
-        result.writeSarifJson(File("findings.sarif"))
+        val tmpFile = createTempFile(prefix = "findings", suffix = ".sarif").toFile()
+        result.writeSarifJson(tmpFile)
+
+        assertTrue(tmpFile.length() > 0)
+        tmpFile.delete()
     }
 }
