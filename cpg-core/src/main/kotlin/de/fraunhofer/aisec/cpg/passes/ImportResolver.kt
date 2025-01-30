@@ -290,7 +290,7 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
                 if (added) {
                     log.debug(
                         "Added {} as an dependency of {}",
-                        namespaceTu.component?.name,
+                        namespaceComponent.name,
                         currentComponent.name,
                     )
                 }
