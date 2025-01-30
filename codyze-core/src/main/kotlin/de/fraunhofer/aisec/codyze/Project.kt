@@ -159,10 +159,13 @@ class AnalysisProject(
             }
 
             components?.let {
-                val componentDir = projectDir.toFile().resolve("components")
+                val componentDir = projectDir.resolve("components")
                 val pairs =
                     it.map { component ->
-                        Pair(component, mutableListOf<File>(componentDir.resolve(component)))
+                        Pair(
+                            component,
+                            mutableListOf<File>(componentDir.resolve(component).toFile()),
+                        )
                     }
                 builder =
                     builder
@@ -179,7 +182,7 @@ class AnalysisProject(
                                 }
                                 .toMutableMap()
                         )
-                        .topLevels(it.associate { Pair(it, componentDir.resolve(it)) })
+                        .topLevels(it.associate { Pair(it, componentDir.resolve(it).toFile()) })
             }
 
             exclusionPatterns?.forEach { builder = builder.exclusionPatterns(it) }
@@ -196,7 +199,7 @@ class AnalysisProject(
         fun fromOptions(
             projectOptions: ProjectOptions,
             translationOptions: TranslationOptions,
-            configBuilder:
+            configModifier:
                 ((TranslationConfiguration.Builder) -> TranslationConfiguration.Builder)? =
                 null,
         ): AnalysisProject {
@@ -205,7 +208,7 @@ class AnalysisProject(
                 translationOptions.sources,
                 translationOptions.components,
                 translationOptions.exclusionPatterns,
-                configBuilder,
+                configModifier,
             )
         }
     }
