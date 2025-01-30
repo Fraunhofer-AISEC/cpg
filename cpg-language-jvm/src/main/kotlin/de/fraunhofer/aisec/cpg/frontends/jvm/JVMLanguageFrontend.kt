@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
+import java.nio.file.Path
 import sootup.core.model.Body
 import sootup.core.model.SootMethod
 import sootup.core.model.SourceType
@@ -189,5 +190,14 @@ class JVMLanguageFrontend(
                 out
             }
         }
+    }
+
+    override fun gatherExternalSources(
+        rootPaths: List<Path>,
+        source: File,
+        externalSources: MutableList<File>,
+        processedImports: MutableList<String>,
+    ): List<File> {
+        return listOf()
     }
 }

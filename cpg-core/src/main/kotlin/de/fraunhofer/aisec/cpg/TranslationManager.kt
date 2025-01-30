@@ -39,11 +39,13 @@ import java.io.File
 import java.io.PrintWriter
 import java.lang.reflect.InvocationTargetException
 import java.nio.file.Files
+import java.nio.file.Path
 import java.util.*
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionException
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.io.path.name
 import kotlin.reflect.full.findAnnotation
 import org.slf4j.LoggerFactory
 
@@ -140,15 +142,24 @@ private constructor(
         result: TranslationResult,
     ): Set<LanguageFrontend<*, *>> {
         val usedFrontends = mutableSetOf<LanguageFrontend<*, *>>()
+
+        val externalSources: MutableList<File> = mutableListOf()
+        val importedSources: MutableSet<File> = mutableSetOf()
+
+        ctx.config.includePaths.forEach { externalSources.addAll(extractConfiguredSources(it)) }
+
+        var useParallelFrontends = ctx.config.useParallelFrontends
+
         for (sc in ctx.config.softwareComponents.keys) {
             val component = Component()
             component.ctx = ctx
             component.name = Name(sc)
             result.addComponent(component)
 
+            // Every Component needs to reprocess the sources
             var sourceLocations: List<File> = ctx.config.softwareComponents[sc] ?: listOf()
 
-            var useParallelFrontends = ctx.config.useParallelFrontends
+            // Todo Here we need to dispatch to the correct frontend to do preproccessing
 
             val list =
                 sourceLocations.flatMap { file ->
@@ -172,6 +183,7 @@ private constructor(
                         files
                     } else {
                         val frontendClass = file.language?.frontend
+
                         val supportsParallelParsing =
                             file.language
                                 ?.frontend
@@ -243,6 +255,29 @@ private constructor(
                 sourceLocations = list
             }
 
+            val processedImports: MutableList<String> = mutableListOf()
+
+            sourceLocations
+                .filter { it.language != null }
+                .forEach {
+                    val frontend = it.language?.newFrontend(ctx)
+                    importedSources.addAll(
+                        frontend?.gatherExternalSources(
+                            ctx.config.includePaths,
+                            it,
+                            externalSources,
+                            processedImports,
+                        ) ?: listOf()
+                    )
+                }
+            log.info(
+                "Extending " +
+                    sourceLocations.size +
+                    " source files by " +
+                    importedSources.size +
+                    " interface files."
+            )
+
             usedFrontends.addAll(
                 if (useParallelFrontends) {
                     parseParallel(component, result, ctx, sourceLocations)
@@ -252,7 +287,41 @@ private constructor(
             )
         }
 
+        // Distribute all files by there root path prefix, parse them in individual component
+        // named
+        // like their rootPath local name
+        ctx.config.includePaths.forEach { includePath ->
+            val filesInPath =
+                importedSources.filter {
+                    it.path.removePrefix(includePath.toString()) != it.path.toString()
+                }
+            if (filesInPath.isNotEmpty()) {
+                val component = Component()
+                component.ctx = ctx
+                component.name = Name(includePath.name)
+                result.addComponent(component)
+
+                ctx.config.topLevels.put(includePath.toString(), includePath.toFile())
+
+                usedFrontends.addAll(
+                    if (useParallelFrontends) {
+                        parseParallel(component, result, ctx, filesInPath)
+                    } else {
+                        parseSequentially(component, result, ctx, filesInPath)
+                    }
+                )
+            }
+        }
+
         return usedFrontends
+    }
+
+    private fun extractConfiguredSources(path: Path): MutableList<File> {
+        val rootFile = path.toFile()
+        return if (rootFile.exists())
+            (if (rootFile.isDirectory) rootFile.walkTopDown().toMutableList()
+            else mutableListOf(rootFile))
+        else mutableListOf()
     }
 
     private fun parseParallel(

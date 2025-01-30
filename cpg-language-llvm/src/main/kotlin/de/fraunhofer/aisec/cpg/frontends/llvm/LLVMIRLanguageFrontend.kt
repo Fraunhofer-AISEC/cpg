@@ -43,6 +43,7 @@ import de.fraunhofer.aisec.cpg.passes.configuration.RegisterExtraPass
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
 import java.nio.ByteBuffer
+import java.nio.file.Path
 import org.bytedeco.javacpp.BytePointer
 import org.bytedeco.javacpp.Pointer
 import org.bytedeco.llvm.LLVM.*
@@ -263,6 +264,15 @@ class LLVMIRLanguageFrontend(language: Language<LLVMIRLanguageFrontend>, ctx: Tr
         } else {
             ""
         }
+    }
+
+    override fun gatherExternalSources(
+        rootPaths: List<Path>,
+        source: File,
+        externalSources: MutableList<File>,
+        processedImports: MutableList<String>,
+    ): List<File> {
+        return listOf()
     }
 }
 

@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
+import java.nio.file.Path
 import java.util.function.Supplier
 import kotlin.reflect.KClass
 
@@ -95,6 +96,15 @@ open class TestLanguageFrontend(
 
     override fun codeOf(astNode: Any): String? {
         TODO("Not yet implemented")
+    }
+
+    override fun gatherExternalSources(
+        rootPaths: List<Path>,
+        source: File,
+        externalSources: MutableList<File>,
+        processedImports: MutableList<String>,
+    ): List<File> {
+        return listOf()
     }
 
     override fun locationOf(astNode: Any): PhysicalLocation? {
