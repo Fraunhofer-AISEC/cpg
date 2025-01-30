@@ -659,7 +659,7 @@ inline fun Node.followXUntilHit(
                         (next !in alreadySeenNodes && worklist.none { next in it.first }))
             ) {
                 val newContext =
-                    if (nextPath.size > 1) {
+                    if (nextNodes.size > 1) {
                         currentContext.clone()
                     } else {
                         currentContext
@@ -810,6 +810,8 @@ fun Node.followNextEOGEdgesUntilHit(
                     currentNode is CallExpression &&
                     currentNode.invokes.isNotEmpty()
             ) {
+                // We follow the invokes edges and push the call expression on the call stack, so we
+                // can jump back here after processing the function.
                 ctx.callStack.push(currentNode)
                 currentNode.invokes.flatMap { it.eogStarters }
             } else if (
