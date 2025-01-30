@@ -113,25 +113,25 @@ class ImportResolverTest {
 
         // a has 0 dependencies
         var a =
-            app.translationUnitDependencies.entries
-                .filter { it.key.name.toString() == "file.a" }
-                .firstOrNull()
+            app.translationUnitDependencies?.entries?.firstOrNull {
+                it.key.name.toString() == "file.a"
+            }
         assertNotNull(a)
         assertEquals(0, a.value.size)
 
         // c has 0 dependencies
         var c =
-            app.translationUnitDependencies.entries
-                .filter { it.key.name.toString() == "file.c" }
-                .firstOrNull()
+            app.translationUnitDependencies?.entries?.firstOrNull {
+                it.key.name.toString() == "file.c"
+            }
         assertNotNull(c)
         assertEquals(0, c.value.size)
 
         // b has two dependencies (a, c)
         var b =
-            app.translationUnitDependencies.entries
-                .filter { it.key.name.toString() == "file.b" }
-                .firstOrNull()
+            app.translationUnitDependencies?.entries?.firstOrNull {
+                it.key.name.toString() == "file.b"
+            }
         assertNotNull(b)
         assertEquals(2, b.value.size)
         assertEquals(setOf(a.key, c.key), b.value)

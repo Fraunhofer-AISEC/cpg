@@ -38,6 +38,7 @@ import de.fraunhofer.aisec.cpg.passes.ImportDependencies
 import de.fraunhofer.aisec.cpg.passes.ImportResolver
 import de.fraunhofer.aisec.cpg.passes.Pass
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
+import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import org.neo4j.ogm.annotation.Relationship
@@ -65,7 +66,10 @@ class TranslationResult(
      */
     val components by unwrapping(TranslationResult::componentEdges)
 
-    /** The import dependencies of [Component] nodes of this translation result. */
+    /**
+     * The import dependencies of [Component] nodes of this translation result. The preferred way to
+     * access this is via [Strategy.COMPONENTS_LEAST_IMPORTS].
+     */
     @Transient
     @PopulatedByPass(ImportResolver::class)
     var componentDependencies: ImportDependencies<Component>? = null

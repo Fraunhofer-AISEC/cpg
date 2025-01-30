@@ -41,6 +41,9 @@ import de.fraunhofer.aisec.cpg.graph.translationUnit
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation
 import de.fraunhofer.aisec.cpg.passes.Pass.Companion.log
+import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
+import de.fraunhofer.aisec.cpg.processing.strategy.Strategy.COMPONENTS_LEAST_IMPORTS
+import de.fraunhofer.aisec.cpg.processing.strategy.Strategy.TRANSLATION_UNITS_LEAST_IMPORTS
 
 /**
  * This class holds the information about import dependencies between nodes that represent some kind
@@ -201,13 +204,14 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
                 handleImportDeclaration(node)
             }
         }
-        tr.componentDependencies
-            ?.sorted
-            ?.flatMap { it.translationUnitDependencies?.sorted ?: listOf() }
-            ?.forEach {
-                log.debug("Resolving imports for translation unit {}", it.name)
-                walker.iterate(it)
-            }
+
+        for (tu in
+            (Strategy::COMPONENTS_LEAST_IMPORTS)(tr).asSequence().flatMap {
+                (Strategy::TRANSLATION_UNITS_LEAST_IMPORTS)(it).asSequence()
+            }) {
+            log.debug("Resolving imports for translation unit {}", tu.name)
+            walker.iterate(tu)
+        }
     }
 
     /**
