@@ -841,6 +841,10 @@ fun Node.followNextEOGEdgesUntilHit(
     )
 }
 
+/**
+ * Returns the a [Collection] of last nodes in the EOG of this [FunctionDeclaration]. If there's no
+ * body, it will return a list of this function declaration.
+ */
 val FunctionDeclaration.lastEOGNode: Collection<Node>
     get() {
         val lastEOG = collectAllNextEOGPaths(false).flatMap { it.last().prevEOGEdges }
@@ -851,6 +855,7 @@ val FunctionDeclaration.lastEOGNode: Collection<Node>
         } else lastEOG.filter { it.unreachable != true }.map { it.start }
     }
 
+/** Returns only potentially reachable previous EOG edges. */
 val Node.reachablePrevEOG: Collection<Node>
     get() = this.prevEOGEdges.filter { it.unreachable != true }.map { it.start }
 
