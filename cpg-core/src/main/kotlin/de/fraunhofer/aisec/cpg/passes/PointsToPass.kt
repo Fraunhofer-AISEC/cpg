@@ -119,6 +119,15 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         if (node !is FunctionDeclaration) {
             return
         }
+
+        /*if (node.functionSummary.isEmpty()) {
+            ctx.config.functionSummaries.run {
+                this.functionToDFGEntryMap
+                    .filterKeys { it.methodName == node.name.localName }
+                    .map { (_, summary) -> applyDfgEntryToFunctionDeclaration(node, summary) }
+            }
+        }*/
+
         // If the node already has a function summary, we have visited it before and can
         // return here.
         if (
@@ -317,22 +326,18 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         val mapDstToSrc = mutableMapOf<Node, MutableSet<Node>>()
 
         // First, check if there are missing FunctionSummaries
-        /*        currentNode.language?.let { language ->
-            currentNode.invokes.addAll(
-                ctx.config.functionSummaries.run {
-                    this.functionToDFGEntryMap
-                        .filterKeys { it.methodName == currentNode.name.localName }
-                        .map { (declEntry, summary) ->
-                            this.generateFunctionForEntry(
-                                this@PointsToPass,
-                                language,
-                                declEntry,
-                                summary
-                            )
-                        }
-                        .filter { it !in currentNode.invokes }
+        /*currentNode.language?.let { language ->
+            currentNode.invokes.forEach { invoke ->
+                if (invoke.functionSummary.isEmpty()) {
+                    ctx.config.functionSummaries.run {
+                        this.functionToDFGEntryMap
+                            .filterKeys { it.methodName == invoke.name.localName }
+                            .map { (declEntry, summary) ->
+                                applyDfgEntryToFunctionDeclaration(invoke, summary)
+                            }
+                    }
                 }
-            )
+            }
         }*/
 
         var i = 0
@@ -433,16 +438,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                         argumentValues.forEach { v ->
                                             val parentName = nodeNameToString(v)
                                             val newName = Name(subAccessName, parentName)
-                                            doubleState =
-                                                doubleState.createFieldAddresses(
-                                                    identitySetOf(v),
-                                                    newName
-                                                )
-                                            fieldAddresses.addAll(
-                                                doubleState.getFieldAddresses(
-                                                    identitySetOf(v),
-                                                    newName
-                                                )
+                                            doubleState.fetchFieldAddresses(
+                                                identitySetOf(v),
+                                                newName
                                             )
                                         }
                                         fieldAddresses
@@ -602,24 +600,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         doubleState: PointsToState2
     ): PointsToState2 {
         var doubleState = doubleState
-        /* For MemberExpressions and SubscriptExpressions, we may have to create a memoryAddress first */
-        if (currentNode is MemberExpression) {
-            val (base, fieldName) = resolveMemberExpression(currentNode)
-            doubleState =
-                doubleState.createFieldAddresses(
-                    doubleState.getAddresses(base).toIdentitySet(),
-                    fieldName
-                )
-        } else if (currentNode is SubscriptExpression) {
-            doubleState.getValues(currentNode.base).toIdentitySet().forEach { value ->
-                val fieldName = nodeNameToString(currentNode.subscriptExpression)
-                doubleState =
-                    doubleState.createFieldAddresses(
-                        identitySetOf(value),
-                        Name(fieldName.localName, nodeNameToString(value))
-                    )
-            }
-        }
 
         /* If we have an Expression that is written to, we handle it later and ignore it now */
         val access =
@@ -951,7 +931,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     val baseAddresses = getAddresses(base).toIdentitySet()
                     // TODO: Check if we can/should use createFieldAddresses instead of this magic
                     // but we can't for magic reasons :(
-                    val fieldAddresses = getFieldAddresses(baseAddresses, fieldName)
+                    val fieldAddresses = fetchFieldAddresses(baseAddresses, fieldName)
                     if (fieldAddresses.isNotEmpty()) {
                         fieldAddresses
                             .flatMap { fetchElementFromDeclarationState(it).map { it.first } }
@@ -973,9 +953,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 is SubscriptExpression -> {
                     this.getAddresses(node).flatMap { this.getValues(it) }.toIdentitySet()
                 }
-                is BinaryOperator -> {
-                    fetchElementFromDeclarationState(node, true).map { it.first }.toIdentitySet()
-                }
+                // is BinaryOperator -> {
+                //    fetchElementFromDeclarationState(node, true).map { it.first }.toIdentitySet()
+                // }
                 /* In these cases, we simply have to fetch the current value for the MemoryAddress from the DeclarationState */
                 else -> identitySetOf(node)
             }
@@ -1012,7 +992,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                      * For MemberExpressions, the fieldAddresses in the MemoryAddress node of the base hold the information we are looking for
                      */
                     val (base, newName) = resolveMemberExpression(node)
-                    getFieldAddresses(this.getAddresses(base).toIdentitySet(), newName)
+                    fetchFieldAddresses(this.getAddresses(base).toIdentitySet(), newName)
                 }
                 is Reference -> {
                     /*
@@ -1036,7 +1016,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     val localName = nodeNameToString(node.subscriptExpression)
                     this.getValues(node.base)
                         .flatMap {
-                            getFieldAddresses(
+                            fetchFieldAddresses(
                                 identitySetOf(it),
                                 Name(localName.localName, nodeNameToString(it))
                             )
@@ -1065,48 +1045,46 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             return ret
         }
 
-        /**
-         * Create the field `nodeName` at the addresses in `baseAddresses`. If fieldAddresses
-         * already exit, do nothing
-         */
-        fun createFieldAddresses(baseAddresses: IdentitySet<Node>, nodeName: Name): PointsToState2 {
-            var doubleState = this
-
-            baseAddresses.forEach { addr ->
-                /* If we do not yet have a MemoryAddress for this FieldDeclaration, we create one */
-                val addrState = declarationsState.elements[addr]
-                if (
-                    addrState == null ||
-                        addrState.elements.first.elements.none { it.name == nodeName }
-                ) {
-                    val fieldAddress = MemoryAddress(nodeName)
-                    doubleState =
-                        pushToDeclarationsState(
-                            addr,
-                            TupleLattice(
-                                Pair(
-                                    PowersetLattice(identitySetOf(addr, fieldAddress)),
-                                    PowersetLattice(identitySetOf())
-                                )
-                            )
-                        )
-                }
-            }
-            return doubleState
-        }
-
-        /** Lookup the field `nodeName` at the addresses in `baseAddresses` and return them */
-        fun getFieldAddresses(baseAddresses: IdentitySet<Node>, nodeName: Name): Set<Node> {
+        fun fetchFieldAddresses(baseAddresses: IdentitySet<Node>, nodeName: Name): Set<Node> {
             val fieldAddresses = identitySetOf<Node>()
 
             baseAddresses.forEach { addr ->
-                declarationsState.elements[addr]
-                    ?.elements
-                    ?.first
-                    ?.elements
-                    ?.filter { it.name.localName == nodeName.localName }
-                    ?.let { fieldAddresses.addAll(it) }
+                val elements =
+                    declarationsState.elements[addr]
+                        ?.elements
+                        ?.first
+                        ?.elements
+                        ?.filter { it.name.localName == nodeName.localName }
+                        ?.toMutableList()
+
+                if (elements.isNullOrEmpty()) {
+                    val newName = nodeNameToString(addr)
+                    val newEntry = identitySetOf<Node>(UnknownMemoryValue(newName))
+                    (this.declarationsState.elements
+                            as?
+                            MutableMap<
+                                Node,
+                                LatticeElement<
+                                    Pair<LatticeElement<Set<Node>>, LatticeElement<Set<Node>>>
+                                >
+                            >)
+                        ?.computeIfAbsent(addr) {
+                            TupleLattice(
+                                Pair(
+                                    PowersetLattice(identitySetOf(addr, *newEntry.toTypedArray())),
+                                    PowersetLattice(identitySetOf())
+                                )
+                            )
+                        }
+                    /*val newElements = this.declarationsState.elements[addr]?.elements?.second?.elements
+                    (newElements as? MutableSet<Node>)?.addAll(newEntry)*/
+                    fieldAddresses.addAll(newEntry)
+                    /*newEntry.map { ret.add(Pair(it, "")) }*/
+                } else {
+                    elements.let { fieldAddresses.addAll(it) }
+                }
             }
+
             return fieldAddresses
         }
 
