@@ -251,16 +251,10 @@ class StatementHandlerTest : BaseTest() {
         var globalC = cVariables.firstOrNull { it.scope == pythonGlobalScope }
         assertNotNull(globalC)
 
-        var localC1 =
-            cVariables.firstOrNull {
-                it.scope?.astNode?.astParent?.name?.localName == "local_write"
-            }
+        var localC1 = cVariables.firstOrNull { it.scope?.astNode?.name?.localName == "local_write" }
         assertNotNull(localC1)
 
-        var localC2 =
-            cVariables.firstOrNull {
-                it.scope?.astNode?.astParent?.name?.localName == "error_write"
-            }
+        var localC2 = cVariables.firstOrNull { it.scope?.astNode?.name?.localName == "error_write" }
         assertNotNull(localC2)
 
         // In global_write, all references should point to global c
