@@ -390,12 +390,15 @@ class ShortcutsTest {
         val magic = classDecl.methods["magic"]
         assertNotNull(magic)
 
-        val attrAssignment =
-            ((((magic.body as Block).statements[0] as IfStatement).elseStatement as Block)
-                    .statements[0]
-                    as AssignExpression)
-                .lhs
-                .first()
+        val magicBody = magic.body
+        assertIs<Block>(magicBody)
+        val ifStmt0 = magicBody.statements[0]
+        assertIs<IfStatement>(ifStmt0)
+        val elseStmt = ifStmt0.elseStatement
+        assertIs<Block>(elseStmt)
+        val assignExpr = elseStmt.statements[0]
+        assertIs<AssignExpression>(assignExpr)
+        val attrAssignment = assignExpr.lhs.first()
 
         val paramPassed = attrAssignment.followPrevFullDFG { it is Literal<*> }
         assertNotNull(paramPassed)
