@@ -313,32 +313,44 @@ class ShortcutsTest {
         val magic2 = classDecl.methods["magic2"]
         assertNotNull(magic2)
 
-        val aAssignment2 =
-            ((((magic2.body as Block).statements[1] as IfStatement).elseStatement as Block)
-                    .statements[0]
-                    as AssignExpression)
-                .lhs
-                .first()
+        val magic2Body = magic2.body
+        assertIs<Block>(magic2Body)
+        val ifStatement2 = magic2Body.statements[1]
+        assertIs<IfStatement>(ifStatement2)
+        val elseStmt2 = ifStatement2.elseStatement
+        assertIs<Block>(elseStmt2)
+        val assignExpr2 = elseStmt2.statements[0]
+        assertIs<AssignExpression>(assignExpr2)
+        val aAssignment2 = assignExpr2.lhs.first()
 
         val paramPassed2 = aAssignment2.followPrevFullDFGEdgesUntilHit { it is Literal<*> }
         assertEquals(1, paramPassed2.fulfilled.size)
         assertEquals(0, paramPassed2.failed.size)
-        assertEquals(5, (paramPassed2.fulfilled[0].last() as? Literal<*>)?.value)
+
+        val lastFulfilled2 = paramPassed2.fulfilled[0].last()
+        assertIs<Literal<*>>(lastFulfilled2)
+        assertLiteralValue(5, lastFulfilled2)
 
         val magic = classDecl.methods["magic"]
         assertNotNull(magic)
 
-        val attrAssignment =
-            ((((magic.body as Block).statements[0] as IfStatement).elseStatement as Block)
-                    .statements[0]
-                    as AssignExpression)
-                .lhs
-                .first()
+        val magicBody = magic.body
+        assertIs<Block>(magicBody)
+        val ifStatement = magicBody.statements[0]
+        assertIs<IfStatement>(ifStatement)
+        val elseStmt = ifStatement.elseStatement
+        assertIs<Block>(elseStmt)
+        val assignExpr = elseStmt.statements[0]
+        assertIs<AssignExpression>(assignExpr)
+        val attrAssignment = assignExpr.lhs.first()
 
         val paramPassed = attrAssignment.followPrevFullDFGEdgesUntilHit { it is Literal<*> }
         assertEquals(1, paramPassed.fulfilled.size)
         assertEquals(0, paramPassed.failed.size)
-        assertEquals(3, (paramPassed.fulfilled[0].last() as? Literal<*>)?.value)
+
+        val lastFulfilled = paramPassed.fulfilled[0].last()
+        assertIs<Literal<*>>(lastFulfilled)
+        assertLiteralValue(3, lastFulfilled)
     }
 
     @Test
@@ -363,9 +375,9 @@ class ShortcutsTest {
         val paramPassed = attrAssignment.followPrevEOGEdgesUntilHit { it is Literal<*> }
         assertEquals(1, paramPassed.fulfilled.size)
         assertEquals(0, paramPassed.failed.size)
-        val lastFulfiled = paramPassed.fulfilled[0].last()
-        assertIs<Literal<*>>(lastFulfiled)
-        assertLiteralValue(5, lastFulfiled) // It's the comparison
+        val lastFulfilled = paramPassed.fulfilled[0].last()
+        assertIs<Literal<*>>(lastFulfilled)
+        assertLiteralValue(5, lastFulfilled) // It's the comparison
     }
 
     @Test
