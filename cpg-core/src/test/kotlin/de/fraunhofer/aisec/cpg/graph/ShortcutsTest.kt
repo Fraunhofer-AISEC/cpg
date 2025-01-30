@@ -287,14 +287,19 @@ class ShortcutsTest {
         assertNotNull(magic)
 
         // get the statement attr = 3;
-        val ifStatement = (magic.body as Block).statements[0] as IfStatement
-        val thenStatement = (ifStatement.thenStatement as Block).statements[0] as IfStatement
-        val nestedThen = thenStatement.thenStatement as Block
+        val ifStatement = (magic.body as Block).statements[0]
+        assertIs<IfStatement>(ifStatement)
+        val thenStmt = ifStatement.thenStatement
+        assertIs<Block>(thenStmt)
+        val thenStatement0 = thenStmt.statements[0]
+        assertIs<IfStatement>(thenStatement0)
+        val nestedThen = thenStatement0.thenStatement
+        assertIs<Block>(nestedThen)
         val interestingNode = nestedThen.statements[0]
         val actual = interestingNode.controlledBy()
 
         expected.add(ifStatement)
-        expected.add(thenStatement)
+        expected.add(thenStatement0)
 
         assertTrue(expected.containsAll(actual))
         assertTrue(actual.containsAll(expected))
