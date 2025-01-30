@@ -200,6 +200,32 @@ class UnwrappedEdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
         }
     }
 
+    /**
+     * Similar to [Delegate] but this employs dark voodoo magic to make an incoming list available
+     * as delegate. This is a little bit dangerous because we need to cast the unwrapped listed to
+     * the incoming type. The originating reason for this is that an [Edge] only has a generic type
+     * parameter for the [Edge.end] property, but not for the [Edge.start] property. This is why we
+     * need to cast the underlying [Edge.start] property to the incoming type.
+     */
+    inner class IncomingDelegate<ThisType : Node, IncomingType>() {
+        operator fun getValue(
+            thisRef: ThisType,
+            property: KProperty<*>,
+        ): MutableList<IncomingType> {
+            @Suppress("UNCHECKED_CAST")
+            return this@UnwrappedEdgeList as MutableList<IncomingType>
+        }
+
+        operator fun setValue(
+            thisRef: ThisType,
+            property: KProperty<*>,
+            value: List<IncomingType>,
+        ) {
+            @Suppress("UNCHECKED_CAST")
+            this@UnwrappedEdgeList.resetTo(value as Collection<NodeType>)
+        }
+    }
+
     operator fun <ThisType : Node> provideDelegate(
         thisRef: ThisType,
         prop: KProperty<*>,
