@@ -824,8 +824,8 @@ fun Node.followNextEOGEdgesUntilHit(
                     (currentNode is ReturnStatement || currentNode.nextEOG.isEmpty())
             ) {
                 if (ctx.callStack.isEmpty()) {
-                    (currentNode.firstParentOrNull { it is FunctionDeclaration }
-                            as? FunctionDeclaration)
+                    (currentNode as? FunctionDeclaration
+                            ?: currentNode.firstParentOrNull<FunctionDeclaration>())
                         ?.calledBy
                         ?.flatMap { it.nextEOG } ?: setOf()
                 } else {
@@ -849,8 +849,8 @@ val FunctionDeclaration.lastEOGNode: Collection<Node>
     get() {
         val lastEOG = collectAllNextEOGPaths(false).flatMap { it.last().prevEOGEdges }
         return if (lastEOG.isEmpty()) {
-            // In some cases, we have no body, so we have to jump directly to the function
-            // declaration.
+            // In some cases, we do not have a body, so we have to jump directly to the
+            // function declaration.
             listOf(this)
         } else lastEOG.filter { it.unreachable != true }.map { it.start }
     }
@@ -1143,13 +1143,15 @@ val Node?.assigns: List<AssignExpression>
  *
  * @param predicate the search predicate
  */
-fun Node.firstParentOrNull(predicate: (Node) -> Boolean): Node? {
+inline fun <reified T : Node> Node.firstParentOrNull(
+    noinline predicate: ((T) -> Boolean)? = null
+): T? {
 
     // start at searchNodes parent
-    var node: Node? = this.astParent
+    var node = this.astParent
 
     while (node != null) {
-        if (predicate(node)) {
+        if (node is T && (predicate == null || predicate(node))) {
             return node
         }
 
@@ -1348,7 +1350,7 @@ fun Expression?.unwrapReference(): Reference? {
 /** Returns the [TranslationUnitDeclaration] where this node is located in. */
 val Node.translationUnit: TranslationUnitDeclaration?
     get() {
-        return firstParentOrNull { it is TranslationUnitDeclaration } as? TranslationUnitDeclaration
+        return firstParentOrNull<TranslationUnitDeclaration>()
     }
 
 /**
