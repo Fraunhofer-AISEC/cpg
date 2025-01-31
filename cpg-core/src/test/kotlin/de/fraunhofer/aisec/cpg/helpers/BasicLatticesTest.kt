@@ -26,11 +26,11 @@
 package de.fraunhofer.aisec.cpg.helpers
 
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice
-import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
-import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLatticeT
-import de.fraunhofer.aisec.cpg.helpers.functional.TripleLattice
-import de.fraunhofer.aisec.cpg.helpers.functional.TupleLattice
+import de.fraunhofer.aisec.cpg.helpers.functional.MapLatticeElement
+import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLatticeElement
+import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLatticeElementT
+import de.fraunhofer.aisec.cpg.helpers.functional.TripleLatticeElement
+import de.fraunhofer.aisec.cpg.helpers.functional.TupleLatticeElement
 import de.fraunhofer.aisec.cpg.helpers.functional.emptyPowersetLattice
 import java.util.IdentityHashMap
 import kotlin.test.Test
@@ -45,7 +45,7 @@ import kotlin.test.assertTrue
 class BasicLatticesTest {
     @Test
     fun testPowersetLattice() {
-        val emptyLattice1: PowersetLatticeT<Node> = emptyPowersetLattice<Node>()
+        val emptyLattice1: PowersetLatticeElementT<Node> = emptyPowersetLattice<Node>()
         val emptyLattice2 = emptyPowersetLattice<Node>()
         assertEquals(0, emptyLattice1.compareTo(emptyLattice2))
         assertEquals(emptyLattice1, emptyLattice2)
@@ -71,16 +71,16 @@ class BasicLatticesTest {
         assertNotEquals(blaBlubLattice, blaFooLattice)
 
         assertNotSame(emptyLattice1, emptyLattice1.duplicate())
-        assertNotSame(emptyLattice1.elements, emptyLattice1.duplicate().elements)
+        assertNotSame(emptyLattice1.value, emptyLattice1.duplicate().value)
         assertNotSame(blaLattice1, blaLattice1.duplicate())
-        assertNotSame(blaLattice1.elements, blaLattice1.duplicate().elements)
+        assertNotSame(blaLattice1.value, blaLattice1.duplicate().value)
         assertNotSame(blaFooLattice, blaFooLattice.duplicate())
-        assertNotSame(blaFooLattice.elements, blaFooLattice.duplicate().elements)
+        assertNotSame(blaFooLattice.value, blaFooLattice.duplicate().value)
         assertNotSame(blaBlubLattice, blaBlubLattice.duplicate())
-        assertNotSame(blaBlubLattice.elements, blaBlubLattice.duplicate().elements)
+        assertNotSame(blaBlubLattice.value, blaBlubLattice.duplicate().value)
 
         val emptyLubEmpty = emptyLattice1.lub(emptyLattice1)
-        assertIs<PowersetLatticeT<Node>>(emptyLubEmpty)
+        assertIs<PowersetLatticeElementT<Node>>(emptyLubEmpty)
         assertNotSame(emptyLattice1, emptyLubEmpty)
         assertEquals(emptyLattice1, emptyLubEmpty)
         assertEquals(0, emptyLattice1.compareTo(emptyLubEmpty))
@@ -90,7 +90,7 @@ class BasicLatticesTest {
 
         val emptyLattice3 = emptyPowersetLattice<String>()
         val emptyLubBla = emptyLattice3.lub(blaLattice1)
-        assertIs<PowersetLatticeT<String>>(emptyLubBla)
+        assertIs<PowersetLatticeElementT<String>>(emptyLubBla)
         assertNotSame(emptyLattice3, emptyLubBla)
         assertNotEquals(emptyLattice3, emptyLubBla)
         assertEquals(-1, emptyLattice3.compareTo(emptyLubBla))
@@ -99,7 +99,7 @@ class BasicLatticesTest {
         assertEquals(0, blaLattice1.compareTo(emptyLubBla))
 
         val blaFooBlub = blaFooLattice.lub(blaBlubLattice)
-        assertIs<PowersetLatticeT<String>>(blaFooBlub)
+        assertIs<PowersetLatticeElementT<String>>(blaFooBlub)
         assertNotSame(emptyLattice3, blaFooBlub)
         assertNotEquals(emptyLattice3, blaFooBlub)
         assertEquals(-1, emptyLattice3.compareTo(blaFooBlub))
@@ -112,25 +112,29 @@ class BasicLatticesTest {
         assertNotSame(blaBlubLattice, blaFooBlub)
         assertNotEquals(blaBlubLattice, blaFooBlub)
         assertEquals(-1, blaBlubLattice.compareTo(blaFooBlub))
-        assertEquals(identitySetOf("bla", "blub", "foo"), blaFooBlub.elements)
+        assertEquals(identitySetOf("bla", "blub", "foo"), blaFooBlub.value)
     }
 
     @Test
     fun testMapLattice() {
         val emptyLattice1 =
-            MapLattice<String, PowersetLatticeT<String>, IdentitySet<String>>(IdentityHashMap())
+            MapLatticeElement<String, PowersetLatticeElementT<String>, IdentitySet<String>>(
+                IdentityHashMap()
+            )
         val emptyLattice2 =
-            MapLattice<String, PowersetLatticeT<String>, IdentitySet<String>>(IdentityHashMap())
+            MapLatticeElement<String, PowersetLatticeElementT<String>, IdentitySet<String>>(
+                IdentityHashMap()
+            )
         assertEquals(0, emptyLattice1.compareTo(emptyLattice2))
         assertEquals(emptyLattice1, emptyLattice2)
         assertNotSame(emptyLattice1.hashCode(), emptyLattice1.hashCode())
 
         val aBlaLattice1 =
-            MapLattice<String, PowersetLatticeT<String>, IdentitySet<String>>(
+            MapLatticeElement<String, PowersetLatticeElementT<String>, IdentitySet<String>>(
                 IdentityHashMap(mapOf("a" to PowersetLatticeT(identitySetOf("bla"))))
             )
         val aBlaLattice2 =
-            MapLattice<String, PowersetLatticeT<String>, IdentitySet<String>>(
+            MapLatticeElement<String, PowersetLatticeElementT<String>, IdentitySet<String>>(
                 IdentityHashMap(mapOf("a" to PowersetLatticeT(identitySetOf("bla"))))
             )
         assertEquals(0, aBlaLattice1.compareTo(aBlaLattice2))
@@ -138,7 +142,7 @@ class BasicLatticesTest {
         assertNotSame(aBlaLattice1, aBlaLattice2)
 
         val aBlaFooLattice =
-            MapLattice<String, PowersetLatticeT<String>, IdentitySet<String>>(
+            MapLatticeElement<String, PowersetLatticeElementT<String>, IdentitySet<String>>(
                 IdentityHashMap(mapOf("a" to PowersetLatticeT(identitySetOf("bla", "foo"))))
             )
         assertEquals(1, aBlaFooLattice.compareTo(aBlaLattice1))
@@ -147,10 +151,10 @@ class BasicLatticesTest {
         assertNotEquals(aBlaLattice1, aBlaFooLattice)
 
         val aBlaBFooLattice =
-            MapLattice<String, PowersetLatticeT<String>, IdentitySet<String>>(
+            MapLatticeElement<String, PowersetLatticeElementT<String>, IdentitySet<String>>(
                 IdentityHashMap(
                     mapOf(
-                        "a" to PowersetLattice(identitySetOf("bla")),
+                        "a" to PowersetLatticeElement(identitySetOf("bla")),
                         "b" to PowersetLatticeT(identitySetOf("foo")),
                     )
                 )
@@ -168,19 +172,21 @@ class BasicLatticesTest {
         assertEquals(emptyLattice1, emptyDuplicate)
         val aBlaLatticeDuplicate = aBlaLattice1.duplicate()
         assertNotSame(aBlaLattice1, aBlaLatticeDuplicate)
-        assertNotSame(aBlaLattice1.elements, aBlaLatticeDuplicate.elements)
+        assertNotSame(aBlaLattice1.value, aBlaLatticeDuplicate.value)
         assertEquals(aBlaLattice1, aBlaLatticeDuplicate)
         val aBlaFooLatticeDuplicate = aBlaFooLattice.duplicate()
         assertNotSame(aBlaFooLattice, aBlaFooLatticeDuplicate)
-        assertNotSame(aBlaBFooLattice.elements, aBlaFooLatticeDuplicate.elements)
+        assertNotSame(aBlaBFooLattice.value, aBlaFooLatticeDuplicate.value)
         assertEquals(aBlaFooLattice, aBlaFooLatticeDuplicate)
         val aBlaBFooLatticeDuplicate = aBlaBFooLattice.duplicate()
         assertNotSame(aBlaFooLattice, aBlaBFooLatticeDuplicate)
-        assertNotSame(aBlaBFooLattice.elements, aBlaBFooLatticeDuplicate.elements)
+        assertNotSame(aBlaBFooLattice.value, aBlaBFooLatticeDuplicate.value)
         assertEquals(aBlaBFooLattice, aBlaBFooLatticeDuplicate)
 
         val emptyLubEmpty = emptyLattice1.lub(emptyLattice1)
-        assertIs<MapLattice<String, PowersetLatticeT<String>, IdentitySet<String>>>(emptyLubEmpty)
+        assertIs<MapLatticeElement<String, PowersetLatticeElementT<String>, IdentitySet<String>>>(
+            emptyLubEmpty
+        )
         assertNotSame(emptyLattice1, emptyLubEmpty)
         assertEquals(emptyLattice1, emptyLubEmpty)
         assertEquals(0, emptyLattice1.compareTo(emptyLubEmpty))
@@ -189,7 +195,9 @@ class BasicLatticesTest {
         assertEquals(0, emptyLattice2.compareTo(emptyLubEmpty))
 
         val emptyLubABla = emptyLattice1.lub(aBlaLattice1)
-        assertIs<MapLattice<String, PowersetLatticeT<String>, IdentitySet<String>>>(emptyLubABla)
+        assertIs<MapLatticeElement<String, PowersetLatticeElementT<String>, IdentitySet<String>>>(
+            emptyLubABla
+        )
         assertNotSame(emptyLattice1, emptyLubABla)
         assertNotEquals(emptyLattice1, emptyLubABla)
         assertEquals(-1, emptyLattice1.compareTo(emptyLubABla))
@@ -198,16 +206,18 @@ class BasicLatticesTest {
         assertEquals(0, aBlaLattice1.compareTo(emptyLubABla))
 
         val aFooBBlaLattice =
-            MapLattice<String, PowersetLatticeT<String>, IdentitySet<String>>(
+            MapLatticeElement<String, PowersetLatticeElementT<String>, IdentitySet<String>>(
                 IdentityHashMap(
                     mapOf(
-                        "a" to PowersetLattice(identitySetOf("foo")),
+                        "a" to PowersetLatticeElement(identitySetOf("foo")),
                         "b" to PowersetLatticeT(identitySetOf("bla")),
                     )
                 )
             )
         val aBlaFooBBla = aBlaFooLattice.lub(aFooBBlaLattice) // a to {"foo", "bla"}, b to {"bla"}
-        assertIs<MapLattice<String, PowersetLatticeT<String>, IdentitySet<String>>>(aBlaFooBBla)
+        assertIs<MapLatticeElement<String, PowersetLatticeElementT<String>, IdentitySet<String>>>(
+            aBlaFooBBla
+        )
         assertNotSame(emptyLattice1, aBlaFooBBla)
         assertNotEquals(emptyLattice1, aBlaFooBBla)
         assertEquals(-1, emptyLattice1.compareTo(aBlaFooBBla))
@@ -228,41 +238,41 @@ class BasicLatticesTest {
         assertNotEquals(aFooBBlaLattice, aBlaFooBBla)
         assertEquals(-1, aFooBBlaLattice.compareTo(aBlaFooBBla))
         assertEquals(1, aBlaFooBBla.compareTo(aFooBBlaLattice))
-        assertEquals(setOf("a", "b"), aBlaFooBBla.elements.keys)
-        assertEquals(identitySetOf("bla", "foo"), aBlaFooBBla.elements["a"]?.elements)
-        assertEquals(identitySetOf("bla"), aBlaFooBBla.elements["b"]?.elements)
+        assertEquals(setOf("a", "b"), aBlaFooBBla.value.keys)
+        assertEquals(identitySetOf("bla", "foo"), aBlaFooBBla.value["a"]?.value)
+        assertEquals(identitySetOf("bla"), aBlaFooBBla.value["b"]?.value)
 
         assertFalse(aBlaFooBBla == emptyLattice1) // Wrong elements
         assertTrue(emptyLattice1 == emptyLattice2) // This is equal
         assertTrue(aBlaLattice1 == aBlaLattice2) // This is equal
-        assertFalse(aBlaFooBBla == aBlaFooBBla.elements["a"]) // Wrong types
-        assertFalse(aBlaFooBBla.elements["a"] == aBlaFooBBla) // Wrong types
+        assertFalse(aBlaFooBBla == aBlaFooBBla.value["a"]) // Wrong types
+        assertFalse(aBlaFooBBla.value["a"] == aBlaFooBBla) // Wrong types
     }
 
     @Test
     fun testPairLattice() {
         val emptyEmpty =
-            TupleLattice<
-                PowersetLatticeT<String>,
-                PowersetLatticeT<String>,
+            TupleLatticeElement<
+                PowersetLatticeElementT<String>,
+                PowersetLatticeElementT<String>,
                 IdentitySet<String>,
                 IdentitySet<String>,
             >(
                 Pair(emptyPowersetLattice<String>(), emptyPowersetLattice<String>())
             )
         val emptyBla =
-            TupleLattice<
-                PowersetLatticeT<String>,
-                PowersetLatticeT<String>,
+            TupleLatticeElement<
+                PowersetLatticeElementT<String>,
+                PowersetLatticeElementT<String>,
                 IdentitySet<String>,
                 IdentitySet<String>,
             >(
                 Pair(emptyPowersetLattice<String>(), PowersetLatticeT<String>(identitySetOf("bla")))
             )
         val blaEmpty =
-            TupleLattice<
-                PowersetLatticeT<String>,
-                PowersetLatticeT<String>,
+            TupleLatticeElement<
+                PowersetLatticeElementT<String>,
+                PowersetLatticeElementT<String>,
                 IdentitySet<String>,
                 IdentitySet<String>,
             >(
@@ -274,12 +284,12 @@ class BasicLatticesTest {
         assertNotSame(emptyBla, emptyBla2)
         assertNotSame(emptyBla.hashCode(), emptyBla2.hashCode())
         val (emptyBlaFirst, emptyBlaSecond) = emptyBla
-        assertSame(emptyBlaFirst, emptyBla.elements.first)
-        assertSame(emptyBlaSecond, emptyBla.elements.second)
-        assertNotSame(emptyBlaFirst, emptyBla2.elements.first)
-        assertEquals(emptyBlaFirst, emptyBla2.elements.first)
-        assertNotSame(emptyBlaSecond, emptyBla2.elements.second)
-        assertEquals(emptyBlaSecond, emptyBla2.elements.second)
+        assertSame(emptyBlaFirst, emptyBla.value.first)
+        assertSame(emptyBlaSecond, emptyBla.value.second)
+        assertNotSame(emptyBlaFirst, emptyBla2.value.first)
+        assertEquals(emptyBlaFirst, emptyBla2.value.first)
+        assertNotSame(emptyBlaSecond, emptyBla2.value.second)
+        assertEquals(emptyBlaSecond, emptyBla2.value.second)
 
         assertEquals(-1, emptyEmpty.compareTo(emptyBla))
         assertEquals(-1, emptyEmpty.compareTo(blaEmpty))
@@ -307,10 +317,10 @@ class BasicLatticesTest {
     @Test
     fun testTripleLattice() {
         val emptyEmptyEmpty =
-            TripleLattice<
-                PowersetLatticeT<String>,
-                PowersetLatticeT<String>,
-                PowersetLatticeT<String>,
+            TripleLatticeElement<
+                PowersetLatticeElementT<String>,
+                PowersetLatticeElementT<String>,
+                PowersetLatticeElementT<String>,
                 IdentitySet<String>,
                 IdentitySet<String>,
                 IdentitySet<String>,
@@ -322,10 +332,10 @@ class BasicLatticesTest {
                 )
             )
         val emptyEmptyBla =
-            TripleLattice<
-                PowersetLatticeT<String>,
-                PowersetLatticeT<String>,
-                PowersetLatticeT<String>,
+            TripleLatticeElement<
+                PowersetLatticeElementT<String>,
+                PowersetLatticeElementT<String>,
+                PowersetLatticeElementT<String>,
                 IdentitySet<String>,
                 IdentitySet<String>,
                 IdentitySet<String>,
@@ -337,10 +347,10 @@ class BasicLatticesTest {
                 )
             )
         val emptyBlaEmpty =
-            TripleLattice<
-                PowersetLatticeT<String>,
-                PowersetLatticeT<String>,
-                PowersetLatticeT<String>,
+            TripleLatticeElement<
+                PowersetLatticeElementT<String>,
+                PowersetLatticeElementT<String>,
+                PowersetLatticeElementT<String>,
                 IdentitySet<String>,
                 IdentitySet<String>,
                 IdentitySet<String>,
@@ -352,10 +362,10 @@ class BasicLatticesTest {
                 )
             )
         val blaEmptyEmpty =
-            TripleLattice<
-                PowersetLatticeT<String>,
-                PowersetLatticeT<String>,
-                PowersetLatticeT<String>,
+            TripleLatticeElement<
+                PowersetLatticeElementT<String>,
+                PowersetLatticeElementT<String>,
+                PowersetLatticeElementT<String>,
                 IdentitySet<String>,
                 IdentitySet<String>,
                 IdentitySet<String>,
@@ -372,15 +382,15 @@ class BasicLatticesTest {
         assertNotSame(emptyEmptyBla, emptyEmptyBla2)
         assertNotSame(emptyEmptyBla.hashCode(), emptyEmptyBla2.hashCode())
         val (emptyBlaFirst, emptyBlaSecond, emptyBlaThird) = emptyEmptyBla
-        assertSame(emptyBlaFirst, emptyEmptyBla.elements.first)
-        assertSame(emptyBlaSecond, emptyEmptyBla.elements.second)
-        assertSame(emptyBlaThird, emptyEmptyBla.elements.third)
-        assertNotSame(emptyBlaFirst, emptyEmptyBla2.elements.first)
-        assertEquals(emptyBlaFirst, emptyEmptyBla2.elements.first)
-        assertNotSame(emptyBlaSecond, emptyEmptyBla2.elements.second)
-        assertEquals(emptyBlaSecond, emptyEmptyBla2.elements.second)
-        assertNotSame(emptyBlaThird, emptyEmptyBla2.elements.third)
-        assertEquals(emptyBlaThird, emptyEmptyBla2.elements.third)
+        assertSame(emptyBlaFirst, emptyEmptyBla.value.first)
+        assertSame(emptyBlaSecond, emptyEmptyBla.value.second)
+        assertSame(emptyBlaThird, emptyEmptyBla.value.third)
+        assertNotSame(emptyBlaFirst, emptyEmptyBla2.value.first)
+        assertEquals(emptyBlaFirst, emptyEmptyBla2.value.first)
+        assertNotSame(emptyBlaSecond, emptyEmptyBla2.value.second)
+        assertEquals(emptyBlaSecond, emptyEmptyBla2.value.second)
+        assertNotSame(emptyBlaThird, emptyEmptyBla2.value.third)
+        assertEquals(emptyBlaThird, emptyEmptyBla2.value.third)
 
         assertEquals(-1, emptyEmptyEmpty.compareTo(emptyEmptyBla))
         assertEquals(-1, emptyEmptyEmpty.compareTo(emptyBlaEmpty))
