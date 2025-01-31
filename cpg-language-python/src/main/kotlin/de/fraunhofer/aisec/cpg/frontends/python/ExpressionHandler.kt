@@ -106,9 +106,11 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
      */
     private fun handleGeneratorExp(node: Python.AST.GeneratorExp): CollectionComprehension {
         return newCollectionComprehension(rawNode = node).apply {
+            ctx?.scopeManager?.enterScope(this)
             statement = handle(node.elt)
             comprehensionExpressions += node.generators.map { handleComprehension(it, node) }
             type = objectType("Generator")
+            ctx?.scopeManager?.leaveScope(this)
         }
     }
 
@@ -118,9 +120,11 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
      */
     private fun handleListComprehension(node: Python.AST.ListComp): CollectionComprehension {
         return newCollectionComprehension(rawNode = node).apply {
+            ctx?.scopeManager?.enterScope(this)
             statement = handle(node.elt)
             comprehensionExpressions += node.generators.map { handleComprehension(it, node) }
-            type = objectType("list") // TODO: Replace this once we have dedicated types
+            type = objectType("list")
+            ctx?.scopeManager?.leaveScope(this)
         }
     }
 
@@ -130,9 +134,11 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
      */
     private fun handleSetComprehension(node: Python.AST.SetComp): CollectionComprehension {
         return newCollectionComprehension(rawNode = node).apply {
+            ctx?.scopeManager?.enterScope(this)
             this.statement = handle(node.elt)
             this.comprehensionExpressions += node.generators.map { handleComprehension(it, node) }
-            this.type = objectType("set") // TODO: Replace this once we have dedicated types
+            this.type = objectType("set")
+            ctx?.scopeManager?.leaveScope(this)
         }
     }
 
@@ -142,6 +148,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
      */
     private fun handleDictComprehension(node: Python.AST.DictComp): CollectionComprehension {
         return newCollectionComprehension(rawNode = node).apply {
+            ctx?.scopeManager?.enterScope(this)
             this.statement =
                 newKeyValueExpression(
                     key = handle(node.key),
@@ -149,7 +156,8 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                     rawNode = node,
                 )
             this.comprehensionExpressions += node.generators.map { handleComprehension(it, node) }
-            this.type = objectType("dict") // TODO: Replace this once we have dedicated types
+            this.type = objectType("dict")
+            ctx?.scopeManager?.leaveScope(this)
         }
     }
 
