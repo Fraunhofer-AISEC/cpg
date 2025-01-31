@@ -597,8 +597,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
             }
             is ReturnStatement -> {
                 // If this is part of a return statement, we can take the return type
-                val func =
-                    hint.firstParentOrNull { it is FunctionDeclaration } as? FunctionDeclaration
+                val func = hint.firstParentOrNull<FunctionDeclaration>()
                 val returnTypes = func?.returnTypes
 
                 return if (returnTypes != null && returnTypes.size > 1) {

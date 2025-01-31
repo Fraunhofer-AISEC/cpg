@@ -104,7 +104,7 @@ private fun Node?.toSarifMessage(): Message? {
  * current function.
  */
 private fun Node.toSarifCallStack(): List<Stack> {
-    val currentFunc = this.firstParentOrNull { it is FunctionDeclaration }
+    val currentFunc = this.firstParentOrNull<FunctionDeclaration>()
     return listOf(
         Stack(
             message = Message(text = "Stack"),
