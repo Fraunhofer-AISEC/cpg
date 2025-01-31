@@ -213,7 +213,10 @@ class MapLattice<K, V>(val innerLattice: Lattice<V>) : Lattice<Map<K, V>> {
 
     override fun compare(one: Map<K, V>, two: Map<K, V>): Order {
         return when {
-            one == two -> Order.EQUAL
+            one.keys == two.keys &&
+                one.entries.all { (k, v) ->
+                    two[k]?.let { innerLattice.compare(v, it) == Order.EQUAL } == true
+                } -> Order.EQUAL
             one.keys.containsAll(two.keys) &&
                 one.entries.all { (k, v) ->
                     two[k]?.let { otherV ->
