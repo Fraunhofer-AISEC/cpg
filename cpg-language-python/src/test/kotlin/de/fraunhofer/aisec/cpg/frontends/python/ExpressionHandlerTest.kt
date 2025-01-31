@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.LocalScope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
@@ -106,6 +107,9 @@ class ExpressionHandlerTest {
         assertNotNull(result)
         val listComp = result.functions["listComp"]
         assertNotNull(listComp)
+        val paramX = listComp.parameters[0]
+        assertIs<ParameterDeclaration>(paramX)
+        assertLocalName("x", paramX)
 
         val body = listComp.body
         assertIs<Block>(body)
@@ -124,8 +128,10 @@ class ExpressionHandlerTest {
         val declI = variableI.refersTo
         assertIs<VariableDeclaration>(declI)
         assertEquals(singleWithIf, declI.scope?.astNode)
-        assertIs<Reference>(singleWithIf.comprehensionExpressions[0].iterable)
-        assertLocalName("x", singleWithIf.comprehensionExpressions[0].iterable)
+        val iterableX = singleWithIf.comprehensionExpressions[0].iterable
+        assertIs<Reference>(iterableX)
+        assertLocalName("x", iterableX)
+        assertRefersTo(iterableX, paramX)
         val ifPredicate = singleWithIf.comprehensionExpressions[0].predicate
         assertIs<BinaryOperator>(ifPredicate)
         assertEquals("==", ifPredicate.operatorCode)
