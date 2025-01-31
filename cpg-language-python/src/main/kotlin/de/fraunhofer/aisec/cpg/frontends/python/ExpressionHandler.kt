@@ -100,18 +100,6 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     }
 
     /**
-     * Works similar to [apply] but before executing [block], it enters the scope for this object
-     * and afterward leaves the scope again.
-     */
-    private inline fun <T : Node> T.applyWithScope(block: T.() -> Unit): T {
-        return this.apply {
-            ctx?.scopeManager?.enterScope(this)
-            block()
-            ctx?.scopeManager?.leaveScope(this)
-        }
-    }
-
-    /**
      * Translates a Python
      * [`GeneratorExp`](https://docs.python.org/3/library/ast.html#ast.GeneratorExp) into a
      * [CollectionComprehension].
