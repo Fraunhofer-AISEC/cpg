@@ -199,23 +199,16 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
      * Generates a new [VariableDeclaration] for [Reference] (and those included in a
      * [InitializerListExpression]) in the [ComprehensionExpression.variable].
      */
-    private fun handleComprehensionExpression(
-        comprehensionExpression: ComprehensionExpression,
-        setAccessValue: Boolean = false,
-    ) {
+    private fun handleComprehensionExpression(comprehensionExpression: ComprehensionExpression) {
         when (val variable = comprehensionExpression.variable) {
             is Reference -> {
-                if (setAccessValue) {
-                    variable.access = AccessValues.WRITE
-                }
+                variable.access = AccessValues.WRITE
                 handleWriteToReference(variable)
             }
             is InitializerListExpression -> {
                 variable.initializers.forEach {
                     (it as? Reference)?.let { ref ->
-                        if (setAccessValue) {
-                            ref.access = AccessValues.WRITE
-                        }
+                        ref.access = AccessValues.WRITE
                         handleWriteToReference(ref)
                     }
                 }
