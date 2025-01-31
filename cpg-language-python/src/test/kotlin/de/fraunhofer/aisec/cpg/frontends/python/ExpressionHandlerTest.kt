@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.scopes.LocalScope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
@@ -81,8 +82,18 @@ class ExpressionHandlerTest {
         val variableV = initializerListExpression.initializers[1]
         assertIs<Reference>(variableV)
         assertLocalName("v", variableV)
-        assertEquals(setOf<Node>(argK), variableK.nextDFG.toSet())
-        assertEquals(setOf<Node>(argV), variableV.nextDFG.toSet())
+
+        // Check that the declarations exist for the variables k and v
+        val declK = variableK.refersTo
+        assertIs<VariableDeclaration>(declK)
+        assertIs<LocalScope>(declK.scope)
+        assertEquals(tupleAsVariable, declK.scope?.astNode)
+        assertRefersTo(argK, declK)
+        val declV = variableV.refersTo
+        assertIs<VariableDeclaration>(declV)
+        assertIs<LocalScope>(declV.scope)
+        assertEquals(tupleAsVariable, declV.scope?.astNode)
+        assertRefersTo(argV, declV)
     }
 
     @Test
