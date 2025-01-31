@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.passes.ImportDependencies
 import de.fraunhofer.aisec.cpg.passes.ImportResolver
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
+import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.io.File
 import org.neo4j.ogm.annotation.Relationship
 import org.neo4j.ogm.annotation.Transient
@@ -52,9 +53,13 @@ open class Component : Node() {
     /** All translation units belonging to this application. */
     val translationUnits by unwrapping(Component::translationUnitEdges)
 
+    /**
+     * The import dependencies of [TranslationUnitDeclaration] nodes of this component. The
+     * preferred way to access this is via [Strategy.TRANSLATION_UNITS_LEAST_IMPORTS].
+     */
     @Transient
     @PopulatedByPass(ImportResolver::class)
-    var importDependencies = ImportDependencies(translationUnits)
+    var translationUnitDependencies: ImportDependencies<TranslationUnitDeclaration>? = null
 
     @Synchronized
     fun addTranslationUnit(tu: TranslationUnitDeclaration) {
