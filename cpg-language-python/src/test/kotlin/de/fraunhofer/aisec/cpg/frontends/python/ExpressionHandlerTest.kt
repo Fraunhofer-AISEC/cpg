@@ -56,7 +56,7 @@ class ExpressionHandlerTest {
             }
         assertNotNull(result)
 
-        val tupleComp = result.functions["tupleComp"]
+        val tupleComp = result.functions["tuple_comp"]
         assertNotNull(tupleComp)
 
         val body = tupleComp.body
@@ -105,7 +105,7 @@ class ExpressionHandlerTest {
                 it.registerLanguage<PythonLanguage>()
             }
         assertNotNull(result)
-        val listComp = result.functions["listComp"]
+        val listComp = result.functions["list_comp"]
         assertNotNull(listComp)
         val paramX = listComp.parameters[0]
         assertIs<ParameterDeclaration>(paramX)
@@ -185,7 +185,7 @@ class ExpressionHandlerTest {
                 it.registerLanguage<PythonLanguage>()
             }
         assertNotNull(result)
-        val listComp = result.functions["setComp"]
+        val listComp = result.functions["set_comp"]
         assertNotNull(listComp)
 
         val body = listComp.body as? Block
@@ -243,7 +243,7 @@ class ExpressionHandlerTest {
                 it.registerLanguage<PythonLanguage>()
             }
         assertNotNull(result)
-        val listComp = result.functions["dictComp"]
+        val listComp = result.functions["dict_comp"]
         assertNotNull(listComp)
 
         val body = listComp.body as? Block
