@@ -1067,13 +1067,15 @@ val Node?.assigns: List<AssignExpression>
  *
  * @param predicate the search predicate
  */
-fun Node.firstParentOrNull(predicate: (Node) -> Boolean): Node? {
+inline fun <reified T : Node> Node.firstParentOrNull(
+    noinline predicate: ((T) -> Boolean)? = null
+): T? {
 
     // start at searchNodes parent
-    var node: Node? = this.astParent
+    var node = this.astParent
 
     while (node != null) {
-        if (predicate(node)) {
+        if (node is T && (predicate == null || predicate(node))) {
             return node
         }
 
@@ -1272,7 +1274,7 @@ fun Expression?.unwrapReference(): Reference? {
 /** Returns the [TranslationUnitDeclaration] where this node is located in. */
 val Node.translationUnit: TranslationUnitDeclaration?
     get() {
-        return firstParentOrNull { it is TranslationUnitDeclaration } as? TranslationUnitDeclaration
+        return firstParentOrNull<TranslationUnitDeclaration>()
     }
 
 /**
