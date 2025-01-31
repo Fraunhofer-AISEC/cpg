@@ -66,8 +66,7 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
     private val tokenTypeIndex = 0
     private val jep = JepSingleton // configure Jep
 
-    // val declarationHandler = DeclarationHandler(this)
-    // val specificationHandler = SpecificationHandler(this)
+    internal val declarationHandler = DeclarationHandler(this)
     internal var statementHandler = StatementHandler(this)
     internal var expressionHandler = ExpressionHandler(this)
 
@@ -313,7 +312,11 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
 
         if (lastNamespace != null) {
             for (stmt in pythonASTModule.body) {
-                lastNamespace.statements += statementHandler.handle(stmt)
+                if (stmt is Python.AST.FunctionDef || stmt is Python.AST.AsyncFunctionDef) {
+                    declarationHandler.handleNode(stmt)
+                } else {
+                    lastNamespace.statements += statementHandler.handle(stmt)
+                }
             }
         }
 

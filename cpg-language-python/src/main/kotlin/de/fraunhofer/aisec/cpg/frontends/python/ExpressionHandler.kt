@@ -568,7 +568,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         val function = newFunctionDeclaration(name = "", rawNode = node)
         frontend.scopeManager.enterScope(function)
         for (arg in node.args.args) {
-            this.frontend.statementHandler.handleArgument(arg)
+            this.frontend.declarationHandler.handleArgument(arg)
         }
         function.body = handle(node.body)
         frontend.scopeManager.leaveScope(function)

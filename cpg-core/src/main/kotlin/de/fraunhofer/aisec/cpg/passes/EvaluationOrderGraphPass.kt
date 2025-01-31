@@ -344,7 +344,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
      * e.g. [LoopStatement]s or [BreakStatement].
      */
     protected fun handleEOG(node: Node?) {
-        if (node == null || alreadySeen.contains(node)) {
+        if (node == null) {
             return
         }
 
@@ -543,8 +543,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             } else if (declaration is FunctionDeclaration) {
                 // save the current EOG stack, because we can have a function declaration within an
                 // existing function and the EOG handler for handling function declarations will
-                // reset the
-                // stack
+                // reset the stack
                 val oldEOG = currentPredecessors.toMutableList()
 
                 // analyze the defaults
