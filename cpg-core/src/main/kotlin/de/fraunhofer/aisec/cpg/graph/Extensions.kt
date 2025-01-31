@@ -818,7 +818,7 @@ fun Node.followNextEOGEdgesUntilHit(
                 // We follow the invokes edges and push the call expression on the call stack, so we
                 // can jump back here after processing the function.
                 ctx.callStack.push(currentNode)
-                currentNode.invokes.flatMap { it.eogStarters }
+                currentNode.invokes
             } else if (
                 interproceduralAnalysis &&
                     (currentNode is ReturnStatement || currentNode.nextEOG.isEmpty())
@@ -842,10 +842,10 @@ fun Node.followNextEOGEdgesUntilHit(
 }
 
 /**
- * Returns the a [Collection] of last nodes in the EOG of this [FunctionDeclaration]. If there's no
+ * Returns a [Collection] of last nodes in the EOG of this [FunctionDeclaration]. If there's no
  * body, it will return a list of this function declaration.
  */
-val FunctionDeclaration.lastEOGNode: Collection<Node>
+val FunctionDeclaration.lastEOGNodes: Collection<Node>
     get() {
         val lastEOG = collectAllNextEOGPaths(false).flatMap { it.last().prevEOGEdges }
         return if (lastEOG.isEmpty()) {
@@ -899,7 +899,7 @@ fun Node.followPrevEOGEdgesUntilHit(
                     // nodes in the functions which are invoked and continue there.
                     ctx.callStack.push(currentNode)
 
-                    currentNode.invokes.flatMap { it.lastEOGNode }
+                    currentNode.invokes.flatMap { it.lastEOGNodes }
                 }
                 else -> {
                     currentNode.reachablePrevEOG
