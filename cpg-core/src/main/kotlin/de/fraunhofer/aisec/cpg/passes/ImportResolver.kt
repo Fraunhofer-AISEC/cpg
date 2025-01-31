@@ -38,12 +38,16 @@ import de.fraunhofer.aisec.cpg.graph.namespaces
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.translationUnit
+import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation
+import de.fraunhofer.aisec.cpg.helpers.identitySetOf
+import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import de.fraunhofer.aisec.cpg.passes.Pass.Companion.log
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy.COMPONENTS_LEAST_IMPORTS
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy.TRANSLATION_UNITS_LEAST_IMPORTS
+import java.util.IdentityHashMap
 
 /**
  * This class holds the information about import dependencies between nodes that represent some kind
@@ -53,12 +57,12 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy.TRANSLATION_UNITS_LE
  * symbols and imports ideally. This is stored in [sorted] and is automatically computed the fist
  * time someone accesses the property.
  */
-class ImportDependencies<T : Node>(modules: MutableList<T>) : HashMap<T, MutableSet<T>>() {
+class ImportDependencies<T : Node>(modules: MutableList<T>) : IdentityHashMap<T, IdentitySet<T>>() {
 
     init {
         // Populate the map with all modules so that we have an entry in our list
         // for all
-        this += modules.map { Pair(it, mutableSetOf()) }
+        this += modules.map { Pair(it, identitySetOf()) }
     }
 
     /**
@@ -70,7 +74,7 @@ class ImportDependencies<T : Node>(modules: MutableList<T>) : HashMap<T, Mutable
 
     /** Adds a dependency from [importer] to [imported]. */
     fun add(importer: T, imported: T): Boolean {
-        var list = this.computeIfAbsent(importer) { mutableSetOf<T>() }
+        var list = this.computeIfAbsent(importer) { identitySetOf<T>() }
         var added = list.add(imported)
 
         return added
@@ -80,11 +84,11 @@ class ImportDependencies<T : Node>(modules: MutableList<T>) : HashMap<T, Mutable
      * A work-list, which contains a local copy of our dependency map, so that we can remove items
      * from it while determining the order.
      */
-    class WorkList<T : Node>(start: ImportDependencies<T>) : HashMap<T, MutableSet<T>>() {
+    class WorkList<T : Node>(start: ImportDependencies<T>) : IdentityHashMap<T, IdentitySet<T>>() {
 
         init {
             // Populate the work-list with a copy of the import dependency map
-            this += start.map { Pair(it.key, it.value.toMutableSet()) }
+            this += start.map { Pair(it.key, it.value.toIdentitySet()) }
         }
 
         /**
