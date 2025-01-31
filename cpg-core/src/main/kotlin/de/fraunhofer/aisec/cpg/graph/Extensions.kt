@@ -1363,7 +1363,7 @@ val Node.translationUnit: TranslationUnitDeclaration?
 /** Returns the [Component] where this node is located in. */
 val Node.component: Component?
     get() {
-        return firstParentOrNull { it is Component } as? Component
+        return firstParentOrNull<Component>()
     }
 
 /**
