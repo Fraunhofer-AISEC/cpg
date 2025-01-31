@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.edges.flows.IndexedDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
@@ -78,6 +79,20 @@ class ExpressionHandlerTest {
         val variableV = initializerListExpression.initializers[1]
         assertIs<Reference>(variableV)
         assertLocalName("v", variableV)
+
+        // Check that the ILE flows to the variables with the indexed granularity
+        assertContains(initializerListExpression.nextDFG, variableK)
+        val granularityTupleToK =
+            initializerListExpression.nextDFGEdges.single { it.end == variableK }.granularity
+        assertIs<IndexedDataflowGranularity>(granularityTupleToK)
+        assertEquals(0, granularityTupleToK.index)
+        assertContains(initializerListExpression.nextDFG, variableV)
+        val granularityTupleToV =
+            initializerListExpression.nextDFGEdges.single { it.end == variableV }.granularity
+        assertIs<IndexedDataflowGranularity>(granularityTupleToV)
+        assertEquals(1, granularityTupleToV.index)
+
+        // Check that the variables flow to their usages
         assertEquals(setOf<Node>(argK), variableK.nextDFG.toSet())
         assertEquals(setOf<Node>(argV), variableV.nextDFG.toSet())
     }
