@@ -1062,18 +1062,22 @@ val Node?.assigns: List<AssignExpression>
     get() = this.allChildren()
 
 /**
- * This function tries to find the first parent node that satisfies the condition specified in
- * [predicate]. It starts searching in [this], moving upwards using the [Node.astParent] attribute.
+ * This function tries to find the first parent node of type [T] that satisfies the optional
+ * condition specified in [predicate]. If [predicate] is `null`, the first AST parent node of type
+ * [T] is returned. It starts searching in [this], moving upwards using the [Node.astParent]
+ * attribute.
  *
- * @param predicate the search predicate
+ * @param predicate the optional search predicate
  */
-fun Node.firstParentOrNull(predicate: (Node) -> Boolean): Node? {
+inline fun <reified T : Node> Node.firstParentOrNull(
+    noinline predicate: ((T) -> Boolean)? = null
+): T? {
 
     // start at searchNodes parent
-    var node: Node? = this.astParent
+    var node = this.astParent
 
     while (node != null) {
-        if (predicate(node)) {
+        if (node is T && (predicate == null || predicate(node))) {
             return node
         }
 
@@ -1085,15 +1089,20 @@ fun Node.firstParentOrNull(predicate: (Node) -> Boolean): Node? {
 }
 
 /**
- * This function returns the first parent scope that matches the given [predicate]. If no parent
- * scope matches the predicate, null is returned.
+ * This function tries to find the first parent scope of type [T] that satisfies the optional
+ * condition specified in [predicate]. If [predicate] is `null`, the first parent scope of type [T]
+ * is returned. It starts searching in [this], moving upwards using the [Scope.parent] attribute.
  *
- * @param predicate The predicate to match the parent scope against
+ * If no parent scope matches the predicate, null is returned.
+ *
+ * @param predicate The predicate optional to match the parent scope against
  */
-fun Scope.firstScopeParentOrNull(predicate: (Scope) -> Boolean): Scope? {
+inline fun <reified T : Scope> Scope.firstScopeParentOrNull(
+    noinline predicate: ((T) -> Boolean)? = null
+): T? {
     var scope = this.parent
     while (scope != null) {
-        if (predicate(scope)) {
+        if (scope is T && (predicate == null || predicate(scope))) {
             return scope
         }
 
@@ -1272,7 +1281,7 @@ fun Expression?.unwrapReference(): Reference? {
 /** Returns the [TranslationUnitDeclaration] where this node is located in. */
 val Node.translationUnit: TranslationUnitDeclaration?
     get() {
-        return firstParentOrNull { it is TranslationUnitDeclaration } as? TranslationUnitDeclaration
+        return firstParentOrNull<TranslationUnitDeclaration>()
     }
 
 /**

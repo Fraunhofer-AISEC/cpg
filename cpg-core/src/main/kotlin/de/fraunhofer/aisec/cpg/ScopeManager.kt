@@ -93,9 +93,7 @@ class ScopeManager : ScopeProvider {
 
     /** The current block, according to the scope that is currently active. */
     val currentBlock: Block?
-        get() =
-            currentScope?.astNode as? Block
-                ?: currentScope?.astNode?.firstParentOrNull { it is Block } as? Block
+        get() = currentScope?.astNode as? Block ?: currentScope?.astNode?.firstParentOrNull<Block>()
 
     /**
      * The current method in the active scope tree, this ensures that 'this' keywords are mapped
