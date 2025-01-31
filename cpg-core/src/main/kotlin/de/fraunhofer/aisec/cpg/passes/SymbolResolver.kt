@@ -126,10 +126,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         ctx.currentComponent = component
         walker = ScopedWalker(scopeManager)
 
-        walker.registerHandler(::findTemplates)
-        for (tu in component.translationUnits) {
-            walker.iterate(tu)
-        }
+        cacheTemplates(component)
 
         walker.strategy =
             if (passConfig?.skipUnreachableEOG == true) {
@@ -159,10 +156,15 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         templateList.clear()
     }
 
-    /** Caches all TemplateDeclarations in [templateList] */
-    private fun findTemplates(node: Node?) {
-        if (node is TemplateDeclaration) {
-            templateList.add(node)
+    /** This function caches all [TemplateDeclaration]s into [templateList]. */
+    private fun cacheTemplates(component: Component) {
+        walker.registerHandler { node ->
+            if (node is TemplateDeclaration) {
+                templateList.add(node)
+            }
+        }
+        for (tu in component.translationUnits) {
+            walker.iterate(tu)
         }
     }
 
@@ -317,7 +319,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             language is HasSuperClasses &&
                 curClass != null &&
                 base is Reference &&
-                base.name.endsWith(language.superClassKeyword)
+                base.name.localName == language.superClassKeyword
         ) {
             language.handleSuperExpression(current, curClass, scopeManager)
         }
@@ -437,7 +439,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         // not resolving them here.
         //
         // We have a dynamic invoke in two cases:
-        // a) our calleee is not a reference
+        // a) our callee is not a reference
         // b) our reference already refers to a variable rather than a function
         if (
             callee !is Reference ||
