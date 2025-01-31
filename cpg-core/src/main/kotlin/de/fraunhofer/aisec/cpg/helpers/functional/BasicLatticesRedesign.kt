@@ -328,19 +328,19 @@ class TripleLattice<R, S, T>(
             result1 == Order.EQUAL && result2 == Order.EQUAL && result3 == Order.GREATER ->
                 Order.GREATER
             result1 == Order.LESSER && result2 == Order.LESSER && result3 == Order.LESSER ->
-                Order.GREATER
+                Order.LESSER
             result1 == Order.LESSER && result2 == Order.LESSER && result3 == Order.EQUAL ->
-                Order.GREATER
+                Order.LESSER
             result1 == Order.LESSER && result2 == Order.EQUAL && result3 == Order.LESSER ->
-                Order.GREATER
+                Order.LESSER
             result1 == Order.LESSER && result2 == Order.EQUAL && result3 == Order.EQUAL ->
-                Order.GREATER
+                Order.LESSER
             result1 == Order.EQUAL && result2 == Order.LESSER && result3 == Order.LESSER ->
-                Order.GREATER
+                Order.LESSER
             result1 == Order.EQUAL && result2 == Order.LESSER && result3 == Order.EQUAL ->
-                Order.GREATER
+                Order.LESSER
             result1 == Order.EQUAL && result2 == Order.EQUAL && result3 == Order.LESSER ->
-                Order.GREATER
+                Order.LESSER
             else -> Order.UNEQUAL
         }
     }
