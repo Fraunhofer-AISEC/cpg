@@ -25,22 +25,32 @@
  */
 package de.fraunhofer.aisec.codyze.compliance
 
-import com.github.ajalt.clikt.testing.test
+import de.fraunhofer.aisec.codyze.AnalysisProject
+import de.fraunhofer.aisec.cpg.graph.*
+import kotlin.io.path.Path
+import kotlin.io.path.createTempFile
 import kotlin.test.Test
-import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
-class CommandIntegrationTest {
+class SarifTest {
     @Test
-    fun testScanCommand() {
-        val command = ScanCommand()
-        val result =
-            command.test(
-                "--project-dir src/integrationTest/resources/demo-app --components webapp --components auth"
+    fun testSarifFindings() {
+        val project =
+            AnalysisProject.from(
+                projectDir = Path("src/integrationTest/resources/demo-app"),
+                components = listOf("webapp"),
             )
-        assertEquals(
-            "Message(arguments=null, id=null, markdown=null, properties=null, text=Query was successful)\n" +
-                "Message(arguments=null, id=null, markdown=null, properties=null, text=Query was successful)\n",
-            result.output,
-        )
+
+        val result = project.analyzeWithGoals()
+        val tr = result.translationResult
+        val webappMain = tr.namespaces["webapp.main"]
+        assertNotNull(webappMain)
+
+        val tmpFile = createTempFile(prefix = "findings", suffix = ".sarif").toFile()
+        result.writeSarifJson(tmpFile)
+
+        assertTrue(tmpFile.length() > 0)
+        tmpFile.delete()
     }
 }

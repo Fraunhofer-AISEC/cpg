@@ -27,6 +27,8 @@ package de.fraunhofer.aisec.codyze
 
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
+import de.fraunhofer.aisec.cpg.query.QueryTree
+import io.github.detekt.sarif4k.Result
 import java.io.File
 import kotlin.reflect.full.functions
 import kotlin.script.experimental.api.*
@@ -34,6 +36,8 @@ import kotlin.script.experimental.host.toScriptSource
 import kotlin.script.experimental.jvmhost.BasicJvmScriptingHost
 import kotlin.script.experimental.jvmhost.createJvmCompilationConfigurationFromTemplate
 import kotlin.script.experimental.jvmhost.createJvmEvaluationConfigurationFromTemplate
+
+data class QueryResult(val tree: QueryTree<Boolean>, val sarif: List<Result>)
 
 /**
  * Evaluates a query script with the given query function name on the [TranslationResult]. It uses
@@ -44,7 +48,7 @@ import kotlin.script.experimental.jvmhost.createJvmEvaluationConfigurationFromTe
  * @param queryFunc The name of the query function to call
  * @return The result of the query function
  */
-fun TranslationResult.evalQuery(scriptFile: File, queryFunc: String): Any? {
+fun TranslationResult.evalQuery(scriptFile: File, queryFunc: String, ruleID: String): QueryResult {
     var b = Benchmark(TranslationResult::class.java, "Compiling query script $scriptFile")
     val compilationConfiguration = createJvmCompilationConfigurationFromTemplate<QueryScript>()
     val evaluationConfiguration = createJvmEvaluationConfigurationFromTemplate<QueryScript>()
@@ -59,10 +63,21 @@ fun TranslationResult.evalQuery(scriptFile: File, queryFunc: String): Any? {
     if (func == null) {
         throw IllegalArgumentException("Query function $queryFunc not found in script")
     }
+
+    // Check, if the return type is correct
+    if (
+        func.returnType.classifier != QueryTree::class ||
+            func.returnType.arguments.firstOrNull()?.type?.classifier != Boolean::class
+    ) {
+        throw IllegalArgumentException("Query function $queryFunc must return a QueryTree<Boolean>")
+    }
     b.stop()
 
     b = Benchmark(TranslationResult::class.java, "Executing query function $queryFunc")
-    val ret = func.call(value.returnValue.scriptInstance, this)
+    @Suppress("UNCHECKED_CAST")
+    val ret = func.call(value.returnValue.scriptInstance, this) as QueryTree<Boolean>
+    val res = QueryResult(ret, ret.toSarif(ruleID))
     b.stop()
-    return ret
+
+    return res
 }
