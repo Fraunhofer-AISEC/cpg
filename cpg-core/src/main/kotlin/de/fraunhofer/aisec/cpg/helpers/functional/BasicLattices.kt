@@ -35,7 +35,7 @@ import kotlin.collections.component2
 import kotlin.collections.toMap
 
 /**
- * A complete lattice is an ordered structure of values of type [T]. [T] could be anything, where
+ * A lattice is a partially ordered structure of values of type [T]. [T] could be anything, where
  * common examples are sets, ranges, maps, tuples, but it can also have random names and a new data
  * structure which only make sense in a certain context. [T] depends on the analysis and typically
  * has to abstract the value for the specific purpose.
