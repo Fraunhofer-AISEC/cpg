@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.helpers.functional
 
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
+import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import java.util.IdentityHashMap
 import kotlin.collections.component1
@@ -58,6 +59,10 @@ enum class Order {
  * non-trivial examples.
  */
 interface Lattice<T> {
+
+    /** The smallest possible element in the lattice */
+    val bottom: T
+
     /** Computes the least upper bound (join) of [one] and [two] */
     fun lub(one: T, two: T): T
 
@@ -131,6 +136,9 @@ interface Lattice<T> {
 
 /** Implements a [Lattice] whose elements are the powerset of a given set of values. */
 class PowersetLattice<T>() : Lattice<Set<T>> {
+    override val bottom: Set<T>
+        get() = identitySetOf()
+
     override fun lub(one: Set<T>, two: Set<T>): Set<T> {
         return when (compare(one, two)) {
             Order.GREATER -> duplicate(one)
@@ -167,6 +175,9 @@ class PowersetLattice<T>() : Lattice<Set<T>> {
  * by [innerLattice].
  */
 class MapLattice<K, V>(val innerLattice: Lattice<V>) : Lattice<Map<K, V>> {
+    override val bottom: Map<K, V>
+        get() = IdentityHashMap()
+
     override fun lub(one: Map<K, V>, two: Map<K, V>): Map<K, V> {
         val allKeys = one.keys.toIdentitySet()
         allKeys += two.keys
@@ -234,6 +245,9 @@ class MapLattice<K, V>(val innerLattice: Lattice<V>) : Lattice<Map<K, V>> {
  */
 class TupleLattice<S, T>(val innerLattice1: Lattice<S>, val innerLattice2: Lattice<T>) :
     Lattice<Pair<S, T>> {
+    override val bottom: Pair<S, T>
+        get() = Pair(innerLattice1.bottom, innerLattice2.bottom)
+
     override fun lub(one: Pair<S, T>, two: Pair<S, T>): Pair<S, T> {
         val result1 = innerLattice1.lub(one.first, two.first)
         val result2 = innerLattice2.lub(one.second, two.second)
@@ -275,6 +289,9 @@ class TripleLattice<R, S, T>(
     val innerLattice2: Lattice<S>,
     val innerLattice3: Lattice<T>,
 ) : Lattice<Triple<R, S, T>> {
+    override val bottom: Triple<R, S, T>
+        get() = Triple(innerLattice1.bottom, innerLattice2.bottom, innerLattice3.bottom)
+
     override fun lub(one: Triple<R, S, T>, two: Triple<R, S, T>): Triple<R, S, T> {
         val result1 = innerLattice1.lub(one.first, two.first)
         val result2 = innerLattice2.lub(one.second, two.second)
