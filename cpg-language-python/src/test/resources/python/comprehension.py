@@ -6,6 +6,7 @@ def listComp(x, y):
     b = [foo(i) for i in x]
     c = {foo(i) for i in x if i == 10 if i < 20}
     d = [foo(i) for z in y if z in x for i in z if i == 10 ]
+    foo(i)
 
 def setComp(x, y):
     a = {foo(i) for i in x if i == 10}

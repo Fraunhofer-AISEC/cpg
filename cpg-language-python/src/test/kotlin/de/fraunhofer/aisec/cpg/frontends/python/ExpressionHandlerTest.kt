@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
@@ -36,6 +37,8 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.test.analyze
 import de.fraunhofer.aisec.cpg.test.assertLiteralValue
 import de.fraunhofer.aisec.cpg.test.assertLocalName
+import de.fraunhofer.aisec.cpg.test.assertNotRefersTo
+import de.fraunhofer.aisec.cpg.test.assertRefersTo
 import java.nio.file.Path
 import kotlin.test.*
 
@@ -57,14 +60,30 @@ class ExpressionHandlerTest {
         assertIs<AssignExpression>(singleWithIfAssignment)
         val singleWithIf = singleWithIfAssignment.rhs[0]
         assertIs<CollectionComprehension>(singleWithIf)
-        assertIs<CallExpression>(singleWithIf.statement)
+        val fooCall = singleWithIf.statement
+        assertIs<CallExpression>(fooCall)
+        val usageI = fooCall.arguments[0]
+        assertIs<Reference>(usageI)
         assertEquals(1, singleWithIf.comprehensionExpressions.size)
-        assertLocalName("i", singleWithIf.comprehensionExpressions[0].variable)
+        val variableI = singleWithIf.comprehensionExpressions[0].variable
+        assertIs<Reference>(variableI)
+        assertLocalName("i", variableI)
+        val declI = variableI.refersTo
+        assertIs<VariableDeclaration>(declI)
+        assertEquals(singleWithIf, declI.scope?.astNode)
         assertIs<Reference>(singleWithIf.comprehensionExpressions[0].iterable)
         assertLocalName("x", singleWithIf.comprehensionExpressions[0].iterable)
         val ifPredicate = singleWithIf.comprehensionExpressions[0].predicate
         assertIs<BinaryOperator>(ifPredicate)
         assertEquals("==", ifPredicate.operatorCode)
+        assertRefersTo(usageI, declI)
+
+        val fooIOutside = body.statements[4]
+        assertIs<CallExpression>(fooIOutside)
+        val outsideI = fooIOutside.arguments[0]
+        assertIs<Reference>(outsideI)
+        assertLocalName("i", outsideI)
+        assertNotRefersTo(outsideI, declI)
 
         val singleWithoutIfAssignment = body.statements[1]
         assertIs<AssignExpression>(singleWithoutIfAssignment)
