@@ -37,6 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ComprehensionExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
@@ -67,15 +68,15 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
     }
 
     /**
-     * This function checks for each [AssignExpression] whether there is already a matching variable
-     * or not. New variables can be one of:
+     * This function checks for each [AssignExpression], [ComprehensionExpression] and
+     * [ForEachStatement] whether there is already a matching variable or not. New variables can be
+     * one of:
      * - [FieldDeclaration] if we are currently in a record
      * - [VariableDeclaration] otherwise
-     *
-     * TODO: loops
      */
     private fun handle(node: Node?) {
         when (node) {
+            is ComprehensionExpression -> handleComprehensionExpression(node)
             is AssignExpression -> handleAssignExpression(node)
             is ForEachStatement -> handleForEach(node)
             else -> {
@@ -193,6 +194,34 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
             return this is MemberExpression &&
                 this.base.name == scopeManager.currentMethod?.receiver?.name
         }
+
+    /**
+     * Generates a new [VariableDeclaration] for [Reference] (and those included in a
+     * [InitializerListExpression]) in the [ComprehensionExpression.variable].
+     */
+    private fun handleComprehensionExpression(
+        comprehensionExpression: ComprehensionExpression,
+        setAccessValue: Boolean = false,
+    ) {
+        when (val variable = comprehensionExpression.variable) {
+            is Reference -> {
+                if (setAccessValue) {
+                    variable.access = AccessValues.WRITE
+                }
+                handleWriteToReference(variable)
+            }
+            is InitializerListExpression -> {
+                variable.initializers.forEach {
+                    (it as? Reference)?.let { ref ->
+                        if (setAccessValue) {
+                            ref.access = AccessValues.WRITE
+                        }
+                        handleWriteToReference(ref)
+                    }
+                }
+            }
+        }
+    }
 
     /**
      * Generates a new [VariableDeclaration] if [target] is a [Reference] and there is no existing
