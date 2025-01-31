@@ -1,3 +1,6 @@
+import groovy.util.Node
+import groovy.util.NodeList
+
 /*
  * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
  *
@@ -29,7 +32,7 @@ plugins {
 }
 
 application {
-    mainClass.set("de.fraunhofer.aisec.cpg.codyze.ApplicationKt")
+    mainClass.set("de.fraunhofer.aisec.codyze.ApplicationKt")
 }
 
 publishing {
@@ -39,12 +42,23 @@ publishing {
                 artifactId = "codyze"
                 name.set("Codyze")
                 description.set("The one-stop shop to the code property graph")
+                withXml {
+                    // Modify the XML to exclude dependencies that start with "cpg-language-".
+                    // This is necessary because we do not want to "leak" the dependency to our dynamically activated
+                    // frontends to the outside
+                    val dependenciesNode = asNode().children().filterIsInstance<Node>().firstOrNull { it.name().toString() == "{http://maven.apache.org/POM/4.0.0}dependencies" }
+                    dependenciesNode?.children()?.removeIf {
+                        it is Node &&
+                                (it.name().toString() == "{http://maven.apache.org/POM/4.0.0}dependency") &&
+                                ((it.get("artifactId") as? NodeList)?.text()?.startsWith("cpg-language-") == true)
+                    }
+                }
             }
         }
     }
 }
 
 dependencies {
+    implementation(projects.codyzeCompliance)
     implementation(libs.clikt)
-    implementation(project(":codyze-compliance"))
 }

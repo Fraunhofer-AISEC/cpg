@@ -154,7 +154,7 @@ fun MetadataProvider.newParameterDeclaration(
     rawNode: Any? = null,
 ): ParameterDeclaration {
     val node = ParameterDeclaration()
-    node.applyMetadata(this, name, rawNode, localNameOnly = true)
+    node.applyMetadata(this, name, rawNode, doNotPrependNamespace = true)
 
     node.type = type
     node.isVariadic = variadic

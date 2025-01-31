@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.query
 
 import de.fraunhofer.aisec.cpg.analysis.compareTo
+import de.fraunhofer.aisec.cpg.graph.Node
 
 /**
  * Holds the [value] to which the statements have been evaluated. The [children] define previous
@@ -59,6 +60,13 @@ open class QueryTree<T>(
     open var value: T,
     open val children: MutableList<QueryTree<*>> = mutableListOf(),
     open var stringRepresentation: String = "",
+
+    /**
+     * The node, to which this current element of the query tree is associated with. This is useful
+     * to access detailed information about the node that is otherwise only contained in string form
+     * in [stringRepresentation].
+     */
+    open var node: Node? = null,
 ) : Comparable<QueryTree<T>> {
     fun printNicely(depth: Int = 0): String {
         var res =
@@ -75,6 +83,10 @@ open class QueryTree<T>(
         return res
     }
 
+    override fun toString(): String {
+        return stringRepresentation
+    }
+
     /** Checks for equality of two [QueryTree]s. */
     infix fun eq(other: QueryTree<T>): QueryTree<Boolean> {
         val result = this.value == other.value
@@ -87,7 +99,12 @@ open class QueryTree<T>(
      */
     infix fun eq(other: T): QueryTree<Boolean> {
         val result = this.value == other
-        return QueryTree(result, mutableListOf(this, QueryTree(other)), "${this.value} == $value")
+        return QueryTree(
+            result,
+            mutableListOf(this, QueryTree(other)),
+            "${this.value} == $value",
+            this.node,
+        )
     }
 
     /** Checks for inequality of two [QueryTree]s. */

@@ -29,9 +29,13 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
+import de.fraunhofer.aisec.cpg.graph.edges.flows.Invoke
+import de.fraunhofer.aisec.cpg.graph.edges.flows.Invokes
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.graph.edges.unwrappingIncoming
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
@@ -59,6 +63,20 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder, EOGStart
 
     @Relationship(value = "OVERRIDES", direction = Relationship.Direction.OUTGOING)
     val overrides = mutableListOf<FunctionDeclaration>()
+
+    /**
+     * The mirror property for [CallExpression.invokeEdges]. This holds all incoming [Invokes] edges
+     * from [CallExpression] nodes to this function.
+     */
+    @Relationship(value = "INVOKES", direction = Relationship.Direction.INCOMING)
+    val calledByEdges: Invokes<FunctionDeclaration> =
+        Invokes<FunctionDeclaration>(this, CallExpression::invokeEdges, outgoing = false)
+
+    /** Virtual property for accessing [calledByEdges] without property edges. */
+    val calledBy by
+        unwrappingIncoming<CallExpression, FunctionDeclaration, FunctionDeclaration, Invoke>(
+            FunctionDeclaration::calledByEdges
+        )
 
     /** The list of return types. The default is an empty list. */
     var returnTypes = listOf<Type>()

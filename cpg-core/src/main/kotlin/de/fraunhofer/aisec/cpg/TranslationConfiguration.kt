@@ -28,10 +28,12 @@ package de.fraunhofer.aisec.cpg
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
+import de.fraunhofer.aisec.cpg.TranslationResult.Companion.DEFAULT_APPLICATION_NAME
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase
 import de.fraunhofer.aisec.cpg.frontends.KClassSerializer
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.passes.configuration.*
@@ -59,7 +61,7 @@ private constructor(
     val symbols: Map<String, String>,
     /** Source code files to parse. */
     val softwareComponents: Map<String, List<File>>,
-    val topLevel: File?,
+    val topLevels: MutableMap<String, File?>,
     /** Set to true to generate debug output for the parser. */
     val debugParser: Boolean,
     /**
@@ -238,7 +240,7 @@ private constructor(
     class Builder {
         private var softwareComponents: MutableMap<String, List<File>> = HashMap()
         private val languages = mutableListOf<Language<*>>()
-        private var topLevel: File? = null
+        private var topLevels = mutableMapOf<String, File?>()
         private var debugParser = false
         private var failOnError = false
         private var loadIncludes = false
@@ -272,14 +274,14 @@ private constructor(
         }
 
         /**
-         * Files or directories containing the source code to analyze. Generates a dummy software
-         * component called "application".
+         * Files or directories containing the source code to analyze. Generates a [Component] with
+         * the name of [DEFAULT_APPLICATION_NAME].
          *
          * @param sourceLocations The files with the source code
          * @return this
          */
         fun sourceLocations(vararg sourceLocations: File): Builder {
-            softwareComponents["application"] = sourceLocations.toMutableList()
+            softwareComponents[DEFAULT_APPLICATION_NAME] = sourceLocations.toMutableList()
             return this
         }
 
@@ -291,7 +293,7 @@ private constructor(
          * @return this
          */
         fun sourceLocations(sourceLocations: List<File>): Builder {
-            softwareComponents["application"] = sourceLocations.toMutableList()
+            softwareComponents[DEFAULT_APPLICATION_NAME] = sourceLocations.toMutableList()
             return this
         }
 
@@ -313,7 +315,13 @@ private constructor(
         }
 
         fun topLevel(topLevel: File?): Builder {
-            this.topLevel = topLevel
+            this.topLevels[DEFAULT_APPLICATION_NAME] = topLevel
+            return this
+        }
+
+        fun topLevels(topLevels: Map<String, File?>): Builder {
+            this.topLevels.clear()
+            this.topLevels += topLevels
             return this
         }
 
@@ -661,7 +669,7 @@ private constructor(
             return TranslationConfiguration(
                 symbols,
                 softwareComponents,
-                topLevel,
+                topLevels,
                 debugParser,
                 failOnError,
                 loadIncludes,

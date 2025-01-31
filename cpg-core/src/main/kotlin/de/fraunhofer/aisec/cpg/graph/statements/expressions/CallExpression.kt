@@ -54,7 +54,12 @@ open class CallExpression :
      */
     @PopulatedByPass(SymbolResolver::class)
     @Relationship(value = "INVOKES", direction = Relationship.Direction.OUTGOING)
-    var invokeEdges = Invokes<FunctionDeclaration>(this)
+    var invokeEdges: Invokes<FunctionDeclaration> =
+        Invokes<FunctionDeclaration>(
+            this,
+            mirrorProperty = FunctionDeclaration::calledByEdges,
+            outgoing = true,
+        )
         protected set
 
     /**
