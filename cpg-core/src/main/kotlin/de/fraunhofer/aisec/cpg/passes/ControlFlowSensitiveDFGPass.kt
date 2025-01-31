@@ -529,23 +529,24 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                 }
             }
         // We wrote something to this variable declaration
-        writtenTo.forEach { writtenTo ->
+        writtenTo.forEach { writtenToIt ->
             val writtenDeclaration =
-                when (writtenTo) {
-                    is Declaration -> writtenTo
-                    is Reference -> writtenTo.refersTo
+                when (writtenToIt) {
+                    is Declaration -> writtenToIt
+                    is Reference -> writtenToIt.refersTo
                     else -> {
                         log.error(
-                            "The variable of type ${writtenTo.javaClass} is not yet supported in the ComprehensionExpression"
+                            "The variable of type ${writtenToIt.javaClass} is not yet supported in the ComprehensionExpression"
                         )
                         null
                     }
                 }
 
-            state.push(writtenTo, PowersetLattice(identitySetOf(currentNode.iterable)))
+            state.push(writtenToIt, PowersetLattice(identitySetOf(currentNode.iterable)))
             // Add the variable declaration (or the reference) to the list of previous
             // write nodes in this path
-            state.declarationsState[writtenDeclaration] = PowersetLattice(identitySetOf(writtenTo))
+            state.declarationsState[writtenDeclaration] =
+                PowersetLattice(identitySetOf(writtenToIt))
         }
     }
 
