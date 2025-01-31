@@ -44,8 +44,23 @@ class TypeTest {
             val func = newFunctionDeclaration("main")
             assertLocalName("main", func)
 
+            val someObject = newRecordDeclaration("SomeObject", kind = "class")
+            assertNotNull(someObject)
+
+            ctx.scopeManager.enterScope(someObject)
+
+            val fieldA = newFieldDeclaration("a", objectType("int"))
+            ctx.scopeManager.addDeclaration(fieldA)
+            assertNotNull(fieldA)
+
+            ctx.scopeManager.leaveScope(someObject)
+
             val simpleType = objectType("SomeObject")
+            simpleType.recordDeclaration = someObject
             assertLocalName("SomeObject", simpleType)
+
+            val fields = (simpleType as ObjectType).fields
+            assertNotNull(fields)
         }
     }
 

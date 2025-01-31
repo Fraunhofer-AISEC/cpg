@@ -27,6 +27,9 @@ package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
 import de.fraunhofer.aisec.cpg.graph.unknownType
@@ -93,6 +96,16 @@ open class ObjectType : Type {
         return PointerType(this, PointerOrigin.POINTER)
     }
 
+    val fields: List<FieldDeclaration>
+        get() {
+            return recordDeclaration.filterScopeSymbols<FieldDeclaration>()
+        }
+
+    val methods: List<MethodDeclaration>
+        get() {
+            return recordDeclaration.filterScopeSymbols<MethodDeclaration>()
+        }
+
     /**
      * @return UnknownType, as we cannot infer any type information when de-referencing an
      *   ObjectType, as it is just some memory and its interpretation is unknown
@@ -109,4 +122,12 @@ open class ObjectType : Type {
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), generics, isPrimitive)
+}
+
+inline fun <reified T : Node> RecordDeclaration?.filterScopeSymbols(): List<T> {
+    return this?.let { ctx?.scopeManager?.lookupScope(it) }
+        ?.symbols
+        ?.values
+        ?.flatMap { it }
+        ?.filterIsInstance<T>() ?: emptyList()
 }
