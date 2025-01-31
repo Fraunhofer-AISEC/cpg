@@ -247,9 +247,26 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
         // `backend`. We do this in order to make the dependency as fine-grained as possible.
         for (part in parts) {
             var namespaces =
-                scopeManager
-                    .lookupSymbolByName(part, import.language, import.location, import.scope)
-                    .filterIsInstance<NamespaceDeclaration>()
+                scopeManager.lookupSymbolByName(
+                    part,
+                    import.language,
+                    import.location,
+                    import.scope,
+                ) {
+                    // We are only interested in "leaf" namespace declarations, meaning that they do
+                    // not have sub-declarations. The reason for that is that we usually need to
+                    // nest namespace declarations, and thus a "parent" namespace declaration often
+                    // exists in more than one file. We only want to depend on the particular
+                    // translation unit that is the authoritative source of this namespace and this
+                    // is the case if there is no sub-declaration.
+                    //
+                    // Note: One might be inclined to use the "namespaces" extensions to filter for
+                    // leaf namespaces. However, this can be extremely slow because it first gathers
+                    // all children and then filters them. Instead, we can directly filter for the
+                    // child declarations.
+                    it is NamespaceDeclaration &&
+                        it.declarations.filterIsInstance<NamespaceDeclaration>().isEmpty()
+                }
 
             // We are only interested in "leaf" namespace declarations, meaning that they do not
             // have sub-declarations. The reason for that is that we usually need to nest namespace
@@ -257,12 +274,12 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
             // file. We only want to depend on the particular translation unit that is the
             // authoritative source of this namespace and this is the case if there is no
             // sub-declaration.
-            namespaces =
-                namespaces.filter {
-                    // Note: the "namespaces" extension contains the starting node itself as well,
-                    // so if we have no sub-namespace declaration, the size == 1
-                    it.namespaces.size == 1
-                }
+            /*namespaces =
+            namespaces.filter {
+                // Note: the "namespaces" extension contains the starting node itself as well,
+                // so if we have no sub-namespace declaration, the size == 1
+                it.namespaces.size == 1
+            }*/
 
             // Next, we loop through all namespaces in order to "connect" them to our current module
             for (declaration in namespaces) {
