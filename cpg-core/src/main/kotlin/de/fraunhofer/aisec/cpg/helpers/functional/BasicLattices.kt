@@ -59,6 +59,7 @@ interface LatticeElement<T> : Comparable<LatticeElement<T>> {
     fun duplicate(): LatticeElement<in T>
 }
 
+/** Writing all the type params is annoying, so this removes some of them. */
 typealias PowersetLatticeElementT<V> = PowersetLatticeElement<IdentitySet<V>, V>
 
 inline fun <reified V> emptyPowersetLattice() =
@@ -97,7 +98,8 @@ open class PowersetLatticeElement<V : IdentitySet<T>, T>(override val value: V) 
     }
 }
 
-typealias MapLatticeElementT<K, V> = LatticeElement<Map<K, V>>
+/** Writing all the type params is annoying, so this removes some of them. */
+typealias MapLatticeElementT<K, V> = MapLatticeElement<K, LatticeElement<V>, V>
 
 inline fun <reified K, T> emptyMapLatticeElement() =
     MapLatticeElement<K, LatticeElement<T>, T>(IdentityHashMap())
@@ -154,6 +156,10 @@ open class MapLatticeElement<K, V : LatticeElement<T>, T>(
     }
 }
 
+/** Writing all the type params is annoying, so this removes some of them. */
+typealias TupleLatticeElementT<S, T> =
+    TupleLatticeElement<LatticeElement<S>, LatticeElement<T>, S, T>
+
 open class TupleLatticeElement<U : LatticeElement<S>, V : LatticeElement<T>, S, T>(
     override val value: Pair<U, V>
 ) : LatticeElement<Pair<U, V>> {
@@ -189,6 +195,10 @@ open class TupleLatticeElement<U : LatticeElement<S>, V : LatticeElement<T>, S, 
 
     operator fun component2() = this.value.second
 }
+
+/** Writing all the type params is annoying, so this removes some of them. */
+typealias TripleLatticeElementT<R, S, T> =
+    TripleLatticeElement<LatticeElement<R>, LatticeElement<S>, LatticeElement<T>, R, S, T>
 
 class TripleLatticeElement<
     U : LatticeElement<R>,
