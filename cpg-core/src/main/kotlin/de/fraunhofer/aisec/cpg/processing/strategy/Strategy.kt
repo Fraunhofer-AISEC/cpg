@@ -25,11 +25,19 @@
  */
 package de.fraunhofer.aisec.cpg.processing.strategy
 
+import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import java.util.*
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 /** Strategies (iterators) for traversing graphs to be used by visitors. */
 object Strategy {
+
+    val log: Logger = LoggerFactory.getLogger(Strategy::class.java)
+
     /**
      * Do not traverse any nodes.
      *
@@ -53,6 +61,26 @@ object Strategy {
     /** A strategy to traverse the EOG in forward direction, but only if the edge is reachable. */
     fun REACHABLE_EOG_FORWARD(x: Node): Iterator<Node> {
         return x.nextEOGEdges.filter { !it.unreachable }.map { it.end }.iterator()
+    }
+
+    fun COMPONENTS_LEAST_IMPORTS(x: TranslationResult): Iterator<Component> {
+        return x.componentDependencies?.sorted?.iterator()
+            ?: x.components.iterator().also {
+                log.warn(
+                    "Strategy for components with least import dependencies was requested, but no import dependency information is available."
+                )
+                log.warn("Please make sure that the ImportResolver pass was run successfully.")
+            }
+    }
+
+    fun TRANSLATION_UNITS_LEAST_IMPORTS(x: Component): Iterator<TranslationUnitDeclaration> {
+        return x.translationUnitDependencies?.sorted?.iterator()
+            ?: x.translationUnits.iterator().also {
+                log.warn(
+                    "Strategy for translation units with least import dependencies was requested, but no import dependency information is available."
+                )
+                log.warn("Please make sure that the ImportResolver pass was run successfully.")
+            }
     }
 
     /**

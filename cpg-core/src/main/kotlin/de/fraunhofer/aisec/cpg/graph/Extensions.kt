@@ -1360,6 +1360,12 @@ val Node.translationUnit: TranslationUnitDeclaration?
         return firstParentOrNull<TranslationUnitDeclaration>()
     }
 
+/** Returns the [Component] where this node is located in. */
+val Node.component: Component?
+    get() {
+        return firstParentOrNull<Component>()
+    }
+
 /**
  * This helper function be used to find out if a particular expression (usually a [CallExpression]
  * or a [Reference]) is imported through a [ImportDeclaration].
