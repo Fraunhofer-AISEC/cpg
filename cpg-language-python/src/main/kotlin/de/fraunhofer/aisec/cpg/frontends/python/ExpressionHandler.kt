@@ -99,18 +99,24 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         }
     }
 
+    private inline fun <T : Node> T.applyWithScope(block: T.() -> Unit): T {
+        return this.apply {
+            ctx?.scopeManager?.enterScope(this)
+            block()
+            ctx?.scopeManager?.leaveScope(this)
+        }
+    }
+
     /**
      * Translates a Python
      * [`GeneratorExp`](https://docs.python.org/3/library/ast.html#ast.GeneratorExp) into a
      * [CollectionComprehension].
      */
     private fun handleGeneratorExp(node: Python.AST.GeneratorExp): CollectionComprehension {
-        return newCollectionComprehension(rawNode = node).apply {
-            ctx?.scopeManager?.enterScope(this)
+        return newCollectionComprehension(rawNode = node).applyWithScope {
             statement = handle(node.elt)
             comprehensionExpressions += node.generators.map { handleComprehension(it, node) }
             type = objectType("Generator")
-            ctx?.scopeManager?.leaveScope(this)
         }
     }
 
@@ -119,12 +125,10 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
      * into a [CollectionComprehension].
      */
     private fun handleListComprehension(node: Python.AST.ListComp): CollectionComprehension {
-        return newCollectionComprehension(rawNode = node).apply {
-            ctx?.scopeManager?.enterScope(this)
+        return newCollectionComprehension(rawNode = node).applyWithScope {
             statement = handle(node.elt)
             comprehensionExpressions += node.generators.map { handleComprehension(it, node) }
             type = objectType("list")
-            ctx?.scopeManager?.leaveScope(this)
         }
     }
 
@@ -133,12 +137,10 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
      * a [CollectionComprehension].
      */
     private fun handleSetComprehension(node: Python.AST.SetComp): CollectionComprehension {
-        return newCollectionComprehension(rawNode = node).apply {
-            ctx?.scopeManager?.enterScope(this)
+        return newCollectionComprehension(rawNode = node).applyWithScope {
             this.statement = handle(node.elt)
             this.comprehensionExpressions += node.generators.map { handleComprehension(it, node) }
             this.type = objectType("set")
-            ctx?.scopeManager?.leaveScope(this)
         }
     }
 
@@ -147,8 +149,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
      * into a [CollectionComprehension].
      */
     private fun handleDictComprehension(node: Python.AST.DictComp): CollectionComprehension {
-        return newCollectionComprehension(rawNode = node).apply {
-            ctx?.scopeManager?.enterScope(this)
+        return newCollectionComprehension(rawNode = node).applyWithScope {
             this.statement =
                 newKeyValueExpression(
                     key = handle(node.key),
@@ -157,7 +158,6 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                 )
             this.comprehensionExpressions += node.generators.map { handleComprehension(it, node) }
             this.type = objectType("dict")
-            ctx?.scopeManager?.leaveScope(this)
         }
     }
 
