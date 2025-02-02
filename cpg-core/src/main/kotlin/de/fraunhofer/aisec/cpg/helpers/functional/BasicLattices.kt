@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.helpers.functional
 
+import de.fraunhofer.aisec.cpg.helpers.IdentitySet
+import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import kotlin.Pair
 import kotlin.collections.component1
@@ -56,15 +58,15 @@ abstract class LatticeElement<T>(val elements: T) : Comparable<LatticeElement<T>
 
 typealias PowersetLatticeT<V> = LatticeElement<Set<V>>
 
-inline fun <reified V> emptyPowersetLattice() = PowersetLattice<V>(setOf())
+inline fun <reified V> emptyPowersetLattice() = PowersetLattice<V>(identitySetOf())
 
 /**
  * Implements the [LatticeElement] for a lattice over a set of nodes. The lattice itself is
  * constructed by the powerset.
  */
-class PowersetLattice<V>(elements: Set<V>) : LatticeElement<Set<V>>(elements) {
+class PowersetLattice<V>(elements: IdentitySet<V>) : LatticeElement<Set<V>>(elements) {
     override fun lub(other: LatticeElement<Set<V>>) =
-        PowersetLattice(this.elements.union(other.elements))
+        PowersetLattice(this.elements.union(other.elements).toIdentitySet())
 
     override fun duplicate(): LatticeElement<Set<V>> =
         PowersetLattice(this.elements.toIdentitySet())

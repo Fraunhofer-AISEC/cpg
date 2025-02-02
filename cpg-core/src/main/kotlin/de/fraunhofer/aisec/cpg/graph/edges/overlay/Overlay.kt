@@ -37,9 +37,9 @@ import kotlin.reflect.KProperty
  *
  * @param start The starting node of the edge.
  * @param end The ending node of the edge.
+ * @constructor Constructs an [OverlayEdge] with a specified [start] and [end] node.
  * @property labels A predefined set of labels associated with the OverlayEdge. By default, it is
  *   initialized with the label "OVERLAY".
- * @constructor Constructs an [OverlayEdge] with a specified [start] and [end] node.
  */
 class OverlayEdge(start: Node, end: Node) : Edge<Node>(start, end) {
     override var labels: Set<String> = setOf("OVERLAY")
