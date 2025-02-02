@@ -56,6 +56,7 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
+import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
@@ -145,7 +146,10 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
 
             // We create an implicit import for "java.lang.*"
             val decl =
-                newImportDeclaration(parseName("java.lang"), wildcardImport = true)
+                newImportDeclaration(
+                        parseName("java.lang"),
+                        style = ImportDeclaration.ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE,
+                    )
                     .implicit("import java.lang.*")
             scopeManager.addDeclaration(decl)
 

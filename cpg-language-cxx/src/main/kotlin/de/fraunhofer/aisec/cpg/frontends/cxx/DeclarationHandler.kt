@@ -81,15 +81,21 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     }
 
     /**
-     * Translates a C++ (namespace
-     * alias)[https://en.cppreference.com/w/cpp/language/namespace_alias] into an alias handled by
-     * an [ImportDeclaration].
+     * Translates a C++
+     * [namespace alias](https://en.cppreference.com/w/cpp/language/namespace_alias) into an alias
+     * handled by an [ImportDeclaration].
      */
     private fun handleNamespaceAlias(ctx: CPPASTNamespaceAlias): ImportDeclaration {
         val from = parseName(ctx.mappingName.toString())
         val to = parseName(ctx.alias.toString())
 
-        val import = newImportDeclaration(from, false, to, rawNode = ctx)
+        val import =
+            newImportDeclaration(
+                from,
+                style = ImportDeclaration.ImportStyle.IMPORT_NAMESPACE,
+                to,
+                rawNode = ctx,
+            )
 
         frontend.scopeManager.addDeclaration(import)
 
@@ -97,14 +103,18 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     }
 
     /**
-     * Translates a C++ (using
-     * directive)[https://en.cppreference.com/w/cpp/language/namespace#Using-directives] into a
-     * [ImportDeclaration].
+     * Translates a C++
+     * [using directive](https://en.cppreference.com/w/cpp/language/namespace#Using-directives) into
+     * a [ImportDeclaration].
      */
     private fun handleUsingDirective(ctx: CPPASTUsingDirective): Declaration {
         val import = parseName(ctx.qualifiedName.toString())
-        val declaration = newImportDeclaration(import, rawNode = ctx)
-        declaration.wildcardImport = true
+        val declaration =
+            newImportDeclaration(
+                import,
+                style = ImportDeclaration.ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE,
+                rawNode = ctx,
+            )
 
         frontend.scopeManager.addDeclaration(declaration)
 
@@ -112,13 +122,18 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     }
 
     /**
-     * Translates a C++ (using
-     * declaration)[https://en.cppreference.com/w/cpp/language/using_declaration] into a
+     * Translates a C++
+     * [using declaration](https://en.cppreference.com/w/cpp/language/using_declaration) into a
      * [ImportDeclaration].
      */
     private fun handleUsingDeclaration(ctx: CPPASTUsingDeclaration): Declaration {
         val import = parseName(ctx.name.toString())
-        val declaration = newImportDeclaration(import, rawNode = ctx)
+        val declaration =
+            newImportDeclaration(
+                import,
+                style = ImportDeclaration.ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE,
+                rawNode = ctx,
+            )
 
         frontend.scopeManager.addDeclaration(declaration)
 

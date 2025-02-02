@@ -542,12 +542,16 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 if (alias != null) {
                     newImportDeclaration(
                         parseName(imp.name),
-                        false,
+                        style = ImportDeclaration.ImportStyle.IMPORT_NAMESPACE,
                         parseName(alias),
                         rawNode = imp,
                     )
                 } else {
-                    newImportDeclaration(parseName(imp.name), false, rawNode = imp)
+                    newImportDeclaration(
+                        parseName(imp.name),
+                        style = ImportDeclaration.ImportStyle.IMPORT_NAMESPACE,
+                        rawNode = imp,
+                    )
                 }
             frontend.scopeManager.addDeclaration(decl)
             declStmt.declarationEdges += decl
@@ -595,16 +599,31 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 if (imp.name == "*") {
                     // In the wildcard case, our "import" is the module name, and we set "wildcard"
                     // to true
-                    newImportDeclaration(module, true, rawNode = imp)
+                    newImportDeclaration(
+                        module,
+                        style = ImportDeclaration.ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE,
+                        rawNode = imp,
+                    )
                 } else {
                     // If we import an individual symbol, we need to FQN the symbol with our module
                     // name and import that. We also need to take care of any alias
                     val name = module.fqn(imp.name)
                     val alias = imp.asname
                     if (alias != null) {
-                        newImportDeclaration(name, false, parseName(alias), rawNode = imp)
+                        newImportDeclaration(
+                            name,
+                            style =
+                                ImportDeclaration.ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE,
+                            parseName(alias),
+                            rawNode = imp,
+                        )
                     } else {
-                        newImportDeclaration(name, false, rawNode = imp)
+                        newImportDeclaration(
+                            name,
+                            style =
+                                ImportDeclaration.ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE,
+                            rawNode = imp,
+                        )
                     }
                 }
 

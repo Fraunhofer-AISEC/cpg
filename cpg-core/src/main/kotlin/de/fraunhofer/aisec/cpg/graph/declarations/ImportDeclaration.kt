@@ -43,7 +43,7 @@ import org.neo4j.ogm.annotation.typeconversion.Convert
  *
  * ### Examples (Go)
  *
- * In Go, we usually import the package itself as a symbol.
+ * In Go, we usually import the package itself as a symbol (see [ImportStyle.IMPORT_NAMESPACE]).
  *
  * ```Go
  * package p
@@ -101,7 +101,8 @@ import org.neo4j.ogm.annotation.typeconversion.Convert
  * ```
  *
  * The imported symbol is then visible within the current [Scope] of the [ImportDeclaration]. In the
- * example [name] and [import] is set to `std::string`, [wildcardImport] is `false`.
+ * example [name] and [import] is set to `std::string`, [style] is
+ * [ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE].
  *
  * Another possibility is to import a complete namespace, or to be more precise import all symbols
  * of the specified namespace into the current scope.
@@ -118,7 +119,8 @@ import org.neo4j.ogm.annotation.typeconversion.Convert
  * }
  * ```
  *
- * In this example, the [name] and [import] is set to `std` and [wildcardImport] is `true`.
+ * In this example, the [name] and [import] is set to `std` and [style] is
+ * [ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE].
  */
 class ImportDeclaration : Declaration() {
 
@@ -149,11 +151,16 @@ class ImportDeclaration : Declaration() {
      */
     var importURL: String? = null
 
+    /** The import style. */
+    var style: ImportStyle = ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE
+
     /**
-     * Specifies that [name] is pointing to a [NameScope] and that all [Scope.symbols] of that name
-     * scope need to be imported into the scope this declaration lives in.
+     * The [NamespaceDeclaration] where the symbols are imported from. This will be populated by
+     * [ImportResolver.collectImportDependencies].
      */
-    var wildcardImport: Boolean = false
+    @Transient
+    @PopulatedByPass(ImportResolver::class)
+    var importedFrom: NamespaceDeclaration? = null
 
     /**
      * A list of symbols that this declaration imports. This will be populated by
@@ -162,4 +169,29 @@ class ImportDeclaration : Declaration() {
     @Transient
     @PopulatedByPass(ImportResolver::class)
     var importedSymbols: SymbolMap = mutableMapOf()
+
+    /**
+     * The style of the import. This can be used to distinguish between different import modes, such
+     * as importing a single symbol from a namespace, importing a whole namespace or importing all
+     * symbols from a namespace.
+     */
+    enum class ImportStyle {
+        /**
+         * Imports a single symbol from the [ImportDeclaration.importedFrom] namespace. The current
+         * scope will contain a symbol with the same name as the imported symbol.
+         */
+        IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE,
+
+        /**
+         * Imports the [ImportDeclaration.importedFrom] namespace as a single symbol. The current
+         * scope will contain a symbol with the same name as the imported namespace.
+         */
+        IMPORT_NAMESPACE,
+
+        /**
+         * Imports all symbols from the [ImportDeclaration.importedFrom] namespace. The current
+         * scope will contain one new symbol for each symbol in the namespace.
+         */
+        IMPORT_ALL_SYMBOLS_FROM_NAMESPACE,
+    }
 }

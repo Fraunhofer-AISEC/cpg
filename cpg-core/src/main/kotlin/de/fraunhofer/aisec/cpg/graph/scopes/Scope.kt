@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.firstScopeParentOrNull
 import de.fraunhofer.aisec.cpg.graph.statements.LabelStatement
 import de.fraunhofer.aisec.cpg.graph.statements.LookupScopeStatement
@@ -95,7 +96,10 @@ sealed class Scope(
 
     /** Adds a [declaration] with the defined [symbol]. */
     fun addSymbol(symbol: Symbol, declaration: Declaration) {
-        if (declaration is ImportDeclaration && declaration.wildcardImport) {
+        if (
+            declaration is ImportDeclaration &&
+                declaration.style == ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE
+        ) {
             // Because a wildcard import does not really have a valid "symbol", we store it in a
             // separate list
             wildcardImports += declaration

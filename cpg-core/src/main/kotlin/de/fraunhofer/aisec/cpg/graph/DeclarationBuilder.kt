@@ -449,7 +449,7 @@ fun MetadataProvider.newNamespaceDeclaration(
 @JvmOverloads
 fun MetadataProvider.newImportDeclaration(
     import: Name,
-    wildcardImport: Boolean = false,
+    style: ImportDeclaration.ImportStyle,
     alias: Name? = null,
     rawNode: Any? = null,
 ): ImportDeclaration {
@@ -457,7 +457,7 @@ fun MetadataProvider.newImportDeclaration(
     node.applyMetadata(this, "", rawNode)
     node.import = import
     node.alias = alias
-    node.wildcardImport = wildcardImport
+    node.style = style
     if (alias != null) {
         node.name = alias
     } else {

@@ -63,7 +63,13 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                 }
             }
 
-        val import = newImportDeclaration(import = name, alias = alias, rawNode = importSpec)
+        val import =
+            newImportDeclaration(
+                import = name,
+                alias = alias,
+                style = ImportDeclaration.ImportStyle.IMPORT_NAMESPACE,
+                rawNode = importSpec,
+            )
         import.importURL = filename
 
         return import

@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.TypeManager
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.translationResult
+import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
 import de.fraunhofer.aisec.cpg.graph.newImportDeclaration
 import de.fraunhofer.aisec.cpg.graph.newNamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.newTranslationUnitDeclaration
@@ -67,9 +68,19 @@ class ImportResolverTest {
                             var pkgB = newNamespaceDeclaration("b")
                             scopeManager.addDeclaration(pkgB)
                             scopeManager.enterScope(pkgB)
-                            var import = newImportDeclaration(parseName("a"))
+                            var import =
+                                newImportDeclaration(
+                                    parseName("a"),
+                                    style = ImportDeclaration.ImportStyle.IMPORT_NAMESPACE,
+                                )
                             scopeManager.addDeclaration(import)
-                            import = newImportDeclaration(parseName("c.bar"))
+                            import =
+                                newImportDeclaration(
+                                    parseName("c.bar"),
+                                    style =
+                                        ImportDeclaration.ImportStyle
+                                            .IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE,
+                                )
                             scopeManager.addDeclaration(import)
                             scopeManager.leaveScope(pkgB)
                             tuB

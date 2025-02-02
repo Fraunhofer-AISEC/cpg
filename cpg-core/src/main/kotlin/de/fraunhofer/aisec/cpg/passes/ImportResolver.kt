@@ -32,9 +32,9 @@ import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.component
 import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.namespaces
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.translationUnit
@@ -44,9 +44,8 @@ import de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import de.fraunhofer.aisec.cpg.passes.Pass.Companion.log
+import de.fraunhofer.aisec.cpg.passes.inference.tryNamespaceInference
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
-import de.fraunhofer.aisec.cpg.processing.strategy.Strategy.COMPONENTS_LEAST_IMPORTS
-import de.fraunhofer.aisec.cpg.processing.strategy.Strategy.TRANSLATION_UNITS_LEAST_IMPORTS
 import java.util.IdentityHashMap
 
 /**
@@ -274,12 +273,6 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
             // file. We only want to depend on the particular translation unit that is the
             // authoritative source of this namespace and this is the case if there is no
             // sub-declaration.
-            /*namespaces =
-            namespaces.filter {
-                // Note: the "namespaces" extension contains the starting node itself as well,
-                // so if we have no sub-namespace declaration, the size == 1
-                it.namespaces.size == 1
-            }*/
 
             // Next, we loop through all namespaces in order to "connect" them to our current module
             for (declaration in namespaces) {
@@ -325,7 +318,47 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
     }
 
     private fun handleImportDeclaration(import: ImportDeclaration) {
+        // TOOD: Remove
         import.updateImportedSymbols()
+
+        val name =
+            when (import.style) {
+                ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE -> {
+                    import.import.parent
+                }
+                ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE,
+                ImportStyle.IMPORT_NAMESPACE -> {
+                    import.import
+                }
+            }
+        if (name == null) {
+            errorWithFileLocation(
+                import,
+                log,
+                "Could not get namespace name from import declaration",
+            )
+            return
+        }
+
+        println(name)
+
+        var candidates =
+            scopeManager
+                .lookupSymbolByName(name, import.language, import.location, import.scope) {
+                    it is NamespaceDeclaration
+                }
+                .filterIsInstance<NamespaceDeclaration>()
+
+        if (candidates.isEmpty()) {
+            candidates = listOfNotNull(tryNamespaceInference(name, import))
+        }
+
+        // There could potentially be more than one namespace declaration with the same name. For
+        // example, in python we create nested namespace declarations in each module for the
+        // complete package path. By definition of how the scope manager works, all namespace
+        // declarations with the same name will point to the same namespace scope, so it is
+        // sufficient for us to just pick any declaration.
+        import.importedFrom = candidates.firstOrNull()
     }
 
     override fun cleanup() {
@@ -346,7 +379,7 @@ fun ImportDeclaration.updateImportedSymbols() {
     val scope = scopeManager.globalScope ?: return
 
     // Let's do some importing. We need to import either a wildcard
-    if (this.wildcardImport) {
+    if (this.style == ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE) {
         val list = scopeManager.lookupSymbolByName(this.import, this.language, this.location, scope)
         val symbol = list.singleOrNull()
         if (symbol != null) {

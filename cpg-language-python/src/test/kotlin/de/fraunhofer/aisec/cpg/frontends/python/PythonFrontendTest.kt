@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.*
@@ -1415,6 +1416,18 @@ class PythonFrontendTest : BaseTest() {
                 it.registerLanguage<PythonLanguage>()
             }
         assertNotNull(result)
+
+        // import a
+        val importA = result.imports["a"]
+        assertNotNull(importA)
+        assertEquals(ImportDeclaration.ImportStyle.IMPORT_NAMESPACE, importA.style)
+        assertEquals(result.namespaces["a"], importA.importedFrom)
+
+        // from c import *
+        val importC = result.imports["c"]
+        assertNotNull(importC)
+        assertEquals(ImportDeclaration.ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE, importC.style)
+        assertEquals(result.namespaces["c"], importC.importedFrom)
 
         val aFunc = result.functions["a.func"]
         assertNotNull(aFunc)
