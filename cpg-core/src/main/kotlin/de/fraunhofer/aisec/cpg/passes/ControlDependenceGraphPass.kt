@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.cyclomaticComplexity
-import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
@@ -39,13 +38,10 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.CollectionComprehens
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ComprehensionExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConditionalExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ShortCircuitOperator
-import de.fraunhofer.aisec.cpg.helpers.IdentitySet
-import de.fraunhofer.aisec.cpg.helpers.functional.LatticeElement
+import de.fraunhofer.aisec.cpg.helpers.functional.Lattice
 import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
-import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLatticeT
-import de.fraunhofer.aisec.cpg.helpers.functional.iterateEOGClean
-import de.fraunhofer.aisec.cpg.helpers.identitySetOf
+import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import java.util.*
 import kotlin.collections.component1
@@ -94,28 +90,33 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
             return
         }
 
+        val prevEOGState =
+            PrevEOGState(innerLattice = PrevEOGLattice(innerLattice = PowersetLattice<Node>()))
+
         // Maps nodes to their "cdg parent" (i.e. the dominator) and also has the information
         // through which path it is reached. If all outgoing paths of the node's dominator result in
         // the node, we use the dominator's state instead (i.e., we move the node one layer upwards)
-        var startState = PrevEOGState(IdentityHashMap<Node, PrevEOGLattice>())
-        val identityMap = IdentityHashMap<Node, PowersetLatticeT<Node>>()
-        identityMap[startNode] = PowersetLattice<IdentitySet<Node>, Node>(identitySetOf(startNode))
-        startState = startState.push(startNode, PrevEOGLattice(identityMap))
+        var startState: PrevEOGStateElement = prevEOGState.bottom
+        startState =
+            prevEOGState.push(
+                startState,
+                startNode,
+                PrevEOGLatticeElement(startNode to PowersetLattice.Element(startNode)),
+            )
         log.debug("Iterating EOG of {}", startNode)
-        val finalState = iterateEOGClean(startNode.nextEOGEdges, startState, ::handleEdge)
+        val finalState =
+            prevEOGState.iterateEOGEvenMoreNew(startNode.nextEOGEdges, startState, ::handleEdge)
         log.debug("Done iterating EOG of {}", startNode)
 
         val branchingNodeConditionals = getBranchingNodeConditions(startNode)
 
         // Collect the information, identify merge points, etc. This is not really efficient yet :(
-        for ((node, dominatorPaths) in finalState.elements) {
+        for ((node, dominatorPaths) in finalState) {
             val dominatorsList =
-                dominatorPaths.elements.entries
-                    .map { (k, v) -> Pair(k, v.elements.toMutableSet()) }
-                    .toMutableList()
+                dominatorPaths.entries.map { (k, v) -> Pair(k, v.toMutableSet()) }.toMutableList()
             val finalDominators = mutableListOf<Pair<Node, MutableSet<Node>>>()
             val conditionKeys =
-                dominatorPaths.elements.entries
+                dominatorPaths.entries
                     .filter { (k, _) ->
                         (k as? BranchingNode)?.branchedBy == node ||
                             node in
@@ -128,13 +129,13 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
                 // want this. Move it one layer up.
                 for (k1 in conditionKeys) {
                     dominatorsList.removeIf { k1 == it.first }
-                    finalState.elements[k1]?.elements?.forEach { (newK, newV) ->
+                    finalState[k1]?.forEach { (newK, newV) ->
                         val entry = dominatorsList.firstOrNull { it.first == newK }
                         entry?.let {
                             dominatorsList.remove(entry)
-                            val update = entry.second.addAll(newV.elements)
+                            val update = entry.second.addAll(newV)
                             if (update) dominatorsList.add(entry) else finalDominators.add(entry)
-                        } ?: dominatorsList.add(Pair(newK, newV.elements.toMutableSet()))
+                        } ?: dominatorsList.add(Pair(newK, newV.toMutableSet()))
                     }
                 }
             }
@@ -147,22 +148,19 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
                     // We are reachable from all the branches of a branching node. Add this parent
                     // to the worklist or update an existing entry. Also consider already existing
                     // entries in finalDominators list and update it (if necessary)
-                    val newDominatorMap = finalState.elements[k]?.elements
+                    val newDominatorMap = finalState[k]
                     newDominatorMap?.forEach { (newK, newV) ->
                         when {
                             dominatorsList.any { it.first == newK } -> {
                                 // Entry exists => update it
-                                dominatorsList
-                                    .first { it.first == newK }
-                                    .second
-                                    .addAll(newV.elements)
+                                dominatorsList.first { it.first == newK }.second.addAll(newV)
                             }
                             finalDominators.any { it.first == newK } -> {
                                 // Entry in final dominators => Delete it and add it to the worklist
                                 // (but only if something changed)
                                 val entry = finalDominators.first { it.first == newK }
                                 finalDominators.remove(entry)
-                                val update = entry.second.addAll(newV.elements)
+                                val update = entry.second.addAll(newV)
                                 if (
                                     update &&
                                         alreadySeen.none {
@@ -174,17 +172,17 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
                                 else finalDominators.add(entry)
                             }
                             alreadySeen.none {
-                                it.first == newK && it.second.containsAll(newV.elements)
+                                it.first == newK && it.second.containsAll(newV)
                             } -> {
                                 // We don't have an entry yet => add a new one
-                                val newEntry = Pair(newK, newV.elements.toMutableSet())
+                                val newEntry = Pair(newK, newV.toIdentitySet())
                                 dominatorsList.add(newEntry)
                             }
                             else -> {
                                 // Not sure what to do, there seems to be a cycle but this entry is
                                 // not in finalDominators for some reason. Add to finalDominators
                                 // now.
-                                finalDominators.add(Pair(newK, newV.elements.toMutableSet()))
+                                finalDominators.add(Pair(newK, newV.toIdentitySet()))
                             }
                         }
                     }
@@ -278,10 +276,12 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
  * Returns the updated state and true because we always expect an update of the state.
  */
 fun handleEdge(
+    lattice: Lattice<PrevEOGStateElement>,
     currentEdge: EvaluationOrder,
-    currentState: LatticeElement<IdentityHashMap<Node, PrevEOGLattice>>,
-): LatticeElement<IdentityHashMap<Node, PrevEOGLattice>> {
-    var newState = currentState as? PrevEOGState ?: return currentState
+    currentState: PrevEOGStateElement,
+): PrevEOGStateElement {
+    val lattice = lattice as? PrevEOGState ?: return currentState
+    var newState = currentState
 
     val currentStart = currentEdge.start
 
@@ -297,18 +297,15 @@ fun handleEdge(
         // following state:
         // for the branching node "start", we have a path through "end".
         val prevPathLattice =
-            PrevEOGLattice(
-                IdentityHashMap(
-                    newState.elements[currentStart]
-                        ?.elements
-                        ?.filter { (k, _) -> k == currentStart }
-                        ?.mapValues { (_, v) -> PowersetLattice(v.elements) }
-                )
+            PrevEOGLatticeElement(
+                newState[currentStart]
+                    ?.filter { (k, _) -> k == currentStart }
+                    ?.mapValues { (_, v) -> PowersetLattice.Element(v) } ?: mapOf()
             )
-        val map = IdentityHashMap<Node, PowersetLatticeT<Node>>()
-        map[currentStart] = PowersetLattice(identitySetOf(currentEdge.end))
-        val newPath = PrevEOGLattice(map).lub(prevPathLattice)
-        newState = newState.push(currentEdge.end, newPath)
+        val map = PrevEOGLatticeElement(currentStart to PowersetLattice.Element(currentEdge.end))
+
+        val newPath = lattice.innerLattice.lub(PrevEOGLatticeElement(map), prevPathLattice)
+        newState = lattice.push(newState, currentEdge.end, newPath)
     } else {
         // We did not start in a branching node, so for the next node, we have the same path
         // (last branching + first end node) as for the start node of this edge.
@@ -316,17 +313,11 @@ fun handleEdge(
         // first edge in a function), we generate a new state where we start in "start" end
         // have "end" as the first node in the "branch".
         val state =
-            PrevEOGLattice(
-                IdentityHashMap(
-                    newState.elements[currentStart]?.elements?.mapValues { (_, v) ->
-                        PowersetLattice(v.elements)
-                    }
-                        ?: mutableMapOf(
-                            Pair(currentStart, PowersetLattice(identitySetOf(currentEdge.end)))
-                        )
-                )
+            PrevEOGLatticeElement(
+                newState[currentStart]?.mapValues { (_, v) -> PowersetLattice.Element(v) }
+                    ?: mutableMapOf(Pair(currentStart, PowersetLattice.Element(currentEdge.end)))
             )
-        newState = newState.push(currentEdge.end, state)
+        newState = lattice.push(newState, currentEdge.end, state)
     }
     return newState
 }
@@ -386,74 +377,18 @@ private fun IfStatement.allBranchesFromMyThenBranchGoThrough(node: Node?): Boole
     return true
 }
 
-/**
- * Implements the [LatticeElement] over a set of nodes and their set of "nextEOG" nodes which reach
- * this node.
- */
-class PrevEOGLattice(elements: IdentityHashMap<Node, PowersetLatticeT<Node>>) :
-    MapLattice<Node, PowersetLatticeT<Node>, IdentitySet<Node>>(elements) {
+typealias PrevEOGLatticeElement = MapLattice.Element<Node, PowersetLattice.Element<Node>>
 
-    override fun lub(
-        other: LatticeElement<out IdentityHashMap<Node, PowersetLatticeT<Node>>>
-    ): PrevEOGLattice {
-        val allKeys = other.elements.keys.toMutableSet()
-        allKeys += elements.keys
-        val newMap =
-            allKeys.fold(IdentityHashMap<Node, PowersetLattice<IdentitySet<Node>, Node>>()) {
-                current,
-                key ->
-                val otherValue = other.elements[key]
-                val thisValue = this.elements[key]
-                val newValue =
-                    if (thisValue != null && otherValue != null && thisValue < otherValue) {
-                        thisValue.lub(otherValue)
-                    } else if (thisValue != null) {
-                        thisValue.duplicate()
-                    } else otherValue?.duplicate()
-                newValue?.let { current[key] = it }
-                current
-            }
-        return PrevEOGLattice(newMap)
-    }
+typealias PrevEOGLattice = MapLattice<Node, PowersetLattice.Element<Node>>
 
-    override fun duplicate() =
-        PrevEOGLattice(IdentityHashMap(this.elements.mapValues { (_, v) -> v.duplicate() }))
-}
+typealias PrevEOGStateElement = MapLattice.Element<Node, PrevEOGLatticeElement>
 
-/**
- * A state which actually holds a state for all [Edge]s. It maps the node to its
- * [BranchingNode]-parent and the path through which it is reached.
- */
-class PrevEOGState(elements: IdentityHashMap<Node, PrevEOGLattice>) :
-    MapLattice<Node, PrevEOGLattice, IdentityHashMap<Node, PowersetLatticeT<Node>>>(elements) {
+typealias PrevEOGState = MapLattice<Node, PrevEOGLatticeElement>
 
-    override fun lub(
-        other: LatticeElement<out IdentityHashMap<Node, PrevEOGLattice>>
-    ): PrevEOGState {
-        val allKeys = other.elements.keys.union(this.elements.keys)
-        val newMap =
-            allKeys.fold(IdentityHashMap<Node, PrevEOGLattice>()) { current, key ->
-                val otherValue = other.elements[key]
-                val thisValue = this.elements[key]
-                val newValue =
-                    if (thisValue != null && otherValue != null && thisValue < otherValue) {
-                        thisValue.lub(otherValue)
-                    } else if (thisValue != null) {
-                        thisValue.duplicate()
-                    } else otherValue?.duplicate()
-                newValue?.let { current[key] = it }
-                current
-            }
-        return PrevEOGState(newMap)
-    }
-
-    override fun duplicate() = PrevEOGState(this.elements)
-
-    fun push(newNode: Node, newEOGLattice: PrevEOGLattice): PrevEOGState {
-        return this.lub(
-            PrevEOGState(
-                IdentityHashMap(mutableMapOf<Node, PrevEOGLattice>(Pair(newNode, newEOGLattice)))
-            )
-        )
-    }
+fun PrevEOGState.push(
+    currentElement: PrevEOGStateElement,
+    newNode: Node,
+    newEOGLattice: PrevEOGLatticeElement,
+): PrevEOGStateElement {
+    return this.lub(currentElement, PrevEOGStateElement(newNode to newEOGLattice))
 }
