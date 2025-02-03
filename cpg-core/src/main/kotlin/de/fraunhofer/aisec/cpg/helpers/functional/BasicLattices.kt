@@ -102,7 +102,7 @@ open class PowersetLatticeElement<V : IdentitySet<T>, T>(override val value: V) 
 }
 
 /** Writing all the type params is annoying, so this removes some of them. */
-typealias MapLatticeElementT<K, V> = MapLatticeElementT<K, LatticeElement<V>, V>
+typealias MapLatticeElementT<K, V> = MapLatticeElement<K, LatticeElement<V>, V>
 
 inline fun <reified K, T> emptyMapLatticeElement() =
     MapLatticeElement<K, LatticeElement<T>, T>(IdentityHashMap())
