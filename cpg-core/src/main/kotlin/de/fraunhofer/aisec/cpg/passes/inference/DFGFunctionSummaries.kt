@@ -43,6 +43,7 @@ import de.fraunhofer.aisec.cpg.graph.newFunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.newParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.parseName
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemoryAddress
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnknownMemoryValue
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.unknownType
@@ -308,7 +309,7 @@ class DFGFunctionSummaries {
                 } else if (entry.from == "base") {
                     (functionDeclaration as? MethodDeclaration)?.receiver
                 } else {
-                    null
+                    UnknownMemoryValue(Name(entry.from))
                 }
             val to =
                 if (entry.to.startsWith("param")) {

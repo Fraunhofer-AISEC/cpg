@@ -298,7 +298,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
     private fun handleReturnStatement(
         currentNode: ReturnStatement,
-        doubleState: PointsToState2
+        doubleState: PointsToState2,
     ): PointsToState2 {
         /* For Return Statements, all we really want to do is to collect their return values
         to add them to the FunctionSummary */
@@ -442,7 +442,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                             doubleState.getNestedValues(
                                                 argument,
                                                 destAddrDepth,
-                                                fetchFields = true
+                                                fetchFields = true,
                                             )
                                         argumentValues.forEach { v ->
                                             val parentName = nodeNameToString(v)
@@ -468,7 +468,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                             .getNestedValues(
                                                 currentNode.arguments[srcNode.argumentIndex],
                                                 srcValueDepth,
-                                                fetchFields = true
+                                                fetchFields = true,
                                             )
                                             .forEach { value ->
                                                 destination.forEach { d ->
@@ -1028,13 +1028,13 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         fun getNestedValues(
             node: Node,
             nestingDepth: Int,
-            fetchFields: Boolean = false
+            fetchFields: Boolean = false,
         ): Set<Node> {
             if (nestingDepth == 0) return this.getAddresses(node)
             //            else if (dereferenceDepth == 1) return addr.flatMap { getValues(it)
             // }.toSet()
             var ret = getValues(node)
-            for (i in 1 ..< nestingDepth) {
+            for (i in 1..<nestingDepth) {
                 ret = // ret.flatMap { getValues(it) }.toIdentitySet()
                     ret.flatMap { this.fetchElementFromDeclarationState(it, fetchFields) }
                         .map { it.first }
@@ -1045,7 +1045,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
         fun fetchFieldAddresses(
             baseAddresses: IdentitySet<Node>,
-            nodeName: Name
+            nodeName: Name,
         ): IdentitySet<Node> {
             val fieldAddresses = identitySetOf<Node>()
 
