@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.scopes.ValueDeclarationScope
@@ -90,12 +91,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         val to = parseName(ctx.alias.toString())
 
         val import =
-            newImportDeclaration(
-                from,
-                style = ImportDeclaration.ImportStyle.IMPORT_NAMESPACE,
-                to,
-                rawNode = ctx,
-            )
+            newImportDeclaration(from, style = ImportStyle.IMPORT_NAMESPACE, to, rawNode = ctx)
 
         frontend.scopeManager.addDeclaration(import)
 
@@ -112,7 +108,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         val declaration =
             newImportDeclaration(
                 import,
-                style = ImportDeclaration.ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE,
+                style = ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE,
                 rawNode = ctx,
             )
 
@@ -131,7 +127,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         val declaration =
             newImportDeclaration(
                 import,
-                style = ImportDeclaration.ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE,
+                style = ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE,
                 rawNode = ctx,
             )
 

@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.graph.Name
+import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.scopes.FileScope
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
@@ -155,43 +156,10 @@ class ImportDeclaration : Declaration() {
     var style: ImportStyle = ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE
 
     /**
-     * The [NamespaceDeclaration] where the symbols are imported from. This will be populated by
-     * [ImportResolver.collectImportDependencies].
-     */
-    @Transient
-    @PopulatedByPass(ImportResolver::class)
-    var importedFrom: NamespaceDeclaration? = null
-
-    /**
      * A list of symbols that this declaration imports. This will be populated by
      * [ImportResolver.handleImportDeclaration].
      */
     @Transient
     @PopulatedByPass(ImportResolver::class)
     var importedSymbols: SymbolMap = mutableMapOf()
-
-    /**
-     * The style of the import. This can be used to distinguish between different import modes, such
-     * as importing a single symbol from a namespace, importing a whole namespace or importing all
-     * symbols from a namespace.
-     */
-    enum class ImportStyle {
-        /**
-         * Imports a single symbol from the [ImportDeclaration.importedFrom] namespace. The current
-         * scope will contain a symbol with the same name as the imported symbol.
-         */
-        IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE,
-
-        /**
-         * Imports the [ImportDeclaration.importedFrom] namespace as a single symbol. The current
-         * scope will contain a symbol with the same name as the imported namespace.
-         */
-        IMPORT_NAMESPACE,
-
-        /**
-         * Imports all symbols from the [ImportDeclaration.importedFrom] namespace. The current
-         * scope will contain one new symbol for each symbol in the namespace.
-         */
-        IMPORT_ALL_SYMBOLS_FROM_NAMESPACE,
-    }
 }

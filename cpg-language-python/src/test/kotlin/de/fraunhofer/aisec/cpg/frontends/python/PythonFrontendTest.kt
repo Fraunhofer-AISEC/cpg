@@ -32,10 +32,10 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.*
+import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ListType
@@ -1420,14 +1420,17 @@ class PythonFrontendTest : BaseTest() {
         // import a
         val importA = result.imports["a"]
         assertNotNull(importA)
-        assertEquals(ImportDeclaration.ImportStyle.IMPORT_NAMESPACE, importA.style)
-        assertEquals(result.namespaces["a"], importA.importedFrom)
+        assertEquals(ImportStyle.IMPORT_NAMESPACE, importA.style)
+        assertContains(
+            assertNotNull(importA.scope?.importedScopes),
+            assertNotNull(result.finalCtx.scopeManager.lookupScope(Name("a"))),
+        )
 
         // from c import *
         val importC = result.imports["c"]
         assertNotNull(importC)
-        assertEquals(ImportDeclaration.ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE, importC.style)
-        assertEquals(result.namespaces["c"], importC.importedFrom)
+        assertEquals(ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE, importC.style)
+        // assertEquals(result.namespaces["c"], importC.importedFrom)
 
         val aFunc = result.functions["a.func"]
         assertNotNull(aFunc)

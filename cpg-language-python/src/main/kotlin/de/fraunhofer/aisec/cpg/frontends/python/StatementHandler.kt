@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage.Companion.MODIFIE
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.scopes.FunctionScope
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.NamespaceScope
@@ -542,14 +543,14 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 if (alias != null) {
                     newImportDeclaration(
                         parseName(imp.name),
-                        style = ImportDeclaration.ImportStyle.IMPORT_NAMESPACE,
+                        style = ImportStyle.IMPORT_NAMESPACE,
                         parseName(alias),
                         rawNode = imp,
                     )
                 } else {
                     newImportDeclaration(
                         parseName(imp.name),
-                        style = ImportDeclaration.ImportStyle.IMPORT_NAMESPACE,
+                        style = ImportStyle.IMPORT_NAMESPACE,
                         rawNode = imp,
                     )
                 }
@@ -601,7 +602,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     // to true
                     newImportDeclaration(
                         module,
-                        style = ImportDeclaration.ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE,
+                        style = ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE,
                         rawNode = imp,
                     )
                 } else {
@@ -612,16 +613,14 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     if (alias != null) {
                         newImportDeclaration(
                             name,
-                            style =
-                                ImportDeclaration.ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE,
+                            style = ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE,
                             parseName(alias),
                             rawNode = imp,
                         )
                     } else {
                         newImportDeclaration(
                             name,
-                            style =
-                                ImportDeclaration.ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE,
+                            style = ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE,
                             rawNode = imp,
                         )
                     }

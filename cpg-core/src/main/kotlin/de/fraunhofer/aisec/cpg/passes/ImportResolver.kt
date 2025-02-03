@@ -32,10 +32,12 @@ import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.component
 import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.edges.scopes.Import
+import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
+import de.fraunhofer.aisec.cpg.graph.scopes.NamespaceScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.translationUnit
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
@@ -44,7 +46,6 @@ import de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import de.fraunhofer.aisec.cpg.passes.Pass.Companion.log
-import de.fraunhofer.aisec.cpg.passes.inference.tryNamespaceInference
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.util.IdentityHashMap
 
@@ -340,25 +341,14 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
             return
         }
 
-        println(name)
+        val targetScope = scopeManager.lookupScope(name) as? NamespaceScope
 
-        var candidates =
-            scopeManager
-                .lookupSymbolByName(name, import.language, import.location, import.scope) {
-                    it is NamespaceDeclaration
-                }
-                .filterIsInstance<NamespaceDeclaration>()
-
-        if (candidates.isEmpty()) {
-            candidates = listOfNotNull(tryNamespaceInference(name, import))
+        val startScope = import.scope
+        if (startScope != null && targetScope != null) {
+            // Create a new import edge with all the necessary information
+            val edge = Import(startScope, targetScope, import)
+            startScope.importedScopeEdges += edge
         }
-
-        // There could potentially be more than one namespace declaration with the same name. For
-        // example, in python we create nested namespace declarations in each module for the
-        // complete package path. By definition of how the scope manager works, all namespace
-        // declarations with the same name will point to the same namespace scope, so it is
-        // sufficient for us to just pick any declaration.
-        import.importedFrom = candidates.firstOrNull()
     }
 
     override fun cleanup() {

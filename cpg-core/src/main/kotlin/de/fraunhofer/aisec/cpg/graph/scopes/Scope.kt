@@ -31,7 +31,9 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration.ImportStyle
+import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
+import de.fraunhofer.aisec.cpg.graph.edges.scopes.Imports
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.firstScopeParentOrNull
 import de.fraunhofer.aisec.cpg.graph.statements.LabelStatement
 import de.fraunhofer.aisec.cpg.graph.statements.LookupScopeStatement
@@ -80,9 +82,15 @@ sealed class Scope(
     @Transient var symbols: SymbolMap = mutableMapOf()
 
     /**
-     * A list of [ImportDeclaration] nodes that have [ImportDeclaration.wildcardImport] set to true.
+     * A list of [ImportDeclaration] nodes that have an
+     * [ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE] import style ("wildcard" import).
      */
     @Transient var wildcardImports: MutableSet<ImportDeclaration> = mutableSetOf()
+
+    @Relationship(value = "IMPORTS_SCOPE", direction = Relationship.Direction.OUTGOING)
+    val importedScopeEdges =
+        Imports(this, mirrorProperty = NamespaceScope::importedByEdges, outgoing = true)
+    val importedScopes by unwrapping(Scope::importedScopeEdges)
 
     /**
      * In some languages, the lookup scope of a symbol that is being resolved (e.g. of a

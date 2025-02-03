@@ -25,11 +25,25 @@
  */
 package de.fraunhofer.aisec.cpg.graph.scopes
 
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
+import de.fraunhofer.aisec.cpg.graph.edges.scopes.Imports
+import de.fraunhofer.aisec.cpg.graph.edges.unwrappingIncoming
 
 /**
  * This scope is opened up by a [NamespaceDeclaration] and represents the scope of the whole
  * namespace. This scope is special in a way that it will only exist once (per [GlobalScope]) and
  * contains all symbols declared in this namespace, even if they are spread across multiple files.
  */
-class NamespaceScope(astNode: NamespaceDeclaration) : NameScope(astNode)
+class NamespaceScope(astNode: NamespaceDeclaration) : NameScope(astNode) {
+
+    val importedByEdges: Imports =
+        Imports(this, mirrorProperty = Scope::importedScopeEdges, outgoing = false)
+    val importedBy: MutableSet<Scope> by unwrappingIncoming(NamespaceScope::importedByEdges)
+
+    override fun addDeclaration(declaration: Declaration, addToAST: Boolean) {
+        // Update imported symbols of dependent scopes
+
+        super.addDeclaration(declaration, addToAST)
+    }
+}

@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node.Companion.EMPTY_NAME
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.log
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewArrayExpression
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -449,7 +450,7 @@ fun MetadataProvider.newNamespaceDeclaration(
 @JvmOverloads
 fun MetadataProvider.newImportDeclaration(
     import: Name,
-    style: ImportDeclaration.ImportStyle,
+    style: ImportStyle,
     alias: Name? = null,
     rawNode: Any? = null,
 ): ImportDeclaration {
