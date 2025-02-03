@@ -26,12 +26,19 @@
 package de.fraunhofer.aisec.cpg.processing
 
 import de.fraunhofer.aisec.cpg.GraphExamples
+import de.fraunhofer.aisec.cpg.ScopeManager
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.TranslationManager
+import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.TypeManager
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.passes.ImportDependencies
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import de.fraunhofer.aisec.cpg.test.*
 import java.util.concurrent.ExecutionException
@@ -128,6 +135,66 @@ class VisitorTest : BaseTest() {
             },
         )
         assertEquals(2, returnStatements.size)
+    }
+
+    @Test
+    fun testFallbackComponentLeastImported() {
+        val component1 = Component().also { it.name = Name("component1") }
+        val component2 = Component().also { it.name = Name("component2") }
+
+        val tr =
+            TranslationResult(
+                translationManager = TranslationManager.builder().build(),
+                finalCtx =
+                    TranslationContext(
+                        config = TranslationConfiguration.builder().build(),
+                        scopeManager = ScopeManager(),
+                        typeManager = TypeManager(),
+                    ),
+            )
+        tr.components += component1
+        tr.components += component2
+
+        // will trigger fallback as we have no dependency information
+        val fallback = Strategy.COMPONENTS_LEAST_IMPORTS(tr).asSequence().toList()
+        assertEquals(listOf(component1, component2), fallback)
+
+        tr.componentDependencies =
+            ImportDependencies<Component>(tr.components).also {
+                it.add(component1, component2)
+                it
+            }
+
+        // will use sorted
+        val sorted = Strategy.COMPONENTS_LEAST_IMPORTS(tr).asSequence().toList()
+        assertEquals(listOf(component2, component1), sorted)
+        assertEquals(tr.componentDependencies?.sorted, sorted)
+    }
+
+    @Test
+    fun testFallbackTULeastImported() {
+        val component = Component()
+
+        val tr1 = TranslationUnitDeclaration().also { it.name = Name("tr1") }
+        val tr2 = TranslationUnitDeclaration().also { it.name = Name("tr2") }
+
+        component.translationUnits += tr1
+        component.translationUnits += tr2
+
+        // will trigger fallback as we have no dependency information
+        val fallback = Strategy.TRANSLATION_UNITS_LEAST_IMPORTS(component).asSequence().toList()
+        assertEquals(listOf(tr1, tr2), fallback)
+
+        component.translationUnitDependencies =
+            ImportDependencies<TranslationUnitDeclaration>(component.translationUnits).also {
+                it.add(tr1, tr2)
+                it
+            }
+
+        // will use sorted
+        val sorted = Strategy.TRANSLATION_UNITS_LEAST_IMPORTS(component).asSequence().toList()
+        assertEquals(listOf(tr2, tr1), sorted)
+        assertEquals(component.translationUnitDependencies?.sorted, sorted)
     }
 
     companion object {

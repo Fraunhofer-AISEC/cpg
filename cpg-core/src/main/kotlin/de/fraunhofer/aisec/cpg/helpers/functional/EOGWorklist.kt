@@ -28,7 +28,13 @@ package de.fraunhofer.aisec.cpg.helpers.functional
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import java.util.IdentityHashMap
 
-inline fun <reified V> iterateEOGClean(
+/**
+ * Computes a fixpoint by iterating over the EOG beginning with the [startEdges] and a state
+ * [startState]. This means, it keeps applying [transformation] until the state does no longer
+ * change. With state, we mean a mapping between the [EvaluationOrder] edges to the value of
+ * [LatticeElement] which represents possible values (or abstractions thereof) that they hold.
+ */
+inline fun <reified V> iterateEOGNew(
     startEdges: List<EvaluationOrder>,
     startState: LatticeElement<V>,
     transformation: (EvaluationOrder, LatticeElement<V>) -> LatticeElement<V>,
@@ -45,12 +51,16 @@ inline fun <reified V> iterateEOGClean(
         val nextEdge = edgesList.first()
         edgesList.removeFirst()
 
+        // Compute the effects of "nextEdge" on the state by applying the transformation to its
+        // state.
         val nextGlobal = globalState[nextEdge] ?: continue
         val newState = transformation(nextEdge, nextGlobal)
         if (nextEdge.end.nextEOGEdges.isEmpty()) {
             finalState[nextEdge] = newState
         }
         nextEdge.end.nextEOGEdges.forEach {
+            // We continue with the nextEOG edge if we haven't seen it before or if we updated the
+            // state in comparison to the previous time we were there.
             val oldGlobalIt = globalState[it]
             val newGlobalIt =
                 (oldGlobalIt?.let { newState.lub(it) } ?: newState) as LatticeElement<V>

@@ -195,7 +195,7 @@ class StatementHandlerTest : BaseTest() {
 
         // Test for `del a`
         val deleteStmt1 = deleteExpressions[0]
-        assertEquals(0, deleteStmt1.operands.size)
+        assertEquals(1, deleteStmt1.operands.size)
         assertEquals(1, deleteStmt1.additionalProblems.size)
 
         // Test for `del my_list[2]`
@@ -212,7 +212,7 @@ class StatementHandlerTest : BaseTest() {
 
         // Test for `del obj.d`
         val deleteStmt4 = deleteExpressions[3]
-        assertEquals(0, deleteStmt4.operands.size)
+        assertEquals(1, deleteStmt4.operands.size)
         assertEquals(1, deleteStmt4.additionalProblems.size)
     }
 
@@ -251,16 +251,10 @@ class StatementHandlerTest : BaseTest() {
         var globalC = cVariables.firstOrNull { it.scope == pythonGlobalScope }
         assertNotNull(globalC)
 
-        var localC1 =
-            cVariables.firstOrNull {
-                it.scope?.astNode?.astParent?.name?.localName == "local_write"
-            }
+        var localC1 = cVariables.firstOrNull { it.scope?.astNode?.name?.localName == "local_write" }
         assertNotNull(localC1)
 
-        var localC2 =
-            cVariables.firstOrNull {
-                it.scope?.astNode?.astParent?.name?.localName == "error_write"
-            }
+        var localC2 = cVariables.firstOrNull { it.scope?.astNode?.name?.localName == "error_write" }
         assertNotNull(localC2)
 
         // In global_write, all references should point to global c

@@ -142,6 +142,7 @@ private constructor(
         val usedFrontends = mutableSetOf<LanguageFrontend<*, *>>()
         for (sc in ctx.config.softwareComponents.keys) {
             val component = Component()
+            component.ctx = ctx
             component.name = Name(sc)
             result.addComponent(component)
 
@@ -207,39 +208,37 @@ private constructor(
                 tmpFile.deleteOnExit()
 
                 PrintWriter(tmpFile).use { writer ->
-                    list.forEach {
+                    list.forEach { file ->
                         val cxxExtensions = listOf("c", "cpp", "cc", "cxx")
-                        if (cxxExtensions.contains(it.extension)) {
-                            if (ctx.config.topLevel != null) {
-                                val topLevel = ctx.config.topLevel.toPath()
+                        if (cxxExtensions.contains(file.extension)) {
+                            ctx.config.topLevels[sc]?.let {
+                                val topLevel = it.toPath()
                                 writer.write(
                                     """
-#include "${topLevel.relativize(it.toPath())}"
-
-"""
-                                        .trimIndent()
-                                )
-                            } else {
-                                writer.write(
-                                    """
-#include "${it.absolutePath}"
+#include "${topLevel.relativize(file.toPath())}"
 
 """
                                         .trimIndent()
                                 )
                             }
+                                ?: run {
+                                    writer.write(
+                                        """
+#include "${file.absolutePath}"
+
+"""
+                                            .trimIndent()
+                                    )
+                                }
                         }
                     }
                 }
 
                 sourceLocations = listOf(tmpFile)
-                if (ctx.config.compilationDatabase != null) {
-                    // merge include paths from all translation units
-                    ctx.config.compilationDatabase.addIncludePath(
-                        tmpFile,
-                        ctx.config.compilationDatabase.allIncludePaths,
-                    )
-                }
+                ctx.config.compilationDatabase?.addIncludePath(
+                    tmpFile,
+                    ctx.config.compilationDatabase.allIncludePaths,
+                )
             } else {
                 sourceLocations = list
             }

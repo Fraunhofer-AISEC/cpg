@@ -32,12 +32,14 @@ import java.util.IdentityHashMap
 import kotlin.Pair
 import kotlin.collections.component1
 import kotlin.collections.component2
+import kotlin.collections.set
 import kotlin.collections.toMap
 
 /**
- * A complete lattice is an ordered structure of values of type [T]. [T] could be anything, e.g., a
- * set, a new data structure (like a range), or anything else. [T] depends on the analysis and
- * typically has to abstract the value for the specific purpose.
+ * A lattice is a partially ordered structure of values of type [T]. [T] could be anything, where
+ * common examples are sets, ranges, maps, tuples, but it can also have random names and a new data
+ * structure which only make sense in a certain context. [T] depends on the analysis and typically
+ * has to abstract the value for the specific purpose.
  *
  * This class is actually used to hold individual instances of the lattice's elements and to compute
  * bigger elements depending on these two elements.
@@ -46,7 +48,7 @@ import kotlin.collections.toMap
  * lattices.
  */
 interface LatticeElement<T> : Comparable<LatticeElement<T>> {
-    val elements: T
+    val value: T
 
     /**
      * Computes the least upper bound of this lattice and [other]. It returns a new object and does
@@ -58,27 +60,30 @@ interface LatticeElement<T> : Comparable<LatticeElement<T>> {
     fun duplicate(): LatticeElement<in T>
 }
 
-typealias PowersetLatticeT<V> = PowersetLattice<IdentitySet<V>, V>
+/** Writing all the type params is annoying, so this removes some of them. */
+typealias PowersetLatticeElementT<V> = PowersetLatticeElement<IdentitySet<V>, V>
 
-inline fun <reified V> emptyPowersetLattice() = PowersetLattice<IdentitySet<V>, V>(identitySetOf())
+inline fun <reified V> emptyPowersetLattice() =
+    PowersetLatticeElement<IdentitySet<V>, V>(identitySetOf())
 
 /**
  * Implements the [LatticeElement] for a lattice over a set of nodes. The lattice itself is
  * constructed by the powerset.
  */
-open class PowersetLattice<V : IdentitySet<T>, T>(override val elements: V) : LatticeElement<V> {
-    override fun lub(other: LatticeElement<out V>): PowersetLattice<in V, T> {
-        val newElements = this.elements.toIdentitySet()
-        newElements += other.elements
-        return PowersetLattice(newElements)
+open class PowersetLatticeElement<V : IdentitySet<T>, T>(override val value: V) :
+    LatticeElement<V> {
+    override fun lub(other: LatticeElement<out V>): PowersetLatticeElement<in V, T> {
+        val newElements = this.value.toIdentitySet()
+        newElements += other.value
+        return PowersetLatticeElement(newElements)
     }
 
-    override fun duplicate() = PowersetLattice(this.elements.toIdentitySet() as V)
+    override fun duplicate() = PowersetLatticeElement(this.value.toIdentitySet() as V)
 
     override fun compareTo(other: LatticeElement<V>): Int {
-        return if (this.elements == other.elements) {
+        return if (this.value == other.value) {
             0
-        } else if (this.elements.containsAll(other.elements)) {
+        } else if (this.value.containsAll(other.value)) {
             1
         } else {
             -1
@@ -86,29 +91,31 @@ open class PowersetLattice<V : IdentitySet<T>, T>(override val elements: V) : La
     }
 
     override fun equals(other: Any?): Boolean {
-        // The call of `toSet` ensures that we don't get stuck for different types of sets.
-        return other is PowersetLattice<V, T> && this.elements.toSet() == other.elements.toSet()
+        return other is PowersetLatticeElement<V, T> && this.value == other.value
     }
 
     override fun hashCode(): Int {
-        return super.hashCode() * 31 + elements.hashCode()
+        return super.hashCode() * 31 + value.hashCode()
     }
 }
 
-typealias MapLatticeT<K, V> = LatticeElement<Map<K, V>>
+/** Writing all the type params is annoying, so this removes some of them. */
+typealias MapLatticeElementT<K, V> = MapLatticeElement<K, LatticeElement<V>, V>
 
-inline fun <reified K, T> emptyMapLattice() = MapLattice<K, LatticeElement<T>, T>(IdentityHashMap())
+inline fun <reified K, T> emptyMapLatticeElement() =
+    MapLatticeElement<K, LatticeElement<T>, T>(IdentityHashMap())
 
 /** Implements the [LatticeElement] for a lattice over a map of nodes to another lattice. */
-open class MapLattice<K, V : LatticeElement<T>, T>(override val elements: IdentityHashMap<K, V>) :
-    LatticeElement<IdentityHashMap<K, V>> {
+open class MapLatticeElement<K, V : LatticeElement<T>, T>(
+    override val value: IdentityHashMap<K, V>
+) : LatticeElement<IdentityHashMap<K, V>> {
 
-    override fun lub(other: LatticeElement<out IdentityHashMap<K, V>>): MapLattice<K, V, T> {
-        val allKeys = other.elements.keys.union(this.elements.keys)
+    override fun lub(other: LatticeElement<out IdentityHashMap<K, V>>): MapLatticeElement<K, V, T> {
+        val allKeys = other.value.keys.union(this.value.keys)
         val newMap =
             allKeys.fold(IdentityHashMap<K, V>()) { current, key ->
-                val otherValue = other.elements[key]
-                val thisValue = this.elements[key]
+                val otherValue = other.value[key]
+                val thisValue = this.value[key]
                 val newValue =
                     if (thisValue != null && otherValue != null && thisValue < otherValue) {
                         thisValue.lub(otherValue) as? V
@@ -118,22 +125,20 @@ open class MapLattice<K, V : LatticeElement<T>, T>(override val elements: Identi
                 newValue?.let { current[key] = it }
                 current
             }
-        return MapLattice(newMap)
+        return MapLatticeElement(newMap)
     }
 
     override fun duplicate() =
-        MapLattice(
-            IdentityHashMap(
-                this.elements.map { (k, v) -> Pair<K, V>(k, v.duplicate() as V) }.toMap()
-            )
+        MapLatticeElement(
+            IdentityHashMap(this.value.map { (k, v) -> Pair<K, V>(k, v.duplicate() as V) }.toMap())
         )
 
     override fun compareTo(other: LatticeElement<IdentityHashMap<K, V>>): Int {
         if (this == other) return 0
         if (
-            this.elements.keys.containsAll(other.elements.keys) &&
-                this.elements.entries.all { (k, v) ->
-                    other.elements[k]?.let { otherV -> v >= otherV } != false
+            this.value.keys.containsAll(other.value.keys) &&
+                this.value.entries.all { (k, v) ->
+                    other.value[k]?.let { otherV -> v >= otherV } != false
                 }
         )
             return 1
@@ -141,111 +146,117 @@ open class MapLattice<K, V : LatticeElement<T>, T>(override val elements: Identi
     }
 
     override fun equals(other: Any?): Boolean {
-        return other is MapLattice<K, V, T> &&
-            this.elements.keys.size == other.elements.keys.size &&
-            this.elements.keys.containsAll(other.elements.keys) &&
-            this.elements.entries.all { (k, v) -> other.elements[k] == v }
+        return other is MapLatticeElement<K, V, T> &&
+            this.value.keys.size == other.value.keys.size &&
+            this.value.keys.containsAll(other.value.keys) &&
+            this.value.entries.all { (k, v) -> other.value[k] == v }
     }
 
     override fun hashCode(): Int {
-        return super.hashCode() * 31 + elements.hashCode()
+        return super.hashCode() * 31 + value.hashCode()
     }
 }
 
-open class TupleLattice<U : LatticeElement<S>, V : LatticeElement<T>, S, T>(
-    override val elements: Pair<U, V>
+/** Writing all the type params is annoying, so this removes some of them. */
+typealias TupleLatticeElementT<S, T> =
+    TupleLatticeElement<LatticeElement<S>, LatticeElement<T>, S, T>
+
+open class TupleLatticeElement<U : LatticeElement<S>, V : LatticeElement<T>, S, T>(
+    override val value: Pair<U, V>
 ) : LatticeElement<Pair<U, V>> {
     override fun lub(other: LatticeElement<out Pair<U, V>>) =
-        TupleLattice(
+        TupleLatticeElement(
             Pair(
-                this.elements.first.lub(other.elements.first) as U,
-                this.elements.second.lub(other.elements.second) as V,
+                this.value.first.lub(other.value.first) as U,
+                this.value.second.lub(other.value.second) as V,
             )
         )
 
     override fun duplicate() =
-        TupleLattice(Pair(elements.first.duplicate() as U, elements.second.duplicate() as V))
+        TupleLatticeElement(Pair(value.first.duplicate() as U, value.second.duplicate() as V))
 
     override fun compareTo(other: LatticeElement<Pair<U, V>>): Int {
-        if (
-            this.elements.first == other.elements.first &&
-                this.elements.second == other.elements.second
-        )
+        if (this.value.first == other.value.first && this.value.second == other.value.second)
             return 0
-        if (
-            this.elements.first >= other.elements.first &&
-                this.elements.second >= other.elements.second
-        )
+        if (this.value.first >= other.value.first && this.value.second >= other.value.second)
             return 1
         return -1
     }
 
     override fun equals(other: Any?): Boolean {
-        if (other !is TupleLattice<U, V, S, T>) return false
-        return other.elements.first == this.elements.first &&
-            other.elements.second == this.elements.second
+        if (other !is TupleLatticeElement<U, V, S, T>) return false
+        return other.value.first == this.value.first && other.value.second == this.value.second
     }
 
     override fun hashCode(): Int {
-        return super.hashCode() * 31 + elements.hashCode()
+        return super.hashCode() * 31 + value.hashCode()
     }
 
-    operator fun component1() = this.elements.first
+    operator fun component1() = this.value.first
 
-    operator fun component2() = this.elements.second
+    operator fun component2() = this.value.second
 }
 
-class TripleLattice<U : LatticeElement<R>, V : LatticeElement<S>, W : LatticeElement<T>, R, S, T>(
-    override val elements: Triple<U, V, W>
-) : LatticeElement<Triple<U, V, W>> {
+/** Writing all the type params is annoying, so this removes some of them. */
+typealias TripleLatticeElementT<R, S, T> =
+    TripleLatticeElement<LatticeElement<R>, LatticeElement<S>, LatticeElement<T>, R, S, T>
+
+class TripleLatticeElement<
+    U : LatticeElement<R>,
+    V : LatticeElement<S>,
+    W : LatticeElement<T>,
+    R,
+    S,
+    T,
+>(override val value: Triple<U, V, W>) : LatticeElement<Triple<U, V, W>> {
     override fun lub(other: LatticeElement<out Triple<U, V, W>>) =
-        TripleLattice(
+        TripleLatticeElement(
             Triple(
-                this.elements.first.lub(other.elements.first) as U,
-                this.elements.second.lub(other.elements.second) as V,
-                this.elements.third.lub(other.elements.third) as W,
+                this.value.first.lub(other.value.first) as U,
+                this.value.second.lub(other.value.second) as V,
+                this.value.third.lub(other.value.third) as W,
             )
         )
 
     override fun duplicate() =
-        TripleLattice(
+        TripleLatticeElement(
             Triple(
-                elements.first.duplicate() as U,
-                elements.second.duplicate() as V,
-                elements.third.duplicate() as W,
+                value.first.duplicate() as U,
+                value.second.duplicate() as V,
+                value.third.duplicate() as W,
             )
         )
 
     override fun compareTo(other: LatticeElement<Triple<U, V, W>>): Int {
         if (
-            this.elements.first == other.elements.first &&
-                this.elements.second == other.elements.second &&
-                this.elements.third == other.elements.third
+            this.value.first == other.value.first &&
+                this.value.second == other.value.second &&
+                this.value.third == other.value.third
         )
             return 0
         if (
-            this.elements.first >= other.elements.first as U &&
-                this.elements.second >= other.elements.second as V &&
-                this.elements.third >= other.elements.third as W
+            this.value.first >= other.value.first as U &&
+                this.value.second >= other.value.second as V &&
+                this.value.third >= other.value.third as W
         )
             return 1
         return -1
     }
 
     override fun equals(other: Any?): Boolean {
-        if (other !is TripleLattice<U, V, W, R, S, T>) return false
-        return other.elements.first == this.elements.first &&
-            other.elements.second == this.elements.second &&
-            other.elements.third == this.elements.third
+        if (other !is TripleLatticeElement<U, V, W, R, S, T>) return false
+        return other.value.first == this.value.first &&
+            other.value.second == this.value.second &&
+            other.value.third == this.value.third
     }
 
     override fun hashCode(): Int {
-        return super.hashCode() * 31 + elements.hashCode()
+        return super.hashCode() * 31 + value.hashCode()
     }
 
-    operator fun component1() = this.elements.first
+    operator fun component1() = this.value.first
 
-    operator fun component2() = this.elements.second
+    operator fun component2() = this.value.second
 
-    operator fun component3() = this.elements.third
+    operator fun component3() = this.value.third
 }

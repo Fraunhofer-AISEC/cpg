@@ -49,7 +49,7 @@ publishing {
                     // Modify the XML to exclude dependencies that start with "cpg-language-".
                     // This is necessary because we do not want to "leak" the dependency to our dynamically activated
                     // frontends to the outside
-                    var dependenciesNode = asNode().children().filterIsInstance<Node>().firstOrNull { true && it.name().toString() == "{http://maven.apache.org/POM/4.0.0}dependencies" }
+                    val dependenciesNode = asNode().children().filterIsInstance<Node>().firstOrNull { it.name().toString() == "{http://maven.apache.org/POM/4.0.0}dependencies" }
                     dependenciesNode?.children()?.removeIf {
                         it is Node &&
                                 (it.name().toString() == "{http://maven.apache.org/POM/4.0.0}dependency") &&

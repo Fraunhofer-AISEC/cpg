@@ -9,7 +9,8 @@ nexus-publish = "2.0.0"
 sootup = "1.3.0"
 slf4j = "2.0.16"
 clikt = "5.0.2"
-kaml = "0.67.0"
+kaml = "0.70.0"
+sarif4k = "0.6.0"
 
 [libraries]
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin"}
@@ -47,11 +48,12 @@ picocli-codegen = { module = "info.picocli:picocli-codegen", version = "4.7.0"}
 jep = { module = "black.ninia:jep", version = "4.2.0" }  # build.yml uses grep to extract the jep verison number for CI/CD purposes
 llvm = { module = "org.bytedeco:llvm-platform", version = "16.0.4-1.5.9"}
 jruby = { module = "org.jruby:jruby-core", version = "9.4.3.0" }
-jline = { module = "org.jline:jline", version = "3.28.0" }
+jline = { module = "org.jline:jline", version = "3.29.0" }
 antlr-runtime = { module = "org.antlr:antlr4-runtime", version = "4.8-1" } # we cannot upgrade until ki-shell upgrades this!
 ini4j = { module = "org.ini4j:ini4j", version = "0.5.4" }
 clikt = { module = "com.github.ajalt.clikt:clikt", version.ref = "clikt" }
 kaml = { module = "com.charleskorn.kaml:kaml", version.ref = "kaml" }
+sarif4k = { module = "io.github.detekt.sarif4k:sarif4k", version.ref = "sarif4k" }
 
 # test
 junit-params = { module = "org.junit.jupiter:junit-jupiter-params", version = "5.11.0"}
