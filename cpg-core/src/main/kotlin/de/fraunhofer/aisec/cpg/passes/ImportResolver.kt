@@ -46,6 +46,7 @@ import de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import de.fraunhofer.aisec.cpg.passes.Pass.Companion.log
+import de.fraunhofer.aisec.cpg.passes.inference.tryNamespaceInference
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.util.IdentityHashMap
 
@@ -322,6 +323,7 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
         // TOOD: Remove
         import.updateImportedSymbols()
 
+        val startScope = import.scope
         val name =
             when (import.style) {
                 ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE -> {
@@ -339,12 +341,23 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
                 "Could not get namespace name from import declaration",
             )
             return
+        } else if (startScope == null) {
+            errorWithFileLocation(import, log, "Could not get scope from import declaration")
+            return
         }
 
-        val targetScope = scopeManager.lookupScope(name) as? NamespaceScope
+        // Try to look up the namespace scope by the name
+        var targetScope = scopeManager.lookupScope(name) as? NamespaceScope
+        if (targetScope == null) {
+            // Try to infer it, if inference is configured
+            val decl = tryNamespaceInference(name, import)
+            if (decl != null) {
+                targetScope = scopeManager.lookupScope(name) as? NamespaceScope
+            }
+        }
 
-        val startScope = import.scope
-        if (startScope != null && targetScope != null) {
+        // If we have a target scope, we can create an "import" edge
+        if (targetScope != null) {
             // Create a new import edge with all the necessary information
             val edge = Import(startScope, targetScope, import)
             startScope.importedScopeEdges += edge
