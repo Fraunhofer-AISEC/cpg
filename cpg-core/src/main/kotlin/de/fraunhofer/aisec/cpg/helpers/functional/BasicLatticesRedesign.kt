@@ -79,7 +79,7 @@ interface Lattice<T : Lattice.Element> {
     }
 
     /** Allows storing all elements which are part of this lattice */
-    var elements: Set<Element>
+    var elements: Set<T>
 
     /** The smallest possible element in the lattice */
     val bottom: T
@@ -157,7 +157,7 @@ interface Lattice<T : Lattice.Element> {
 
 /** Implements a [Lattice] whose elements are the powerset of a given set of values. */
 class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
-    override lateinit var elements: Set<Lattice.Element>
+    override lateinit var elements: Set<Element<T>>
 
     class Element<T>() : IdentitySet<T>(), Lattice.Element {
         constructor(set: Set<T>) : this() {
@@ -234,7 +234,7 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
  */
 open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
     Lattice<MapLattice.Element<K, V>> {
-    override lateinit var elements: Set<Lattice.Element>
+    override lateinit var elements: Set<Element<K, V>>
 
     class Element<K, V : Lattice.Element>() : IdentityHashMap<K, V>(), Lattice.Element {
 
@@ -358,7 +358,7 @@ class TupleLattice<S : Lattice.Element, T : Lattice.Element>(
     val innerLattice1: Lattice<S>,
     val innerLattice2: Lattice<T>,
 ) : Lattice<TupleLattice.Element<S, T>> {
-    override lateinit var elements: Set<Lattice.Element>
+    override lateinit var elements: Set<Element<S, T>>
 
     class Element<S : Lattice.Element, T : Lattice.Element>(val first: S, val second: T) :
         Serializable, Lattice.Element {
@@ -450,7 +450,7 @@ class TripleLattice<R : Lattice.Element, S : Lattice.Element, T : Lattice.Elemen
     val innerLattice2: Lattice<S>,
     val innerLattice3: Lattice<T>,
 ) : Lattice<TripleLattice.Element<R, S, T>> {
-    override lateinit var elements: Set<Lattice.Element>
+    override lateinit var elements: Set<Element<R, S, T>>
 
     class Element<R : Lattice.Element, S : Lattice.Element, T : Lattice.Element>(
         val first: R,
