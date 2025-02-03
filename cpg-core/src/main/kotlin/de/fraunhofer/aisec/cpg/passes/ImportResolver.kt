@@ -230,6 +230,8 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
             return
         }
 
+        setImportedScopeThingie(import)
+
         // Let's look for imported namespaces
         // First, we collect the individual parts of the name
         var parts = mutableListOf<Name>()
@@ -322,13 +324,16 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
     private fun handleImportDeclaration(import: ImportDeclaration) {
         // TOOD: Remove
         with(tr.finalCtx) { import.updateImportedSymbols() }
+    }
 
+    private fun setImportedScopeThingie(import: ImportDeclaration) {
         val startScope = import.scope
         val name =
             when (import.style) {
                 ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE -> {
                     import.import.parent
                 }
+
                 ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE,
                 ImportStyle.IMPORT_NAMESPACE -> {
                     import.import
