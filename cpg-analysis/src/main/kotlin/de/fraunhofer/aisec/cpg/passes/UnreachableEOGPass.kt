@@ -260,8 +260,8 @@ class ReachabilityLattice() : Lattice<ReachabilityLattice.Element> {
         }
     }
 
-    var elements =
-        setOf<Element>(
+    override var elements =
+        setOf(
             Element(Reachability.BOTTOM),
             Element(Reachability.UNREACHABLE),
             Element(Reachability.REACHABLE),
