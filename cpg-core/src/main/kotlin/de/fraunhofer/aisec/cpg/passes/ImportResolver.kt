@@ -230,7 +230,8 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
             return
         }
 
-        setImportedScopeThingie(import)
+        // Populate the imported scopes edges
+        import.populateImportedScopes()
 
         // Let's look for imported namespaces
         // First, we collect the individual parts of the name
@@ -326,28 +327,28 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
         with(tr.finalCtx) { import.updateImportedSymbols() }
     }
 
-    private fun setImportedScopeThingie(import: ImportDeclaration) {
-        val startScope = import.scope
+    /**
+     * This function populates the [Scope.importedScopes] property of the [Scope] that the
+     * [ImportDeclaration] "lives" in.
+     */
+    private fun ImportDeclaration.populateImportedScopes() {
+        val startScope = scope
         val name =
-            when (import.style) {
+            when (style) {
                 ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE -> {
-                    import.import.parent
+                    import.parent
                 }
 
                 ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE,
                 ImportStyle.IMPORT_NAMESPACE -> {
-                    import.import
+                    import
                 }
             }
         if (name == null) {
-            errorWithFileLocation(
-                import,
-                log,
-                "Could not get namespace name from import declaration",
-            )
+            errorWithFileLocation(this, log, "Could not get namespace name from import declaration")
             return
         } else if (startScope == null) {
-            errorWithFileLocation(import, log, "Could not get scope from import declaration")
+            errorWithFileLocation(this, log, "Could not get scope from import declaration")
             return
         }
 
@@ -355,7 +356,7 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
         var targetScope = scopeManager.lookupScope(name) as? NamespaceScope
         if (targetScope == null) {
             // Try to infer it, if inference is configured
-            val decl = tryNamespaceInference(name, import)
+            val decl = tryNamespaceInference(name, this)
             if (decl != null) {
                 targetScope = scopeManager.lookupScope(name) as? NamespaceScope
             }
@@ -364,7 +365,7 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
         // If we have a target scope, we can create an "import" edge
         if (targetScope != null) {
             // Create a new import edge with all the necessary information
-            val edge = Import(startScope, targetScope, import)
+            val edge = Import(startScope, targetScope, this)
             startScope.importedScopeEdges += edge
         }
     }

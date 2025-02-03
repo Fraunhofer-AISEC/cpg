@@ -26,11 +26,13 @@
 package de.fraunhofer.aisec.cpg.graph.scopes
 
 import com.fasterxml.jackson.annotation.JsonBackReference
+import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.frontends.HasImplicitReceiver
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
+import de.fraunhofer.aisec.cpg.graph.edges.scopes.Import
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.Imports
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
@@ -38,6 +40,7 @@ import de.fraunhofer.aisec.cpg.graph.firstScopeParentOrNull
 import de.fraunhofer.aisec.cpg.graph.statements.LabelStatement
 import de.fraunhofer.aisec.cpg.graph.statements.LookupScopeStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.passes.ImportResolver
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.NodeEntity
 import org.neo4j.ogm.annotation.Relationship
@@ -87,9 +90,18 @@ sealed class Scope(
      */
     @Transient var wildcardImports: MutableSet<ImportDeclaration> = mutableSetOf()
 
+    /**
+     * This set of edges is used to store [Import] edges that denotes foreign [NamespaceScope]
+     * information that is imported into this scope. The edge holds information about the "style" of
+     * the import (see [ImportStyle]) and the [ImportDeclaration] that is responsible for this. The
+     * property is populated by the [ImportResolver].
+     */
     @Relationship(value = "IMPORTS_SCOPE", direction = Relationship.Direction.OUTGOING)
+    @PopulatedByPass(ImportResolver::class)
     val importedScopeEdges =
         Imports(this, mirrorProperty = NamespaceScope::importedByEdges, outgoing = true)
+
+    /** Virtual property for accessing [importedScopeEdges] without property edges. */
     val importedScopes by unwrapping(Scope::importedScopeEdges)
 
     /**

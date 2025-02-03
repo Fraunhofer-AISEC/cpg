@@ -26,11 +26,13 @@
 package de.fraunhofer.aisec.cpg.graph.scopes
 
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.Imports
 import de.fraunhofer.aisec.cpg.graph.edges.unwrappingIncoming
 import de.fraunhofer.aisec.cpg.graph.translationResult
 import de.fraunhofer.aisec.cpg.passes.updateImportedSymbols
+import org.neo4j.ogm.annotation.Relationship
 
 /**
  * This scope is opened up by a [NamespaceDeclaration] and represents the scope of the whole
@@ -39,8 +41,18 @@ import de.fraunhofer.aisec.cpg.passes.updateImportedSymbols
  */
 class NamespaceScope(astNode: NamespaceDeclaration) : NameScope(astNode) {
 
+    /**
+     * This is the mirror property to [Scope.importedScopeEdges]. It specifies which other [Scope]s
+     * are importing this namespace.
+     *
+     * This is used in [addDeclaration] to update the [ImportDeclaration.importedSymbols] once we
+     * add a new symbol here, so that is it also visible in the scope of the [ImportDeclaration].
+     */
+    @Relationship(value = "IMPORTS_SCOPE", direction = Relationship.Direction.INCOMING)
     val importedByEdges: Imports =
         Imports(this, mirrorProperty = Scope::importedScopeEdges, outgoing = false)
+
+    /** Virtual property for accessing [importedScopeEdges] without property edges. */
     val importedBy: MutableSet<Scope> by unwrappingIncoming(NamespaceScope::importedByEdges)
 
     override fun addDeclaration(declaration: Declaration, addToAST: Boolean) {
