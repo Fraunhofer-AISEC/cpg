@@ -29,6 +29,8 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.Imports
 import de.fraunhofer.aisec.cpg.graph.edges.unwrappingIncoming
+import de.fraunhofer.aisec.cpg.graph.translationResult
+import de.fraunhofer.aisec.cpg.passes.updateImportedSymbols
 
 /**
  * This scope is opened up by a [NamespaceDeclaration] and represents the scope of the whole
@@ -42,8 +44,16 @@ class NamespaceScope(astNode: NamespaceDeclaration) : NameScope(astNode) {
     val importedBy: MutableSet<Scope> by unwrappingIncoming(NamespaceScope::importedByEdges)
 
     override fun addDeclaration(declaration: Declaration, addToAST: Boolean) {
-        // Update imported symbols of dependent scopes
+        val result = super.addDeclaration(declaration, addToAST)
 
-        super.addDeclaration(declaration, addToAST)
+        // Some dirty hack to get a working scope manager
+        val finalCtx = declaration.translationResult?.finalCtx
+
+        // Update imported symbols of dependent scopes
+        for (edge in importedByEdges) {
+            with(finalCtx!!) { edge.declaration!!.updateImportedSymbols() }
+        }
+
+        return result
     }
 }

@@ -321,7 +321,7 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
 
     private fun handleImportDeclaration(import: ImportDeclaration) {
         // TOOD: Remove
-        import.updateImportedSymbols()
+        with(tr.finalCtx) { import.updateImportedSymbols() }
 
         val startScope = import.scope
         val name =
@@ -375,7 +375,7 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
  * namespaces that are imported at a later stage (e.g., in the [TypeResolver]), otherwise they won't
  * be visible to the later passes.
  */
-context(Pass<*>)
+context(TranslationContext)
 fun ImportDeclaration.updateImportedSymbols() {
     // We always need to search at the global scope because we are "importing" something, so by
     // definition, this is not in the scope of the current file.

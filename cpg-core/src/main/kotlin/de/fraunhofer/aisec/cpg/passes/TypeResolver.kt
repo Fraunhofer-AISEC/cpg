@@ -57,7 +57,6 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 TypeResolver::class.java,
                 "Updating imported symbols for ${component.imports.size} imports",
             )
-        component.imports.forEach { it.updateImportedSymbols() }
         b.stop()
     }
 
