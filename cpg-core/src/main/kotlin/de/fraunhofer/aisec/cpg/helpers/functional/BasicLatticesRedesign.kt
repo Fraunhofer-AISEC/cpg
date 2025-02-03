@@ -115,7 +115,7 @@ interface Lattice<T : Lattice.Element> {
     fun iterateEOGEvenMoreNew(
         startEdges: List<EvaluationOrder>,
         startState: T,
-        transformation: (EvaluationOrder, T) -> T,
+        transformation: (Lattice<T>, EvaluationOrder, T) -> T,
     ): T {
         val globalState = IdentityHashMap<EvaluationOrder, T>()
         val finalState = IdentityHashMap<EvaluationOrder, T>()
@@ -132,7 +132,7 @@ interface Lattice<T : Lattice.Element> {
             // Compute the effects of "nextEdge" on the state by applying the transformation to its
             // state.
             val nextGlobal = globalState[nextEdge] ?: continue
-            val newState = transformation(nextEdge, nextGlobal)
+            val newState = transformation(this, nextEdge, nextGlobal)
             if (nextEdge.end.nextEOGEdges.isEmpty()) {
                 finalState[nextEdge] = newState
             }
@@ -232,7 +232,7 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
  * Implements the [LatticeElement] for a lattice over a map of nodes to another lattice represented
  * by [innerLattice].
  */
-class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
+open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
     Lattice<MapLattice.Element<K, V>> {
     override lateinit var elements: Set<Lattice.Element>
 
