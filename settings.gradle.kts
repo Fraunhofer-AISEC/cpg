@@ -13,6 +13,7 @@ include(":cpg-console")
 include(":cpg-concepts")
 
 include(":codyze")
+include(":codyze-core")
 include(":codyze-compliance")
 
 // this code block also exists in the root build.gradle.kts

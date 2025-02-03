@@ -141,13 +141,19 @@ jobs:
         with:
           folder: build/dokkaCustomMultiModuleOutput/main-SNAPSHOT
           target-folder: dokka/main
-      - name: Publish to GitHub Packages
+      - name: Publish to GitHub Packages (as snapshot)
         if: github.ref == 'refs/heads/main' || contains(github.event.pull_request.labels.*.name, 'publish-to-github-packages')
         run: |
           ./gradlew --parallel -Pversion=$VERSION publishAllPublicationsToGitHubPackagesRepository
         env:
           VERSION: ${{ env.version }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #- name: Publish to GitHub Packages (as commit SHA)
+      #  if: github.ref == 'refs/heads/main' || contains(github.event.pull_request.labels.*.name, 'publish-to-github-packages')
+      #  run: |
+      #    ./gradlew --parallel -Pversion=${GITHUB_SHA::7} publishAllPublicationsToGitHubPackagesRepository
+      #  env:
+      #    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Create Release
         if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, 'beta') && !contains(github.ref, 'alpha')
         id: create_release

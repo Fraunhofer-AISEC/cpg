@@ -27,12 +27,15 @@ package de.fraunhofer.aisec.cpg.query
 
 import de.fraunhofer.aisec.cpg.analysis.MultiValueEvaluator
 import de.fraunhofer.aisec.cpg.analysis.NumberSet
+import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.testcases.Query
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
 
@@ -754,5 +757,37 @@ class QueryTest {
         println(queryTreeResult.printNicely())
         assertFalse(queryTreeResult.value)
         assertEquals(1, queryTreeResult.children.size)
+    }
+
+    @Test
+    fun testNode() {
+        with(TestLanguageFrontend()) {
+            val lit1 = newLiteral(1)
+            val lit2 = newLiteral(2)
+
+            val queryTree1 = lit1.intValue
+            assertNotNull(queryTree1)
+            assertEquals(lit1, queryTree1.node)
+            val queryTree2 = lit2.intValue
+            assertNotNull(queryTree2)
+            assertEquals(lit2, queryTree2.node)
+
+            val queryTree3 = queryTree1 eq queryTree2
+            assertNotNull(queryTree3)
+            assertNull(queryTree3.node)
+
+            val tu = newTranslationUnitDeclaration("tu")
+            val func1 = newFunctionDeclaration("func1")
+            tu.declarations += func1
+            val func2 = newFunctionDeclaration("func2")
+            tu.declarations += func2
+            val func3 = newFunctionDeclaration("func3")
+            tu.declarations += func3
+
+            val queryTree4 = tu.allExtended<FunctionDeclaration>(mustSatisfy = { QueryTree(true) })
+            assertNotNull(queryTree4)
+            assertEquals(tu, queryTree4.node)
+            assertEquals(listOf(func1, func2, func3), queryTree4.children.map { it.node })
+        }
     }
 }

@@ -747,7 +747,9 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         }
         // Forwards all open and uncaught throwing nodes to the outer scope that may handle them
         val outerCatchingNode =
-            node.firstParentOrNull { parent -> parent is TryStatement || parent is LoopStatement }
+            node.firstParentOrNull<Node> { parent ->
+                parent is TryStatement || parent is LoopStatement
+            }
         if (outerCatchingNode != null) {
             // Forwarding is done by merging the currently associated throws to a type with the new
             // throws based on their type
@@ -1311,7 +1313,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         if (throwType != null) {
             // Here, we identify the encapsulating ast node that can handle or relay a throw
             val handlingOrRelayingParent =
-                throwExpression.firstParentOrNull { parent ->
+                throwExpression.firstParentOrNull<Node> { parent ->
                     parent is TryStatement || parent is FunctionDeclaration
                 }
             if (handlingOrRelayingParent != null) {
