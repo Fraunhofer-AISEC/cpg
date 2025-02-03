@@ -159,17 +159,19 @@ interface Lattice<T : Lattice.Element> {
 class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
     override lateinit var elements: Set<Element<T>>
 
-    class Element<T>() : IdentitySet<T>(), Lattice.Element {
-        constructor(set: Set<T>) : this() {
+    class Element<T>(expectedMaxSize: Int) : IdentitySet<T>(expectedMaxSize), Lattice.Element {
+        constructor(set: Set<T>) : this(set.size) {
             addAll(set)
         }
 
-        constructor(vararg entries: T) : this() {
+        constructor() : this(16)
+
+        constructor(vararg entries: T) : this(entries.size) {
             addAll(entries)
         }
 
         override fun equals(other: Any?): Boolean {
-            return other is Element<T> && this.compare(other) == Order.EQUAL
+            return other is Element<T> && super<IdentitySet>.equals(other)
         }
 
         override fun compare(other: Lattice.Element): Order {
@@ -179,8 +181,8 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
                         "$other should be of type PowersetLattice.Element<T> but is of type ${other.javaClass}"
                     )
                 super<IdentitySet>.equals(other) -> Order.EQUAL
-                this.containsAll(other) -> Order.GREATER
-                other.containsAll(this) -> Order.LESSER
+                this.size > other.size && this.containsAll(other) -> Order.GREATER
+                other.size > this.size && other.containsAll(this) -> Order.LESSER
                 else -> Order.UNEQUAL
             }
         }
@@ -203,7 +205,8 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
             Order.EQUAL -> one.duplicate()
             Order.LESSER -> two.duplicate()
             else -> {
-                val result = one.duplicate()
+                val result = Element<T>(one.size + two.size)
+                result += one
                 result += two
                 result
             }
@@ -215,12 +218,7 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
     }
 
     override fun compare(one: Element<T>, two: Element<T>): Order {
-        return when {
-            one == two -> Order.EQUAL
-            one.containsAll(two) -> Order.GREATER
-            two.containsAll(one) -> Order.LESSER
-            else -> Order.UNEQUAL
-        }
+        return one.compare(two)
     }
 
     override fun duplicate(one: Element<T>): Element<T> {
@@ -236,13 +234,16 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
     Lattice<MapLattice.Element<K, V>> {
     override lateinit var elements: Set<Element<K, V>>
 
-    class Element<K, V : Lattice.Element>() : IdentityHashMap<K, V>(), Lattice.Element {
+    class Element<K, V : Lattice.Element>(expectedMaxSize: Int) :
+        IdentityHashMap<K, V>(expectedMaxSize), Lattice.Element {
 
-        constructor(m: Map<K, V>) : this() {
+        constructor() : this(32)
+
+        constructor(m: Map<K, V>) : this(m.size) {
             putAll(m)
         }
 
-        constructor(vararg entries: Pair<K, V>) : this() {
+        constructor(vararg entries: Pair<K, V>) : this(entries.size) {
             putAll(entries)
         }
 
@@ -260,28 +261,33 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
                     this.entries.all { (k, v) ->
                         other[k]?.let { v.compare(it) == Order.EQUAL } == true
                     } -> Order.EQUAL
-                this.keys.containsAll(other.keys) &&
-                    this.entries.all { (k, v) ->
-                        other[k]?.let { otherV ->
-                            (v.compare(otherV) == Order.GREATER || v.compare(otherV) == Order.EQUAL)
-                        } != false
-                    } -> Order.GREATER
-                other.keys.containsAll(this.keys) &&
-                    other.entries.all { (k, v) ->
-                        this[k]?.let { otherV ->
-                            (v.compare(otherV) == Order.GREATER || v.compare(otherV) == Order.EQUAL)
-                        } != false
-                    } -> Order.LESSER
+                oneGETwo(this, other) -> Order.GREATER
+                oneGETwo(other, this) -> Order.LESSER
                 else -> Order.UNEQUAL
             }
         }
 
         override fun duplicate(): Element<K, V> {
-            return Element(this)
+            return Element(this.map { (k, v) -> Pair<K, V>(k, v.duplicate() as V) }.toMap())
         }
 
         override fun hashCode(): Int {
             return super.hashCode()
+        }
+
+        companion object {
+            private fun <K, V : Lattice.Element> oneGETwo(
+                one: Element<K, V>,
+                two: Element<K, V>,
+            ): Boolean {
+                return one.keys.size >= two.keys.size &&
+                    one.keys.containsAll(two.keys) &&
+                    one.entries.all { (k, v) ->
+                        val otherV = two[k] ?: return@all true
+                        val cmp = v.compare(otherV)
+                        cmp == Order.EQUAL || cmp == Order.GREATER
+                    }
+            }
         }
     }
 
@@ -292,7 +298,7 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
         val allKeys = one.keys.toIdentitySet()
         allKeys += two.keys
         val newMap =
-            allKeys.fold(MapLattice.Element<K, V>()) { current, key ->
+            allKeys.fold(Element<K, V>(allKeys.size)) { current, key ->
                 val otherValue = two[key]
                 val thisValue = one[key]
                 val newValue =
@@ -314,39 +320,19 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
                 val newValue =
                     if (thisValue != null && otherValue != null) {
                         innerLattice.glb(thisValue, otherValue)
-                    } else thisValue ?: otherValue
-                newValue?.let { current[key] = it }
+                    } else innerLattice.bottom
+                current[key] = newValue
                 current
             }
         return newMap
     }
 
     override fun compare(one: Element<K, V>, two: Element<K, V>): Order {
-        return when {
-            one.keys == two.keys &&
-                one.entries.all { (k, v) ->
-                    two[k]?.let { innerLattice.compare(v, it) == Order.EQUAL } == true
-                } -> Order.EQUAL
-            one.keys.containsAll(two.keys) &&
-                one.entries.all { (k, v) ->
-                    two[k]?.let { otherV ->
-                        (innerLattice.compare(v, otherV) == Order.GREATER ||
-                            innerLattice.compare(v, otherV) == Order.EQUAL)
-                    } != false
-                } -> Order.GREATER
-            two.keys.containsAll(one.keys) &&
-                two.entries.all { (k, v) ->
-                    one[k]?.let { otherV ->
-                        (innerLattice.compare(v, otherV) == Order.GREATER ||
-                            innerLattice.compare(v, otherV) == Order.EQUAL)
-                    } != false
-                } -> Order.LESSER
-            else -> Order.UNEQUAL
-        }
+        return one.compare(two)
     }
 
     override fun duplicate(one: Element<K, V>): Element<K, V> {
-        return Element(one.map { (k, v) -> Pair<K, V>(k, innerLattice.duplicate(v)) }.toMap())
+        return one.duplicate()
     }
 }
 
