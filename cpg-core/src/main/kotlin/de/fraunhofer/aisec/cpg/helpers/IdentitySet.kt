@@ -43,14 +43,14 @@ import java.util.concurrent.atomic.AtomicInteger
  * be very resource-intensive if nodes are very similar but not the *same*, in a work-list however
  * we only want just to avoid to place the exact node twice.
  */
-open class IdentitySet<T> : MutableSet<T> {
+open class IdentitySet<T>(expectedMaxSize: Int = 16) : MutableSet<T> {
     /**
      * The backing hashmap for our set. The [IdentityHashMap] offers reference-equality for keys and
      * values. In this case we use it to determine, if a node is already in our set or not. The
      * value of the map is not used and is always true. A [Boolean] is used because it seems to be
      * the smallest data type possible.
      */
-    private val map: IdentityHashMap<T, Int> = IdentityHashMap()
+    private val map: IdentityHashMap<T, Int> = IdentityHashMap(expectedMaxSize * 2)
     private val counter = AtomicInteger()
 
     override operator fun contains(element: T): Boolean {
@@ -61,8 +61,7 @@ open class IdentitySet<T> : MutableSet<T> {
 
     override fun equals(other: Any?): Boolean {
         if (other !is Set<*>) return false
-        val otherSet = other
-        return this.containsAll(otherSet) && otherSet.containsAll(this)
+        return this.size == other.size && this.containsAll(other)
     }
 
     override fun add(element: T): Boolean {
@@ -141,21 +140,21 @@ open class IdentitySet<T> : MutableSet<T> {
 }
 
 fun <T> identitySetOf(vararg elements: T): IdentitySet<T> {
-    val set = IdentitySet<T>()
+    val set = IdentitySet<T>(elements.size)
     for (element in elements) set.add(element)
 
     return set
 }
 
 infix fun <T> IdentitySet<T>.union(other: Iterable<T>): IdentitySet<T> {
-    val set = identitySetOf<T>()
+    val set = IdentitySet<T>(this.size * 2)
     set += this
     set += other
     return set
 }
 
 fun <T> Collection<T>.toIdentitySet(): IdentitySet<T> {
-    val set = identitySetOf<T>()
+    val set = IdentitySet<T>(this.size)
     set += this
     return set
 }
