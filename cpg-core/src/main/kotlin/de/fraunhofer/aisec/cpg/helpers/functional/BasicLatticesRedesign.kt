@@ -56,15 +56,30 @@ enum class Order {
  * - compare two elements.
  * - duplicate/clone an element.
  *
- * Note: We do not store the elements spanning the lattice because it would cost too much memory for
- * non-trivial examples.
+ * Note: We usually do not want (nor have to) store the elements spanning the lattice because it
+ * would cost too much memory for non-trivial examples. But if a user wants to do so, we provide the
+ * property [elements].
  */
 interface Lattice<T : Lattice.Element> {
+    /**
+     * Represents a single element of the [Lattice]. It also provides the functionality to compare
+     * and duplicate the element.
+     */
     interface Element {
+        /**
+         * Compares this element to [other].
+         *
+         * @throws IllegalArgumentException if [other] is not an instance of this implementation of
+         *   Element
+         */
         fun compare(other: Element): Order
 
+        /** Duplicates this element, i.e., it creates a new object with equal contents. */
         fun duplicate(): Element
     }
+
+    /** Allows storing all elements which are part of this lattice */
+    var elements: Set<Element>
 
     /** The smallest possible element in the lattice */
     val bottom: T
@@ -142,6 +157,8 @@ interface Lattice<T : Lattice.Element> {
 
 /** Implements a [Lattice] whose elements are the powerset of a given set of values. */
 class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
+    override lateinit var elements: Set<Lattice.Element>
+
     class Element<T>() : IdentitySet<T>(), Lattice.Element {
         constructor(set: Set<T>) : this() {
             addAll(set)
@@ -157,7 +174,10 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
 
         override fun compare(other: Lattice.Element): Order {
             return when {
-                other !is Element<T> -> Order.UNEQUAL
+                other !is Element<T> ->
+                    throw IllegalArgumentException(
+                        "$other should be of type PowersetLattice.Element<T> but is of type ${other.javaClass}"
+                    )
                 super<IdentitySet>.equals(other) -> Order.EQUAL
                 this.containsAll(other) -> Order.GREATER
                 other.containsAll(this) -> Order.LESSER
@@ -214,6 +234,8 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
  */
 class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
     Lattice<MapLattice.Element<K, V>> {
+    override lateinit var elements: Set<Lattice.Element>
+
     class Element<K, V : Lattice.Element>() : IdentityHashMap<K, V>(), Lattice.Element {
 
         constructor(m: Map<K, V>) : this() {
@@ -230,7 +252,10 @@ class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
 
         override fun compare(other: Lattice.Element): Order {
             return when {
-                other !is Element<K, V> -> Order.UNEQUAL
+                other !is Element<K, V> ->
+                    throw IllegalArgumentException(
+                        "$other should be of type MapLattice.Element<K, V> but is of type ${other.javaClass}"
+                    )
                 this.keys == other.keys &&
                     this.entries.all { (k, v) ->
                         other[k]?.let { v.compare(it) == Order.EQUAL } == true
@@ -333,6 +358,8 @@ class TupleLattice<S : Lattice.Element, T : Lattice.Element>(
     val innerLattice1: Lattice<S>,
     val innerLattice2: Lattice<T>,
 ) : Lattice<TupleLattice.Element<S, T>> {
+    override lateinit var elements: Set<Lattice.Element>
+
     class Element<S : Lattice.Element, T : Lattice.Element>(val first: S, val second: T) :
         Serializable, Lattice.Element {
         override fun toString(): String = "($first, $second)"
@@ -349,7 +376,10 @@ class TupleLattice<S : Lattice.Element, T : Lattice.Element>(
         }
 
         override fun compare(other: Lattice.Element): Order {
-            if (other !is Element<S, T>) return Order.UNEQUAL
+            if (other !is Element<S, T>)
+                throw IllegalArgumentException(
+                    "$other should be of type TupleLattice.Element<S, T> but is of type ${other.javaClass}"
+                )
 
             val result1 = this.first.compare(other.first)
             val result2 = this.second.compare(other.second)
@@ -420,6 +450,8 @@ class TripleLattice<R : Lattice.Element, S : Lattice.Element, T : Lattice.Elemen
     val innerLattice2: Lattice<S>,
     val innerLattice3: Lattice<T>,
 ) : Lattice<TripleLattice.Element<R, S, T>> {
+    override lateinit var elements: Set<Lattice.Element>
+
     class Element<R : Lattice.Element, S : Lattice.Element, T : Lattice.Element>(
         val first: R,
         val second: S,
@@ -438,7 +470,10 @@ class TripleLattice<R : Lattice.Element, S : Lattice.Element, T : Lattice.Elemen
         }
 
         override fun compare(other: Lattice.Element): Order {
-            if (other !is Element<R, S, T>) return Order.UNEQUAL
+            if (other !is Element<R, S, T>)
+                throw IllegalArgumentException(
+                    "$other should be of type TripleLattice.Element<R, S, T> but is of type ${other.javaClass}"
+                )
 
             val result1 = this.first.compare(other.first)
             val result2 = this.second.compare(other.second)
