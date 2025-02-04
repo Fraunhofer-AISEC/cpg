@@ -412,7 +412,7 @@ class TupleLattice<S : Lattice.Element, T : Lattice.Element>(
     }
 
     override fun duplicate(one: Element<S, T>): Element<S, T> {
-        return Element(innerLattice1.duplicate(one.first), innerLattice2.duplicate(one.second))
+        return one.duplicate()
     }
 }
 

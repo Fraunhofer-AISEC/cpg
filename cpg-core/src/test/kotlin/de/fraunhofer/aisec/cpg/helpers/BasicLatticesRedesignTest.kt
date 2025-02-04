@@ -296,6 +296,17 @@ class BasicLatticesRedesignTest {
         assertEquals(Order.UNEQUAL, tupleLattice.compare(blaEmpty, emptyBla))
         assertEquals(Order.UNEQUAL, tupleLattice.compare(emptyBla, blaEmpty))
 
+        val emptyEmptyGlb = tupleLattice.glb(blaEmpty, emptyBla)
+        assertNotSame(emptyEmpty, emptyEmptyGlb)
+        assertEquals(emptyEmpty, emptyEmptyGlb)
+        assertEquals(Order.LESSER, tupleLattice.compare(emptyEmptyGlb, blaEmpty))
+        assertEquals(Order.LESSER, tupleLattice.compare(emptyEmptyGlb, emptyBla))
+
+        val emptyEmptyDuplicate = tupleLattice.duplicate(emptyEmpty)
+        assertNotSame(emptyEmpty, emptyEmptyDuplicate)
+        assertEquals(emptyEmpty, emptyEmptyDuplicate)
+        assertEquals(emptyEmpty.hashCode(), emptyEmptyDuplicate.hashCode())
+
         val blaBla = tupleLattice.lub(emptyBla, blaEmpty)
         assertEquals(Order.LESSER, tupleLattice.compare(emptyEmpty, blaBla))
         assertEquals(Order.LESSER, tupleLattice.compare(emptyBla, blaBla))
@@ -325,12 +336,18 @@ class BasicLatticesRedesignTest {
                 PowersetLattice<String>(),
             )
 
+        val bottom = tripleLattice.bottom
+
         val emptyEmptyEmpty =
             TripleLattice.Element(
                 PowersetLattice.Element<String>(),
                 PowersetLattice.Element<String>(),
                 PowersetLattice.Element<String>(),
             )
+        assertNotSame(bottom, emptyEmptyEmpty)
+        assertEquals(bottom, emptyEmptyEmpty)
+        assertEquals(bottom.hashCode(), emptyEmptyEmpty.hashCode())
+
         val emptyEmptyBla =
             TripleLattice.Element(
                 PowersetLattice.Element<String>(),
@@ -386,6 +403,12 @@ class BasicLatticesRedesignTest {
         assertEquals(Order.GREATER, tripleLattice.compare(blaEmptyBla, emptyEmptyEmpty))
         assertEquals(Order.GREATER, tripleLattice.compare(blaEmptyBla, emptyEmptyBla))
         assertEquals(Order.GREATER, tripleLattice.compare(blaEmptyBla, blaEmptyEmpty))
+
+        val emptyEmptyEmptyGlb = tripleLattice.glb(blaEmptyBla, emptyBlaEmpty)
+        assertNotSame(emptyEmptyEmptyGlb, emptyEmptyEmpty)
+        assertEquals(emptyEmptyEmptyGlb, emptyEmptyEmpty)
+        assertEquals(Order.LESSER, tripleLattice.compare(emptyEmptyEmptyGlb, blaEmptyBla))
+        assertEquals(Order.LESSER, tripleLattice.compare(emptyEmptyEmptyGlb, emptyBlaEmpty))
 
         // We explicitly want to call equals here
         assertFalse(blaEmptyBla == emptyEmptyBla) // Wrong elements
