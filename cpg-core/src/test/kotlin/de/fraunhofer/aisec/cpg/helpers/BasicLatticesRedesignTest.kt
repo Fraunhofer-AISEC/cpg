@@ -58,6 +58,11 @@ class BasicLatticesRedesignTest {
         assertEquals(Order.GREATER, powersetLattice.compare(blaFooLattice, blaLattice1))
         assertNotEquals(blaFooLattice, blaLattice1)
 
+        val bluLattice = PowersetLattice.Element("blu")
+        assertEquals(Order.UNEQUAL, powersetLattice.compare(blaFooLattice, bluLattice))
+        assertEquals(Order.UNEQUAL, powersetLattice.compare(bluLattice, blaFooLattice))
+        assertNotEquals(blaFooLattice, bluLattice)
+
         assertEquals(Order.LESSER, powersetLattice.compare(blaLattice1, blaFooLattice))
         assertNotEquals(blaLattice1, blaFooLattice)
 
@@ -65,6 +70,9 @@ class BasicLatticesRedesignTest {
         assertEquals(Order.UNEQUAL, powersetLattice.compare(blaFooLattice, blaBlubLattice))
         assertNotEquals(blaFooLattice, blaBlubLattice)
         assertEquals(Order.UNEQUAL, powersetLattice.compare(blaBlubLattice, blaFooLattice))
+        assertEquals(Order.UNEQUAL, powersetLattice.compare(blaBlubLattice, bluLattice))
+        assertEquals(Order.UNEQUAL, powersetLattice.compare(bluLattice, blaBlubLattice))
+        assertNotEquals(blaBlubLattice, bluLattice)
 
         assertNotSame(emptyLattice1, powersetLattice.duplicate(emptyLattice1))
         assertNotSame(emptyLattice1, powersetLattice.duplicate(emptyLattice1))
