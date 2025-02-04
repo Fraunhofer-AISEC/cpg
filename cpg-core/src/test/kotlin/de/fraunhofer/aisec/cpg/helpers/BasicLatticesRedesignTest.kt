@@ -111,6 +111,11 @@ class BasicLatticesRedesignTest {
         assertEquals(Order.EQUAL, powersetLattice.compare(blaLattice1, emptyLubBla))
 
         val blaFooBlub = powersetLattice.lub(blaFooLattice, blaBlubLattice)
+        val blaGlb = powersetLattice.glb(blaFooLattice, blaBlubLattice)
+        assertNotSame(blaLattice1, blaGlb)
+        assertNotSame(blaLattice2, blaGlb)
+        assertEquals(blaLattice2, blaGlb)
+        assertEquals(blaLattice1, blaGlb)
         assertNotSame(emptyLattice3, blaFooBlub)
         assertNotEquals(emptyLattice3, blaFooBlub)
         assertEquals(Order.LESSER, powersetLattice.compare(emptyLattice3, blaFooBlub))
