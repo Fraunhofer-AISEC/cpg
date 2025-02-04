@@ -37,6 +37,7 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertNotSame
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
+import org.junit.jupiter.api.assertThrows
 
 class BasicLatticesRedesignTest {
     @Test
@@ -126,7 +127,12 @@ class BasicLatticesRedesignTest {
         assertEquals(Order.EQUAL, mapLattice.compare(emptyLattice1, emptyLattice2))
         assertEquals(emptyLattice1, emptyLattice2)
 
-        val aBlaLattice1 = (MapLattice.Element("a" to PowersetLattice.Element("bla")))
+        val blaPowerset = PowersetLattice.Element("bla")
+
+        assertThrows<IllegalArgumentException> { emptyLattice1.compare(blaPowerset) }
+        assertThrows<IllegalArgumentException> { blaPowerset.compare(emptyLattice1) }
+
+        val aBlaLattice1 = (MapLattice.Element("a" to blaPowerset))
         val aBlaLattice2 = (MapLattice.Element("a" to PowersetLattice.Element("bla")))
         assertEquals(Order.EQUAL, mapLattice.compare(aBlaLattice1, aBlaLattice2))
         assertEquals(aBlaLattice1, aBlaLattice2)
@@ -249,6 +255,9 @@ class BasicLatticesRedesignTest {
         assertNotSame(emptyBlaSecond, emptyBla2.second)
         assertEquals(emptyBlaSecond, emptyBla2.second)
 
+        assertThrows<IllegalArgumentException> { emptyBlaFirst.compare(emptyBla) }
+        assertThrows<IllegalArgumentException> { emptyBla.compare(emptyBlaFirst) }
+
         assertEquals(Order.LESSER, tupleLattice.compare(emptyEmpty, emptyBla))
         assertEquals(Order.LESSER, tupleLattice.compare(emptyEmpty, blaEmpty))
         assertEquals(Order.GREATER, tupleLattice.compare(emptyBla, emptyEmpty))
@@ -324,6 +333,9 @@ class BasicLatticesRedesignTest {
         assertEquals(emptyBlaSecond, emptyEmptyBla2.second)
         assertNotSame(emptyBlaThird, emptyEmptyBla2.third)
         assertEquals(emptyBlaThird, emptyEmptyBla2.third)
+
+        assertThrows<IllegalArgumentException> { emptyBlaFirst.compare(emptyEmptyBla) }
+        assertThrows<IllegalArgumentException> { emptyEmptyBla.compare(emptyBlaFirst) }
 
         assertEquals(Order.LESSER, tripleLattice.compare(emptyEmptyEmpty, emptyEmptyBla))
         assertEquals(Order.LESSER, tripleLattice.compare(emptyEmptyEmpty, emptyBlaEmpty))
