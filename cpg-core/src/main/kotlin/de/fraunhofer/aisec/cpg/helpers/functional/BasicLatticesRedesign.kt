@@ -201,9 +201,9 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
 
     override fun lub(one: Element<T>, two: Element<T>): Element<T> {
         return when (compare(one, two)) {
-            Order.GREATER -> one.duplicate()
-            Order.EQUAL -> one.duplicate()
-            Order.LESSER -> two.duplicate()
+            Order.GREATER -> one
+            Order.EQUAL -> one
+            Order.LESSER -> two
             else -> {
                 val result = Element<T>(one.size + two.size)
                 result += one
@@ -386,9 +386,7 @@ class TupleLattice<S : Lattice.Element, T : Lattice.Element>(
         }
 
         override fun hashCode(): Int {
-            var result = first.hashCode()
-            result = 31 * result + second.hashCode()
-            return result
+            return 31 * first.hashCode() + second.hashCode()
         }
     }
 
@@ -396,30 +394,21 @@ class TupleLattice<S : Lattice.Element, T : Lattice.Element>(
         get() = Element(innerLattice1.bottom, innerLattice2.bottom)
 
     override fun lub(one: Element<S, T>, two: Element<S, T>): Element<S, T> {
-        val result1 = innerLattice1.lub(one.first, two.first)
-        val result2 = innerLattice2.lub(one.second, two.second)
-        return Element(result1, result2)
+        return Element(
+            innerLattice1.lub(one.first, two.first),
+            innerLattice2.lub(one.second, two.second),
+        )
     }
 
     override fun glb(one: Element<S, T>, two: Element<S, T>): Element<S, T> {
-        val result1 = innerLattice1.glb(one.first, two.first)
-        val result2 = innerLattice2.glb(one.second, two.second)
-        return Element(result1, result2)
+        return Element(
+            innerLattice1.glb(one.first, two.first),
+            innerLattice2.glb(one.second, two.second),
+        )
     }
 
     override fun compare(one: Element<S, T>, two: Element<S, T>): Order {
-        val result1 = innerLattice1.compare(one.first, two.first)
-        val result2 = innerLattice2.compare(one.second, two.second)
-        return when {
-            result1 == Order.EQUAL && result2 == Order.EQUAL -> Order.EQUAL
-            result1 == Order.GREATER && result2 == Order.GREATER -> Order.GREATER
-            result1 == Order.EQUAL && result2 == Order.GREATER -> Order.GREATER
-            result1 == Order.GREATER && result2 == Order.EQUAL -> Order.GREATER
-            result1 == Order.LESSER && result2 == Order.LESSER -> Order.LESSER
-            result1 == Order.EQUAL && result2 == Order.LESSER -> Order.LESSER
-            result1 == Order.LESSER && result2 == Order.EQUAL -> Order.LESSER
-            else -> Order.UNEQUAL
-        }
+        return one.compare(two)
     }
 
     override fun duplicate(one: Element<S, T>): Element<S, T> {
@@ -519,9 +508,7 @@ class TripleLattice<R : Lattice.Element, S : Lattice.Element, T : Lattice.Elemen
         }
 
         override fun hashCode(): Int {
-            var result = first.hashCode()
-            result = 31 * result + second.hashCode()
-            return result
+            return 31 * (31 * first.hashCode() + second.hashCode()) + third.hashCode()
         }
     }
 
@@ -529,63 +516,26 @@ class TripleLattice<R : Lattice.Element, S : Lattice.Element, T : Lattice.Elemen
         get() = Element(innerLattice1.bottom, innerLattice2.bottom, innerLattice3.bottom)
 
     override fun lub(one: Element<R, S, T>, two: Element<R, S, T>): Element<R, S, T> {
-        val result1 = innerLattice1.lub(one.first, two.first)
-        val result2 = innerLattice2.lub(one.second, two.second)
-        val result3 = innerLattice3.lub(one.third, two.third)
-        return Element(result1, result2, result3)
+        return Element(
+            innerLattice1.lub(one.first, two.first),
+            innerLattice2.lub(one.second, two.second),
+            innerLattice3.lub(one.third, two.third),
+        )
     }
 
     override fun glb(one: Element<R, S, T>, two: Element<R, S, T>): Element<R, S, T> {
-        val result1 = innerLattice1.glb(one.first, two.first)
-        val result2 = innerLattice2.glb(one.second, two.second)
-        val result3 = innerLattice3.glb(one.third, two.third)
-        return Element(result1, result2, result3)
+        return Element(
+            innerLattice1.glb(one.first, two.first),
+            innerLattice2.glb(one.second, two.second),
+            innerLattice3.glb(one.third, two.third),
+        )
     }
 
     override fun compare(one: Element<R, S, T>, two: Element<R, S, T>): Order {
-        val result1 = innerLattice1.compare(one.first, two.first)
-        val result2 = innerLattice2.compare(one.second, two.second)
-        val result3 = innerLattice3.compare(one.third, two.third)
-        return when {
-            result1 == Order.EQUAL && result2 == Order.EQUAL && result3 == Order.EQUAL ->
-                Order.EQUAL
-            result1 == Order.GREATER && result2 == Order.GREATER && result3 == Order.GREATER ->
-                Order.GREATER
-            result1 == Order.GREATER && result2 == Order.GREATER && result3 == Order.EQUAL ->
-                Order.GREATER
-            result1 == Order.GREATER && result2 == Order.EQUAL && result3 == Order.GREATER ->
-                Order.GREATER
-            result1 == Order.GREATER && result2 == Order.EQUAL && result3 == Order.EQUAL ->
-                Order.GREATER
-            result1 == Order.EQUAL && result2 == Order.GREATER && result3 == Order.GREATER ->
-                Order.GREATER
-            result1 == Order.EQUAL && result2 == Order.GREATER && result3 == Order.EQUAL ->
-                Order.GREATER
-            result1 == Order.EQUAL && result2 == Order.EQUAL && result3 == Order.GREATER ->
-                Order.GREATER
-            result1 == Order.LESSER && result2 == Order.LESSER && result3 == Order.LESSER ->
-                Order.LESSER
-            result1 == Order.LESSER && result2 == Order.LESSER && result3 == Order.EQUAL ->
-                Order.LESSER
-            result1 == Order.LESSER && result2 == Order.EQUAL && result3 == Order.LESSER ->
-                Order.LESSER
-            result1 == Order.LESSER && result2 == Order.EQUAL && result3 == Order.EQUAL ->
-                Order.LESSER
-            result1 == Order.EQUAL && result2 == Order.LESSER && result3 == Order.LESSER ->
-                Order.LESSER
-            result1 == Order.EQUAL && result2 == Order.LESSER && result3 == Order.EQUAL ->
-                Order.LESSER
-            result1 == Order.EQUAL && result2 == Order.EQUAL && result3 == Order.LESSER ->
-                Order.LESSER
-            else -> Order.UNEQUAL
-        }
+        return one.compare(two)
     }
 
     override fun duplicate(one: Element<R, S, T>): Element<R, S, T> {
-        return Element(
-            innerLattice1.duplicate(one.first),
-            innerLattice2.duplicate(one.second),
-            innerLattice3.duplicate(one.third),
-        )
+        return one.duplicate()
     }
 }
