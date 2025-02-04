@@ -40,6 +40,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.tryCast
 import java.util.*
 import org.slf4j.LoggerFactory
@@ -119,6 +120,8 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
      * the next target of an EOG edge.
      */
     protected val intermediateNodes = mutableListOf<Node>()
+
+    val alreadySeen = identitySetOf<Node>()
 
     protected fun doNothing() {
         // Nothing to do for this node type
@@ -344,6 +347,9 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         if (node == null) {
             return
         }
+
+        alreadySeen.add(node)
+
         intermediateNodes.add(node)
 
         when (node) {
@@ -537,8 +543,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             } else if (declaration is FunctionDeclaration) {
                 // save the current EOG stack, because we can have a function declaration within an
                 // existing function and the EOG handler for handling function declarations will
-                // reset the
-                // stack
+                // reset the stack
                 val oldEOG = currentPredecessors.toMutableList()
 
                 // analyze the defaults
