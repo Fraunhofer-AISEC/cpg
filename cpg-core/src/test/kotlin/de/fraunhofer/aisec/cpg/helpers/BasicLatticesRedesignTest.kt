@@ -203,10 +203,10 @@ class BasicLatticesRedesignTest {
         assertEquals(Order.EQUAL, mapLattice.compare(aBlaLattice1, emptyLubABla))
 
         val aFooBBlaLattice =
-            (MapLattice.Element(
+            MapLattice.Element(
                 "a" to PowersetLattice.Element("foo"),
                 "b" to PowersetLattice.Element("bla"),
-            ))
+            )
         val aBlaFooBBla =
             mapLattice.lub(aBlaFooLattice, aFooBBlaLattice) // a to {"foo", "bla"}, b to {"bla"}
         assertNotSame(emptyLattice1, aBlaFooBBla)
@@ -238,6 +238,24 @@ class BasicLatticesRedesignTest {
         assertTrue(aBlaLattice1 == aBlaLattice2) // This is equal
         assertFalse(aBlaFooBBla == aBlaFooBBla["a"]) // Wrong types
         assertFalse(aBlaFooBBla["a"] == aBlaFooBBla) // Wrong types
+
+        val aEmptyBEmptyGlb = mapLattice.glb(aFooBBlaLattice, aBlaBFooLattice)
+        val aEmptyBEmpty =
+            MapLattice.Element(
+                "a" to PowersetLattice.Element<String>(),
+                "b" to PowersetLattice.Element<String>(),
+            )
+        assertNotSame(aEmptyBEmptyGlb, aEmptyBEmpty)
+        assertEquals(aEmptyBEmptyGlb, aEmptyBEmpty)
+        assertEquals(Order.LESSER, aEmptyBEmptyGlb.compare(aFooBBlaLattice))
+        assertEquals(Order.LESSER, aEmptyBEmptyGlb.compare(aBlaBFooLattice))
+
+        val aBlaGlb = mapLattice.glb(aBlaFooLattice, aBlaBFooLattice)
+        assertNotSame(aBlaGlb, aBlaLattice1)
+        assertNotSame(aBlaGlb, aBlaLattice2)
+        assertEquals(aBlaGlb, aBlaLattice1)
+        assertEquals(Order.LESSER, aBlaGlb.compare(aBlaFooLattice))
+        assertEquals(Order.LESSER, aBlaGlb.compare(aBlaBFooLattice))
     }
 
     @Test
