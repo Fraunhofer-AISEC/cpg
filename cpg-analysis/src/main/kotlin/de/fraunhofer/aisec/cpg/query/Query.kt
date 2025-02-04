@@ -199,6 +199,47 @@ fun max(n: Node?, eval: ValueEvaluator = MultiValueEvaluator()): QueryTree<Numbe
     return QueryTree((evalRes as? NumberSet)?.max() ?: -1, mutableListOf(), "max($n)", n)
 }
 
+/** Determines in which direction we follow the edges. */
+enum class AnalysisDirection {
+    /** Follow the order of the EOG */
+    FORWARD,
+    /** Against the order of the EOG */
+    BACKWARD,
+}
+
+/** Determines if the predicate must or may hold */
+enum class AnalysisType {
+    /**
+     * The predicate must hold, i.e., all paths fulfill the property/requirement. No path violates
+     * the property/requirement.
+     */
+    MUST,
+    /**
+     * The predicate may hold, i.e., there is at least one path which fulfills the
+     * property/requirement.
+     */
+    MAY,
+}
+
+/** Configures the sensitivity of the analysis. */
+enum class AnalysisSensitivity {
+    /** Consider the calling context when following paths (e.g. based on a call stack). */
+    CONTEXT_SENSITIVE,
+
+    /** Differentiate between fields/attributes of objects. */
+    FIELD_SENSITIVE,
+}
+
+private fun dataFlowBase(
+    from: Node,
+    predicate: (Node) -> Boolean,
+    direction: AnalysisDirection,
+    type: AnalysisType,
+    sensitivity: AnalysisSensitivity,
+): QueryTree<Boolean> {
+    TODO()
+}
+
 /** Checks if a data flow is possible between the nodes [from] as a source and [to] as sink. */
 fun dataFlow(
     from: Node,
