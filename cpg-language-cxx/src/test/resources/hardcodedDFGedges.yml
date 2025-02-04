@@ -1,5 +1,5 @@
 - functionDeclaration:
-    language: de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
+    language: CPPLanguage
     methodName: strcpy
   dataFlows:
     - from: param1.deref
@@ -10,7 +10,7 @@
       dfgType: full
 
 - functionDeclaration:
-    language: de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
+    language: CPPLanguage
     methodName: memcpy
   dataFlows:
     - from: param1.deref
@@ -21,7 +21,7 @@
       dfgType: full
 
 - functionDeclaration:
-    language: de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
+    language: CPPLanguage
     methodName: memcpy_verw
   dataFlows:
     - from: param1.deref
@@ -32,7 +32,7 @@
       dfgType: full
 
 - functionDeclaration:
-    language: de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
+    language: CPPLanguage
     methodName: memcpy_s
   dataFlows:
     - from: param2.deref
@@ -40,7 +40,7 @@
       dfgType: full
 
 - functionDeclaration:
-    language: de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
+    language: CPPLanguage
     methodName: memcpy_verw_s
   dataFlows:
     - from: param2.deref
@@ -49,7 +49,7 @@
 
 
 - functionDeclaration:
-    language: de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
+    language: CPPLanguage
     methodName: sgx_sha256_update
   dataFlows:
     - from: param0.deref
@@ -57,7 +57,7 @@
       dfgType: full
 
 - functionDeclaration:
-    language: de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
+    language: CPPLanguage
     methodName: sgx_sha256_init
   dataFlows:
     - from: param0.deref
@@ -65,7 +65,7 @@
       dfgType: full
 
 - functionDeclaration:
-    language: de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
+    language: CPPLanguage
     methodName: sgx_ocall
   dataFlows:
     - from: param1.deref
@@ -73,7 +73,7 @@
       dfgType: full
 
 - functionDeclaration:
-    language: de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
+    language: CPPLanguage
     methodName: fread
   dataFlows:
     - from: param1.deref
@@ -81,15 +81,7 @@
       dfgType: full
 
 - functionDeclaration:
-    language: de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
-    methodName: sgx_get_key
-  dataFlows:
-    - from: param1.deref
-      to: param1.deref
-      dfgType: full
-
-- functionDeclaration:
-    language: de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
+    language: CPPLanguage
     methodName: memset
   dataFlows:
     - from: param1
@@ -97,14 +89,49 @@
       dfgType: full
 
 - functionDeclaration:
-    language: de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
+    language: CPPLanguage
     methodName: malloc
-  dataFlows: []
+  dataFlows:
+    - from: NewMemoryAddress0
+      to: param0.deref
+      dfgType: full
 
 - functionDeclaration:
-    language: de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
+    language: CPPLanguage
     methodName: ocall_malloc
   dataFlows:
     - from: param0.deref
       to: param0.deref
+      dfgType: full
+
+- functionDeclaration:
+    language: CPPLanguage
+    methodName: sgx_get_key
+  dataFlows:
+    - from: sgx_get_key.secret
+      to: param1.deref
+      dfgType: full
+
+- functionDeclaration:
+    language: CPPLanguage
+    methodName: sgx_read_rand
+  dataFlows:
+    - from: sgx_read_rand.secret
+      to: param0.deref
+      dfgType: full
+
+- functionDeclaration:
+    language: CPPLanguage
+    methodName: sgx_ra_get_keys
+  dataFlows:
+    - from: sgx_ra_get_keys.secret
+      to: param2.deref
+      dfgType: full
+
+- functionDeclaration:
+    language: CPPLanguage
+    methodName: sgx_unseal_data
+  dataFlows:
+    - from: sgx_unseal_data.secret
+      to: param3.deref
       dfgType: full

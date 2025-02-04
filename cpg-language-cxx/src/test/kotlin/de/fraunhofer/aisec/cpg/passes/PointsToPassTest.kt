@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.PointerDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.test.assertLocalName
 import java.io.File
@@ -1193,7 +1194,6 @@ class PointsToPassTest {
         )
 
         // Line 190
-        // TODO: verify the memcpy in Line 183
         assertEquals(1, local_18DerefLine190.memoryAddress.size)
         assertTrue(local_18DerefLine190.memoryAddress.firstOrNull() is ParameterMemoryValue)
         assertLocalName("derefvalue", local_18DerefLine190.memoryAddress.firstOrNull())
@@ -1757,6 +1757,59 @@ class PointsToPassTest {
                 }
                 .first()
                 .start,
+        )
+    }
+
+    @Test
+    fun testGlobalVariables() {
+        val file = File("src/test/resources/pointsto.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+                it.registerPass<PointsToPass>()
+                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+                it.configurePass<PointsToPass>(PointsToPass.Configuration(addressLength = 64))
+            }
+        assertNotNull(tu)
+
+        // Declarations
+        val keyDecl = tu.allChildren<Declaration> { it.location?.region?.startLine == 267 }.first()
+        assertNotNull(keyDecl)
+
+        // Ensure that all key-references point to keyDecl as prevDFG
+        assertEquals(
+            1,
+            tu.allChildren<Reference> {
+                    it !is PointerDereference &&
+                        it !is PointerReference &&
+                        it.name.localName == "key"
+                }
+                .flatMap { it.prevDFG }
+                .toIdentitySet()
+                .size,
+        )
+        assertTrue(
+            tu.allChildren<Reference> {
+                    it !is PointerDereference &&
+                        it !is PointerReference &&
+                        it.name.localName == "key"
+                }
+                .flatMap { it.prevDFG }
+                .toIdentitySet()
+                .first() is UnknownMemoryValue
+        )
+
+        assertTrue(
+            tu.allChildren<Reference> {
+                    it !is PointerDereference &&
+                        it !is PointerReference &&
+                        it.name.localName == "key"
+                }
+                .flatMap { it.prevDFG }
+                .toIdentitySet()
+                .first()
+                .name
+                .localName == "key"
         )
     }
 }

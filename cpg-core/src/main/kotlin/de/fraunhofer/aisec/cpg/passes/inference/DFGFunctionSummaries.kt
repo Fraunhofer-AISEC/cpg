@@ -157,7 +157,7 @@ class DFGFunctionSummaries {
         val matchingEntries =
             functionToDFGEntryMap.keys.filter {
                 // The language has to match otherwise the remaining comparison is useless
-                if (it.language == languageName) {
+                if (languageName.endsWith(it.language)) {
                     // Split the name if we have a FQN
                     val entryMethodName = language.parseName(it.methodName)
                     val entryRecord =

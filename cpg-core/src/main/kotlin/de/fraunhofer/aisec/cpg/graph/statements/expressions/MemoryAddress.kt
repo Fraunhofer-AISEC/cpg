@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 
-open class MemoryAddress(override var name: Name) : Node() {
+open class MemoryAddress(override var name: Name, var isGlobal: Boolean = false) : Node() {
 
     override fun equals(other: Any?): Boolean {
         if (this === other) {
@@ -38,7 +38,9 @@ open class MemoryAddress(override var name: Name) : Node() {
             return false
         }
         // TODO: What else do we need to compare?
-        return other is MemoryAddress /*&& name == other.name*/ && id == other.id
+        return other is MemoryAddress /*&& name == other.name*/ &&
+            id == other.id &&
+            isGlobal == other.isGlobal
     }
 
     override fun hashCode(): Int {
