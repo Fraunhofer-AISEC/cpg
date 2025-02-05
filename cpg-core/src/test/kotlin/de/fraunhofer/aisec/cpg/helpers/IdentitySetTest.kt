@@ -43,7 +43,7 @@ class IdentitySetTest {
 
     @Test
     fun testContains() {
-        val set = IdentitySet<Int>()
+        val set = IdentitySet<Int>(2)
         set.add(1)
         set.add(2)
 
@@ -71,6 +71,7 @@ class IdentitySetTest {
         assertNotEquals(identitySetOf(1, 2, 3), set)
         assertNotEquals(identitySetOf(1), set)
         assertFalse(set == identitySetOf("1", "2", 3))
+        assertFalse(set == listOf(1, 2))
     }
 
     @Test
