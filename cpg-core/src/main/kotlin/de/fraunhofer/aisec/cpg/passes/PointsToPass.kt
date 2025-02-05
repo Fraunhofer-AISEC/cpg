@@ -28,8 +28,8 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
+import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.edges.flows.PointerDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.default
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
@@ -43,13 +43,34 @@ import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 
+typealias StateEntry = TupleLattice<PowersetLattice.Element<Node>, PowersetLattice.Element<Node>>
+
+typealias StateEntryElement =
+    TupleLattice.Element<PowersetLattice.Element<Node>, PowersetLattice.Element<Node>>
+
+typealias SingleStateElement =
+    MapLattice.Element<
+        Node,
+        TupleLattice.Element<PowersetLattice.Element<Node>, PowersetLattice.Element<Node>>,
+    >
+
+typealias SingleState =
+    MapLattice<
+        Node,
+        TupleLattice.Element<PowersetLattice.Element<Node>, PowersetLattice.Element<Node>>,
+    >
+
+typealias PointsToStateElement = TupleLattice.Element<SingleStateElement, SingleStateElement>
+
+typealias PointsToState = TupleLattice<SingleStateElement, SingleStateElement>
+
 /**
  * Returns a string that allows a human to identify the node. Mostly, this is simply the node's
  * localName, but for Literals, it is their value
  */
 fun nodeNameToString(node: Node): Name {
     return when (node) {
-        is Literal<*> -> Name((node as? Literal<*>)?.value.toString())
+        is Literal<*> -> Name(node.value.toString())
         is UnknownMemoryValue -> Name(node.name.localName, Name("UnknownMemoryValue"))
         else -> node.name
     }
@@ -157,28 +178,32 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
         log.info("Analyzing function ${node.name}. Complexity: $c")
 
-        var startState = PointsToState2()
-        startState =
-            startState.pushToDeclarationsState(
-                node,
-                TupleLattice(
-                    Pair(PowersetLattice(identitySetOf()), PowersetLattice(identitySetOf()))
-                ),
+        val lattice =
+            PointsToState(
+                SingleState(StateEntry(PowersetLattice<Node>(), PowersetLattice<Node>())),
+                SingleState(StateEntry(PowersetLattice<Node>(), PowersetLattice<Node>())),
             )
 
-        startState = initializeParameters(node.parameters, startState)
+        var startState = lattice.bottom
+        startState =
+            lattice.pushToDeclarationsState(
+                startState,
+                node,
+                StateEntryElement(PowersetLattice.Element(), PowersetLattice.Element()),
+            )
 
-        val finalState = iterateEOGClean(node.nextEOGEdges, startState, ::transfer)
-        if (finalState !is PointsToState2) return
+        startState = initializeParameters(lattice, node.parameters, startState)
+
+        val finalState = lattice.iterateEOG(node.nextEOGEdges, startState, ::transfer)
 
         /* Store function summary for this FunctionDeclaration. */
         storeFunctionSummary(node, finalState)
 
-        for ((key, value) in finalState.generalState.elements) {
+        for ((key, value) in finalState.generalState) {
             // All nodes in the state get new memoryValues, Expressions and Declarations
             // additionally get new MemoryAddresses
-            val newPrevDFGs = value.elements.second.elements
-            val newMemoryAddresses = value.elements.first.elements as Collection<Node>
+            val newPrevDFGs = value.second
+            val newMemoryAddresses = value.first
             if (newPrevDFGs.isNotEmpty()) {
                 //                key.prevDFG.clear()
                 newPrevDFGs.forEach { prev ->
@@ -206,7 +231,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         }
     }
 
-    private fun storeFunctionSummary(node: FunctionDeclaration, doubleState: PointsToState2) {
+    private fun storeFunctionSummary(node: FunctionDeclaration, doubleState: PointsToStateElement) {
         node.parameters.forEach { param ->
             // Collect all addresses of the parameter that we can use as index to look up possible
             // new values
@@ -268,28 +293,34 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         }
     }
 
-    protected fun transfer(currentEdge: Edge<Node>, state: LatticeElement<*>): PointsToState2 {
+    protected fun transfer(
+        lattice: Lattice<PointsToStateElement>,
+        currentEdge: EvaluationOrder,
+        state: PointsToStateElement,
+    ): PointsToStateElement {
+        val lattice = lattice as? PointsToState ?: return state
         val currentNode = currentEdge.end
 
-        var doubleState = state as PointsToState2
+        var doubleState = state
 
         // Used to keep iterating for steps which do not modify the alias-state otherwise
         doubleState =
-            doubleState.pushToDeclarationsState(
+            lattice.pushToDeclarationsState(
+                doubleState,
                 currentNode,
                 doubleState.getFromDecl(currentEdge.end)
-                    ?: TupleLattice(Pair(emptyPowersetLattice(), emptyPowersetLattice())),
+                    ?: StateEntryElement(PowersetLattice.Element(), PowersetLattice.Element()),
             )
 
         doubleState =
             when (currentNode) {
                 is Declaration,
-                is MemoryAddress -> handleDeclaration(currentNode, doubleState)
-                is AssignExpression -> handleAssignExpression(currentNode, doubleState)
-                is UnaryOperator -> handleUnaryOperator(currentNode, doubleState)
-                is CallExpression -> handleCallExpression(currentNode, doubleState)
-                is Expression -> handleExpression(currentNode, doubleState)
-                is ReturnStatement -> handleReturnStatement(currentNode, doubleState)
+                is MemoryAddress -> handleDeclaration(lattice, currentNode, doubleState)
+                is AssignExpression -> handleAssignExpression(lattice, currentNode, doubleState)
+                is UnaryOperator -> handleUnaryOperator(lattice, currentNode, doubleState)
+                is CallExpression -> handleCallExpression(lattice, currentNode, doubleState)
+                is Expression -> handleExpression(lattice, currentNode, doubleState)
+                is ReturnStatement -> handleReturnStatement(lattice, currentNode, doubleState)
                 else -> doubleState
             }
 
@@ -297,15 +328,15 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     }
 
     private fun handleReturnStatement(
+        lattice: PointsToState,
         currentNode: ReturnStatement,
-        doubleState: PointsToState2,
-    ): PointsToState2 {
+        doubleState: PointsToStateElement,
+    ): PointsToStateElement {
         /* For Return Statements, all we really want to do is to collect their return values
         to add them to the FunctionSummary */
         var doubleState = doubleState
         if (currentNode.returnValues.isNotEmpty()) {
-            val parentFD =
-                currentNode.firstParentOrNull { it is FunctionDeclaration } as? FunctionDeclaration
+            val parentFD = currentNode.firstParentOrNull<FunctionDeclaration>()
             if (parentFD != null) {
                 currentNode.returnValues.forEach { retval ->
                     parentFD.functionSummary
@@ -322,9 +353,10 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     }
 
     private fun handleCallExpression(
+        lattice: PointsToState,
         currentNode: CallExpression,
-        doubleState: PointsToState2,
-    ): PointsToState2 {
+        doubleState: PointsToStateElement,
+    ): PointsToStateElement {
         var doubleState = doubleState
         val mapDstToSrc = mutableMapOf<Node, IdentitySet<Node>>()
 
@@ -386,16 +418,15 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     // Create a DFG-Edge from the argument to the parameter's memoryValue
                     val p = invoke.parameters[arg.argumentIndex]
                     if (p.memoryValue == null)
-                        initializeParameters(mutableListOf(p), doubleState, 1)
+                        initializeParameters(lattice, mutableListOf(p), doubleState, 1)
                     p.memoryValue?.let {
                         doubleState =
-                            doubleState.push(
+                            lattice.push(
+                                doubleState,
                                 it,
-                                TupleLattice(
-                                    Pair(
-                                        PowersetLattice(identitySetOf(it)),
-                                        PowersetLattice(identitySetOf(arg)),
-                                    )
+                                TupleLattice.Element(
+                                    PowersetLattice.Element(identitySetOf(it)),
+                                    PowersetLattice.Element(identitySetOf(arg)),
                                 ),
                             )
                     }
@@ -529,47 +560,48 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             val dstValues = doubleState.getValues(dst)
             doubleState =
                 if (dstValues.all { it == dst })
-                    doubleState.updateValues(src, dstValues, identitySetOf(dst))
-                else doubleState.updateValues(src, identitySetOf(), identitySetOf(dst))
+                    doubleState.updateValues(lattice, src, dstValues, identitySetOf(dst))
+                else doubleState.updateValues(lattice, src, identitySetOf(), identitySetOf(dst))
         }
 
         return doubleState
     }
 
     private fun handleUnaryOperator(
+        lattice: PointsToState,
         currentNode: UnaryOperator,
-        doubleState: PointsToState2,
-    ): PointsToState2 {
+        doubleState: PointsToStateElement,
+    ): PointsToStateElement {
         var doubleState = doubleState
         /* For UnaryOperators, we have to update the value if it's a ++ or -- operator
          */
         // TODO: Check out cases where the input is no Reference
         if (currentNode.operatorCode in (listOf("++", "--")) && currentNode.input is Reference) {
             val addresses = doubleState.getAddresses(currentNode)
-            val newDeclState = doubleState.declarationsState.elements.toMutableMap()
+            val newDeclState = doubleState.declarationsState.toMutableMap()
             /* Update the declarationState for the refersTo */
             doubleState.getAddresses(currentNode.input).forEach { addr ->
                 newDeclState.replace(
                     addr,
-                    TupleLattice(
-                        Pair(
-                            PowersetLattice(addresses),
-                            PowersetLattice(identitySetOf(currentNode)),
-                        )
+                    TupleLattice.Element(
+                        PowersetLattice.Element(addresses),
+                        PowersetLattice.Element(currentNode),
                     ),
                 )
             }
             // TODO: Should we already update the input's value in the generalState, or is it
             // enough at the next use?
-            doubleState = PointsToState2(doubleState.generalState, MapLattice(newDeclState))
+            doubleState =
+                PointsToStateElement(doubleState.generalState, MapLattice.Element(newDeclState))
         }
         return doubleState
     }
 
     private fun handleAssignExpression(
+        lattice: PointsToState,
         currentNode: AssignExpression,
-        doubleState: PointsToState2,
-    ): PointsToState2 {
+        doubleState: PointsToStateElement,
+    ): PointsToStateElement {
         var doubleState = doubleState
         /* For AssignExpressions, we update the value of the rhs with the lhs
          * In C(++), both the lhs and the rhs should only have one element
@@ -579,16 +611,18 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             val destinations: IdentitySet<Node> = currentNode.lhs.map { it }.toIdentitySet()
             val destinationsAddresses =
                 destinations.flatMap { doubleState.getAddresses(it) }.toIdentitySet()
-            doubleState = doubleState.updateValues(sources, destinations, destinationsAddresses)
+            doubleState =
+                doubleState.updateValues(lattice, sources, destinations, destinationsAddresses)
         }
 
         return doubleState
     }
 
     private fun handleExpression(
+        lattice: PointsToState,
         currentNode: Expression,
-        doubleState: PointsToState2,
-    ): PointsToState2 {
+        doubleState: PointsToStateElement,
+    ): PointsToStateElement {
         var doubleState = doubleState
 
         /* If we have an Expression that is written to, we handle it later and ignore it now */
@@ -625,19 +659,27 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 }
 
             doubleState =
-                doubleState.push(
+                lattice.push(
+                    doubleState,
                     currentNode,
-                    TupleLattice(Pair(PowersetLattice(addresses), PowersetLattice(values))),
+                    StateEntryElement(
+                        PowersetLattice.Element(addresses),
+                        PowersetLattice.Element(values),
+                    ),
                 )
         }
         return doubleState
     }
 
-    private fun handleDeclaration(currentNode: Node, doubleState: PointsToState2): PointsToState2 {
+    private fun handleDeclaration(
+        lattice: PointsToState,
+        currentNode: Node,
+        doubleState: PointsToStateElement,
+    ): PointsToStateElement {
         /* No need to set the address, this already happens in the constructor */
         val addresses = doubleState.getAddresses(currentNode)
 
-        val values = identitySetOf<Node>()
+        val values = PowersetLattice.Element<Node>()
 
         (currentNode as? HasInitializer)?.initializer?.let { initializer ->
             if (initializer is Literal<*>) values.add(initializer)
@@ -645,17 +687,22 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         }
 
         var doubleState =
-            doubleState.push(
+            lattice.push(
+                doubleState,
                 currentNode,
-                TupleLattice(Pair(PowersetLattice(addresses), PowersetLattice(values))),
+                StateEntryElement(PowersetLattice.Element(addresses), values),
             )
         /* In the DeclarationsState, we save the address which we wrote to the value for easier work with pointers
          * */
         addresses.forEach { addr ->
             doubleState =
-                doubleState.pushToDeclarationsState(
+                lattice.pushToDeclarationsState(
+                    doubleState,
                     addr,
-                    TupleLattice(Pair(PowersetLattice(addresses), PowersetLattice(values))),
+                    StateEntryElement(
+                        PowersetLattice.Element(addresses),
+                        PowersetLattice.Element(values),
+                    ),
                 )
         }
         return doubleState
@@ -663,11 +710,12 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
     /** Create ParameterMemoryValues up to depth `depth` */
     private fun initializeParameters(
+        lattice: PointsToState,
         parameters: MutableList<ParameterDeclaration>,
-        doubleState: PointsToState2,
+        doubleState: PointsToStateElement,
         // Until which depth do we create ParameterMemoryValues
         depth: Int = 2,
-    ): PointsToState2 {
+    ): PointsToStateElement {
         var doubleState = doubleState
         parameters
             .filter { it.memoryValue == null }
@@ -701,484 +749,21 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     if (src is ParameterDeclaration) src.memoryValue = pmv
 
                     // Update the states
-                    val state:
-                        LatticeElement<Pair<PowersetLatticeT<Node>, PowersetLatticeT<Node>>> =
-                        TupleLattice(
-                            Pair(PowersetLattice(addresses), PowersetLattice(identitySetOf(pmv)))
+                    val state =
+                        StateEntryElement(
+                            PowersetLattice.Element(addresses),
+                            PowersetLattice.Element(pmv),
                         )
                     addresses.forEach { addr ->
-                        doubleState = doubleState.pushToDeclarationsState(addr, state)
+                        doubleState = lattice.pushToDeclarationsState(doubleState, addr, state)
                     }
-                    doubleState = doubleState.push(src, state)
+                    doubleState = lattice.push(doubleState, src, state)
                     // prepare for next step
                     src = pmv
                     addresses = identitySetOf(pmv)
                 }
             }
         return doubleState
-    }
-
-    protected class PointsToState2(
-        generalState:
-            LatticeElement<
-                Map<
-                    Node,
-                    LatticeElement<Pair<LatticeElement<Set<Node>>, LatticeElement<Set<Node>>>>,
-                >
-            > =
-            MapLattice(mutableMapOf()),
-        declarationsState:
-            LatticeElement<
-                Map<
-                    Node,
-                    LatticeElement<Pair<LatticeElement<Set<Node>>, LatticeElement<Set<Node>>>>,
-                >
-            > =
-            MapLattice(mutableMapOf()),
-    ) :
-        TupleLattice<
-            Map<Node, LatticeElement<Pair<LatticeElement<Set<Node>>, LatticeElement<Set<Node>>>>>,
-            Map<Node, LatticeElement<Pair<LatticeElement<Set<Node>>, LatticeElement<Set<Node>>>>>,
-        >(Pair(generalState, declarationsState)) {
-        override fun lub(
-            other:
-                LatticeElement<
-                    Pair<
-                        MapLatticeT<
-                            Node,
-                            LatticeElement<
-                                Pair<LatticeElement<Set<Node>>, LatticeElement<Set<Node>>>
-                            >,
-                        >,
-                        MapLatticeT<
-                            Node,
-                            LatticeElement<
-                                Pair<LatticeElement<Set<Node>>, LatticeElement<Set<Node>>>
-                            >,
-                        >,
-                    >
-                >
-        ) =
-            PointsToState2(
-                this.generalState.lub(other.elements.first),
-                this.elements.second.lub(other.elements.second),
-            )
-
-        override fun duplicate() =
-            PointsToState2(elements.first.duplicate(), elements.second.duplicate())
-
-        val generalState:
-            MapLatticeT<
-                Node,
-                LatticeElement<Pair<LatticeElement<Set<Node>>, LatticeElement<Set<Node>>>>,
-            >
-            get() = this.elements.first
-
-        val declarationsState:
-            MapLatticeT<
-                Node,
-                LatticeElement<Pair<LatticeElement<Set<Node>>, LatticeElement<Set<Node>>>>,
-            >
-            get() = this.elements.second
-
-        fun get(
-            key: Node
-        ): LatticeElement<Pair<LatticeElement<Set<Node>>, LatticeElement<Set<Node>>>>? {
-            return this.generalState.elements[key] ?: this.declarationsState.elements[key]
-        }
-
-        fun getFromDecl(
-            key: Node
-        ): LatticeElement<Pair<LatticeElement<Set<Node>>, LatticeElement<Set<Node>>>>? {
-            return this.declarationsState.elements[key]
-        }
-
-        fun push(
-            newNode: Node,
-            newLatticeElement:
-                LatticeElement<Pair<LatticeElement<Set<Node>>, LatticeElement<Set<Node>>>>,
-        ): PointsToState2 {
-            val newGeneralState =
-                this.generalState.lub(MapLattice(mutableMapOf(Pair(newNode, newLatticeElement))))
-            return PointsToState2(newGeneralState, declarationsState)
-        }
-
-        /** Pushes the [newNode] and its [newLatticeElement] to the [declarationsState]. */
-        fun pushToDeclarationsState(
-            newNode: Node,
-            newLatticeElement:
-                LatticeElement<Pair<LatticeElement<Set<Node>>, LatticeElement<Set<Node>>>>,
-        ): PointsToState2 {
-            val newDeclarationsState =
-                this.declarationsState.lub(
-                    MapLattice(mutableMapOf(Pair(newNode, newLatticeElement)))
-                )
-            return PointsToState2(generalState, newDeclarationsState)
-        }
-
-        override fun equals(other: Any?): Boolean {
-            if (other !is PointsToState2) return false
-            return other.elements.first == this.elements.first &&
-                other.elements.second == this.elements.second
-        }
-
-        /** Check if `node` has an entry in the DeclarationState */
-        fun hasDeclarationStateEntry(node: Node): Boolean {
-            return (this.declarationsState.elements[node]
-                ?.elements
-                ?.second
-                ?.elements
-                ?.isNotEmpty() == true)
-        }
-
-        /**
-         * Fetch the entry for `addr` from the DeclarationState. If there isn't any, create an
-         * UnknownMemoryValue
-         */
-        fun fetchElementFromDeclarationState(
-            addr: Node,
-            fetchFields: Boolean = false,
-        ): IdentitySet<Pair<Node, String>> {
-            val ret = identitySetOf<Pair<Node, String>>()
-
-            // For global nodes, we check the globalDerefs map
-            if (isGlobal(addr)) {
-                val element = globalDerefs[addr]
-                if (element != null) ret.add(Pair(element, ""))
-                else {
-                    val newName = nodeNameToString(addr)
-                    val newEntry = UnknownMemoryValue(newName, true)
-                    globalDerefs[addr] = newEntry
-                    ret.add(Pair(newEntry, ""))
-                }
-            } else {
-
-                // Otherwise, we read the declarationState.
-                // Let's start with the main element
-                val elements = this.declarationsState.elements[addr]?.elements?.second?.elements
-                if (elements.isNullOrEmpty()) {
-                    val newName = nodeNameToString(addr)
-                    val newEntry = identitySetOf<Node>(UnknownMemoryValue(newName))
-                    (this.declarationsState.elements
-                            as?
-                            MutableMap<
-                                Node,
-                                LatticeElement<
-                                    Pair<LatticeElement<Set<Node>>, LatticeElement<Set<Node>>>
-                                >,
-                            >)
-                        ?.computeIfAbsent(addr) {
-                            TupleLattice(
-                                Pair(
-                                    PowersetLattice(identitySetOf(addr)),
-                                    PowersetLattice(newEntry),
-                                )
-                            )
-                        }
-                    val newElements =
-                        this.declarationsState.elements[addr]?.elements?.second?.elements
-                    (newElements as? MutableSet<Node>)?.addAll(newEntry)
-                    newEntry.map { ret.add(Pair(it, "")) }
-                } else elements.map { ret.add(Pair(it, "")) }
-
-                // if fetchFields is true, we also fetch the values for fields
-                if (fetchFields) {
-                    val fields =
-                        this.declarationsState.elements[addr]?.elements?.first?.elements?.filter {
-                            it != addr
-                        }
-                    fields?.forEach { field ->
-                        this.declarationsState.elements[field]?.elements?.second?.elements?.let {
-                            it.map { ret.add(Pair(it, field.name.localName)) }
-                        }
-                    }
-                }
-            }
-
-            return ret
-        }
-
-        fun getValues(node: Node): IdentitySet<Node> {
-            return when (node) {
-                is PointerReference -> {
-                    /* For PointerReferences, the value is the address of the input
-                     * For example, the value of `&i` is the address of `i`
-                     * */
-                    this.getAddresses(node.input)
-                }
-                is PointerDereference -> {
-                    /* To find the value for PointerDereferences, we first check what's the current value of the input, which is probably a MemoryAddress
-                     * Then we look up the current value at this MemoryAddress
-                     */
-                    val inputVal =
-                        /*                        when (node.input) {
-                        is Reference -> this.getValues(node.input)
-                        else -> // TODO: How can we handle other cases?*/
-                        this.getValues(node.input)
-                    //                        }
-                    val retVal = identitySetOf<Node>()
-                    inputVal.forEach { input ->
-                        retVal.addAll(
-                            fetchElementFromDeclarationState(input, true).map { it.first }
-                        )
-                    }
-                    retVal
-                }
-                is Declaration -> {
-                    /* For Declarations, we have to look up the last value written to it.
-                     */
-                    if (node.memoryAddress == null) {
-                        node.memoryAddress = MemoryAddress(node.name, isGlobal(node))
-                    }
-                    fetchElementFromDeclarationState(node.memoryAddress!!)
-                        .map { it.first }
-                        .toIdentitySet()
-                }
-                is MemoryAddress -> {
-                    fetchElementFromDeclarationState(node).map { it.first }.toIdentitySet()
-                }
-                is MemberExpression -> {
-                    val (base, fieldName) = resolveMemberExpression(node)
-                    val baseAddresses = getAddresses(base).toIdentitySet()
-                    val fieldAddresses = fetchFieldAddresses(baseAddresses, fieldName)
-                    if (fieldAddresses.isNotEmpty()) {
-                        fieldAddresses
-                            .flatMap { fetchElementFromDeclarationState(it).map { it.first } }
-                            .toIdentitySet()
-                    } else
-                        identitySetOf(
-                            UnknownMemoryValue(Name(nodeNameToString(node).localName, base.name))
-                        )
-                }
-                is Reference -> {
-                    /* For References, we have to look up the last value written to its declaration.
-                     */
-                    val retVals = identitySetOf<Node>()
-                    this.getAddresses(node).forEach { addr ->
-                        // For globals we draw
-                        // a DFG edge to the global Declaration's memory Address
-                        /*if (isGlobal(node)) node.refersTo?.memoryAddress?.let { retVals.add(it) }
-                        else*/ retVals.addAll(this.getValues(addr))
-                    }
-                    return retVals
-                }
-                is CastExpression -> {
-                    this.getValues(node.expression)
-                }
-                is UnaryOperator -> this.getValues(node.input)
-                is SubscriptExpression -> {
-                    this.getAddresses(node).flatMap { this.getValues(it) }.toIdentitySet()
-                }
-                /* In these cases, we simply have to fetch the current value for the MemoryAddress from the DeclarationState */
-                else -> identitySetOf(node)
-            }
-        }
-
-        fun getAddresses(node: Node): IdentitySet<Node> {
-            return when (node) {
-                is Declaration -> {
-                    /*
-                     * For declarations, we created a new MemoryAddress node, so that's the one we use here
-                     */
-                    if (node.memoryAddress == null) {
-                        node.memoryAddress = MemoryAddress(node.name, isGlobal(node))
-                    }
-
-                    identitySetOf(node.memoryAddress!!)
-                }
-                is ParameterMemoryValue -> {
-                    if (node.memoryAddress != null) identitySetOf(node.memoryAddress!!)
-                    else identitySetOf()
-                }
-                is MemoryAddress -> {
-                    identitySetOf(node)
-                }
-                is PointerReference -> {
-                    identitySetOf()
-                }
-                is PointerDereference -> {
-                    /*
-                    PointerDereferences have as address the value of their input.
-                    For example, the address of `*a` is the value of `a`
-                     */
-                    this.getValues(node.input)
-                }
-                is MemberExpression -> {
-                    /*
-                     * For MemberExpressions, the fieldAddresses in the MemoryAddress node of the base hold the information we are looking for
-                     */
-                    val (base, newName) = resolveMemberExpression(node)
-                    fetchFieldAddresses(this.getAddresses(base).toIdentitySet(), newName)
-                }
-                is Reference -> {
-                    /*
-                    For references, the address is the same as for the declaration, AKA the refersTo
-                    */
-                    node.refersTo?.let { refersTo ->
-                        /* In some cases, the refersTo might not yet have an initialized MemoryAddress, for example if it's a FunctionDeclaration. So let's to this here */
-                        if (refersTo.memoryAddress == null) {
-                            refersTo.memoryAddress = MemoryAddress(node.name, isGlobal(node))
-                        }
-
-                        identitySetOf(refersTo.memoryAddress!!)
-                    } ?: identitySetOf()
-                }
-                is CastExpression -> {
-                    /*
-                    For CastExpressions we take the expression as the cast itself does not have any impact on the address
-                     */
-                    this.getAddresses(node.expression)
-                }
-                is SubscriptExpression -> {
-                    val localName = nodeNameToString(node.subscriptExpression)
-                    this.getValues(node.base)
-                        .flatMap {
-                            fetchFieldAddresses(
-                                identitySetOf(it),
-                                Name(localName.localName, nodeNameToString(it)),
-                            )
-                        }
-                        .toIdentitySet()
-                }
-                else -> identitySetOf(node)
-            }
-        }
-
-        /**
-         * nestingDepth 0 gets the `node`'s address. 1 fetches the current value, 2 the dereference,
-         * 3 the derefdereference, etc...
-         */
-        fun getNestedValues(
-            node: Node,
-            nestingDepth: Int,
-            fetchFields: Boolean = false,
-        ): Set<Node> {
-            if (nestingDepth == 0) return this.getAddresses(node)
-            //            else if (dereferenceDepth == 1) return addr.flatMap { getValues(it)
-            // }.toSet()
-            var ret = getValues(node)
-            for (i in 1..<nestingDepth) {
-                ret = // ret.flatMap { getValues(it) }.toIdentitySet()
-                    ret.flatMap { this.fetchElementFromDeclarationState(it, fetchFields) }
-                        .map { it.first }
-                        .toIdentitySet()
-            }
-            return ret
-        }
-
-        fun fetchFieldAddresses(
-            baseAddresses: IdentitySet<Node>,
-            nodeName: Name,
-        ): IdentitySet<Node> {
-            val fieldAddresses = identitySetOf<Node>()
-
-            baseAddresses.forEach { addr ->
-                val elements =
-                    declarationsState.elements[addr]
-                        ?.elements
-                        ?.first
-                        ?.elements
-                        ?.filter { it.name.localName == nodeName.localName }
-                        ?.toMutableList()
-
-                if (elements.isNullOrEmpty()) {
-                    // val newName = nodeNameToString(addr)
-                    val newEntry = identitySetOf<Node>(MemoryAddress(nodeName))
-                    (this.declarationsState.elements
-                            as?
-                            MutableMap<
-                                Node,
-                                LatticeElement<
-                                    Pair<LatticeElement<Set<Node>>, LatticeElement<Set<Node>>>
-                                >,
-                            >)
-                        ?.computeIfAbsent(addr) {
-                            TupleLattice(
-                                Pair(
-                                    PowersetLattice(identitySetOf(addr)),
-                                    PowersetLattice(identitySetOf()),
-                                )
-                            )
-                        }
-                    val newElements =
-                        this.declarationsState.elements[addr]?.elements?.first?.elements
-                    (newElements as? IdentitySet<Node>)?.addAll(newEntry)
-                    fieldAddresses.addAll(newEntry)
-                    /*newEntry.map { ret.add(Pair(it, "")) }*/
-                } else {
-                    elements.let { fieldAddresses.addAll(it) }
-                }
-            }
-
-            return fieldAddresses
-        }
-
-        /**
-         * Updates the declarationState at `destinationAddresses` to the values in `sources`.
-         * Additionally updates the generalstate at `destinations` if there is any
-         */
-        fun updateValues(
-            sources: IdentitySet<Node>,
-            destinations: IdentitySet<Node>,
-            destinationAddresses: IdentitySet<Node>,
-        ): PointsToState2 {
-            val newDeclState = this.declarationsState.elements.toMutableMap()
-            val newGenState = this.generalState.elements.toMutableMap()
-
-            /* Update the declarationState for the addresses */
-            destinationAddresses.forEach { destAddr ->
-                if (!isGlobal(destAddr)) {
-                    val currentEntries =
-                        this.declarationsState.elements[destAddr]
-                            ?.elements
-                            ?.first
-                            ?.elements
-                            ?.toIdentitySet() ?: identitySetOf(destAddr)
-
-                    newDeclState[destAddr] =
-                        TupleLattice(
-                            Pair(PowersetLattice(currentEntries), PowersetLattice(sources))
-                        )
-                } else {
-                    // TODO: We basically do this below, but currently we don't get the destinations
-                    // value from the call
-                    getValues(destAddr).forEach { addr ->
-                        newGenState[addr] =
-                            TupleLattice(
-                                Pair(
-                                    PowersetLattice(destinationAddresses),
-                                    PowersetLattice(sources),
-                                )
-                            )
-                    }
-                }
-            }
-
-            /* Also update the generalState for dst (if we have any destinations) */
-            destinations.forEach { d ->
-                newGenState[d] =
-                    TupleLattice(
-                        Pair(PowersetLattice(destinationAddresses), PowersetLattice(sources))
-                    )
-            }
-
-            var doubleState = PointsToState2(MapLattice(newGenState), MapLattice(newDeclState))
-
-            /* When we are dealing with SubscriptExpression, we also have to initialize the arrayExpression
-            , since that hasn't been done yet */
-            destinations.filterIsInstance<SubscriptExpression>().forEach { d ->
-                val aEaddresses = this.getAddresses(d.arrayExpression)
-                val aEvalues = this.getValues(d.arrayExpression)
-
-                doubleState =
-                    doubleState.push(
-                        d.arrayExpression,
-                        TupleLattice(Pair(PowersetLattice(aEaddresses), PowersetLattice(aEvalues))),
-                    )
-            }
-
-            return doubleState
-        }
     }
 }
 
@@ -1193,4 +778,363 @@ fun FunctionDeclaration.isStub(): Boolean {
             bodySize <= 3 &&
             this.calls.singleOrNull()?.name == this.name &&
             this.returns.singleOrNull() != null)
+}
+
+val PointsToStateElement.generalState: SingleStateElement
+    get() = this.first
+
+val PointsToStateElement.declarationsState: SingleStateElement
+    get() = this.second
+
+fun PointsToStateElement.get(key: Node): StateEntryElement? {
+    return this.generalState[key] ?: this.declarationsState[key]
+}
+
+fun PointsToStateElement.getFromDecl(key: Node): StateEntryElement? {
+    return this.declarationsState[key]
+}
+
+fun PointsToState.push(
+    currentState: PointsToStateElement,
+    newNode: Node,
+    newLatticeElement: StateEntryElement,
+): PointsToStateElement {
+    val newGeneralState =
+        this.innerLattice2.lub(
+            currentState.generalState,
+            MapLattice.Element(newNode to newLatticeElement),
+        )
+    return PointsToStateElement(newGeneralState, currentState.declarationsState)
+}
+
+/** Pushes the [newNode] and its [newLatticeElement] to the [declarationsState]. */
+fun PointsToState.pushToDeclarationsState(
+    currentState: PointsToStateElement,
+    newNode: Node,
+    newLatticeElement: StateEntryElement,
+): PointsToStateElement {
+    val newDeclarationsState =
+        this.innerLattice2.lub(
+            currentState.generalState,
+            MapLattice.Element(newNode to newLatticeElement),
+        )
+    return PointsToStateElement(currentState.generalState, newDeclarationsState)
+}
+
+/** Check if `node` has an entry in the DeclarationState */
+fun PointsToStateElement.hasDeclarationStateEntry(node: Node): Boolean {
+    return (this.declarationsState[node]?.second?.isNotEmpty() == true)
+}
+
+/**
+ * Fetch the entry for `addr` from the DeclarationState. If there isn't any, create an
+ * UnknownMemoryValue
+ */
+fun PointsToStateElement.fetchElementFromDeclarationState(
+    addr: Node,
+    fetchFields: Boolean = false,
+): IdentitySet<Pair<Node, String>> {
+    val ret = identitySetOf<Pair<Node, String>>()
+
+    // For global nodes, we check the globalDerefs map
+    if (isGlobal(addr)) {
+        val element = globalDerefs[addr]
+        if (element != null) ret.add(Pair(element, ""))
+        else {
+            val newName = nodeNameToString(addr)
+            val newEntry = UnknownMemoryValue(newName, true)
+            globalDerefs[addr] = newEntry
+            ret.add(Pair(newEntry, ""))
+        }
+    } else {
+
+        // Otherwise, we read the declarationState.
+        // Let's start with the main element
+        val elements = this.declarationsState[addr]?.second
+        if (elements.isNullOrEmpty()) {
+            val newName = nodeNameToString(addr)
+            val newEntry = identitySetOf<Node>(UnknownMemoryValue(newName))
+            this.declarationsState.computeIfAbsent(addr) {
+                TupleLattice.Element(
+                    PowersetLattice.Element(addr),
+                    PowersetLattice.Element(newEntry),
+                )
+            }
+            val newElements = this.declarationsState[addr]?.second
+            (newElements as? MutableSet<Node>)?.addAll(newEntry)
+            newEntry.map { ret.add(Pair(it, "")) }
+        } else elements.map { ret.add(Pair(it, "")) }
+
+        // if fetchFields is true, we also fetch the values for fields
+        if (fetchFields) {
+            val fields = this.declarationsState[addr]?.first?.filter { it != addr }
+            fields?.forEach { field ->
+                this.declarationsState[field]?.second?.let {
+                    it.map { ret.add(Pair(it, field.name.localName)) }
+                }
+            }
+        }
+    }
+
+    return ret
+}
+
+fun PointsToStateElement.getValues(node: Node): IdentitySet<Node> {
+    return when (node) {
+        is PointerReference -> {
+            /* For PointerReferences, the value is the address of the input
+             * For example, the value of `&i` is the address of `i`
+             * */
+            this.getAddresses(node.input)
+        }
+        is PointerDereference -> {
+            /* To find the value for PointerDereferences, we first check what's the current value of the input, which is probably a MemoryAddress
+             * Then we look up the current value at this MemoryAddress
+             */
+            val inputVal =
+                /*                        when (node.input) {
+                is Reference -> this.getValues(node.input)
+                else -> // TODO: How can we handle other cases?*/
+                this.getValues(node.input)
+            //                        }
+            val retVal = identitySetOf<Node>()
+            inputVal.forEach { input ->
+                retVal.addAll(fetchElementFromDeclarationState(input, true).map { it.first })
+            }
+            retVal
+        }
+        is Declaration -> {
+            /* For Declarations, we have to look up the last value written to it.
+             */
+            if (node.memoryAddress == null) {
+                node.memoryAddress = MemoryAddress(node.name, isGlobal(node))
+            }
+            fetchElementFromDeclarationState(node.memoryAddress!!).map { it.first }.toIdentitySet()
+        }
+        is MemoryAddress -> {
+            fetchElementFromDeclarationState(node).map { it.first }.toIdentitySet()
+        }
+        is MemberExpression -> {
+            val (base, fieldName) = resolveMemberExpression(node)
+            val baseAddresses = getAddresses(base).toIdentitySet()
+            val fieldAddresses = fetchFieldAddresses(baseAddresses, fieldName)
+            if (fieldAddresses.isNotEmpty()) {
+                fieldAddresses
+                    .flatMap { fetchElementFromDeclarationState(it).map { it.first } }
+                    .toIdentitySet()
+            } else
+                identitySetOf(UnknownMemoryValue(Name(nodeNameToString(node).localName, base.name)))
+        }
+        is Reference -> {
+            /* For References, we have to look up the last value written to its declaration.
+             */
+            val retVals = identitySetOf<Node>()
+            this.getAddresses(node).forEach { addr ->
+                // For globals we draw
+                // a DFG edge to the global Declaration's memory Address
+                /*if (isGlobal(node)) node.refersTo?.memoryAddress?.let { retVals.add(it) }
+                else*/ retVals.addAll(this.getValues(addr))
+            }
+            return retVals
+        }
+        is CastExpression -> {
+            this.getValues(node.expression)
+        }
+        is UnaryOperator -> this.getValues(node.input)
+        is SubscriptExpression -> {
+            this.getAddresses(node).flatMap { this.getValues(it) }.toIdentitySet()
+        }
+        /* In these cases, we simply have to fetch the current value for the MemoryAddress from the DeclarationState */
+        else -> identitySetOf(node)
+    }
+}
+
+fun PointsToStateElement.getAddresses(node: Node): IdentitySet<Node> {
+    return when (node) {
+        is Declaration -> {
+            /*
+             * For declarations, we created a new MemoryAddress node, so that's the one we use here
+             */
+            if (node.memoryAddress == null) {
+                node.memoryAddress = MemoryAddress(node.name, isGlobal(node))
+            }
+
+            identitySetOf(node.memoryAddress!!)
+        }
+        is ParameterMemoryValue -> {
+            if (node.memoryAddress != null) identitySetOf(node.memoryAddress!!) else identitySetOf()
+        }
+        is MemoryAddress -> {
+            identitySetOf(node)
+        }
+        is PointerReference -> {
+            identitySetOf()
+        }
+        is PointerDereference -> {
+            /*
+            PointerDereferences have as address the value of their input.
+            For example, the address of `*a` is the value of `a`
+             */
+            this.getValues(node.input)
+        }
+        is MemberExpression -> {
+            /*
+             * For MemberExpressions, the fieldAddresses in the MemoryAddress node of the base hold the information we are looking for
+             */
+            val (base, newName) = resolveMemberExpression(node)
+            fetchFieldAddresses(this.getAddresses(base).toIdentitySet(), newName)
+        }
+        is Reference -> {
+            /*
+            For references, the address is the same as for the declaration, AKA the refersTo
+            */
+            node.refersTo?.let { refersTo ->
+                /* In some cases, the refersTo might not yet have an initialized MemoryAddress, for example if it's a FunctionDeclaration. So let's to this here */
+                if (refersTo.memoryAddress == null) {
+                    refersTo.memoryAddress = MemoryAddress(node.name, isGlobal(node))
+                }
+
+                identitySetOf(refersTo.memoryAddress!!)
+            } ?: identitySetOf()
+        }
+        is CastExpression -> {
+            /*
+            For CastExpressions we take the expression as the cast itself does not have any impact on the address
+             */
+            this.getAddresses(node.expression)
+        }
+        is SubscriptExpression -> {
+            val localName = nodeNameToString(node.subscriptExpression)
+            this.getValues(node.base)
+                .flatMap {
+                    fetchFieldAddresses(
+                        identitySetOf(it),
+                        Name(localName.localName, nodeNameToString(it)),
+                    )
+                }
+                .toIdentitySet()
+        }
+        else -> identitySetOf(node)
+    }
+}
+
+/**
+ * nestingDepth 0 gets the `node`'s address. 1 fetches the current value, 2 the dereference, 3 the
+ * derefdereference, etc...
+ */
+fun PointsToStateElement.getNestedValues(
+    node: Node,
+    nestingDepth: Int,
+    fetchFields: Boolean = false,
+): Set<Node> {
+    if (nestingDepth == 0) return this.getAddresses(node)
+    //            else if (dereferenceDepth == 1) return addr.flatMap { getValues(it)
+    // }.toSet()
+    var ret = getValues(node)
+    for (i in 1..<nestingDepth) {
+        ret = // ret.flatMap { getValues(it) }.toIdentitySet()
+            ret.flatMap { this.fetchElementFromDeclarationState(it, fetchFields) }
+                .map { it.first }
+                .toIdentitySet()
+    }
+    return ret
+}
+
+fun PointsToStateElement.fetchFieldAddresses(
+    baseAddresses: IdentitySet<Node>,
+    nodeName: Name,
+): IdentitySet<Node> {
+    val fieldAddresses = identitySetOf<Node>()
+
+    baseAddresses.forEach { addr ->
+        val elements =
+            declarationsState[addr]
+                ?.first
+                ?.filter { it.name.localName == nodeName.localName }
+                ?.toMutableList()
+
+        if (elements.isNullOrEmpty()) {
+            // val newName = nodeNameToString(addr)
+            val newEntry = identitySetOf<Node>(MemoryAddress(nodeName))
+            this.declarationsState.computeIfAbsent(addr) {
+                TupleLattice.Element(PowersetLattice.Element(addr), PowersetLattice.Element())
+            }
+            val newElements = this.declarationsState[addr]?.first
+            newElements?.addAll(newEntry)
+            fieldAddresses.addAll(newEntry)
+            /*newEntry.map { ret.add(Pair(it, "")) }*/
+        } else {
+            elements.let { fieldAddresses.addAll(it) }
+        }
+    }
+
+    return fieldAddresses
+}
+
+/**
+ * Updates the declarationState at `destinationAddresses` to the values in `sources`. Additionally
+ * updates the generalstate at `destinations` if there is any
+ */
+fun PointsToStateElement.updateValues(
+    lattice: PointsToState,
+    sources: IdentitySet<Node>,
+    destinations: IdentitySet<Node>,
+    destinationAddresses: IdentitySet<Node>,
+): PointsToStateElement {
+    val newDeclState = this.declarationsState.duplicate()
+    val newGenState = this.generalState.duplicate()
+
+    /* Update the declarationState for the addresses */
+    destinationAddresses.forEach { destAddr ->
+        if (!isGlobal(destAddr)) {
+            val currentEntries =
+                this.declarationsState[destAddr]?.first?.toIdentitySet() ?: identitySetOf(destAddr)
+
+            newDeclState[destAddr] =
+                TupleLattice.Element(
+                    PowersetLattice.Element(currentEntries),
+                    PowersetLattice.Element(sources),
+                )
+        } else {
+            // TODO: We basically do this below, but currently we don't get the destinations
+            // value from the call
+            getValues(destAddr).forEach { addr ->
+                newGenState[addr] =
+                    TupleLattice.Element(
+                        PowersetLattice.Element(destinationAddresses),
+                        PowersetLattice.Element(sources),
+                    )
+            }
+        }
+    }
+
+    /* Also update the generalState for dst (if we have any destinations) */
+    destinations.forEach { d ->
+        newGenState[d] =
+            TupleLattice.Element(
+                PowersetLattice.Element(destinationAddresses),
+                PowersetLattice.Element(sources),
+            )
+    }
+
+    var doubleState = PointsToStateElement(newGenState, newDeclState)
+
+    /* When we are dealing with SubscriptExpression, we also have to initialize the arrayExpression
+    , since that hasn't been done yet */
+    destinations.filterIsInstance<SubscriptExpression>().forEach { d ->
+        val aEaddresses = this.getAddresses(d.arrayExpression)
+        val aEvalues = this.getValues(d.arrayExpression)
+
+        doubleState =
+            lattice.push(
+                doubleState,
+                d.arrayExpression,
+                TupleLattice.Element(
+                    PowersetLattice.Element(aEaddresses),
+                    PowersetLattice.Element(aEvalues),
+                ),
+            )
+    }
+
+    return doubleState
 }
