@@ -34,11 +34,15 @@ import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.helpers.MeasurementHolder
 import de.fraunhofer.aisec.cpg.helpers.StatisticsHolder
+import de.fraunhofer.aisec.cpg.passes.ImportDependencies
+import de.fraunhofer.aisec.cpg.passes.ImportResolver
 import de.fraunhofer.aisec.cpg.passes.Pass
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
+import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import org.neo4j.ogm.annotation.Relationship
+import org.neo4j.ogm.annotation.Transient
 
 /**
  * The global (intermediate) result of the translation. A [LanguageFrontend] will initially populate
@@ -61,6 +65,14 @@ class TranslationResult(
      * of software.
      */
     val components by unwrapping(TranslationResult::componentEdges)
+
+    /**
+     * The import dependencies of [Component] nodes of this translation result. The preferred way to
+     * access this is via [Strategy.COMPONENTS_LEAST_IMPORTS].
+     */
+    @Transient
+    @PopulatedByPass(ImportResolver::class)
+    var componentDependencies: ImportDependencies<Component>? = null
 
     /**
      * Scratch storage that can be used by passes to store additional information in this result.

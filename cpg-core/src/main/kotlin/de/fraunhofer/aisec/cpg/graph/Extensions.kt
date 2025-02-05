@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import kotlin.collections.filter
 import kotlin.collections.firstOrNull
 import kotlin.math.absoluteValue
 
@@ -285,9 +286,7 @@ fun Node.followPrevDFGEdgesUntilHit(
                             // from).
                             // We try to pop from the stack and only select the elements with the
                             // matching index.
-                            ctx.indexStack.popIfOnTop(
-                                it.granularity as IndexedDataflowGranularity
-                            ) == true
+                            ctx.indexStack.popIfOnTop(it.granularity as IndexedDataflowGranularity)
                         } else {
                             true
                         }
@@ -328,7 +327,7 @@ class Context(
     val callStack: SimpleStack<CallExpression> = SimpleStack(),
 ) {
     fun clone(): Context {
-        return Context(indexStack.clone(), callStack.clone())
+        return Context(indexStack = indexStack.clone(), callStack = callStack.clone())
     }
 }
 
@@ -361,6 +360,9 @@ class SimpleStack<T> {
         return false
     }
 
+    /** Pops the top element from the stack. */
+    fun pop(): T = deque.removeFirst()
+
     /** Clones the stack. */
     fun clone(): SimpleStack<T> {
         return SimpleStack<T>().apply { deque.addAll(this@SimpleStack.deque) }
@@ -387,10 +389,14 @@ fun Node.collectAllNextFullDFGPaths(): List<List<Node>> {
  * Iterates the next EOG edges until there are no more edges available (or until a loop is
  * detected). Returns a list of possible paths (each path is represented by a list of nodes).
  */
-fun Node.collectAllNextEOGPaths(): List<List<Node>> {
+fun Node.collectAllNextEOGPaths(interproceduralAnalysis: Boolean = true): List<List<Node>> {
     // We make everything fail to reach the end of the CDG. Then, we use the stuff collected in the
     // failed paths (everything)
-    return this.followNextEOGEdgesUntilHit(collectFailedPaths = true, findAllPossiblePaths = true) {
+    return this.followNextEOGEdgesUntilHit(
+            collectFailedPaths = true,
+            findAllPossiblePaths = true,
+            interproceduralAnalysis = interproceduralAnalysis,
+        ) {
             false
         }
         .failed
@@ -658,7 +664,7 @@ inline fun Node.followXUntilHit(
                         (next !in alreadySeenNodes && worklist.none { next in it.first }))
             ) {
                 val newContext =
-                    if (nextPath.size > 1) {
+                    if (nextNodes.size > 1) {
                         currentContext.clone()
                     } else {
                         currentContext
@@ -799,17 +805,59 @@ fun Node.followNextDFGEdgesUntilHit(
 fun Node.followNextEOGEdgesUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
+    interproceduralAnalysis: Boolean = true,
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
-        x = { currentNode, _, _ ->
-            currentNode.nextEOGEdges.filter { it.unreachable != true }.map { it.end }
+        x = { currentNode, ctx, _ ->
+            if (
+                interproceduralAnalysis &&
+                    currentNode is CallExpression &&
+                    currentNode.invokes.isNotEmpty()
+            ) {
+                // We follow the invokes edges and push the call expression on the call stack, so we
+                // can jump back here after processing the function.
+                ctx.callStack.push(currentNode)
+                currentNode.invokes
+            } else if (
+                interproceduralAnalysis &&
+                    (currentNode is ReturnStatement || currentNode.nextEOG.isEmpty())
+            ) {
+                if (ctx.callStack.isEmpty()) {
+                    (currentNode as? FunctionDeclaration
+                            ?: currentNode.firstParentOrNull<FunctionDeclaration>())
+                        ?.calledBy
+                        ?.flatMap { it.nextEOG } ?: setOf()
+                } else {
+                    ctx.callStack.pop().nextEOG
+                }
+            } else {
+                currentNode.nextEOGEdges.filter { it.unreachable != true }.map { it.end }
+            }
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
         predicate = predicate,
     )
 }
+
+/**
+ * Returns a [Collection] of last nodes in the EOG of this [FunctionDeclaration]. If there's no
+ * body, it will return a list of this function declaration.
+ */
+val FunctionDeclaration.lastEOGNodes: Collection<Node>
+    get() {
+        val lastEOG = collectAllNextEOGPaths(false).flatMap { it.last().prevEOGEdges }
+        return if (lastEOG.isEmpty()) {
+            // In some cases, we do not have a body, so we have to jump directly to the
+            // function declaration.
+            listOf(this)
+        } else lastEOG.filter { it.unreachable != true }.map { it.start }
+    }
+
+/** Returns only potentially reachable previous EOG edges. */
+val Node.reachablePrevEOG: Collection<Node>
+    get() = this.prevEOGEdges.filter { it.unreachable != true }.map { it.start }
 
 /**
  * Returns an instance of [FulfilledAndFailedPaths] where [FulfilledAndFailedPaths.fulfilled]
@@ -824,11 +872,39 @@ fun Node.followNextEOGEdgesUntilHit(
 fun Node.followPrevEOGEdgesUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
+    interproceduralAnalysis: Boolean = true,
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
+
     return followXUntilHit(
-        x = { currentNode, _, _ ->
-            currentNode.prevEOGEdges.filter { it.unreachable != true }.map { it.start }
+        x = { currentNode, ctx, _ ->
+            when {
+                interproceduralAnalysis &&
+                    currentNode is FunctionDeclaration &&
+                    ctx.callStack.isEmpty() -> {
+                    // We're at the beginning of a function. If the stack is empty, we jump to
+                    // all calls of this function.
+                    currentNode.calledBy.flatMap { it.reachablePrevEOG }
+                }
+                interproceduralAnalysis && currentNode is FunctionDeclaration -> {
+                    // We're at the beginning of a function. If there's something on the stack,
+                    // we ended up here by following the respective call expression, and we jump
+                    // back there.
+                    ctx.callStack.pop().reachablePrevEOG
+                }
+                interproceduralAnalysis &&
+                    currentNode is CallExpression &&
+                    currentNode.invokes.isNotEmpty() -> {
+                    // We're in the call expression. Push it on the stack, go to all last EOG
+                    // nodes in the functions which are invoked and continue there.
+                    ctx.callStack.push(currentNode)
+
+                    currentNode.invokes.flatMap { it.lastEOGNodes }
+                }
+                else -> {
+                    currentNode.reachablePrevEOG
+                }
+            }
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
@@ -1282,6 +1358,12 @@ fun Expression?.unwrapReference(): Reference? {
 val Node.translationUnit: TranslationUnitDeclaration?
     get() {
         return firstParentOrNull<TranslationUnitDeclaration>()
+    }
+
+/** Returns the [Component] where this node is located in. */
+val Node.component: Component?
+    get() {
+        return firstParentOrNull<Component>()
     }
 
 /**
