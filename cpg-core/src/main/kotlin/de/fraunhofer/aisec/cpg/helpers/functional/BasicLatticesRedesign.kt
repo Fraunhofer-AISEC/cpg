@@ -58,7 +58,8 @@ enum class Order {
  *
  * Note: We usually do not want (nor have to) store the elements spanning the lattice because it
  * would cost too much memory for non-trivial examples. But if a user wants to do so, we provide the
- * property [elements].
+ * property [elements]. It can be used to store all, no or some of the elements spanning the lattice
+ * and currently has no real effect.
  */
 interface Lattice<T : Lattice.Element> {
     /**
