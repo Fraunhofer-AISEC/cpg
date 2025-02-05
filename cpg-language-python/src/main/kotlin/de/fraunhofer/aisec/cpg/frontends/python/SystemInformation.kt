@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.OverlayNode
 
 /** Represents the contents of `sys.version_info` which contains the Python version. */
 data class VersionInfo(var major: Long? = null, var minor: Long? = null, var micro: Long? = null) :
-    OverlayNode() {
+    OverlayNode(), Comparable<VersionInfo> {
     /**
      * Returns the version info as a tuple (major, minor, micro). The length of the tuple depends on
      * the information set, e.g., if only major version is set, then the list is 1 element long.
@@ -45,6 +45,24 @@ data class VersionInfo(var major: Long? = null, var minor: Long? = null, var mic
         }
 
         return list
+    }
+
+    override fun compareTo(other: VersionInfo): Int {
+        val thisMajor = this.major ?: -1
+        val otherMajor = other.major ?: -1
+        val thisMinor = this.minor ?: -1
+        val otherMinor = other.minor ?: -1
+        val thisMicro = this.micro ?: -1
+        val otherMicro = other.micro ?: -1
+        return if (thisMajor == otherMajor && thisMinor == otherMinor && thisMicro == otherMicro) {
+            0
+        } else if (
+            thisMajor < otherMajor ||
+                (thisMajor == otherMajor &&
+                    (thisMinor < otherMinor || thisMinor == otherMinor && thisMicro < otherMicro))
+        ) {
+            -1
+        } else 1
     }
 }
 

@@ -353,6 +353,18 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
 }
 
 /**
+ * Returns the version info from the [TranslationConfiguration] as [VersionInfo] or `null` if it was
+ * not specified.
+ */
+fun getVersionInfo(config: TranslationConfiguration): VersionInfo? {
+    return config.symbols["PYTHON_VERSION_MAJOR"]?.toLong()?.let { major ->
+        val minor = config.symbols["PYTHON_VERSION_MINOR"]?.toLong()
+        val micro = if (minor != null) config.symbols["PYTHON_VERSION_MICRO"]?.toLong() else null
+        VersionInfo(major, minor, micro)
+    }
+}
+
+/**
  * Populate system information from defined symbols that represent our environment. We add it as an
  * overlay node to our [TranslationUnitDeclaration].
  */
@@ -366,14 +378,7 @@ fun populateSystemInformation(
             // We need to populate the version info "in-order", to ensure that we do not
             // set the micro version if minor and major are not set, i.e., there must not be a
             // "gap" in the granularity of version numbers
-            versionInfo =
-                config.symbols["PYTHON_VERSION_MAJOR"]?.toLong()?.let { major ->
-                    val minor = config.symbols["PYTHON_VERSION_MINOR"]?.toLong()
-                    val micro =
-                        if (minor != null) config.symbols["PYTHON_VERSION_MICRO"]?.toLong()
-                        else null
-                    VersionInfo(major, minor, micro)
-                },
+            versionInfo = getVersionInfo(config),
         )
     sysInfo.underlyingNode = tu
     return sysInfo

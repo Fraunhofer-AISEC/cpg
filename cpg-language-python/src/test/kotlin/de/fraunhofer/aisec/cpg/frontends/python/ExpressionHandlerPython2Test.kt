@@ -29,23 +29,23 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.scopes.LocalScope
+import de.fraunhofer.aisec.cpg.graph.scopes.FunctionScope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
 import kotlin.test.*
 
-class ExpressionHandlerTest {
+class ExpressionHandlerPython2Test {
 
     @Test
-    fun testComprehensionExpressionTuplePython3() {
+    fun testComprehensionExpressionTuplePython2() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val result =
             analyze(listOf(topLevel.resolve("comprehension.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
                 it.symbols(
                     mapOf(
-                        "PYTHON_VERSION_MAJOR" to "3",
+                        "PYTHON_VERSION_MAJOR" to "2",
                         "PYTHON_VERSION_MINOR" to "0",
                         "PYTHON_VERSION_MICRO" to "0",
                     )
@@ -84,25 +84,25 @@ class ExpressionHandlerTest {
         // Check that the declarations exist for the variables k and v
         val declK = variableK.refersTo
         assertIs<VariableDeclaration>(declK)
-        assertIs<LocalScope>(declK.scope)
-        assertEquals(tupleAsVariable, declK.scope?.astNode)
+        assertIs<FunctionScope>(declK.scope)
+        assertEquals(tupleComp, declK.scope?.astNode)
         assertRefersTo(argK, declK)
         val declV = variableV.refersTo
         assertIs<VariableDeclaration>(declV)
-        assertIs<LocalScope>(declV.scope)
-        assertEquals(tupleAsVariable, declV.scope?.astNode)
+        assertIs<FunctionScope>(declV.scope)
+        assertEquals(tupleComp, declV.scope?.astNode)
         assertRefersTo(argV, declV)
     }
 
     @Test
-    fun testListComprehensionsPython3() {
+    fun testListComprehensionsPython2() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val result =
             analyze(listOf(topLevel.resolve("comprehension.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
                 it.symbols(
                     mapOf(
-                        "PYTHON_VERSION_MAJOR" to "3",
+                        "PYTHON_VERSION_MAJOR" to "2",
                         "PYTHON_VERSION_MINOR" to "0",
                         "PYTHON_VERSION_MICRO" to "0",
                     )
@@ -131,7 +131,7 @@ class ExpressionHandlerTest {
         assertLocalName("i", variableI)
         val declI = variableI.refersTo
         assertIs<VariableDeclaration>(declI)
-        assertEquals(singleWithIf, declI.scope?.astNode)
+        assertEquals(listComp, declI.scope?.astNode)
         val iterableX = singleWithIf.comprehensionExpressions[0].iterable
         assertIs<Reference>(iterableX)
         assertLocalName("x", iterableX)
@@ -146,7 +146,7 @@ class ExpressionHandlerTest {
         val outsideI = fooIOutside.arguments[0]
         assertIs<Reference>(outsideI)
         assertLocalName("i", outsideI)
-        assertNotRefersTo(outsideI, declI)
+        assertRefersTo(outsideI, declI)
 
         val singleWithoutIfAssignment = body.statements[1]
         assertIs<AssignExpression>(singleWithoutIfAssignment)
@@ -182,14 +182,14 @@ class ExpressionHandlerTest {
     }
 
     @Test
-    fun testSetComprehensionsPython3() {
+    fun testSetComprehensionsPython2() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val result =
             analyze(listOf(topLevel.resolve("comprehension.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
                 it.symbols(
                     mapOf(
-                        "PYTHON_VERSION_MAJOR" to "3",
+                        "PYTHON_VERSION_MAJOR" to "2",
                         "PYTHON_VERSION_MINOR" to "0",
                         "PYTHON_VERSION_MICRO" to "0",
                     )
@@ -247,14 +247,14 @@ class ExpressionHandlerTest {
     }
 
     @Test
-    fun testDictComprehensionsPython3() {
+    fun testDictComprehensionsPython2() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val result =
             analyze(listOf(topLevel.resolve("comprehension.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
                 it.symbols(
                     mapOf(
-                        "PYTHON_VERSION_MAJOR" to "3",
+                        "PYTHON_VERSION_MAJOR" to "2",
                         "PYTHON_VERSION_MINOR" to "0",
                         "PYTHON_VERSION_MICRO" to "0",
                     )
@@ -328,14 +328,14 @@ class ExpressionHandlerTest {
     }
 
     @Test
-    fun testGeneratorExprPython3() {
+    fun testGeneratorExprPython2() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val result =
             analyze(listOf(topLevel.resolve("comprehension.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
                 it.symbols(
                     mapOf(
-                        "PYTHON_VERSION_MAJOR" to "3",
+                        "PYTHON_VERSION_MAJOR" to "2",
                         "PYTHON_VERSION_MINOR" to "0",
                         "PYTHON_VERSION_MICRO" to "0",
                     )
@@ -377,14 +377,14 @@ class ExpressionHandlerTest {
      * This test ensures that variables in a comprehension do not bind to the outer scope. See
      * [testCompBindingAssignExpr] for exceptions.
      */
-    fun testCompBindingPython3() {
+    fun testCompBindingPython2() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val result =
             analyze(listOf(topLevel.resolve("comprehension.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
                 it.symbols(
                     mapOf(
-                        "PYTHON_VERSION_MAJOR" to "3",
+                        "PYTHON_VERSION_MAJOR" to "2",
                         "PYTHON_VERSION_MINOR" to "0",
                         "PYTHON_VERSION_MICRO" to "0",
                     )
@@ -398,22 +398,22 @@ class ExpressionHandlerTest {
         assertIs<VariableDeclaration>(xDecl)
 
         assertEquals(
-            5,
+            1,
             compBindingFunc.variables.size,
-            "Expected five variables. One for the \"outside\" x and one for each of the four comprehensions.",
+            "Expected one variable where all other \"x\" refer to",
         )
 
         assertEquals(
-            2,
+            11,
             xDecl.usages.size,
-            "Expected two usages: one for the initial assignment and one for the usage in \"print(x)\".",
+            "Expected eleven usages: one for the initial assignment and one for the usage in \"print(x)\" and nine inside the list/set/dict comprehensions.",
         )
 
         val comprehensions =
             compBindingFunc.body.statements.filterIsInstance<CollectionComprehension>()
         assertEquals(4, comprehensions.size, "Expected to find four comprehensions.")
 
-        comprehensions.forEach { it.refs("x").forEach { ref -> assertNotRefersTo(ref, xDecl) } }
+        comprehensions.forEach { it.refs("x").forEach { ref -> assertRefersTo(ref, xDecl) } }
     }
 
     @Test
@@ -421,14 +421,14 @@ class ExpressionHandlerTest {
      * This test ensures that variables in a comprehension do not bind to the outer scope if they
      * are used in an `AssignExpr`. See https://peps.python.org/pep-0572/#scope-of-the-target
      */
-    fun testCompBindingAssignExprPython3() {
+    fun testCompBindingAssignExprPython2() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val result =
             analyze(listOf(topLevel.resolve("comprehension.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
                 it.symbols(
                     mapOf(
-                        "PYTHON_VERSION_MAJOR" to "3",
+                        "PYTHON_VERSION_MAJOR" to "2",
                         "PYTHON_VERSION_MINOR" to "0",
                         "PYTHON_VERSION_MICRO" to "0",
                     )
@@ -443,9 +443,9 @@ class ExpressionHandlerTest {
         assertIs<VariableDeclaration>(xDecl)
 
         assertEquals(
-            2,
+            1,
             compBindingAssignFunc.variables.size,
-            "Expected two variables. One for the \"outside\" x and one for the \"temp\" inside the comprehension.",
+            "Expected two variables. One for the \"outside\" x.",
         )
 
         assertEquals(
@@ -464,84 +464,5 @@ class ExpressionHandlerTest {
         // TODO: test for other types of comprehensions
         // TODO: test nested comprehensions -> AssignExpression binds to
         // containing scope
-    }
-
-    @Test
-    fun testBoolOps() {
-        val topLevel = Path.of("src", "test", "resources", "python")
-        val result =
-            analyze(listOf(topLevel.resolve("boolop.py").toFile()), topLevel, true) {
-                it.registerLanguage<PythonLanguage>()
-            }
-        assertNotNull(result)
-
-        val twoBoolOpCondition = result.functions["twoBoolOp"]?.ifs?.singleOrNull()?.condition
-        assertIs<BinaryOperator>(twoBoolOpCondition)
-        assertEquals("and", twoBoolOpCondition.operatorCode)
-        assertLocalName("a", twoBoolOpCondition.lhs)
-        assertLiteralValue(true, twoBoolOpCondition.rhs)
-
-        // We expect that lhs comes first in the EOG and then the rhs.
-        assertContains(twoBoolOpCondition.lhs.nextEOG, twoBoolOpCondition.rhs)
-
-        val threeBoolOpCondition = result.functions["threeBoolOp"]?.ifs?.singleOrNull()?.condition
-        assertIs<BinaryOperator>(threeBoolOpCondition)
-        assertEquals("and", threeBoolOpCondition.operatorCode)
-        assertLocalName("a", threeBoolOpCondition.lhs)
-        val threeBoolOpConditionRhs = threeBoolOpCondition.rhs
-        assertIs<BinaryOperator>(threeBoolOpConditionRhs)
-        assertEquals("and", threeBoolOpConditionRhs.operatorCode)
-        assertLiteralValue(true, threeBoolOpConditionRhs.lhs)
-        assertLocalName("b", threeBoolOpConditionRhs.rhs)
-
-        val threeBoolOpNoBoolCondition =
-            result.functions["threeBoolOpNoBool"]?.ifs?.singleOrNull()?.condition
-        assertIs<BinaryOperator>(threeBoolOpNoBoolCondition)
-        assertEquals("and", threeBoolOpNoBoolCondition.operatorCode)
-        assertLocalName("a", threeBoolOpNoBoolCondition.lhs)
-        val threeBoolOpNoBoolConditionRhs = threeBoolOpNoBoolCondition.rhs
-        assertIs<BinaryOperator>(threeBoolOpNoBoolConditionRhs)
-        assertEquals("and", threeBoolOpNoBoolConditionRhs.operatorCode)
-        assertLiteralValue(true, threeBoolOpNoBoolConditionRhs.lhs)
-        assertLiteralValue("foo", threeBoolOpNoBoolConditionRhs.rhs)
-
-        // We expect that lhs comes first in the EOG and then the lhs of the rhs and last the rhs of
-        // the rhs.
-        assertContains(threeBoolOpNoBoolCondition.lhs.nextEOG, threeBoolOpNoBoolConditionRhs.lhs)
-        assertContains(threeBoolOpNoBoolConditionRhs.lhs.nextEOG, threeBoolOpNoBoolConditionRhs.rhs)
-
-        val nestedBoolOpDifferentOp =
-            result.functions["nestedBoolOpDifferentOp"]?.ifs?.singleOrNull()?.condition
-
-        assertIs<BinaryOperator>(nestedBoolOpDifferentOp)
-        assertEquals("or", nestedBoolOpDifferentOp.operatorCode)
-        assertLocalName("b", nestedBoolOpDifferentOp.rhs)
-        val nestedBoolOpDifferentOpLhs = nestedBoolOpDifferentOp.lhs
-        assertIs<BinaryOperator>(nestedBoolOpDifferentOpLhs)
-        assertEquals("and", nestedBoolOpDifferentOpLhs.operatorCode)
-        assertLiteralValue(true, nestedBoolOpDifferentOpLhs.rhs)
-        assertLocalName("a", nestedBoolOpDifferentOpLhs.lhs)
-
-        // We expect that lhs of the "and" comes first in the EOG and then the rhs of the "and",
-        // then we evaluate the whole "and" and last the rhs of the "or".
-        assertContains(nestedBoolOpDifferentOpLhs.lhs.nextEOG, nestedBoolOpDifferentOpLhs.rhs)
-        assertContains(nestedBoolOpDifferentOpLhs.rhs.nextEOG, nestedBoolOpDifferentOpLhs)
-        assertContains(nestedBoolOpDifferentOpLhs.nextEOG, nestedBoolOpDifferentOp.rhs)
-
-        val nestedBoolOpDifferentOp2 =
-            result.functions["nestedBoolOpDifferentOp2"]?.ifs?.singleOrNull()?.condition
-        assertIs<BinaryOperator>(nestedBoolOpDifferentOp2)
-        assertEquals("or", nestedBoolOpDifferentOp2.operatorCode)
-        assertLocalName("a", nestedBoolOpDifferentOp2.lhs)
-        val nestedBoolOpDifferentOp2Rhs = nestedBoolOpDifferentOp2.rhs
-        assertIs<BinaryOperator>(nestedBoolOpDifferentOp2Rhs)
-        assertEquals("and", nestedBoolOpDifferentOp2Rhs.operatorCode)
-        assertLiteralValue(true, nestedBoolOpDifferentOp2Rhs.lhs)
-        assertLocalName("b", nestedBoolOpDifferentOp2Rhs.rhs)
-
-        // We expect that lhs comes first in the EOG and then the lhs of the rhs and last the rhs of
-        // the rhs.
-        assertContains(nestedBoolOpDifferentOp2.lhs.nextEOG, nestedBoolOpDifferentOp2Rhs.lhs)
-        assertContains(nestedBoolOpDifferentOp2Rhs.lhs.nextEOG, nestedBoolOpDifferentOp2Rhs.rhs)
     }
 }
