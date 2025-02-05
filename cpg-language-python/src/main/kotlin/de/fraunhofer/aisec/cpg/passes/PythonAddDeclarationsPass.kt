@@ -37,6 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CollectionComprehension
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ComprehensionExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
@@ -245,6 +246,15 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
     }
 
     private fun handleAssignExpression(assignExpression: AssignExpression) {
+        val parentCollectionComprehensions = ArrayDeque<CollectionComprehension>()
+        var parentCollectionComprehension =
+            assignExpression.firstParentOrNull<CollectionComprehension>()
+        while (assignExpression.operatorCode == ":=" && parentCollectionComprehension != null) {
+            scopeManager.leaveScope(parentCollectionComprehension)
+            parentCollectionComprehensions.addLast(parentCollectionComprehension)
+            parentCollectionComprehension =
+                parentCollectionComprehension.firstParentOrNull<CollectionComprehension>()
+        }
         for (target in assignExpression.lhs) {
             handleAssignmentToTarget(assignExpression, target, setAccessValue = false)
             // If the lhs is an InitializerListExpression, we have to handle the individual elements
@@ -254,6 +264,11 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
                     handleAssignmentToTarget(assignExpression, initializer, setAccessValue = true)
                 }
             }
+        }
+        while (
+            assignExpression.operatorCode == ":=" && parentCollectionComprehensions.isNotEmpty()
+        ) {
+            scopeManager.enterScope(parentCollectionComprehensions.removeLast())
         }
     }
 
