@@ -38,11 +38,18 @@ import kotlin.test.*
 class ExpressionHandlerTest {
 
     @Test
-    fun testComprehensionExpressionTuple() {
+    fun testComprehensionExpressionTuplePython3() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val result =
             analyze(listOf(topLevel.resolve("comprehension.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
+                it.symbols(
+                    mapOf(
+                        "PYTHON_VERSION_MAJOR" to "3",
+                        "PYTHON_VERSION_MINOR" to "0",
+                        "PYTHON_VERSION_MICRO" to "0",
+                    )
+                )
             }
         assertNotNull(result)
 
@@ -88,11 +95,18 @@ class ExpressionHandlerTest {
     }
 
     @Test
-    fun testListComprehensions() {
+    fun testListComprehensionsPython3() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val result =
             analyze(listOf(topLevel.resolve("comprehension.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
+                it.symbols(
+                    mapOf(
+                        "PYTHON_VERSION_MAJOR" to "3",
+                        "PYTHON_VERSION_MINOR" to "0",
+                        "PYTHON_VERSION_MICRO" to "0",
+                    )
+                )
             }
         assertNotNull(result)
         val listComp = result.functions["list_comp"]
@@ -168,11 +182,18 @@ class ExpressionHandlerTest {
     }
 
     @Test
-    fun testSetComprehensions() {
+    fun testSetComprehensionsPython3() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val result =
             analyze(listOf(topLevel.resolve("comprehension.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
+                it.symbols(
+                    mapOf(
+                        "PYTHON_VERSION_MAJOR" to "3",
+                        "PYTHON_VERSION_MINOR" to "0",
+                        "PYTHON_VERSION_MICRO" to "0",
+                    )
+                )
             }
         assertNotNull(result)
         val listComp = result.functions["set_comp"]
@@ -226,11 +247,18 @@ class ExpressionHandlerTest {
     }
 
     @Test
-    fun testDictComprehensions() {
+    fun testDictComprehensionsPython3() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val result =
             analyze(listOf(topLevel.resolve("comprehension.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
+                it.symbols(
+                    mapOf(
+                        "PYTHON_VERSION_MAJOR" to "3",
+                        "PYTHON_VERSION_MINOR" to "0",
+                        "PYTHON_VERSION_MICRO" to "0",
+                    )
+                )
             }
         assertNotNull(result)
         val listComp = result.functions["dict_comp"]
@@ -300,11 +328,18 @@ class ExpressionHandlerTest {
     }
 
     @Test
-    fun testGeneratorExpr() {
+    fun testGeneratorExprPython3() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val result =
             analyze(listOf(topLevel.resolve("comprehension.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
+                it.symbols(
+                    mapOf(
+                        "PYTHON_VERSION_MAJOR" to "3",
+                        "PYTHON_VERSION_MINOR" to "0",
+                        "PYTHON_VERSION_MICRO" to "0",
+                    )
+                )
             }
         assertNotNull(result)
         val listComp = result.functions["generator"]
@@ -342,11 +377,18 @@ class ExpressionHandlerTest {
      * This test ensures that variables in a comprehension do not bind to the outer scope. See
      * [testCompBindingAssignExpr] for exceptions.
      */
-    fun testCompBinding() {
+    fun testCompBindingPython3() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val result =
             analyze(listOf(topLevel.resolve("comprehension.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
+                it.symbols(
+                    mapOf(
+                        "PYTHON_VERSION_MAJOR" to "3",
+                        "PYTHON_VERSION_MINOR" to "0",
+                        "PYTHON_VERSION_MICRO" to "0",
+                    )
+                )
             }
         assertNotNull(result)
         val compBindingFunc = result.functions["comp_binding"]
@@ -379,11 +421,18 @@ class ExpressionHandlerTest {
      * This test ensures that variables in a comprehension do not bind to the outer scope if they
      * are used in an `AssignExpr`. See https://peps.python.org/pep-0572/#scope-of-the-target
      */
-    fun testCompBindingAssignExpr() {
+    fun testCompBindingAssignExprPython3() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val result =
             analyze(listOf(topLevel.resolve("comprehension.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
+                it.symbols(
+                    mapOf(
+                        "PYTHON_VERSION_MAJOR" to "3",
+                        "PYTHON_VERSION_MINOR" to "0",
+                        "PYTHON_VERSION_MICRO" to "0",
+                    )
+                )
             }
         assertNotNull(result)
 
