@@ -238,7 +238,9 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
             Pair(functionDeclaration, setOf(functionDeclaration)),
             *(functionDeclaration.allChildren<BranchingNode>() +
                     functionDeclaration.allChildren<CollectionComprehension>() +
-                    functionDeclaration.allChildren<ComprehensionExpression>())
+                    functionDeclaration.allChildren<
+                        ComprehensionExpression
+                    >()) // TODO: May be simplified when resolving issue 2027
                 .filterIsInstance<Node>()
                 .map { branchingNode ->
                     val mergingPoints =
@@ -288,7 +290,8 @@ fun handleEdge(
     if (
         currentStart is BranchingNode ||
             currentStart is ComprehensionExpression ||
-            currentStart.astParent is ComprehensionExpression &&
+            currentStart.astParent is
+                ComprehensionExpression && // TODO: May be simplified when resolving issue 2027
                 currentStart == (currentStart.astParent as ComprehensionExpression).iterable
     ) { // && currentEdge.isConditionalBranch()) {
         // We start in a branching node and end in one of the branches, so we have the
