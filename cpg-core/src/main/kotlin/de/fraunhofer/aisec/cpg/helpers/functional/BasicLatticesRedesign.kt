@@ -38,11 +38,26 @@ import kotlin.collections.set
 
 /** Used to identify the order of elements */
 enum class Order {
-    GREATER,
-    EQUAL,
     LESSER,
+    EQUAL,
+    GREATER,
     UNEQUAL,
 }
+
+/**
+ * Computes the order of multiple elements passed in [orders] as follows:
+ * - If everything is [Order.EQUAL], it's [Order.EQUAL]
+ * - If everything is [Order.EQUAL] or [Order.LESSER], it's [Order.LESSER]
+ * - If everything is [Order.EQUAL] or [Order.GREATER], it's [Order.GREATER]
+ * - Otherwise, it's [Order.UNEQUAL]
+ */
+fun compareMultiple(vararg orders: Order) =
+    when {
+        orders.all { it == Order.EQUAL } -> Order.EQUAL
+        orders.all { it == Order.EQUAL || it == Order.LESSER } -> Order.LESSER
+        orders.all { it == Order.EQUAL || it == Order.GREATER } -> Order.GREATER
+        else -> Order.UNEQUAL
+    }
 
 /**
  * A lattice is a partially ordered structure of values of type [T]. [T] could be anything, where
@@ -58,7 +73,8 @@ enum class Order {
  *
  * Note: We usually do not want (nor have to) store the elements spanning the lattice because it
  * would cost too much memory for non-trivial examples. But if a user wants to do so, we provide the
- * property [elements].
+ * property [elements]. It can be used to store all, no or some of the elements spanning the lattice
+ * and currently has no real effect.
  */
 interface Lattice<T : Lattice.Element> {
     /**
@@ -110,9 +126,9 @@ interface Lattice<T : Lattice.Element> {
      * Computes a fixpoint by iterating over the EOG beginning with the [startEdges] and a state
      * [startState]. This means, it keeps applying [transformation] until the state does no longer
      * change. With state, we mean a mapping between the [EvaluationOrder] edges to the value of
-     * [LatticeElement] which represents possible values (or abstractions thereof) that they hold.
+     * [Lattice] which represents possible values (or abstractions thereof) that they hold.
      */
-    fun iterateEOGEvenMoreNew(
+    fun iterateEOG(
         startEdges: List<EvaluationOrder>,
         startState: T,
         transformation: (Lattice<T>, EvaluationOrder, T) -> T,
@@ -201,10 +217,10 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
 
     override fun lub(one: Element<T>, two: Element<T>): Element<T> {
         return when (compare(one, two)) {
-            Order.GREATER -> one
-            Order.EQUAL -> one
             Order.LESSER -> two
-            else -> {
+            Order.EQUAL,
+            Order.GREATER -> one
+            Order.UNEQUAL -> {
                 val result = Element<T>(one.size + two.size)
                 result += one
                 result += two
@@ -227,8 +243,8 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
 }
 
 /**
- * Implements the [LatticeElement] for a lattice over a map of nodes to another lattice represented
- * by [innerLattice].
+ * Implements the [Lattice] for a lattice over a map of nodes to another lattice represented by
+ * [innerLattice].
  */
 open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
     Lattice<MapLattice.Element<K, V>> {
@@ -337,7 +353,7 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
 }
 
 /**
- * Implements the [LatticeElement] for a lattice over two other lattices which are represented by
+ * Implements the [Lattice] for a lattice over two other lattices which are represented by
  * [innerLattice1] and [innerLattice2].
  */
 class TupleLattice<S : Lattice.Element, T : Lattice.Element>(
@@ -369,16 +385,7 @@ class TupleLattice<S : Lattice.Element, T : Lattice.Element>(
 
             val result1 = this.first.compare(other.first)
             val result2 = this.second.compare(other.second)
-            return when {
-                result1 == Order.EQUAL && result2 == Order.EQUAL -> Order.EQUAL
-                result1 == Order.GREATER && result2 == Order.GREATER -> Order.GREATER
-                result1 == Order.EQUAL && result2 == Order.GREATER -> Order.GREATER
-                result1 == Order.GREATER && result2 == Order.EQUAL -> Order.GREATER
-                result1 == Order.LESSER && result2 == Order.LESSER -> Order.LESSER
-                result1 == Order.EQUAL && result2 == Order.LESSER -> Order.LESSER
-                result1 == Order.LESSER && result2 == Order.EQUAL -> Order.LESSER
-                else -> Order.UNEQUAL
-            }
+            return compareMultiple(result1, result2)
         }
 
         override fun duplicate(): Element<S, T> {
@@ -417,7 +424,7 @@ class TupleLattice<S : Lattice.Element, T : Lattice.Element>(
 }
 
 /**
- * Implements the [LatticeElement] for a lattice over three other lattices which are represented by
+ * Implements the [Lattice] for a lattice over three other lattices which are represented by
  * [innerLattice1], [innerLattice2] and [innerLattice3].
  */
 class TripleLattice<R : Lattice.Element, S : Lattice.Element, T : Lattice.Element>(
@@ -453,54 +460,7 @@ class TripleLattice<R : Lattice.Element, S : Lattice.Element, T : Lattice.Elemen
             val result1 = this.first.compare(other.first)
             val result2 = this.second.compare(other.second)
             val result3 = this.third.compare(other.third)
-            return when {
-                result1 == Order.EQUAL && result2 == Order.EQUAL && result3 == Order.EQUAL ->
-                    Order.EQUAL
-
-                result1 == Order.GREATER && result2 == Order.GREATER && result3 == Order.GREATER ->
-                    Order.GREATER
-
-                result1 == Order.GREATER && result2 == Order.GREATER && result3 == Order.EQUAL ->
-                    Order.GREATER
-
-                result1 == Order.GREATER && result2 == Order.EQUAL && result3 == Order.GREATER ->
-                    Order.GREATER
-
-                result1 == Order.GREATER && result2 == Order.EQUAL && result3 == Order.EQUAL ->
-                    Order.GREATER
-
-                result1 == Order.EQUAL && result2 == Order.GREATER && result3 == Order.GREATER ->
-                    Order.GREATER
-
-                result1 == Order.EQUAL && result2 == Order.GREATER && result3 == Order.EQUAL ->
-                    Order.GREATER
-
-                result1 == Order.EQUAL && result2 == Order.EQUAL && result3 == Order.GREATER ->
-                    Order.GREATER
-
-                result1 == Order.LESSER && result2 == Order.LESSER && result3 == Order.LESSER ->
-                    Order.LESSER
-
-                result1 == Order.LESSER && result2 == Order.LESSER && result3 == Order.EQUAL ->
-                    Order.LESSER
-
-                result1 == Order.LESSER && result2 == Order.EQUAL && result3 == Order.LESSER ->
-                    Order.LESSER
-
-                result1 == Order.LESSER && result2 == Order.EQUAL && result3 == Order.EQUAL ->
-                    Order.LESSER
-
-                result1 == Order.EQUAL && result2 == Order.LESSER && result3 == Order.LESSER ->
-                    Order.LESSER
-
-                result1 == Order.EQUAL && result2 == Order.LESSER && result3 == Order.EQUAL ->
-                    Order.LESSER
-
-                result1 == Order.EQUAL && result2 == Order.EQUAL && result3 == Order.LESSER ->
-                    Order.LESSER
-
-                else -> Order.UNEQUAL
-            }
+            return compareMultiple(result1, result2, result3)
         }
 
         override fun duplicate(): Element<R, S, T> {
