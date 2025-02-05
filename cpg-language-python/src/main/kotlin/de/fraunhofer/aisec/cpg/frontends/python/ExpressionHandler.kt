@@ -81,7 +81,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         versionTo: VersionInfo? = null,
         block: T.() -> Unit,
     ): T {
-        val version = this.ctx?.config?.let { getVersionInfo(it) } ?: VersionInfo(-1, -1, -1)
+        val version = this.ctx?.config?.let { getVersionInfo(it) } ?: VersionInfo()
         return if (
             (versionFrom == null || versionFrom <= version) &&
                 (versionTo == null || versionTo >= version)
