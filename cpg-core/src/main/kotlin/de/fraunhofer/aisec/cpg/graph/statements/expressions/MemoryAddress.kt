@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 
-open class MemoryAddress(override var name: Name, var isGlobal: Boolean = false) : Node() {
+open class MemoryAddress(override var name: Name, open var isGlobal: Boolean = false) : Node() {
 
     override fun equals(other: Any?): Boolean {
         if (this === other) {
@@ -61,7 +61,10 @@ class ParameterMemoryValue(override var name: Name) : MemoryAddress(name) {
 }
 
 /** We don't know the value. It might be set somewhere else or not. No idea. */
-class UnknownMemoryValue(override var name: Name = Name("")) : MemoryAddress(name) {
+class UnknownMemoryValue(
+    override var name: Name = Name(""),
+    override var isGlobal: Boolean = false,
+) : MemoryAddress(name) {
     override fun equals(other: Any?): Boolean {
         if (this === other) {
             return true

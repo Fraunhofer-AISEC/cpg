@@ -847,7 +847,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 if (element != null) ret.add(Pair(element, ""))
                 else {
                     val newName = nodeNameToString(addr)
-                    val newEntry = UnknownMemoryValue(newName)
+                    val newEntry = UnknownMemoryValue(newName, true)
                     globalDerefs[addr] = newEntry
                     ret.add(Pair(newEntry, ""))
                 }

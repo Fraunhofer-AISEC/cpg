@@ -1776,6 +1776,21 @@ class PointsToPassTest {
         val keyDecl = tu.allChildren<Declaration> { it.location?.region?.startLine == 267 }.first()
         assertNotNull(keyDecl)
 
+        // PointerReferences
+        val keyPointerRefLine314 =
+            tu.allChildren<PointerReference> {
+                    it.name.localName == "key" && it.location?.region?.startLine == 314
+                }
+                .first()
+        assertNotNull(keyPointerRefLine314)
+
+        val keyPointerRefLine318 =
+            tu.allChildren<PointerReference> {
+                    it.name.localName == "key" && it.location?.region?.startLine == 318
+                }
+                .first()
+        assertNotNull(keyPointerRefLine318)
+
         // Ensure that all key-references point to keyDecl as prevDFG
         assertEquals(
             1,
@@ -1811,5 +1826,22 @@ class PointsToPassTest {
                 .name
                 .localName == "key"
         )
+
+        // The UnknownMemoryValue storing the value of the global variable "key"
+        val keyVal =
+            tu.allChildren<Reference> {
+                    it !is PointerDereference &&
+                        it !is PointerReference &&
+                        it.name.localName == "key"
+                }
+                .flatMap { it.prevDFG }
+                .toIdentitySet()
+                .first()
+        assertNotNull(keyVal)
+        assertTrue((keyVal as? UnknownMemoryValue)?.isGlobal ?: false)
+
+        assertEquals(1, keyVal.prevDFG.size)
+        assertTrue(keyVal.prevDFG.first() is UnknownMemoryValue)
+        assertLocalName("sgx_get_key.secret", keyVal.prevDFG.first())
     }
 }
