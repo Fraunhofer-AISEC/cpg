@@ -200,6 +200,14 @@ fun max(n: Node?, eval: ValueEvaluator = MultiValueEvaluator()): QueryTree<Numbe
 }
 
 /** Determines in which direction we follow the edges. */
+enum class AnalysisScope {
+    /** Only intraprocedural analysis */
+    INTRAPROCEDURAL,
+    /** Enable interprocedural analysis */
+    INTERPROCEDURAL,
+}
+
+/** Determines in which direction we follow the edges. */
 enum class AnalysisDirection {
     /** Follow the order of the EOG */
     FORWARD,
@@ -236,8 +244,47 @@ private fun dataFlowBase(
     direction: AnalysisDirection,
     type: AnalysisType,
     sensitivity: AnalysisSensitivity,
+    scope: AnalysisScope,
 ): QueryTree<Boolean> {
-    TODO()
+    val collectFailedPaths = type == AnalysisType.MUST
+    val findAllPossiblePaths = type == AnalysisType.MUST
+    val useIndexStack = sensitivity == AnalysisSensitivity.FIELD_SENSITIVE
+    val contextSensitive = sensitivity == AnalysisSensitivity.CONTEXT_SENSITIVE
+    val interproceduralAnalysis = scope == AnalysisScope.INTERPROCEDURAL
+    val evalRes =
+        when (direction) {
+            AnalysisDirection.FORWARD -> {
+                from.followNextDFGEdgesUntilHit(
+                    collectFailedPaths = collectFailedPaths,
+                    findAllPossiblePaths = findAllPossiblePaths,
+                    useIndexStack = useIndexStack,
+                    contextSensitive = contextSensitive,
+                    interproceduralAnalysis = interproceduralAnalysis,
+                    predicate = predicate,
+                )
+            }
+            AnalysisDirection.BACKWARD -> {
+                from.followPrevDFGEdgesUntilHit(
+                    collectFailedPaths = collectFailedPaths,
+                    findAllPossiblePaths = findAllPossiblePaths,
+                    useIndexStack = useIndexStack,
+                    contextSensitive = contextSensitive,
+                    interproceduralAnalysis = interproceduralAnalysis,
+                    predicate = predicate,
+                )
+            }
+        }
+    // TODO: Change this to provide better access to the result
+    val allPaths = evalRes.fulfilled.map { QueryTree(it) } + evalRes.failed.map { QueryTree(it) }
+
+    if (type == AnalysisType.MUST) {
+        QueryTree(
+            evalRes.failed.isEmpty(),
+            allPaths.toMutableList(),
+            "data flow from $from to ${evalRes.fulfilled.map { it.last() }}",
+            from,
+        )
+    }
 }
 
 /** Checks if a data flow is possible between the nodes [from] as a source and [to] as sink. */
