@@ -39,6 +39,7 @@ de.fraunhofer.aisec.cpg.graph.statements.expressions
 de.fraunhofer.aisec.cpg.graph.types
 de.fraunhofer.aisec.cpg.helpers
 de.fraunhofer.aisec.cpg.helpers.annotations
+de.fraunhofer.aisec.cpg.helpers.functional
 de.fraunhofer.aisec.cpg.helpers.neo4j
 de.fraunhofer.aisec.cpg.passes
 de.fraunhofer.aisec.cpg.passes.configuration
