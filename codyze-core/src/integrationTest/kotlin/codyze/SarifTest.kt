@@ -25,29 +25,37 @@
  */
 package codyze
 
-import de.fraunhofer.aisec.codyze.evalQuery
+import de.fraunhofer.aisec.codyze.toSarifLocation
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.test.analyze
-import java.io.File
 import kotlin.io.path.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 
-class QueryHostTest {
+class SarifTest {
     @Test
-    fun testQuery() {
+    fun testSarifLocation() {
         val topLevel = Path("src/integrationTest/resources")
         val result =
             analyze(listOf(topLevel.resolve("simple.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
             }
-        val queryResult =
-            result.evalQuery(
-                File("src/integrationTest/resources/simple.query.kts"),
-                "statement1",
-                "statement1",
-            )
-        assertEquals(true, queryResult.tree.value)
+        val fullLoc = result.functions["foo"].toSarifLocation()
+        assertNotNull(fullLoc)
+        assertEquals(3, fullLoc.physicalLocation?.region?.endLine)
+        assertEquals(15, fullLoc.physicalLocation?.region?.endColumn)
+
+        val logical = fullLoc.logicalLocations?.firstOrNull()
+        assertNotNull(logical)
+        assertEquals("foo", logical.name)
+        assertEquals("simple.foo", logical.fullyQualifiedName)
+        assertEquals("function", logical.kind)
+
+        val onlyHeader = result.functions["foo"].toSarifLocation(onlyFunctionHeader = true)
+        assertNotNull(onlyHeader)
+        assertEquals(2, onlyHeader.physicalLocation?.region?.endLine)
+        assertEquals(5, onlyHeader.physicalLocation?.region?.endColumn)
     }
 }

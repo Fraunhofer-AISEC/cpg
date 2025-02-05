@@ -23,24 +23,37 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.codyze.compliance
+package de.fraunhofer.aisec.cpg.graph.edges.flows
 
-import com.github.ajalt.clikt.testing.test
+import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
+import de.fraunhofer.aisec.cpg.graph.newCallExpression
+import de.fraunhofer.aisec.cpg.graph.newFunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.newReference
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertSame
 
-class CommandIntegrationTest {
+class InvokeTest {
     @Test
-    fun testScanCommand() {
-        val command = ScanCommand()
-        val result =
-            command.test(
-                "--project-dir src/integrationTest/resources/demo-app --components webapp --components auth"
-            )
-        assertEquals(
-            "Message(arguments=null, id=null, markdown=null, properties=null, text=Query was successful)\n" +
-                "Message(arguments=null, id=null, markdown=null, properties=null, text=Query was successful)\n",
-            result.output,
-        )
+    fun testMirror() {
+        with(TestLanguageFrontend()) {
+            val func = newFunctionDeclaration("myFunc")
+            val call = newCallExpression(newReference("myFunc"))
+            call.invokes += func
+
+            assertEquals(1, func.calledByEdges.size)
+
+            val edge = func.calledByEdges.firstOrNull()
+            assertNotNull(edge)
+            assertSame(call, edge.start)
+            assertSame(func, edge.end)
+
+            assertEquals(1, func.calledBy.size)
+            assertSame(call, func.calledBy.firstOrNull())
+
+            func.calledBy.clear()
+            assertEquals(0, call.invokes.size)
+        }
     }
 }
