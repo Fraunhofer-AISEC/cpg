@@ -27,10 +27,13 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.helpers.functional.Order
+import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
 import de.fraunhofer.aisec.cpg.testcases.Passes
 import kotlin.test.*
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
+import org.junit.jupiter.api.assertThrows
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class UnreachableEOGPassTest {
@@ -210,5 +213,48 @@ class UnreachableEOGPassTest {
 
         assertFalse(whileStatement.nextEOGEdges[1].unreachable)
         assertFalse(whileStatement.nextEOGEdges[0].unreachable)
+    }
+
+    @Test
+    fun testReachabilityLattice() {
+        val lattice = ReachabilityLattice()
+        val bottom = lattice.bottom
+        assertEquals(Reachability.BOTTOM, bottom.reachability)
+        val unreachable = ReachabilityLattice.Element(Reachability.UNREACHABLE)
+        val reachable = ReachabilityLattice.Element(Reachability.REACHABLE)
+        val reachable2 = lattice.duplicate(reachable)
+        assertNotSame(reachable, reachable2)
+        assertEquals(reachable, reachable2)
+        assertEquals(setOf(bottom, unreachable, reachable), lattice.elements)
+
+        assertEquals(bottom, lattice.glb(bottom, unreachable))
+        assertEquals(bottom, lattice.glb(bottom, reachable))
+        assertEquals(unreachable, lattice.glb(unreachable, reachable))
+        assertEquals(reachable, lattice.glb(reachable, reachable2))
+        assertEquals(bottom, lattice.glb(unreachable, bottom))
+        assertEquals(bottom, lattice.glb(reachable, bottom))
+        assertEquals(unreachable, lattice.glb(reachable, unreachable))
+        assertEquals(reachable, lattice.glb(reachable, reachable2))
+
+        assertEquals(unreachable, lattice.lub(bottom, unreachable))
+        assertEquals(reachable, lattice.lub(bottom, reachable))
+        assertEquals(reachable, lattice.lub(unreachable, reachable))
+        assertEquals(reachable, lattice.lub(reachable, reachable2))
+        assertEquals(unreachable, lattice.lub(unreachable, bottom))
+        assertEquals(reachable, lattice.lub(reachable, bottom))
+        assertEquals(reachable, lattice.lub(reachable, unreachable))
+        assertEquals(reachable, lattice.lub(reachable, reachable2))
+
+        assertEquals(Order.LESSER, lattice.compare(bottom, unreachable))
+        assertEquals(Order.LESSER, lattice.compare(bottom, reachable))
+        assertEquals(Order.LESSER, lattice.compare(unreachable, reachable))
+        assertEquals(Order.EQUAL, lattice.compare(bottom, bottom.duplicate()))
+        assertEquals(Order.EQUAL, lattice.compare(unreachable, unreachable.duplicate()))
+        assertEquals(Order.EQUAL, lattice.compare(reachable, reachable2))
+        assertEquals(Order.GREATER, lattice.compare(unreachable, bottom))
+        assertEquals(Order.GREATER, lattice.compare(reachable, bottom))
+        assertEquals(Order.GREATER, lattice.compare(reachable, unreachable))
+
+        assertThrows<IllegalArgumentException> { bottom.compare(PowersetLattice.Element<String>()) }
     }
 }
