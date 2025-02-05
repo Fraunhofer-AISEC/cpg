@@ -110,9 +110,9 @@ interface Lattice<T : Lattice.Element> {
      * Computes a fixpoint by iterating over the EOG beginning with the [startEdges] and a state
      * [startState]. This means, it keeps applying [transformation] until the state does no longer
      * change. With state, we mean a mapping between the [EvaluationOrder] edges to the value of
-     * [LatticeElement] which represents possible values (or abstractions thereof) that they hold.
+     * [Lattice] which represents possible values (or abstractions thereof) that they hold.
      */
-    fun iterateEOGEvenMoreNew(
+    fun iterateEOG(
         startEdges: List<EvaluationOrder>,
         startState: T,
         transformation: (Lattice<T>, EvaluationOrder, T) -> T,
@@ -227,8 +227,8 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
 }
 
 /**
- * Implements the [LatticeElement] for a lattice over a map of nodes to another lattice represented
- * by [innerLattice].
+ * Implements the [Lattice] for a lattice over a map of nodes to another lattice represented by
+ * [innerLattice].
  */
 open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
     Lattice<MapLattice.Element<K, V>> {
@@ -337,7 +337,7 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
 }
 
 /**
- * Implements the [LatticeElement] for a lattice over two other lattices which are represented by
+ * Implements the [Lattice] for a lattice over two other lattices which are represented by
  * [innerLattice1] and [innerLattice2].
  */
 class TupleLattice<S : Lattice.Element, T : Lattice.Element>(
@@ -417,7 +417,7 @@ class TupleLattice<S : Lattice.Element, T : Lattice.Element>(
 }
 
 /**
- * Implements the [LatticeElement] for a lattice over three other lattices which are represented by
+ * Implements the [Lattice] for a lattice over three other lattices which are represented by
  * [innerLattice1], [innerLattice2] and [innerLattice3].
  */
 class TripleLattice<R : Lattice.Element, S : Lattice.Element, T : Lattice.Element>(
