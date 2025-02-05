@@ -223,9 +223,9 @@ fun compareLineFromLocationIfExists(n: Node, startLine: Boolean, toCompare: Int)
 }
 
 /** Asserts, that the expression given in [expression] refers to the expected declaration [b]. */
-fun assertRefersTo(expression: Expression?, b: Declaration?) {
+fun assertRefersTo(expression: Expression?, b: Declaration?, message: String? = null) {
     if (expression is Reference) {
-        assertEquals(b, (expression as Reference?)?.refersTo)
+        assertEquals(b, (expression as Reference?)?.refersTo, message)
     } else {
         fail("not a reference")
     }
