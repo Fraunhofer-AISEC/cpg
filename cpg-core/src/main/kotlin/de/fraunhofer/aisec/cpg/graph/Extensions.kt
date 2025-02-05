@@ -266,8 +266,11 @@ fun Node.followPrevDFGEdgesUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
     useIndexStack: Boolean = true,
+    contextSensitive: Boolean = true,
+    interproceduralAnalysis: Boolean = true,
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
+    // TODO: This method lacks context sensitive steps
     return followXUntilHit(
         x = { currentNode, ctx, path ->
             if (
@@ -712,6 +715,8 @@ fun Node.followNextDFGEdgesUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
     useIndexStack: Boolean = true,
+    interproceduralAnalysis: Boolean = true,
+    contextSensitive: Boolean = true,
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
@@ -742,7 +747,12 @@ fun Node.followNextDFGEdgesUntilHit(
                 // First, let's take care of pushing any information on the stacks (index, calling
                 // context)
                 currentNode.nextDFGEdges.forEach {
-                    if (it is ContextSensitiveDataflow && it.callingContext is CallingContextIn) {
+                    if (
+                        interproceduralAnalysis &&
+                            contextSensitive &&
+                            it is ContextSensitiveDataflow &&
+                            it.callingContext is CallingContextIn
+                    ) {
                         // Push the call of our calling context to the stack
                         ctx.callStack.push(it.callingContext.call)
                     }
@@ -760,15 +770,23 @@ fun Node.followNextDFGEdgesUntilHit(
                 val selected =
                     currentNode.nextDFGEdges
                         .filter {
-                            if (ctx.callStack.isEmpty()) {
+                            if (
+                                interproceduralAnalysis &&
+                                    contextSensitive &&
+                                    ctx.callStack.isEmpty()
+                            ) {
                                 true
                             } else if (
-                                it is ContextSensitiveDataflow &&
+                                interproceduralAnalysis &&
+                                    contextSensitive &&
+                                    it is ContextSensitiveDataflow &&
                                     it.callingContext is CallingContextOut
                             ) {
                                 // We are only interested in outgoing edges from our current
                                 // "call-in", i.e., the call expression that is on the stack.
                                 ctx.callStack.top == it.callingContext.call
+                            } else if (it is ContextSensitiveDataflow && !interproceduralAnalysis) {
+                                false
                             } else {
                                 true
                             }
@@ -777,7 +795,12 @@ fun Node.followNextDFGEdgesUntilHit(
 
                 // Let's do any remaining pop'ing
                 currentNode.nextDFGEdges.forEach {
-                    if (it is ContextSensitiveDataflow && it.callingContext is CallingContextOut) {
+                    if (
+                        interproceduralAnalysis &&
+                            contextSensitive &&
+                            it is ContextSensitiveDataflow &&
+                            it.callingContext is CallingContextOut
+                    ) {
                         // Pop the current call, if it's on top
                         ctx.callStack.popIfOnTop(it.callingContext.call)
                     }
