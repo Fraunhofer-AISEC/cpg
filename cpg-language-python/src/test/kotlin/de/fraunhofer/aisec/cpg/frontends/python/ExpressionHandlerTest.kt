@@ -26,22 +26,12 @@
 package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.LocalScope
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CollectionComprehension
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.KeyValueExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
-import de.fraunhofer.aisec.cpg.test.analyze
-import de.fraunhofer.aisec.cpg.test.assertLiteralValue
-import de.fraunhofer.aisec.cpg.test.assertLocalName
-import de.fraunhofer.aisec.cpg.test.assertNotRefersTo
-import de.fraunhofer.aisec.cpg.test.assertRefersTo
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
 import kotlin.test.*
 
@@ -345,6 +335,86 @@ class ExpressionHandlerTest {
         assertIs<CallExpression>(singleWithIf.comprehensionExpressions[0].iterable)
         assertLocalName("range", singleWithIf.comprehensionExpressions[0].iterable)
         assertNull(singleWithoutIf.comprehensionExpressions[0].predicate)
+    }
+
+    @Test
+    /**
+     * This test ensures that variables in a comprehension do not bind to the outer scope. See
+     * [testCompBindingAssignExpr] for exceptions.
+     */
+    fun testCompBinding() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val result =
+            analyze(listOf(topLevel.resolve("comprehension.py").toFile()), topLevel, true) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(result)
+        val compBindingFunc = result.functions["comp_binding"]
+        assertIs<FunctionDeclaration>(compBindingFunc)
+
+        val xDecl = compBindingFunc.variables.firstOrNull()
+        assertIs<VariableDeclaration>(xDecl)
+
+        assertEquals(
+            5,
+            compBindingFunc.variables.size,
+            "Expected 5 variables. One for the \"outside\" x and one for each of the 4 comprehensions.",
+        )
+
+        assertEquals(
+            2,
+            xDecl.usages.size,
+            "Expected two usages: one for the initial assignment and one for the usage in \"print(x)\".",
+        )
+
+        val comprehensions =
+            compBindingFunc.body.statements.filterIsInstance<CollectionComprehension>()
+        assertEquals(4, comprehensions.size, "Expected to find 4 comprehensions.")
+
+        comprehensions.forEach { it.refs.forEach { ref -> assertNotRefersTo(ref, xDecl) } }
+    }
+
+    @Test
+    /**
+     * This test ensures that variables in a comprehension do not bind to the outer scope if they
+     * are used in an `AssignExpr`. See https://peps.python.org/pep-0572/#scope-of-the-target
+     */
+    fun testCompBindingAssignExpr() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val result =
+            analyze(listOf(topLevel.resolve("comprehension.py").toFile()), topLevel, true) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(result)
+
+        val compBindingAssignFunc = result.functions["comp_binding_assign_expr"]
+        assertIs<FunctionDeclaration>(compBindingAssignFunc)
+
+        val xDecl = compBindingAssignFunc.variables.firstOrNull()
+        assertIs<VariableDeclaration>(xDecl)
+
+        assertEquals(
+            2,
+            compBindingAssignFunc.variables.size,
+            "Expected 2 variables. One for the \"outside\" x and one for the \"temp\" inside the comprehension.",
+        )
+
+        assertEquals(
+            3,
+            xDecl.usages.size,
+            "Expected 3 usages: one for the initial assignment, one for the comprehension and one for the usage in \"print(x)\".",
+        )
+
+        val comprehension =
+            compBindingAssignFunc.body.statements.singleOrNull { it is CollectionComprehension }
+        assertNotNull(comprehension)
+        val xRef = comprehension.refs("x").singleOrNull()
+        assertNotNull(xRef)
+        assertRefersTo(xRef, xDecl)
+
+        // TODO: test for other types of comprehensions
+        // TODO: test nested comprehensions -> AssignExpression binds to
+        // containing scope
     }
 
     @Test

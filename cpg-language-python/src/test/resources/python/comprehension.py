@@ -29,3 +29,18 @@ def bar(k, v):
 
 def tuple_comp(x):
     a = [bar(k, v) for (k, v) in x]
+
+def comp_binding(foo):
+    # As of Python 3, none of the comprehensions should bind to the outer x
+    x = 42
+    [x for x in foo]
+    {x for x in foo}
+    {x: x for x in foo}
+    {x**2 for x in foo}
+    print(x) # this prints 42
+
+def comp_binding_assign_expr(foo):
+    # https://peps.python.org/pep-0572/#scope-of-the-target
+    x = 42
+    [(x := temp) for temp in foo]
+    print(x) # doesn't print 42
