@@ -34,8 +34,10 @@ import de.fraunhofer.aisec.cpg.graph.component
 import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.namespaces
+import de.fraunhofer.aisec.cpg.graph.edges.scopes.Import
+import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
+import de.fraunhofer.aisec.cpg.graph.scopes.NamespaceScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.translationUnit
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
@@ -44,9 +46,8 @@ import de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import de.fraunhofer.aisec.cpg.passes.Pass.Companion.log
+import de.fraunhofer.aisec.cpg.passes.inference.tryNamespaceInference
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
-import de.fraunhofer.aisec.cpg.processing.strategy.Strategy.COMPONENTS_LEAST_IMPORTS
-import de.fraunhofer.aisec.cpg.processing.strategy.Strategy.TRANSLATION_UNITS_LEAST_IMPORTS
 import java.util.IdentityHashMap
 
 /**
@@ -229,6 +230,9 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
             return
         }
 
+        // Populate the imported scopes edges
+        import.populateImportedScopes()
+
         // Let's look for imported namespaces
         // First, we collect the individual parts of the name
         var parts = mutableListOf<Name>()
@@ -274,12 +278,6 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
             // file. We only want to depend on the particular translation unit that is the
             // authoritative source of this namespace and this is the case if there is no
             // sub-declaration.
-            /*namespaces =
-            namespaces.filter {
-                // Note: the "namespaces" extension contains the starting node itself as well,
-                // so if we have no sub-namespace declaration, the size == 1
-                it.namespaces.size == 1
-            }*/
 
             // Next, we loop through all namespaces in order to "connect" them to our current module
             for (declaration in namespaces) {
@@ -325,7 +323,51 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
     }
 
     private fun handleImportDeclaration(import: ImportDeclaration) {
-        import.updateImportedSymbols()
+        // TOOD: Remove
+        with(tr.finalCtx) { import.updateImportedSymbols() }
+    }
+
+    /**
+     * This function populates the [Scope.importedScopes] property of the [Scope] that the
+     * [ImportDeclaration] "lives" in.
+     */
+    private fun ImportDeclaration.populateImportedScopes() {
+        val startScope = scope
+        val name =
+            when (style) {
+                ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE -> {
+                    import.parent
+                }
+
+                ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE,
+                ImportStyle.IMPORT_NAMESPACE -> {
+                    import
+                }
+            }
+        if (name == null) {
+            errorWithFileLocation(this, log, "Could not get namespace name from import declaration")
+            return
+        } else if (startScope == null) {
+            errorWithFileLocation(this, log, "Could not get scope from import declaration")
+            return
+        }
+
+        // Try to look up the namespace scope by the name
+        var targetScope = scopeManager.lookupScope(name) as? NamespaceScope
+        if (targetScope == null) {
+            // Try to infer it, if inference is configured
+            val decl = tryNamespaceInference(name, this)
+            if (decl != null) {
+                targetScope = scopeManager.lookupScope(name) as? NamespaceScope
+            }
+        }
+
+        // If we have a target scope, we can create an "import" edge
+        if (targetScope != null) {
+            // Create a new import edge with all the necessary information
+            val edge = Import(startScope, targetScope, this)
+            startScope.importedScopeEdges += edge
+        }
     }
 
     override fun cleanup() {
@@ -339,14 +381,14 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
  * namespaces that are imported at a later stage (e.g., in the [TypeResolver]), otherwise they won't
  * be visible to the later passes.
  */
-context(Pass<*>)
+context(TranslationContext)
 fun ImportDeclaration.updateImportedSymbols() {
     // We always need to search at the global scope because we are "importing" something, so by
     // definition, this is not in the scope of the current file.
     val scope = scopeManager.globalScope ?: return
 
     // Let's do some importing. We need to import either a wildcard
-    if (this.wildcardImport) {
+    if (this.style == ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE) {
         val list = scopeManager.lookupSymbolByName(this.import, this.language, this.location, scope)
         val symbol = list.singleOrNull()
         if (symbol != null) {

@@ -26,15 +26,21 @@
 package de.fraunhofer.aisec.cpg.graph.scopes
 
 import com.fasterxml.jackson.annotation.JsonBackReference
+import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.frontends.HasImplicitReceiver
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
+import de.fraunhofer.aisec.cpg.graph.edges.scopes.Import
+import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
+import de.fraunhofer.aisec.cpg.graph.edges.scopes.Imports
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.firstScopeParentOrNull
 import de.fraunhofer.aisec.cpg.graph.statements.LabelStatement
 import de.fraunhofer.aisec.cpg.graph.statements.LookupScopeStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.passes.ImportResolver
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.NodeEntity
 import org.neo4j.ogm.annotation.Relationship
@@ -79,9 +85,24 @@ sealed class Scope(
     @Transient var symbols: SymbolMap = mutableMapOf()
 
     /**
-     * A list of [ImportDeclaration] nodes that have [ImportDeclaration.wildcardImport] set to true.
+     * A list of [ImportDeclaration] nodes that have an
+     * [ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE] import style ("wildcard" import).
      */
     @Transient var wildcardImports: MutableSet<ImportDeclaration> = mutableSetOf()
+
+    /**
+     * This set of edges is used to store [Import] edges that denotes foreign [NamespaceScope]
+     * information that is imported into this scope. The edge holds information about the "style" of
+     * the import (see [ImportStyle]) and the [ImportDeclaration] that is responsible for this. The
+     * property is populated by the [ImportResolver].
+     */
+    @Relationship(value = "IMPORTS_SCOPE", direction = Relationship.Direction.OUTGOING)
+    @PopulatedByPass(ImportResolver::class)
+    val importedScopeEdges =
+        Imports(this, mirrorProperty = NamespaceScope::importedByEdges, outgoing = true)
+
+    /** Virtual property for accessing [importedScopeEdges] without property edges. */
+    val importedScopes by unwrapping(Scope::importedScopeEdges)
 
     /**
      * In some languages, the lookup scope of a symbol that is being resolved (e.g. of a
@@ -95,7 +116,10 @@ sealed class Scope(
 
     /** Adds a [declaration] with the defined [symbol]. */
     fun addSymbol(symbol: Symbol, declaration: Declaration) {
-        if (declaration is ImportDeclaration && declaration.wildcardImport) {
+        if (
+            declaration is ImportDeclaration &&
+                declaration.style == ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE
+        ) {
             // Because a wildcard import does not really have a valid "symbol", we store it in a
             // separate list
             wildcardImports += declaration

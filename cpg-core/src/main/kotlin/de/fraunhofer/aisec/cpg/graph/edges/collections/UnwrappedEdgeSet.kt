@@ -59,6 +59,19 @@ class UnwrappedEdgeSet<NodeType : Node, EdgeType : Edge<NodeType>>(
         }
     }
 
+    /** See [UnwrappedEdgeList.IncomingDelegate], but as a [MutableSet] instead of [MutableList]. */
+    @Transient
+    inner class IncomingDelegate<ThisType : Node, IncomingType>() {
+        operator fun getValue(thisRef: ThisType, property: KProperty<*>): MutableSet<IncomingType> {
+            @Suppress("UNCHECKED_CAST")
+            return this@UnwrappedEdgeSet as MutableSet<IncomingType>
+        }
+
+        operator fun setValue(thisRef: ThisType, property: KProperty<*>, value: Set<IncomingType>) {
+            @Suppress("UNCHECKED_CAST") this@UnwrappedEdgeSet.resetTo(value as Collection<NodeType>)
+        }
+    }
+
     operator fun <ThisType : Node> provideDelegate(
         thisRef: ThisType,
         prop: KProperty<*>,
