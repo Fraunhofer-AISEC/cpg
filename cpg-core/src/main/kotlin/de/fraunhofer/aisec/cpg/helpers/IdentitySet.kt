@@ -42,6 +42,9 @@ import java.util.concurrent.atomic.AtomicInteger
  * as [Node.hashCode] or even worse [Node.equals], if the hashcode is the same. This can potentially
  * be very resource-intensive if nodes are very similar but not the *same*, in a work-list however
  * we only want just to avoid to place the exact node twice.
+ *
+ * The magic size of 16 comes from the implementation of Java and is randomly chosen. The
+ * [expectedMaxSize] should be 2^n but this will be enforced internally anyway.
  */
 open class IdentitySet<T>(expectedMaxSize: Int = 16) : MutableSet<T> {
     /**
@@ -49,6 +52,8 @@ open class IdentitySet<T>(expectedMaxSize: Int = 16) : MutableSet<T> {
      * values. In this case we use it to determine, if a node is already in our set or not. The
      * value of the map is not used and is always true. A [Boolean] is used because it seems to be
      * the smallest data type possible.
+     *
+     * The map is twice the [expectedMaxSize] to avoid resizing too often which is expensive.
      */
     private val map: IdentityHashMap<T, Int> = IdentityHashMap(expectedMaxSize * 2)
     private val counter = AtomicInteger()
