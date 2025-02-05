@@ -44,3 +44,10 @@ def comp_binding_assign_expr(foo):
     x = 42
     [(x := temp) for temp in foo]
     print(x) # doesn't print 42
+
+
+def comp_binding_assign_expr_nested(foo):
+    # https://peps.python.org/pep-0572/#scope-of-the-target
+    x = 42
+    [[(x := temp) for temp in foo] for a in foo]
+    print(x) # doesn't print 42

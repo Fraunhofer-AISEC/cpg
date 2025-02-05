@@ -515,10 +515,67 @@ class ExpressionHandlerTest {
         val xRef = comprehension.refs("x").singleOrNull()
         assertNotNull(xRef)
         assertRefersTo(xRef, xDecl)
+    }
 
-        // TODO: test for other types of comprehensions
-        // TODO: test nested comprehensions -> AssignExpression binds to
-        // containing scope
+    @Test
+    /**
+     * This test ensures that variables in a comprehension do not bind to the outer scope if they
+     * are used in an `AssignExpr`. See https://peps.python.org/pep-0572/#scope-of-the-target
+     */
+    fun testCompBindingAssignExprNestedPython3() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val result =
+            analyze(listOf(topLevel.resolve("comprehension.py").toFile()), topLevel, true) {
+                it.registerLanguage<PythonLanguage>()
+                it.symbols(
+                    mapOf(
+                        "PYTHON_VERSION_MAJOR" to "3",
+                        "PYTHON_VERSION_MINOR" to "0",
+                        "PYTHON_VERSION_MICRO" to "0",
+                    )
+                )
+            }
+        assertNotNull(result)
+
+        val compBindingAssignFunc = result.functions["comp_binding_assign_expr_nested"]
+        assertIs<FunctionDeclaration>(compBindingAssignFunc)
+
+        val xDecl = compBindingAssignFunc.variables.firstOrNull()
+        assertIs<VariableDeclaration>(xDecl)
+
+        assertEquals(
+            3,
+            compBindingAssignFunc.variables.size,
+            "Expected two variables. One for the \"outside\" x, one for the \"temp\" inside the comprehension and one for the \"a\" inside the comprehension.",
+        )
+
+        assertEquals(
+            3,
+            xDecl.usages.size,
+            "Expected three usages: one for the initial assignment, one for the comprehension and one for the usage in \"print(x)\".",
+        )
+        val body = compBindingAssignFunc.body
+        assertIs<Block>(body, "The body of a function must be a Block.")
+        val outerComprehension = body.statements.singleOrNull { it is CollectionComprehension }
+        assertIs<CollectionComprehension>(
+            outerComprehension,
+            "There must be exactly one CollectionComprehension (the list comprehension) in the statement of the body. Note: The inner collection comprehension would be reached by the extension function Node.statements which does not apply here.",
+        )
+        val innerComprehension = outerComprehension.statement
+        assertIs<CollectionComprehension>(
+            innerComprehension,
+            "The inner comprehension is the statement of the outer list comprehension",
+        )
+        val xRef = innerComprehension.refs("x").singleOrNull()
+        assertNotNull(
+            xRef,
+            "There is only one usage of \"x\" which is inside the inner comprehension's statement.",
+        )
+        assertRefersTo(
+            xRef,
+            xDecl,
+            "The reference of \"x\" inside the inner comprehension's statement refers to the variable declared outside the comprehensions.",
+        )
     }
 
     @Test
