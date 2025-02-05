@@ -400,7 +400,7 @@ class ExpressionHandlerTest {
         assertEquals(
             5,
             compBindingFunc.variables.size,
-            "Expected 5 variables. One for the \"outside\" x and one for each of the 4 comprehensions.",
+            "Expected five variables. One for the \"outside\" x and one for each of the four comprehensions.",
         )
 
         assertEquals(
@@ -411,9 +411,9 @@ class ExpressionHandlerTest {
 
         val comprehensions =
             compBindingFunc.body.statements.filterIsInstance<CollectionComprehension>()
-        assertEquals(4, comprehensions.size, "Expected to find 4 comprehensions.")
+        assertEquals(4, comprehensions.size, "Expected to find four comprehensions.")
 
-        comprehensions.forEach { it.refs.forEach { ref -> assertNotRefersTo(ref, xDecl) } }
+        comprehensions.forEach { it.refs("x").forEach { ref -> assertNotRefersTo(ref, xDecl) } }
     }
 
     @Test
@@ -445,13 +445,13 @@ class ExpressionHandlerTest {
         assertEquals(
             2,
             compBindingAssignFunc.variables.size,
-            "Expected 2 variables. One for the \"outside\" x and one for the \"temp\" inside the comprehension.",
+            "Expected two variables. One for the \"outside\" x and one for the \"temp\" inside the comprehension.",
         )
 
         assertEquals(
             3,
             xDecl.usages.size,
-            "Expected 3 usages: one for the initial assignment, one for the comprehension and one for the usage in \"print(x)\".",
+            "Expected three usages: one for the initial assignment, one for the comprehension and one for the usage in \"print(x)\".",
         )
 
         val comprehension =
