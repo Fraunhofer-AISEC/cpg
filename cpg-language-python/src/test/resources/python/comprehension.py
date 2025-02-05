@@ -22,3 +22,9 @@ def dictComp(x, y):
 def generator(x, y):
     a = (i**2 for i in range(10) if i == 10)
     b = (i**2 for i in range(10))
+
+def bar(k, v):
+    return k+v
+
+def tupleComp(x):
+    a = [bar(k, v) for (k, v) in x]
