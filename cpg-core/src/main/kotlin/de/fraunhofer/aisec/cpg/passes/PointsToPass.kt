@@ -800,7 +800,7 @@ fun PointsToState.push(
     newLatticeElement: StateEntryElement,
 ): PointsToStateElement {
     val newGeneralState =
-        this.innerLattice2.lub(
+        this.innerLattice1.lub(
             currentState.generalState,
             MapLattice.Element(newNode to newLatticeElement),
         )
@@ -815,7 +815,7 @@ fun PointsToState.pushToDeclarationsState(
 ): PointsToStateElement {
     val newDeclarationsState =
         this.innerLattice2.lub(
-            currentState.generalState,
+            currentState.declarationsState,
             MapLattice.Element(newNode to newLatticeElement),
         )
     return PointsToStateElement(currentState.generalState, newDeclarationsState)
@@ -861,7 +861,7 @@ fun PointsToStateElement.fetchElementFromDeclarationState(
                 )
             }
             val newElements = this.declarationsState[addr]?.second
-            (newElements as? MutableSet<Node>)?.addAll(newEntry)
+            newElements?.addAll(newEntry)
             newEntry.map { ret.add(Pair(it, "")) }
         } else elements.map { ret.add(Pair(it, "")) }
 
