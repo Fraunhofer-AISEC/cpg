@@ -70,29 +70,6 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     }
 
     /**
-     * Applies [block] to [this]. We enter a scope before running [block] depending on the version v
-     * we aim to represent (i.e., the version information passed via
-     * [de.fraunhofer.aisec.cpg.TranslationConfiguration.symbols]). We enter a scope if
-     * - v is greater or equal to [versionFrom] or if [versionFrom] is `null` and
-     * - v is smaller or equal to [versionTo] or if [versionTo] is `null`.
-     */
-    private inline fun <reified T : Node> T.applyWithScopeIfVersionInRange(
-        versionFrom: VersionInfo? = null,
-        versionTo: VersionInfo? = null,
-        block: T.() -> Unit,
-    ): T {
-        val version = this.ctx?.config?.let { getVersionInfo(it) } ?: VersionInfo()
-        return if (
-            (versionFrom == null || versionFrom <= version) &&
-                (versionTo == null || versionTo >= version)
-        ) {
-            this.applyWithScope(block)
-        } else {
-            this.apply(block)
-        }
-    }
-
-    /**
      * Translates a Python
      * [`comprehension`](https://docs.python.org/3/library/ast.html#ast.comprehension) into a
      * [ComprehensionExpression].
@@ -128,10 +105,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
      * [CollectionComprehension].
      */
     private fun handleGeneratorExp(node: Python.AST.GeneratorExp): CollectionComprehension {
-        return newCollectionComprehension(rawNode = node).applyWithScopeIfVersionInRange(
-            versionFrom = VersionInfo(3, 0, 0),
-            versionTo = null,
-        ) {
+        return newCollectionComprehension(rawNode = node).applyWithScope {
             statement = handle(node.elt)
             comprehensionExpressions += node.generators.map { handleComprehension(it, node) }
             type = objectType("Generator")
@@ -143,10 +117,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
      * into a [CollectionComprehension].
      */
     private fun handleListComprehension(node: Python.AST.ListComp): CollectionComprehension {
-        return newCollectionComprehension(rawNode = node).applyWithScopeIfVersionInRange(
-            versionFrom = VersionInfo(3, 0, 0),
-            versionTo = null,
-        ) {
+        return newCollectionComprehension(rawNode = node).applyWithScope {
             statement = handle(node.elt)
             comprehensionExpressions += node.generators.map { handleComprehension(it, node) }
             type = objectType("list")
@@ -158,10 +129,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
      * a [CollectionComprehension].
      */
     private fun handleSetComprehension(node: Python.AST.SetComp): CollectionComprehension {
-        return newCollectionComprehension(rawNode = node).applyWithScopeIfVersionInRange(
-            versionFrom = VersionInfo(3, 0, 0),
-            versionTo = null,
-        ) {
+        return newCollectionComprehension(rawNode = node).applyWithScope {
             this.statement = handle(node.elt)
             this.comprehensionExpressions += node.generators.map { handleComprehension(it, node) }
             this.type = objectType("set")
@@ -173,10 +141,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
      * into a [CollectionComprehension].
      */
     private fun handleDictComprehension(node: Python.AST.DictComp): CollectionComprehension {
-        return newCollectionComprehension(rawNode = node).applyWithScopeIfVersionInRange(
-            versionFrom = VersionInfo(3, 0, 0),
-            versionTo = null,
-        ) {
+        return newCollectionComprehension(rawNode = node).applyWithScope {
             this.statement =
                 newKeyValueExpression(
                     key = handle(node.key),
