@@ -215,18 +215,14 @@ class CollectionComprehensionPython3Test {
             "The right hand side of the assignment \"a = [foo(i) for i in x if i == 10]\" is expected to be modeled as a CollectionComprehension \"[foo(i) for i in x if i == 10]\" in the CPG.",
         )
         var statement = singleWithIf.statement
-        assertIs<KeyValueExpression>(
+        assertIs<CallExpression>(
             statement,
-            "The CollectionComprehension has the statement \"foo(i)\" which is expected to be modeled as a KeyValueExpression.",
-        )
-        assertIs<Reference>(
-            statement,
-            "The CollectionComprehension has the statement \"foo(i)\" which is expected to be modeled as a Reference with localName \"i\".",
+            "The CollectionComprehension has the statement \"foo(i)\" which is expected to be modeled as a CallExpression with localName \"foo\".",
         )
         assertLocalName(
-            "i",
+            "foo",
             statement,
-            "The CollectionComprehension has the statement \"foo(i)\" which is expected to be modeled as a Reference with localName \"i\".",
+            "The CollectionComprehension has the statement \"foo(i)\" which is expected to be modeled as a CallExpression with localName \"foo\".",
         )
         assertEquals(
             1,
