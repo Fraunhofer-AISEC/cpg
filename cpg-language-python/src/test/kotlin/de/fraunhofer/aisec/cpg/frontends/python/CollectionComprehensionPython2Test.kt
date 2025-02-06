@@ -62,45 +62,100 @@ class CollectionComprehensionPython2Test {
 
     @Test
     fun testComprehensionExpressionTuple() {
+        // Get the function tuple_comp
         val tupleComp = result.functions["tuple_comp"]
-        assertNotNull(tupleComp)
+        assertNotNull(tupleComp, "There was no function \"tuple_comp\"")
 
+        // Get the body
         val body = tupleComp.body
-        assertIs<Block>(body)
+        assertIs<Block>(body, "The body of \"tuple_comp\" must be a Block.")
+        // The first statement is an assigment of a list comprehension with an if to a variable "a"
         val tupleAsVariableAssignment = body.statements[0]
-        assertIs<AssignExpression>(tupleAsVariableAssignment)
+        assertIs<AssignExpression>(
+            tupleAsVariableAssignment,
+            "The statement is an AssignExpression",
+        )
         val tupleAsVariable = tupleAsVariableAssignment.rhs[0]
-        assertIs<CollectionComprehension>(tupleAsVariable)
+        assertIs<CollectionComprehension>(
+            tupleAsVariable,
+            "The right hand side must be a CollectionComprehension representing python's list comprehension \"[bar(k, v) for (k, v) in x]\".",
+        )
         val barCall = tupleAsVariable.statement
-        assertIs<CallExpression>(barCall)
-        assertLocalName("bar", barCall)
+        assertIs<CallExpression>(
+            barCall,
+            "The statement inside the list comprehension is a call to bar with arguments k and v",
+        )
+        assertLocalName("bar", barCall, "The CallExpression calls bar()")
         val argK = barCall.arguments[0]
-        assertIs<Reference>(argK)
-        assertLocalName("k", argK)
+        assertIs<Reference>(argK, "The first argument of bar() is a reference k")
+        assertLocalName("k", argK, "The first argument of bar() is a reference k")
         val argV = barCall.arguments[1]
-        assertIs<Reference>(argV)
-        assertLocalName("v", argV)
-        assertEquals(1, tupleAsVariable.comprehensionExpressions.size)
+        assertIs<Reference>(argV, "The second argument of bar() is a reference v")
+        assertLocalName("v", argV, "The second argument of bar() is a reference v")
+        assertEquals(
+            1,
+            tupleAsVariable.comprehensionExpressions.size,
+            "There is a single comprehension expression (\"for (k, v) in x\")",
+        )
         val initializerListExpression = tupleAsVariable.comprehensionExpressions[0].variable
-        assertIs<InitializerListExpression>(initializerListExpression)
+        assertIs<InitializerListExpression>(
+            initializerListExpression,
+            "The variable is actually tuple which is represented as an InitializerListExpression in the CPG",
+        )
         val variableK = initializerListExpression.initializers[0]
-        assertIs<Reference>(variableK)
-        assertLocalName("k", variableK)
+        assertIs<Reference>(
+            variableK,
+            "The first element in the tuple is a variable reference \"k\"",
+        )
+        assertLocalName(
+            "k",
+            variableK,
+            "The first element in the tuple is a variable reference \"k\"",
+        )
         val variableV = initializerListExpression.initializers[1]
-        assertIs<Reference>(variableV)
-        assertLocalName("v", variableV)
+        assertIs<Reference>(
+            variableV,
+            "The second element in the tuple is a variable reference \"v\"",
+        )
+        assertLocalName(
+            "v",
+            variableV,
+            "The second element in the tuple is a variable reference \"V\"",
+        )
 
         // Check that the declarations exist for the variables k and v
         val declK = variableK.refersTo
-        assertIs<VariableDeclaration>(declK)
-        assertIs<FunctionScope>(declK.scope)
-        assertEquals(tupleComp, declK.scope?.astNode)
-        assertRefersTo(argK, declK)
+        assertIs<VariableDeclaration>(declK, "The refersTo should be a VariableDeclaration")
+        assertIs<FunctionScope>(
+            declK.scope,
+            "The scope of the variable is the function scope belonging to the function declaration. In particular, it is not the LocalScope.",
+        )
+        assertEquals(
+            tupleComp,
+            declK.scope?.astNode,
+            "The scope of the variable is the function scope belonging to the function declaration. In particular, it is not the LocalScope.",
+        )
+        assertRefersTo(
+            argK,
+            declK,
+            "The argument k of the call also refers to the variable k declared in the comprehension expression.",
+        )
         val declV = variableV.refersTo
-        assertIs<VariableDeclaration>(declV)
-        assertIs<FunctionScope>(declV.scope)
-        assertEquals(tupleComp, declV.scope?.astNode)
-        assertRefersTo(argV, declV)
+        assertIs<VariableDeclaration>(declV, "The refersTo should be a VariableDeclaration")
+        assertIs<FunctionScope>(
+            declV.scope,
+            "The scope of the variable is the function scope belonging to the function declaration. In particular, it is not the LocalScope.",
+        )
+        assertEquals(
+            tupleComp,
+            declV.scope?.astNode,
+            "The scope of the variable is the function scope belonging to the function declaration. In particular, it is not the LocalScope.",
+        )
+        assertRefersTo(
+            argV,
+            declV,
+            "The argument v of the call also refers to the variable v declared in the comprehension expression.",
+        )
     }
 
     @Test
