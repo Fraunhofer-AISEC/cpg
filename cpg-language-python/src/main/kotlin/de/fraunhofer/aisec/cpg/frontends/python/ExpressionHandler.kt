@@ -120,7 +120,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         return newCollectionComprehension(rawNode = node).applyWithScope {
             statement = handle(node.elt)
             comprehensionExpressions += node.generators.map { handleComprehension(it, node) }
-            type = objectType("list")
+            type = primitiveType("list")
         }
     }
 
@@ -132,7 +132,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         return newCollectionComprehension(rawNode = node).applyWithScope {
             this.statement = handle(node.elt)
             this.comprehensionExpressions += node.generators.map { handleComprehension(it, node) }
-            this.type = objectType("set")
+            this.type = primitiveType("set")
         }
     }
 
@@ -149,7 +149,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                     rawNode = node,
                 )
             this.comprehensionExpressions += node.generators.map { handleComprehension(it, node) }
-            this.type = objectType("dict")
+            this.type = primitiveType("dict")
         }
     }
 
