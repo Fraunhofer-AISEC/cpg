@@ -79,7 +79,7 @@ class CollectionComprehensionPython3Test {
     }
 
     @Test
-    fun testComprehensionExpressionTuplePython3() {
+    fun testComprehensionExpressionTuple() {
         // Get the function tuple_comp
         val tupleComp = result.functions["tuple_comp"]
         assertNotNull(tupleComp, "There was no function \"tuple_comp\"")
@@ -177,7 +177,7 @@ class CollectionComprehensionPython3Test {
     }
 
     @Test
-    fun testListComprehensionsPython3() {
+    fun testListComprehensions() {
         val listComp = result.functions["list_comp"]
         assertNotNull(listComp)
         val paramX = listComp.parameters[0]
@@ -251,7 +251,7 @@ class CollectionComprehensionPython3Test {
     }
 
     @Test
-    fun testSetComprehensionsPython3() {
+    fun testSetComprehensions() {
         val listComp = result.functions["set_comp"]
         assertNotNull(listComp)
 
@@ -303,7 +303,7 @@ class CollectionComprehensionPython3Test {
     }
 
     @Test
-    fun testDictComprehensionsPython3() {
+    fun testDictComprehensions() {
         val listComp = result.functions["dict_comp"]
         assertNotNull(listComp)
 
@@ -371,7 +371,7 @@ class CollectionComprehensionPython3Test {
     }
 
     @Test
-    fun testGeneratorExprPython3() {
+    fun testGeneratorExpr() {
         val listComp = result.functions["generator"]
         assertNotNull(listComp)
 
@@ -407,7 +407,7 @@ class CollectionComprehensionPython3Test {
      * This test ensures that variables in a comprehension do not bind to the outer scope. See
      * [testCompBindingAssignExpr] for exceptions.
      */
-    fun testCompBindingPython3() {
+    fun testCompBinding() {
         val compBindingFunc = result.functions["comp_binding"]
         assertIs<FunctionDeclaration>(compBindingFunc)
 
@@ -438,7 +438,7 @@ class CollectionComprehensionPython3Test {
      * This test ensures that variables in a comprehension do not bind to the outer scope if they
      * are used in an `AssignExpr`. See https://peps.python.org/pep-0572/#scope-of-the-target
      */
-    fun testCompBindingAssignExprPython3() {
+    fun testCompBindingAssignExpr() {
 
         val compBindingAssignFunc = result.functions["comp_binding_assign_expr"]
         assertIs<FunctionDeclaration>(compBindingAssignFunc)
@@ -471,7 +471,7 @@ class CollectionComprehensionPython3Test {
      * This test ensures that variables in a comprehension do not bind to the outer scope if they
      * are used in an `AssignExpr`. See https://peps.python.org/pep-0572/#scope-of-the-target
      */
-    fun testCompBindingAssignExprNestedPython3() {
+    fun testCompBindingAssignExprNested() {
 
         val compBindingAssignFunc = result.functions["comp_binding_assign_expr_nested"]
         assertIs<FunctionDeclaration>(compBindingAssignFunc)
