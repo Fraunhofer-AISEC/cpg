@@ -82,11 +82,17 @@ class CollectionComprehensionPython3Test {
     fun testComprehensionExpressionTuple() {
         // Get the function tuple_comp
         val tupleComp = result.functions["tuple_comp"]
-        assertNotNull(tupleComp, "There was no function \"tuple_comp\"")
+        assertIs<FunctionDeclaration>(
+            tupleComp,
+            "There must be a function called \"tuple_comp\" in the file. It must be neither null nor any other class than a FunctionDeclaration.",
+        )
 
         // Get the body
         val body = tupleComp.body
-        assertIs<Block>(body, "The body of \"tuple_comp\" must be a Block.")
+        assertIs<Block>(
+            body,
+            "The body of each function is modeled as a Block in the CPG. This must also apply to the function \"tuple_comp\".",
+        )
         // The first statement is an assigment of a list comprehension with an if to a variable "a"
         val tupleAsVariableAssignment = body.statements[0]
         assertIs<AssignExpression>(
@@ -178,14 +184,24 @@ class CollectionComprehensionPython3Test {
 
     @Test
     fun testListComprehensions() {
-        val listComp = result.functions["list_comp"]
-        assertNotNull(listComp)
-        val paramX = listComp.parameters[0]
-        assertIs<ParameterDeclaration>(paramX)
-        assertLocalName("x", paramX)
+        val listCompFunctionDeclaration = result.functions["list_comp"]
+        assertIs<FunctionDeclaration>(
+            listCompFunctionDeclaration,
+            "There must be a function called \"list_comp\" in the file. It must be neither null nor any other class than a FunctionDeclaration.",
+        )
 
-        val body = listComp.body
-        assertIs<Block>(body)
+        val paramX = listCompFunctionDeclaration.parameters[0]
+        assertIs<ParameterDeclaration>(
+            paramX,
+            "The function \"list_comp\" has a parameter called \"x^\".",
+        )
+        assertLocalName("x", paramX, "The function \"list_comp\" has a parameter called \"x\".")
+
+        val body = listCompFunctionDeclaration.body
+        assertIs<Block>(
+            body,
+            "The body of each function is modeled as a Block in the CPG. This must also apply to the function \"list_comp\".",
+        )
         val singleWithIfAssignment = body.statements[0]
         assertIs<AssignExpression>(singleWithIfAssignment)
         val singleWithIf = singleWithIfAssignment.rhs[0]
@@ -247,16 +263,21 @@ class CollectionComprehensionPython3Test {
         assertNotNull(double)
         assertIs<CallExpression>(double.statement)
         assertEquals(2, double.comprehensionExpressions.size)
-        // TODO: Add tests on the comprehension expressions
     }
 
     @Test
     fun testSetComprehensions() {
-        val listComp = result.functions["set_comp"]
-        assertNotNull(listComp)
+        val setCompFunctionDeclaration = result.functions["set_comp"]
+        assertIs<FunctionDeclaration>(
+            setCompFunctionDeclaration,
+            "There must be a function called \"set_comp\" in the file. It must be neither null nor any other class than a FunctionDeclaration.",
+        )
 
-        val body = listComp.body as? Block
-        assertNotNull(body)
+        val body = setCompFunctionDeclaration.body
+        assertIs<Block>(
+            body,
+            "The body of each function is modeled as a Block in the CPG. This must also apply to the function \"set_comp\".",
+        )
         val singleWithIfAssignment = body.statements[0]
         assertIs<AssignExpression>(singleWithIfAssignment)
         val singleWithIf = singleWithIfAssignment.rhs[0]
@@ -304,11 +325,17 @@ class CollectionComprehensionPython3Test {
 
     @Test
     fun testDictComprehensions() {
-        val listComp = result.functions["dict_comp"]
-        assertNotNull(listComp)
+        val dictCompFunctionDeclaration = result.functions["dict_comp"]
+        assertIs<FunctionDeclaration>(
+            dictCompFunctionDeclaration,
+            "There must be a function called \"dict_comp\" in the file. It must be neither null nor any other class than a FunctionDeclaration.",
+        )
 
-        val body = listComp.body as? Block
-        assertNotNull(body)
+        val body = dictCompFunctionDeclaration.body
+        assertIs<Block>(
+            body,
+            "The body of each function is modeled as a Block in the CPG. This must also apply to the function \"dict_comp\".",
+        )
         val singleWithIfAssignment = body.statements[0]
         assertIs<AssignExpression>(singleWithIfAssignment)
         val singleWithIf = singleWithIfAssignment.rhs[0]
@@ -372,11 +399,17 @@ class CollectionComprehensionPython3Test {
 
     @Test
     fun testGeneratorExpr() {
-        val listComp = result.functions["generator"]
-        assertNotNull(listComp)
+        val generatorFunctionDeclaration = result.functions["generator"]
+        assertIs<FunctionDeclaration>(
+            generatorFunctionDeclaration,
+            "There must be a function called \"generator\" in the file. It must be neither null nor any other class than a FunctionDeclaration.",
+        )
 
-        val body = listComp.body as? Block
-        assertNotNull(body)
+        val body = generatorFunctionDeclaration.body
+        assertIs<Block>(
+            body,
+            "The body of each function is modeled as a Block in the CPG. This must also apply to the function \"generator\".",
+        )
         val singleWithIfAssignment = body.statements[0]
         assertIs<AssignExpression>(singleWithIfAssignment)
         val singleWithIf = singleWithIfAssignment.rhs[0]
@@ -408,15 +441,18 @@ class CollectionComprehensionPython3Test {
      * [testCompBindingAssignExpr] for exceptions.
      */
     fun testCompBinding() {
-        val compBindingFunc = result.functions["comp_binding"]
-        assertIs<FunctionDeclaration>(compBindingFunc)
+        val compBindingFunctionDeclaration = result.functions["comp_binding"]
+        assertIs<FunctionDeclaration>(
+            compBindingFunctionDeclaration,
+            "There must be a function called \"comp_binding\" in the file. It must be neither null nor any other class than a FunctionDeclaration.",
+        )
 
-        val xDecl = compBindingFunc.variables.firstOrNull()
+        val xDecl = compBindingFunctionDeclaration.variables.firstOrNull()
         assertIs<VariableDeclaration>(xDecl)
 
         assertEquals(
             5,
-            compBindingFunc.variables.size,
+            compBindingFunctionDeclaration.variables.size,
             "Expected five variables. One for the \"outside\" x and one for each of the four comprehensions.",
         )
 
@@ -427,7 +463,9 @@ class CollectionComprehensionPython3Test {
         )
 
         val comprehensions =
-            compBindingFunc.body.statements.filterIsInstance<CollectionComprehension>()
+            compBindingFunctionDeclaration.body.statements.filterIsInstance<
+                CollectionComprehension
+            >()
         assertEquals(4, comprehensions.size, "Expected to find four comprehensions.")
 
         comprehensions.forEach { it.refs("x").forEach { ref -> assertNotRefersTo(ref, xDecl) } }
@@ -439,16 +477,21 @@ class CollectionComprehensionPython3Test {
      * are used in an `AssignExpr`. See https://peps.python.org/pep-0572/#scope-of-the-target
      */
     fun testCompBindingAssignExpr() {
+        val compBindingAssignExprFunctionDeclaration = result.functions["comp_binding_assign_expr"]
+        assertIs<FunctionDeclaration>(
+            compBindingAssignExprFunctionDeclaration,
+            "There must be a function called \"comp_binding_assign_expr\" in the file. It must be neither null nor any other class than a FunctionDeclaration.",
+        )
 
-        val compBindingAssignFunc = result.functions["comp_binding_assign_expr"]
-        assertIs<FunctionDeclaration>(compBindingAssignFunc)
-
-        val xDecl = compBindingAssignFunc.variables.firstOrNull()
-        assertIs<VariableDeclaration>(xDecl)
+        val xDecl = compBindingAssignExprFunctionDeclaration.variables["x"]
+        assertIs<VariableDeclaration>(
+            xDecl,
+            "There must be a VariableDeclaration with the local name \"x\" inside the function.",
+        )
 
         assertEquals(
             2,
-            compBindingAssignFunc.variables.size,
+            compBindingAssignExprFunctionDeclaration.variables.size,
             "Expected two variables. One for the \"outside\" x and one for the \"temp\" inside the comprehension.",
         )
 
@@ -459,7 +502,9 @@ class CollectionComprehensionPython3Test {
         )
 
         val comprehension =
-            compBindingAssignFunc.body.statements.singleOrNull { it is CollectionComprehension }
+            compBindingAssignExprFunctionDeclaration.body.statements.singleOrNull {
+                it is CollectionComprehension
+            }
         assertNotNull(comprehension)
         val xRef = comprehension.refs("x").singleOrNull()
         assertNotNull(xRef)
@@ -472,16 +517,22 @@ class CollectionComprehensionPython3Test {
      * are used in an `AssignExpr`. See https://peps.python.org/pep-0572/#scope-of-the-target
      */
     fun testCompBindingAssignExprNested() {
+        val compBindingAssignExprNestedFunctionDeclaration =
+            result.functions["comp_binding_assign_expr_nested"]
+        assertIs<FunctionDeclaration>(
+            compBindingAssignExprNestedFunctionDeclaration,
+            "There must be a function called \"comp_binding_assign_expr_nested\" in the file. It must be neither null nor any other class than a FunctionDeclaration.",
+        )
 
-        val compBindingAssignFunc = result.functions["comp_binding_assign_expr_nested"]
-        assertIs<FunctionDeclaration>(compBindingAssignFunc)
-
-        val xDecl = compBindingAssignFunc.variables.firstOrNull()
-        assertIs<VariableDeclaration>(xDecl)
+        val xDecl = compBindingAssignExprNestedFunctionDeclaration.variables["x"]
+        assertIs<VariableDeclaration>(
+            xDecl,
+            "There must be a VariableDeclaration with the local name \"x\" inside the function.",
+        )
 
         assertEquals(
             3,
-            compBindingAssignFunc.variables.size,
+            compBindingAssignExprNestedFunctionDeclaration.variables.size,
             "Expected two variables. One for the \"outside\" x, one for the \"temp\" inside the comprehension and one for the \"a\" inside the comprehension.",
         )
 
@@ -490,12 +541,12 @@ class CollectionComprehensionPython3Test {
             xDecl.usages.size,
             "Expected three usages: one for the initial assignment, one for the comprehension and one for the usage in \"print(x)\".",
         )
-        val body = compBindingAssignFunc.body
+        val body = compBindingAssignExprNestedFunctionDeclaration.body
         assertIs<Block>(body, "The body of a function must be a Block.")
         val outerComprehension = body.statements.singleOrNull { it is CollectionComprehension }
         assertIs<CollectionComprehension>(
             outerComprehension,
-            "There must be exactly one CollectionComprehension (the list comprehension) in the statement of the body. Note: The inner collection comprehension would be reached by the extension function Node.statements which does not apply here.",
+            "There must be exactly one CollectionComprehension (the list comprehension) in the statement of the body. Note: The inner collection comprehension would be reached by the extension function Node::statements which does not apply here.",
         )
         val innerComprehension = outerComprehension.statement
         assertIs<CollectionComprehension>(
