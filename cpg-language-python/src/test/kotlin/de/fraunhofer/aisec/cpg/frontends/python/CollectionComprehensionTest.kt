@@ -94,7 +94,7 @@ class CollectionComprehensionTest {
             body,
             "The body of each function is modeled as a Block in the CPG. This must also apply to the function \"tuple_comp\".",
         )
-        // The first statement is expected to be an assigment of a list comprehension with an if to
+        // The first statement is expected to be an assignment of a list comprehension with an if to
         // a variable "a"
         val tupleAsVariableAssignment = body.statements[0]
         assertIs<AssignExpression>(
@@ -150,36 +150,36 @@ class CollectionComprehensionTest {
         )
 
         // Check that the declarations exist for the variables k and v
-        val declK = variableK.refersTo
-        assertIs<VariableDeclaration>(declK, "The refersTo should be a VariableDeclaration")
+        val declarationK = variableK.refersTo
+        assertIs<VariableDeclaration>(declarationK, "The refersTo should be a VariableDeclaration")
         assertIs<LocalScope>(
-            declK.scope,
+            declarationK.scope,
             "The scope of the variable is the local scope belonging to the list comprehension. In particular, it is not the FunctionScope.",
         )
         assertEquals(
             tupleAsVariable,
-            declK.scope?.astNode,
+            declarationK.scope?.astNode,
             "The scope of the variable is the local scope belonging to the list comprehension. In particular, it is not the FunctionScope.",
         )
         assertRefersTo(
             argK,
-            declK,
+            declarationK,
             "The argument k of the call also refers to the variable k declared in the comprehension expression.",
         )
-        val declV = variableV.refersTo
-        assertIs<VariableDeclaration>(declV, "The refersTo should be a VariableDeclaration")
+        val declarationV = variableV.refersTo
+        assertIs<VariableDeclaration>(declarationV, "The refersTo should be a VariableDeclaration")
         assertIs<LocalScope>(
-            declV.scope,
+            declarationV.scope,
             "The scope of the variable is the local scope belonging to the list comprehension. In particular, it is not the FunctionScope.",
         )
         assertEquals(
             tupleAsVariable,
-            declV.scope?.astNode,
+            declarationV.scope?.astNode,
             "The scope of the variable is the local scope belonging to the list comprehension. In particular, it is not the FunctionScope.",
         )
         assertRefersTo(
             argV,
-            declV,
+            declarationV,
             "The argument v of the call also refers to the variable v declared in the comprehension expression.",
         )
     }
@@ -992,8 +992,8 @@ class CollectionComprehensionTest {
             "There must be a function called \"comp_binding\" in the file. It must be neither null nor any other class than a FunctionDeclaration.",
         )
 
-        val xDecl = compBindingFunctionDeclaration.variables.firstOrNull()
-        assertIs<VariableDeclaration>(xDecl)
+        val xDeclaration = compBindingFunctionDeclaration.variables.firstOrNull()
+        assertIs<VariableDeclaration>(xDeclaration)
 
         assertEquals(
             5,
@@ -1003,7 +1003,7 @@ class CollectionComprehensionTest {
 
         assertEquals(
             2,
-            xDecl.usages.size,
+            xDeclaration.usages.size,
             "Expected two usages: one for the initial assignment and one for the usage in \"print(x)\".",
         )
 
@@ -1013,7 +1013,9 @@ class CollectionComprehensionTest {
             >()
         assertEquals(4, comprehensions.size, "Expected to find four comprehensions.")
 
-        comprehensions.forEach { it.refs("x").forEach { ref -> assertNotRefersTo(ref, xDecl) } }
+        comprehensions.forEach {
+            it.refs("x").forEach { ref -> assertNotRefersTo(ref, xDeclaration) }
+        }
     }
 
     @Test
@@ -1028,9 +1030,9 @@ class CollectionComprehensionTest {
             "There must be a function called \"comp_binding_assign_expr\" in the file. It must be neither null nor any other class than a FunctionDeclaration.",
         )
 
-        val xDecl = compBindingAssignExprFunctionDeclaration.variables["x"]
+        val xDeclaration = compBindingAssignExprFunctionDeclaration.variables["x"]
         assertIs<VariableDeclaration>(
-            xDecl,
+            xDeclaration,
             "There must be a VariableDeclaration with the local name \"x\" inside the function.",
         )
 
@@ -1042,7 +1044,7 @@ class CollectionComprehensionTest {
 
         assertEquals(
             3,
-            xDecl.usages.size,
+            xDeclaration.usages.size,
             "Expected three usages: one for the initial assignment, one for the comprehension and one for the usage in \"print(x)\".",
         )
 
@@ -1053,7 +1055,7 @@ class CollectionComprehensionTest {
         assertNotNull(comprehension)
         val xRef = comprehension.refs("x").singleOrNull()
         assertNotNull(xRef)
-        assertRefersTo(xRef, xDecl)
+        assertRefersTo(xRef, xDeclaration)
     }
 
     @Test
@@ -1069,9 +1071,9 @@ class CollectionComprehensionTest {
             "There must be a function called \"comp_binding_assign_expr_nested\" in the file. It must be neither null nor any other class than a FunctionDeclaration.",
         )
 
-        val xDecl = compBindingAssignExprNestedFunctionDeclaration.variables["x"]
+        val xDeclaration = compBindingAssignExprNestedFunctionDeclaration.variables["x"]
         assertIs<VariableDeclaration>(
-            xDecl,
+            xDeclaration,
             "There must be a VariableDeclaration with the local name \"x\" inside the function.",
         )
 
@@ -1083,7 +1085,7 @@ class CollectionComprehensionTest {
 
         assertEquals(
             3,
-            xDecl.usages.size,
+            xDeclaration.usages.size,
             "Expected three usages: one for the initial assignment, one for the comprehension and one for the usage in \"print(x)\".",
         )
         val body = compBindingAssignExprNestedFunctionDeclaration.body
@@ -1105,7 +1107,7 @@ class CollectionComprehensionTest {
         )
         assertRefersTo(
             xRef,
-            xDecl,
+            xDeclaration,
             "The reference of \"x\" inside the inner comprehension's statement refers to the variable declared outside the comprehensions.",
         )
     }
