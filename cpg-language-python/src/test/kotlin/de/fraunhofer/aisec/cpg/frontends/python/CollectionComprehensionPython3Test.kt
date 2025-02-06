@@ -93,11 +93,12 @@ class CollectionComprehensionPython3Test {
             body,
             "The body of each function is modeled as a Block in the CPG. This must also apply to the function \"tuple_comp\".",
         )
-        // The first statement is an assigment of a list comprehension with an if to a variable "a"
+        // The first statement is expected to be an assigment of a list comprehension with an if to
+        // a variable "a"
         val tupleAsVariableAssignment = body.statements[0]
         assertIs<AssignExpression>(
             tupleAsVariableAssignment,
-            "The statement is an AssignExpression",
+            "The statement is expected to be an AssignExpression",
         )
         val tupleAsVariable = tupleAsVariableAssignment.rhs[0]
         assertIs<CollectionComprehension>(
@@ -107,44 +108,44 @@ class CollectionComprehensionPython3Test {
         val barCall = tupleAsVariable.statement
         assertIs<CallExpression>(
             barCall,
-            "The statement inside the list comprehension is a call to bar with arguments k and v",
+            "The statement inside the list comprehension is expected to be a call to bar with arguments k and v",
         )
         assertLocalName("bar", barCall, "The CallExpression calls bar()")
         val argK = barCall.arguments[0]
-        assertIs<Reference>(argK, "The first argument of bar() is a reference k")
-        assertLocalName("k", argK, "The first argument of bar() is a reference k")
+        assertIs<Reference>(argK, "The first argument of bar() is expected to be a reference k")
+        assertLocalName("k", argK, "The first argument of bar() is expected to be a reference k")
         val argV = barCall.arguments[1]
-        assertIs<Reference>(argV, "The second argument of bar() is a reference v")
-        assertLocalName("v", argV, "The second argument of bar() is a reference v")
+        assertIs<Reference>(argV, "The second argument of bar() is expected to be a reference v")
+        assertLocalName("v", argV, "The second argument of bar() is expected to be a reference v")
         assertEquals(
             1,
             tupleAsVariable.comprehensionExpressions.size,
-            "There is a single comprehension expression (\"for (k, v) in x\")",
+            "There is expected to be a single comprehension expression (\"for (k, v) in x\")",
         )
         val initializerListExpression = tupleAsVariable.comprehensionExpressions[0].variable
         assertIs<InitializerListExpression>(
             initializerListExpression,
-            "The variable is actually tuple which is represented as an InitializerListExpression in the CPG",
+            "The variable is expected to be actually tuple which is represented as an InitializerListExpression in the CPG",
         )
         val variableK = initializerListExpression.initializers[0]
         assertIs<Reference>(
             variableK,
-            "The first element in the tuple is a variable reference \"k\"",
+            "The first element in the tuple is expected to be a variable reference \"k\"",
         )
         assertLocalName(
             "k",
             variableK,
-            "The first element in the tuple is a variable reference \"k\"",
+            "The first element in the tuple is expected to be a variable reference \"k\"",
         )
         val variableV = initializerListExpression.initializers[1]
         assertIs<Reference>(
             variableV,
-            "The second element in the tuple is a variable reference \"v\"",
+            "The second element in the tuple is expected to be a variable reference \"v\"",
         )
         assertLocalName(
             "v",
             variableV,
-            "The second element in the tuple is a variable reference \"V\"",
+            "The second element in the tuple is expected to be a variable reference \"V\"",
         )
 
         // Check that the declarations exist for the variables k and v
@@ -337,64 +338,238 @@ class CollectionComprehensionPython3Test {
             "The body of each function is modeled as a Block in the CPG. This must also apply to the function \"dict_comp\".",
         )
         val singleWithIfAssignment = body.statements[0]
-        assertIs<AssignExpression>(singleWithIfAssignment)
+        assertIs<AssignExpression>(
+            singleWithIfAssignment,
+            "The first statement in the body is \"a = {i: foo(i) for i in x if i == 10}^\" which should be represented by an AssignExpression in the CPG.",
+        )
         val singleWithIf = singleWithIfAssignment.rhs[0]
-        assertIs<CollectionComprehension>(singleWithIf)
+        assertIs<CollectionComprehension>(
+            singleWithIf,
+            "The right hand side of the assignment \"a = {i: foo(i) for i in x if i == 10}\" is expected to be modeled as a CollectionComprehension \"{i: foo(i) for i in x if i == 10}\" in the CPG.",
+        )
         var statement = singleWithIf.statement
-        assertIs<KeyValueExpression>(statement)
-        assertIs<Reference>(statement.key)
-        assertLocalName("i", statement.key)
-        assertIs<CallExpression>(statement.value)
-        assertEquals(1, singleWithIf.comprehensionExpressions.size)
-        assertLocalName("i", singleWithIf.comprehensionExpressions[0].variable)
-        assertIs<Reference>(singleWithIf.comprehensionExpressions[0].iterable)
-        assertLocalName("x", singleWithIf.comprehensionExpressions[0].iterable)
+        assertIs<KeyValueExpression>(
+            statement,
+            "The CollectionComprehension has the statement \"i: foo(i)\" which is expected to be modeled as a KeyValueExpression.",
+        )
+        assertIs<Reference>(
+            statement.key,
+            "The key of the CollectionComprehension of the KeyValueExpression \"i: foo(i)\" is expected to be a Reference with localName \"i\"",
+        )
+        assertLocalName(
+            "i",
+            statement.key,
+            "The key of the CollectionComprehension of the KeyValueExpression \"i: foo(i)\" is expected to be a Reference with localName \"i\"",
+        )
+        assertIs<CallExpression>(
+            statement.value,
+            "The value of the CollectionComprehension of the KeyValueExpression \"i: foo(i)\" is expected to be a CallExpression with localName \"foo\"",
+        )
+        assertLocalName(
+            "foo",
+            statement.value,
+            "The value of the CollectionComprehension of the KeyValueExpression \"i: foo(i)\" is expected to be a CallExpression with localName \"foo\"",
+        )
+        assertEquals(
+            1,
+            singleWithIf.comprehensionExpressions.size,
+            "The CollectionComprehension \"{i: foo(i) for i in x if i == 10}\" has exactly one comprehensionExpressions which is \"for i in x if i == 10\"",
+        )
+        assertLocalName(
+            "i",
+            singleWithIf.comprehensionExpressions[0].variable,
+            "The variable of the comprehension expression \"for i in x if i == 10\" is expected to be a Reference with localName \"i\"",
+        )
+        assertIs<Reference>(
+            singleWithIf.comprehensionExpressions[0].variable,
+            "The variable of the comprehension expression \"for i in x if i == 10\" is expected to be a Reference with localName \"i\"",
+        )
+        assertIs<Reference>(
+            singleWithIf.comprehensionExpressions[0].iterable,
+            "The iterable of the comprehension expression \"for i in x if i == 10\" is expected to be a Reference with localName \"x\"",
+        )
+        assertLocalName(
+            "x",
+            singleWithIf.comprehensionExpressions[0].iterable,
+            "The iterable of the comprehension expression \"for i in x if i == 10\" is expected to be a Reference with localName \"x\"",
+        )
         val ifPredicate = singleWithIf.comprehensionExpressions[0].predicate
-        assertIs<BinaryOperator>(ifPredicate)
-        assertEquals("==", ifPredicate.operatorCode)
+        assertIs<BinaryOperator>(
+            ifPredicate,
+            "The two predicates \"if i == 10\" is expected to be represented by a binary operator \"==\" in the CPG.",
+        )
+        assertEquals(
+            "==",
+            ifPredicate.operatorCode,
+            "The two predicates \"if i == 10\" is expected to be represented by a binary operator \"==\" in the CPG.",
+        )
 
         val singleWithoutIfAssignment = body.statements[1]
-        assertIs<AssignExpression>(singleWithoutIfAssignment)
+        assertIs<AssignExpression>(
+            singleWithoutIfAssignment,
+            "The second statement in the body is \"b = {i: foo(i) for i in x}\" which should be represented by an AssignExpression in the CPG.",
+        )
         val singleWithoutIf = singleWithoutIfAssignment.rhs[0]
-        assertIs<CollectionComprehension>(singleWithoutIf)
+        assertIs<CollectionComprehension>(
+            singleWithoutIf,
+            "The right hand side of the assignment \"b = {i: foo(i) for i in x}\" is expected to be modeled as a CollectionComprehension \"{i: foo(i) for i in x}\" in the CPG.",
+        )
         statement = singleWithIf.statement
-        assertIs<KeyValueExpression>(statement)
-        assertIs<Reference>(statement.key)
-        assertLocalName("i", statement.key)
-        assertIs<CallExpression>(statement.value)
-        assertEquals(1, singleWithoutIf.comprehensionExpressions.size)
-        assertLocalName("i", singleWithoutIf.comprehensionExpressions[0].variable)
-        assertIs<Reference>(singleWithoutIf.comprehensionExpressions[0].iterable)
-        assertLocalName("x", singleWithoutIf.comprehensionExpressions[0].iterable)
-        assertNull(singleWithoutIf.comprehensionExpressions[0].predicate)
+        assertIs<KeyValueExpression>(
+            statement,
+            "The CollectionComprehension has the statement \"i: foo(i)\" which is expected to be modeled as a KeyValueExpression.",
+        )
+        assertIs<Reference>(
+            statement.key,
+            "The key of the CollectionComprehension of the KeyValueExpression \"i: foo(i)\" is expected to be a Reference with localName \"i\"",
+        )
+        assertLocalName(
+            "i",
+            statement.key,
+            "The key of the CollectionComprehension of the KeyValueExpression \"i: foo(i)\" is expected to be a Reference with localName \"i\"",
+        )
+        assertIs<CallExpression>(
+            statement.value,
+            "The value of the CollectionComprehension of the KeyValueExpression \"i: foo(i)\" is expected to be a CallExpression with localName \"foo\"",
+        )
+        assertLocalName(
+            "foo",
+            statement.value,
+            "The value of the CollectionComprehension of the KeyValueExpression \"i: foo(i)\" is expected to be a CallExpression with localName \"foo\"",
+        )
+        assertEquals(
+            1,
+            singleWithoutIf.comprehensionExpressions.size,
+            "The CollectionComprehension \"{i: foo(i) for i in x}\" has exactly one comprehensionExpressions which is \"for i in x\"",
+        )
+        assertLocalName(
+            "i",
+            singleWithIf.comprehensionExpressions[0].variable,
+            "The variable of the comprehension expression \"for i in x\" is expected to be a Reference with localName \"i\"",
+        )
+        assertIs<Reference>(
+            singleWithIf.comprehensionExpressions[0].variable,
+            "The variable of the comprehension expression \"for i in x\" is expected to be a Reference with localName \"i\"",
+        )
+        assertIs<Reference>(
+            singleWithIf.comprehensionExpressions[0].iterable,
+            "The iterable of the comprehension expression \"for i in x\" is expected to be a Reference with localName \"x\"",
+        )
+        assertLocalName(
+            "x",
+            singleWithIf.comprehensionExpressions[0].iterable,
+            "The iterable of the comprehension expression \"for i in x\" is expected to be a Reference with localName \"x\"",
+        )
+        assertNull(
+            singleWithoutIf.comprehensionExpressions[0].predicate,
+            "The comprehension expression \"for i in x\" should not have any predicate.",
+        )
 
         val singleWithDoubleIfAssignment = body.statements[2]
-        assertIs<AssignExpression>(singleWithDoubleIfAssignment)
+        assertIs<AssignExpression>(
+            singleWithDoubleIfAssignment,
+            "The third statement in the body is \"c = {i: foo(i) for i in x if i == 10 if i < 20}\" which should be represented by an AssignExpression in the CPG.",
+        )
         val singleWithDoubleIf = singleWithDoubleIfAssignment.rhs[0]
-        assertIs<CollectionComprehension>(singleWithDoubleIf)
+        assertIs<CollectionComprehension>(
+            singleWithDoubleIf,
+            "The right hand side of the assignment \"c = {i: foo(i) for i in x if i == 10 if i < 20}\" is expected to be modeled as a CollectionComprehension \"{i: foo(i) for i in x if i == 10 if i < 20}\" in the CPG.",
+        )
         statement = singleWithIf.statement
-        assertIs<KeyValueExpression>(statement)
-        assertIs<Reference>(statement.key)
-        assertLocalName("i", statement.key)
-        assertIs<CallExpression>(statement.value)
-        assertEquals(1, singleWithDoubleIf.comprehensionExpressions.size)
-        assertLocalName("i", singleWithDoubleIf.comprehensionExpressions[0].variable)
-        assertIs<Reference>(singleWithDoubleIf.comprehensionExpressions[0].iterable)
-        assertLocalName("x", singleWithDoubleIf.comprehensionExpressions[0].iterable)
+        assertIs<KeyValueExpression>(
+            statement,
+            "The CollectionComprehension has the statement \"i: foo(i)\" which is expected to be modeled as a KeyValueExpression.",
+        )
+        assertIs<Reference>(
+            statement.key,
+            "The key of the CollectionComprehension of the KeyValueExpression \"i: foo(i)\" is expected to be a Reference with localName \"i\"",
+        )
+        assertLocalName(
+            "i",
+            statement.key,
+            "The key of the CollectionComprehension of the KeyValueExpression \"i: foo(i)\" is expected to be a Reference with localName \"i\"",
+        )
+        assertIs<CallExpression>(
+            statement.value,
+            "The value of the CollectionComprehension of the KeyValueExpression \"i: foo(i)\" is expected to be a CallExpression with localName \"foo\"",
+        )
+        assertLocalName(
+            "foo",
+            statement.value,
+            "The value of the CollectionComprehension of the KeyValueExpression \"i: foo(i)\" is expected to be a CallExpression with localName \"foo\"",
+        )
+        assertEquals(
+            1,
+            singleWithDoubleIf.comprehensionExpressions.size,
+            "The CollectionComprehension \"{i: foo(i) for i in x if i == 10 if i < 20}\" has exactly one comprehensionExpressions which is \"for i in x if i == 10 if i < 20\"",
+        )
+        assertLocalName(
+            "i",
+            singleWithIf.comprehensionExpressions[0].variable,
+            "The variable of the comprehension expression \"for i in x if i == 10 if i < 20\" is expected to be a Reference with localName \"i\"",
+        )
+        assertIs<Reference>(
+            singleWithIf.comprehensionExpressions[0].variable,
+            "The variable of the comprehension expression \"for i in x if i == 10 if i < 20\" is expected to be a Reference with localName \"i\"",
+        )
+        assertIs<Reference>(
+            singleWithIf.comprehensionExpressions[0].iterable,
+            "The iterable of the comprehension expression \"for i in x if i == 10 if i < 20\" is expected to be a Reference with localName \"x\"",
+        )
+        assertLocalName(
+            "x",
+            singleWithIf.comprehensionExpressions[0].iterable,
+            "The iterable of the comprehension expression \"for i in x if i == 10 if i < 20\" is expected to be a Reference with localName \"x\"",
+        )
         val doubleIfPredicate = singleWithDoubleIf.comprehensionExpressions[0].predicate
-        assertIs<BinaryOperator>(doubleIfPredicate)
-        assertEquals("and", doubleIfPredicate.operatorCode)
+        assertIs<BinaryOperator>(
+            doubleIfPredicate,
+            "The two predicates \"if i == 10 if i < 20\" are expected to be connected with the binary operator \"and\" in the CPG.",
+        )
+        assertEquals(
+            "and",
+            doubleIfPredicate.operatorCode,
+            "The two predicates \"if i == 10 if i < 20\" are expected to be connected with the binary operator \"and\" in the CPG.",
+        )
 
-        val doubleAssignment = body.statements[3] as? AssignExpression
-        assertIs<AssignExpression>(doubleAssignment)
-        val double = doubleAssignment.rhs[0] as? CollectionComprehension
-        assertNotNull(double)
+        val doubleAssignment = body.statements[3]
+        assertIs<AssignExpression>(
+            doubleAssignment,
+            "The third statement in the body is \"d = {i: foo(i) for z in y if z in x for i in z if i == 10 }\" which should be represented by an AssignExpression in the CPG.",
+        )
+        val double = doubleAssignment.rhs[0]
+        assertIs<CollectionComprehension>(
+            double,
+            "The right hand side of the assignment \"d = {i: foo(i) for z in y if z in x for i in z if i == 10 }\" is expected to be modeled as a CollectionComprehension \"{i: foo(i) for z in y if z in x for i in z if i == 10 }\" in the CPG.",
+        )
         statement = singleWithIf.statement
-        assertIs<KeyValueExpression>(statement)
-        assertIs<Reference>(statement.key)
-        assertLocalName("i", statement.key)
-        assertIs<CallExpression>(statement.value)
-        assertEquals(2, double.comprehensionExpressions.size)
+        assertIs<KeyValueExpression>(
+            statement,
+            "The CollectionComprehension has the statement \"i: foo(i)\" which is expected to be modeled as a KeyValueExpression.",
+        )
+        assertIs<Reference>(
+            statement.key,
+            "The key of the CollectionComprehension of the KeyValueExpression \"i: foo(i)\" is expected to be a Reference with localName \"i\"",
+        )
+        assertLocalName(
+            "i",
+            statement.key,
+            "The key of the CollectionComprehension of the KeyValueExpression \"i: foo(i)\" is expected to be a Reference with localName \"i\"",
+        )
+        assertIs<CallExpression>(
+            statement.value,
+            "The value of the CollectionComprehension of the KeyValueExpression \"i: foo(i)\" is expected to be a CallExpression with localName \"foo\"",
+        )
+        assertLocalName(
+            "foo",
+            statement.value,
+            "The value of the CollectionComprehension of the KeyValueExpression \"i: foo(i)\" is expected to be a CallExpression with localName \"foo\"",
+        )
+        assertEquals(
+            2,
+            double.comprehensionExpressions.size,
+            "The CollectionComprehension \"{i: foo(i) for z in y if z in x for i in z if i == 10 }\" has two comprehension expressions which are \"for z in y if z in x\" and \"for i in z if i == 10\"",
+        )
     }
 
     @Test
