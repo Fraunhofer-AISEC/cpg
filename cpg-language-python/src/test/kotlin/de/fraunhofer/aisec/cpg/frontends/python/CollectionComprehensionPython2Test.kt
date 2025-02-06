@@ -64,16 +64,23 @@ class CollectionComprehensionPython2Test {
     fun testComprehensionExpressionTuple() {
         // Get the function tuple_comp
         val tupleComp = result.functions["tuple_comp"]
-        assertNotNull(tupleComp, "There was no function \"tuple_comp\"")
+        assertIs<FunctionDeclaration>(
+            tupleComp,
+            "There must be a function called \"tuple_comp\" in the file. It must be neither null nor any other class than a FunctionDeclaration.",
+        )
 
         // Get the body
         val body = tupleComp.body
-        assertIs<Block>(body, "The body of \"tuple_comp\" must be a Block.")
-        // The first statement is an assigment of a list comprehension with an if to a variable "a"
+        assertIs<Block>(
+            body,
+            "The body of each function is modeled as a Block in the CPG. This must also apply to the function \"tuple_comp\".",
+        )
+        // The first statement is expected to be an assigment of a list comprehension with an if to
+        // a variable "a"
         val tupleAsVariableAssignment = body.statements[0]
         assertIs<AssignExpression>(
             tupleAsVariableAssignment,
-            "The statement is an AssignExpression",
+            "The statement is expected to be an AssignExpression",
         )
         val tupleAsVariable = tupleAsVariableAssignment.rhs[0]
         assertIs<CollectionComprehension>(
@@ -83,44 +90,44 @@ class CollectionComprehensionPython2Test {
         val barCall = tupleAsVariable.statement
         assertIs<CallExpression>(
             barCall,
-            "The statement inside the list comprehension is a call to bar with arguments k and v",
+            "The statement inside the list comprehension is expected to be a call to bar with arguments k and v",
         )
         assertLocalName("bar", barCall, "The CallExpression calls bar()")
         val argK = barCall.arguments[0]
-        assertIs<Reference>(argK, "The first argument of bar() is a reference k")
-        assertLocalName("k", argK, "The first argument of bar() is a reference k")
+        assertIs<Reference>(argK, "The first argument of bar() is expected to be a reference k")
+        assertLocalName("k", argK, "The first argument of bar() is expected to be a reference k")
         val argV = barCall.arguments[1]
-        assertIs<Reference>(argV, "The second argument of bar() is a reference v")
-        assertLocalName("v", argV, "The second argument of bar() is a reference v")
+        assertIs<Reference>(argV, "The second argument of bar() is expected to be a reference v")
+        assertLocalName("v", argV, "The second argument of bar() is expected to be a reference v")
         assertEquals(
             1,
             tupleAsVariable.comprehensionExpressions.size,
-            "There is a single comprehension expression (\"for (k, v) in x\")",
+            "There is expected to be a single comprehension expression (\"for (k, v) in x\")",
         )
         val initializerListExpression = tupleAsVariable.comprehensionExpressions[0].variable
         assertIs<InitializerListExpression>(
             initializerListExpression,
-            "The variable is actually tuple which is represented as an InitializerListExpression in the CPG",
+            "The variable is expected to be actually tuple which is represented as an InitializerListExpression in the CPG",
         )
         val variableK = initializerListExpression.initializers[0]
         assertIs<Reference>(
             variableK,
-            "The first element in the tuple is a variable reference \"k\"",
+            "The first element in the tuple is expected to be a variable reference \"k\"",
         )
         assertLocalName(
             "k",
             variableK,
-            "The first element in the tuple is a variable reference \"k\"",
+            "The first element in the tuple is expected to be a variable reference \"k\"",
         )
         val variableV = initializerListExpression.initializers[1]
         assertIs<Reference>(
             variableV,
-            "The second element in the tuple is a variable reference \"v\"",
+            "The second element in the tuple is expected to be a variable reference \"v\"",
         )
         assertLocalName(
             "v",
             variableV,
-            "The second element in the tuple is a variable reference \"V\"",
+            "The second element in the tuple is expected to be a variable reference \"V\"",
         )
 
         // Check that the declarations exist for the variables k and v
@@ -128,12 +135,12 @@ class CollectionComprehensionPython2Test {
         assertIs<VariableDeclaration>(declK, "The refersTo should be a VariableDeclaration")
         assertIs<FunctionScope>(
             declK.scope,
-            "The scope of the variable is the function scope belonging to the function declaration. In particular, it is not the LocalScope.",
+            "The scope of the variable is expected to be the function scope belonging to the function declaration. In particular, it is not the LocalScope.",
         )
         assertEquals(
             tupleComp,
             declK.scope?.astNode,
-            "The scope of the variable is the function scope belonging to the function declaration. In particular, it is not the LocalScope.",
+            "The scope of the variable  is expected to be the function scope belonging to the function declaration. In particular, it is not the LocalScope.",
         )
         assertRefersTo(
             argK,
@@ -144,12 +151,12 @@ class CollectionComprehensionPython2Test {
         assertIs<VariableDeclaration>(declV, "The refersTo should be a VariableDeclaration")
         assertIs<FunctionScope>(
             declV.scope,
-            "The scope of the variable is the function scope belonging to the function declaration. In particular, it is not the LocalScope.",
+            "The scope of the variable is expected to be the function scope belonging to the function declaration. In particular, it is not the LocalScope.",
         )
         assertEquals(
             tupleComp,
             declV.scope?.astNode,
-            "The scope of the variable is the function scope belonging to the function declaration. In particular, it is not the LocalScope.",
+            "The scope of the variable is expected to be the function scope belonging to the function declaration. In particular, it is not the LocalScope.",
         )
         assertRefersTo(
             argV,
