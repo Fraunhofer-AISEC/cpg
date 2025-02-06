@@ -105,7 +105,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
                 PrevEOGLatticeElement(startNode to PowersetLattice.Element(startNode)),
             )
         log.debug("Iterating EOG of {}", startNode)
-        var finalState: State<Node, IdentityHashMap<Node, IdentitySet<Node>>>
+        var finalState: PrevEOGStateElement
         val executionTime = measureTimeMillis {
             finalState = prevEOGState.iterateEOG(startNode.nextEOGEdges, startState, ::handleEdge)
         }
