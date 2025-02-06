@@ -59,7 +59,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class CollectionComprehensionPython3Test {
+class CollectionComprehensionTest {
     private lateinit var result: TranslationResult
 
     @BeforeAll
