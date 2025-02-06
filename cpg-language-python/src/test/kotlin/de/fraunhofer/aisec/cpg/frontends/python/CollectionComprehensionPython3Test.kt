@@ -53,6 +53,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertSame
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
@@ -230,6 +231,15 @@ class CollectionComprehensionPython3Test {
             singleWithIf.comprehensionExpressions.size,
             "The CollectionComprehension \"[foo(i) for i in x if i == 10]\" has exactly one comprehensionExpressions which is \"for i in x if i == 10\"",
         )
+        assertIs<LocalScope>(
+            variable.scope,
+            "The scope of the variable is expected to be a local scope belonging to the list comprehension.",
+        )
+        assertSame(
+            singleWithIf,
+            variable.scope?.astNode,
+            "The scope of the variable is expected to be a local scope belonging to the list comprehension.",
+        )
         assertLocalName(
             "i",
             variable,
@@ -285,6 +295,15 @@ class CollectionComprehensionPython3Test {
             singleWithoutIf.comprehensionExpressions.size,
             "The CollectionComprehension \"[foo(i) for i in x]\" has exactly one comprehensionExpressions which is \"for i in x\"",
         )
+        assertIs<LocalScope>(
+            variable.scope,
+            "The scope of the variable is expected to be a local scope belonging to the list comprehension.",
+        )
+        assertSame(
+            singleWithoutIf,
+            variable.scope?.astNode,
+            "The scope of the variable is expected to be a local scope belonging to the list comprehension.",
+        )
         assertLocalName(
             "i",
             variable,
@@ -334,6 +353,15 @@ class CollectionComprehensionPython3Test {
             singleWithDoubleIf.comprehensionExpressions.size,
             "The CollectionComprehension \"[foo(i) for i in x if i == 10 if i < 20]\" has exactly one comprehensionExpressions which is \"for i in x if i == 10 if i < 20\"",
         )
+        assertIs<LocalScope>(
+            variable.scope,
+            "The scope of the variable is expected to be a local scope belonging to the list comprehension.",
+        )
+        assertSame(
+            singleWithDoubleIf,
+            variable.scope?.astNode,
+            "The scope of the variable is expected to be a local scope belonging to the list comprehension.",
+        )
         assertLocalName(
             "i",
             variable,
@@ -373,8 +401,7 @@ class CollectionComprehensionPython3Test {
             double,
             "The right hand side of the assignment \"d = [foo(i) for z in y if z in x for i in z if i == 10 ]\" is expected to be modeled as a CollectionComprehension \"[foo(i) for z in y if z in x for i in z if i == 10 ]\" in the CPG.",
         )
-        statement = singleWithDoubleIf.statement
-        variable = singleWithDoubleIf.comprehensionExpressions[0].variable
+        statement = double.statement
         assertIs<CallExpression>(
             statement,
             "The CollectionComprehension has the statement \"foo(i)\" which is expected to be modeled as a CallExpression with localName \"foo\".",
@@ -429,6 +456,15 @@ class CollectionComprehensionPython3Test {
             1,
             singleWithIf.comprehensionExpressions.size,
             "The CollectionComprehension \"{foo(i) for i in x if i == 10}\" has exactly one comprehensionExpressions which is \"for i in x if i == 10\"",
+        )
+        assertIs<LocalScope>(
+            variable.scope,
+            "The scope of the variable is expected to be a local scope belonging to the list comprehension.",
+        )
+        assertSame(
+            singleWithIf,
+            variable.scope?.astNode,
+            "The scope of the variable is expected to be a local scope belonging to the list comprehension.",
         )
         assertLocalName(
             "i",
@@ -485,6 +521,15 @@ class CollectionComprehensionPython3Test {
             singleWithoutIf.comprehensionExpressions.size,
             "The CollectionComprehension \"{foo(i) for i in x}\" has exactly one comprehensionExpressions which is \"for i in x\"",
         )
+        assertIs<LocalScope>(
+            variable.scope,
+            "The scope of the variable is expected to be a local scope belonging to the list comprehension.",
+        )
+        assertSame(
+            singleWithoutIf,
+            variable.scope?.astNode,
+            "The scope of the variable is expected to be a local scope belonging to the list comprehension.",
+        )
         assertLocalName(
             "i",
             variable,
@@ -534,6 +579,15 @@ class CollectionComprehensionPython3Test {
             singleWithDoubleIf.comprehensionExpressions.size,
             "The CollectionComprehension \"{foo(i) for i in x if i == 10 if i < 20}\" has exactly one comprehensionExpressions which is \"for i in x if i == 10 if i < 20\"",
         )
+        assertIs<LocalScope>(
+            variable.scope,
+            "The scope of the variable is expected to be a local scope belonging to the list comprehension.",
+        )
+        assertSame(
+            singleWithDoubleIf,
+            variable.scope?.astNode,
+            "The scope of the variable is expected to be a local scope belonging to the list comprehension.",
+        )
         assertLocalName(
             "i",
             variable,
@@ -573,8 +627,7 @@ class CollectionComprehensionPython3Test {
             double,
             "The right hand side of the assignment \"d = {foo(i) for z in y if z in x for i in z if i == 10 }\" is expected to be modeled as a CollectionComprehension \"{foo(i) for z in y if z in x for i in z if i == 10 }\" in the CPG.",
         )
-        statement = singleWithDoubleIf.statement
-        variable = singleWithDoubleIf.comprehensionExpressions[0].variable
+        statement = double.statement
         assertIs<CallExpression>(
             statement,
             "The CollectionComprehension has the statement \"foo(i)\" which is expected to be modeled as a CallExpression with localName \"foo\".",
@@ -642,6 +695,15 @@ class CollectionComprehensionPython3Test {
             1,
             singleWithIf.comprehensionExpressions.size,
             "The CollectionComprehension \"{i: foo(i) for i in x if i == 10}\" has exactly one comprehensionExpressions which is \"for i in x if i == 10\"",
+        )
+        assertIs<LocalScope>(
+            variable.scope,
+            "The scope of the variable is expected to be a local scope belonging to the list comprehension.",
+        )
+        assertSame(
+            singleWithIf,
+            variable.scope?.astNode,
+            "The scope of the variable is expected to be a local scope belonging to the list comprehension.",
         )
         assertLocalName(
             "i",
@@ -711,6 +773,15 @@ class CollectionComprehensionPython3Test {
             singleWithoutIf.comprehensionExpressions.size,
             "The CollectionComprehension \"{i: foo(i) for i in x}\" has exactly one comprehensionExpressions which is \"for i in x\"",
         )
+        assertIs<LocalScope>(
+            variable.scope,
+            "The scope of the variable is expected to be a local scope belonging to the list comprehension.",
+        )
+        assertSame(
+            singleWithoutIf,
+            variable.scope?.astNode,
+            "The scope of the variable is expected to be a local scope belonging to the list comprehension.",
+        )
         assertLocalName(
             "i",
             variable,
@@ -773,6 +844,15 @@ class CollectionComprehensionPython3Test {
             singleWithDoubleIf.comprehensionExpressions.size,
             "The CollectionComprehension \"{i: foo(i) for i in x if i == 10 if i < 20}\" has exactly one comprehensionExpressions which is \"for i in x if i == 10 if i < 20\"",
         )
+        assertIs<LocalScope>(
+            variable.scope,
+            "The scope of the variable is expected to be a local scope belonging to the list comprehension.",
+        )
+        assertSame(
+            singleWithDoubleIf,
+            variable.scope?.astNode,
+            "The scope of the variable is expected to be a local scope belonging to the list comprehension.",
+        )
         assertLocalName(
             "i",
             variable,
@@ -812,8 +892,7 @@ class CollectionComprehensionPython3Test {
             double,
             "The right hand side of the assignment \"d = {i: foo(i) for z in y if z in x for i in z if i == 10 }\" is expected to be modeled as a CollectionComprehension \"{i: foo(i) for z in y if z in x for i in z if i == 10 }\" in the CPG.",
         )
-        statement = singleWithDoubleIf.statement
-        variable = singleWithDoubleIf.comprehensionExpressions[0].variable
+        statement = double.statement
         assertIs<KeyValueExpression>(
             statement,
             "The CollectionComprehension has the statement \"i: foo(i)\" which is expected to be modeled as a KeyValueExpression.",
@@ -863,6 +942,15 @@ class CollectionComprehensionPython3Test {
         assertIs<BinaryOperator>(singleWithIf.statement)
         assertEquals(1, singleWithIf.comprehensionExpressions.size)
         var variable = singleWithIf.comprehensionExpressions[0].variable
+        assertIs<LocalScope>(
+            variable.scope,
+            "The scope of the variable is expected to be a local scope belonging to the list comprehension.",
+        )
+        assertSame(
+            singleWithIf,
+            variable.scope?.astNode,
+            "The scope of the variable is expected to be a local scope belonging to the list comprehension.",
+        )
         assertLocalName("i", variable)
         assertIs<CallExpression>(singleWithIf.comprehensionExpressions[0].iterable)
         assertLocalName("range", singleWithIf.comprehensionExpressions[0].iterable)
@@ -876,7 +964,17 @@ class CollectionComprehensionPython3Test {
         assertIs<CollectionComprehension>(singleWithoutIf)
         assertIs<BinaryOperator>(singleWithoutIf.statement)
         assertEquals(1, singleWithoutIf.comprehensionExpressions.size)
-        assertLocalName("i", singleWithoutIf.comprehensionExpressions[0].variable)
+        variable = singleWithoutIf.comprehensionExpressions[0].variable
+        assertIs<LocalScope>(
+            variable.scope,
+            "The scope of the variable is expected to be a local scope belonging to the list comprehension.",
+        )
+        assertSame(
+            singleWithoutIf,
+            variable.scope?.astNode,
+            "The scope of the variable is expected to be a local scope belonging to the list comprehension.",
+        )
+        assertLocalName("i", variable)
         assertIs<CallExpression>(singleWithIf.comprehensionExpressions[0].iterable)
         assertLocalName("range", singleWithIf.comprehensionExpressions[0].iterable)
         assertNull(singleWithoutIf.comprehensionExpressions[0].predicate)
