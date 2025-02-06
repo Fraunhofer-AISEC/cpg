@@ -215,6 +215,7 @@ class CollectionComprehensionPython3Test {
             "The right hand side of the assignment \"a = [foo(i) for i in x if i == 10]\" is expected to be modeled as a CollectionComprehension \"[foo(i) for i in x if i == 10]\" in the CPG.",
         )
         var statement = singleWithIf.statement
+        var variable = singleWithIf.comprehensionExpressions[0].variable
         assertIs<CallExpression>(
             statement,
             "The CollectionComprehension has the statement \"foo(i)\" which is expected to be modeled as a CallExpression with localName \"foo\".",
@@ -231,11 +232,11 @@ class CollectionComprehensionPython3Test {
         )
         assertLocalName(
             "i",
-            singleWithIf.comprehensionExpressions[0].variable,
+            variable,
             "The variable of the comprehension expression \"for i in x if i == 10\" is expected to be a Reference with localName \"i\"",
         )
         assertIs<Reference>(
-            singleWithIf.comprehensionExpressions[0].variable,
+            variable,
             "The variable of the comprehension expression \"for i in x if i == 10\" is expected to be a Reference with localName \"i\"",
         )
         assertIs<Reference>(
@@ -268,7 +269,8 @@ class CollectionComprehensionPython3Test {
             singleWithoutIf,
             "The right hand side of the assignment \"b = [foo(i) for i in x]\" is expected to be modeled as a CollectionComprehension \"[foo(i) for i in x]\" in the CPG.",
         )
-        statement = singleWithIf.statement
+        statement = singleWithoutIf.statement
+        variable = singleWithoutIf.comprehensionExpressions[0].variable
         assertIs<CallExpression>(
             statement,
             "The CollectionComprehension has the statement \"foo(i)\" which is expected to be modeled as a CallExpression with localName \"foo\".",
@@ -285,20 +287,20 @@ class CollectionComprehensionPython3Test {
         )
         assertLocalName(
             "i",
-            singleWithIf.comprehensionExpressions[0].variable,
+            variable,
             "The variable of the comprehension expression \"for i in x\" is expected to be a Reference with localName \"i\"",
         )
         assertIs<Reference>(
-            singleWithIf.comprehensionExpressions[0].variable,
+            variable,
             "The variable of the comprehension expression \"for i in x\" is expected to be a Reference with localName \"i\"",
         )
         assertIs<Reference>(
-            singleWithIf.comprehensionExpressions[0].iterable,
+            singleWithoutIf.comprehensionExpressions[0].iterable,
             "The iterable of the comprehension expression \"for i in x\" is expected to be a Reference with localName \"x\"",
         )
         assertLocalName(
             "x",
-            singleWithIf.comprehensionExpressions[0].iterable,
+            singleWithoutIf.comprehensionExpressions[0].iterable,
             "The iterable of the comprehension expression \"for i in x\" is expected to be a Reference with localName \"x\"",
         )
         assertNull(
@@ -316,7 +318,8 @@ class CollectionComprehensionPython3Test {
             singleWithDoubleIf,
             "The right hand side of the assignment \"c = [foo(i) for i in x if i == 10 if i < 20]\" is expected to be modeled as a CollectionComprehension \"[foo(i) for i in x if i == 10 if i < 20]\" in the CPG.",
         )
-        statement = singleWithIf.statement
+        statement = singleWithDoubleIf.statement
+        variable = singleWithDoubleIf.comprehensionExpressions[0].variable
         assertIs<CallExpression>(
             statement,
             "The CollectionComprehension has the statement \"foo(i)\" which is expected to be modeled as a CallExpression with localName \"foo\".",
@@ -333,20 +336,20 @@ class CollectionComprehensionPython3Test {
         )
         assertLocalName(
             "i",
-            singleWithIf.comprehensionExpressions[0].variable,
+            variable,
             "The variable of the comprehension expression \"for i in x if i == 10 if i < 20\" is expected to be a Reference with localName \"i\"",
         )
         assertIs<Reference>(
-            singleWithIf.comprehensionExpressions[0].variable,
+            variable,
             "The variable of the comprehension expression \"for i in x if i == 10 if i < 20\" is expected to be a Reference with localName \"i\"",
         )
         assertIs<Reference>(
-            singleWithIf.comprehensionExpressions[0].iterable,
+            singleWithDoubleIf.comprehensionExpressions[0].iterable,
             "The iterable of the comprehension expression \"for i in x if i == 10 if i < 20\" is expected to be a Reference with localName \"x\"",
         )
         assertLocalName(
             "x",
-            singleWithIf.comprehensionExpressions[0].iterable,
+            singleWithDoubleIf.comprehensionExpressions[0].iterable,
             "The iterable of the comprehension expression \"for i in x if i == 10 if i < 20\" is expected to be a Reference with localName \"x\"",
         )
         val doubleIfPredicate = singleWithDoubleIf.comprehensionExpressions[0].predicate
@@ -370,7 +373,8 @@ class CollectionComprehensionPython3Test {
             double,
             "The right hand side of the assignment \"d = [foo(i) for z in y if z in x for i in z if i == 10 ]\" is expected to be modeled as a CollectionComprehension \"[foo(i) for z in y if z in x for i in z if i == 10 ]\" in the CPG.",
         )
-        statement = singleWithIf.statement
+        statement = singleWithDoubleIf.statement
+        variable = singleWithDoubleIf.comprehensionExpressions[0].variable
         assertIs<CallExpression>(
             statement,
             "The CollectionComprehension has the statement \"foo(i)\" which is expected to be modeled as a CallExpression with localName \"foo\".",
@@ -411,6 +415,7 @@ class CollectionComprehensionPython3Test {
             "The right hand side of the assignment \"a = {foo(i) for i in x if i == 10}\" is expected to be modeled as a CollectionComprehension \"{foo(i) for i in x if i == 10}\" in the CPG.",
         )
         var statement = singleWithIf.statement
+        var variable = singleWithIf.comprehensionExpressions[0].variable
         assertIs<CallExpression>(
             statement,
             "The CollectionComprehension has the statement \"foo(i)\" which is expected to be modeled as a CallExpression with localName \"foo\".",
@@ -427,11 +432,11 @@ class CollectionComprehensionPython3Test {
         )
         assertLocalName(
             "i",
-            singleWithIf.comprehensionExpressions[0].variable,
+            variable,
             "The variable of the comprehension expression \"for i in x if i == 10\" is expected to be a Reference with localName \"i\"",
         )
         assertIs<Reference>(
-            singleWithIf.comprehensionExpressions[0].variable,
+            variable,
             "The variable of the comprehension expression \"for i in x if i == 10\" is expected to be a Reference with localName \"i\"",
         )
         assertIs<Reference>(
@@ -464,7 +469,8 @@ class CollectionComprehensionPython3Test {
             singleWithoutIf,
             "The right hand side of the assignment \"b = {foo(i) for i in x}\" is expected to be modeled as a CollectionComprehension \"{foo(i) for i in x}\" in the CPG.",
         )
-        statement = singleWithIf.statement
+        statement = singleWithoutIf.statement
+        variable = singleWithoutIf.comprehensionExpressions[0].variable
         assertIs<CallExpression>(
             statement,
             "The CollectionComprehension has the statement \"foo(i)\" which is expected to be modeled as a CallExpression with localName \"foo\".",
@@ -481,20 +487,20 @@ class CollectionComprehensionPython3Test {
         )
         assertLocalName(
             "i",
-            singleWithIf.comprehensionExpressions[0].variable,
+            variable,
             "The variable of the comprehension expression \"for i in x\" is expected to be a Reference with localName \"i\"",
         )
         assertIs<Reference>(
-            singleWithIf.comprehensionExpressions[0].variable,
+            variable,
             "The variable of the comprehension expression \"for i in x\" is expected to be a Reference with localName \"i\"",
         )
         assertIs<Reference>(
-            singleWithIf.comprehensionExpressions[0].iterable,
+            singleWithoutIf.comprehensionExpressions[0].iterable,
             "The iterable of the comprehension expression \"for i in x\" is expected to be a Reference with localName \"x\"",
         )
         assertLocalName(
             "x",
-            singleWithIf.comprehensionExpressions[0].iterable,
+            singleWithoutIf.comprehensionExpressions[0].iterable,
             "The iterable of the comprehension expression \"for i in x\" is expected to be a Reference with localName \"x\"",
         )
         assertNull(
@@ -512,7 +518,8 @@ class CollectionComprehensionPython3Test {
             singleWithDoubleIf,
             "The right hand side of the assignment \"c = {foo(i) for i in x if i == 10 if i < 20}\" is expected to be modeled as a CollectionComprehension \"{foo(i) for i in x if i == 10 if i < 20}\" in the CPG.",
         )
-        statement = singleWithIf.statement
+        statement = singleWithDoubleIf.statement
+        variable = singleWithDoubleIf.comprehensionExpressions[0].variable
         assertIs<CallExpression>(
             statement,
             "The CollectionComprehension has the statement \"foo(i)\" which is expected to be modeled as a CallExpression with localName \"foo\".",
@@ -529,20 +536,20 @@ class CollectionComprehensionPython3Test {
         )
         assertLocalName(
             "i",
-            singleWithIf.comprehensionExpressions[0].variable,
+            variable,
             "The variable of the comprehension expression \"for i in x if i == 10 if i < 20\" is expected to be a Reference with localName \"i\"",
         )
         assertIs<Reference>(
-            singleWithIf.comprehensionExpressions[0].variable,
+            variable,
             "The variable of the comprehension expression \"for i in x if i == 10 if i < 20\" is expected to be a Reference with localName \"i\"",
         )
         assertIs<Reference>(
-            singleWithIf.comprehensionExpressions[0].iterable,
+            singleWithDoubleIf.comprehensionExpressions[0].iterable,
             "The iterable of the comprehension expression \"for i in x if i == 10 if i < 20\" is expected to be a Reference with localName \"x\"",
         )
         assertLocalName(
             "x",
-            singleWithIf.comprehensionExpressions[0].iterable,
+            singleWithDoubleIf.comprehensionExpressions[0].iterable,
             "The iterable of the comprehension expression \"for i in x if i == 10 if i < 20\" is expected to be a Reference with localName \"x\"",
         )
         val doubleIfPredicate = singleWithDoubleIf.comprehensionExpressions[0].predicate
@@ -566,7 +573,8 @@ class CollectionComprehensionPython3Test {
             double,
             "The right hand side of the assignment \"d = {foo(i) for z in y if z in x for i in z if i == 10 }\" is expected to be modeled as a CollectionComprehension \"{foo(i) for z in y if z in x for i in z if i == 10 }\" in the CPG.",
         )
-        statement = singleWithIf.statement
+        statement = singleWithDoubleIf.statement
+        variable = singleWithDoubleIf.comprehensionExpressions[0].variable
         assertIs<CallExpression>(
             statement,
             "The CollectionComprehension has the statement \"foo(i)\" which is expected to be modeled as a CallExpression with localName \"foo\".",
@@ -607,6 +615,7 @@ class CollectionComprehensionPython3Test {
             "The right hand side of the assignment \"a = {i: foo(i) for i in x if i == 10}\" is expected to be modeled as a CollectionComprehension \"{i: foo(i) for i in x if i == 10}\" in the CPG.",
         )
         var statement = singleWithIf.statement
+        var variable = singleWithIf.comprehensionExpressions[0].variable
         assertIs<KeyValueExpression>(
             statement,
             "The CollectionComprehension has the statement \"i: foo(i)\" which is expected to be modeled as a KeyValueExpression.",
@@ -636,11 +645,11 @@ class CollectionComprehensionPython3Test {
         )
         assertLocalName(
             "i",
-            singleWithIf.comprehensionExpressions[0].variable,
+            variable,
             "The variable of the comprehension expression \"for i in x if i == 10\" is expected to be a Reference with localName \"i\"",
         )
         assertIs<Reference>(
-            singleWithIf.comprehensionExpressions[0].variable,
+            variable,
             "The variable of the comprehension expression \"for i in x if i == 10\" is expected to be a Reference with localName \"i\"",
         )
         assertIs<Reference>(
@@ -673,7 +682,8 @@ class CollectionComprehensionPython3Test {
             singleWithoutIf,
             "The right hand side of the assignment \"b = {i: foo(i) for i in x}\" is expected to be modeled as a CollectionComprehension \"{i: foo(i) for i in x}\" in the CPG.",
         )
-        statement = singleWithIf.statement
+        statement = singleWithoutIf.statement
+        variable = singleWithoutIf.comprehensionExpressions[0].variable
         assertIs<KeyValueExpression>(
             statement,
             "The CollectionComprehension has the statement \"i: foo(i)\" which is expected to be modeled as a KeyValueExpression.",
@@ -703,20 +713,20 @@ class CollectionComprehensionPython3Test {
         )
         assertLocalName(
             "i",
-            singleWithIf.comprehensionExpressions[0].variable,
+            variable,
             "The variable of the comprehension expression \"for i in x\" is expected to be a Reference with localName \"i\"",
         )
         assertIs<Reference>(
-            singleWithIf.comprehensionExpressions[0].variable,
+            variable,
             "The variable of the comprehension expression \"for i in x\" is expected to be a Reference with localName \"i\"",
         )
         assertIs<Reference>(
-            singleWithIf.comprehensionExpressions[0].iterable,
+            singleWithoutIf.comprehensionExpressions[0].iterable,
             "The iterable of the comprehension expression \"for i in x\" is expected to be a Reference with localName \"x\"",
         )
         assertLocalName(
             "x",
-            singleWithIf.comprehensionExpressions[0].iterable,
+            singleWithoutIf.comprehensionExpressions[0].iterable,
             "The iterable of the comprehension expression \"for i in x\" is expected to be a Reference with localName \"x\"",
         )
         assertNull(
@@ -734,7 +744,8 @@ class CollectionComprehensionPython3Test {
             singleWithDoubleIf,
             "The right hand side of the assignment \"c = {i: foo(i) for i in x if i == 10 if i < 20}\" is expected to be modeled as a CollectionComprehension \"{i: foo(i) for i in x if i == 10 if i < 20}\" in the CPG.",
         )
-        statement = singleWithIf.statement
+        statement = singleWithDoubleIf.statement
+        variable = singleWithDoubleIf.comprehensionExpressions[0].variable
         assertIs<KeyValueExpression>(
             statement,
             "The CollectionComprehension has the statement \"i: foo(i)\" which is expected to be modeled as a KeyValueExpression.",
@@ -764,20 +775,20 @@ class CollectionComprehensionPython3Test {
         )
         assertLocalName(
             "i",
-            singleWithIf.comprehensionExpressions[0].variable,
+            variable,
             "The variable of the comprehension expression \"for i in x if i == 10 if i < 20\" is expected to be a Reference with localName \"i\"",
         )
         assertIs<Reference>(
-            singleWithIf.comprehensionExpressions[0].variable,
+            variable,
             "The variable of the comprehension expression \"for i in x if i == 10 if i < 20\" is expected to be a Reference with localName \"i\"",
         )
         assertIs<Reference>(
-            singleWithIf.comprehensionExpressions[0].iterable,
+            singleWithDoubleIf.comprehensionExpressions[0].iterable,
             "The iterable of the comprehension expression \"for i in x if i == 10 if i < 20\" is expected to be a Reference with localName \"x\"",
         )
         assertLocalName(
             "x",
-            singleWithIf.comprehensionExpressions[0].iterable,
+            singleWithDoubleIf.comprehensionExpressions[0].iterable,
             "The iterable of the comprehension expression \"for i in x if i == 10 if i < 20\" is expected to be a Reference with localName \"x\"",
         )
         val doubleIfPredicate = singleWithDoubleIf.comprehensionExpressions[0].predicate
@@ -801,7 +812,8 @@ class CollectionComprehensionPython3Test {
             double,
             "The right hand side of the assignment \"d = {i: foo(i) for z in y if z in x for i in z if i == 10 }\" is expected to be modeled as a CollectionComprehension \"{i: foo(i) for z in y if z in x for i in z if i == 10 }\" in the CPG.",
         )
-        statement = singleWithIf.statement
+        statement = singleWithDoubleIf.statement
+        variable = singleWithDoubleIf.comprehensionExpressions[0].variable
         assertIs<KeyValueExpression>(
             statement,
             "The CollectionComprehension has the statement \"i: foo(i)\" which is expected to be modeled as a KeyValueExpression.",
@@ -850,7 +862,8 @@ class CollectionComprehensionPython3Test {
         assertIs<CollectionComprehension>(singleWithIf)
         assertIs<BinaryOperator>(singleWithIf.statement)
         assertEquals(1, singleWithIf.comprehensionExpressions.size)
-        assertLocalName("i", singleWithIf.comprehensionExpressions[0].variable)
+        var variable = singleWithIf.comprehensionExpressions[0].variable
+        assertLocalName("i", variable)
         assertIs<CallExpression>(singleWithIf.comprehensionExpressions[0].iterable)
         assertLocalName("range", singleWithIf.comprehensionExpressions[0].iterable)
         val ifPredicate = singleWithIf.comprehensionExpressions[0].predicate
