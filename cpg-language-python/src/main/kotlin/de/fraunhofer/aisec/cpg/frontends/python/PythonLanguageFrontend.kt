@@ -175,8 +175,7 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
                 var type = type
                 val names = mutableListOf<String>()
 
-                // Traverse nested attributes (e.g., `modules.a.Foobar`) to reconstruct the full
-                // name.
+                // Traverse nested attributes (e.g., `modules.a.Foobar`)
                 while (type is Python.AST.Attribute) {
                     names.add(type.attr)
                     type = type.value
