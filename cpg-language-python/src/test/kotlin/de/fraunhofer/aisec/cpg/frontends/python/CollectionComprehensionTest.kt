@@ -1535,6 +1535,11 @@ class CollectionComprehensionTest {
             innerVariableDeclarationA,
             "We expect that the reference \"a\" used as an index in the first element of the tuple does refers to the same VariableDeclaration as the second element of the tuple. Python crashes because it's not initialized at this point in time.",
         )
+        assertEquals(
+            0,
+            index.prevDFG.size,
+            "We expect that the reference \"a\" used as an index in the first element of the tuple does not have any incoming data flows which somewhat simulates that it's not initialized at this point in time which is also why python crashes.",
+        )
     }
 
     @Test
