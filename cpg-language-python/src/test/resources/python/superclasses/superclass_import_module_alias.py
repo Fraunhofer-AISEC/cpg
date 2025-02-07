@@ -1,5 +1,5 @@
-from resources.python import superclasses
+from resources.python import superclasses as super_alias
 
-class base(superclasses.superclass.Foobar):
+class base(super_alias.superclass.Foobar):
     pass
 
