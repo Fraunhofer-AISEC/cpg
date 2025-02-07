@@ -51,3 +51,8 @@ def comp_binding_assign_expr_nested(foo):
     x = 42
     [[(x := temp) for temp in foo] for a in foo]
     print(x) # doesn't print 42
+
+def comprehension_with_list_assignment():
+    b = [0, 1, 2]
+    [a for (a, b[0]) in [(1, 2), (2, 4), (3, 6)]]
+    print(b) # prints [6, 1, 2]
