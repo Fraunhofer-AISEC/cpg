@@ -1533,16 +1533,16 @@ class CollectionComprehensionTest {
         assertNotRefersTo(
             index,
             variableDeclarationA,
-            "We expect that the reference \"a\" in the first element of the tuple does not refer to the same VariableDeclaration as the second element of the tuple nor to the local variable nor does it have an own VariableDeclaration.",
+            "We expect that the reference \"a\" used as an index in the second element of the tuple does not refer to the same VariableDeclaration as the second element of the tuple nor to the local variable nor does it have an own VariableDeclaration since python would just crash.",
         )
         assertNotRefersTo(
             index,
             aDeclaration,
-            "We expect that the reference \"a\" in the first element of the tuple does not refer to the same VariableDeclaration as the second element of the tuple nor to the local variable nor does it have an own VariableDeclaration.",
+            "We expect that the reference \"a\" used as an index in the second element of the tuple does not refer to the same VariableDeclaration as the second element of the tuple nor to the local variable nor does it have an own VariableDeclaration since python would just crash.",
         )
         assertNull(
             index.refersTo,
-            "We expect that the reference \"a\" in the first element of the tuple does not refer to the same VariableDeclaration as the second element of the tuple nor to the local variable nor does it have an own VariableDeclaration.",
+            "We expect that the reference \"a\" used as an index in the second element of the tuple does not refer to the same VariableDeclaration as the second element of the tuple nor to the local variable nor does it have an own VariableDeclaration since python would just crash.",
         )
     }
 }
