@@ -1477,27 +1477,27 @@ class CollectionComprehensionTest {
         val accessBA = tuple.initializers[0]
         assertIs<SubscriptExpression>(
             accessBA,
-            "The first element of the tuple \"(b[a], a)\" is expected to be represented by a SubscriptExpression with in the CPG. We expect that the base is a Reference with localName \"b\"  and the subscriptExpression representing the index is a Reference \"a\" which refers to the same variable as the tuple's first element.",
+            "The first element of the tuple \"(b[a], a)\" is expected to be represented by a SubscriptExpression with in the CPG. We expect that the base is a Reference with localName \"b\"  and the subscriptExpression representing the index is a Reference \"a\" which refers to no variable available at this point.",
         )
         val refB = accessBA.arrayExpression
         assertIs<Reference>(
             refB,
-            "The first element of the tuple \"(b[a], a)\" is expected to be represented by a SubscriptExpression with in the CPG. We expect that the base is a Reference with localName \"b\"  and the subscriptExpression representing the index is a Reference \"a\" which refers to the same variable as the tuple's first element.",
+            "The first element of the tuple \"(b[a], a)\" is expected to be represented by a SubscriptExpression with in the CPG. We expect that the base is a Reference with localName \"b\"  and the subscriptExpression representing the index is a Reference \"a\" which refers to no variable available at this point.",
         )
         assertLocalName(
             "b",
             refB,
-            "The first element of the tuple \"(b[a], a)\" is expected to be represented by a SubscriptExpression with in the CPG. We expect that the base is a Reference with localName \"b\"  and the subscriptExpression representing the index is Reference \"a\" which refers to the same variable as the tuple's first element.",
+            "The first element of the tuple \"(b[a], a)\" is expected to be represented by a SubscriptExpression with in the CPG. We expect that the base is a Reference with localName \"b\"  and the subscriptExpression representing the index is a Reference \"a\" which refers to no variable available at this point.",
         )
         val index = accessBA.subscriptExpression
         assertIs<Reference>(
             index,
-            "The first element of the tuple \"(b[a], a)\" is expected to be represented by a SubscriptExpression with in the CPG. We expect that the base is a Reference with localName \"b\"  and the subscriptExpression representing the index is Reference \"a\" which refers to the same variable as the tuple's first element.",
+            "The first element of the tuple \"(b[a], a)\" is expected to be represented by a SubscriptExpression with in the CPG. We expect that the base is a Reference with localName \"b\"  and the subscriptExpression representing the index is a Reference \"a\" which refers to no variable available at this point.",
         )
         assertLocalName(
             "a",
             index,
-            "The first element of the tuple \"(b[a], a)\" is expected to be represented by a SubscriptExpression with in the CPG. We expect that the base is a Reference with localName \"b\"  and the subscriptExpression representing the index is a Literal<Int> with value \"0\" (with kotlin type Long ).",
+            "The first element of the tuple \"(b[a], a)\" is expected to be represented by a SubscriptExpression with in the CPG. We expect that the base is a Reference with localName \"b\"  and the subscriptExpression representing the index is a Reference \"a\" which refers to no variable available at this point.",
         )
         val refA = tuple.initializers[1]
         assertIs<Reference>(
@@ -1533,16 +1533,172 @@ class CollectionComprehensionTest {
         assertNotRefersTo(
             index,
             variableDeclarationA,
-            "We expect that the reference \"a\" used as an index in the second element of the tuple does not refer to the same VariableDeclaration as the second element of the tuple nor to the local variable nor does it have an own VariableDeclaration since python would just crash.",
+            "We expect that the reference \"a\" used as an index in the first element of the tuple does not refer to the same VariableDeclaration as the second element of the tuple nor to the local variable nor does it have an own VariableDeclaration since python would just crash.",
         )
         assertNotRefersTo(
             index,
             aDeclaration,
-            "We expect that the reference \"a\" used as an index in the second element of the tuple does not refer to the same VariableDeclaration as the second element of the tuple nor to the local variable nor does it have an own VariableDeclaration since python would just crash.",
+            "We expect that the reference \"a\" used as an index in the first element of the tuple does not refer to the same VariableDeclaration as the second element of the tuple nor to the local variable nor does it have an own VariableDeclaration since python would just crash.",
         )
         assertNull(
             index.refersTo,
-            "We expect that the reference \"a\" used as an index in the second element of the tuple does not refer to the same VariableDeclaration as the second element of the tuple nor to the local variable nor does it have an own VariableDeclaration since python would just crash.",
+            "We expect that the reference \"a\" used as an index in the first element of the tuple does not refer to the same VariableDeclaration as the second element of the tuple nor to the local variable nor does it have an own VariableDeclaration since python would just crash.",
+        )
+    }
+
+    @Test
+    fun testcomprehensionWithListAssignmentAndLocalIndexVariable() {
+        val comprehensionWithListAssignmentAndLocalIndexVariableFunctionDeclaration =
+            result.functions["comprehension_with_list_assignment_and_local_index_variable"]
+        assertIs<FunctionDeclaration>(
+            comprehensionWithListAssignmentAndLocalIndexVariableFunctionDeclaration,
+            "There must be a function called \"comprehension_with_list_assignment_and_local_index_variable\" in the file. It must be neither null nor any other class than a FunctionDeclaration.",
+        )
+
+        // Get the body
+        val body = comprehensionWithListAssignmentAndLocalIndexVariableFunctionDeclaration.body
+        assertIs<Block>(
+            body,
+            "The body of each function is modeled as a Block in the CPG. This must also apply to the function \"comprehension_with_list_assignment_and_local_index_variable\".",
+        )
+
+        val listBInitialization = body.statements[0]
+        assertIs<AssignExpression>(
+            listBInitialization,
+            "The first statement of the function \"comprehension_with_list_assignment_and_local_index_variable\" is expected to be the initialization of list \"b\" by the statement \"b = [0, 1, 2]\" which is expected to be represented by an AssignExpression in the CPG.",
+        )
+        val refBFirstStatement = listBInitialization.lhs[0]
+        assertIs<Reference>(
+            refBFirstStatement,
+            "The left hand side of the assignment \"b = [0, 1, 2]\" is expected to be represented by a Reference with localName \"b\" in the CPG.",
+        )
+        assertLocalName(
+            "b",
+            refBFirstStatement,
+            "The left hand side of the assignment \"b = [0, 1, 2]\" is expected to be represented by a Reference with localName \"b\" in the CPG.",
+        )
+        val bDeclaration = listBInitialization.variables["b"]
+        assertIs<VariableDeclaration>(
+            bDeclaration,
+            "There must be a VariableDeclaration with the local name \"b\" inside the first statement of the function \"comprehension_with_list_assignment_and_local_index_variable\".",
+        )
+        assertRefersTo(
+            refBFirstStatement,
+            bDeclaration,
+            "The reference \"b\" is expected to refer to the variable declaration \"b\" in the same statement.",
+        )
+
+        val localCAssignment = body.statements[1]
+        assertIs<AssignExpression>(
+            localCAssignment,
+            "The first statement of the function \"comprehension_with_list_assignment_and_local_index_variable\" is expected to be the initialization of the local variable \"c\" by the statement \"c = 1\" which is expected to be represented by an AssignExpression in the CPG.",
+        )
+        val localCRef = localCAssignment.lhs[0]
+        assertIs<Reference>(
+            localCRef,
+            "The left hand side of the assignment \"c = 1\" is expected to be represented by a Reference with localName \"c\" in the CPG.",
+        )
+        val cDeclaration = localCAssignment.variables["c"]
+        assertIs<VariableDeclaration>(
+            cDeclaration,
+            "There must be a VariableDeclaration with the local name \"c\" inside the first statement of the function \"comprehension_with_list_assignment_and_local_index_variable\".",
+        )
+        assertRefersTo(
+            localCRef,
+            cDeclaration,
+            "The reference \"c\" is expected to refer to the variable declaration \"c\" in the same statement.",
+        )
+
+        // Check if the AST of the list comprehension fits our expectations.
+        val listComprehensionWithTupleAndAssignmentToListElement = body.statements[2]
+        assertIs<CollectionComprehension>(
+            listComprehensionWithTupleAndAssignmentToListElement,
+            "The third statement of the function \"comprehension_with_list_assignment_and_local_index_variable\" is expected to be python's list comprehension \"[a for (b[c], a) in [('this', 0), ('is', 1), ('fun', 2)]]\" which is represented by a CollectionComprehension in the CPG",
+        )
+
+        val comprehensionExpression =
+            listComprehensionWithTupleAndAssignmentToListElement.comprehensionExpressions
+                .singleOrNull()
+        assertEquals(
+            1,
+            listComprehensionWithTupleAndAssignmentToListElement.comprehensionExpressions.size,
+            "There is expected to be exactly one CollectionComprehension in the list comprehension \"[a for (b[c], a) in [('this', 0), ('is', 1), ('fun', 2)]]\". It represents the code's part \"for (b[c], a) in [('this', 0), ('is', 1), ('fun', 2)]\"",
+        )
+        assertIs<ComprehensionExpression>(
+            comprehensionExpression,
+            "There is expected to be exactly one ComprehensionExpression in the list comprehension \"[a for (b[c], a) in [('this', 0), ('is', 1), ('fun', 2)]]\". It represents the code's part \"for (b[c], a) in [('this', 0), ('is', 1), ('fun', 2)]\"",
+        )
+
+        val tuple = comprehensionExpression.variable
+        assertIs<InitializerListExpression>(
+            tuple,
+            "The variable of the ComprehensionExpression is the tuple \"(b[c], a)\" which is expected to be represented by an InitializerListExpression in the CPG.",
+        )
+        assertEquals(
+            2,
+            tuple.initializers.size,
+            "The tuple \"(b[c], a)\" represented by an InitializerListExpression in the CPG is expected to have exactly two elements.",
+        )
+        val accessBA = tuple.initializers[0]
+        assertIs<SubscriptExpression>(
+            accessBA,
+            "The first element of the tuple \"(b[c], a)\" is expected to be represented by a SubscriptExpression with in the CPG. We expect that the base is a Reference with localName \"b\" and the subscriptExpression representing the index is a Reference \"c\" which refers to the local variable.",
+        )
+        val refB = accessBA.arrayExpression
+        assertIs<Reference>(
+            refB,
+            "The first element of the tuple \"(b[c], a)\" is expected to be represented by a SubscriptExpression with in the CPG. We expect that the base is a Reference with localName \"b\" and the subscriptExpression representing the index is a Reference \"c\" which refers to the local variable.",
+        )
+        assertLocalName(
+            "b",
+            refB,
+            "The first element of the tuple \"(b[c], a)\" is expected to be represented by a SubscriptExpression with in the CPG. We expect that the base is a Reference with localName \"b\" and the subscriptExpression representing the index is a Reference \"c\" which refers to the local variable.",
+        )
+        val index = accessBA.subscriptExpression
+        assertIs<Reference>(
+            index,
+            "The first element of the tuple \"(b[c], a)\" is expected to be represented by a SubscriptExpression with in the CPG. We expect that the base is a Reference with localName \"b\" and the subscriptExpression representing the index is a Reference \"c\" which refers to the local variable.",
+        )
+        assertLocalName(
+            "c",
+            index,
+            "The first element of the tuple \"(b[c], a)\" is expected to be represented by a SubscriptExpression with in the CPG. We expect that the base is a Reference with localName \"b\" and the subscriptExpression representing the index is a Reference \"c\" which refers to the local variable.",
+        )
+        val refA = tuple.initializers[1]
+        assertIs<Reference>(
+            refA,
+            "The second element of the tuple \"(b[c], a)\" is expected to be represented by a Reference with localName \"a\" in the CPG.",
+        )
+        assertLocalName(
+            "a",
+            refA,
+            "The second element of the tuple \"(b[c], a)\" is expected to be represented by a Reference with localName \"a\" in the CPG.",
+        )
+
+        // Now the actually interesting part: We check for variables belonging to the references.
+        val variableDeclarationA = refA.refersTo
+        assertIs<VariableDeclaration>(
+            variableDeclarationA,
+            "We expect that the reference \"a\" in the second element of the tuple refers to a VariableDeclaration with localName \"a\" which is not null and whose scope is the LocalScope of the list comprehension.",
+        )
+        assertIs<LocalScope>(
+            variableDeclarationA.scope,
+            "We expect that the reference \"a\" refers to a VariableDeclaration with localName \"a\" which is not null and whose scope is the LocalScope of the list comprehension.",
+        )
+        assertEquals(
+            listComprehensionWithTupleAndAssignmentToListElement,
+            variableDeclarationA.scope?.astNode,
+            "We expect that the reference \"a\" refers to a VariableDeclaration with localName \"a\" which is not null and whose scope is the LocalScope of the list comprehension.",
+        )
+        assertRefersTo(
+            refB,
+            bDeclaration,
+            "We expect that the reference \"b\" in the tuple refers to the VariableDeclaration of \"b\" which is added outside the list comprehension (in statement 0).",
+        )
+        assertRefersTo(
+            index,
+            cDeclaration,
+            "We expect that the reference \"c\" used as an index in the first element of the tuple refers to the local variable \"c\" (in statement 1).",
         )
     }
 }
