@@ -1118,15 +1118,15 @@ class CollectionComprehensionTest {
 
     @Test
     fun testCompBindingListAssignment() {
-        val comprehensionWithListAssignemntFunctionDeclaration =
+        val comprehensionWithListAssignmentFunctionDeclaration =
             result.functions["comprehension_with_list_assignment"]
         assertIs<FunctionDeclaration>(
-            comprehensionWithListAssignemntFunctionDeclaration,
+            comprehensionWithListAssignmentFunctionDeclaration,
             "There must be a function called \"comprehension_with_list_assignment\" in the file. It must be neither null nor any other class than a FunctionDeclaration.",
         )
 
         // Get the body
-        val body = comprehensionWithListAssignemntFunctionDeclaration.body
+        val body = comprehensionWithListAssignmentFunctionDeclaration.body
         assertIs<Block>(
             body,
             "The body of each function is modeled as a Block in the CPG. This must also apply to the function \"comprehension_with_list_assignment\".",
@@ -1247,7 +1247,7 @@ class CollectionComprehensionTest {
     }
 
     @Test
-    fun testcomprehensionWithListAssignmentAndIndexVariable() {
+    fun testComprehensionWithListAssignmentAndIndexVariable() {
         val comprehensionWithListAssignmentAndIndexVariableFunctionDeclaration =
             result.functions["comprehension_with_list_assignment_and_index_variable"]
         assertIs<FunctionDeclaration>(
@@ -1382,7 +1382,7 @@ class CollectionComprehensionTest {
     }
 
     @Test
-    fun testcomprehensionWithListAssignmentAndIndexVariableReversed() {
+    fun testComprehensionWithListAssignmentAndIndexVariableReversed() {
         val comprehensionWithListAssignmentAndIndexVariableReversedFunctionDeclaration =
             result.functions["comprehension_with_list_assignment_and_index_variable_reversed"]
         assertIs<FunctionDeclaration>(
@@ -1511,18 +1511,18 @@ class CollectionComprehensionTest {
         )
 
         // Now the actually interesting part: We check for variables belonging to the references.
-        val variableDeclarationA = refA.refersTo
+        val innerVariableDeclarationA = refA.refersTo
         assertIs<VariableDeclaration>(
-            variableDeclarationA,
+            innerVariableDeclarationA,
             "We expect that the reference \"a\" in the second element of the tuple refers to a VariableDeclaration with localName \"a\" which is not null and whose scope is the LocalScope of the list comprehension.",
         )
         assertIs<LocalScope>(
-            variableDeclarationA.scope,
+            innerVariableDeclarationA.scope,
             "We expect that the reference \"a\" refers to a VariableDeclaration with localName \"a\" which is not null and whose scope is the LocalScope of the list comprehension.",
         )
         assertEquals(
             listComprehensionWithTupleAndAssignmentToListElement,
-            variableDeclarationA.scope?.astNode,
+            innerVariableDeclarationA.scope?.astNode,
             "We expect that the reference \"a\" refers to a VariableDeclaration with localName \"a\" which is not null and whose scope is the LocalScope of the list comprehension.",
         )
         assertRefersTo(
@@ -1530,24 +1530,15 @@ class CollectionComprehensionTest {
             bDeclaration,
             "We expect that the reference \"b\" in the tuple refers to the VariableDeclaration of \"b\" which is added outside the list comprehension (in statement 0).",
         )
-        assertNotRefersTo(
+        assertRefersTo(
             index,
-            variableDeclarationA,
-            "We expect that the reference \"a\" used as an index in the first element of the tuple does not refer to the same VariableDeclaration as the second element of the tuple nor to the local variable nor does it have an own VariableDeclaration since python would just crash.",
-        )
-        assertNotRefersTo(
-            index,
-            aDeclaration,
-            "We expect that the reference \"a\" used as an index in the first element of the tuple does not refer to the same VariableDeclaration as the second element of the tuple nor to the local variable nor does it have an own VariableDeclaration since python would just crash.",
-        )
-        assertNull(
-            index.refersTo,
-            "We expect that the reference \"a\" used as an index in the first element of the tuple does not refer to the same VariableDeclaration as the second element of the tuple nor to the local variable nor does it have an own VariableDeclaration since python would just crash.",
+            innerVariableDeclarationA,
+            "We expect that the reference \"a\" used as an index in the first element of the tuple does refers to the same VariableDeclaration as the second element of the tuple. Python crashes because it's not initialized at this point in time.",
         )
     }
 
     @Test
-    fun testcomprehensionWithListAssignmentAndLocalIndexVariable() {
+    fun testComprehensionWithListAssignmentAndLocalIndexVariable() {
         val comprehensionWithListAssignmentAndLocalIndexVariableFunctionDeclaration =
             result.functions["comprehension_with_list_assignment_and_local_index_variable"]
         assertIs<FunctionDeclaration>(

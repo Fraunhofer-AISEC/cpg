@@ -64,7 +64,7 @@ def comprehension_with_list_assignment_and_index_variable():
 def comprehension_with_list_assignment_and_index_variable_reversed():
     b = [0, 1, 2]
     a = 1
-    [a for (b[a], a) in [('this', 0), ('is', 1), ('fun', 2)]] # This crashes because the "a" in the tuple shadows the outer variable.
+    [a for (b[a], a) in [('this', 0), ('is', 1), ('fun', 2)]] # This crashes because the "a" in the tuple shadows the outer variable and "UnboundLocalError: cannot access local variable 'a' where it is not associated with a value".
     print(b) # prints nothing due to crash
 
 def comprehension_with_list_assignment_and_local_index_variable():
