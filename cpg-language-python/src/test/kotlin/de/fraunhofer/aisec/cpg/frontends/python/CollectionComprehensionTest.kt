@@ -1530,15 +1530,24 @@ class CollectionComprehensionTest {
             bDeclaration,
             "We expect that the reference \"b\" in the tuple refers to the VariableDeclaration of \"b\" which is added outside the list comprehension (in statement 0).",
         )
-        assertRefersTo(
-            index,
-            innerVariableDeclarationA,
-            "We expect that the reference \"a\" used as an index in the first element of the tuple does refers to the same VariableDeclaration as the second element of the tuple. Python crashes because it's not initialized at this point in time.",
-        )
         assertEquals(
             0,
             index.prevDFG.size,
             "We expect that the reference \"a\" used as an index in the first element of the tuple does not have any incoming data flows which somewhat simulates that it's not initialized at this point in time which is also why python crashes.",
+        )
+        assertNotRefersTo(
+            index,
+            aDeclaration,
+            "We expect that the reference \"a\" used as an index in the first element of the tuple does not refer to the same VariableDeclaration as the second element of the tuple nor to the local variable nor does it have an own VariableDeclaration since python would just crash.",
+        )
+        assertNotRefersTo(
+            index,
+            innerVariableDeclarationA,
+            "We expect that the reference \"a\" used as an index in the first element of the tuple does not refer to the same VariableDeclaration as the second element of the tuple nor to the local variable nor does it have an own VariableDeclaration since python would just crash.",
+        )
+        assertNull(
+            index.refersTo,
+            "We expect that the reference \"a\" used as an index in the first element of the tuple does not refer to the same VariableDeclaration as the second element of the tuple nor to the local variable nor does it have an own VariableDeclaration since python would just crash.",
         )
     }
 
