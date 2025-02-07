@@ -45,7 +45,6 @@ def comp_binding_assign_expr(foo):
     [(x := temp) for temp in foo]
     print(x) # doesn't print 42
 
-
 def comp_binding_assign_expr_nested(foo):
     # https://peps.python.org/pep-0572/#scope-of-the-target
     x = 42
@@ -56,3 +55,21 @@ def comprehension_with_list_assignment():
     b = [0, 1, 2]
     [a for (a, b[0]) in [(1, 2), (2, 4), (3, 6)]]
     print(b) # prints [6, 1, 2]
+
+def comprehension_with_list_assignment_and_index_variable():
+    b = [0, 1, 2]
+    [a for (a, b[a]) in [(0, 'this'), (1, 'is'), (2, 'fun')]]
+    print(b) # prints ['this', 'is', 'fun']
+
+def comprehension_with_list_assignment_and_index_variable_reversed():
+    b = [0, 1, 2]
+    a = 1
+    [a for (b[a], a) in [('this', 0), ('is', 1), ('fun', 2)]] # This crashes because the "a" in the tuple shadows the outer variable.
+    print(b) # prints nothing due to crash
+
+def comprehension_with_list_assignment_and_local_index_variable():
+    b = [0, 1, 2]
+    c = 1
+    [a for (b[c], a) in [('this', 0), ('is', 1), ('fun', 2)]]
+    print(b) # prints [0, 'fun', 2]
+
