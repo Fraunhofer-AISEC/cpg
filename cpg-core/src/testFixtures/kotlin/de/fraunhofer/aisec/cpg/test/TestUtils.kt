@@ -232,9 +232,9 @@ fun assertRefersTo(expression: Expression?, b: Declaration?, message: String? = 
 }
 
 /** Asserts, that the expression given in [expression] does not refer to the declaration [b]. */
-fun assertNotRefersTo(expression: Expression?, b: Declaration?) {
+fun assertNotRefersTo(expression: Expression?, b: Declaration?, message: String? = null) {
     if (expression is Reference) {
-        assertNotEquals(b, (expression as Reference?)?.refersTo)
+        assertNotEquals(b, (expression as Reference?)?.refersTo, message)
     } else {
         fail("not a reference")
     }
