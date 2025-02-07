@@ -332,6 +332,77 @@ private fun dataFlowBase(
     }
 }
 
+private fun executionPathBase(
+    startNode: Node,
+    predicate: (Node) -> Boolean,
+    direction: AnalysisDirection,
+    type: AnalysisType,
+    scope: AnalysisScope,
+    verbose: Boolean = true,
+): QueryTree<Boolean> {
+    val collectFailedPaths = type == AnalysisType.MUST || verbose
+    val findAllPossiblePaths = type == AnalysisType.MUST || verbose
+    val contextSensitive = scope == AnalysisScope.INTERPROCEDURAL
+    val interproceduralAnalysis = scope == AnalysisScope.INTERPROCEDURAL
+    val evalRes =
+        when (direction) {
+            AnalysisDirection.FORWARD -> {
+                startNode.followNextEOGEdgesUntilHit(
+                    collectFailedPaths = collectFailedPaths,
+                    findAllPossiblePaths = findAllPossiblePaths,
+                    interproceduralAnalysis = interproceduralAnalysis,
+                    predicate = predicate,
+                )
+            }
+            AnalysisDirection.BACKWARD -> {
+                startNode.followPrevEOGEdgesUntilHit(
+                    collectFailedPaths = collectFailedPaths,
+                    findAllPossiblePaths = findAllPossiblePaths,
+                    interproceduralAnalysis = interproceduralAnalysis,
+                    predicate = predicate,
+                )
+            }
+        }
+    val allPaths =
+        evalRes.fulfilled
+            .map {
+                QueryTree(
+                    true,
+                    mutableListOf(QueryTree(it)),
+                    "execution path from $startNode to ${it.last()} fulfills the requirement",
+                    startNode,
+                )
+            }
+            .toMutableList()
+    if (type == AnalysisType.MUST || verbose)
+        allPaths +=
+            evalRes.failed.map {
+                QueryTree(
+                    false,
+                    mutableListOf(QueryTree(it)),
+                    "execution path from $startNode to ${it.last()} does not fulfill the requirement",
+                    startNode,
+                )
+            }
+
+    return when (type) {
+        AnalysisType.MUST ->
+            QueryTree(
+                evalRes.failed.isEmpty(),
+                allPaths.toMutableList(),
+                "execution path from $startNode to ${evalRes.fulfilled.map { it.last() }}",
+                startNode,
+            )
+        AnalysisType.MAY ->
+            QueryTree(
+                evalRes.fulfilled.isNotEmpty(),
+                allPaths.toMutableList(),
+                "execution path from $startNode to ${evalRes.fulfilled.map { it.last() }}",
+                startNode,
+            )
+    }
+}
+
 /** Checks if a data flow is possible between the nodes [from] as a source and [to] as sink. */
 fun dataFlow(
     from: Node,
@@ -363,7 +434,7 @@ fun dataFlow(
 ) =
     dataFlowBase(
         startNode = from,
-        predicate,
+        predicate = predicate,
         direction = AnalysisDirection.FORWARD,
         type = AnalysisType.MAY,
         sensitivities = AnalysisSensitivity.FIELD_SENSITIVE + AnalysisSensitivity.CONTEXT_SENSITIVE,
@@ -372,49 +443,43 @@ fun dataFlow(
     )
 
 /** Checks if a path of execution flow is possible between the nodes [from] and [to]. */
-fun executionPath(from: Node, to: Node): QueryTree<Boolean> {
-    val evalRes = from.followNextEOGEdgesUntilHit { it == to }
-    val allPaths = evalRes.fulfilled.map { QueryTree(it) }.toMutableList()
-    allPaths.addAll(evalRes.failed.map { QueryTree(it) })
-    return QueryTree(
-        evalRes.fulfilled.isNotEmpty(),
-        allPaths.toMutableList(),
-        "executionPath($from, $to)",
-        from,
+fun executionPath(from: Node, to: Node) =
+    executionPathBase(
+        startNode = from,
+        predicate = { it == to },
+        direction = AnalysisDirection.FORWARD,
+        type = AnalysisType.MAY,
+        scope = AnalysisScope.INTERPROCEDURAL,
+        verbose = true,
     )
-}
 
 /**
  * Checks if a path of execution flow is possible starting at the node [from] and fulfilling the
  * requirement specified in [predicate].
  */
-fun executionPath(from: Node, predicate: (Node) -> Boolean): QueryTree<Boolean> {
-    val evalRes = from.followNextEOGEdgesUntilHit(predicate = predicate)
-    val allPaths = evalRes.fulfilled.map { QueryTree(it) }.toMutableList()
-    allPaths.addAll(evalRes.failed.map { QueryTree(it) })
-    return QueryTree(
-        evalRes.fulfilled.isNotEmpty(),
-        allPaths.toMutableList(),
-        "executionPath($from, $predicate)",
-        from,
+fun executionPath(from: Node, predicate: (Node) -> Boolean) =
+    executionPathBase(
+        startNode = from,
+        predicate = predicate,
+        direction = AnalysisDirection.FORWARD,
+        type = AnalysisType.MAY,
+        scope = AnalysisScope.INTERPROCEDURAL,
+        verbose = true,
     )
-}
 
 /**
  * Checks if a path of execution flow is possible ending at the node [to] and fulfilling the
  * requirement specified in [predicate].
  */
-fun executionPathBackwards(to: Node, predicate: (Node) -> Boolean): QueryTree<Boolean> {
-    val evalRes = to.followPrevEOGEdgesUntilHit(predicate = predicate)
-    val allPaths = evalRes.fulfilled.map { QueryTree(it) }.toMutableList()
-    allPaths.addAll(evalRes.failed.map { QueryTree(it) })
-    return QueryTree(
-        evalRes.fulfilled.isNotEmpty(),
-        allPaths.toMutableList(),
-        "executionPathBackwards($to, $predicate)",
-        to,
+fun executionPathBackwards(to: Node, predicate: (Node) -> Boolean) =
+    executionPathBase(
+        startNode = to,
+        predicate = predicate,
+        direction = AnalysisDirection.BACKWARD,
+        type = AnalysisType.MAY,
+        scope = AnalysisScope.INTERPROCEDURAL,
+        verbose = true,
     )
-}
 
 /** Calls [ValueEvaluator.evaluate] for this expression, thus trying to resolve a constant value. */
 operator fun Expression?.invoke(): QueryTree<Any?> {
