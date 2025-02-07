@@ -26,12 +26,15 @@
 package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.get
 import de.fraunhofer.aisec.cpg.graph.invoke
+import de.fraunhofer.aisec.cpg.graph.records
 import de.fraunhofer.aisec.cpg.graph.refs
 import de.fraunhofer.aisec.cpg.graph.scopes.LocalScope
 import de.fraunhofer.aisec.cpg.graph.statements
@@ -44,6 +47,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.ComprehensionExpress
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.KeyValueExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.SubscriptExpression
 import de.fraunhofer.aisec.cpg.graph.variables
@@ -1708,24 +1712,25 @@ class CollectionComprehensionTest {
     }
 
     @Test
-    fun testMoreLoopVariables() {
-        val moreLoopVariablesFunctionDeclaration = result.functions["more_loop_variables"]
+    fun testListComprehensionToListIndex() {
+        val moreLoopVariablesFunctionDeclaration =
+            result.functions["list_comprehension_to_list_index"]
         assertIs<FunctionDeclaration>(
             moreLoopVariablesFunctionDeclaration,
-            "There must be a function called \"more_loop_variables\" in the file. It must be neither null nor any other class than a FunctionDeclaration.",
+            "There must be a function called \"list_comprehension_to_list_index\" in the file. It must be neither null nor any other class than a FunctionDeclaration.",
         )
 
         // Get the body
         val body = moreLoopVariablesFunctionDeclaration.body
         assertIs<Block>(
             body,
-            "The body of each function is modeled as a Block in the CPG. This must also apply to the function \"more_loop_variables\".",
+            "The body of each function is modeled as a Block in the CPG. This must also apply to the function \"list_comprehension_to_list_index\".",
         )
 
         val listBInitialization = body.statements[0]
         assertIs<AssignExpression>(
             listBInitialization,
-            "The first statement of the function \"more_loop_variables\" is expected to be the initialization of list \"b\" by the statement \"b = [0, 1, 2]\" which is expected to be represented by an AssignExpression in the CPG.",
+            "The first statement of the function \"list_comprehension_to_list_index\" is expected to be the initialization of list \"b\" by the statement \"b = [0, 1, 2]\" which is expected to be represented by an AssignExpression in the CPG.",
         )
         val refBFirstStatement = listBInitialization.lhs[0]
         assertIs<Reference>(
@@ -1740,7 +1745,7 @@ class CollectionComprehensionTest {
         val bDeclaration = listBInitialization.variables["b"]
         assertIs<VariableDeclaration>(
             bDeclaration,
-            "There must be a VariableDeclaration with the local name \"b\" inside the first statement of the function \"more_loop_variables\".",
+            "There must be a VariableDeclaration with the local name \"b\" inside the first statement of the function \"list_comprehension_to_list_index\".",
         )
         assertRefersTo(
             refBFirstStatement,
@@ -1752,7 +1757,7 @@ class CollectionComprehensionTest {
         val listComprehensionWithTupleAndAssignmentToListElement = body.statements[1]
         assertIs<CollectionComprehension>(
             listComprehensionWithTupleAndAssignmentToListElement,
-            "The second statement of the function \"more_loop_variables\" is expected to be python's list comprehension \"[b[0] for b[0] in ['this', 'is', 'fun']]\" which is represented by a CollectionComprehension in the CPG",
+            "The second statement of the function \"list_comprehension_to_list_index\" is expected to be python's list comprehension \"[b[0] for b[0] in ['this', 'is', 'fun']]\" which is represented by a CollectionComprehension in the CPG",
         )
 
         val comprehensionExpression =
@@ -1771,34 +1776,147 @@ class CollectionComprehensionTest {
         val accessB0 = comprehensionExpression.variable
         assertIs<SubscriptExpression>(
             accessB0,
-            "The variable of the ComprehensionExpression is \"b[0]\" which is expected to be represented by a SubscriptExpression with in the CPG. We expect that the base is a Reference with localName \"b\"  and the subscriptExpression representing the index is a Literal<Int> with value \"0\".",
+            "The control variable of the ComprehensionExpression is \"b[0]\" which is expected to be represented by a SubscriptExpression with in the CPG. We expect that the base is a Reference with localName \"b\" and the subscriptExpression representing the index is a Literal<Int> with value \"0\".",
         )
         val refB = accessB0.arrayExpression
         assertIs<Reference>(
             refB,
-            "The second element of the tuple \"b[0]\"is expected to be represented by a SubscriptExpression with in the CPG. We expect that the base is a Reference with localName \"b\"  and the subscriptExpression representing the index is a Literal<Int> with value \"0\" (with kotlin type Long ).",
+            "The control variable \"b[0]\" is expected to be represented by a SubscriptExpression with in the CPG. We expect that the base is a Reference with localName \"b\" and the subscriptExpression representing the index is a Literal<Int> with value \"0\" (with kotlin type Long ).",
         )
         assertLocalName(
             "b",
             refB,
-            "The second element of the tuple \"b[0]\"is expected to be represented by a SubscriptExpression with in the CPG. We expect that the base is a Reference with localName \"b\"  and the subscriptExpression representing the index is a Literal<Int> with value \"0\" (with kotlin type Long ).",
+            "The control variable \"b[0]\" is expected to be represented by a SubscriptExpression with in the CPG. We expect that the base is a Reference with localName \"b\" and the subscriptExpression representing the index is a Literal<Int> with value \"0\" (with kotlin type Long ).",
         )
         val index = accessB0.subscriptExpression
         assertIs<Literal<Int>>(
             index,
-            "The second element of the tuple \"b[0]\"is expected to be represented by a SubscriptExpression with in the CPG. We expect that the base is a Reference with localName \"b\"  and the subscriptExpression representing the index is a Literal<Int> with value \"0\" (with kotlin type Long ).",
+            "The control variable \"b[0]\" is expected to be represented by a SubscriptExpression with in the CPG. We expect that the base is a Reference with localName \"b\" and the subscriptExpression representing the index is a Literal<Int> with value \"0\" (with kotlin type Long ).",
         )
         assertLiteralValue(
             0L,
             index,
-            "The second element of the tuple \"b[0]\"is expected to be represented by a SubscriptExpression with in the CPG. We expect that the base is a Reference with localName \"b\"  and the subscriptExpression representing the index is a Literal<Int> with value \"0\" (with kotlin type Long ).",
+            "The control variable \"b[0]\" is expected to be represented by a SubscriptExpression with in the CPG. We expect that the base is a Reference with localName \"b\" and the subscriptExpression representing the index is a Literal<Int> with value \"0\" (with kotlin type Long ).",
         )
 
         // Now the actually interesting part: We check for variables belonging to the references.
         assertRefersTo(
             refB,
             bDeclaration,
-            "We expect that the reference \"b\" in the tuple refers to the VariableDeclaration of \"b\" which is added outside the list comprehension (in statement 0).",
+            "We expect that the reference \"b\" in the control variable refers to the VariableDeclaration of \"b\" which is added outside the list comprehension (in statement 0).",
+        )
+    }
+
+    @Test
+    fun testListComprehensionToField() {
+        val listComprehensionToFieldFunctionDeclaration =
+            result.functions["list_comprehension_to_field"]
+        assertIs<FunctionDeclaration>(
+            listComprehensionToFieldFunctionDeclaration,
+            "There must be a function called \"list_comprehension_to_field\" in the file. It must be neither null nor any other class than a FunctionDeclaration.",
+        )
+
+        // Get the body
+        val body = listComprehensionToFieldFunctionDeclaration.body
+        assertIs<Block>(
+            body,
+            "The body of each function is modeled as a Block in the CPG. This must also apply to the function \"list_comprehension_to_field\".",
+        )
+
+        val listBInitialization = body.statements[0]
+        assertIs<AssignExpression>(
+            listBInitialization,
+            "The first statement of the function \"list_comprehension_to_field\" is expected to be the initialization of list \"b\" by the statement \"b = Magic()\" which is expected to be represented by an AssignExpression in the CPG.",
+        )
+        val refBFirstStatement = listBInitialization.lhs[0]
+        assertIs<Reference>(
+            refBFirstStatement,
+            "The left hand side of the assignment \"b = Magic()\" is expected to be represented by a Reference with localName \"b\" in the CPG.",
+        )
+        assertLocalName(
+            "b",
+            refBFirstStatement,
+            "The left hand side of the assignment \"b = Magic())\" is expected to be represented by a Reference with localName \"b\" in the CPG.",
+        )
+        val bDeclaration = listBInitialization.variables["b"]
+        assertIs<VariableDeclaration>(
+            bDeclaration,
+            "There must be a VariableDeclaration with the local name \"b\" inside the first statement of the function \"list_comprehension_to_field\".",
+        )
+        assertRefersTo(
+            refBFirstStatement,
+            bDeclaration,
+            "The reference \"b\" is expected to refer to the variable declaration \"b\" in the same statement.",
+        )
+
+        // Check if the AST of the list comprehension fits our expectations.
+        val listComprehensionWithTupleAndAssignmentToListElement = body.statements[1]
+        assertIs<CollectionComprehension>(
+            listComprehensionWithTupleAndAssignmentToListElement,
+            "The second statement of the function \"list_comprehension_to_field\" is expected to be python's list comprehension \"[b.a for b.a in ['this', 'is', 'fun']]\" which is represented by a CollectionComprehension in the CPG.",
+        )
+
+        val comprehensionExpression =
+            listComprehensionWithTupleAndAssignmentToListElement.comprehensionExpressions
+                .singleOrNull()
+        assertEquals(
+            1,
+            listComprehensionWithTupleAndAssignmentToListElement.comprehensionExpressions.size,
+            "There is expected to be exactly one CollectionComprehension in the list comprehension \"[b.a for b.a in ['this', 'is', 'fun']]\". It represents the code's part \"for b.a in ['this', 'is', 'fun']\"",
+        )
+        assertIs<ComprehensionExpression>(
+            comprehensionExpression,
+            "There is expected to be exactly one ComprehensionExpression in the list comprehension \"[b.a for b.a in ['this', 'is', 'fun']]\". It represents the code's part \"for b.a in ['this', 'is', 'fun']\"",
+        )
+
+        val bMemberA = comprehensionExpression.variable
+        assertIs<MemberExpression>(
+            bMemberA,
+            "The control variable \"b.a\" is expected to be represented by a MemberExpression in the CPG. We expect that the base is a Reference with localName \"b\" and the localName of the MemberExpression is \"a\".",
+        )
+        val refB = bMemberA.base
+        assertIs<Reference>(
+            refB,
+            "The control variable \"b.a\" is expected to be represented by a MemberExpression in the CPG. We expect that the base is a Reference with localName \"b\" and the localName of the MemberExpression is \"a\".",
+        )
+        assertLocalName(
+            "b",
+            refB,
+            "The control variable \"b.a\" is expected to be represented by a MemberExpression in the CPG. We expect that the base is a Reference with localName \"b\" and the localName of the MemberExpression is \"a\".",
+        )
+        assertLocalName(
+            "a",
+            bMemberA,
+            "The control variable \"b.a\" is expected to be represented by a MemberExpression in the CPG. We expect that the base is a Reference with localName \"b\" and the localName of the MemberExpression is \"a\".",
+        )
+
+        // Now the actually interesting part: We check for variables belonging to the references.
+        assertRefersTo(
+            refB,
+            bDeclaration,
+            "We expect that the reference \"b\" used in the control variable refers to the VariableDeclaration of \"b\" which is added outside the list comprehension (in statement 0).",
+        )
+
+        val magicClass = result.records["Magic"]
+        assertIs<RecordDeclaration>(
+            magicClass,
+            "There must be a class called \"Magic\" in the file. It must be neither null nor any other class than a RecordDeclaration which is expected to model python classes in the CPG.",
+        )
+        assertEquals(
+            1,
+            magicClass.fields.size,
+            "We expect exactly one field inside the record declaration representing the class \"Magic\" and that's the field which we expect to represent the class' attribute \"a\".",
+        )
+        val fieldA = magicClass.fields["a"]
+        assertIs<FieldDeclaration>(
+            fieldA,
+            "We expect exactly one field inside the record declaration representing the class \"Magic\" and that's the field which we expect to represent the class' attribute \"a\".",
+        )
+
+        assertRefersTo(
+            bMemberA,
+            fieldA,
+            "We expect that the member expression \"b.a\" used as control variable refers to the FieldDeclaration \"a\" of the class \"Magic\".",
         )
     }
 }

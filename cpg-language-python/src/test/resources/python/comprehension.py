@@ -73,7 +73,15 @@ def comprehension_with_list_assignment_and_local_index_variable():
     [a for (b[c], a) in [('this', 0), ('is', 1), ('fun', 2)]]
     print(b) # prints [0, 'fun', 2]
 
-def more_loop_variables():
+def list_comprehension_to_list_index():
     b = [0, 1, 2]
     [b[0] for b[0] in ['this', 'is', 'fun']]
     print(b) # prints ['fun', 1, 2]
+
+class Magic:
+    a = 7
+
+def list_comprehension_to_field():
+    b = Magic()
+    [b.a for b.a in ['this', 'is', 'fun']]
+    print(b.a) # prints 'fun'
