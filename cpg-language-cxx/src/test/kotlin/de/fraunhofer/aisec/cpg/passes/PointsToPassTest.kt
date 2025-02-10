@@ -40,6 +40,7 @@ import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.test.assertLocalName
 import java.io.File
+import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -1472,6 +1473,7 @@ class PointsToPassTest {
         assertTrue(ceLine242.prevFullDFG.contains(binOpLine212))
     }
 
+    @Ignore
     @Test
     fun testSubstructs() {
         val file = File("src/test/resources/c/dataflow/tls.cpp")

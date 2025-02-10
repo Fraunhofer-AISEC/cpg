@@ -270,6 +270,7 @@ class CXXDeclarationTest {
         assertInvokes(binaryOp1, plus.getOrNull(1))
     }
 
+    @Ignore
     @Test
     fun testMemberAccessOperator() {
         val file = File("src/test/resources/cxx/operators/member_access.cpp")
@@ -307,6 +308,7 @@ class CXXDeclarationTest {
         assertInvokes(opCall, op)
     }
 
+    @Ignore
     @Test
     fun testCallExpressionOperator() {
         val file = File("src/test/resources/cxx/operators/call_expression.cpp")

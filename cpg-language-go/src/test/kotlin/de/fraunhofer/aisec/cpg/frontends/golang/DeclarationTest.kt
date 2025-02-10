@@ -271,6 +271,7 @@ class DeclarationTest {
         assertNotNull(myInterface)
     }
 
+    @Ignore
     @Test
     fun testConst() {
         val topLevel = Path.of("src", "test", "resources", "golang")

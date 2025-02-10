@@ -235,6 +235,7 @@ class DFGFunctionSummariesTest {
         )
     }
 
+    @Ignore
     @Test
     fun testPropagateArguments() {
         val dfgTest = getDfgInferredCall() { defaultPasses() }

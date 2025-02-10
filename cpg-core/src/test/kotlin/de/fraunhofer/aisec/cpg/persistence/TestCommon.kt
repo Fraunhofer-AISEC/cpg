@@ -67,6 +67,7 @@ class TestCommon {
                 "DFG",
                 "EOG",
                 "LANGUAGE",
+                "MEMORY_ADDRESS",
                 "OVERLAY",
                 "OVERRIDES",
                 "PARAMETERS",

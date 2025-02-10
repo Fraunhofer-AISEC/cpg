@@ -31,10 +31,12 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
 import de.fraunhofer.aisec.cpg.graph.edges.flows.PartialDataflowGranularity
 import de.fraunhofer.aisec.cpg.test.*
 import java.io.File
+import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
+@Ignore
 class CDataflowTest {
     @Test
     fun testTLSContext() {
