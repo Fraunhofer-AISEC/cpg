@@ -178,19 +178,23 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
                 // Traverse nested attributes (e.g., `modules.a.Foobar`)
                 while (type is Python.AST.Attribute) {
                     names.add(type.attr)
-                    type = type.value
-                }
-                if (type is Python.AST.Name) {
-                    names.add(type.id)
-                }
-
-                // As the AST provides attributes from outermost to innermost,
-                // we need to reconstruct the Name hierarchy in reverse order.
-                val parsedNames =
-                    names.foldRight(null as Name?) { child, parent ->
-                        Name(localName = child, parent = parent)
+                    if (type.value is Python.AST.Name) {
+                        names.add((type.value as Python.AST.Name).id)
+                        break
                     }
-                objectType(parsedNames ?: return unknownType())
+                    type = type.value as Python.AST.Attribute
+                }
+                if (names.isNotEmpty()) {
+                    // As the AST provides attributes from outermost to innermost,
+                    // we need to reconstruct the Name hierarchy in reverse order.
+                    val parsedNames =
+                        names.foldRight(null as Name?) { child, parent ->
+                            Name(localName = child, parent = parent)
+                        }
+                    objectType(parsedNames ?: return unknownType())
+                } else {
+                    unknownType()
+                }
             }
 
             else -> {
