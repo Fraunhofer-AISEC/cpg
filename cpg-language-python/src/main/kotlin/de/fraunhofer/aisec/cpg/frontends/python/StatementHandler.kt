@@ -569,7 +569,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             // level.
             var parent =
                 if (isInitModule()) {
-                    frontend.scopeManager.currentNamespace.fqn("__init__")
+                    frontend.scopeManager.currentNamespace.fqn(PythonLanguage.IDENTIFIER_INIT)
                 } else {
                     frontend.scopeManager.currentNamespace
                 }
@@ -655,7 +655,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                                     .path ==
                                     importPath +
                                         "/" +
-                                        "__init__" +
+                                        PythonLanguage.IDENTIFIER_INIT +
                                         language.namespaceDelimiter +
                                         fileExtension
                             }
@@ -677,7 +677,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         (frontend.scopeManager.firstScopeIsInstanceOrNull<NameScope>()?.astNode
                 as? NamespaceDeclaration)
             ?.path
-            ?.endsWith("__init__") == true
+            ?.endsWith(PythonLanguage.IDENTIFIER_INIT) == true
 
     private fun handleWhile(node: Python.AST.While): Statement {
         val ret = newWhileStatement(rawNode = node)
@@ -895,7 +895,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         val language = language
         val result =
             if (recordDeclaration != null) {
-                if (s.name == "__init__") {
+                if (s.name == PythonLanguage.IDENTIFIER_INIT) {
                     newConstructorDeclaration(
                         name = s.name,
                         recordDeclaration = recordDeclaration,

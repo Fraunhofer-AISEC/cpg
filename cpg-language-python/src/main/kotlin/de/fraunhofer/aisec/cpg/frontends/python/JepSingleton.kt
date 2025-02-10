@@ -117,7 +117,7 @@ object JepSingleton {
                 // fixes: jep.JepException: <class 'ModuleNotFoundError'>: No module named 'jep'
                 if (
                     path.parent.fileName.toString() == "jep" &&
-                        (Paths.get(path.parent.toString(), "__init__.py").exists())
+                        (Paths.get(path.parent.toString(), PythonLanguage.IDENTIFIER_INIT+ ".py").exists())
                 ) {
                     config.addIncludePaths(path.parent.parent.toString())
                 }

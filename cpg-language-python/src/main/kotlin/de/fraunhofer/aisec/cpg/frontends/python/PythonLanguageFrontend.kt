@@ -301,7 +301,7 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
                 // However, in reality, the symbols are actually available in foo.bar as well as in
                 // foo.bar.__init__, although the latter is practically not used, and therefore we
                 // do not support it because major workarounds would be needed.
-                if (path == "__init__") {
+                if (path == PythonLanguage.IDENTIFIER_INIT) {
                     previous
                 } else {
                     val nsd = newNamespaceDeclaration(fqn, rawNode = pythonASTModule)
