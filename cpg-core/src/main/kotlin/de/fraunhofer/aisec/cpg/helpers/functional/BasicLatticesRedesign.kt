@@ -159,7 +159,10 @@ interface Lattice<T : Lattice.Element> {
                 val oldGlobalIt = globalState[it]
                 val newGlobalIt = (oldGlobalIt?.let { this.lub(newState, it) } ?: newState)
                 globalState[it] = newGlobalIt
-                if (it !in edgesList && (oldGlobalIt == null || newGlobalIt != oldGlobalIt)) {
+                if (
+                    it !in edgesList &&
+                        (oldGlobalIt == null || newGlobalIt.compare(oldGlobalIt) == Order.GREATER)
+                ) {
                     edgesList.add(0, it)
                 }
             }

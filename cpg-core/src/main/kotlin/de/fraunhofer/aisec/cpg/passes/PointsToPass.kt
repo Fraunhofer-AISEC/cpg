@@ -49,7 +49,7 @@ import kotlin.collections.map
 import kotlin.let
 import kotlin.text.contains
 
-val nodesCreatingUnknownValues = HashMap<Node, UnknownMemoryValue>()
+val nodesCreatingUnknownValues = HashMap<Pair<Node, Name>, MemoryAddress>()
 
 typealias StateEntry = TupleLattice<PowersetLattice.Element<Node>, PowersetLattice.Element<Node>>
 
@@ -850,7 +850,7 @@ fun PointsToStateElement.fetchElementFromDeclarationState(
         else {
             val newName = nodeNameToString(addr)
             val newEntry =
-                nodesCreatingUnknownValues.computeIfAbsent(addr) {
+                nodesCreatingUnknownValues.computeIfAbsent(Pair(addr, newName)) {
                     UnknownMemoryValue(newName, true)
                 }
             globalDerefs[addr] = newEntry
@@ -864,7 +864,9 @@ fun PointsToStateElement.fetchElementFromDeclarationState(
         if (elements.isNullOrEmpty()) {
             val newName = nodeNameToString(addr)
             val newEntry =
-                nodesCreatingUnknownValues.computeIfAbsent(addr) { UnknownMemoryValue(newName) }
+                nodesCreatingUnknownValues.computeIfAbsent(Pair(addr, newName)) {
+                    UnknownMemoryValue(newName)
+                }
             this.declarationsState.computeIfAbsent(addr) {
                 TupleLattice.Element(
                     PowersetLattice.Element(addr),
@@ -933,12 +935,14 @@ fun PointsToStateElement.getValues(node: Node): IdentitySet<Node> {
                 fieldAddresses
                     .flatMap { fetchElementFromDeclarationState(it).map { it.first } }
                     .toIdentitySet()
-            } else
+            } else {
+                val newName = Name(nodeNameToString(node).localName, base.name)
                 identitySetOf(
-                    nodesCreatingUnknownValues.computeIfAbsent(node) {
-                        UnknownMemoryValue(Name(nodeNameToString(node).localName, base.name))
+                    nodesCreatingUnknownValues.computeIfAbsent(Pair(node, newName)) {
+                        UnknownMemoryValue(newName)
                     }
                 )
+            }
         }
         is Reference -> {
             /* For References, we have to look up the last value written to its declaration.
@@ -1070,7 +1074,12 @@ fun PointsToStateElement.fetchFieldAddresses(
 
         if (elements.isNullOrEmpty()) {
             // val newName = nodeNameToString(addr)
-            val newEntry = identitySetOf<Node>(MemoryAddress(nodeName))
+            val newEntry =
+                identitySetOf<Node>(
+                    nodesCreatingUnknownValues.computeIfAbsent(Pair(addr, nodeName)) {
+                        MemoryAddress(nodeName)
+                    }
+                )
             this.declarationsState.computeIfAbsent(addr) {
                 TupleLattice.Element(PowersetLattice.Element(addr), PowersetLattice.Element())
             }

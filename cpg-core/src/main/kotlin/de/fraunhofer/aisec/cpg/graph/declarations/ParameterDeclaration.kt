@@ -35,7 +35,7 @@ import java.util.*
 import org.neo4j.ogm.annotation.Relationship
 
 /** A declaration of a function or nontype template parameter. */
-class ParameterDeclaration : ValueDeclaration(), HasDefault<Expression?>, ArgumentHolder  {
+class ParameterDeclaration : ValueDeclaration(), HasDefault<Expression?>, ArgumentHolder {
     // We use the memoryValue to link the ParameterDeclaration to the ParameterMemoryValue when we
     // don't have a declarationState (outside of the function)
     var memoryValue: ParameterMemoryValue? = null
