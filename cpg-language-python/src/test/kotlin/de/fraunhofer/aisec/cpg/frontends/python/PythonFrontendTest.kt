@@ -1841,12 +1841,14 @@ class PythonFrontendTest : BaseTest() {
 
     @Test
     fun testSuperclassImportFullPath() {
-        val topLevel = Path.of("src", "test", "resources", "python", "superclasses")
+        val topLevel = Path.of("src", "test")
         val result =
             analyze(
                 listOf(
-                    topLevel.resolve("superclass_import_full_path.py").toFile(),
-                    topLevel.resolve("superclass.py").toFile(),
+                    topLevel
+                        .resolve("resources/python/superclasses/superclass_import_full_path.py")
+                        .toFile(),
+                    topLevel.resolve("resources/python/superclasses/superclass.py").toFile(),
                 ),
                 topLevel,
                 true,
@@ -1869,12 +1871,14 @@ class PythonFrontendTest : BaseTest() {
 
     @Test
     fun testSuperclassImportModuleAlias() {
-        val topLevel = Path.of("src", "test", "resources", "python", "superclasses")
+        val topLevel = Path.of("src", "test")
         val result =
             analyze(
                 listOf(
-                    topLevel.resolve("superclass_import_module_alias.py").toFile(),
-                    topLevel.resolve("superclass.py").toFile(),
+                    topLevel
+                        .resolve("resources/python/superclasses/superclass_import_module_alias.py")
+                        .toFile(),
+                    topLevel.resolve("resources/python/superclasses/superclass.py").toFile(),
                 ),
                 topLevel,
                 true,
