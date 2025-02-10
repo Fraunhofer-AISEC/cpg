@@ -31,15 +31,12 @@ import de.fraunhofer.aisec.cpg.frontends.HasMemberExpressionAmbiguity
 import de.fraunhofer.aisec.cpg.graph.HasBase
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.codeAndLocationFrom
-import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.fqn
-import de.fraunhofer.aisec.cpg.graph.imports
 import de.fraunhofer.aisec.cpg.graph.newReference
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
-import de.fraunhofer.aisec.cpg.graph.translationUnit
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.replace
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
@@ -103,12 +100,8 @@ class ResolveMemberExpressionAmbiguityPass(ctx: TranslationContext) : Translatio
      * function returns the fully qualified name of the import. If the name does not refer to an
      * import, returns null.
      *
-     * The check happens in two stages:
-     * - First, the function looks up the name in the current scope. If a symbol is found that
-     *   represents a [NamespaceDeclaration], the name of the declaration is returned.
-     * - Second, if no symbol is found in the current scope, the function looks up the name in the
-     *   list of [ImportDeclaration]s of the translation unit. If an import is found that matches
-     *   the name, the name of the import is returned.
+     * The function looks up the name in the current scope. If a symbol is found that represents a
+     * [NamespaceDeclaration], the name of the declaration is returned.
      *
      * @param name The name to check for an import.
      * @param hint The expression that hints at the language and location.
@@ -121,20 +114,12 @@ class ResolveMemberExpressionAmbiguityPass(ctx: TranslationContext) : Translatio
                 language = hint.language,
                 location = hint.location,
                 startScope = hint.scope,
+                predicate = { it is NamespaceDeclaration },
             )
-        var declaration = resolved.singleOrNull()
-        var isImportedNamespace = declaration is NamespaceDeclaration
-        if (!isImportedNamespace) {
-            // It still could be an imported namespace of an imported package that we do not know.
-            // The problem is that we do not really know at this point whether we import a
-            // (sub)module or a global variable of the namespace. We tend to assume that this is a
-            // namespace
-            val imports = hint.translationUnit.imports
-            declaration =
-                imports.firstOrNull { it.name.lastPartsMatch(name) || it.name.startsWith(name) }
-            isImportedNamespace = declaration != null
-        }
-
+        // There can be multiple declarations for the same namespace because the declaration can
+        // exist multiple times, but per definition in the scope manager, they all point to the same
+        // namespace, so we can just pick the first one.
+        var declaration = resolved.firstOrNull()
         return declaration?.name
     }
 

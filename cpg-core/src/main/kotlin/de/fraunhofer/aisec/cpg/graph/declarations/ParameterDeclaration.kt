@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
+import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.HasDefault
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
@@ -34,7 +35,7 @@ import java.util.*
 import org.neo4j.ogm.annotation.Relationship
 
 /** A declaration of a function or nontype template parameter. */
-class ParameterDeclaration : ValueDeclaration(), HasDefault<Expression?> {
+class ParameterDeclaration : ValueDeclaration(), HasDefault<Expression?>, ArgumentHolder  {
     // We use the memoryValue to link the ParameterDeclaration to the ParameterMemoryValue when we
     // don't have a declarationState (outside of the function)
     var memoryValue: ParameterMemoryValue? = null
@@ -62,4 +63,23 @@ class ParameterDeclaration : ValueDeclaration(), HasDefault<Expression?> {
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), isVariadic, defaultValue)
+
+    override fun addArgument(expression: Expression) {
+        if (defaultValue == null) {
+            defaultValue = expression
+        }
+    }
+
+    override fun replaceArgument(old: Expression, new: Expression): Boolean {
+        if (defaultValue == old) {
+            defaultValue = new
+            return true
+        }
+
+        return false
+    }
+
+    override fun hasArgument(expression: Expression): Boolean {
+        return defaultValue == expression
+    }
 }
