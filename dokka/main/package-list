@@ -33,6 +33,7 @@ de.fraunhofer.aisec.cpg.graph.edges.ast
 de.fraunhofer.aisec.cpg.graph.edges.collections
 de.fraunhofer.aisec.cpg.graph.edges.flows
 de.fraunhofer.aisec.cpg.graph.edges.overlay
+de.fraunhofer.aisec.cpg.graph.edges.scopes
 de.fraunhofer.aisec.cpg.graph.scopes
 de.fraunhofer.aisec.cpg.graph.statements
 de.fraunhofer.aisec.cpg.graph.statements.expressions
