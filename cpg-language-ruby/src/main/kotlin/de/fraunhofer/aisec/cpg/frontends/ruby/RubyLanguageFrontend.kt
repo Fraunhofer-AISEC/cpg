@@ -32,7 +32,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
-import java.nio.file.Path
 import org.jruby.Ruby
 import org.jruby.ast.BlockNode
 import org.jruby.ast.MethodDefNode
@@ -101,14 +100,5 @@ class RubyLanguageFrontend(language: RubyLanguage, ctx: TranslationContext) :
 
     override fun setComment(node: Node, astNode: org.jruby.ast.Node) {
         // not yet implemented
-    }
-
-    override fun gatherExternalSources(
-        rootPaths: List<Path>,
-        source: File,
-        externalSources: MutableList<File>,
-        processedImports: MutableList<String>,
-    ): List<File> {
-        return listOf()
     }
 }

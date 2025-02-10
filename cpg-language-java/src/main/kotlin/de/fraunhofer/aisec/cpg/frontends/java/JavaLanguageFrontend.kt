@@ -71,7 +71,6 @@ import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.IOException
-import java.nio.file.Path
 import java.util.function.Consumer
 import kotlin.jvm.optionals.getOrNull
 
@@ -513,15 +512,6 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
                 objectType(type.describe(), type.typeParametersValues().map { typeOf(it) })
             else -> objectType(type.describe())
         }
-    }
-
-    override fun gatherExternalSources(
-        rootPaths: List<Path>,
-        source: File,
-        externalSources: MutableList<File>,
-        processedImports: MutableList<String>,
-    ): List<File> {
-        return listOf()
     }
 
     companion object {

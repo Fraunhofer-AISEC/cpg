@@ -237,14 +237,6 @@ class TypeScriptLanguageFrontend(
         }
     }
 
-    override fun gatherExternalSources(
-        rootPaths: List<Path>,
-        source: File,
-        externalSources: MutableList<File>,
-        processedImports: MutableList<String>,
-    ): List<File> {
-        return listOf()
-    }
 }
 
 class Location(var file: String, var pos: Int, var end: Int)

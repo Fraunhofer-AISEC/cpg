@@ -46,6 +46,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.TryStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 import de.fraunhofer.aisec.cpg.helpers.Util
+import java.io.File
 import kotlin.collections.plusAssign
 
 class StatementHandler(frontend: PythonLanguageFrontend) :
@@ -548,6 +549,9 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 } else {
                     newImportDeclaration(parseName(imp.name), false, rawNode = imp)
                 }
+
+            addExternallyImportedToAnalysis(decl.name)
+            log.info("Importing with Name: " + imp.name)
             frontend.scopeManager.addDeclaration(decl)
             declStmt.declarationEdges += decl
         }
@@ -594,12 +598,16 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 if (imp.name == "*") {
                     // In the wildcard case, our "import" is the module name, and we set "wildcard"
                     // to true
+                    log.info("Importing wildcard from module: " + module)
+                    addExternallyImportedToAnalysis(module)
                     newImportDeclaration(module, true, rawNode = imp)
                 } else {
                     // If we import an individual symbol, we need to FQN the symbol with our module
                     // name and import that. We also need to take care of any alias
                     val name = module.fqn(imp.name)
                     val alias = imp.asname
+                    addExternallyImportedToAnalysis(name)
+                    log.info("Importing specific based on module: " + name)
                     if (alias != null) {
                         newImportDeclaration(name, false, parseName(alias), rawNode = imp)
                     } else {
@@ -612,6 +620,56 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             declStmt.declarationEdges += decl
         }
         return declStmt
+    }
+
+    private fun addExternallyImportedToAnalysis(importName: Name) {
+        ctx?.let { ctx ->
+            // Todo add all files according to our import name, from externalSources to
+            // importedSources
+            var currentName = importName
+            while (currentName.parent?.isNotEmpty() == true) {
+                var importPath = currentName.toString().replace(language.namespaceDelimiter, "/")
+
+                language.fileExtensions.forEach { fileExtension ->
+
+                    // Includes a file in the analysis, if it has the root path and
+                    ctx.externalSources
+                        .firstOrNull {
+                            it.relativeTo(Util.getRootPath(it, ctx.config.includePaths).toFile())
+                                .path == importPath + language.namespaceDelimiter + fileExtension
+                        }
+                        ?.let {
+                            ctx.importedSources += it
+                            // Todo potentially remove the name from some global list to reduce time
+                        }
+
+                    if (File(importPath).isDirectory) {
+
+                        // TOdo, then find __init__.py
+
+                        ctx.externalSources
+                            .firstOrNull {
+                                it.relativeTo(
+                                        Util.getRootPath(it, ctx.config.includePaths).toFile()
+                                    )
+                                    .path ==
+                                    importPath +
+                                        "/" +
+                                        "__init__" +
+                                        language.namespaceDelimiter +
+                                        fileExtension
+                            }
+                            ?.let {
+                                ctx.importedSources += it
+                                // Todo potentially remove the name from some global list to reduce
+                                // time
+                            }
+                    }
+                }
+
+                currentName = currentName.parent ?: Name("")
+            }
+        }
     }
 
     /** Small utility function to check, whether we are inside an __init__ module. */

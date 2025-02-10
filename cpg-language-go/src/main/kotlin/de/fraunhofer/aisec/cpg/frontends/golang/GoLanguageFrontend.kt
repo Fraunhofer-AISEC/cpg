@@ -51,7 +51,6 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import java.net.URI
-import java.nio.file.Path
 
 /**
  * A language frontend for the [GoLanguage]. It makes use the internal
@@ -418,15 +417,6 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
             val comment = this.commentMap?.comment(astNode)
             node.comment = comment
         }
-    }
-
-    override fun gatherExternalSources(
-        rootPaths: List<Path>,
-        source: File,
-        externalSources: MutableList<File>,
-        processedImports: MutableList<String>,
-    ): List<File> {
-        return listOf()
     }
 
     companion object {

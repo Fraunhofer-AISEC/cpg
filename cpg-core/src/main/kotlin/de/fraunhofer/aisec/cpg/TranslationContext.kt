@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg
 
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
+import java.io.File
 
 /**
  * The translation context holds all necessary managers and configurations needed during the
@@ -56,4 +57,6 @@ class TranslationContext(
      * the [TranslationResult.finalCtx] this may either be null or the last component analyzed.
      */
     var currentComponent: Component? = null,
+    var externalSources: MutableSet<File> = mutableSetOf(),
+    var importedSources: MutableSet<File> = mutableSetOf(),
 )
