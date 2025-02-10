@@ -60,7 +60,11 @@ sealed class StructureDeclarationScope(astNode: Node?) : ValueDeclarationScope(a
         }
     }
 
-    override fun addDeclaration(declaration: Declaration, addToAST: Boolean) {
+    override fun addDeclaration(
+        declaration: Declaration,
+        addToAST: Boolean,
+        scopeManager: ScopeManager,
+    ) {
         if (declaration is ValueDeclaration) {
             addValueDeclaration(declaration, addToAST)
         } else {

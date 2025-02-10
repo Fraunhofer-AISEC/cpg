@@ -690,9 +690,6 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
                 parseName(name.toString())
             }
 
-        // We need to take name(space) aliases into account.
-        typeName = scopeManager.resolveParentAlias(typeName, scopeManager.currentScope)
-
         return objectType(typeName, rawNode = name)
     }
 
