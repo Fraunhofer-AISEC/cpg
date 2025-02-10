@@ -34,13 +34,8 @@ open class MemoryAddress(override var name: Name, open var isGlobal: Boolean = f
         if (this === other) {
             return true
         }
-        if (other != null && other::class != this::class) {
-            return false
-        }
         // TODO: What else do we need to compare?
-        return other is MemoryAddress /*&& name == other.name*/ &&
-            id == other.id &&
-            isGlobal == other.isGlobal
+        return other is MemoryAddress && name == other.name && isGlobal == other.isGlobal
     }
 
     override fun hashCode(): Int {

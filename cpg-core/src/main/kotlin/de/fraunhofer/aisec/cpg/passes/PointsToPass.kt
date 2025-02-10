@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.default
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnknownMemoryValue
 import de.fraunhofer.aisec.cpg.graph.types.NumericType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
@@ -42,6 +43,13 @@ import de.fraunhofer.aisec.cpg.helpers.functional.*
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
+import kotlin.Pair
+import kotlin.collections.filter
+import kotlin.collections.map
+import kotlin.let
+import kotlin.text.contains
+
+val nodesCreatingUnknownValues = HashMap<Node, UnknownMemoryValue>()
 
 typealias StateEntry = TupleLattice<PowersetLattice.Element<Node>, PowersetLattice.Element<Node>>
 
@@ -608,7 +616,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
          */
         if (currentNode.lhs.size == 1 && currentNode.rhs.size == 1) {
             val sources = currentNode.rhs.flatMap { doubleState.getValues(it) }.toIdentitySet()
-            val destinations: IdentitySet<Node> = currentNode.lhs.map { it }.toIdentitySet()
+            val destinations: IdentitySet<Node> = currentNode.lhs.toIdentitySet()
             val destinationsAddresses =
                 destinations.flatMap { doubleState.getAddresses(it) }.toIdentitySet()
             doubleState =
@@ -723,8 +731,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 // In the first step, we have a triangle of ParameterDeclaration, the
                 // ParameterDeclaration's Memory Address and the ParameterMemoryValue
                 // Therefore, the src and the addresses are different. For all other depths, we set
-                // both
-                // to the ParameterMemoryValue we create in the first step
+                // both to the ParameterMemoryValue we create in the first step
                 var src: Node = param
                 var addresses = doubleState.getAddresses(src)
                 // If we have a Pointer as param, we initialize all levels, otherwise, only the
@@ -842,7 +849,10 @@ fun PointsToStateElement.fetchElementFromDeclarationState(
         if (element != null) ret.add(Pair(element, ""))
         else {
             val newName = nodeNameToString(addr)
-            val newEntry = UnknownMemoryValue(newName, true)
+            val newEntry =
+                nodesCreatingUnknownValues.computeIfAbsent(addr) {
+                    UnknownMemoryValue(newName, true)
+                }
             globalDerefs[addr] = newEntry
             ret.add(Pair(newEntry, ""))
         }
@@ -853,7 +863,8 @@ fun PointsToStateElement.fetchElementFromDeclarationState(
         val elements = this.declarationsState[addr]?.second
         if (elements.isNullOrEmpty()) {
             val newName = nodeNameToString(addr)
-            val newEntry = identitySetOf<Node>(UnknownMemoryValue(newName))
+            val newEntry =
+                nodesCreatingUnknownValues.computeIfAbsent(addr) { UnknownMemoryValue(newName) }
             this.declarationsState.computeIfAbsent(addr) {
                 TupleLattice.Element(
                     PowersetLattice.Element(addr),
@@ -861,8 +872,8 @@ fun PointsToStateElement.fetchElementFromDeclarationState(
                 )
             }
             val newElements = this.declarationsState[addr]?.second
-            newElements?.addAll(newEntry)
-            newEntry.map { ret.add(Pair(it, "")) }
+            newElements?.add(newEntry)
+            ret.add(Pair(newEntry, ""))
         } else elements.map { ret.add(Pair(it, "")) }
 
         // if fetchFields is true, we also fetch the values for fields
@@ -923,7 +934,11 @@ fun PointsToStateElement.getValues(node: Node): IdentitySet<Node> {
                     .flatMap { fetchElementFromDeclarationState(it).map { it.first } }
                     .toIdentitySet()
             } else
-                identitySetOf(UnknownMemoryValue(Name(nodeNameToString(node).localName, base.name)))
+                identitySetOf(
+                    nodesCreatingUnknownValues.computeIfAbsent(node) {
+                        UnknownMemoryValue(Name(nodeNameToString(node).localName, base.name))
+                    }
+                )
         }
         is Reference -> {
             /* For References, we have to look up the last value written to its declaration.
@@ -1026,7 +1041,7 @@ fun PointsToStateElement.getNestedValues(
     node: Node,
     nestingDepth: Int,
     fetchFields: Boolean = false,
-): Set<Node> {
+): IdentitySet<Node> {
     if (nestingDepth == 0) return this.getAddresses(node)
     //            else if (dereferenceDepth == 1) return addr.flatMap { getValues(it)
     // }.toSet()
@@ -1072,7 +1087,7 @@ fun PointsToStateElement.fetchFieldAddresses(
 }
 
 /**
- * Updates the declarationState at `destinationAddresses` to the values in `sources`. Additionally
+ * Updates the declarationState at `destinationAddresses` to the values in `sources`. Additionally,
  * updates the generalstate at `destinations` if there is any
  */
 fun PointsToStateElement.updateValues(
