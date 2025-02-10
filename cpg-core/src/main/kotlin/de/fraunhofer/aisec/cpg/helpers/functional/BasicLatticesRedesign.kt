@@ -148,7 +148,7 @@ interface Lattice<T : Lattice.Element> {
             // Compute the effects of "nextEdge" on the state by applying the transformation to its
             // state.
             val nextGlobal = globalState[nextEdge] ?: continue
-            val newState = transformation(this, nextEdge, nextGlobal)
+            val newState = transformation(this, nextEdge, nextGlobal.duplicate() as T)
             if (nextEdge.end.nextEOGEdges.isEmpty()) {
                 finalState[nextEdge] = newState
             }
