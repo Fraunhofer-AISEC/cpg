@@ -157,6 +157,7 @@ fun SubgraphWalker.ScopedWalker.replaceCallWithConstruct(
     construct.callee = call.callee
     (construct.callee as? Reference)?.resolutionHelper = construct
     construct.arguments = call.arguments
+    construct.argumentEdges.addAll(call.argumentEdges)
     construct.type = type
 
     replace(parent, call, construct)
