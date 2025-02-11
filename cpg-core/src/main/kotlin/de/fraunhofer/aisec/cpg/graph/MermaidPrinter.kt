@@ -104,23 +104,10 @@ fun <EdgeType : Edge<Node>> Node.printGraph(
         )
         conns++
 
-        // Add next and prev edges to the work-list. We sort the entries by name to have this
-        // somewhat consistent across multiple invocations of this function
+        // Add start and edges to the work-list.
         strategies.forEach { strategy ->
-            when (strategy) {
-                Strategy::DFG_FORWARD_EDGES,
-                Strategy::EOG_FORWARD_EDGES -> {
-                    worklist += strategy(end).asSequence().sortedBy { it.end.name }
-                    worklist += strategy(start).asSequence().sortedBy { it.end.name }
-                }
-
-                Strategy::DFG_BACKWARD_EDGES,
-                Strategy::EOG_BACKWARD_EDGES -> {
-                    worklist += strategy(end).asSequence().sortedBy { it.start.name }
-                    worklist += strategy(start).asSequence().sortedBy { it.start.name }
-                }
-                else -> TODO("Unknown strategy received.")
-            }
+            worklist += strategy(end).asSequence().sortedBy { it.end.name }
+            worklist += strategy(start).asSequence().sortedBy { it.end.name }
         }
     }
 
