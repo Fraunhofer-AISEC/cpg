@@ -850,11 +850,7 @@ fun PointsToStateElement.fetchElementFromDeclarationState(
         else {
             val newName = nodeNameToString(addr)
             val newEntry =
-                if ("UnknownMemoryValue" in newName) {
-                    nodesCreatingUnknownValues.computeIfAbsent(Pair(addr, newName)) {
-                        UnknownMemoryValue(newName, true)
-                    }
-                } else {
+                nodesCreatingUnknownValues.computeIfAbsent(Pair(addr, newName)) {
                     UnknownMemoryValue(newName, true)
                 }
             globalDerefs[addr] = newEntry
@@ -868,11 +864,7 @@ fun PointsToStateElement.fetchElementFromDeclarationState(
         if (elements.isNullOrEmpty()) {
             val newName = nodeNameToString(addr)
             val newEntry =
-                if ("UnknownMemoryValue" in newName) {
-                    nodesCreatingUnknownValues.computeIfAbsent(Pair(addr, newName)) {
-                        UnknownMemoryValue(newName)
-                    }
-                } else {
+                nodesCreatingUnknownValues.computeIfAbsent(Pair(addr, newName)) {
                     UnknownMemoryValue(newName)
                 }
             this.declarationsState.computeIfAbsent(addr) {
@@ -946,11 +938,7 @@ fun PointsToStateElement.getValues(node: Node): IdentitySet<Node> {
             } else {
                 val newName = Name(nodeNameToString(node).localName, base.name)
                 identitySetOf(
-                    if ("UnknownMemoryValue" in newName) {
-                        nodesCreatingUnknownValues.computeIfAbsent(Pair(node, newName)) {
-                            UnknownMemoryValue(newName)
-                        }
-                    } else {
+                    nodesCreatingUnknownValues.computeIfAbsent(Pair(node, newName)) {
                         UnknownMemoryValue(newName)
                     }
                 )
@@ -1088,11 +1076,7 @@ fun PointsToStateElement.fetchFieldAddresses(
             // val newName = nodeNameToString(addr)
             val newEntry =
                 identitySetOf<Node>(
-                    if ("UnknownMemoryValue" in nodeName) {
-                        nodesCreatingUnknownValues.computeIfAbsent(Pair(addr, nodeName)) {
-                            MemoryAddress(nodeName)
-                        }
-                    } else {
+                    nodesCreatingUnknownValues.computeIfAbsent(Pair(addr, nodeName)) {
                         MemoryAddress(nodeName)
                     }
                 )
