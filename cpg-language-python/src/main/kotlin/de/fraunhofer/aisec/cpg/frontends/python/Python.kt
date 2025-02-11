@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.python
 
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import jep.python.PyObject
 
 /**
@@ -89,6 +90,16 @@ interface Python {
                     return (pyObject.getAttr("end_col_offset") as? Long)?.toInt() ?: TODO()
                 }
         }
+
+        /**
+         * Python does not really have "declarations", but rather these are also [AST.BaseStmt]s.
+         * But in order to be compatible with the remaining languages we need to ensure that
+         * elements such as functions or classes, still turn out to be [Declaration]s.
+         *
+         * This interface should be attached to all such statements that we consider to be
+         * declarations.
+         */
+        interface WithDeclaration {}
 
         /**
          * Represents a `ast.AST` node as returned by Python's `ast` parser.
@@ -172,7 +183,7 @@ interface Python {
          * However, they are so similar, that we make use of this interface to avoid a lot of
          * duplicate code.
          */
-        interface NormalOrAsyncFunctionDef : AsyncOrNot {
+        interface NormalOrAsyncFunctionDef : AsyncOrNot, WithDeclaration {
             val name: String
             val args: arguments
             val body: kotlin.collections.List<BaseStmt>
@@ -232,7 +243,7 @@ interface Python {
          *  |  ClassDef(identifier name, expr* bases, keyword* keywords, stmt* body, expr* decorator_list)
          * ```
          */
-        class ClassDef(pyObject: PyObject) : BaseStmt(pyObject) {
+        class ClassDef(pyObject: PyObject) : BaseStmt(pyObject), WithDeclaration {
             val name: String by lazy { "name" of pyObject }
 
             val bases: kotlin.collections.List<BaseExpr> by lazy { "bases" of pyObject }
