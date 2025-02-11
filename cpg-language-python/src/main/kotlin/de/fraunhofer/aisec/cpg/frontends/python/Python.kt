@@ -99,7 +99,7 @@ interface Python {
          * This interface should be attached to all such statements that we consider to be
          * declarations.
          */
-        interface WithDeclaration {}
+        sealed interface WithDeclaration
 
         /**
          * Represents a `ast.AST` node as returned by Python's `ast` parser.
@@ -173,17 +173,17 @@ interface Python {
          * Several classes are duplicated in the python AST for async and non-async variants. This
          * interface is a common interface for those AST classes.
          */
-        interface AsyncOrNot : WithLocation
+        sealed interface AsyncOrNot : WithLocation
 
         /** This interface denotes that this is an "async" node. */
-        interface IsAsync : AsyncOrNot
+        sealed interface IsAsync : AsyncOrNot
 
         /**
          * ast.FunctionDef and ast.AsyncFunctionDef are not related according to the Python syntax.
          * However, they are so similar, that we make use of this interface to avoid a lot of
          * duplicate code.
          */
-        interface NormalOrAsyncFunctionDef : AsyncOrNot, WithDeclaration {
+        sealed interface NormalOrAsyncFunctionDef : AsyncOrNot, WithDeclaration {
             val name: String
             val args: arguments
             val body: kotlin.collections.List<BaseStmt>

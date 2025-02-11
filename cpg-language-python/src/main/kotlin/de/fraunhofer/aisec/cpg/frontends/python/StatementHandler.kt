@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.frontends.python.Python.AST.IsAsync
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.scopes.FunctionScope
@@ -41,7 +40,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.TryStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.helpers.Util
 import kotlin.collections.plusAssign
 
 class StatementHandler(frontend: PythonLanguageFrontend) :
@@ -49,7 +47,6 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
     override fun handleNode(node: Python.AST.BaseStmt): Statement {
         return when (node) {
-            is Python.AST.ClassDef -> handleClassDef(node)
             is Python.AST.Pass -> return newEmptyStatement(rawNode = node)
             is Python.AST.ImportFrom -> handleImportFrom(node)
             is Python.AST.Assign -> handleAssign(node)
@@ -78,9 +75,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     problem = "The statement of class ${node.javaClass} is not supported yet",
                     rawNode = node,
                 )
-            is Python.AST.AsyncFunctionDef ->
-                wrapDeclarationToStatement(frontend.declarationHandler.handleNode(node))
-            is Python.AST.FunctionDef ->
+            is Python.AST.WithDeclaration ->
                 wrapDeclarationToStatement(frontend.declarationHandler.handleNode(node))
         }
     }
@@ -809,33 +804,6 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         )
     }
 
-    private fun handleClassDef(stmt: Python.AST.ClassDef): Statement {
-        val cls = newRecordDeclaration(stmt.name, "class", rawNode = stmt)
-        stmt.bases.map { cls.superClasses.add(frontend.typeOf(it)) }
-
-        frontend.scopeManager.enterScope(cls)
-
-        stmt.keywords.forEach {
-            cls.additionalProblems +=
-                newProblemExpression(problem = "could not parse keyword $it in class", rawNode = it)
-        }
-
-        for (s in stmt.body) {
-            when (s) {
-                is Python.AST.FunctionDef,
-                is Python.AST.AsyncFunctionDef -> {
-                    frontend.declarationHandler.handleNode(s)
-                }
-                else -> cls.statements += handleNode(s)
-            }
-        }
-
-        frontend.scopeManager.leaveScope(cls)
-        frontend.scopeManager.addDeclaration(cls)
-
-        return wrapDeclarationToStatement(cls)
-    }
-
     /**
      * Translates a Python [`Global`](https://docs.python.org/3/library/ast.html#ast.Global) into a
      * [LookupScopeStatement].
@@ -870,79 +838,6 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             outerFunctionScope,
             rawNode = global,
         )
-    }
-
-    internal fun handleAnnotations(
-        node: Python.AST.NormalOrAsyncFunctionDef
-    ): Collection<Annotation> {
-        return handleDeclaratorList(node, node.decorator_list)
-    }
-
-    fun handleDeclaratorList(
-        node: Python.AST.WithLocation,
-        decoratorList: List<Python.AST.BaseExpr>,
-    ): List<Annotation> {
-        val annotations = mutableListOf<Annotation>()
-        for (decorator in decoratorList) {
-            var annotation =
-                when (decorator) {
-                    is Python.AST.Name -> {
-                        val parsedDecorator = frontend.expressionHandler.handle(decorator)
-                        newAnnotation(name = parsedDecorator.name, rawNode = decorator)
-                    }
-                    is Python.AST.Attribute -> {
-                        val parsedDecorator = frontend.expressionHandler.handle(decorator)
-                        val name =
-                            if (parsedDecorator is MemberExpression) {
-                                parsedDecorator.base.name.fqn(parsedDecorator.name.localName)
-                            } else {
-                                parsedDecorator.name
-                            }
-                        newAnnotation(name = name, rawNode = decorator)
-                    }
-                    is Python.AST.Call -> {
-                        val parsedDecorator = frontend.expressionHandler.handle(decorator.func)
-                        val name =
-                            if (parsedDecorator is MemberExpression) {
-                                parsedDecorator.base.name.fqn(parsedDecorator.name.localName)
-                            } else {
-                                parsedDecorator.name
-                            }
-                        val annotation = newAnnotation(name = name, rawNode = decorator)
-                        for (arg in decorator.args) {
-                            val argParsed = frontend.expressionHandler.handle(arg)
-                            annotation.members +=
-                                newAnnotationMember(
-                                    "annotationArg" + decorator.args.indexOf(arg), // TODO
-                                    argParsed,
-                                    rawNode = arg,
-                                )
-                        }
-                        for (keyword in decorator.keywords) {
-                            annotation.members +=
-                                newAnnotationMember(
-                                    name = keyword.arg,
-                                    value = frontend.expressionHandler.handle(keyword.value),
-                                    rawNode = keyword,
-                                )
-                        }
-                        annotation
-                    }
-                    else -> {
-                        Util.warnWithFileLocation(
-                            frontend,
-                            decorator,
-                            log,
-                            "Decorator is of type ${decorator::class}, cannot handle this (yet).",
-                        )
-                        continue
-                    }
-                }
-
-            annotations += annotation
-        }
-
-        return annotations
     }
 
     /**

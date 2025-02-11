@@ -346,7 +346,14 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
 
         if (lastNamespace != null) {
             for (stmt in pythonASTModule.body) {
-                lastNamespace.statements += statementHandler.handle(stmt)
+                when (stmt) {
+                    // In order to be as compatible as possible with existing languages, we try to
+                    // add declarations directly to the class
+                    is Python.AST.WithDeclaration -> declarationHandler.handle(stmt)
+                    // All other statements are added to the (static) statements block of the
+                    // namespace.
+                    else -> lastNamespace.statements += statementHandler.handle(stmt)
+                }
             }
         }
 

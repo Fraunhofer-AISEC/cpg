@@ -30,10 +30,13 @@ import de.fraunhofer.aisec.cpg.frontends.isKnownOperatorName
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage.Companion.MODIFIER_KEYWORD_ONLY_ARGUMENT
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage.Companion.MODIFIER_POSITIONAL_ONLY_ARGUMENT
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.scopes.FunctionScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 import de.fraunhofer.aisec.cpg.helpers.Util
 
@@ -50,6 +53,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
         return when (node) {
             is Python.AST.FunctionDef -> handleFunctionDef(node)
             is Python.AST.AsyncFunctionDef -> handleFunctionDef(node)
+            is Python.AST.ClassDef -> handleClassDef(node)
             else -> {
                 return handleNotSupported(node, node.javaClass.simpleName)
             }
@@ -73,10 +77,41 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
     }
 
     /**
+     * Translates a Python [`ClassDef`](https://docs.python.org/3/library/ast.html#ast.ClassDef)
+     * into an [RecordDeclaration].
+     */
+    private fun handleClassDef(stmt: Python.AST.ClassDef): RecordDeclaration {
+        val cls = newRecordDeclaration(stmt.name, "class", rawNode = stmt)
+        stmt.bases.map { cls.superClasses.add(frontend.typeOf(it)) }
+
+        frontend.scopeManager.enterScope(cls)
+
+        stmt.keywords.forEach {
+            cls.additionalProblems +=
+                newProblemExpression(problem = "could not parse keyword $it in class", rawNode = it)
+        }
+
+        for (s in stmt.body) {
+            when (s) {
+                // In order to be as compatible as possible with existing languages, we try to add
+                // declarations directly to the class
+                is Python.AST.WithDeclaration -> handle(s)
+                // All other statements are added to the statements block of the class
+                else -> cls.statements += frontend.statementHandler.handle(s)
+            }
+        }
+
+        frontend.scopeManager.leaveScope(cls)
+        frontend.scopeManager.addDeclaration(cls)
+
+        return cls
+    }
+
+    /**
      * We have to consider multiple things when matching Python's FunctionDef to the CPG:
      * - A [Python.AST.FunctionDef] could be one of
      *     - a [ConstructorDeclaration] if it appears in a record and its [name] is `__init__`
-     *     - a [MethodeDeclaration] if it appears in a record, and it isn't a
+     *     - a [MethodDeclaration] if it appears in a record, and it isn't a
      *       [ConstructorDeclaration]
      *     - a [FunctionDeclaration] if neither of the above apply
      *
@@ -128,7 +163,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
         frontend.statementHandler.addAsyncWarning(s, result)
 
         // Handle decorators (which are translated into CPG "annotations")
-        result.annotations += frontend.statementHandler.handleAnnotations(s)
+        result.annotations += handleAnnotations(s)
 
         // Handle return type and calculate function type
         if (result is ConstructorDeclaration) {
@@ -327,5 +362,78 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
                 defaultValue = default?.let { frontend.expressionHandler.handle(it) },
             )
         }
+    }
+
+    internal fun handleAnnotations(
+        node: Python.AST.NormalOrAsyncFunctionDef
+    ): Collection<Annotation> {
+        return handleDeclaratorList(node, node.decorator_list)
+    }
+
+    fun handleDeclaratorList(
+        node: Python.AST.WithLocation,
+        decoratorList: List<Python.AST.BaseExpr>,
+    ): List<Annotation> {
+        val annotations = mutableListOf<Annotation>()
+        for (decorator in decoratorList) {
+            var annotation =
+                when (decorator) {
+                    is Python.AST.Name -> {
+                        val parsedDecorator = frontend.expressionHandler.handle(decorator)
+                        newAnnotation(name = parsedDecorator.name, rawNode = decorator)
+                    }
+                    is Python.AST.Attribute -> {
+                        val parsedDecorator = frontend.expressionHandler.handle(decorator)
+                        val name =
+                            if (parsedDecorator is MemberExpression) {
+                                parsedDecorator.base.name.fqn(parsedDecorator.name.localName)
+                            } else {
+                                parsedDecorator.name
+                            }
+                        newAnnotation(name = name, rawNode = decorator)
+                    }
+                    is Python.AST.Call -> {
+                        val parsedDecorator = frontend.expressionHandler.handle(decorator.func)
+                        val name =
+                            if (parsedDecorator is MemberExpression) {
+                                parsedDecorator.base.name.fqn(parsedDecorator.name.localName)
+                            } else {
+                                parsedDecorator.name
+                            }
+                        val annotation = newAnnotation(name = name, rawNode = decorator)
+                        for (arg in decorator.args) {
+                            val argParsed = frontend.expressionHandler.handle(arg)
+                            annotation.members +=
+                                newAnnotationMember(
+                                    "annotationArg" + decorator.args.indexOf(arg), // TODO
+                                    argParsed,
+                                    rawNode = arg,
+                                )
+                        }
+                        for (keyword in decorator.keywords) {
+                            annotation.members +=
+                                newAnnotationMember(
+                                    name = keyword.arg,
+                                    value = frontend.expressionHandler.handle(keyword.value),
+                                    rawNode = keyword,
+                                )
+                        }
+                        annotation
+                    }
+                    else -> {
+                        Util.warnWithFileLocation(
+                            frontend,
+                            decorator,
+                            log,
+                            "Decorator is of type ${decorator::class}, cannot handle this (yet).",
+                        )
+                        continue
+                    }
+                }
+
+            annotations += annotation
+        }
+
+        return annotations
     }
 }
