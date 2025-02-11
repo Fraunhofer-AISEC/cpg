@@ -1383,6 +1383,12 @@ val Node.translationUnit: TranslationUnitDeclaration?
         return firstParentOrNull<TranslationUnitDeclaration>()
     }
 
+/** Returns the [TranslationResult] where this node is located in. */
+val Node.translationResult: TranslationResult?
+    get() {
+        return firstParentOrNull<TranslationResult>()
+    }
+
 /** Returns the [Component] where this node is located in. */
 val Node.component: Component?
     get() {

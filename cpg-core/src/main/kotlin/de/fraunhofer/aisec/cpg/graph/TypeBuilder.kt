@@ -101,7 +101,7 @@ fun LanguageProvider.objectType(
 ): Type {
     // First, we check, whether this is a built-in type, to avoid necessary allocations of simple
     // types
-    val builtIn = language?.getSimpleTypeOf(name.toString())
+    val builtIn = language.getSimpleTypeOf(name.toString())
     if (builtIn != null) {
         return builtIn
     }
