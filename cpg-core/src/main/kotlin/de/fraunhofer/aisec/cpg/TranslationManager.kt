@@ -287,7 +287,7 @@ private constructor(
                         component.ctx = ctx
                         component.name = compName
                         result.addComponent(component)
-                        ctx.config.topLevels.put(includePath.toString(), includePath.toFile())
+                        ctx.config.topLevels.put(includePath.name, includePath.toFile())
                     }
 
                     usedFrontends.addAll(

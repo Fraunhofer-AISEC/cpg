@@ -244,10 +244,9 @@ class PythonLanguage :
         const val MODIFIER_KEYWORD_ONLY_ARGUMENT = "kwonlyarg"
 
         /**
-         * The initialization identifier of python, used for constructors and as name for module initialization.
+         * The initialization identifier of python, used for constructors and as name for module
+         * initialization.
          */
         const val IDENTIFIER_INIT = "__init__"
-
-
     }
 }
