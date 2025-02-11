@@ -151,8 +151,10 @@ fun SubgraphWalker.ScopedWalker.replaceCallWithConstruct(
     parent: Node,
     call: CallExpression,
 ) {
-    val construct = call.toConstructExpression(callee = call.callee as Reference)
-    construct.type = type
-
-    replace(parent, call, construct)
+    val callee = call.callee
+    if (callee is Reference) {
+        val construct = call.toConstructExpression(callee)
+        construct.type = type
+        replace(parent, call, construct)
+    }
 }
