@@ -75,7 +75,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     problem = "The statement of class ${node.javaClass} is not supported yet",
                     rawNode = node,
                 )
-            is Python.AST.WithDeclaration ->
+            is Python.AST.Def ->
                 wrapDeclarationToStatement(frontend.declarationHandler.handleNode(node))
         }
     }
@@ -270,10 +270,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         }
 
         /** Prepares the `manager.__exit__(None, None, None)` call for the else-block. */
-        fun generateExitCallWithNone(
-            managerName: Name,
-            withItem: Python.AST.withitem,
-        ): MemberCallExpression {
+        fun generateExitCallWithNone(managerName: Name): MemberCallExpression {
             val exitCallWithNone =
                 newMemberCallExpression(
                         callee =
@@ -295,10 +292,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
          * Prepares the if-statement which is the body of the catch block. This includes the call of
          * `manager.__exit__(*sys.exc_info())`, the negation and the throw statement.
          */
-        fun generateExitCallWithSysExcInfo(
-            managerName: Name,
-            withItem: Python.AST.withitem,
-        ): IfStatement {
+        fun generateExitCallWithSysExcInfo(managerName: Name): IfStatement {
             val exitCallWithSysExec =
                 newMemberCallExpression(
                         callee =
@@ -331,10 +325,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
          * tmpVal = manager.__enter__()
          * ```
          */
-        fun generateEnterCallAndAssignment(
-            managerName: Name,
-            withItem: Python.AST.withitem,
-        ): Pair<AssignExpression, Name> {
+        fun generateEnterCallAndAssignment(managerName: Name): Pair<AssignExpression, Name> {
             val tmpValName = Name.random(prefix = WITH_TMP_VAL)
             val enterVar = newReference(name = tmpValName).implicit()
             val enterCall =
@@ -373,8 +364,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
                 currentBlock.statements.add(managerAssignment)
 
-                val (enterAssignment, tmpValName) =
-                    generateEnterCallAndAssignment(managerName, withItem)
+                val (enterAssignment, tmpValName) = generateEnterCallAndAssignment(managerName)
                 currentBlock.statements.add(enterAssignment)
 
                 // Create the try statement with __exit__ calls in the finally block
@@ -416,7 +406,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                                 this.body =
                                     newBlock().implicit().apply {
                                         this.statements.add(
-                                            generateExitCallWithSysExcInfo(managerName, withItem)
+                                            generateExitCallWithSysExcInfo(managerName)
                                         )
                                     }
                             }
@@ -424,7 +414,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                         // Add the else-block
                         this.elseBlock =
                             newBlock().implicit().apply {
-                                this.statements.add(generateExitCallWithNone(managerName, withItem))
+                                this.statements.add(generateExitCallWithNone(managerName))
                             }
                     }
                 currentBlock.statements.add(tryStatement)
@@ -846,25 +836,21 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      * [parentNode].
      */
     internal fun makeBlock(
-        stmts: List<Python.AST.BaseStmt>,
+        statements: List<Python.AST.BaseStmt>,
         parentNode: Python.AST.WithLocation,
     ): Block {
         val result = newBlock()
 
-        for (stmt in stmts) {
+        for (stmt in statements) {
             result.statements += handle(stmt)
         }
 
-        // Try to retrieve the code and location from the parent node, if it is a base stmt
-        val ast = parentNode as? Python.AST.AST
-        if (ast != null) {
-            // We need to scope the call to codeAndLocationFromChildren to our frontend, so that
-            // all Python.AST.AST nodes are accepted, otherwise it would be scoped to the handler
-            // and only Python.AST.BaseStmt nodes would be accepted. This would cause issues with
-            // other nodes that are not "statements", but also handled as part of this handler,
-            // e.g., the Python.AST.ExceptHandler.
-            with(frontend) { result.codeAndLocationFromChildren(ast, frontend.lineSeparator) }
-        }
+        // We need to scope the call to codeAndLocationFromChildren to our frontend, so that
+        // all Python.AST.AST nodes are accepted, otherwise it would be scoped to the handler
+        // and only Python.AST.BaseStmt nodes would be accepted. This would cause issues with
+        // other nodes that are not "statements", but also handled as part of this handler,
+        // e.g., the Python.AST.ExceptHandler.
+        with(frontend) { result.codeAndLocationFromChildren(parentNode, frontend.lineSeparator) }
 
         return result
     }

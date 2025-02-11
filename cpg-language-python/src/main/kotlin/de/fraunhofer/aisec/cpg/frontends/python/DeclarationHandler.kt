@@ -34,7 +34,6 @@ import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.scopes.FunctionScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
@@ -48,32 +47,13 @@ import de.fraunhofer.aisec.cpg.helpers.Util
  * [DeclarationHandler], for others, the [StatementHandler] will forward these statements to us.
  */
 class DeclarationHandler(frontend: PythonLanguageFrontend) :
-    PythonHandler<Declaration, Python.AST.BaseStmt>(::ProblemDeclaration, frontend) {
-    override fun handleNode(node: Python.AST.BaseStmt): Declaration {
+    PythonHandler<Declaration, Python.AST.Def>(::ProblemDeclaration, frontend) {
+    override fun handleNode(node: Python.AST.Def): Declaration {
         return when (node) {
             is Python.AST.FunctionDef -> handleFunctionDef(node)
             is Python.AST.AsyncFunctionDef -> handleFunctionDef(node)
             is Python.AST.ClassDef -> handleClassDef(node)
-            else -> {
-                return handleNotSupported(node, node.javaClass.simpleName)
-            }
         }
-    }
-
-    private fun handleNotSupported(node: Python.AST.BaseStmt, name: String): Declaration {
-        Util.errorWithFileLocation(
-            frontend,
-            node,
-            log,
-            "Parsing of type $name is not supported (yet)",
-        )
-
-        val cpgNode = this.configConstructor.get()
-        if (cpgNode is ProblemNode) {
-            cpgNode.problem = "Parsing of type $name is not supported (yet)"
-        }
-
-        return cpgNode
     }
 
     /**
@@ -95,7 +75,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
             when (s) {
                 // In order to be as compatible as possible with existing languages, we try to add
                 // declarations directly to the class
-                is Python.AST.WithDeclaration -> handle(s)
+                is Python.AST.Def -> handle(s)
                 // All other statements are added to the statements block of the class
                 else -> cls.statements += frontend.statementHandler.handle(s)
             }

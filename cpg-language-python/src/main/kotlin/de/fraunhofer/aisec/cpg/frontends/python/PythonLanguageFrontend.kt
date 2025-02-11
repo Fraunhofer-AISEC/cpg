@@ -349,7 +349,7 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
                 when (stmt) {
                     // In order to be as compatible as possible with existing languages, we try to
                     // add declarations directly to the class
-                    is Python.AST.WithDeclaration -> declarationHandler.handle(stmt)
+                    is Python.AST.Def -> declarationHandler.handle(stmt)
                     // All other statements are added to the (static) statements block of the
                     // namespace.
                     else -> lastNamespace.statements += statementHandler.handle(stmt)
