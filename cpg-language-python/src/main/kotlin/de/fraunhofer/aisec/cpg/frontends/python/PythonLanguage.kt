@@ -29,13 +29,14 @@ import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.autoType
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
+import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation
+import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import kotlin.reflect.KClass
 import org.neo4j.ogm.annotation.Transient
 
@@ -45,7 +46,8 @@ class PythonLanguage :
     HasShortCircuitOperators,
     HasOperatorOverloading,
     HasFunctionStyleConstruction,
-    HasMemberExpressionAmbiguity {
+    HasMemberExpressionAmbiguity,
+    HasDynamicDeclarations {
     override val fileExtensions = listOf("py", "pyi")
     override val namespaceDelimiter = "."
     @Transient
@@ -226,6 +228,42 @@ class PythonLanguage :
         }
 
         return super.tryCast(type, targetType, hint, targetHint)
+    }
+
+    override fun SymbolResolver.provideDeclaration(ref: Reference): Declaration? {
+        // Completely hacky
+        return when {
+            ref.astParent is AssignExpression -> {
+                provideDeclarationForAssignExpression(
+                    ref.astParent!! as AssignExpression,
+                    ref,
+                    setAccessValue = false,
+                )
+            }
+            ref.astParent is InitializerListExpression &&
+                ref.astParent?.astParent is ComprehensionExpression -> {
+                provideDeclarationForComprehensionExpression(
+                    ref.astParent!!.astParent as ComprehensionExpression,
+                    ref,
+                    setAccessValue = true,
+                )
+            }
+            ref.astParent is InitializerListExpression &&
+                ref.astParent?.astParent is AssignExpression -> {
+                provideDeclarationForAssignExpression(
+                    ref.astParent!!.astParent as AssignExpression,
+                    ref,
+                    setAccessValue = true,
+                )
+            }
+            ref.astParent is ForEachStatement -> {
+                provideDeclarationForForEachStatement(ref.astParent as ForEachStatement, ref)
+            }
+
+            else -> {
+                null
+            }
+        }
     }
 
     companion object {

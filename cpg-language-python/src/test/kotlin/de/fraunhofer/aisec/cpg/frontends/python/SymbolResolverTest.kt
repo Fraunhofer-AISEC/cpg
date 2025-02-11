@@ -60,6 +60,12 @@ class SymbolResolverTest {
         aRefs.filterIsInstance<MemberExpression>().forEach { assertRefersTo(it, fieldA) }
         aRefs.filter { it !is MemberExpression }.forEach { assertRefersTo(it, globalA) }
 
+        // First assignment of copyA (a) should refer to global A, since the static class context is
+        // executed before the methods
+        val copyA = result.fields["copyA"]
+        assertNotNull(copyA)
+        assertRefersTo(copyA.firstAssignment, globalA)
+
         // We should only have one reference to "os" -> the member expression "self.os"
         val osRefs = result.refs("os")
         assertEquals(1, osRefs.size)
