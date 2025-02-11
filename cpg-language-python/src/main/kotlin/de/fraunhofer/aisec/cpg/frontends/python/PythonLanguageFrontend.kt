@@ -176,11 +176,12 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
                 // Traverse nested attributes (e.g., `modules.a.Foobar`)
                 while (type is Python.AST.Attribute) {
                     names.add(type.attr)
-                    if (type.value is Python.AST.Name) {
-                        names.add((type.value as Python.AST.Name).id)
+                    val typeValue = type.value
+                    if (typeValue is Python.AST.Name) {
+                        names.add(typeValue.id)
                         break
                     }
-                    type = type.value as Python.AST.Attribute
+                    type = type.value
                 }
                 if (names.isNotEmpty()) {
                     // As the AST provides attributes from outermost to innermost,
