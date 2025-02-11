@@ -43,12 +43,17 @@ fun Node.printDFG(
     return this.printGraph(maxConnections = maxConnections, *strategies)
 }
 
-/*
 /** Utility function to print the EOG using [printGraph]. */
-fun Node.printEOG(maxConnections: Int = 25): String {
-    return this.printGraph(PropertyEdge::class, Node::nextEOGEdges, Node::prevEOGEdges, maxConnections)
+fun Node.printEOG(
+    maxConnections: Int = 25,
+    vararg strategies: (Node) -> Iterator<Edge<Node>> =
+        arrayOf<(Node) -> Iterator<Edge<Node>>>(
+            Strategy::EOG_FORWARD_EDGES,
+            Strategy::EOG_BACKWARD_EDGES,
+        ),
+): String {
+    return this.printGraph(maxConnections, *strategies)
 }
-*/
 
 /**
  * This function prints a partial graph, limited to a particular set of edges, starting with the
@@ -61,9 +66,9 @@ fun Node.printEOG(maxConnections: Int = 25): String {
  *   implementations.
  * @return The Mermaid graph as a string encapsulated in triple-backticks.
  */
-fun Node.printGraph(
+fun <EdgeType : Edge<Node>> Node.printGraph(
     maxConnections: Int = 25,
-    vararg strategies: (Node) -> Iterator<Edge<Node>>,
+    vararg strategies: (Node) -> Iterator<EdgeType>,
 ): String {
     val builder = StringBuilder()
 
@@ -103,16 +108,17 @@ fun Node.printGraph(
         // somewhat consistent across multiple invocations of this function
         strategies.forEach { strategy ->
             when (strategy) {
-                Strategy::DFG_FORWARD_EDGES -> {
+                Strategy::DFG_FORWARD_EDGES,
+                Strategy::EOG_FORWARD_EDGES -> {
                     worklist += strategy(end).asSequence().sortedBy { it.end.name }
                     worklist += strategy(start).asSequence().sortedBy { it.end.name }
                 }
 
-                Strategy::DFG_BACKWARD_EDGES -> {
+                Strategy::DFG_BACKWARD_EDGES,
+                Strategy::EOG_BACKWARD_EDGES -> {
                     worklist += strategy(end).asSequence().sortedBy { it.start.name }
                     worklist += strategy(start).asSequence().sortedBy { it.start.name }
                 }
-
                 else -> TODO("Unknown strategy received.")
             }
         }

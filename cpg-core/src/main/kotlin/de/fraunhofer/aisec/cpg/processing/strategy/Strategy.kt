@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.edges.Edge
+import de.fraunhofer.aisec.cpg.graph.edges.flows.*
 import java.util.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -130,7 +130,7 @@ object Strategy {
      * @param x Current node in DFG.
      * @return Iterator over successor edges.
      */
-    fun DFG_FORWARD_EDGES(x: Node): Iterator<Edge<Node>> {
+    fun DFG_FORWARD_EDGES(x: Node): Iterator<Dataflow> {
         return x.nextDFGEdges.iterator()
     }
 
@@ -140,9 +140,27 @@ object Strategy {
      * @param x Current node in DFG.
      * @return Iterator over predecessor edges.
      */
-    fun DFG_BACKWARD_EDGES(x: Node): Iterator<Edge<Node>> {
+    fun DFG_BACKWARD_EDGES(x: Node): Iterator<Dataflow> {
         return x.prevDFGEdges.iterator()
     }
 
-    // TODO: return Dataflows instead of Edge<Node>
+    /**
+     * Traverse [EvaluationOrder] edges in forward direction.
+     *
+     * @param x Current node in EOG.
+     * @return Iterator over successor edges.
+     */
+    fun EOG_FORWARD_EDGES(x: Node): Iterator<EvaluationOrder> {
+        return x.nextEOGEdges.iterator()
+    }
+
+    /**
+     * Traverse [EvaluationOrder] edges in backward direction.
+     *
+     * @param x Current node in EOG.
+     * @return Iterator over predecessor edges.
+     */
+    fun EOG_BACKWARD_EDGES(x: Node): Iterator<EvaluationOrder> {
+        return x.prevEOGEdges.iterator()
+    }
 }
