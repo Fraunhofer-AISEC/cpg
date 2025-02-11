@@ -26,7 +26,9 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.GraphExamples
+import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertNotNull
 
 class MermaidPrinterTest {
@@ -36,5 +38,25 @@ class MermaidPrinterTest {
         val sc = graph.functions["main"].variables["sc"]
         assertNotNull(sc)
         println(sc.printDFG())
+    }
+
+    @Test
+    fun testPrintAST() {
+        with(TestLanguageFrontend()) {
+            val ref = newReference("foo")
+            val call = newCallExpression(ref)
+            val lit = newLiteral(1)
+            call.arguments += lit
+            assertNotNull(ref.astParent)
+
+            // We cannot really assert the whole string since the ID of nodes is not static and
+            // therefore the hashcode is not static
+            val ast = ref.printAST()
+            println(ast)
+            assertContains(ast, "foo")
+            assertContains(ast, "CallExpression")
+            assertContains(ast, "Literal")
+            assertContains(ast, "1")
+        }
     }
 }

@@ -26,7 +26,9 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
+import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
+import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.edges.flows.PartialDataflowGranularity
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
@@ -34,10 +36,10 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 /** Utility function to print the DFG using [printGraph]. */
 fun Node.printDFG(
     maxConnections: Int = 25,
-    vararg strategies: (Node) -> Iterator<Edge<Node>> =
-        arrayOf<(Node) -> Iterator<Edge<Node>>>(
-            Strategy::DFG_FORWARD_EDGES,
-            Strategy::DFG_BACKWARD_EDGES,
+    vararg strategies: (Node) -> Iterator<Dataflow> =
+        arrayOf<(Node) -> Iterator<Dataflow>>(
+            Strategy::DFG_EDGES_FORWARD,
+            Strategy::DFG_EDGES_BACKWARD,
         ),
 ): String {
     return this.printGraph(maxConnections = maxConnections, *strategies)
@@ -46,10 +48,22 @@ fun Node.printDFG(
 /** Utility function to print the EOG using [printGraph]. */
 fun Node.printEOG(
     maxConnections: Int = 25,
-    vararg strategies: (Node) -> Iterator<Edge<Node>> =
-        arrayOf<(Node) -> Iterator<Edge<Node>>>(
-            Strategy::EOG_FORWARD_EDGES,
-            Strategy::EOG_BACKWARD_EDGES,
+    vararg strategies: (Node) -> Iterator<EvaluationOrder> =
+        arrayOf<(Node) -> Iterator<EvaluationOrder>>(
+            Strategy::EOG_EDGES_FORWARD,
+            Strategy::EOG_EDGES_BACKWARD,
+        ),
+): String {
+    return this.printGraph(maxConnections, *strategies)
+}
+
+/** Utility function to print the AST using [printGraph]. */
+fun Node.printAST(
+    maxConnections: Int = 25,
+    vararg strategies: (Node) -> Iterator<AstEdge<out Node>> =
+        arrayOf<(Node) -> Iterator<AstEdge<out Node>>>(
+            Strategy::AST_EDGES_FORWARD,
+            Strategy::AST_EDGES_BACKWARD,
         ),
 ): String {
     return this.printGraph(maxConnections, *strategies)
@@ -66,7 +80,7 @@ fun Node.printEOG(
  *   implementations.
  * @return The Mermaid graph as a string encapsulated in triple-backticks.
  */
-fun <EdgeType : Edge<Node>> Node.printGraph(
+fun <EdgeType : Edge<out Node>> Node.printGraph(
     maxConnections: Int = 25,
     vararg strategies: (Node) -> Iterator<EdgeType>,
 ): String {
@@ -77,12 +91,13 @@ fun <EdgeType : Edge<Node>> Node.printGraph(
 
     // We use a set with a defined ordering to hold our work-list to have a somewhat consistent
     // ordering of statements in the mermaid file.
-    val worklist = LinkedHashSet<Edge<Node>>()
-    val alreadySeen = identitySetOf<Edge<Node>>()
+    val worklist = LinkedHashSet<EdgeType>()
+    val alreadySeen = identitySetOf<EdgeType>()
     var conns = 0
 
     strategies.forEach { strategy ->
-        worklist += strategy(this).asSequence().sortedBy { it.end.name }
+        worklist +=
+            strategy(this).asSequence().filter { it !in alreadySeen }.sortedBy { it.end.name }
     }
 
     while (worklist.isNotEmpty() && conns < maxConnections) {
@@ -116,7 +131,7 @@ fun <EdgeType : Edge<Node>> Node.printGraph(
     return builder.toString()
 }
 
-private fun Edge<Node>.label(): String {
+private fun Edge<out Node>.label(): String {
     val builder = StringBuilder()
     builder.append("\"")
     builder.append(this.labels.joinToString(","))

@@ -29,6 +29,8 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.edges.ast.*
+import de.fraunhofer.aisec.cpg.graph.edges.astEdges
 import de.fraunhofer.aisec.cpg.graph.edges.flows.*
 import java.util.*
 import org.slf4j.Logger
@@ -130,7 +132,7 @@ object Strategy {
      * @param x Current node in DFG.
      * @return Iterator over successor edges.
      */
-    fun DFG_FORWARD_EDGES(x: Node): Iterator<Dataflow> {
+    fun DFG_EDGES_FORWARD(x: Node): Iterator<Dataflow> {
         return x.nextDFGEdges.iterator()
     }
 
@@ -140,7 +142,7 @@ object Strategy {
      * @param x Current node in DFG.
      * @return Iterator over predecessor edges.
      */
-    fun DFG_BACKWARD_EDGES(x: Node): Iterator<Dataflow> {
+    fun DFG_EDGES_BACKWARD(x: Node): Iterator<Dataflow> {
         return x.prevDFGEdges.iterator()
     }
 
@@ -150,7 +152,7 @@ object Strategy {
      * @param x Current node in EOG.
      * @return Iterator over successor edges.
      */
-    fun EOG_FORWARD_EDGES(x: Node): Iterator<EvaluationOrder> {
+    fun EOG_EDGES_FORWARD(x: Node): Iterator<EvaluationOrder> {
         return x.nextEOGEdges.iterator()
     }
 
@@ -160,7 +162,27 @@ object Strategy {
      * @param x Current node in EOG.
      * @return Iterator over predecessor edges.
      */
-    fun EOG_BACKWARD_EDGES(x: Node): Iterator<EvaluationOrder> {
+    fun EOG_EDGES_BACKWARD(x: Node): Iterator<EvaluationOrder> {
         return x.prevEOGEdges.iterator()
+    }
+
+    /**
+     * Traverse [AstEdge] edges in forward direction.
+     *
+     * @param x Current node in EOG.
+     * @return Iterator over successor edges.
+     */
+    fun AST_EDGES_FORWARD(x: Node): Iterator<AstEdge<out Node>> {
+        return x.astEdges.iterator()
+    }
+
+    /**
+     * Traverse [AstEdge] edges in forward direction.
+     *
+     * @param x Current node in EOG.
+     * @return Iterator over successor edges.
+     */
+    fun AST_EDGES_BACKWARD(x: Node): Iterator<AstEdge<out Node>> {
+        return (x.astParent?.astEdges?.filter { it.end == x } ?: emptyList()).iterator()
     }
 }
