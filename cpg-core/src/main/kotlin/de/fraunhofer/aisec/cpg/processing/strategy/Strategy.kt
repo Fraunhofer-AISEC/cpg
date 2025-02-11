@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import java.util.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -107,7 +108,7 @@ object Strategy {
      * Traverse Data Flow Graph in backward direction.
      *
      * @param x Current node in DFG.
-     * @return Iterator over successors.
+     * @return Iterator over predecessor.
      */
     fun DFG_BACKWARD(x: Node): Iterator<Node> {
         return x.prevDFG.iterator()
@@ -122,4 +123,26 @@ object Strategy {
     fun AST_FORWARD(x: Node): Iterator<Node> {
         return x.astChildren.iterator()
     }
+
+    /**
+     * Traverse Data Flow Graph in forward direction.
+     *
+     * @param x Current node in DFG.
+     * @return Iterator over successor edges.
+     */
+    fun DFG_FORWARD_EDGES(x: Node): Iterator<Edge<Node>> {
+        return x.nextDFGEdges.iterator()
+    }
+
+    /**
+     * Traverse Data Flow Graph in backward direction.
+     *
+     * @param x Current node in DFG.
+     * @return Iterator over predecessor edges.
+     */
+    fun DFG_BACKWARD_EDGES(x: Node): Iterator<Edge<Node>> {
+        return x.prevDFGEdges.iterator()
+    }
+
+    // TODO: return Dataflows instead of Edge<Node>
 }

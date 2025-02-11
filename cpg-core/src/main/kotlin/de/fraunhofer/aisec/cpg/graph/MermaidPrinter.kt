@@ -25,40 +25,22 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.graph.PrintDFGDirection.*
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
 import de.fraunhofer.aisec.cpg.graph.edges.flows.PartialDataflowGranularity
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
-import kotlin.reflect.KProperty1
-
-/**
- * Indicates the direction when building the DFG.
- * - [FORWARD] build the DFG starting from the given node.
- * - [BACKWARD] build the DFG ending at the given node.
- * - [BOTH] build the DFG from and to the given node.
- */
-enum class PrintDFGDirection {
-    FORWARD,
-    BACKWARD,
-    BOTH,
-}
+import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 
 /** Utility function to print the DFG using [printGraph]. */
-fun Node.printDFG(maxConnections: Int = 25, direction: PrintDFGDirection = BOTH): String {
-    return when (direction) {
-        FORWARD -> {
-            this.printGraph(Node::nextDFGEdges, null, maxConnections)
-        }
-
-        BACKWARD -> {
-            this.printGraph(null, Node::prevDFGEdges, maxConnections)
-        }
-
-        BOTH -> {
-            this.printGraph(Node::nextDFGEdges, Node::prevDFGEdges, maxConnections)
-        }
-    }
+fun Node.printDFG(
+    maxConnections: Int = 25,
+    vararg strategies: (Node) -> Iterator<Edge<Node>> =
+        arrayOf<(Node) -> Iterator<Edge<Node>>>(
+            Strategy::DFG_FORWARD_EDGES,
+            Strategy::DFG_BACKWARD_EDGES,
+        ),
+): String {
+    return this.printGraph(maxConnections = maxConnections, *strategies)
 }
 
 /*
@@ -75,13 +57,13 @@ fun Node.printEOG(maxConnections: Int = 25): String {
  * issues, discussions or pull requests (see
  * https://github.blog/2022-02-14-include-diagrams-markdown-files-mermaid/).
  *
- * The edge type can be specified with the [nextEdgeGetter] and [prevEdgeGetter] functions, that
- * need to return a list of edges (as a [Edge]) beginning from this node.
+ * @param strategies The strategies to use when iterating the graph. See [Strategy] for
+ *   implementations.
+ * @return The Mermaid graph as a string encapsulated in triple-backticks.
  */
-fun <T : Edge<Node>> Node.printGraph(
-    nextEdgeGetter: KProperty1<Node, MutableCollection<T>>?,
-    prevEdgeGetter: KProperty1<Node, MutableCollection<T>>?,
+fun Node.printGraph(
     maxConnections: Int = 25,
+    vararg strategies: (Node) -> Iterator<Edge<Node>>,
 ): String {
     val builder = StringBuilder()
 
@@ -94,8 +76,9 @@ fun <T : Edge<Node>> Node.printGraph(
     val alreadySeen = identitySetOf<Edge<Node>>()
     var conns = 0
 
-    nextEdgeGetter?.let { worklist.addAll(it.get(this)) }
-    prevEdgeGetter?.let { worklist.addAll(it.get(this)) }
+    strategies.forEach { strategy ->
+        worklist += strategy(this).asSequence().sortedBy { it.end.name }
+    }
 
     while (worklist.isNotEmpty() && conns < maxConnections) {
         // Take one edge out of the work-list
@@ -116,20 +99,22 @@ fun <T : Edge<Node>> Node.printGraph(
         )
         conns++
 
-        // Add next and prev edges to the work-list (if not already seen). We sort the entries by
-        // name to have this somewhat consistent across multiple invocations of this function
-        nextEdgeGetter?.let { nextEdgeGetter ->
-            worklist +=
-                nextEdgeGetter.get(end).filter { it !in alreadySeen }.sortedBy { it.end.name }
-            worklist +=
-                nextEdgeGetter.get(start).filter { it !in alreadySeen }.sortedBy { it.end.name }
-        }
+        // Add next and prev edges to the work-list. We sort the entries by name to have this
+        // somewhat consistent across multiple invocations of this function
+        strategies.forEach { strategy ->
+            when (strategy) {
+                Strategy::DFG_FORWARD_EDGES -> {
+                    worklist += strategy(end).asSequence().sortedBy { it.end.name }
+                    worklist += strategy(start).asSequence().sortedBy { it.end.name }
+                }
 
-        prevEdgeGetter?.let { prevEdgeGetter ->
-            worklist +=
-                prevEdgeGetter.get(end).filter { it !in alreadySeen }.sortedBy { it.start.name }
-            worklist +=
-                prevEdgeGetter.get(start).filter { it !in alreadySeen }.sortedBy { it.start.name }
+                Strategy::DFG_BACKWARD_EDGES -> {
+                    worklist += strategy(end).asSequence().sortedBy { it.start.name }
+                    worklist += strategy(start).asSequence().sortedBy { it.start.name }
+                }
+
+                else -> TODO("Unknown strategy received.")
+            }
         }
     }
 
