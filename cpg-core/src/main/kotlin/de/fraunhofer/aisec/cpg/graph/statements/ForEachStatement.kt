@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdges
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
@@ -47,7 +46,7 @@ class ForEachStatement : LoopStatement(), BranchingNode, StatementHolder {
         astOptionalEdgeOf<Statement>(
             onChanged = { _, new ->
                 val end = new?.end
-                if (end is Reference) {
+                if (end is HasAccess) {
                     end.access = AccessValues.WRITE
                 }
             }

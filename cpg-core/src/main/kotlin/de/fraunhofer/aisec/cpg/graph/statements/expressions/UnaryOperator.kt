@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
+import de.fraunhofer.aisec.cpg.graph.HasAccess
 import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
@@ -78,9 +79,7 @@ class UnaryOperator : Expression(), HasOverloadedOperation, ArgumentHolder, HasT
         if (operatorCode == "++" || operatorCode == "--") {
             access = AccessValues.READWRITE
         }
-        if (input is Reference) {
-            (input as? Reference)?.access = access
-        }
+        (input as? HasAccess)?.access = access
     }
 
     override fun toString(): String {

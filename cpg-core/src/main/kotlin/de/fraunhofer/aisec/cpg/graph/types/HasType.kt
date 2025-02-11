@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.graph.ContextProvider
+import de.fraunhofer.aisec.cpg.graph.HasAccess
 import de.fraunhofer.aisec.cpg.graph.LanguageProvider
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
@@ -140,6 +141,9 @@ interface HasType : ContextProvider, LanguageProvider {
         ) {
             (old?.end as? HasType)?.unregisterTypeObserver(this)
             (new?.end as? HasType)?.registerTypeObserver(this)
+            if (this is HasAccess) {
+                (new?.end as? HasAccess)?.access = this.access
+            }
         }
     }
 

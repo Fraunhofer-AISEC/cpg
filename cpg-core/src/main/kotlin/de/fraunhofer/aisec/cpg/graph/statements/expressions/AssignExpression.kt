@@ -72,9 +72,9 @@ class AssignExpression :
                 }
 
                 if (isSimpleAssignment) {
-                    (end as? Reference)?.access = AccessValues.WRITE
+                    (end as? HasAccess)?.access = AccessValues.WRITE
                 } else {
-                    (end as? Reference)?.access = AccessValues.READWRITE
+                    (end as? HasAccess)?.access = AccessValues.READWRITE
                 }
             }
         )

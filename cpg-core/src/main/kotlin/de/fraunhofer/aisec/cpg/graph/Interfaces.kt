@@ -149,3 +149,11 @@ interface HasOverloadedOperation : HasOperatorCode {
      */
     val operatorBase: Expression
 }
+
+interface HasAccess {
+    /**
+     * Is this reference used for writing data instead of just reading it? Determines dataflow
+     * direction
+     */
+    var access: AccessValues
+}

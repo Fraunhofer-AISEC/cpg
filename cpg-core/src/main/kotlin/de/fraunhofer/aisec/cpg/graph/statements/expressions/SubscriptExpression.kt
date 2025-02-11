@@ -38,7 +38,14 @@ import org.neo4j.ogm.annotation.Relationship
  * ([arrayExpression]) and `index` ([subscriptExpression]) are of type [Expression]. CPP can
  * overload operators thus changing semantics of array access.
  */
-class SubscriptExpression : Expression(), HasBase, HasType.TypeObserver, ArgumentHolder {
+class SubscriptExpression : Expression(), HasBase, HasType.TypeObserver, ArgumentHolder, HasAccess {
+    override var access = AccessValues.READ
+        set(value) {
+            field = value
+            // Propagate the access value to the array expression
+            (arrayExpression as? HasAccess)?.access = value
+        }
+
     @Relationship("ARRAY_EXPRESSION")
     var arrayExpressionEdge =
         astEdgeOf<Expression>(
