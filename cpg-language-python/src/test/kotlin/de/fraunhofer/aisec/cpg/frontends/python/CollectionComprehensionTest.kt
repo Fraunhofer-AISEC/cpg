@@ -1539,17 +1539,17 @@ class CollectionComprehensionTest {
             index.prevDFG.size,
             "We expect that the reference \"a\" used as an index in the first element of the tuple does not have any incoming data flows which somewhat simulates that it's not initialized at this point in time which is also why python crashes.",
         )
-        /*assertNotRefersTo(
+        assertNotRefersTo(
             index,
             aDeclaration,
             "We expect that the reference \"a\" used as an index in the first element of the tuple does not refer to the same VariableDeclaration as the second element of the tuple nor to the local variable nor does it have an own VariableDeclaration since python would just crash.",
-        )*/
-        assertNotRefersTo(
+        )
+        /*assertNotRefersTo(
             index,
             innerVariableDeclarationA,
             "We expect that the reference \"a\" used as an index in the first element of the tuple does not refer to the same VariableDeclaration as the second element of the tuple nor to the local variable nor does it have an own VariableDeclaration since python would just crash.",
         )
-        /*assertNull(
+        assertNull(
             index.refersTo,
             "We expect that the reference \"a\" used as an index in the first element of the tuple does not refer to the same VariableDeclaration as the second element of the tuple nor to the local variable nor does it have an own VariableDeclaration since python would just crash.",
         )*/
