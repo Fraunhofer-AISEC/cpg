@@ -26,15 +26,8 @@
 package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.edges.flows.IndexedDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CollectionComprehension
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.test.*
 import de.fraunhofer.aisec.cpg.test.analyze
 import de.fraunhofer.aisec.cpg.test.assertLiteralValue
@@ -43,60 +36,6 @@ import java.nio.file.Path
 import kotlin.test.*
 
 class ExpressionHandlerTest {
-
-    @Test
-    fun testComprehensionExpressionTuple() {
-        val topLevel = Path.of("src", "test", "resources", "python")
-        val result =
-            analyze(listOf(topLevel.resolve("comprehension.py").toFile()), topLevel, true) {
-                it.registerLanguage<PythonLanguage>()
-            }
-        assertNotNull(result)
-
-        val tupleComp = result.functions["tupleComp"]
-        assertNotNull(tupleComp)
-
-        val body = tupleComp.body
-        assertIs<Block>(body)
-        val tupleAsVariableAssignment = body.statements[0]
-        assertIs<AssignExpression>(tupleAsVariableAssignment)
-        val tupleAsVariable = tupleAsVariableAssignment.rhs[0]
-        assertIs<CollectionComprehension>(tupleAsVariable)
-        val barCall = tupleAsVariable.statement
-        assertIs<CallExpression>(barCall)
-        assertLocalName("bar", barCall)
-        val argK = barCall.arguments[0]
-        assertIs<Reference>(argK)
-        assertLocalName("k", argK)
-        val argV = barCall.arguments[1]
-        assertIs<Reference>(argV)
-        assertLocalName("v", argV)
-        assertEquals(1, tupleAsVariable.comprehensionExpressions.size)
-        val initializerListExpression = tupleAsVariable.comprehensionExpressions[0].variable
-        assertIs<InitializerListExpression>(initializerListExpression)
-        val variableK = initializerListExpression.initializers[0]
-        assertIs<Reference>(variableK)
-        assertLocalName("k", variableK)
-        val variableV = initializerListExpression.initializers[1]
-        assertIs<Reference>(variableV)
-        assertLocalName("v", variableV)
-
-        // Check that the ILE flows to the variables with the indexed granularity
-        assertContains(initializerListExpression.nextDFG, variableK)
-        val granularityTupleToK =
-            initializerListExpression.nextDFGEdges.single { it.end == variableK }.granularity
-        assertIs<IndexedDataflowGranularity>(granularityTupleToK)
-        assertEquals(0, granularityTupleToK.index)
-        assertContains(initializerListExpression.nextDFG, variableV)
-        val granularityTupleToV =
-            initializerListExpression.nextDFGEdges.single { it.end == variableV }.granularity
-        assertIs<IndexedDataflowGranularity>(granularityTupleToV)
-        assertEquals(1, granularityTupleToV.index)
-
-        // Check that the variables flow to their usages
-        assertEquals(setOf<Node>(argK), variableK.nextDFG.toSet())
-        assertEquals(setOf<Node>(argV), variableV.nextDFG.toSet())
-    }
 
     @Test
     fun testBoolOps() {

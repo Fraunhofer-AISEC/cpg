@@ -26,11 +26,13 @@
 package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.edges.flows.IndexedDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.get
 import de.fraunhofer.aisec.cpg.graph.invoke
@@ -57,6 +59,7 @@ import de.fraunhofer.aisec.cpg.test.assertLocalName
 import de.fraunhofer.aisec.cpg.test.assertNotRefersTo
 import de.fraunhofer.aisec.cpg.test.assertRefersTo
 import java.nio.file.Path
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
@@ -189,6 +192,52 @@ class CollectionComprehensionTest {
             argV,
             declarationV,
             "The argument v of the call also refers to the variable v declared in the comprehension expression.",
+        )
+
+        // Check that the ILE flows to the variables with the indexed granularity
+        assertContains(
+            initializerListExpression.nextDFG,
+            variableK,
+            "We expect that the data of the ILE flows to the reference \"k\" with index granularity and index 1",
+        )
+        val granularityTupleToK =
+            initializerListExpression.nextDFGEdges.single { it.end == variableK }.granularity
+        assertIs<IndexedDataflowGranularity>(
+            granularityTupleToK,
+            "We expect that the data of the ILE flows to the reference \"k\" with index granularity and index 1",
+        )
+        assertEquals(
+            0,
+            granularityTupleToK.index,
+            "We expect that the data of the ILE flows to the reference \"k\" with index granularity and index 1",
+        )
+        assertContains(
+            initializerListExpression.nextDFG,
+            variableV,
+            "We expect that the data of the ILE flows to the reference \"v\" with index granularity and index 1",
+        )
+        val granularityTupleToV =
+            initializerListExpression.nextDFGEdges.single { it.end == variableV }.granularity
+        assertIs<IndexedDataflowGranularity>(
+            granularityTupleToV,
+            "We expect that the data of the ILE flows to the reference \"v\" with index granularity and index 1",
+        )
+        assertEquals(
+            1,
+            granularityTupleToV.index,
+            "We expect that the data of the ILE flows to the reference \"v\" with index granularity and index 1",
+        )
+
+        // Check that the variables flow to their usages
+        assertEquals(
+            setOf<Node>(argK),
+            variableK.nextDFG.toSet(),
+            "We expect that the \"k\" in the tuple flows to its usage",
+        )
+        assertEquals(
+            setOf<Node>(argV),
+            variableV.nextDFG.toSet(),
+            "We expect that the \"v\" in the tuple flows to its usage",
         )
     }
 
