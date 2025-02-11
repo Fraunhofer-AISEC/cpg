@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
+import de.fraunhofer.aisec.cpg.graph.PrintDFGDirection.*
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
 import de.fraunhofer.aisec.cpg.graph.edges.flows.PartialDataflowGranularity
@@ -32,9 +33,33 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.PointerDataflowGranularity
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import kotlin.reflect.KProperty1
 
+/**
+ * Indicates the direction when building the DFG.
+ * - [FORWARD] build the DFG starting from the given node.
+ * - [BACKWARD] build the DFG ending at the given node.
+ * - [BOTH] build the DFG from and to the given node.
+ */
+enum class PrintDFGDirection {
+    FORWARD,
+    BACKWARD,
+    BOTH,
+}
+
 /** Utility function to print the DFG using [printGraph]. */
-fun Node.printDFG(maxConnections: Int = 25): String {
-    return this.printGraph(Node::nextDFGEdges, Node::prevDFGEdges, maxConnections)
+fun Node.printDFG(maxConnections: Int = 25, direction: PrintDFGDirection = BOTH): String {
+    return when (direction) {
+        FORWARD -> {
+            this.printGraph(Node::nextDFGEdges, null, maxConnections)
+        }
+
+        BACKWARD -> {
+            this.printGraph(null, Node::prevDFGEdges, maxConnections)
+        }
+
+        BOTH -> {
+            this.printGraph(Node::nextDFGEdges, Node::prevDFGEdges, maxConnections)
+        }
+    }
 }
 
 /*
@@ -55,8 +80,8 @@ fun Node.printEOG(maxConnections: Int = 25): String {
  * need to return a list of edges (as a [Edge]) beginning from this node.
  */
 fun <T : Edge<Node>> Node.printGraph(
-    nextEdgeGetter: KProperty1<Node, MutableCollection<T>>,
-    prevEdgeGetter: KProperty1<Node, MutableCollection<T>>,
+    nextEdgeGetter: KProperty1<Node, MutableCollection<T>>?,
+    prevEdgeGetter: KProperty1<Node, MutableCollection<T>>?,
     maxConnections: Int = 25,
 ): String {
     val builder = StringBuilder()
@@ -70,12 +95,17 @@ fun <T : Edge<Node>> Node.printGraph(
     val alreadySeen = identitySetOf<Edge<Node>>()
     var conns = 0
 
-    worklist.addAll(nextEdgeGetter.get(this))
+    nextEdgeGetter?.let { worklist.addAll(it.get(this)) }
+    prevEdgeGetter?.let { worklist.addAll(it.get(this)) }
 
     while (worklist.isNotEmpty() && conns < maxConnections) {
         // Take one edge out of the work-list
         val edge = worklist.first()
         worklist.remove(edge)
+
+        if (edge in alreadySeen) {
+            continue
+        }
 
         // Add it to the seen-list
         alreadySeen += edge
@@ -89,17 +119,19 @@ fun <T : Edge<Node>> Node.printGraph(
 
         // Add next and prev edges to the work-list (if not already seen). We sort the entries by
         // name to have this somewhat consistent across multiple invocations of this function
-        var next = nextEdgeGetter.get(end).filter { it !in alreadySeen }.sortedBy { it.end.name }
-        worklist += next
+        nextEdgeGetter?.let { nextEdgeGetter ->
+            worklist +=
+                nextEdgeGetter.get(end).filter { it !in alreadySeen }.sortedBy { it.end.name }
+            worklist +=
+                nextEdgeGetter.get(start).filter { it !in alreadySeen }.sortedBy { it.end.name }
+        }
 
-        var prev = prevEdgeGetter.get(end).filter { it !in alreadySeen }.sortedBy { it.start.name }
-        worklist += prev
-
-        next = nextEdgeGetter.get(start).filter { it !in alreadySeen }.sortedBy { it.end.name }
-        worklist += next
-
-        prev = prevEdgeGetter.get(start).filter { it !in alreadySeen }.sortedBy { it.start.name }
-        worklist += prev
+        prevEdgeGetter?.let { prevEdgeGetter ->
+            worklist +=
+                prevEdgeGetter.get(end).filter { it !in alreadySeen }.sortedBy { it.start.name }
+            worklist +=
+                prevEdgeGetter.get(start).filter { it !in alreadySeen }.sortedBy { it.start.name }
+        }
     }
 
     builder.append("```")
