@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.test.analyze
+import de.fraunhofer.aisec.cpg.test.assertFullName
 import de.fraunhofer.aisec.cpg.test.assertNotRefersTo
 import de.fraunhofer.aisec.cpg.test.assertRefersTo
 import java.io.File
@@ -87,5 +88,23 @@ class SymbolResolverTest {
         val bazDoesNotWorkArgument = bazDoesNotWork.arguments.firstOrNull()
         assertNotNull(bazDoesNotWorkArgument)
         assertNotRefersTo(bazDoesNotWorkArgument, fieldCopyA)
+    }
+
+    @Test
+    fun testParentClassConfusion() {
+        val topLevel = File("src/test/resources/python")
+        val result =
+            analyze(
+                listOf(topLevel.resolve("parent_confusion/package/myclass.py")),
+                topLevel.toPath(),
+                true,
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(result)
+
+        val myClass = result.records["MyClass"]
+        assertNotNull(myClass)
+        assertFullName("other.myclass.MyClass", myClass.superTypes.singleOrNull())
     }
 }
