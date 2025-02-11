@@ -40,6 +40,7 @@ import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.replace
+import de.fraunhofer.aisec.cpg.helpers.toConstructExpression
 import de.fraunhofer.aisec.cpg.nameIsType
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
@@ -150,14 +151,7 @@ fun SubgraphWalker.ScopedWalker.replaceCallWithConstruct(
     parent: Node,
     call: CallExpression,
 ) {
-    val construct = newConstructExpression()
-    construct.code = call.code
-    construct.language = call.language
-    construct.location = call.location
-    construct.callee = call.callee
-    (construct.callee as? Reference)?.resolutionHelper = construct
-    construct.arguments = call.arguments
-    construct.argumentEdges.addAll(call.argumentEdges)
+    val construct = call.toConstructExpression(callee = call.callee as Reference)
     construct.type = type
 
     replace(parent, call, construct)

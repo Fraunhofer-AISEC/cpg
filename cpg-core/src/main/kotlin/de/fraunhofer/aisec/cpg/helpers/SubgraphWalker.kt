@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeCollection
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
@@ -467,4 +468,11 @@ fun CallExpression.toMemberCallExpression(callee: MemberExpression): MemberCallE
     duplicateTo(call, callee)
 
     return call
+}
+
+fun CallExpression.toConstructExpression(callee: Reference): ConstructExpression {
+    val construct = ConstructExpression()
+    duplicateTo(construct, callee)
+
+    return construct
 }
