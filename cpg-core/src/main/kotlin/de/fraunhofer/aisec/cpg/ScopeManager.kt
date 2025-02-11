@@ -93,9 +93,7 @@ class ScopeManager : ScopeProvider {
 
     /** The current block, according to the scope that is currently active. */
     val currentBlock: Block?
-        get() =
-            currentScope?.astNode as? Block
-                ?: currentScope?.astNode?.firstParentOrNull { it is Block } as? Block
+        get() = currentScope?.astNode as? Block ?: currentScope?.astNode?.firstParentOrNull<Block>()
 
     /**
      * The current method in the active scope tree, this ensures that 'this' keywords are mapped
@@ -242,6 +240,7 @@ class ScopeManager : ScopeProvider {
                     is TryStatement,
                     is IfStatement,
                     is CatchClause,
+                    is CollectionComprehension,
                     is Block -> LocalScope(nodeToScope)
                     is FunctionDeclaration -> FunctionScope(nodeToScope)
                     is RecordDeclaration -> RecordScope(nodeToScope)
@@ -372,11 +371,11 @@ class ScopeManager : ScopeProvider {
             is ProblemDeclaration,
             is IncludeDeclaration -> {
                 // directly add problems and includes to the global scope
-                this.globalScope?.addDeclaration(declaration, addToAST)
+                this.globalScope?.addDeclaration(declaration, addToAST, this)
             }
             is ValueDeclaration -> {
                 val scope = this.firstScopeIsInstanceOrNull<ValueDeclarationScope>()
-                scope?.addDeclaration(declaration, addToAST)
+                scope?.addDeclaration(declaration, addToAST, this)
             }
             is ImportDeclaration,
             is EnumDeclaration,
@@ -384,7 +383,7 @@ class ScopeManager : ScopeProvider {
             is NamespaceDeclaration,
             is TemplateDeclaration -> {
                 val scope = this.firstScopeIsInstanceOrNull<StructureDeclarationScope>()
-                scope?.addDeclaration(declaration, addToAST)
+                scope?.addDeclaration(declaration, addToAST, this)
             }
         }
     }
@@ -573,23 +572,25 @@ class ScopeManager : ScopeProvider {
      * the given [Name]. It also does this recursively.
      */
     fun resolveParentAlias(name: Name, scope: Scope?): Name {
-        var parentName = name.parent ?: return name
-        parentName = resolveParentAlias(parentName, scope)
+        if (name.parent == null) {
+            return name
+        }
 
-        // Build a new name based on the eventual resolved parent alias
-        var newName =
-            if (parentName != name.parent) {
-                Name(name.localName, parentName, delimiter = name.delimiter)
-            } else {
-                name
-            }
-        var decl =
-            scope?.lookupSymbol(parentName.localName)?.singleOrNull {
-                it is NamespaceDeclaration || it is RecordDeclaration
-            }
-        if (decl != null && parentName != decl.name) {
+        val parentName = resolveParentAlias(name.parent, scope)
+
+        // Look for an alias in the current scope. This is also resolves partial FQNs to their full
+        // FQN
+        var newScope =
+            scope
+                ?.lookupSymbol(parentName.localName) {
+                    it is NamespaceDeclaration || it is RecordDeclaration
+                }
+                ?.map { nameScopeMap[it.name] }
+                ?.toSet()
+                ?.singleOrNull()
+        if (newScope != null) {
             // This is probably an already resolved alias so, we take this one
-            return Name(newName.localName, decl.name, delimiter = newName.delimiter)
+            return adjustNameIfNecessary(newScope.name, parentName, name)
         }
 
         // Some special handling of typedefs; this should somehow be merged with the above but not
@@ -597,27 +598,25 @@ class ScopeManager : ScopeProvider {
         // but we rather want its original type name.
         // TODO: This really needs to be handled better somehow, maybe a common interface for
         //  typedefs, namespaces and records that return the correct name?
-        decl = scope?.lookupSymbol(parentName.localName)?.singleOrNull { it is TypedefDeclaration }
+        val decl =
+            scope?.lookupSymbol(parentName.localName)?.singleOrNull { it is TypedefDeclaration }
         if ((decl as? TypedefDeclaration) != null) {
-            return Name(newName.localName, decl.type.name, delimiter = newName.delimiter)
+            return adjustNameIfNecessary(decl.type.name, parentName, name)
         }
 
-        // If we do not have a match yet, it could be that we are trying to resolve an FQN type
-        // during frontend translation. This is deprecated and will be replaced in the future
-        // by a system that also resolves type during symbol resolving. However, to support aliases
-        // from imports in this intermediate stage, we have to look for unresolved import
-        // declarations and also take their aliases into account
-        decl =
-            scope
-                ?.lookupSymbol(parentName.localName)
-                ?.filterIsInstance<ImportDeclaration>()
-                ?.singleOrNull()
-        if (decl != null && decl.importedSymbols.isEmpty() && parentName != decl.import) {
-            newName = Name(newName.localName, decl.import, delimiter = newName.delimiter)
-        }
+        // Otherwise, just build a new name based on the eventual resolved parent alias (if
+        // necessary)
+        var newName = adjustNameIfNecessary(parentName, name.parent, name)
 
         return newName
     }
+
+    private fun adjustNameIfNecessary(newParentName: Name, oldParentName: Name, name: Name): Name =
+        if (newParentName != oldParentName) {
+            Name(name.localName, newParentName, delimiter = name.delimiter)
+        } else {
+            name
+        }
 
     /**
      * Directly jumps to a given scope. Returns the previous scope. Do not forget to set the scope

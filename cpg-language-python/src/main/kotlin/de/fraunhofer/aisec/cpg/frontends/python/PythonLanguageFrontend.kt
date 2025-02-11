@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.SupportsParallelParsing
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
@@ -63,6 +64,7 @@ import kotlin.math.min
  * a value (on the first assignment).
  */
 @RegisterExtraPass(PythonAddDeclarationsPass::class)
+@SupportsParallelParsing(false) // https://github.com/Fraunhofer-AISEC/cpg/issues/2026
 class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: TranslationContext) :
     LanguageFrontend<Python.AST.AST, Python.AST.AST?>(language, ctx) {
     val lineSeparator = "\n" // TODO
@@ -353,6 +355,22 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
 }
 
 /**
+ * Returns the version info from the [TranslationConfiguration] as [VersionInfo] or `null` if it was
+ * not specified.
+ */
+val TranslationConfiguration.versionInfo: VersionInfo?
+    get() {
+        // We need to populate the version info "in-order", to ensure that we do not
+        // set the micro version if minor and major are not set, i.e., there must not be a
+        // "gap" in the granularity of version numbers
+        return this.symbols["PYTHON_VERSION_MAJOR"]?.toLong()?.let { major ->
+            val minor = this.symbols["PYTHON_VERSION_MINOR"]?.toLong()
+            val micro = if (minor != null) this.symbols["PYTHON_VERSION_MICRO"]?.toLong() else null
+            VersionInfo(major, minor, micro)
+        }
+    }
+
+/**
  * Populate system information from defined symbols that represent our environment. We add it as an
  * overlay node to our [TranslationUnitDeclaration].
  */
@@ -363,17 +381,7 @@ fun populateSystemInformation(
     var sysInfo =
         SystemInformation(
             platform = config.symbols["PYTHON_PLATFORM"],
-            // We need to populate the version info "in-order", to ensure that we do not
-            // set the micro version if minor and major are not set, i.e., there must not be a
-            // "gap" in the granularity of version numbers
-            versionInfo =
-                config.symbols["PYTHON_VERSION_MAJOR"]?.toLong()?.let { major ->
-                    val minor = config.symbols["PYTHON_VERSION_MINOR"]?.toLong()
-                    val micro =
-                        if (minor != null) config.symbols["PYTHON_VERSION_MICRO"]?.toLong()
-                        else null
-                    VersionInfo(major, minor, micro)
-                },
+            versionInfo = config.versionInfo,
         )
     sysInfo.underlyingNode = tu
     return sysInfo

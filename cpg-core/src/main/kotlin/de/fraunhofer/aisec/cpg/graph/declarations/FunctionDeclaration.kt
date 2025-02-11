@@ -29,7 +29,6 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
-import de.fraunhofer.aisec.cpg.graph.edges.flows.Invoke
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Invokes
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.edges.unwrappingIncoming
@@ -73,10 +72,8 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder, EOGStart
         Invokes<FunctionDeclaration>(this, CallExpression::invokeEdges, outgoing = false)
 
     /** Virtual property for accessing [calledByEdges] without property edges. */
-    val calledBy by
-        unwrappingIncoming<CallExpression, FunctionDeclaration, FunctionDeclaration, Invoke>(
-            FunctionDeclaration::calledByEdges
-        )
+    val calledBy: MutableList<CallExpression> by
+        unwrappingIncoming(FunctionDeclaration::calledByEdges)
 
     /** The list of return types. The default is an empty list. */
     var returnTypes = listOf<Type>()

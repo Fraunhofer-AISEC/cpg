@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.scopes
 
+import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
@@ -55,7 +56,11 @@ sealed class ValueDeclarationScope(astNode: Node?) : Scope(astNode) {
         typedefs[typedef.alias.name] = typedef
     }
 
-    open fun addDeclaration(declaration: Declaration, addToAST: Boolean) {
+    open fun addDeclaration(
+        declaration: Declaration,
+        addToAST: Boolean,
+        scopeManager: ScopeManager,
+    ) {
         if (declaration is ValueDeclaration) {
             addValueDeclaration(declaration, addToAST)
         } else {

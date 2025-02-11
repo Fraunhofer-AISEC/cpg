@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.*
+import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ListType
@@ -1416,6 +1417,21 @@ class PythonFrontendTest : BaseTest() {
             }
         assertNotNull(result)
 
+        // import a
+        val importA = result.imports["a"]
+        assertNotNull(importA)
+        assertEquals(ImportStyle.IMPORT_NAMESPACE, importA.style)
+        assertContains(
+            assertNotNull(importA.scope?.importedScopes),
+            assertNotNull(result.finalCtx.scopeManager.lookupScope(Name("a"))),
+        )
+
+        // from c import *
+        val importC = result.imports["c"]
+        assertNotNull(importC)
+        assertEquals(ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE, importC.style)
+        // assertEquals(result.namespaces["c"], importC.importedFrom)
+
         val aFunc = result.functions["a.func"]
         assertNotNull(aFunc)
 
@@ -1638,18 +1654,62 @@ class PythonFrontendTest : BaseTest() {
     @Test
     fun testImportVsMember() {
         val topLevel = Path.of("src", "test", "resources", "python")
-        val tu =
-            analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("import_vs_member.py").toFile()),
-                topLevel,
-                true,
-            ) {
+        val result =
+            analyze(listOf(topLevel.resolve("import_vs_member.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
             }
-        assertNotNull(tu)
+        assertNotNull(result)
 
-        val refs = tu.refs
-        refs.forEach { assertIsNot<MemberExpression>(it) }
+        val pkg = result.namespaces["pkg"]
+        assertNotNull(pkg)
+        assertTrue(pkg.isInferred)
+
+        val pkgThirdModule = result.namespaces["pkg.third_module"]
+        assertNotNull(pkgThirdModule)
+        assertTrue(pkg.isInferred)
+
+        val pkgFunction = result.functions["pkg.function"]
+        assertNotNull(pkgFunction)
+        assertTrue(pkg.isInferred)
+
+        val anotherPkg = result.namespaces["another_pkg"]
+        assertNotNull(anotherPkg)
+        assertTrue(pkg.isInferred)
+
+        val refs = result.refs
+
+        // All reference except the .field access should be reference and not a member expression
+        refs.filter { it.name.localName != "field" }.forEach { assertIsNot<MemberExpression>(it) }
+
+        assertEquals(
+            listOf(
+                // this is the default parameter of foo
+                "pkg.some_variable",
+                // lhs
+                "a",
+                // rhs, ME
+                "UNKNOWN.field",
+                // rhs, base of ME
+                "pkg.some_variable",
+                // lhs
+                "b",
+                // rhs
+                "pkg.function",
+                // lhs
+                "c",
+                // rhs
+                "another_pkg.function",
+                // lhs
+                "d",
+                // rhs
+                "another_pkg.function",
+                // lhs
+                "e",
+                // rhs
+                "pkg.third_module.variable",
+            ),
+            refs.map { it.name.toString() },
+        )
     }
 
     @Test

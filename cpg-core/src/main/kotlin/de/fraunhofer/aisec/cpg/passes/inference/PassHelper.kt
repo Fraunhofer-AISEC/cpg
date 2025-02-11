@@ -287,12 +287,15 @@ internal fun Pass<*>.tryFunctionInference(
     //    the callee is not qualified, because otherwise we are in a static call like
     //    MyClass::doSomething() or in a namespace call (in case we do not want to explore the
     //    base type here yet). This will change in a future PR.
+    val callee = call.callee
     val (suitableBases, bestGuess) =
         if (
-            call.callee is MemberExpression ||
-                !call.callee.name.isQualified() && call.language is HasImplicitReceiver
+            callee is MemberExpression ||
+                callee is Reference &&
+                    !call.callee.name.isQualified() &&
+                    call.language is HasImplicitReceiver
         ) {
-            getPossibleContainingTypes(call)
+            getPossibleContainingTypes(callee)
         } else {
             Pair(setOf(), null)
         }
