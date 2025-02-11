@@ -28,10 +28,7 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
-import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
-import de.fraunhofer.aisec.cpg.graph.edges.flows.PointerDataflowGranularity
-import de.fraunhofer.aisec.cpg.graph.edges.flows.default
+import de.fraunhofer.aisec.cpg.graph.edges.flows.*
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -215,10 +212,21 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             if (newPrevDFGs.isNotEmpty()) {
                 //                key.prevDFG.clear()
                 newPrevDFGs.forEach { prev ->
+                    val entry = edgePropertiesMap[Pair(key, prev)]
+                    var context: CallingContext? = null
                     val granularity =
-                        edgePropertiesMap[Pair(key, prev)] as? PointerDataflowGranularity
-                            ?: default()
-                    key.prevDFGEdges += Dataflow(prev, key, granularity)
+                        when (entry) {
+                            is PointerDataflowGranularity -> entry
+                            is CallingContext -> {
+                                context = entry
+                                default()
+                            }
+                            else -> {
+                                default()
+                            }
+                        }
+                    if (context == null) key.prevDFGEdges += Dataflow(prev, key, granularity)
+                    else key.prevDFGEdges.addContextSensitive(prev, granularity, context)
                 }
             }
             if (newMemoryAddresses.isNotEmpty()) {
@@ -428,6 +436,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     if (p.memoryValue == null)
                         initializeParameters(lattice, mutableListOf(p), doubleState, 1)
                     p.memoryValue?.let {
+                        edgePropertiesMap[Pair(it, arg)] = CallingContextIn(currentNode)
                         doubleState =
                             lattice.push(
                                 doubleState,
@@ -562,6 +571,12 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         }
 
         mapDstToSrc.forEach { (dst, src) ->
+            // If we draw a DFG-Edge from this CallExpression, it should be a CallingContextOut
+            if (dst == currentNode) {
+                src.map { s ->
+                    edgePropertiesMap[Pair(currentNode, s)] = CallingContextOut(currentNode)
+                }
+            }
             // If the values of the destination are the same as the destination (e.g. if dst is a
             // CallExpression), we also add destinations to update the generalState, otherwise, the
             // destinationAddresses for the DeclarationState are enough
