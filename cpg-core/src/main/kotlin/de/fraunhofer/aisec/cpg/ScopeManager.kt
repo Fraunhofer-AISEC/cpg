@@ -240,6 +240,7 @@ class ScopeManager : ScopeProvider {
                     is TryStatement,
                     is IfStatement,
                     is CatchClause,
+                    is CollectionComprehension,
                     is Block -> LocalScope(nodeToScope)
                     is FunctionDeclaration -> FunctionScope(nodeToScope)
                     is RecordDeclaration -> RecordScope(nodeToScope)

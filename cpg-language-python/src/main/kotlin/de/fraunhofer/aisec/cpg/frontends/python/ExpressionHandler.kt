@@ -105,7 +105,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
      * [CollectionComprehension].
      */
     private fun handleGeneratorExp(node: Python.AST.GeneratorExp): CollectionComprehension {
-        return newCollectionComprehension(rawNode = node).apply {
+        return newCollectionComprehension(rawNode = node).applyWithScope {
             statement = handle(node.elt)
             comprehensionExpressions += node.generators.map { handleComprehension(it, node) }
             type = objectType("Generator")
@@ -117,10 +117,10 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
      * into a [CollectionComprehension].
      */
     private fun handleListComprehension(node: Python.AST.ListComp): CollectionComprehension {
-        return newCollectionComprehension(rawNode = node).apply {
+        return newCollectionComprehension(rawNode = node).applyWithScope {
             statement = handle(node.elt)
             comprehensionExpressions += node.generators.map { handleComprehension(it, node) }
-            type = objectType("list") // TODO: Replace this once we have dedicated types
+            type = primitiveType("list")
         }
     }
 
@@ -129,10 +129,10 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
      * a [CollectionComprehension].
      */
     private fun handleSetComprehension(node: Python.AST.SetComp): CollectionComprehension {
-        return newCollectionComprehension(rawNode = node).apply {
+        return newCollectionComprehension(rawNode = node).applyWithScope {
             this.statement = handle(node.elt)
             this.comprehensionExpressions += node.generators.map { handleComprehension(it, node) }
-            this.type = objectType("set") // TODO: Replace this once we have dedicated types
+            this.type = primitiveType("set")
         }
     }
 
@@ -141,7 +141,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
      * into a [CollectionComprehension].
      */
     private fun handleDictComprehension(node: Python.AST.DictComp): CollectionComprehension {
-        return newCollectionComprehension(rawNode = node).apply {
+        return newCollectionComprehension(rawNode = node).applyWithScope {
             this.statement =
                 newKeyValueExpression(
                     key = handle(node.key),
@@ -149,7 +149,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                     rawNode = node,
                 )
             this.comprehensionExpressions += node.generators.map { handleComprehension(it, node) }
-            this.type = objectType("dict") // TODO: Replace this once we have dedicated types
+            this.type = primitiveType("dict")
         }
     }
 
