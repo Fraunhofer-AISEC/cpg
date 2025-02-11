@@ -38,7 +38,8 @@ class CommandIntegrationTest {
                 "--project-dir src/integrationTest/resources/demo-app --components webapp --components auth"
             )
         assertEquals(
-            "Message(arguments=null, id=null, markdown=This is a **finding**, properties=null, text=null)\n",
+            "Message(arguments=null, id=null, markdown=null, properties=null, text=Query was successful)\n" +
+                "Message(arguments=null, id=null, markdown=null, properties=null, text=Query was successful)\n",
             result.output,
         )
     }

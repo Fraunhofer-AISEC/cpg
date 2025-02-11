@@ -34,11 +34,9 @@ import de.fraunhofer.aisec.cpg.graph.codeAndLocationFrom
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.fqn
-import de.fraunhofer.aisec.cpg.graph.imports
 import de.fraunhofer.aisec.cpg.graph.newReference
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
-import de.fraunhofer.aisec.cpg.graph.translationUnit
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.replace
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
@@ -56,6 +54,7 @@ import de.fraunhofer.aisec.cpg.passes.configuration.RequiresLanguageTrait
  * @constructor Initializes the pass with the provided translation context.
  */
 @ExecuteBefore(EvaluationOrderGraphPass::class)
+@ExecuteBefore(ResolveCallExpressionAmbiguityPass::class)
 @DependsOn(ImportResolver::class)
 @RequiresLanguageTrait(HasMemberExpressionAmbiguity::class)
 class ResolveMemberExpressionAmbiguityPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
@@ -85,35 +84,43 @@ class ResolveMemberExpressionAmbiguityPass(ctx: TranslationContext) : Translatio
         // import, because in this case we do not have a member expression, but a reference with a
         // qualified name
         val baseName = me.base.reconstructedImportName
-        var isImportedNamespace = isImportedNamespace(baseName, me)
+        val importName = referredImportName(baseName, me)
 
-        if (isImportedNamespace) {
+        if (importName != null) {
             with(me) {
-                val ref = newReference(baseName.fqn(me.name.localName)).codeAndLocationFrom(this)
+                val ref = newReference(importName.fqn(me.name.localName)).codeAndLocationFrom(this)
                 walker.replace(me.astParent, me, ref)
             }
         }
     }
 
-    private fun isImportedNamespace(name: Name, hint: Expression): Boolean {
+    /**
+     * This function checks if the given name refers to an import, e.g., because it directly has the
+     * name of an import or if its parent name does. If it does refer to an import, then the
+     * function returns the fully qualified name of the import. If the name does not refer to an
+     * import, returns null.
+     *
+     * The function looks up the name in the current scope. If a symbol is found that represents a
+     * [NamespaceDeclaration], the name of the declaration is returned.
+     *
+     * @param name The name to check for an import.
+     * @param hint The expression that hints at the language and location.
+     * @return The fully qualified name of the import if the name refers to an import, or null
+     */
+    private fun referredImportName(name: Name, hint: Expression): Name? {
         val resolved =
             scopeManager.lookupSymbolByName(
                 name,
                 language = hint.language,
                 location = hint.location,
                 startScope = hint.scope,
+                predicate = { it is NamespaceDeclaration },
             )
-        var isImportedNamespace = resolved.singleOrNull() is NamespaceDeclaration
-        if (!isImportedNamespace) {
-            // It still could be an imported namespace of an imported package that we do not know.
-            // The problem is that we do not really know at this point whether we import a
-            // (sub)module or a global variable of the namespace. We tend to assume that this is a
-            // namespace
-            val imports = hint.translationUnit.imports
-            isImportedNamespace =
-                imports.any { it.name.lastPartsMatch(name) || it.name.startsWith(name) }
-        }
-        return isImportedNamespace
+        // There can be multiple declarations for the same namespace because the declaration can
+        // exist multiple times, but per definition in the scope manager, they all point to the same
+        // namespace, so we can just pick the first one.
+        var declaration = resolved.firstOrNull()
+        return declaration?.name
     }
 
     override fun cleanup() {

@@ -132,8 +132,8 @@ fun loadSecurityGoal(stream: InputStream, result: TranslationResult? = null): Se
 }
 
 /**
- * This function returns a [Yaml] instance that is configured to use the given [result] to resolve
- * components.
+ * This function returns a [com.charleskorn.kaml.Yaml] instance that is configured to use the given
+ * [result] to resolve components.
  */
 private fun yaml(result: TranslationResult?): Yaml {
     val module = SerializersModule { contextual(Component::class, ComponentSerializer(result)) }

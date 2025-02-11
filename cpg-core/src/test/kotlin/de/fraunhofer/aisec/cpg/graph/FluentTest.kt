@@ -176,7 +176,7 @@ class FluentTest {
         var app = result.components.firstOrNull()
         assertNotNull(app)
 
-        ImportResolver(result.finalCtx).accept(app)
+        ImportResolver(result.finalCtx).accept(result)
         EvaluationOrderGraphPass(result.finalCtx).accept(app.translationUnits.first())
         SymbolResolver(result.finalCtx).accept(app)
 

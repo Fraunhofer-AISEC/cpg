@@ -28,10 +28,14 @@ package de.fraunhofer.aisec.cpg.graph
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
+import de.fraunhofer.aisec.cpg.graph.edges.flows.*
+import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import kotlin.collections.filter
+import kotlin.collections.firstOrNull
 import kotlin.math.absoluteValue
 
 /**
@@ -43,6 +47,26 @@ import kotlin.math.absoluteValue
 inline fun <reified T> Node?.allChildren(noinline predicate: ((T) -> Boolean)? = null): List<T> {
     val nodes = SubgraphWalker.flattenAST(this)
     val filtered = nodes.filterIsInstance<T>()
+
+    return if (predicate != null) {
+        filtered.filter(predicate)
+    } else {
+        filtered
+    }
+}
+
+/**
+ * Flattens the AST beginning with this node and returns all nodes of type [T]. For convenience, an
+ * optional predicate function [predicate] can be supplied, which will be applied via
+ * [Collection.filter]
+ */
+@JvmOverloads
+inline fun <reified T> Node?.allChildrenWithOverlays(
+    noinline predicate: ((T) -> Boolean)? = null
+): List<T> {
+    val nodes = SubgraphWalker.flattenAST(this)
+    val nodesWithOverlays = nodes + nodes.flatMap { it.overlays }
+    val filtered = nodesWithOverlays.filterIsInstance<T>()
 
     return if (predicate != null) {
         filtered.filter(predicate)
@@ -205,7 +229,7 @@ fun Node.followPrevFullDFGEdgesUntilHit(
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
-        x = { currentNode -> currentNode.prevFullDFG },
+        x = { currentNode, _, _ -> currentNode.prevFullDFG },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
         predicate = predicate,
@@ -229,6 +253,123 @@ fun Node.collectAllPrevFullDFGPaths(): List<List<Node>> {
 }
 
 /**
+ * Returns an instance of [FulfilledAndFailedPaths] where [FulfilledAndFailedPaths.fulfilled]
+ * contains all possible shortest data flow paths (with any
+ * [de.fraunhofer.aisec.cpg.graph.edges.flows.Granularity]) between the end node [this] and the
+ * starting node fulfilling [predicate]. The paths are represented as lists of nodes. Paths which do
+ * not end at such a node are included in [FulfilledAndFailedPaths.failed].
+ *
+ * Hence, if "fulfilled" is a non-empty list, a data flow from [this] to such a node is **possible
+ * but not mandatory**. If the list "failed" is empty, the data flow is mandatory.
+ */
+fun Node.followPrevDFGEdgesUntilHit(
+    collectFailedPaths: Boolean = true,
+    findAllPossiblePaths: Boolean = true,
+    useIndexStack: Boolean = true,
+    predicate: (Node) -> Boolean,
+): FulfilledAndFailedPaths {
+    return followXUntilHit(
+        x = { currentNode, ctx, path ->
+            if (
+                useIndexStack &&
+                    currentNode is InitializerListExpression &&
+                    ctx.indexStack.isEmpty() != true
+            ) {
+                // There's something on the stack. Get the relevant parts
+                currentNode.prevDFGEdges
+                    .filter {
+                        if (
+                            it.start in currentNode.initializers &&
+                                it.granularity is IndexedDataflowGranularity
+                        ) {
+                            // currentNode is the ILE, it is the child and the prevDFG (e.g. read
+                            // from).
+                            // We try to pop from the stack and only select the elements with the
+                            // matching index.
+                            ctx.indexStack.popIfOnTop(it.granularity as IndexedDataflowGranularity)
+                        } else {
+                            true
+                        }
+                    }
+                    .map { it.start }
+            } else {
+                // We don't have to care about poping stuff from the stack. Maybe we can push
+                // something but we accept everything.
+                currentNode.prevDFGEdges.forEach {
+                    if (
+                        it.start is InitializerListExpression &&
+                            it.granularity is IndexedDataflowGranularity
+                    ) {
+                        // CurrentNode is the child and nextDFG goes to ILE => currentNode's written
+                        // to. Push to stack
+                        ctx.indexStack.push(it.granularity as IndexedDataflowGranularity)
+                    }
+                }
+                currentNode.prevDFG
+            }
+        },
+        collectFailedPaths = collectFailedPaths,
+        findAllPossiblePaths = findAllPossiblePaths,
+        predicate = predicate,
+    )
+}
+
+/**
+ * This class holds the context for the [followXUntilHit] function. It is used to keep track of the
+ * current index stack and call stack.
+ *
+ * This class supports copying to allow for cloning the context when needed. This is needed when we
+ * need to follow more than one path at a time, otherwise the different branches would override the
+ * stacks.
+ */
+class Context(
+    val indexStack: SimpleStack<IndexedDataflowGranularity> = SimpleStack(),
+    val callStack: SimpleStack<CallExpression> = SimpleStack(),
+) {
+    fun clone(): Context {
+        return Context(indexStack = indexStack.clone(), callStack = callStack.clone())
+    }
+}
+
+/** Implementation of a simple stack, based on an [ArrayDeque] */
+class SimpleStack<T> {
+    private val deque = ArrayDeque<T>()
+
+    /** Returns true if the stack is empty. */
+    fun isEmpty(): Boolean = deque.isEmpty()
+
+    /** Pushes a new element onto the stack. */
+    fun push(newElem: T) {
+        deque.addFirst(newElem)
+    }
+
+    /** Returns the top element from the stack, without popping it. */
+    val top: T?
+        get() = deque.firstOrNull()
+
+    /**
+     * Pops the top element from the stack, if [elemToPop] is the top element.
+     *
+     * @return true if the element was popped, false otherwise
+     */
+    fun popIfOnTop(elemToPop: T): Boolean {
+        if (deque.firstOrNull() == elemToPop) {
+            deque.removeFirst()
+            return true
+        }
+        return false
+    }
+
+    /** Pops the top element from the stack. */
+    fun pop(): T = deque.removeFirst()
+
+    /** Clones the stack. */
+    fun clone(): SimpleStack<T> {
+        return SimpleStack<T>().apply { deque.addAll(this@SimpleStack.deque) }
+    }
+}
+
+/**
  * Iterates the next full DFG edges until there are no more edges available (or until a loop is
  * detected). Returns a list of possible paths (each path is represented by a list of nodes).
  */
@@ -248,10 +389,14 @@ fun Node.collectAllNextFullDFGPaths(): List<List<Node>> {
  * Iterates the next EOG edges until there are no more edges available (or until a loop is
  * detected). Returns a list of possible paths (each path is represented by a list of nodes).
  */
-fun Node.collectAllNextEOGPaths(): List<List<Node>> {
+fun Node.collectAllNextEOGPaths(interproceduralAnalysis: Boolean = true): List<List<Node>> {
     // We make everything fail to reach the end of the CDG. Then, we use the stuff collected in the
     // failed paths (everything)
-    return this.followNextEOGEdgesUntilHit(collectFailedPaths = true, findAllPossiblePaths = true) {
+    return this.followNextEOGEdgesUntilHit(
+            collectFailedPaths = true,
+            findAllPossiblePaths = true,
+            interproceduralAnalysis = interproceduralAnalysis,
+        ) {
             false
         }
         .failed
@@ -350,7 +495,7 @@ fun Node.followNextPDGUntilHit(
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
-        x = { currentNode ->
+        x = { currentNode, _, _ ->
             val nextNodes = currentNode.nextPDG.toMutableList()
             if (interproceduralAnalysis) {
                 nextNodes.addAll((currentNode as? CallExpression)?.calls ?: listOf())
@@ -379,7 +524,7 @@ fun Node.followNextCDGUntilHit(
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
-        x = { currentNode ->
+        x = { currentNode, _, _ ->
             val nextNodes = currentNode.nextCDG.toMutableList()
             if (interproceduralAnalysis) {
                 nextNodes.addAll((currentNode as? CallExpression)?.calls ?: listOf())
@@ -409,7 +554,7 @@ fun Node.followPrevPDGUntilHit(
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
-        x = { currentNode ->
+        x = { currentNode, _, _ ->
             val nextNodes = currentNode.prevPDG.toMutableList()
             if (interproceduralAnalysis) {
                 nextNodes.addAll(
@@ -443,7 +588,7 @@ fun Node.followPrevCDGUntilHit(
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
-        x = { currentNode ->
+        x = { currentNode, _, _ ->
             val nextNodes = currentNode.prevCDG.toMutableList()
             if (interproceduralAnalysis) {
                 nextNodes.addAll(
@@ -470,10 +615,11 @@ fun Node.followPrevCDGUntilHit(
  * Hence, if "fulfilled" is a non-empty list, a path from [this] to such a node is **possible but
  * not mandatory**. If the list "failed" is empty, the path is mandatory.
  */
-fun Node.followXUntilHit(
-    x: (Node) -> List<Node>,
+inline fun Node.followXUntilHit(
+    noinline x: (Node, Context, List<Node>) -> Collection<Node>,
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
+    context: Context = Context(),
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     // Looks complicated but at least it's not recursive...
@@ -482,26 +628,27 @@ fun Node.followXUntilHit(
     // failedPaths: All the paths which do not satisfy "predicate"
     val failedPaths = mutableListOf<List<Node>>()
     // The list of paths where we're not done yet.
-    val worklist = mutableSetOf<List<Node>>()
-    worklist.add(listOf(this)) // We start only with the "from" node (=this)
+    val worklist = mutableSetOf<Pair<List<Node>, Context>>()
+    worklist.add(Pair(listOf(this), context)) // We start only with the "from" node (=this)
 
     val alreadySeenNodes = mutableSetOf<Node>()
 
     while (worklist.isNotEmpty()) {
-        val currentPath = worklist.maxBy { it.size }
+        val currentPath = worklist.maxBy { it.first.size }
         worklist.remove(currentPath)
-        val currentNode = currentPath.last()
+        val currentNode = currentPath.first.last()
+        val currentContext = currentPath.second
         alreadySeenNodes.add(currentNode)
         // The last node of the path is where we continue. We get all of its outgoing CDG edges and
         // follow them
-        var nextNodes = x(currentNode)
+        val nextNodes = x(currentNode, currentContext, currentPath.first)
 
         // No further nodes in the path and the path criteria are not satisfied.
-        if (nextNodes.isEmpty() && collectFailedPaths) failedPaths.add(currentPath)
+        if (nextNodes.isEmpty() && collectFailedPaths) failedPaths.add(currentPath.first)
 
         for (next in nextNodes) {
             // Copy the path for each outgoing CDG edge and add the next node
-            val nextPath = currentPath.toMutableList()
+            val nextPath = currentPath.first.toMutableList()
             nextPath.add(next)
             if (predicate(next)) {
                 // We ended up in the node fulfilling "predicate", so we're done for this path. Add
@@ -512,11 +659,17 @@ fun Node.followXUntilHit(
             // The next node is new in the current path (i.e., there's no loop), so we add the path
             // with the next step to the worklist.
             if (
-                next !in currentPath &&
+                next !in currentPath.first &&
                     (findAllPossiblePaths ||
-                        (next !in alreadySeenNodes && worklist.none { next in it }))
+                        (next !in alreadySeenNodes && worklist.none { next in it.first }))
             ) {
-                worklist.add(nextPath)
+                val newContext =
+                    if (nextNodes.size > 1) {
+                        currentContext.clone()
+                    } else {
+                        currentContext
+                    }
+                worklist.add(Pair(nextPath, newContext))
             }
         }
     }
@@ -539,7 +692,100 @@ fun Node.followNextFullDFGEdgesUntilHit(
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
-        x = { currentNode -> currentNode.nextFullDFG },
+        x = { currentNode, _, _ -> currentNode.nextFullDFG },
+        collectFailedPaths = collectFailedPaths,
+        findAllPossiblePaths = findAllPossiblePaths,
+        predicate = predicate,
+    )
+}
+
+/**
+ * Returns an instance of [FulfilledAndFailedPaths] where [FulfilledAndFailedPaths.fulfilled]
+ * contains all possible shortest data flow paths (with [FullDataflowGranularity]) between the
+ * starting node [this] and the end node fulfilling [predicate]. The paths are represented as lists
+ * of nodes. Paths which do not end at such a node are included in [FulfilledAndFailedPaths.failed].
+ *
+ * Hence, if "fulfilled" is a non-empty list, a data flow from [this] to such a node is **possible
+ * but not mandatory**. If the list "failed" is empty, the data flow is mandatory.
+ */
+fun Node.followNextDFGEdgesUntilHit(
+    collectFailedPaths: Boolean = true,
+    findAllPossiblePaths: Boolean = true,
+    useIndexStack: Boolean = true,
+    predicate: (Node) -> Boolean,
+): FulfilledAndFailedPaths {
+    return followXUntilHit(
+        x = { currentNode, ctx, _ ->
+            if (
+                useIndexStack &&
+                    currentNode is InitializerListExpression &&
+                    !ctx.indexStack.isEmpty()
+            ) {
+                // There's something on the stack. Get the relevant parts
+                currentNode.nextDFGEdges
+                    .filter {
+                        if (
+                            it.end in currentNode.initializers &&
+                                it.granularity is IndexedDataflowGranularity
+                        ) {
+                            // currentNode is the ILE, it is the child and the next (e.g. read
+                            // from).
+                            // We try to pop from the stack and only select the elements with the
+                            // matching index.
+                            ctx.indexStack.popIfOnTop(it.granularity as IndexedDataflowGranularity)
+                        } else {
+                            true
+                        }
+                    }
+                    .map { it.end }
+            } else {
+                // First, let's take care of pushing any information on the stacks (index, calling
+                // context)
+                currentNode.nextDFGEdges.forEach {
+                    if (it is ContextSensitiveDataflow && it.callingContext is CallingContextIn) {
+                        // Push the call of our calling context to the stack
+                        ctx.callStack.push(it.callingContext.call)
+                    }
+                    if (
+                        it.end is InitializerListExpression &&
+                            it.granularity is IndexedDataflowGranularity
+                    ) {
+                        // CurrentNode is the child and nextDFG goes to ILE => currentNode's written
+                        // to. Push to stack
+                        ctx.indexStack.push(it.granularity as IndexedDataflowGranularity)
+                    }
+                }
+
+                // We need to filter out the edges which based on the stack
+                val selected =
+                    currentNode.nextDFGEdges
+                        .filter {
+                            if (ctx.callStack.isEmpty()) {
+                                true
+                            } else if (
+                                it is ContextSensitiveDataflow &&
+                                    it.callingContext is CallingContextOut
+                            ) {
+                                // We are only interested in outgoing edges from our current
+                                // "call-in", i.e., the call expression that is on the stack.
+                                ctx.callStack.top == it.callingContext.call
+                            } else {
+                                true
+                            }
+                        }
+                        .map { it.end }
+
+                // Let's do any remaining pop'ing
+                currentNode.nextDFGEdges.forEach {
+                    if (it is ContextSensitiveDataflow && it.callingContext is CallingContextOut) {
+                        // Pop the current call, if it's on top
+                        ctx.callStack.popIfOnTop(it.callingContext.call)
+                    }
+                }
+
+                selected
+            }
+        },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
         predicate = predicate,
@@ -559,17 +805,59 @@ fun Node.followNextFullDFGEdgesUntilHit(
 fun Node.followNextEOGEdgesUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
+    interproceduralAnalysis: Boolean = true,
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
-        x = { currentNode ->
-            currentNode.nextEOGEdges.filter { it.unreachable != true }.map { it.end }
+        x = { currentNode, ctx, _ ->
+            if (
+                interproceduralAnalysis &&
+                    currentNode is CallExpression &&
+                    currentNode.invokes.isNotEmpty()
+            ) {
+                // We follow the invokes edges and push the call expression on the call stack, so we
+                // can jump back here after processing the function.
+                ctx.callStack.push(currentNode)
+                currentNode.invokes
+            } else if (
+                interproceduralAnalysis &&
+                    (currentNode is ReturnStatement || currentNode.nextEOG.isEmpty())
+            ) {
+                if (ctx.callStack.isEmpty()) {
+                    (currentNode as? FunctionDeclaration
+                            ?: currentNode.firstParentOrNull<FunctionDeclaration>())
+                        ?.calledBy
+                        ?.flatMap { it.nextEOG } ?: setOf()
+                } else {
+                    ctx.callStack.pop().nextEOG
+                }
+            } else {
+                currentNode.nextEOGEdges.filter { it.unreachable != true }.map { it.end }
+            }
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
         predicate = predicate,
     )
 }
+
+/**
+ * Returns a [Collection] of last nodes in the EOG of this [FunctionDeclaration]. If there's no
+ * body, it will return a list of this function declaration.
+ */
+val FunctionDeclaration.lastEOGNodes: Collection<Node>
+    get() {
+        val lastEOG = collectAllNextEOGPaths(false).flatMap { it.last().prevEOGEdges }
+        return if (lastEOG.isEmpty()) {
+            // In some cases, we do not have a body, so we have to jump directly to the
+            // function declaration.
+            listOf(this)
+        } else lastEOG.filter { it.unreachable != true }.map { it.start }
+    }
+
+/** Returns only potentially reachable previous EOG edges. */
+val Node.reachablePrevEOG: Collection<Node>
+    get() = this.prevEOGEdges.filter { it.unreachable != true }.map { it.start }
 
 /**
  * Returns an instance of [FulfilledAndFailedPaths] where [FulfilledAndFailedPaths.fulfilled]
@@ -584,11 +872,39 @@ fun Node.followNextEOGEdgesUntilHit(
 fun Node.followPrevEOGEdgesUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
+    interproceduralAnalysis: Boolean = true,
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
+
     return followXUntilHit(
-        x = { currentNode ->
-            currentNode.prevEOGEdges.filter { it.unreachable != true }.map { it.start }
+        x = { currentNode, ctx, _ ->
+            when {
+                interproceduralAnalysis &&
+                    currentNode is FunctionDeclaration &&
+                    ctx.callStack.isEmpty() -> {
+                    // We're at the beginning of a function. If the stack is empty, we jump to
+                    // all calls of this function.
+                    currentNode.calledBy.flatMap { it.reachablePrevEOG }
+                }
+                interproceduralAnalysis && currentNode is FunctionDeclaration -> {
+                    // We're at the beginning of a function. If there's something on the stack,
+                    // we ended up here by following the respective call expression, and we jump
+                    // back there.
+                    ctx.callStack.pop().reachablePrevEOG
+                }
+                interproceduralAnalysis &&
+                    currentNode is CallExpression &&
+                    currentNode.invokes.isNotEmpty() -> {
+                    // We're in the call expression. Push it on the stack, go to all last EOG
+                    // nodes in the functions which are invoked and continue there.
+                    ctx.callStack.push(currentNode)
+
+                    currentNode.invokes.flatMap { it.lastEOGNodes }
+                }
+                else -> {
+                    currentNode.reachablePrevEOG
+                }
+            }
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
@@ -664,24 +980,33 @@ fun Node.followPrevEOG(predicate: (Edge<*>) -> Boolean): List<Edge<*>>? {
  * It returns only a single possible path even if multiple paths are possible.
  */
 fun Node.followPrevFullDFG(predicate: (Node) -> Boolean): MutableList<Node>? {
-    val path = mutableListOf<Node>()
+    return followPrevFullDFGEdgesUntilHit(
+            collectFailedPaths = false,
+            findAllPossiblePaths = false,
+            predicate = predicate,
+        )
+        .fulfilled
+        .minByOrNull { it.size }
+        ?.toMutableList()
+}
 
-    for (prev in this.prevFullDFG) {
-        path.add(prev)
-
-        if (predicate(prev)) {
-            return path
-        }
-
-        val subPath = prev.followPrevFullDFG(predicate)
-        if (subPath != null) {
-            path.addAll(subPath)
-        }
-
-        return path
-    }
-
-    return null
+/**
+ * Returns a list of nodes which are a data flow path (with [FullDataflowGranularity]) between the
+ * starting node [this] and the end node fulfilling [predicate]. If the return value is not `null`,
+ * a data flow from [this] to such a node is **possible but not mandatory**.
+ *
+ * It returns only a single possible path even if multiple paths are possible.
+ */
+fun Node.followPrevDFG(predicate: (Node) -> Boolean): MutableList<Node>? {
+    return followPrevDFGEdgesUntilHit(
+            collectFailedPaths = false,
+            findAllPossiblePaths = false,
+            predicate = predicate,
+            useIndexStack = true,
+        )
+        .fulfilled
+        .minByOrNull { it.size }
+        ?.toMutableList()
 }
 
 /** Returns all [Node] children in this graph, starting with this [Node]. */
@@ -813,25 +1138,52 @@ val Node?.assigns: List<AssignExpression>
     get() = this.allChildren()
 
 /**
- * This function tries to find the first parent node that satisfies the condition specified in
- * [predicate]. It starts searching in the [searchNode], moving up-wards using the [Node.astParent]
+ * This function tries to find the first parent node of type [T] that satisfies the optional
+ * condition specified in [predicate]. If [predicate] is `null`, the first AST parent node of type
+ * [T] is returned. It starts searching in [this], moving upwards using the [Node.astParent]
  * attribute.
  *
- * @param searchNode the child node that we start the search from
- * @param predicate the search predicate
+ * @param predicate the optional search predicate
  */
-fun Node.firstParentOrNull(predicate: (Node) -> Boolean): Node? {
+inline fun <reified T : Node> Node.firstParentOrNull(
+    noinline predicate: ((T) -> Boolean)? = null
+): T? {
 
     // start at searchNodes parent
-    var node: Node? = this.astParent
+    var node = this.astParent
 
     while (node != null) {
-        if (predicate(node)) {
+        if (node is T && (predicate == null || predicate(node))) {
             return node
         }
 
         // go upwards in the ast tree
         node = node.astParent
+    }
+
+    return null
+}
+
+/**
+ * This function tries to find the first parent scope of type [T] that satisfies the optional
+ * condition specified in [predicate]. If [predicate] is `null`, the first parent scope of type [T]
+ * is returned. It starts searching in [this], moving upwards using the [Scope.parent] attribute.
+ *
+ * If no parent scope matches the predicate, null is returned.
+ *
+ * @param predicate The predicate optional to match the parent scope against
+ */
+inline fun <reified T : Scope> Scope.firstScopeParentOrNull(
+    noinline predicate: ((T) -> Boolean)? = null
+): T? {
+    var scope = this.parent
+    while (scope != null) {
+        if (scope is T && (predicate == null || predicate(scope))) {
+            return scope
+        }
+
+        // go upwards in the scope tree
+        scope = scope.parent
     }
 
     return null
@@ -1005,7 +1357,19 @@ fun Expression?.unwrapReference(): Reference? {
 /** Returns the [TranslationUnitDeclaration] where this node is located in. */
 val Node.translationUnit: TranslationUnitDeclaration?
     get() {
-        return firstParentOrNull { it is TranslationUnitDeclaration } as? TranslationUnitDeclaration
+        return firstParentOrNull<TranslationUnitDeclaration>()
+    }
+
+/** Returns the [TranslationResult] where this node is located in. */
+val Node.translationResult: TranslationResult?
+    get() {
+        return firstParentOrNull<TranslationResult>()
+    }
+
+/** Returns the [Component] where this node is located in. */
+val Node.component: Component?
+    get() {
+        return firstParentOrNull<Component>()
     }
 
 /**

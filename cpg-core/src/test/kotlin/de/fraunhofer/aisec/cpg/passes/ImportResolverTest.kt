@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.TypeManager
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.translationResult
+import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.newImportDeclaration
 import de.fraunhofer.aisec.cpg.graph.newNamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.newTranslationUnitDeclaration
@@ -67,9 +68,17 @@ class ImportResolverTest {
                             var pkgB = newNamespaceDeclaration("b")
                             scopeManager.addDeclaration(pkgB)
                             scopeManager.enterScope(pkgB)
-                            var import = newImportDeclaration(parseName("a"))
+                            var import =
+                                newImportDeclaration(
+                                    parseName("a"),
+                                    style = ImportStyle.IMPORT_NAMESPACE,
+                                )
                             scopeManager.addDeclaration(import)
-                            import = newImportDeclaration(parseName("c.bar"))
+                            import =
+                                newImportDeclaration(
+                                    parseName("c.bar"),
+                                    style = ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE,
+                                )
                             scopeManager.addDeclaration(import)
                             scopeManager.leaveScope(pkgB)
                             tuB
@@ -113,25 +122,25 @@ class ImportResolverTest {
 
         // a has 0 dependencies
         var a =
-            app.importDependencies.entries
-                .filter { it.key.name.toString() == "file.a" }
-                .firstOrNull()
+            app.translationUnitDependencies?.entries?.firstOrNull {
+                it.key.name.toString() == "file.a"
+            }
         assertNotNull(a)
         assertEquals(0, a.value.size)
 
         // c has 0 dependencies
         var c =
-            app.importDependencies.entries
-                .filter { it.key.name.toString() == "file.c" }
-                .firstOrNull()
+            app.translationUnitDependencies?.entries?.firstOrNull {
+                it.key.name.toString() == "file.c"
+            }
         assertNotNull(c)
         assertEquals(0, c.value.size)
 
         // b has two dependencies (a, c)
         var b =
-            app.importDependencies.entries
-                .filter { it.key.name.toString() == "file.b" }
-                .firstOrNull()
+            app.translationUnitDependencies?.entries?.firstOrNull {
+                it.key.name.toString() == "file.b"
+            }
         assertNotNull(b)
         assertEquals(2, b.value.size)
         assertEquals(setOf(a.key, c.key), b.value)

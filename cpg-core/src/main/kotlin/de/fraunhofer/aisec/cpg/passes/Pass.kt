@@ -42,6 +42,8 @@ import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLast
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLate
 import de.fraunhofer.aisec.cpg.passes.configuration.RequiredFrontend
 import de.fraunhofer.aisec.cpg.passes.configuration.RequiresLanguageTrait
+import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
+import de.fraunhofer.aisec.cpg.processing.strategy.Strategy.TRANSLATION_UNITS_LEAST_IMPORTS
 import java.util.concurrent.CompletableFuture
 import java.util.function.Consumer
 import kotlin.reflect.KClass
@@ -272,14 +274,19 @@ fun executePass(
             consumeTargets(
                 (prototype as ComponentPass)::class,
                 ctx,
-                result.components,
+                // Execute them in the "sorted" order (if available)
+                (Strategy::COMPONENTS_LEAST_IMPORTS)(result).asSequence().toList(),
                 executedFrontends,
             )
         is TranslationUnitPass ->
             consumeTargets(
                 (prototype as TranslationUnitPass)::class,
                 ctx,
-                result.components.flatMap { it.translationUnits },
+                // Execute them in the "sorted" order (if available)
+                (Strategy::COMPONENTS_LEAST_IMPORTS)(result)
+                    .asSequence()
+                    .flatMap { (Strategy::TRANSLATION_UNITS_LEAST_IMPORTS)(it).asSequence() }
+                    .toList(),
                 executedFrontends,
             )
         is EOGStarterPass -> {

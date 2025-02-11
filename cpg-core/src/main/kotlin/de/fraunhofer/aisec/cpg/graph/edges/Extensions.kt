@@ -56,6 +56,36 @@ fun <PropertyType : Node, NodeType : Node, EdgeType : Edge<PropertyType>> NodeTy
     return edge.unwrap()
 }
 
+/** See [UnwrappedEdgeList.IncomingDelegate]. */
+fun <
+    IncomingType : Node,
+    PropertyType : Node,
+    NodeType : Node,
+    EdgeType : Edge<PropertyType>,
+> NodeType.unwrappingIncoming(
+    edgeProperty: KProperty1<NodeType, EdgeList<PropertyType, EdgeType>>
+): UnwrappedEdgeList<PropertyType, EdgeType>.IncomingDelegate<NodeType, IncomingType> {
+    // Create an unwrapped container out of the edge property...
+    edgeProperty.isAccessible = true
+    val edge = edgeProperty.call(this)
+    return edge.unwrap().IncomingDelegate<NodeType, IncomingType>()
+}
+
+/** See [UnwrappedEdgeSet.IncomingDelegate]. */
+fun <
+    IncomingType : Node,
+    PropertyType : Node,
+    NodeType : Node,
+    EdgeType : Edge<PropertyType>,
+> NodeType.unwrappingIncoming(
+    edgeProperty: KProperty1<NodeType, EdgeSet<PropertyType, EdgeType>>
+): UnwrappedEdgeSet<PropertyType, EdgeType>.IncomingDelegate<NodeType, IncomingType> {
+    // Create an unwrapped container out of the edge property...
+    edgeProperty.isAccessible = true
+    val edge = edgeProperty.call(this)
+    return edge.unwrap().IncomingDelegate<NodeType, IncomingType>()
+}
+
 /** See [UnwrappedEdgeSet.Delegate]. */
 fun <PropertyType : Node, NodeType : Node, EdgeType : Edge<PropertyType>> NodeType.unwrapping(
     edgeProperty: KProperty1<NodeType, EdgeSet<PropertyType, EdgeType>>
