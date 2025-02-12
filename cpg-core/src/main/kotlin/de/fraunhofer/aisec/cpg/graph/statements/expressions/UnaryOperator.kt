@@ -38,7 +38,8 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /** A unary operator expression, involving one expression and an operator, such as `a++`. */
-class UnaryOperator : Expression(), HasOverloadedOperation, ArgumentHolder, HasType.TypeObserver {
+class UnaryOperator :
+    Expression(), HasOverloadedOperation, ArgumentHolder, HasType.TypeObserver, HasAccess {
     @Relationship("INPUT")
     var inputEdge =
         astEdgeOf<Expression>(
@@ -79,7 +80,7 @@ class UnaryOperator : Expression(), HasOverloadedOperation, ArgumentHolder, HasT
             if (operatorCode == "++" || operatorCode == "--") {
                 AccessValues.READWRITE
             } else {
-                AccessValues.READ
+                this.access
             }
         (input as? HasAccess)?.access = access
     }
@@ -131,11 +132,13 @@ class UnaryOperator : Expression(), HasOverloadedOperation, ArgumentHolder, HasT
 
     override fun addArgument(expression: Expression) {
         this.input = expression
+        (this.input as? HasAccess)?.access = access
     }
 
     override fun replaceArgument(old: Expression, new: Expression): Boolean {
         if (this.input == old) {
             this.input = new
+            (this.input as? HasAccess)?.access = access
             return true
         }
 
@@ -161,6 +164,12 @@ class UnaryOperator : Expression(), HasOverloadedOperation, ArgumentHolder, HasT
     }
 
     override fun hashCode() = super.hashCode()
+
+    override var access = AccessValues.READ
+        set(value) {
+            field = value
+            (this.input as? HasAccess)?.access = value
+        }
 
     companion object {
         const val OPERATOR_POSTFIX_INCREMENT = "++"
