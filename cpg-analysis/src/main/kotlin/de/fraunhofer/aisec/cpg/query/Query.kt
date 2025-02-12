@@ -568,16 +568,7 @@ val Expression.intValue: QueryTree<Int>?
 fun allNonLiteralsFromFlowTo(from: Node, to: Node, allPaths: List<List<Node>>): QueryTree<Boolean> {
     return when (from) {
         is CallExpression -> {
-            val prevEdges =
-                from.prevDFG
-                    .fold(mutableListOf<Node>()) { l, e ->
-                        if (e !is Literal<*>) {
-                            l.add(e)
-                        }
-                        l
-                    }
-                    .toMutableSet()
-            prevEdges.addAll(from.arguments)
+            val prevEdges = (from.prevDFG.filter { it !is Literal<*> } + from.arguments).toSet()
             // For a call, we collect the incoming data flows (typically only the arguments)
             val prevQTs = prevEdges.map { allNonLiteralsFromFlowTo(it, to, allPaths) }
             QueryTree(prevQTs.all { it.value }, prevQTs.toMutableList(), node = from)
@@ -586,7 +577,7 @@ fun allNonLiteralsFromFlowTo(from: Node, to: Node, allPaths: List<List<Node>>): 
             QueryTree(
                 true,
                 mutableListOf(QueryTree(from)),
-                "DF Irrelevant for Literal node",
+                "Dataflow is irrelevant for Literal node",
                 node = from,
             )
         else -> {
