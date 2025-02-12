@@ -376,6 +376,19 @@ class SimpleStack<T> {
  * Iterates the next full DFG edges until there are no more edges available (or until a loop is
  * detected). Returns a list of possible paths (each path is represented by a list of nodes).
  */
+fun Node.collectAllNextDFGPaths(): List<List<Node>> {
+    // We make everything fail to reach the end of the CDG. Then, we use the stuff collected in the
+    // failed paths (everything)
+    return this.followNextDFGEdgesUntilHit(collectFailedPaths = true, findAllPossiblePaths = true) {
+            false
+        }
+        .failed
+}
+
+/**
+ * Iterates the next full DFG edges until there are no more edges available (or until a loop is
+ * detected). Returns a list of possible paths (each path is represented by a list of nodes).
+ */
 fun Node.collectAllNextFullDFGPaths(): List<List<Node>> {
     // We make everything fail to reach the end of the CDG. Then, we use the stuff collected in the
     // failed paths (everything)

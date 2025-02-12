@@ -721,7 +721,16 @@ class QueryTest {
             result.allExtended<CallExpression>(
                 { it.name.localName == "highlyCriticalOperation" },
                 { n1 ->
-                    val loggingQueryForward =
+                    n1.arguments[0].allNonLiteralsFlowTo(
+                        predicate = { (it as? CallExpression)?.name.toString() == "Logger.log" },
+                        allowOverwritingValue = false,
+                        scope = AnalysisScope.INTERPROCEDURAL,
+                        sensitivities =
+                            AnalysisSensitivity.CONTEXT_SENSITIVE +
+                                AnalysisSensitivity.FIELD_SENSITIVE,
+                    )
+
+                    /*val loggingQueryForward =
                         executionPath(
                             n1,
                             { (it as? CallExpression)?.name.toString() == "Logger.log" },
@@ -750,7 +759,7 @@ class QueryTest {
                         QueryTree(dataFlowPaths.all { it.value }, dataFlowPaths.toMutableList())
 
                     return@allExtended (loggingQueryForward or loggingQueryBackwards) and
-                        dataFlowQuery
+                        dataFlowQuery*/
                 },
             )
 

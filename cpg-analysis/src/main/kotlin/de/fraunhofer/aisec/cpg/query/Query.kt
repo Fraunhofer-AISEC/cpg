@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.Type
 
 /**
@@ -49,18 +50,33 @@ inline fun <reified T> Node.allExtended(
     noinline sel: ((T) -> Boolean)? = null,
     noinline mustSatisfy: (T) -> QueryTree<Boolean>,
 ): QueryTree<Boolean> {
-    val nodes = this.allChildrenWithOverlays(sel)
-
-    val queryChildren =
-        nodes.map { n ->
-            val res = mustSatisfy(n)
-            res.stringRepresentation = "Starting at $n: " + res.stringRepresentation
-            if (n is Node) {
-                res.node = n
-            }
-            res
-        }
+    val queryChildren = evaluateExtended(sel, mustSatisfy)
     return QueryTree(queryChildren.all { it.value }, queryChildren.toMutableList(), "all", this)
+}
+
+/**
+ * Evaluates the conditions specified in [mustSatisfy] hold for all nodes in the graph and returns
+ * the individual results.
+ *
+ * The optional argument [sel] can be used to filter nodes for which the condition has to be
+ * fulfilled. This filter should be rather simple in most cases since its evaluation is not part of
+ * the resulting reasoning chain.
+ *
+ * This method can be used similar to the logical implication to test "sel => mustSatisfy".
+ */
+inline fun <reified T> Node.evaluateExtended(
+    noinline sel: ((T) -> Boolean)? = null,
+    noinline mustSatisfy: (T) -> QueryTree<Boolean>,
+): List<QueryTree<Boolean>> {
+    val nodes = this.allChildrenWithOverlays(sel)
+    return nodes.map { n ->
+        val res = mustSatisfy(n)
+        res.stringRepresentation = "Starting at $n: " + res.stringRepresentation
+        if (n is Node) {
+            res.node = n
+        }
+        res
+    }
 }
 
 /**
@@ -90,17 +106,7 @@ inline fun <reified T> Node.existsExtended(
     noinline sel: ((T) -> Boolean)? = null,
     noinline mustSatisfy: (T) -> QueryTree<Boolean>,
 ): QueryTree<Boolean> {
-    val nodes = this.allChildrenWithOverlays(sel)
-
-    val queryChildren =
-        nodes.map { n ->
-            val res = mustSatisfy(n)
-            res.stringRepresentation = "Starting at $n: " + res.stringRepresentation
-            if (n is Node) {
-                res.node = n
-            }
-            res
-        }
+    val queryChildren = evaluateExtended(sel, mustSatisfy)
     return QueryTree(queryChildren.any { it.value }, queryChildren.toMutableList(), "exists", this)
 }
 
@@ -342,7 +348,6 @@ private fun executionPathBase(
 ): QueryTree<Boolean> {
     val collectFailedPaths = type == AnalysisType.MUST || verbose
     val findAllPossiblePaths = type == AnalysisType.MUST || verbose
-    val contextSensitive = scope == AnalysisScope.INTERPROCEDURAL
     val interproceduralAnalysis = scope == AnalysisScope.INTERPROCEDURAL
     val evalRes =
         when (direction) {
@@ -409,7 +414,6 @@ fun dataFlow(
     to: Node,
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
-    useIndexStack: Boolean = true,
 ) =
     dataFlowBase(
         startNode = from,
@@ -430,7 +434,6 @@ fun dataFlow(
     predicate: (Node) -> Boolean,
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
-    useIndexStack: Boolean = true,
 ) =
     dataFlowBase(
         startNode = from,
@@ -559,6 +562,132 @@ val Expression.intValue: QueryTree<Int>?
         val evalRes = evaluate() as? Int ?: return null
         return QueryTree(evalRes, mutableListOf(), "$this", this)
     }
+
+fun Node.alwaysFlowsTo(
+    predicate: (Node) -> Boolean,
+    allowOverwritingValue: Boolean = false,
+    scope: AnalysisScope,
+    sensitivities: AnalysisSensitivities,
+): QueryTree<Boolean> {
+    val nextDFGPaths = this.collectAllNextDFGPaths().flatten()
+    val executionPaths = this.collectAllNextEOGPaths()
+    var result = true
+    val children = mutableListOf<QueryTree<Boolean>>()
+    for (executionPath in executionPaths) {
+        var foundMatch = false
+        for ((i, step) in executionPath.withIndex()) {
+            // Check if there's a (partial) write to the memory address keeping the data of this
+            if (
+                !allowOverwritingValue &&
+                    this in step.prevDFG &&
+                    (step as? Reference)?.access == AccessValues.WRITE
+            ) {
+                result = false
+                children.add(
+                    QueryTree(
+                        value = false,
+                        children = mutableListOf(QueryTree(executionPath.subList(0, i))),
+                        stringRepresentation =
+                            "Node $step overwrites (some) data of $this before reaching a node matching the predicate",
+                        node = this,
+                    )
+                )
+                foundMatch = true
+                break
+            }
+            // Check if the node matches the predicate and there's a data flow path
+            if (predicate(step) && step in nextDFGPaths) {
+                children.add(
+                    QueryTree(
+                        value = true,
+                        children = mutableListOf(QueryTree(executionPath.subList(0, i))),
+                        stringRepresentation =
+                            "Node $step fulfills the predicate is reachable from $this",
+                        node = this,
+                    )
+                )
+                foundMatch = true
+                break
+            }
+        }
+        if (foundMatch == false) {
+            children.add(
+                QueryTree(
+                    value = true,
+                    children = mutableListOf(QueryTree(executionPath)),
+                    stringRepresentation =
+                        "Reached the end of the EOG reachable from $this without fulfilling the predicate",
+                    node = this,
+                )
+            )
+        }
+    }
+    return QueryTree(
+        result,
+        children.toMutableList(),
+        stringRepresentation =
+            if (result) {
+                "All EOG paths fulfilled the predicate"
+            } else {
+                "Some EOG paths failed to fulfill the predicate"
+            },
+        node = this,
+    )
+    return executionPathBase(
+        this,
+        predicate = { predicate(it) && it in nextDFGPaths },
+        direction = AnalysisDirection.FORWARD,
+        type = AnalysisType.MUST,
+        scope = AnalysisScope.INTERPROCEDURAL,
+    )
+}
+
+fun Node.allNonLiteralsFlowTo(
+    predicate: (Node) -> Boolean,
+    allowOverwritingValue: Boolean = false,
+    scope: AnalysisScope,
+    sensitivities: AnalysisSensitivities,
+): QueryTree<Boolean> {
+    val worklist = mutableListOf<Node>(this)
+    val finalPathsChecked = mutableListOf<QueryTree<Boolean>>()
+    while (worklist.isNotEmpty()) {
+        val currentNode = worklist.removeFirst()
+        if (currentNode.prevDFG.isEmpty()) {
+            finalPathsChecked +=
+                currentNode.alwaysFlowsTo(
+                    predicate = predicate,
+                    allowOverwritingValue = allowOverwritingValue,
+                    scope = scope,
+                    sensitivities = sensitivities,
+                )
+        }
+        currentNode.prevDFG
+            .filter { it !is Literal<*> }
+            .forEach {
+                val pathResult =
+                    it.alwaysFlowsTo(
+                        predicate = predicate,
+                        allowOverwritingValue = allowOverwritingValue,
+                        scope = scope,
+                        sensitivities = sensitivities,
+                    )
+                if (pathResult.value) {
+                    // This path always ends pathResult in a node fulfilling the predicate
+                    finalPathsChecked.add(pathResult)
+                } else {
+                    // This path contained some nodes which do not end up in a node fulfilling the
+                    // predicate
+                    worklist.add(currentNode)
+                }
+            }
+    }
+
+    return QueryTree(
+        finalPathsChecked.all { it.value },
+        finalPathsChecked.toMutableList(),
+        node = this,
+    )
+}
 
 /**
  * Does some magic to identify if the value which is in [from] also reaches [to]. To do so, it goes
