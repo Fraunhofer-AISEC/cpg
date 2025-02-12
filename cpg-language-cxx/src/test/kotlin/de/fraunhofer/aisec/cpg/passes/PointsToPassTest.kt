@@ -32,6 +32,9 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextIn
+import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
+import de.fraunhofer.aisec.cpg.graph.edges.flows.ContextSensitiveDataflow
 import de.fraunhofer.aisec.cpg.graph.edges.flows.PointerDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
@@ -1843,5 +1846,147 @@ class PointsToPassTest {
         assertEquals(1, keyVal.prevDFG.size)
         assertTrue(keyVal.prevDFG.first() is UnknownMemoryValue)
         assertLocalName("sgx_get_key.secret", keyVal.prevDFG.first())
+    }
+
+    @Test
+    fun testCallingContexts() {
+        val file = File("src/test/resources/pointsto.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+                it.registerPass<PointsToPass>()
+                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+            }
+        assertNotNull(tu)
+
+        // CallExpressions
+        val ceLine380 =
+            tu.allChildren<CallExpression> { it.location?.region?.startLine == 380 }.first()
+        assertNotNull(ceLine380)
+
+        val ceLine384 =
+            tu.allChildren<CallExpression> { it.location?.region?.startLine == 384 }.first()
+        assertNotNull(ceLine384)
+
+        val ceLine386 =
+            tu.allChildren<CallExpression> { it.location?.region?.startLine == 386 }.first()
+        assertNotNull(ceLine386)
+
+        val ceLine390 =
+            tu.allChildren<CallExpression> { it.location?.region?.startLine == 390 }.first()
+        assertNotNull(ceLine390)
+
+        // arguments
+        val iArgLine380 =
+            tu.allChildren<Reference> {
+                    it.location?.region?.startLine == 380 && it.location?.region?.startColumn == 11
+                }
+                .first()
+        assertNotNull(iArgLine380)
+
+        val iArgLine384 =
+            tu.allChildren<Reference> {
+                    it.location?.region?.startLine == 384 && it.location?.region?.startColumn == 11
+                }
+                .first()
+        assertNotNull(iArgLine384)
+
+        val pArgLine386 =
+            tu.allChildren<Reference> { it.location?.region?.startLine == 386 }.first()
+        assertNotNull(pArgLine386)
+
+        // BinaryOperators
+        val binOpLine207 =
+            tu.allChildren<BinaryOperator> { it.location?.region?.startLine == 207 }.first()
+        assertNotNull(binOpLine207)
+
+        val binOpLine212 =
+            tu.allChildren<BinaryOperator> { it.location?.region?.startLine == 212 }.first()
+        assertNotNull(binOpLine212)
+
+        // References
+        val iRefLeftLine380 =
+            tu.allChildren<Reference> {
+                    it.location?.region?.startLine == 380 && it.location?.region?.startColumn == 5
+                }
+                .first()
+        assertNotNull(iRefLeftLine380)
+
+        val iRefLeftLine384 =
+            tu.allChildren<Reference> {
+                    it.location?.region?.startLine == 384 && it.location?.region?.startColumn == 5
+                }
+                .first()
+        assertNotNull(iRefLeftLine384)
+
+        // FunctionDeclarations
+        val incpFD = tu.functions.filter { it.name.localName == "incp" }.first()
+        assertNotNull(incpFD)
+
+        // ParameterMemoryValues
+        val incpDerefValue = incpFD.parameters.first().memoryValue?.memoryValue
+        assertNotNull(incpDerefValue)
+
+        // Literals
+        val literal0 = tu.allChildren<Literal<*>> { it.location?.region?.startLine == 376 }.first()
+        assertNotNull(literal0)
+
+        val literal1 = tu.allChildren<Literal<*>> { it.location?.region?.startLine == 377 }.first()
+        assertNotNull(literal1)
+
+        // CallExpression in Line 380
+        assertEquals(1, iArgLine380.nextDFGEdges.size)
+        assertTrue(iArgLine380.nextDFGEdges.first().end is ParameterMemoryValue)
+        assertLocalName("value", iArgLine380.nextDFGEdges.first().end)
+        assertEquals(
+            ceLine380,
+            ((iArgLine380.nextDFGEdges.first() as ContextSensitiveDataflow).callingContext
+                    as CallingContextIn)
+                .call,
+        )
+
+        assertEquals(1, ceLine380.prevDFGEdges.size)
+        assertEquals(
+            ceLine380,
+            ((ceLine380.prevDFGEdges.first() as ContextSensitiveDataflow).callingContext
+                    as CallingContextOut)
+                .call,
+        )
+
+        // CallExpression in Line 384
+        assertEquals(1, iArgLine384.nextDFGEdges.size)
+        assertTrue(iArgLine384.nextDFGEdges.first().end is ParameterMemoryValue)
+        assertLocalName("value", iArgLine384.nextDFGEdges.first().end)
+        assertEquals(
+            ceLine384,
+            ((iArgLine384.nextDFGEdges.first() as ContextSensitiveDataflow).callingContext
+                    as CallingContextIn)
+                .call,
+        )
+
+        assertEquals(1, ceLine384.prevDFGEdges.size)
+        assertEquals(
+            ceLine384,
+            ((ceLine384.prevDFGEdges.first() as ContextSensitiveDataflow).callingContext
+                    as CallingContextOut)
+                .call,
+        )
+
+        // CallExpression in Line 386
+        assertEquals(1, pArgLine386.nextDFGEdges.size)
+        assertEquals(
+            ceLine386,
+            ((pArgLine386.nextDFGEdges.first() as ContextSensitiveDataflow).callingContext
+                    as CallingContextIn)
+                .call,
+        )
+        assertEquals(1, incpDerefValue.prevDFGEdges.filter { it.start == literal1 }.size)
+        assertEquals(
+            ceLine386,
+            ((incpDerefValue.prevDFGEdges.filter { it.start == literal1 }.first()
+                        as ContextSensitiveDataflow)
+                    .callingContext as CallingContextIn)
+                .call,
+        )
     }
 }

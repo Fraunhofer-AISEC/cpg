@@ -372,3 +372,20 @@ undefined4 sgx_ecall_key_to_usercheck(long pms)
   return 2;
 }
 
+int testCallingContexts() {
+    int i=0;
+    int j=1;
+    int* p=&j;
+
+    i=inc(i);
+
+    printf("%d\n", i);
+
+    i=inc(i);
+
+    incp(p);
+
+    printf("%d %d\n", j, *p);
+  
+    incp(p);
+}
