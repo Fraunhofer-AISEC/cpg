@@ -53,6 +53,9 @@ class ParameterMemoryValue(override var name: Name) : MemoryAddress(name) {
     // The ParameterMemoryValue is usually the Value of a parameter. Let's use this little helper to
     // get to the parameter's address
     var memoryAddress: Node? = null
+
+    // Same for the value, make sure we don't use it across different functions
+    var memoryValue: ParameterMemoryValue? = null
 }
 
 /** We don't know the value. It might be set somewhere else or not. No idea. */

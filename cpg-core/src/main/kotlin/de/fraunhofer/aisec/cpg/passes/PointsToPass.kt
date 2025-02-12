@@ -368,6 +368,94 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         return doubleState
     }
 
+    /**
+     * Add the data flows from the CallExpression's arguments to the FunctionDeclaration's
+     * ParameterMemoryValues to the doubleState
+     */
+    private fun calculateIncomingCallingContexts(
+        lattice: PointsToState,
+        functionDeclaration: FunctionDeclaration,
+        callExpression: CallExpression,
+        doubleState: PointsToStateElement,
+    ): PointsToStateElement {
+        var doubleState = doubleState
+        callExpression.arguments.forEach { arg ->
+            if (arg.argumentIndex < functionDeclaration.parameters.size) {
+                // Create a DFG-Edge from the argument to the parameter's memoryValue
+                val p = functionDeclaration.parameters[arg.argumentIndex]
+                if (p.memoryValue == null)
+                    initializeParameters(lattice, mutableListOf(p), doubleState, 1)
+                p.memoryValue?.let { memVal ->
+                    edgePropertiesMap[Pair(memVal, arg)] = CallingContextIn(callExpression)
+                    doubleState =
+                        lattice.push(
+                            doubleState,
+                            memVal,
+                            TupleLattice.Element(
+                                PowersetLattice.Element(identitySetOf(memVal)),
+                                PowersetLattice.Element(identitySetOf(arg)),
+                            ),
+                        )
+                    // Also draw the edges for the (deref)derefvalues if we have any and are
+                    // dealing with a pointer parameter (AKA memoryValue is not null)
+                    val derefPMV = memVal.memoryValue
+                    if (derefPMV != null) {
+                        doubleState
+                            .getNestedValues(
+                                arg,
+                                2,
+                                fetchFields = false,
+                                onlyFetchExistingEntries = true,
+                            )
+                            .forEach { derefValue ->
+                                edgePropertiesMap[Pair(derefPMV, derefValue)] =
+                                    CallingContextIn(callExpression)
+                                doubleState =
+                                    lattice.push(
+                                        doubleState,
+                                        derefPMV,
+                                        TupleLattice.Element(
+                                            PowersetLattice.Element(identitySetOf(derefPMV)),
+                                            PowersetLattice.Element(identitySetOf(derefValue)),
+                                        ),
+                                    )
+                                // The same for the derefderef values
+                                val derefderefPMV = derefPMV.memoryValue
+                                if (derefderefPMV != null) {
+                                    doubleState
+                                        .getNestedValues(
+                                            derefValue,
+                                            1,
+                                            fetchFields = false,
+                                            onlyFetchExistingEntries = true,
+                                        )
+                                        .forEach { derefderefValue ->
+                                            edgePropertiesMap[
+                                                Pair(derefderefPMV, derefderefValue)] =
+                                                CallingContextIn(callExpression)
+                                            doubleState =
+                                                lattice.push(
+                                                    doubleState,
+                                                    derefderefPMV,
+                                                    TupleLattice.Element(
+                                                        PowersetLattice.Element(
+                                                            identitySetOf(derefderefPMV)
+                                                        ),
+                                                        PowersetLattice.Element(
+                                                            identitySetOf(derefderefValue)
+                                                        ),
+                                                    ),
+                                                )
+                                        }
+                                }
+                            }
+                    }
+                }
+            }
+        }
+        return doubleState
+    }
+
     private fun handleCallExpression(
         lattice: PointsToState,
         currentNode: CallExpression,
@@ -428,27 +516,19 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     invoke.functionSummary[ReturnStatement()] = newValues
                 }
             }
-            currentNode.arguments.forEach { arg ->
-                if (arg.argumentIndex < invoke.parameters.size) {
+            /*            currentNode.arguments.forEach { arg ->
+            if (arg.argumentIndex < invoke.parameters.size) {
 
-                    // Create a DFG-Edge from the argument to the parameter's memoryValue
-                    val p = invoke.parameters[arg.argumentIndex]
-                    if (p.memoryValue == null)
-                        initializeParameters(lattice, mutableListOf(p), doubleState, 1)
-                    p.memoryValue?.let {
-                        edgePropertiesMap[Pair(it, arg)] = CallingContextIn(currentNode)
-                        doubleState =
-                            lattice.push(
-                                doubleState,
-                                it,
-                                TupleLattice.Element(
-                                    PowersetLattice.Element(identitySetOf(it)),
-                                    PowersetLattice.Element(identitySetOf(arg)),
-                                ),
-                            )
-                    }
+                // Create a DFG-Edge from the argument to the parameter's memoryValue
+                val p = invoke.parameters[arg.argumentIndex]
+                if (p.memoryValue == null)
+                    initializeParameters(lattice, mutableListOf(p), doubleState, 1)
+                p.memoryValue?.let { memVal ->*/
+            doubleState =
+                calculateIncomingCallingContexts(lattice, invoke, currentNode, doubleState)
+            /*                    }
                 }
-            }
+            }*/
             // }
 
             // If we have a FunctionSummary, we push the values of the arguments and return value
@@ -769,6 +849,12 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     // In the first step, we link the ParameterDeclaration to the PMV to be able to
                     // also access it outside the function
                     if (src is ParameterDeclaration) src.memoryValue = pmv
+                    else {
+                        // Linke the PMVs with each other so that we can find them. This is
+                        // especially important outside the respective function where we don't have
+                        // a state
+                        (pmv.memoryAddress as ParameterMemoryValue).memoryValue = pmv
+                    }
 
                     // Update the states
                     val state =
@@ -1060,14 +1146,14 @@ fun PointsToStateElement.getNestedValues(
     node: Node,
     nestingDepth: Int,
     fetchFields: Boolean = false,
+    onlyFetchExistingEntries: Boolean = false,
 ): IdentitySet<Node> {
     if (nestingDepth == 0) return this.getAddresses(node)
-    //            else if (dereferenceDepth == 1) return addr.flatMap { getValues(it)
-    // }.toSet()
     var ret = getValues(node)
     for (i in 1..<nestingDepth) {
-        ret = // ret.flatMap { getValues(it) }.toIdentitySet()
-            ret.flatMap { this.fetchElementFromDeclarationState(it, fetchFields) }
+        ret =
+            ret.filter { if (onlyFetchExistingEntries) this.hasDeclarationStateEntry(it) else true }
+                .flatMap { this.fetchElementFromDeclarationState(it, fetchFields) }
                 .map { it.first }
                 .toIdentitySet()
     }
