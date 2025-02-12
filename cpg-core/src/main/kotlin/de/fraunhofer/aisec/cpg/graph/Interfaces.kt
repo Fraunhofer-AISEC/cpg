@@ -124,7 +124,7 @@ interface HasInitializer : HasScope, HasType, ArgumentHolder, AssignmentHolder {
 
 /**
  * Some nodes have aliases, i.e., it potentially references another variable. This means that
- * writing to this node, also writes to its [aliases] and vice-versa.
+ * writing to this node, also writes to its [aliases] and vice versa.
  */
 interface HasAliases : HasScope {
     /** The aliases which this node has. */
@@ -132,14 +132,14 @@ interface HasAliases : HasScope {
 }
 
 /**
- * Specifies that this node (e.g. a [BinaryOperator] contains an operation that can be overloaded by
- * an [OperatorDeclaration].
+ * Specifies that this node (e.g. a [BinaryOperator]) contains an operation that can be overloaded
+ * by an [OperatorDeclaration].
  */
 interface HasOverloadedOperation : HasOperatorCode {
 
     /**
-     * Arguments forwarded to the operator. This might not necessarily be all of the regular
-     * "arguments", since often the the first argument is part of the [operatorBase].
+     * Arguments forwarded to the operator. These might not necessarily be all regular "arguments",
+     * since often, the first argument is part of the [operatorBase].
      */
     val operatorArguments: List<Expression>
 
@@ -150,10 +150,13 @@ interface HasOverloadedOperation : HasOperatorCode {
     val operatorBase: Expression
 }
 
+/**
+ * Specifies that this node (e.g., a [Reference]) can be used to read data from or write data to it.
+ * It adds the property [access] which allows to determine the direction of data flow edges.
+ */
 interface HasAccess {
     /**
-     * Is this reference used for writing data instead of just reading it? Determines dataflow
-     * direction
+     * Is this node used for writing data instead of just reading it? Determines dataflow direction
      */
     var access: AccessValues
 }
