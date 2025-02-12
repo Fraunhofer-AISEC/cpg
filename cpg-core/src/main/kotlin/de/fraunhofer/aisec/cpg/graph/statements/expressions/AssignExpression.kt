@@ -71,11 +71,12 @@ class AssignExpression :
                     base = base.base as? MemberExpression
                 }
 
-                if (isSimpleAssignment) {
-                    (end as? HasAccess)?.access = AccessValues.WRITE
-                } else {
-                    (end as? HasAccess)?.access = AccessValues.READWRITE
-                }
+                (end as? HasAccess)?.access =
+                    if (isSimpleAssignment) {
+                        AccessValues.WRITE
+                    } else {
+                        AccessValues.READWRITE
+                    }
             }
         )
     var lhs by unwrapping(AssignExpression::lhsEdges)

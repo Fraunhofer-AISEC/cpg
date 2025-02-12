@@ -75,10 +75,12 @@ class UnaryOperator : Expression(), HasOverloadedOperation, ArgumentHolder, HasT
     var isPrefix = false
 
     private fun changeExpressionAccess() {
-        var access = AccessValues.READ
-        if (operatorCode == "++" || operatorCode == "--") {
-            access = AccessValues.READWRITE
-        }
+        var access =
+            if (operatorCode == "++" || operatorCode == "--") {
+                AccessValues.READWRITE
+            } else {
+                AccessValues.READ
+            }
         (input as? HasAccess)?.access = access
     }
 
