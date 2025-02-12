@@ -543,7 +543,6 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                     }
                 }
 
-            // state.push(writtenToIt, PowersetLattice(identitySetOf(currentNode.iterable)))
             // Add the variable declaration (or the reference) to the list of previous
             // write nodes in this path
             state.declarationsState[writtenDeclaration] =
