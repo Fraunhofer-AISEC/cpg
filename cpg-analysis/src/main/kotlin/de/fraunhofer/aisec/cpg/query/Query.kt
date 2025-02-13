@@ -609,9 +609,10 @@ fun Node.alwaysFlowsTo(
             }
         }
         if (foundMatch == false) {
+            result = false
             children.add(
                 QueryTree(
-                    value = true,
+                    value = false,
                     children = mutableListOf(QueryTree(executionPath)),
                     stringRepresentation =
                         "Reached the end of the EOG reachable from $this without fulfilling the predicate",
@@ -684,7 +685,7 @@ fun Node.allNonLiteralsFlowTo(
                 } else {
                     // This path contained some nodes which do not end up in a node fulfilling the
                     // predicate
-                    worklist.add(currentNode)
+                    worklist.add(it)
                 }
             }
     }
