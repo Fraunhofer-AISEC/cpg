@@ -84,7 +84,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                             param,
                             callingContext = CallingContextOut(call),
                         )
-                        (arg as? HasAccess)?.access = AccessValues.READWRITE
+                        arg.access = AccessValues.READWRITE
                         (arg as? Reference)?.let {
                             it.refersTo?.let { it1 -> it.nextDFGEdges += it1 }
                         }

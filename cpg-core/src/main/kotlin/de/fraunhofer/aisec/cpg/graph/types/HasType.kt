@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.graph.ContextProvider
-import de.fraunhofer.aisec.cpg.graph.HasAccess
 import de.fraunhofer.aisec.cpg.graph.LanguageProvider
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
@@ -76,7 +75,7 @@ interface HasType : ContextProvider, LanguageProvider {
      * change.
      */
     fun addAssignedType(type: Type) {
-        if (language?.shouldPropagateType(this, type) == false) {
+        if (language.shouldPropagateType(this, type) == false) {
             return
         }
 
@@ -93,7 +92,7 @@ interface HasType : ContextProvider, LanguageProvider {
     fun addAssignedTypes(types: Set<Type>) {
         val changed =
             (this.assignedTypes as MutableSet).addAll(
-                types.filter { language?.shouldPropagateType(this, it) == true }
+                types.filter { language.shouldPropagateType(this, it) == true }
             )
         if (changed) {
             informObservers(TypeObserver.ChangeType.ASSIGNED_TYPE)
@@ -141,8 +140,8 @@ interface HasType : ContextProvider, LanguageProvider {
         ) {
             (old?.end as? HasType)?.unregisterTypeObserver(this)
             (new?.end as? HasType)?.registerTypeObserver(this)
-            if (this is HasAccess) {
-                (new?.end as? HasAccess)?.access = this.access
+            if (this is Expression) {
+                (new?.end as? Expression)?.access = this.access
             }
         }
     }

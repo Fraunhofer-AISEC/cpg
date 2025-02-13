@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
-import de.fraunhofer.aisec.cpg.graph.HasAccess
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
@@ -42,7 +41,7 @@ class ComprehensionExpression : Expression(), ArgumentHolder {
     var variableEdge =
         astEdgeOf<Statement>(
             of = ProblemExpression("Missing variableEdge in ${this::class}"),
-            onChanged = { _, new -> (new?.end as? HasAccess)?.access = AccessValues.WRITE },
+            onChanged = { _, new -> (new?.end as? Expression)?.access = AccessValues.WRITE },
         )
 
     /**

@@ -71,7 +71,7 @@ class AssignExpression :
                     base = base.base as? MemberExpression
                 }
 
-                (end as? HasAccess)?.access =
+                end.access =
                     if (isSimpleAssignment) {
                         AccessValues.WRITE
                     } else {
