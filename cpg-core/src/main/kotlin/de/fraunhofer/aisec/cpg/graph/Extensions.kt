@@ -212,6 +212,10 @@ class FulfilledAndFailedPaths(val fulfilled: List<List<Node>>, val failed: List<
     operator fun component1(): List<List<Node>> = fulfilled
 
     operator fun component2(): List<List<Node>> = failed
+
+    operator fun plus(other: FulfilledAndFailedPaths): FulfilledAndFailedPaths {
+        return FulfilledAndFailedPaths(this.fulfilled + other.fulfilled, this.failed + other.failed)
+    }
 }
 
 /**

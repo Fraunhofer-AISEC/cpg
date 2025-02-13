@@ -636,7 +636,7 @@ class QueryTest {
                     n1.arguments[0].allNonLiteralsFlowTo(
                         predicate = { (it as? CallExpression)?.name.toString() == "Logger.log" },
                         allowOverwritingValue = false,
-                        scope = AnalysisScope.INTERPROCEDURAL,
+                        scope = INTERPROCEDURAL(),
                         sensitivities =
                             AnalysisSensitivity.CONTEXT_SENSITIVE +
                                 AnalysisSensitivity.FIELD_SENSITIVE,
@@ -660,7 +660,7 @@ class QueryTest {
                     n1.arguments[0].allNonLiteralsFlowTo(
                         predicate = { (it as? CallExpression)?.name.toString() == "Logger.log" },
                         allowOverwritingValue = false,
-                        scope = AnalysisScope.INTERPROCEDURAL,
+                        scope = INTERPROCEDURAL(),
                         sensitivities =
                             AnalysisSensitivity.CONTEXT_SENSITIVE +
                                 AnalysisSensitivity.FIELD_SENSITIVE,
@@ -684,7 +684,7 @@ class QueryTest {
                     n1.arguments[0].allNonLiteralsFlowTo(
                         predicate = { (it as? CallExpression)?.name.toString() == "Logger.log" },
                         allowOverwritingValue = false,
-                        scope = AnalysisScope.INTERPROCEDURAL,
+                        scope = INTERPROCEDURAL(),
                         sensitivities =
                             AnalysisSensitivity.CONTEXT_SENSITIVE +
                                 AnalysisSensitivity.FIELD_SENSITIVE,

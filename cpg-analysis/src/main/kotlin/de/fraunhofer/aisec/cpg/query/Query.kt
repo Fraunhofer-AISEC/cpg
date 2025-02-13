@@ -203,13 +203,19 @@ fun max(n: Node?, eval: ValueEvaluator = MultiValueEvaluator()): QueryTree<Numbe
     return QueryTree((evalRes as? NumberSet)?.max() ?: -1, mutableListOf(), "max($n)", n)
 }
 
-/** Determines in which direction we follow the edges. */
-enum class AnalysisScope {
-    /** Only intraprocedural analysis */
-    INTRAPROCEDURAL,
-    /** Enable interprocedural analysis */
-    INTERPROCEDURAL,
-}
+/** Determines how far we want to follow edges within the analysis. */
+sealed class AnalysisScope
+
+/** Only intraprocedural analysis */
+class INTRAPROCEDURAL : AnalysisScope()
+
+/**
+ * Enable interprocedural analysis. [maxDepth] defines how many function calls we follow at most.
+ */
+class INTERPROCEDURAL(val maxDepth: Int = -1) : AnalysisScope()
+
+/** Enable interprocedural analysis */
+class MAX_STEPS(val steps: Int) : AnalysisScope()
 
 /** Determines in which direction we follow the edges. */
 enum class AnalysisDirection {
@@ -217,6 +223,8 @@ enum class AnalysisDirection {
     FORWARD,
     /** Against the order of the EOG */
     BACKWARD,
+    /** In and against the order of the EOG */
+    BIDIRECTIONAL,
 }
 
 /** Determines if the predicate must or may hold */
@@ -272,7 +280,7 @@ private fun dataFlowBase(
     val findAllPossiblePaths = type == AnalysisType.MUST || verbose
     val useIndexStack = AnalysisSensitivity.FIELD_SENSITIVE in sensitivities
     val contextSensitive = AnalysisSensitivity.CONTEXT_SENSITIVE in sensitivities
-    val interproceduralAnalysis = scope == AnalysisScope.INTERPROCEDURAL
+    val interproceduralAnalysis = scope is INTERPROCEDURAL
     val evalRes =
         when (direction) {
             AnalysisDirection.FORWARD -> {
@@ -294,6 +302,24 @@ private fun dataFlowBase(
                     interproceduralAnalysis = interproceduralAnalysis,
                     predicate = predicate,
                 )
+            }
+            AnalysisDirection.BIDIRECTIONAL -> {
+                startNode.followNextDFGEdgesUntilHit(
+                    collectFailedPaths = collectFailedPaths,
+                    findAllPossiblePaths = findAllPossiblePaths,
+                    useIndexStack = useIndexStack,
+                    contextSensitive = contextSensitive,
+                    interproceduralAnalysis = interproceduralAnalysis,
+                    predicate = predicate,
+                ) +
+                    startNode.followPrevDFGEdgesUntilHit(
+                        collectFailedPaths = collectFailedPaths,
+                        findAllPossiblePaths = findAllPossiblePaths,
+                        useIndexStack = useIndexStack,
+                        contextSensitive = contextSensitive,
+                        interproceduralAnalysis = interproceduralAnalysis,
+                        predicate = predicate,
+                    )
             }
         }
     val allPaths =
@@ -346,7 +372,7 @@ private fun executionPathBase(
 ): QueryTree<Boolean> {
     val collectFailedPaths = type == AnalysisType.MUST || verbose
     val findAllPossiblePaths = type == AnalysisType.MUST || verbose
-    val interproceduralAnalysis = scope == AnalysisScope.INTERPROCEDURAL
+    val interproceduralAnalysis = scope is INTERPROCEDURAL
     val evalRes =
         when (direction) {
             AnalysisDirection.FORWARD -> {
@@ -364,6 +390,20 @@ private fun executionPathBase(
                     interproceduralAnalysis = interproceduralAnalysis,
                     predicate = predicate,
                 )
+            }
+            AnalysisDirection.BIDIRECTIONAL -> {
+                startNode.followNextEOGEdgesUntilHit(
+                    collectFailedPaths = collectFailedPaths,
+                    findAllPossiblePaths = findAllPossiblePaths,
+                    interproceduralAnalysis = interproceduralAnalysis,
+                    predicate = predicate,
+                ) +
+                    startNode.followPrevEOGEdgesUntilHit(
+                        collectFailedPaths = collectFailedPaths,
+                        findAllPossiblePaths = findAllPossiblePaths,
+                        interproceduralAnalysis = interproceduralAnalysis,
+                        predicate = predicate,
+                    )
             }
         }
     val allPaths =
@@ -419,7 +459,7 @@ fun dataFlow(
         direction = AnalysisDirection.FORWARD,
         type = AnalysisType.MAY,
         sensitivities = AnalysisSensitivity.FIELD_SENSITIVE + AnalysisSensitivity.CONTEXT_SENSITIVE,
-        scope = AnalysisScope.INTERPROCEDURAL,
+        scope = INTERPROCEDURAL(),
         verbose = collectFailedPaths || findAllPossiblePaths,
     )
 
@@ -439,7 +479,7 @@ fun dataFlow(
         direction = AnalysisDirection.FORWARD,
         type = AnalysisType.MAY,
         sensitivities = AnalysisSensitivity.FIELD_SENSITIVE + AnalysisSensitivity.CONTEXT_SENSITIVE,
-        scope = AnalysisScope.INTERPROCEDURAL,
+        scope = INTERPROCEDURAL(),
         verbose = collectFailedPaths || findAllPossiblePaths,
     )
 
@@ -450,7 +490,7 @@ fun executionPath(from: Node, to: Node) =
         predicate = { it == to },
         direction = AnalysisDirection.FORWARD,
         type = AnalysisType.MAY,
-        scope = AnalysisScope.INTERPROCEDURAL,
+        scope = INTERPROCEDURAL(),
         verbose = true,
     )
 
@@ -464,7 +504,7 @@ fun executionPath(from: Node, predicate: (Node) -> Boolean) =
         predicate = predicate,
         direction = AnalysisDirection.FORWARD,
         type = AnalysisType.MAY,
-        scope = AnalysisScope.INTERPROCEDURAL,
+        scope = INTERPROCEDURAL(),
         verbose = true,
     )
 
@@ -478,7 +518,7 @@ fun executionPathBackwards(to: Node, predicate: (Node) -> Boolean) =
         predicate = predicate,
         direction = AnalysisDirection.BACKWARD,
         type = AnalysisType.MAY,
-        scope = AnalysisScope.INTERPROCEDURAL,
+        scope = INTERPROCEDURAL(),
         verbose = true,
     )
 
@@ -577,6 +617,8 @@ fun Node.alwaysFlowsTo(
             // Check if there's a (partial) write to the memory address keeping the data of this
             if (
                 !allowOverwritingValue &&
+                    // TODO: This should be replaced with some check if the memory location/whatever
+                    // where the data is kept is (partially) written to.
                     this in step.prevDFG &&
                     (step as? Reference)?.access == AccessValues.WRITE
             ) {
@@ -637,7 +679,7 @@ fun Node.alwaysFlowsTo(
         predicate = { predicate(it) && it in nextDFGPaths },
         direction = AnalysisDirection.FORWARD,
         type = AnalysisType.MUST,
-        scope = AnalysisScope.INTERPROCEDURAL,
+        scope = INTERPROCEDURAL(),
     )
 }
 
