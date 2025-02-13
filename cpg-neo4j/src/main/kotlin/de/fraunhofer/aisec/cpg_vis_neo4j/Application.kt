@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg_vis_neo4j
 import com.fasterxml.jackson.databind.ObjectMapper
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase.Companion.fromFile
+import de.fraunhofer.aisec.cpg.graph.concepts.database.DatabasePass
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.persistence.persist
@@ -485,6 +486,7 @@ class Application : Callable<Int> {
             translationConfiguration.defaultPasses()
             translationConfiguration.registerPass<ControlDependenceGraphPass>()
             translationConfiguration.registerPass<ProgramDependenceGraphPass>()
+            translationConfiguration.registerPass<DatabasePass>()
         }
         if (customPasses != "DEFAULT") {
             val pieces = customPasses.split(",")
