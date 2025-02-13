@@ -34,7 +34,7 @@ import java.util.*
 import org.neo4j.ogm.annotation.Relationship
 import org.slf4j.LoggerFactory
 
-class CastExpression : Expression(), ArgumentHolder, HasType.TypeObserver, HasAccess {
+class CastExpression : Expression(), ArgumentHolder, HasType.TypeObserver {
     /**
      * The [Expression] that is cast to [castType].
      *
@@ -76,13 +76,13 @@ class CastExpression : Expression(), ArgumentHolder, HasType.TypeObserver, HasAc
 
     override fun addArgument(expression: Expression) {
         this.expression = expression
-        (this.expression as? HasAccess)?.access = access
+        this.expression.access = access
     }
 
     override fun replaceArgument(old: Expression, new: Expression): Boolean {
         if (this.expression == old) {
             this.expression = new
-            (this.expression as? HasAccess)?.access = access
+            this.expression.access = access
             return true
         }
 
@@ -119,7 +119,7 @@ class CastExpression : Expression(), ArgumentHolder, HasType.TypeObserver, HasAc
     override var access = AccessValues.READ
         set(value) {
             field = value
-            (this.expression as? HasAccess)?.access = value
+            this.expression.access = value
         }
 
     companion object {

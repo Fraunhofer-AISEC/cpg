@@ -43,7 +43,7 @@ import org.neo4j.ogm.annotation.Relationship
  * be set before adding any values to [InitializerListExpression.initializers].
  */
 // TODO Merge and/or refactor
-class InitializerListExpression : Expression(), ArgumentHolder, HasType.TypeObserver, HasAccess {
+class InitializerListExpression : Expression(), ArgumentHolder, HasType.TypeObserver {
 
     /** The list of initializers. */
     @Relationship(value = "INITIALIZERS", direction = Relationship.Direction.OUTGOING)
@@ -51,7 +51,7 @@ class InitializerListExpression : Expression(), ArgumentHolder, HasType.TypeObse
         astEdgesOf<Expression>(
             onAdd = {
                 it.end.registerTypeObserver(this)
-                (it.end as? HasAccess)?.access = this.access
+                it.end.access = this.access
             }
         ) {
             it.end.unregisterTypeObserver(this)
@@ -69,7 +69,7 @@ class InitializerListExpression : Expression(), ArgumentHolder, HasType.TypeObse
 
     override fun addArgument(expression: Expression) {
         this.initializers += expression
-        (expression as? HasAccess)?.access = this.access
+        expression.access = this.access
     }
 
     override fun replaceArgument(old: Expression, new: Expression): Boolean {
@@ -80,7 +80,7 @@ class InitializerListExpression : Expression(), ArgumentHolder, HasType.TypeObse
             new.registerTypeObserver(this)
             return true
         }
-        (new as? HasAccess)?.access = this.access
+        new.access = this.access
 
         return false
     }
@@ -132,6 +132,6 @@ class InitializerListExpression : Expression(), ArgumentHolder, HasType.TypeObse
     override var access = AccessValues.READ
         set(value) {
             field = value
-            initializers.forEach { (it as? HasAccess)?.access = value }
+            initializers.forEach { it.access = value }
         }
 }

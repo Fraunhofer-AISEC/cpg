@@ -149,14 +149,3 @@ interface HasOverloadedOperation : HasOperatorCode {
      */
     val operatorBase: Expression
 }
-
-/**
- * Specifies that this node (e.g., a [Reference]) can be used to read data from or write data to it.
- * It adds the property [access] which allows to determine the direction of data flow edges.
- */
-interface HasAccess {
-    /**
-     * Is this node used for writing data instead of just reading it? Determines dataflow direction
-     */
-    var access: AccessValues
-}

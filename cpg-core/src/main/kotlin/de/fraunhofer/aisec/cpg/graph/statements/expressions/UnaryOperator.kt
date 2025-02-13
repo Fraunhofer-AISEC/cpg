@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
-import de.fraunhofer.aisec.cpg.graph.HasAccess
 import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
@@ -38,8 +37,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /** A unary operator expression, involving one expression and an operator, such as `a++`. */
-class UnaryOperator :
-    Expression(), HasOverloadedOperation, ArgumentHolder, HasType.TypeObserver, HasAccess {
+class UnaryOperator : Expression(), HasOverloadedOperation, ArgumentHolder, HasType.TypeObserver {
     @Relationship("INPUT")
     var inputEdge =
         astEdgeOf<Expression>(
@@ -82,7 +80,7 @@ class UnaryOperator :
             } else {
                 this.access
             }
-        (input as? HasAccess)?.access = access
+        this.input.access = access
     }
 
     override fun toString(): String {
@@ -132,13 +130,13 @@ class UnaryOperator :
 
     override fun addArgument(expression: Expression) {
         this.input = expression
-        (this.input as? HasAccess)?.access = access
+        this.input.access = access
     }
 
     override fun replaceArgument(old: Expression, new: Expression): Boolean {
         if (this.input == old) {
             this.input = new
-            (this.input as? HasAccess)?.access = access
+            this.input.access = access
             return true
         }
 
@@ -168,7 +166,7 @@ class UnaryOperator :
     override var access = AccessValues.READ
         set(value) {
             field = value
-            (this.input as? HasAccess)?.access = value
+            this.input.access = value
         }
 
     companion object {
