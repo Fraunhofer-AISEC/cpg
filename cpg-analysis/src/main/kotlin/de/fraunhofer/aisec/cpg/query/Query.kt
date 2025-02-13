@@ -30,10 +30,8 @@ import de.fraunhofer.aisec.cpg.analysis.NumberSet
 import de.fraunhofer.aisec.cpg.analysis.SizeEvaluator
 import de.fraunhofer.aisec.cpg.analysis.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.Type
 
@@ -642,11 +640,20 @@ fun Node.alwaysFlowsTo(
     )
 }
 
+/**
+ * Aims to identify if the value which is in [this] reaches a node fulfilling the [predicate] on all
+ * execution paths. To do so, it goes some data flow steps backwards in the graph, ideally to find
+ * the last assignment but potentially also splits the value up into different parts (e.g. think of
+ * a `+` operation where we follow the lhs and the rhs) and then follows this value until the
+ * [predicate] is fulfilled on all execution paths. Note: Constant values (literals) are not
+ * followed if [followLiterals] is set to `false`.
+ */
 fun Node.allNonLiteralsFlowTo(
     predicate: (Node) -> Boolean,
     allowOverwritingValue: Boolean = false,
     scope: AnalysisScope,
     sensitivities: AnalysisSensitivities,
+    followLiterals: Boolean = false,
 ): QueryTree<Boolean> {
     val worklist = mutableListOf<Node>(this)
     val finalPathsChecked = mutableListOf<QueryTree<Boolean>>()
@@ -662,7 +669,7 @@ fun Node.allNonLiteralsFlowTo(
                 )
         }
         currentNode.prevDFG
-            .filter { it !is Literal<*> }
+            .filter { followLiterals || it !is Literal<*> }
             .forEach {
                 val pathResult =
                     it.alwaysFlowsTo(
@@ -687,60 +694,4 @@ fun Node.allNonLiteralsFlowTo(
         finalPathsChecked.toMutableList(),
         node = this,
     )
-}
-
-/**
- * Does some magic to identify if the value which is in [from] also reaches [to]. To do so, it goes
- * some data flow steps backwards in the graph (ideally to find the last assignment) and then
- * follows this value to the node [to].
- */
-fun allNonLiteralsFromFlowTo(from: Node, to: Node, allPaths: List<List<Node>>): QueryTree<Boolean> {
-    return when (from) {
-        is CallExpression -> {
-            val prevEdges = (from.prevDFG.filter { it !is Literal<*> } + from.arguments).toSet()
-            // For a call, we collect the incoming data flows (typically only the arguments)
-            val prevQTs = prevEdges.map { allNonLiteralsFromFlowTo(it, to, allPaths) }
-            QueryTree(prevQTs.all { it.value }, prevQTs.toMutableList(), node = from)
-        }
-        is Literal<*> ->
-            QueryTree(
-                true,
-                mutableListOf(QueryTree(from)),
-                "Dataflow is irrelevant for Literal node",
-                node = from,
-            )
-        else -> {
-            // We go one step back to see if that one goes into to but also check that no assignment
-            // to from happens in the paths between from and to
-            val prevQTs = from.prevFullDFG.map { dataFlow(it, to) }.toMutableSet()
-            // The base flows into a MemberExpression, but we don't care about such a partial
-            // flow and are only interested in the prevDFG setting the field (if it exists). So, if
-            // there are multiple edges, we filter out partial edges.
-
-            val noAssignmentToFrom =
-                allPaths.none {
-                    it.any { it2 ->
-                        if (it2 is AssignmentHolder) {
-                            it2.assignments.any { assign ->
-                                val prevMemberFromExpr = (from as? MemberExpression)?.prevDFG
-                                val nextMemberToExpr = (assign.target as? MemberExpression)?.nextDFG
-                                assign.target == from ||
-                                    prevMemberFromExpr != null &&
-                                        nextMemberToExpr != null &&
-                                        prevMemberFromExpr.any { it3 ->
-                                            nextMemberToExpr.contains(it3)
-                                        }
-                            }
-                        } else {
-                            false
-                        }
-                    }
-                }
-            QueryTree(
-                prevQTs.all { it.value } && noAssignmentToFrom,
-                prevQTs.toMutableList(),
-                node = from,
-            )
-        }
-    }
 }

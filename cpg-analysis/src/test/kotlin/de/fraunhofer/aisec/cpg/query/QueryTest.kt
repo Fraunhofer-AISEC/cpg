@@ -633,34 +633,14 @@ class QueryTest {
             result.allExtended<CallExpression>(
                 { it.name.localName == "highlyCriticalOperation" },
                 { n1 ->
-                    val loggingQueryForward =
-                        executionPath(n1) {
-                            (it as? CallExpression)?.name.toString() == "Logger.log"
-                        }
-                    val loggingQueryBackwards =
-                        executionPathBackwards(n1) {
-                            (it as? CallExpression)?.name.toString() == "Logger.log"
-                        }
-                    val allChildren = loggingQueryForward.children
-                    allChildren.addAll(loggingQueryBackwards.children)
-                    val allPaths =
-                        allChildren
-                            .map { (it.value as? List<*>) }
-                            .filter { it != null && it.last() is CallExpression }
-                    val allCalls = allPaths.map { it?.last() as CallExpression }
-                    val dataFlowPaths =
-                        allCalls.map {
-                            allNonLiteralsFromFlowTo(
-                                n1.arguments[0],
-                                it.arguments[1],
-                                allPaths as List<List<Node>>,
-                            )
-                        }
-                    val dataFlowQuery =
-                        QueryTree(dataFlowPaths.all { it.value }, dataFlowPaths.toMutableList())
-
-                    return@allExtended (loggingQueryForward or loggingQueryBackwards) and
-                        dataFlowQuery
+                    n1.arguments[0].allNonLiteralsFlowTo(
+                        predicate = { (it as? CallExpression)?.name.toString() == "Logger.log" },
+                        allowOverwritingValue = false,
+                        scope = AnalysisScope.INTERPROCEDURAL,
+                        sensitivities =
+                            AnalysisSensitivity.CONTEXT_SENSITIVE +
+                                AnalysisSensitivity.FIELD_SENSITIVE,
+                    )
                 },
             )
 
@@ -677,34 +657,14 @@ class QueryTest {
             result.allExtended<CallExpression>(
                 { it.name.localName == "highlyCriticalOperation" },
                 { n1 ->
-                    val loggingQueryForward =
-                        executionPath(n1) {
-                            (it as? CallExpression)?.name.toString() == "Logger.log"
-                        }
-                    val loggingQueryBackwards =
-                        executionPathBackwards(n1) {
-                            (it as? CallExpression)?.name.toString() == "Logger.log"
-                        }
-                    val allChildren = loggingQueryForward.children
-                    allChildren.addAll(loggingQueryBackwards.children)
-                    val allPaths =
-                        allChildren
-                            .map { (it.value as? List<*>) }
-                            .filter { it != null && it.last() is CallExpression }
-                    val allCalls = allPaths.map { it?.last() as CallExpression }
-                    val dataFlowPaths =
-                        allCalls.map {
-                            allNonLiteralsFromFlowTo(
-                                n1.arguments[0],
-                                it.arguments[1],
-                                allPaths as List<List<Node>>,
-                            )
-                        }
-                    val dataFlowQuery =
-                        QueryTree(dataFlowPaths.all { it.value }, dataFlowPaths.toMutableList())
-
-                    return@allExtended (loggingQueryForward or loggingQueryBackwards) and
-                        dataFlowQuery
+                    n1.arguments[0].allNonLiteralsFlowTo(
+                        predicate = { (it as? CallExpression)?.name.toString() == "Logger.log" },
+                        allowOverwritingValue = false,
+                        scope = AnalysisScope.INTERPROCEDURAL,
+                        sensitivities =
+                            AnalysisSensitivity.CONTEXT_SENSITIVE +
+                                AnalysisSensitivity.FIELD_SENSITIVE,
+                    )
                 },
             )
 
@@ -729,37 +689,6 @@ class QueryTest {
                             AnalysisSensitivity.CONTEXT_SENSITIVE +
                                 AnalysisSensitivity.FIELD_SENSITIVE,
                     )
-
-                    /*val loggingQueryForward =
-                        executionPath(
-                            n1,
-                            { (it as? CallExpression)?.name.toString() == "Logger.log" },
-                        )
-                    val loggingQueryBackwards =
-                        executionPathBackwards(
-                            n1,
-                            { (it as? CallExpression)?.name.toString() == "Logger.log" },
-                        )
-                    val allChildren = loggingQueryForward.children
-                    allChildren.addAll(loggingQueryBackwards.children)
-                    val allPaths =
-                        allChildren
-                            .map { (it.value as? List<*>) }
-                            .filter { it != null && it.last() is CallExpression }
-                    val allCalls = allPaths.map { it?.last() as CallExpression }
-                    val dataFlowPaths =
-                        allCalls.map {
-                            allNonLiteralsFromFlowTo(
-                                n1.arguments[0],
-                                it.arguments[1],
-                                allPaths as List<List<Node>>,
-                            )
-                        }
-                    val dataFlowQuery =
-                        QueryTree(dataFlowPaths.all { it.value }, dataFlowPaths.toMutableList())
-
-                    return@allExtended (loggingQueryForward or loggingQueryBackwards) and
-                        dataFlowQuery*/
                 },
             )
 
