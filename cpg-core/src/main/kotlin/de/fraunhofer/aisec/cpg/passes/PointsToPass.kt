@@ -108,6 +108,16 @@ private fun isGlobal(node: Node): Boolean {
     }
 }
 
+/**
+ * We use this map to store additional information on the DFG edges which we cannot keep in the
+ * state. This is for example the case to identify if the resulting edge will receive a
+ * context-sensitivity label (i.e., if the node used as key is somehow inside the called function
+ * and the next usage happens inside the function under analysis right now). The key of an entry
+ * works as follows: The 2nd item in the Pair is the prevDFG of the 1st item. Ultimately, it will be
+ * 1st -prevDFG-> 1st.
+ */
+val edgePropertiesMap = mutableMapOf<Pair<Node, Node>, Any>()
+
 // We also need a place to store the derefs of global variables.
 var globalDerefs = mutableMapOf<Node, Node>()
 
@@ -126,16 +136,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         /** This specifies the address length (usually 64bit) */
         var addressLength: Int = 64,
     ) : PassConfiguration()
-
-    /**
-     * We use this map to store additional information on the DFG edges which we cannot keep in the
-     * state. This is for example the case to identify if the resulting edge will receive a
-     * context-sensitivity label (i.e., if the node used as key is somehow inside the called
-     * function and the next usage happens inside the function under analysis right now). The key of
-     * an entry works as follows: The 2nd item in the Pair is the prevDFG of the 1st item.
-     * Ultimately, it will be 1st -prevDFG-> 1st.
-     */
-    private val edgePropertiesMap = mutableMapOf<Pair<Node, Node>, Any>()
 
     // For recursive creation of FunctionSummaries, we have to make sure that we don't run in
     // circles.
@@ -178,6 +178,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             log.info(
                 "Ignoring function ${node.name} because its complexity (${c}) is greater than the configured maximum (${max})"
             )
+            // Add an empty function Summary so that we don't try again
+            node.functionSummary.computeIfAbsent(ReturnStatement()) { mutableSetOf() }
             return
         }
 
@@ -516,20 +518,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     invoke.functionSummary[ReturnStatement()] = newValues
                 }
             }
-            /*            currentNode.arguments.forEach { arg ->
-            if (arg.argumentIndex < invoke.parameters.size) {
 
-                // Create a DFG-Edge from the argument to the parameter's memoryValue
-                val p = invoke.parameters[arg.argumentIndex]
-                if (p.memoryValue == null)
-                    initializeParameters(lattice, mutableListOf(p), doubleState, 1)
-                p.memoryValue?.let { memVal ->*/
             doubleState =
                 calculateIncomingCallingContexts(lattice, invoke, currentNode, doubleState)
-            /*                    }
-                }
-            }*/
-            // }
 
             // If we have a FunctionSummary, we push the values of the arguments and return value
             // after executing the function call to our doubleState.
@@ -651,12 +642,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         }
 
         mapDstToSrc.forEach { (dst, src) ->
-            // If we draw a DFG-Edge from this CallExpression, it should be a CallingContextOut
-            if (dst == currentNode) {
-                src.map { s ->
-                    edgePropertiesMap[Pair(currentNode, s)] = CallingContextOut(currentNode)
-                }
-            }
             // If the values of the destination are the same as the destination (e.g. if dst is a
             // CallExpression), we also add destinations to update the generalState, otherwise, the
             // destinationAddresses for the DeclarationState are enough
@@ -665,6 +650,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 if (dstValues.all { it == dst })
                     doubleState.updateValues(lattice, src, dstValues, identitySetOf(dst))
                 else doubleState.updateValues(lattice, src, identitySetOf(), identitySetOf(dst))
+
+            // If we draw a DFG-Edge from this CallExpression, it should be a CallingContextOut
+            //            if (dst == currentNode) {
+            src.map { s -> edgePropertiesMap[Pair(dst, s)] = CallingContextOut(currentNode) }
+            //            }
         }
 
         return doubleState
@@ -770,6 +760,17 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         PowersetLattice.Element(values),
                     ),
                 )
+
+            // When we stored previoulsy that the address was written to by a function, we use this
+            // information now and attach the callingContext to the actual read
+            addresses.forEach { addr ->
+                values.forEach { value ->
+                    val cc = edgePropertiesMap[Pair(addr, value)]
+                    if (cc is CallingContext) {
+                        edgePropertiesMap[Pair(currentNode, value)] = cc
+                    }
+                }
+            }
         }
         return doubleState
     }
@@ -1211,6 +1212,11 @@ fun PointsToStateElement.updateValues(
 
     /* Update the declarationState for the addresses */
     destinationAddresses.forEach { destAddr ->
+        // Clear previous entries in edgePropertiesMap
+        edgePropertiesMap
+            .filter { it.key.first == destAddr }
+            .forEach { entry -> edgePropertiesMap.remove(entry.key) }
+
         if (!isGlobal(destAddr)) {
             val currentEntries =
                 this.declarationsState[destAddr]?.first?.toIdentitySet() ?: identitySetOf(destAddr)
