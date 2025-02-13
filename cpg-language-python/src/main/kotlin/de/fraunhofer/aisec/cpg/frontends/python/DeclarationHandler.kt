@@ -40,7 +40,7 @@ import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 import de.fraunhofer.aisec.cpg.helpers.Util
 
 /**
- * In Python, all declarations are statements. This class handles the parsing of the statements
+ * In Python, all definitions/declarations are statements. This class handles the parsing of [Python.AST.Def] nodes to be
  * represented as [Declaration] nodes in our CPG.
  *
  * For declarations encountered directly on a namespace and classes, we directly invoke the
