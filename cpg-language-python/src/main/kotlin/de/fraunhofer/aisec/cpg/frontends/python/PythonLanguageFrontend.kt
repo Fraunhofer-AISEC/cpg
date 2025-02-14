@@ -69,13 +69,12 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
     private val tokenTypeIndex = 0
     private val jep = JepSingleton // configure Jep
 
-    // val declarationHandler = DeclarationHandler(this)
-    // val specificationHandler = SpecificationHandler(this)
+    internal val declarationHandler = DeclarationHandler(this)
     internal var statementHandler = StatementHandler(this)
     internal var expressionHandler = ExpressionHandler(this)
 
     /**
-     * fileContent contains the whole file can be stored as a class field because the CPG creates a
+     * fileContent contains the whole file ca be stored as a class field because the CPG creates a
      * new [PythonLanguageFrontend] instance per file.
      */
     private lateinit var fileContent: String
@@ -345,7 +344,14 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
 
         if (lastNamespace != null) {
             for (stmt in pythonASTModule.body) {
-                lastNamespace.statements += statementHandler.handle(stmt)
+                when (stmt) {
+                    // In order to be as compatible as possible with existing languages, we try to
+                    // add declarations directly to the class
+                    is Python.AST.Def -> declarationHandler.handle(stmt)
+                    // All other statements are added to the (static) statements block of the
+                    // namespace.
+                    else -> lastNamespace.statements += statementHandler.handle(stmt)
+                }
             }
         }
 
