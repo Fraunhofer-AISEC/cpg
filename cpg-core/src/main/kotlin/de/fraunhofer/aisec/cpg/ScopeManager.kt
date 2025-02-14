@@ -442,7 +442,12 @@ class ScopeManager : ScopeProvider {
         } else scopeMap[node]
     }
 
-    /** This function looks up scope by its FQN. This only works for [NameScope]s */
+    /**
+     * This function looks up scope by its FQN. This only works for [NameScope]s.
+     *
+     * Note: Beware that this only does a very simple lookup in the scope table and DOES NOT take
+     * into account any eventual aliases that might be active in the current scope.
+     */
     fun lookupScope(fqn: Name): NameScope? {
         return this.nameScopeMap[fqn]
     }
@@ -541,19 +546,14 @@ class ScopeManager : ScopeProvider {
     ): ScopeExtraction? {
         var n = name
         var s: Scope? = null
+        val scopeName = n.parent
 
         // First, we need to check, whether we have some kind of scoping.
-        if (n.isQualified()) {
+        if (scopeName != null) {
             // We need to check, whether we have an alias for the name's parent in this file
-            n = resolveName(n, scope) ?: n
+            val scope = lookupScopeByName(scopeName, scope)
 
-            // extract the scope name, it is usually a name space, but could probably be something
-            // else as well in other languages
-            val scopeName = n.parent
-
-            // this is a scoped call. we need to explicitly jump to that particular scope
-            val nameScope = nameScopeMap[scopeName]
-            if (nameScope == null) {
+            if (scope == null) {
                 Util.warnWithFileLocation(
                     location,
                     LOGGER,
@@ -561,78 +561,67 @@ class ScopeManager : ScopeProvider {
                 )
                 return null
             }
-            s = nameScope
+            s = scope
+            n = adjustNameIfNecessary(scope.name, n.parent, n)
         }
 
         return ScopeExtraction(s, n)
     }
 
     /**
-     * This function resolves a name alias (contained in an import alias) for the [Name.parent] of
-     * the given [Name]. It also does this recursively.
+     * This function looks up a [Scope] by its [name]. The reason why this is necessary is that the
+     * [name] could potentially include aliases set by an [ImportDeclaration] and therefore can not
+     * directly be found in the [nameScopeMap].
+     *
+     * It works by splitting the name into its parts and then iteratively looking up the scope for
+     * each part, starting at the "beginning". For example if we have a name `A::B::C`, we first
+     * look up the scope for `A`, then the scope for `B` in the scope of `A`, and finally the scope
+     * for `C`.
+     *
+     * If no scope is found at any point in the chain, `null` is returned.
+     *
+     * @param name the name to look up
+     * @param startScope the scope to start the lookup in. If null, the current scope is used.
+     * @return the scope, if it exists
      */
-    fun resolveName(name: Name, scope: Scope?): Name? {
-        val names = name.split().toMutableList()
-        val finalNames = mutableListOf<Name>()
+    fun lookupScopeByName(name: Name, startScope: Scope? = currentScope): Scope? {
+        val parts = name.splitTo(mutableListOf())
+        var part: Name? = name
+        var scope = startScope
 
-        var current: Name? = null
-        var currentScope = scope
-        var parent: Name? = null
-        while (names.isNotEmpty()) {
-            current = names.removeLast()
+        while (parts.isNotEmpty() && scope != null) {
+            // Take the "last" entry in the list as this is the less specific one. The order of the
+            // split list of the name "A::B::C" is ["A::B::C", "A::B", "A"]. We want to process them
+            // in reverse order ("A", "A::B", "A::B::C").
+            part = parts.removeLast()
 
-            // Adjust the parent name
-            current = adjustNameIfNecessary(parent, current.parent, current)
-
-            val newScope =
-                currentScope
-                    ?.lookupSymbol(current.localName) {
-                        it is NamespaceDeclaration || it is RecordDeclaration
+            // We need to look for everything that declares some sort of type or introduces a type
+            // alias. We need to map the declaration to a scope and then hope that its unique. We
+            // need to do it in this order because there can be multiple declarations of the same
+            // namespace (in different files), but they all (should) point to the same scope.
+            scope =
+                scope
+                    .lookupSymbol(part.localName) {
+                        it is NamespaceDeclaration ||
+                            it is RecordDeclaration ||
+                            it is TypedefDeclaration
                     }
-                    ?.map { nameScopeMap[it.name] }
-                    ?.toSet()
-                    ?.singleOrNull()
-
-            // Set this name as the new parent
-            parent =
-                if (newScope != null && newScope.name.localName != current.localName) {
-                    newScope.name
-                } else {
-                    current
-                }
+                    .map {
+                        // If it is a typedef, we need to use the type's name instead of the
+                        // declaration's name. Otherwise, we just take the name of the declaration
+                        // to look up the corresponding scope.
+                        nameScopeMap[
+                            if (it is TypedefDeclaration) {
+                                it.type.name
+                            } else {
+                                it.name
+                            }]
+                    }
+                    .toSet()
+                    .singleOrNull()
         }
 
-        /*val (parentName, parentScope) = resolveName(name.parent, scope)
-
-        val newName = adjustNameIfNecessary(parentName, name.parent, name)
-
-        // Look for an alias in the current scope. This is also resolves partial FQNs to their full
-        // FQN
-        var newScope =
-            parentScope
-                ?.lookupSymbol(parentName.localName) {
-                    it is NamespaceDeclaration || it is RecordDeclaration
-                }
-                ?.map { nameScopeMap[it.name] }
-                ?.toSet()
-                ?.singleOrNull()
-        if (newScope != null) {
-            // This is probably an already resolved alias so, we take this one
-            return Pair(adjustNameIfNecessary(newScope.name, parentName, newName), newScope)
-        }
-
-        // Some special handling of typedefs; this should somehow be merged with the above but not
-        // exactly sure how. The issue is that we cannot take the "name" of the typedef declaration,
-        // but we rather want its original type name.
-        // TODO: This really needs to be handled better somehow, maybe a common interface for
-        //  typedefs, namespaces and records that return the correct name?
-        val decl =
-            scope?.lookupSymbol(parentName.localName)?.singleOrNull { it is TypedefDeclaration }
-        if ((decl as? TypedefDeclaration) != null) {
-            return Pair(adjustNameIfNecessary(decl.type.name, parentName, newName), newScope)
-        }*/
-
-        return current
+        return scope
     }
 
     private fun adjustNameIfNecessary(

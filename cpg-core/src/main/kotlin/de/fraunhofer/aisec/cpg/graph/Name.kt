@@ -75,18 +75,16 @@ class Name(
 
     /**
      * This function splits a fully qualified name into its parts. For example,
-     * `my::namespace::name` would be split into `["my", "my::namespace", "my::namespace::name"]`.
+     * `my::namespace::name` would be split into `["my::namespace::name", "my::namespace", "my"]`.
      */
-    fun split(): List<Name> {
-        val list = mutableListOf<Name>()
-
+    fun splitTo(out: MutableList<Name>): MutableList<Name> {
         var current: Name? = this
         while (current != null) {
-            list.add(current)
+            out += current
             current = current.parent
         }
 
-        return list
+        return out
     }
 
     /**
