@@ -74,9 +74,12 @@ class FlowQueriesTest {
 
                             call("print") { ref("b") }
 
+                            ref("b") += literal("added", t("string"))
+
                             ifStmt {
                                 condition { ref("b") eq literal("test", t("string")) }
                                 thenStmt { ref("a") assign literal(10, t("int")) }
+                                elseStmt { ref("b") assign literal("removed", t("string")) }
                             }
 
                             call("baz") { ref("a") + ref("b") }
@@ -92,8 +95,21 @@ class FlowQueriesTest {
         val literal5 = result.literals.singleOrNull { it.value == 5 }
         assertNotNull(literal5)
 
+        val assignmentPlus = result.assigns.singleOrNull { it.operatorCode == "+=" }
+        assertNotNull(assignmentPlus, "There is exactly one \"+=\" assignment")
+        val refB = assignmentPlus.lhs.singleOrNull()
+        assertIs<Reference>(
+            refB,
+            "The lhs of the assignment is expected to be a Reference to \"b\"",
+        )
+        assertLocalName(
+            "b",
+            refB,
+            "The lhs of the assignment is expected to be a Reference to \"b\"",
+        )
+
         // Intraprocedural forward may analysis. The rest doesn't matter
-        val queryResultMay =
+        val queryResultMayA =
             dataFlowBase(
                 startNode = literal5,
                 direction = AnalysisDirection.FORWARD,
@@ -101,10 +117,145 @@ class FlowQueriesTest {
                 type = AnalysisType.MAY,
                 predicate = { (it.astParent as? CallExpression)?.name?.localName == "baz" },
             )
+        print(queryResultMayA.printNicely())
+        assertTrue(
+            queryResultMayA.value,
+            "For the MAY analysis, we can ignore the then statement which would violate that the data would arrive in baz.",
+        )
+        queryResultMayA.children.forEach {
+            // There are multiple paths which have their own query tree. The children here hold the
+            // list of visited nodes in the value.
+            val path = it.children.singleOrNull()?.value as? List<Node>
+            assertNotNull(path, "There should be a path represented by a list of nodes")
+            path.forEach { node ->
+                assertLocalName(
+                    "main",
+                    node.firstParentOrNull<FunctionDeclaration>(),
+                    "We expect that all nodes are within the function \"main\". I.e., there's no node in foo.",
+                )
+            }
+        }
+
+        // Intraprocedural forward may analysis. The rest doesn't matter
+        val queryResultMustA =
+            dataFlowBase(
+                startNode = literal5,
+                direction = AnalysisDirection.FORWARD,
+                scope = INTRAPROCEDURAL(),
+                type = AnalysisType.MUST,
+                predicate = { (it.astParent as? CallExpression)?.name?.localName == "baz" },
+            )
+        print(queryResultMustA.printNicely())
+        assertFalse(
+            queryResultMustA.value,
+            "For the MUST analysis, we cannot ignore the then statement which violates that the data arrive in baz.",
+        )
+        queryResultMustA.children.forEach {
+            // There are multiple paths which have their own query tree. The children here hold the
+            // list of visited nodes in the value.
+            val path = it.children.singleOrNull()?.value as? List<Node>
+            assertNotNull(path, "There should be a path represented by a list of nodes")
+            path.forEach { node ->
+                assertLocalName(
+                    "main",
+                    node.firstParentOrNull<FunctionDeclaration>(),
+                    "We expect that all nodes are within the function \"main\". I.e., there's no node in foo.",
+                )
+            }
+        }
+
+        // Intraprocedural bidirectional may analysis. The rest doesn't matter. We should also
+        // arrive at baz forward.
+        val queryResultMayB =
+            dataFlowBase(
+                startNode = refB,
+                direction = AnalysisDirection.FORWARD,
+                scope = INTRAPROCEDURAL(),
+                type = AnalysisType.MAY,
+                predicate = { (it.astParent as? CallExpression)?.name?.localName == "baz" },
+            )
+        print(queryResultMayB.printNicely())
+        assertTrue(
+            queryResultMayB.value,
+            "For the MAY analysis, we can ignore the else statement which violates that the value in \"b\" arrives in baz.",
+        )
+        queryResultMayB.children.forEach {
+            // There are multiple paths which have their own query tree. The children here hold the
+            // list of visited nodes in the value.
+            val path = it.children.singleOrNull()?.value as? List<Node>
+            assertNotNull(path, "There should be a path represented by a list of nodes")
+            path.forEach { node ->
+                assertLocalName(
+                    "main",
+                    node.firstParentOrNull<FunctionDeclaration>(),
+                    "We expect that all nodes are within the function \"main\". I.e., there's no node in foo.",
+                )
+            }
+        }
+
+        // Intraprocedural forward may analysis. The rest doesn't matter. Either arrive at the 5
+        // (backwards) or in baz (forward).
+        val queryResultMustB =
+            dataFlowBase(
+                startNode = refB,
+                direction = AnalysisDirection.FORWARD,
+                scope = INTRAPROCEDURAL(),
+                type = AnalysisType.MUST,
+                predicate = { (it.astParent as? CallExpression)?.name?.localName == "baz" },
+            )
+        print(queryResultMustB.printNicely())
+        assertFalse(
+            queryResultMustB.value,
+            "For the MUST analysis, we cannot ignore the else statement which violates that the value in \"b\" arrives in baz.",
+        )
+        queryResultMustB.children.forEach {
+            // There are multiple paths which have their own query tree. The children here hold the
+            // list of visited nodes in the value.
+            val path = it.children.singleOrNull()?.value as? List<Node>
+            assertNotNull(path, "There should be a path represented by a list of nodes")
+            path.forEach { node ->
+                assertLocalName(
+                    "main",
+                    node.firstParentOrNull<FunctionDeclaration>(),
+                    "We expect that all nodes are within the function \"main\". I.e., there's no node in foo.",
+                )
+            }
+        }
+    }
+
+    @Test
+    fun testIntraproceduralBidirectionalDFG() {
+        val result = verySimpleDataflow()
+        val assignmentPlus = result.assigns.singleOrNull { it.operatorCode == "+=" }
+        assertNotNull(assignmentPlus, "There is exactly one \"+=\" assignment")
+        val refB = assignmentPlus.lhs.singleOrNull()
+        assertIs<Reference>(
+            refB,
+            "The lhs of the assignment is expected to be a Reference to \"b\"",
+        )
+        assertLocalName(
+            "b",
+            refB,
+            "The lhs of the assignment is expected to be a Reference to \"b\"",
+        )
+
+        // Intraprocedural bidirectional may analysis. The rest doesn't matter. Either arrive at the
+        // 5 (backwards) or in baz (forward).
+        val queryResultMay =
+            dataFlowBase(
+                startNode = refB,
+                direction = AnalysisDirection.BIDIRECTIONAL,
+                scope = INTRAPROCEDURAL(),
+                type = AnalysisType.MAY,
+                predicate = {
+                    (it as? Literal<*>)?.value == 5 ||
+                        (it.astParent as? CallExpression)?.name?.localName == "baz"
+                },
+            )
         print(queryResultMay.printNicely())
         assertTrue(
             queryResultMay.value,
-            "For the MAY analysis, we can ignore the then statement which would violate that the data would arrive in baz.",
+            "For the MAY analysis, we can ignore the else statement which violates that the value in \"b\" arrives in baz.",
         )
         queryResultMay.children.forEach {
             // There are multiple paths which have their own query tree. The children here hold the
@@ -120,19 +271,23 @@ class FlowQueriesTest {
             }
         }
 
-        // Intraprocedural forward may analysis. The rest doesn't matter
+        // Intraprocedural forward may analysis. The rest doesn't matter. Either arrive at the 5
+        // (backwards) or in baz (forward).
         val queryResultMust =
             dataFlowBase(
-                startNode = literal5,
-                direction = AnalysisDirection.FORWARD,
+                startNode = refB,
+                direction = AnalysisDirection.BIDIRECTIONAL,
                 scope = INTRAPROCEDURAL(),
                 type = AnalysisType.MUST,
-                predicate = { (it.astParent as? CallExpression)?.name?.localName == "baz" },
+                predicate = {
+                    (it as? Literal<*>)?.value == 5 ||
+                        (it.astParent as? CallExpression)?.name?.localName == "baz"
+                },
             )
         print(queryResultMust.printNicely())
         assertFalse(
             queryResultMust.value,
-            "For the MUST analysis, we cannot ignore the then statement which violates that the data arrive in baz.",
+            "For the MUST analysis, we cannot ignore the else statement which violates that the value in \"b\" arrives in baz.",
         )
         queryResultMust.children.forEach {
             // There are multiple paths which have their own query tree. The children here hold the
@@ -169,9 +324,21 @@ class FlowQueriesTest {
             bazARef,
             "The lhs of the addition is expected to be a Reference to \"a\"",
         )
+        val assignmentPlus = result.assigns.singleOrNull { it.operatorCode == "+=" }
+        assertNotNull(assignmentPlus, "There is exactly one \"+=\" assignment")
+        val refB = assignmentPlus.lhs.singleOrNull()
+        assertIs<Reference>(
+            refB,
+            "The lhs of the assignment is expected to be a Reference to \"b\"",
+        )
+        assertLocalName(
+            "b",
+            refB,
+            "The lhs of the assignment is expected to be a Reference to \"b\"",
+        )
 
         // Intraprocedural backward may analysis. The rest doesn't matter
-        val queryResultMay =
+        val queryResultMayA =
             dataFlowBase(
                 startNode = bazARef,
                 direction = AnalysisDirection.BACKWARD,
@@ -179,12 +346,12 @@ class FlowQueriesTest {
                 type = AnalysisType.MAY,
                 predicate = { (it as? Literal<*>)?.value == 5 },
             )
-        print(queryResultMay.printNicely())
+        print(queryResultMayA.printNicely())
         assertTrue(
-            queryResultMay.value,
+            queryResultMayA.value,
             "For the MAY analysis, we can ignore the then statement which would violate that the \"5\" would arrive in baz.",
         )
-        queryResultMay.children.forEach {
+        queryResultMayA.children.forEach {
             // There are multiple paths which have their own query tree. The children here hold the
             // list of visited nodes in the value.
             val path = it.children.singleOrNull()?.value as? List<Node>
@@ -199,7 +366,7 @@ class FlowQueriesTest {
         }
 
         // Intraprocedural forward may analysis. The rest doesn't matter
-        val queryResultMust =
+        val queryResultMustA =
             dataFlowBase(
                 startNode = bazARef,
                 direction = AnalysisDirection.BACKWARD,
@@ -207,12 +374,70 @@ class FlowQueriesTest {
                 type = AnalysisType.MUST,
                 predicate = { (it as? Literal<*>)?.value == 5 },
             )
-        print(queryResultMust.printNicely())
+        print(queryResultMustA.printNicely())
         assertFalse(
-            queryResultMust.value,
+            queryResultMustA.value,
             "For the MUST analysis, we cannot ignore the then statement which violates that the \"5\" arrives in baz.",
         )
-        queryResultMust.children.forEach {
+        queryResultMustA.children.forEach {
+            // There are multiple paths which have their own query tree. The children here hold the
+            // list of visited nodes in the value.
+            val path = it.children.singleOrNull()?.value as? List<Node>
+            assertNotNull(path, "There should be a path represented by a list of nodes")
+            path.forEach { node ->
+                assertLocalName(
+                    "main",
+                    node.firstParentOrNull<FunctionDeclaration>(),
+                    "We expect that all nodes are within the function \"main\". I.e., there's no node in foo.",
+                )
+            }
+        }
+
+        // Intraprocedural bidirectional may analysis. The rest doesn't matter. We should also
+        // arrive at baz forward.
+        val queryResultMayB =
+            dataFlowBase(
+                startNode = refB,
+                direction = AnalysisDirection.BACKWARD,
+                scope = INTRAPROCEDURAL(),
+                type = AnalysisType.MAY,
+                predicate = { (it.astParent as? CallExpression)?.name?.localName == "baz" },
+            )
+        print(queryResultMayB.printNicely())
+        assertTrue(
+            queryResultMayB.value,
+            "For the MAY analysis, we can ignore the direct route which violates that the value in \"b\" arrives in baz.",
+        )
+        queryResultMayB.children.forEach {
+            // There are multiple paths which have their own query tree. The children here hold the
+            // list of visited nodes in the value.
+            val path = it.children.singleOrNull()?.value as? List<Node>
+            assertNotNull(path, "There should be a path represented by a list of nodes")
+            path.forEach { node ->
+                assertLocalName(
+                    "main",
+                    node.firstParentOrNull<FunctionDeclaration>(),
+                    "We expect that all nodes are within the function \"main\". I.e., there's no node in foo.",
+                )
+            }
+        }
+
+        // Intraprocedural forward may analysis. The rest doesn't matter. Either arrive at the 5
+        // (backwards) or in baz (forward).
+        val queryResultMustB =
+            dataFlowBase(
+                startNode = refB,
+                direction = AnalysisDirection.BACKWARD,
+                scope = INTRAPROCEDURAL(),
+                type = AnalysisType.MUST,
+                predicate = { (it.astParent as? CallExpression)?.name?.localName == "baz" },
+            )
+        print(queryResultMustB.printNicely())
+        assertFalse(
+            queryResultMustB.value,
+            "For the MUST analysis, we cannot ignore the direct route which violates that the value in \"b\" arrives in baz.",
+        )
+        queryResultMustB.children.forEach {
             // There are multiple paths which have their own query tree. The children here hold the
             // list of visited nodes in the value.
             val path = it.children.singleOrNull()?.value as? List<Node>
