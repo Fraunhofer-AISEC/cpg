@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.SupportsParallelParsing
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
@@ -61,6 +62,7 @@ import kotlin.math.min
  * a value (on the first assignment).
  */
 @RegisterExtraPass(PythonAddDeclarationsPass::class)
+@SupportsParallelParsing(false) // https://github.com/Fraunhofer-AISEC/cpg/issues/2026
 class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: TranslationContext) :
     LanguageFrontend<Python.AST.AST, Python.AST.AST?>(language, ctx) {
     val lineSeparator = "\n" // TODO
@@ -162,9 +164,38 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
                 // No type information -> we return an autoType to infer things magically
                 autoType()
             }
+
             is Python.AST.Name -> {
                 this.typeOf(type.id)
             }
+
+            is Python.AST.Attribute -> {
+                var type = type
+                val names = mutableListOf<String>()
+
+                // Traverse nested attributes (e.g., `modules.a.Foobar`)
+                while (type is Python.AST.Attribute) {
+                    names.add(type.attr)
+                    val typeValue = type.value
+                    if (typeValue is Python.AST.Name) {
+                        names.add(typeValue.id)
+                        break
+                    }
+                    type = type.value
+                }
+                if (names.isNotEmpty()) {
+                    // As the AST provides attributes from outermost to innermost,
+                    // we need to reconstruct the Name hierarchy in reverse order.
+                    val parsedNames =
+                        names.foldRight(null as Name?) { child, parent ->
+                            Name(localName = child, parent = parent)
+                        }
+                    objectType(parsedNames ?: return unknownType())
+                } else {
+                    unknownType()
+                }
+            }
+
             else -> {
                 // The AST supplied us with some kind of type information, but we could not parse
                 // it, so we need to return the unknown type.
