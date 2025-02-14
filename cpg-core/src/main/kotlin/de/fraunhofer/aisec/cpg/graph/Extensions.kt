@@ -230,12 +230,14 @@ class FulfilledAndFailedPaths(val fulfilled: List<List<Node>>, val failed: List<
 fun Node.followPrevFullDFGEdgesUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
+    earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
         x = { currentNode, _, _ -> currentNode.prevFullDFG },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
+        earlyTermination = earlyTermination,
         predicate = predicate,
     )
 }
@@ -272,6 +274,7 @@ fun Node.followPrevDFGEdgesUntilHit(
     useIndexStack: Boolean = true,
     contextSensitive: Boolean = true,
     interproceduralAnalysis: Boolean = true,
+    earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     // TODO: This method lacks context sensitive steps
@@ -317,6 +320,7 @@ fun Node.followPrevDFGEdgesUntilHit(
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
+        earlyTermination = earlyTermination,
         predicate = predicate,
     )
 }
@@ -332,9 +336,15 @@ fun Node.followPrevDFGEdgesUntilHit(
 class Context(
     val indexStack: SimpleStack<IndexedDataflowGranularity> = SimpleStack(),
     val callStack: SimpleStack<CallExpression> = SimpleStack(),
+    var steps: Int,
 ) {
     fun clone(): Context {
-        return Context(indexStack = indexStack.clone(), callStack = callStack.clone())
+        return Context(indexStack = indexStack.clone(), callStack = callStack.clone(), steps)
+    }
+
+    operator fun inc(): Context {
+        this.steps++
+        return this
     }
 }
 
@@ -380,10 +390,18 @@ class SimpleStack<T> {
  * Iterates the next full DFG edges until there are no more edges available (or until a loop is
  * detected). Returns a list of possible paths (each path is represented by a list of nodes).
  */
-fun Node.collectAllNextDFGPaths(): List<List<Node>> {
+fun Node.collectAllNextDFGPaths(
+    interproceduralAnalysis: Boolean = true,
+    contextSensitive: Boolean = true,
+): List<List<Node>> {
     // We make everything fail to reach the end of the CDG. Then, we use the stuff collected in the
     // failed paths (everything)
-    return this.followNextDFGEdgesUntilHit(collectFailedPaths = true, findAllPossiblePaths = true) {
+    return this.followNextDFGEdgesUntilHit(
+            collectFailedPaths = true,
+            findAllPossiblePaths = true,
+            interproceduralAnalysis = interproceduralAnalysis,
+            contextSensitive = contextSensitive,
+        ) {
             false
         }
         .failed
@@ -501,7 +519,7 @@ fun Node.collectAllNextCDGPaths(interproceduralAnalysis: Boolean): List<List<Nod
 
 /**
  * Returns an instance of [FulfilledAndFailedPaths] where [FulfilledAndFailedPaths.fulfilled]
- * contains all possible shortest data flow paths (with [ProgramDependences]) between the starting
+ * contains all possible shortest data flow paths (with [ProgramDependencies]) between the starting
  * node [this] and the end node fulfilling [predicate]. The paths are represented as lists of nodes.
  * Paths which do not end at such a node are included in [FulfilledAndFailedPaths.failed].
  *
@@ -512,6 +530,7 @@ fun Node.followNextPDGUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
     interproceduralAnalysis: Boolean = false,
+    earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
@@ -524,6 +543,7 @@ fun Node.followNextPDGUntilHit(
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
+        earlyTermination = earlyTermination,
         predicate = predicate,
     )
 }
@@ -541,6 +561,7 @@ fun Node.followNextCDGUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
     interproceduralAnalysis: Boolean = false,
+    earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
@@ -553,13 +574,14 @@ fun Node.followNextCDGUntilHit(
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
+        earlyTermination = earlyTermination,
         predicate = predicate,
     )
 }
 
 /**
  * Returns an instance of [FulfilledAndFailedPaths] where [FulfilledAndFailedPaths.fulfilled]
- * contains all possible shortest data flow paths (with [ProgramDependences]) between the starting
+ * contains all possible shortest data flow paths (with [ProgramDependencies]) between the starting
  * node [this] and the end node fulfilling [predicate] (backwards analysis). The paths are
  * represented as lists of nodes. Paths which do not end at such a node are included in
  * [FulfilledAndFailedPaths.failed].
@@ -571,6 +593,7 @@ fun Node.followPrevPDGUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
     interproceduralAnalysis: Boolean = false,
+    earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
@@ -587,6 +610,7 @@ fun Node.followPrevPDGUntilHit(
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
+        earlyTermination = earlyTermination,
         predicate = predicate,
     )
 }
@@ -605,6 +629,7 @@ fun Node.followPrevCDGUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
     interproceduralAnalysis: Boolean = false,
+    earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
@@ -621,6 +646,7 @@ fun Node.followPrevCDGUntilHit(
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
+        earlyTermination = earlyTermination,
         predicate = predicate,
     )
 }
@@ -639,7 +665,8 @@ inline fun Node.followXUntilHit(
     noinline x: (Node, Context, List<Node>) -> Collection<Node>,
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
-    context: Context = Context(),
+    context: Context = Context(steps = 0),
+    earlyTermination: (Node, Context) -> Boolean,
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     // Looks complicated but at least it's not recursive...
@@ -657,7 +684,7 @@ inline fun Node.followXUntilHit(
         val currentPath = worklist.maxBy { it.first.size }
         worklist.remove(currentPath)
         val currentNode = currentPath.first.last()
-        val currentContext = currentPath.second
+        var currentContext = currentPath.second
         alreadySeenNodes.add(currentNode)
         // The last node of the path is where we continue. We get all of its outgoing CDG edges and
         // follow them
@@ -676,6 +703,9 @@ inline fun Node.followXUntilHit(
                 fulfilledPaths.add(nextPath)
                 continue // Don't add this path anymore. The requirement is satisfied.
             }
+            if (earlyTermination(next, currentContext)) {
+                failedPaths.add(nextPath)
+            }
             // The next node is new in the current path (i.e., there's no loop), so we add the path
             // with the next step to the worklist.
             if (
@@ -683,6 +713,8 @@ inline fun Node.followXUntilHit(
                     (findAllPossiblePaths ||
                         (next !in alreadySeenNodes && worklist.none { next in it.first }))
             ) {
+                currentContext++
+
                 val newContext =
                     if (nextNodes.size > 1) {
                         currentContext.clone()
@@ -709,12 +741,14 @@ inline fun Node.followXUntilHit(
 fun Node.followNextFullDFGEdgesUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
+    earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
         x = { currentNode, _, _ -> currentNode.nextFullDFG },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
+        earlyTermination = earlyTermination,
         predicate = predicate,
     )
 }
@@ -734,6 +768,7 @@ fun Node.followNextDFGEdgesUntilHit(
     useIndexStack: Boolean = true,
     interproceduralAnalysis: Boolean = true,
     contextSensitive: Boolean = true,
+    earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
@@ -828,6 +863,7 @@ fun Node.followNextDFGEdgesUntilHit(
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
+        earlyTermination = earlyTermination,
         predicate = predicate,
     )
 }
@@ -846,6 +882,7 @@ fun Node.followNextEOGEdgesUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
     interproceduralAnalysis: Boolean = true,
+    earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
@@ -877,6 +914,7 @@ fun Node.followNextEOGEdgesUntilHit(
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
+        earlyTermination = earlyTermination,
         predicate = predicate,
     )
 }
@@ -913,6 +951,7 @@ fun Node.followPrevEOGEdgesUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
     interproceduralAnalysis: Boolean = true,
+    earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
 
@@ -948,6 +987,7 @@ fun Node.followPrevEOGEdgesUntilHit(
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
+        earlyTermination = earlyTermination,
         predicate = predicate,
     )
 }
