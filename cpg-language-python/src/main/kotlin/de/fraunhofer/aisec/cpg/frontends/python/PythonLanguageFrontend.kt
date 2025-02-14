@@ -312,9 +312,11 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
                 }
             }
 
-        if (lastNamespace != null) {
+        // handles the contained statements and adds them to the current namespace, if we are in a global scope
+        // setting, and no namespace exists, the nodes are added to the translation unit instead.
+        (lastNamespace?: tud).let {
             for (stmt in pythonASTModule.body) {
-                lastNamespace.statements += statementHandler.handle(stmt)
+                it.statements += statementHandler.handle(stmt)
             }
         }
 
