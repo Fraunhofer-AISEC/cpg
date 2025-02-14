@@ -38,9 +38,11 @@ sealed class AnalysisScope
 class INTRAPROCEDURAL : AnalysisScope()
 
 /**
- * Enable interprocedural analysis. [maxDepth] defines how many function calls we follow at most.
+ * Enable interprocedural analysis. [maxCallDepth] defines how many function calls we follow at most
+ * (unlimited depth if `null`). [maxSteps] defines the total number of steps we will follow in the
+ * graph (unlimited depth if `null`).
  */
-class INTERPROCEDURAL(val maxDepth: Int = -1) : AnalysisScope()
+class INTERPROCEDURAL(val maxCallDepth: Int? = null, val maxSteps: Int? = null) : AnalysisScope()
 
 /** Enable interprocedural analysis */
 class MAX_STEPS(val steps: Int) : AnalysisScope()
@@ -69,8 +71,6 @@ enum class AnalysisType {
     MAY,
 }
 
-typealias AnalysisSensitivities = List<AnalysisSensitivity>
-
 /** Configures the sensitivity of the analysis. */
 enum class AnalysisSensitivity {
     /** Consider the calling context when following paths (e.g. based on a call stack). */
@@ -89,16 +89,16 @@ enum class AnalysisSensitivity {
      */
     IMPLICIT;
 
-    operator fun plus(other: AnalysisSensitivity): AnalysisSensitivities {
-        return listOf(this, other)
+    operator fun plus(other: AnalysisSensitivity) = arrayOf(this, other)
+
+    operator fun List<AnalysisSensitivity>.plus(
+        other: AnalysisSensitivity
+    ): Array<AnalysisSensitivity> {
+        return arrayOf(*this.toTypedArray(), other)
     }
 
-    operator fun List<AnalysisSensitivity>.plus(other: AnalysisSensitivity): AnalysisSensitivities {
-        return listOf(*this.toTypedArray(), other)
-    }
-
-    operator fun plus(other: AnalysisSensitivities): AnalysisSensitivities {
-        return listOf(*other.toTypedArray(), this)
+    operator fun plus(other: Array<AnalysisSensitivity>): Array<AnalysisSensitivity> {
+        return arrayOf(*other, this)
     }
 }
 
@@ -106,7 +106,7 @@ fun dataFlowBase(
     startNode: Node,
     direction: AnalysisDirection,
     type: AnalysisType,
-    sensitivities: AnalysisSensitivities,
+    vararg sensitivities: AnalysisSensitivity,
     scope: AnalysisScope,
     verbose: Boolean = true,
     earlyTermination: ((Node) -> Boolean)? = null,
@@ -304,7 +304,7 @@ fun dataFlowWithValidator(
     validatorPredicate: (Node) -> Boolean,
     sinkPredicate: (Node) -> Boolean,
     scope: AnalysisScope,
-    sensitivities: AnalysisSensitivities,
+    vararg sensitivities: AnalysisSensitivity,
 ): QueryTree<Boolean> {
     val flowsToValidator =
         source.alwaysFlowsTo(
@@ -451,7 +451,7 @@ fun Node.alwaysFlowsTo(
     allowOverwritingValue: Boolean = false,
     earlyTermination: ((Node) -> Boolean)? = null,
     scope: AnalysisScope,
-    sensitivities: AnalysisSensitivities,
+    vararg sensitivities: AnalysisSensitivity,
     predicate: (Node) -> Boolean,
 ): QueryTree<Boolean> {
     val nextDFGPaths =
@@ -528,7 +528,7 @@ fun Node.allNonLiteralsFlowTo(
     predicate: (Node) -> Boolean,
     allowOverwritingValue: Boolean = false,
     scope: AnalysisScope,
-    sensitivities: AnalysisSensitivities,
+    vararg sensitivities: AnalysisSensitivity,
     followLiterals: Boolean = false,
 ): QueryTree<Boolean> {
     val worklist = mutableListOf<Node>(this)
