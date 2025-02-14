@@ -76,11 +76,13 @@ class CastExpression : Expression(), ArgumentHolder, HasType.TypeObserver {
 
     override fun addArgument(expression: Expression) {
         this.expression = expression
+        this.expression.access = access
     }
 
     override fun replaceArgument(old: Expression, new: Expression): Boolean {
         if (this.expression == old) {
             this.expression = new
+            this.expression.access = access
             return true
         }
 
@@ -113,6 +115,12 @@ class CastExpression : Expression(), ArgumentHolder, HasType.TypeObserver {
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), expression, castType)
+
+    override var access = AccessValues.READ
+        set(value) {
+            field = value
+            this.expression.access = value
+        }
 
     companion object {
         private val log = LoggerFactory.getLogger(CastExpression::class.java)
