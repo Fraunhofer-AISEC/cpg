@@ -1919,6 +1919,34 @@ class PointsToPassTest {
                 .first()
         assertNotNull(iRefLeftLine384)
 
+        val jLine388 =
+            tu.allChildren<Reference> {
+                    it.location?.region?.startLine == 388 && it.name.localName == "j"
+                }
+                .first()
+        assertNotNull(jLine388)
+
+        val pDerefLine388 =
+            tu.allChildren<PointerDereference> {
+                    it.location?.region?.startLine == 388 && it.name.localName == "p"
+                }
+                .first()
+        assertNotNull(pDerefLine388)
+
+        val jLine394 =
+            tu.allChildren<Reference> {
+                    it.location?.region?.startLine == 394 && it.name.localName == "j"
+                }
+                .first()
+        assertNotNull(jLine394)
+
+        val pDerefLine394 =
+            tu.allChildren<PointerDereference> {
+                    it.location?.region?.startLine == 394 && it.name.localName == "p"
+                }
+                .first()
+        assertNotNull(pDerefLine394)
+
         // FunctionDeclarations
         val incpFD = tu.functions.filter { it.name.localName == "incp" }.first()
         assertNotNull(incpFD)
@@ -1933,6 +1961,9 @@ class PointsToPassTest {
 
         val literal1 = tu.allChildren<Literal<*>> { it.location?.region?.startLine == 377 }.first()
         assertNotNull(literal1)
+
+        val literal2 = tu.allChildren<Literal<*>> { it.location?.region?.startLine == 392 }.first()
+        assertNotNull(literal2)
 
         // CallExpression in Line 380
         assertEquals(1, iArgLine380.nextDFGEdges.size)
@@ -1988,5 +2019,29 @@ class PointsToPassTest {
                     .callingContext as CallingContextIn)
                 .call,
         )
+
+        // print Line 388
+        assertEquals(1, jLine388.prevDFGEdges.size)
+        assertEquals(
+            ceLine386,
+            ((jLine388.prevDFGEdges.first() as ContextSensitiveDataflow).callingContext
+                    as CallingContextOut)
+                .call,
+        )
+        assertEquals(1, pDerefLine388.prevDFGEdges.size)
+        assertEquals(
+            ceLine386,
+            ((pDerefLine388.prevDFGEdges.first() as ContextSensitiveDataflow).callingContext
+                    as CallingContextOut)
+                .call,
+        )
+
+        // print Line 394
+        assertEquals(1, jLine394.prevDFGEdges.size)
+        assertTrue(jLine394.prevDFGEdges.first() !is ContextSensitiveDataflow)
+        assertEquals(literal2, jLine394.prevDFG.first())
+        assertEquals(1, pDerefLine394.prevDFGEdges.size)
+        assertTrue(pDerefLine394.prevDFGEdges.first() !is ContextSensitiveDataflow)
+        assertEquals(literal2, pDerefLine394.prevDFG.first())
     }
 }

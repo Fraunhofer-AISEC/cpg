@@ -388,4 +388,9 @@ int testCallingContexts() {
     printf("%d %d\n", j, *p);
   
     incp(p);
+
+    j = 2;
+
+    printf("%d %d\n", j, *p);
+
 }
