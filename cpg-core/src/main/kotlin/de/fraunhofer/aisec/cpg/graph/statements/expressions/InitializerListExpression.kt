@@ -78,9 +78,9 @@ class InitializerListExpression : Expression(), ArgumentHolder, HasType.TypeObse
             old.unregisterTypeObserver(this)
             initializerEdges[idx].end = new
             new.registerTypeObserver(this)
+            new.access = this.access
             return true
         }
-        new.access = this.access
 
         return false
     }
