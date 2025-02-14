@@ -402,6 +402,9 @@ class Context(
 class SimpleStack<T> {
     private val deque = ArrayDeque<T>()
 
+    val depth: Int
+        get() = deque.size
+
     /** Returns true if the stack is empty. */
     fun isEmpty(): Boolean = deque.isEmpty()
 

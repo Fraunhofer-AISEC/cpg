@@ -31,21 +31,25 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 
-/** Determines how far we want to follow edges within the analysis. */
-sealed class AnalysisScope
+/**
+ * Determines how far we want to follow edges within the analysis. [maxSteps] defines the total
+ * number of steps we will follow in the graph (unlimited depth if `null`).
+ */
+sealed class AnalysisScope(val maxSteps: Int? = null)
 
-/** Only intraprocedural analysis */
-class INTRAPROCEDURAL : AnalysisScope()
+/**
+ * Only intraprocedural analysis. [maxSteps] defines the total number of steps we will follow in the
+ * graph (unlimited depth if `null`).
+ */
+class INTRAPROCEDURAL(maxSteps: Int? = null) : AnalysisScope(maxSteps)
 
 /**
  * Enable interprocedural analysis. [maxCallDepth] defines how many function calls we follow at most
  * (unlimited depth if `null`). [maxSteps] defines the total number of steps we will follow in the
  * graph (unlimited depth if `null`).
  */
-class INTERPROCEDURAL(val maxCallDepth: Int? = null, val maxSteps: Int? = null) : AnalysisScope()
-
-/** Enable interprocedural analysis */
-class MAX_STEPS(val steps: Int) : AnalysisScope()
+class INTERPROCEDURAL(val maxCallDepth: Int? = null, maxSteps: Int? = null) :
+    AnalysisScope(maxSteps)
 
 /** Determines in which direction we follow the edges. */
 enum class AnalysisDirection {
@@ -119,7 +123,8 @@ fun dataFlowBase(
     val interproceduralAnalysis = scope is INTERPROCEDURAL
     val earlyTermination = { n: Node, ctx: Context ->
         earlyTermination?.let { it(n) } == true &&
-            (scope as? MAX_STEPS)?.steps?.let { ctx.steps >= it } == true
+            scope.maxSteps?.let { ctx.steps >= it } == true &&
+            (scope as? INTERPROCEDURAL)?.maxCallDepth?.let { ctx.callStack.depth >= it } == true
     }
     val evalRes =
         when (direction) {
@@ -220,7 +225,8 @@ fun executionPathBase(
     val interproceduralAnalysis = scope is INTERPROCEDURAL
     val earlyTermination = { n: Node, ctx: Context ->
         earlyTermination?.let { it(n) } == true &&
-            (scope as? MAX_STEPS)?.steps?.let { ctx.steps >= it } == true
+            scope.maxSteps?.let { ctx.steps >= it } == true &&
+            (scope as? INTERPROCEDURAL)?.maxCallDepth?.let { ctx.callStack.depth >= it } == true
     }
     val evalRes =
         when (direction) {
@@ -462,12 +468,13 @@ fun Node.alwaysFlowsTo(
             .flatten()
     val earlyTerminationPredicate = { n: Node, ctx: Context ->
         earlyTermination?.let { it(n) } == true &&
-            (scope as? MAX_STEPS)?.steps?.let { ctx.steps >= it } == true &&
-            (!allowOverwritingValue &&
-                // TODO: This should be replaced with some check if the memory location/whatever
-                // where the data is kept is (partially) written to.
-                this in n.prevDFG &&
-                (n as? Reference)?.access == AccessValues.WRITE)
+            scope.maxSteps?.let { ctx.steps >= it } == true &&
+            (scope as? INTERPROCEDURAL)?.maxCallDepth?.let { ctx.callStack.depth >= it } == true
+        (!allowOverwritingValue &&
+            // TODO: This should be replaced with some check if the memory location/whatever
+            // where the data is kept is (partially) written to.
+            this in n.prevDFG &&
+            (n as? Reference)?.access == AccessValues.WRITE)
     }
     val nextEOGEvaluation =
         this.followNextEOGEdgesUntilHit(
