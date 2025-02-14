@@ -44,10 +44,16 @@ import org.neo4j.ogm.annotation.Relationship
  */
 // TODO Merge and/or refactor
 class InitializerListExpression : Expression(), ArgumentHolder, HasType.TypeObserver {
+
     /** The list of initializers. */
     @Relationship(value = "INITIALIZERS", direction = Relationship.Direction.OUTGOING)
     var initializerEdges =
-        astEdgesOf<Expression>(onAdd = { it.end.registerTypeObserver(this) }) {
+        astEdgesOf<Expression>(
+            onAdd = {
+                it.end.registerTypeObserver(this)
+                it.end.access = this.access
+            }
+        ) {
             it.end.unregisterTypeObserver(this)
         }
 
@@ -63,6 +69,7 @@ class InitializerListExpression : Expression(), ArgumentHolder, HasType.TypeObse
 
     override fun addArgument(expression: Expression) {
         this.initializers += expression
+        expression.access = this.access
     }
 
     override fun replaceArgument(old: Expression, new: Expression): Boolean {
@@ -71,6 +78,7 @@ class InitializerListExpression : Expression(), ArgumentHolder, HasType.TypeObse
             old.unregisterTypeObserver(this)
             initializerEdges[idx].end = new
             new.registerTypeObserver(this)
+            new.access = this.access
             return true
         }
 
@@ -120,4 +128,10 @@ class InitializerListExpression : Expression(), ArgumentHolder, HasType.TypeObse
         // unique to avoid too many hash collisions.
         return Objects.hash(super.hashCode(), initializerEdges.size)
     }
+
+    override var access = AccessValues.READ
+        set(value) {
+            field = value
+            initializers.forEach { it.access = value }
+        }
 }

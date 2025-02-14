@@ -240,6 +240,7 @@ class ScopeManager : ScopeProvider {
                     is TryStatement,
                     is IfStatement,
                     is CatchClause,
+                    is CollectionComprehension,
                     is Block -> LocalScope(nodeToScope)
                     is FunctionDeclaration -> FunctionScope(nodeToScope)
                     is RecordDeclaration -> RecordScope(nodeToScope)
@@ -577,6 +578,8 @@ class ScopeManager : ScopeProvider {
 
         val parentName = resolveParentAlias(name.parent, scope)
 
+        val newName = adjustNameIfNecessary(parentName, name.parent, name)
+
         // Look for an alias in the current scope. This is also resolves partial FQNs to their full
         // FQN
         var newScope =
@@ -589,7 +592,7 @@ class ScopeManager : ScopeProvider {
                 ?.singleOrNull()
         if (newScope != null) {
             // This is probably an already resolved alias so, we take this one
-            return adjustNameIfNecessary(newScope.name, parentName, name)
+            return adjustNameIfNecessary(newScope.name, parentName, newName)
         }
 
         // Some special handling of typedefs; this should somehow be merged with the above but not
@@ -600,12 +603,8 @@ class ScopeManager : ScopeProvider {
         val decl =
             scope?.lookupSymbol(parentName.localName)?.singleOrNull { it is TypedefDeclaration }
         if ((decl as? TypedefDeclaration) != null) {
-            return adjustNameIfNecessary(decl.type.name, parentName, name)
+            return adjustNameIfNecessary(decl.type.name, parentName, newName)
         }
-
-        // Otherwise, just build a new name based on the eventual resolved parent alias (if
-        // necessary)
-        var newName = adjustNameIfNecessary(parentName, name.parent, name)
 
         return newName
     }

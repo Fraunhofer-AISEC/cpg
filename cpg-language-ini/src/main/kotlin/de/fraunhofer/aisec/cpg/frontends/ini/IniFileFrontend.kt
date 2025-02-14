@@ -42,7 +42,6 @@ import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import java.io.FileInputStream
 import java.net.URI
-import java.nio.file.Path
 import org.ini4j.Ini
 import org.ini4j.Profile.Section
 
@@ -206,5 +205,4 @@ class IniFileFrontend(language: Language<IniFileFrontend>, ctx: TranslationConte
     override fun setComment(node: Node, astNode: Any) {
         return // not used as this function does not implement [Handler]
     }
-
 }

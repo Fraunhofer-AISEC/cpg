@@ -261,6 +261,12 @@ private constructor(
                 }
             )
         }
+        ctx.externalSources
+            .firstOrNull {
+                it.relativeTo(Util.getRootPath(it, ctx.config.includePaths).toFile()).path ==
+                    "__init__.pyi"
+            }
+            ?.let { ctx.importedSources.add(it) }
 
         // A set of processed files from external sources that is used as negative to the worklist
         // in ctx.importedSources
