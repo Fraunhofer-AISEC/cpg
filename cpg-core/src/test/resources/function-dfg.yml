@@ -31,14 +31,14 @@
     language: de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
     methodName: memcpy
   dataFlows:
-    - from: param1
-      to: param0
+    - from: param1.deref
+      to: param0.deref
       dfgType: full
 
 - functionDeclaration:
     language: de.fraunhofer.aisec.cpg.frontends.TestLanguage
     methodName: memcpy
   dataFlows:
-    - from: param1
-      to: param0
+    - from: param1.deref
+      to: param0.deref
       dfgType: full

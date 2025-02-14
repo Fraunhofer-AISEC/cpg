@@ -35,8 +35,8 @@ import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextIn
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
 import de.fraunhofer.aisec.cpg.graph.edges.flows.ContextSensitiveDataflow
+import de.fraunhofer.aisec.cpg.graph.edges.flows.PointerDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.functions
-import de.fraunhofer.aisec.cpg.graph.pointer
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.recordDeclaration
@@ -235,7 +235,6 @@ class DFGFunctionSummariesTest {
         )
     }
 
-    @Ignore
     @Test
     fun testPropagateArguments() {
         val dfgTest = getDfgInferredCall() { defaultPasses() }
@@ -247,6 +246,7 @@ class DFGFunctionSummariesTest {
         val memcpy = dfgTest.functions["memcpy"]
         assertNotNull(memcpy)
         val param0 = memcpy.parameters[0]
+        assertNotNull(param0.memoryValue)
         val param1 = memcpy.parameters[1]
 
         val call = main.calls["memcpy"]
@@ -260,18 +260,23 @@ class DFGFunctionSummariesTest {
          */
 
         assertEquals(1, argA.nextDFG.size)
-        assertEquals(1, argA.prevDFG.size)
+        assertEquals(1, argA.prevFullDFG.size)
+        assertEquals(
+            1,
+            argA.prevDFGEdges.filter { it.granularity is PointerDataflowGranularity }.size,
+        )
 
         val nextDfg = argA.nextDFGEdges.single()
         assertEquals(
             call,
             ((nextDfg as? ContextSensitiveDataflow)?.callingContext as? CallingContextIn)?.call,
         )
-        assertEquals(param0, nextDfg.end)
+        assertEquals(param0.memoryValue!!, nextDfg.end)
 
         val variableA = main.variables["a"]
         assertNotNull(variableA)
-        assertEquals(mutableSetOf<Node>(variableA), argA.prevDFG)
+        assertNotNull(variableA.memoryAddress)
+        assertEquals(mutableSetOf<Node>(variableA.memoryAddress!!), argA.prevFullDFG.toMutableSet())
 
         val prevDfgOfParam0 = param0.prevDFGEdges.singleOrNull { it !is ContextSensitiveDataflow }
         assertNotNull(prevDfgOfParam0)
@@ -280,15 +285,18 @@ class DFGFunctionSummariesTest {
         val returnA = main.allChildren<ReturnStatement>().singleOrNull()?.returnValue as? Reference
         assertNotNull(returnA)
 
-        assertEquals(mutableSetOf<Node>(returnA), param0.nextDFG)
+        val literal5 = main.literals.filter { it.value?.equals(5) ?: false }.first()
+        assertNotNull(literal5)
+
+        assertEquals(mutableSetOf<Node>(literal5), returnA.prevDFG)
 
         // Check that also the CallingContext property is set correctly
-        val nextDfgOfParam0 =
-            param0.nextDFGEdges.singleOrNull {
+        val prevDfgOfReturnA =
+            returnA.prevDFGEdges.singleOrNull {
                 ((it as? ContextSensitiveDataflow)?.callingContext as? CallingContextOut)?.call ==
                     call
             }
-        assertEquals(returnA, nextDfgOfParam0?.end)
+        assertEquals(literal5, prevDfgOfReturnA?.start)
     }
 
     @Test
@@ -374,6 +382,7 @@ class DFGFunctionSummariesTest {
                 TranslationConfiguration.builder()
                     .registerLanguage(TestLanguage("."))
                     .registerFunctionSummaries(File("src/test/resources/function-dfg.yml"))
+                    .registerPass<PointsToPass>()
                     .inferenceConfiguration(
                         InferenceConfiguration.builder()
                             .inferDfgForUnresolvedCalls(true)
@@ -384,9 +393,9 @@ class DFGFunctionSummariesTest {
                     .build()
             /*
             int main() {
-              char *a = 7;
-              char *b = 5;
-              memcpy(a, b, 1);
+              int a = 7;
+              int b = 5;
+              memcpy(&a, &b, 1);
               return a;
             }
              */
@@ -395,17 +404,13 @@ class DFGFunctionSummariesTest {
                     translationUnit("DfgInferredCall.c") {
                         function("main", t("int")) {
                             body {
-                                declare {
-                                    variable("a", t("char").pointer()) { literal(7, t("char")) }
-                                }
+                                declare { variable("a", t("int")) { literal(7, t("char")) } }
 
-                                declare {
-                                    variable("b", t("char").pointer()) { literal(5, t("char")) }
-                                }
+                                declare { variable("b", t("int")) { literal(5, t("char")) } }
 
                                 call("memcpy") {
-                                    ref("a")
-                                    ref("b")
+                                    ref("a").pointerReference()
+                                    ref("b").pointerReference()
                                     literal(1, t("int"))
                                 }
 
