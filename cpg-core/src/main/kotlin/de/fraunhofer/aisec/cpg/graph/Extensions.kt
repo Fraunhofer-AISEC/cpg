@@ -705,6 +705,7 @@ inline fun Node.followXUntilHit(
             }
             if (earlyTermination(next, currentContext)) {
                 failedPaths.add(nextPath)
+                continue // Don't add this path anymore. We already failed.
             }
             // The next node is new in the current path (i.e., there's no loop), so we add the path
             // with the next step to the worklist.

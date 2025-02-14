@@ -37,8 +37,11 @@ import de.fraunhofer.aisec.cpg.graph.concepts.memory.Memory
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.MemoryManagementMode
 import de.fraunhofer.aisec.cpg.graph.edges.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeleteExpression
+import de.fraunhofer.aisec.cpg.query.AnalysisDirection
+import de.fraunhofer.aisec.cpg.query.AnalysisType
+import de.fraunhofer.aisec.cpg.query.INTERPROCEDURAL
 import de.fraunhofer.aisec.cpg.query.dataFlow
-import de.fraunhofer.aisec.cpg.query.executionPath
+import de.fraunhofer.aisec.cpg.query.executionPathBase
 import de.fraunhofer.aisec.cpg.test.analyze
 import java.io.File
 import kotlin.test.*
@@ -109,9 +112,15 @@ class MemoryTest {
         // Tree is deleted in all paths
         tree =
             key.underlyingNode?.let {
-                executionPath(
-                    it,
-                    predicate = { node -> node.overlayEdges.any { edge -> edge.end is DeAllocate } },
+                executionPathBase(
+                    startNode = it,
+                    predicate = { node ->
+                        node.overlayEdges.any { edge -> edge.end is DeAllocate }
+                    },
+                    direction = AnalysisDirection.FORWARD,
+                    type = AnalysisType.MUST,
+                    scope = INTERPROCEDURAL(),
+                    verbose = true,
                 )
             }
         assertNotNull(tree)

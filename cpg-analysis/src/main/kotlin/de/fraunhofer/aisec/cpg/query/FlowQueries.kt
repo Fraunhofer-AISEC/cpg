@@ -102,7 +102,7 @@ enum class AnalysisSensitivity {
     }
 }
 
-private fun dataFlowBase(
+fun dataFlowBase(
     startNode: Node,
     direction: AnalysisDirection,
     type: AnalysisType,
@@ -118,8 +118,8 @@ private fun dataFlowBase(
     val contextSensitive = AnalysisSensitivity.CONTEXT_SENSITIVE in sensitivities
     val interproceduralAnalysis = scope is INTERPROCEDURAL
     val earlyTermination = { n: Node, ctx: Context ->
-        earlyTermination?.let { it(n) } != false &&
-            (scope as? MAX_STEPS)?.steps?.let { ctx.steps >= it } != false
+        earlyTermination?.let { it(n) } == true &&
+            (scope as? MAX_STEPS)?.steps?.let { ctx.steps >= it } == true
     }
     val evalRes =
         when (direction) {
@@ -206,7 +206,7 @@ private fun dataFlowBase(
     }
 }
 
-private fun executionPathBase(
+fun executionPathBase(
     startNode: Node,
     direction: AnalysisDirection,
     type: AnalysisType,
@@ -219,8 +219,8 @@ private fun executionPathBase(
     val findAllPossiblePaths = type == AnalysisType.MUST || verbose
     val interproceduralAnalysis = scope is INTERPROCEDURAL
     val earlyTermination = { n: Node, ctx: Context ->
-        earlyTermination?.let { it(n) } != false &&
-            (scope as? MAX_STEPS)?.steps?.let { ctx.steps >= it } != false
+        earlyTermination?.let { it(n) } == true &&
+            (scope as? MAX_STEPS)?.steps?.let { ctx.steps >= it } == true
     }
     val evalRes =
         when (direction) {
@@ -461,8 +461,8 @@ fun Node.alwaysFlowsTo(
             )
             .flatten()
     val earlyTerminationPredicate = { n: Node, ctx: Context ->
-        earlyTermination?.let { it(n) } != false &&
-            (scope as? MAX_STEPS)?.steps?.let { ctx.steps >= it } != false &&
+        earlyTermination?.let { it(n) } == true &&
+            (scope as? MAX_STEPS)?.steps?.let { ctx.steps >= it } == true &&
             (!allowOverwritingValue &&
                 // TODO: This should be replaced with some check if the memory location/whatever
                 // where the data is kept is (partially) written to.
