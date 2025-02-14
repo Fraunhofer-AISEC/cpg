@@ -37,6 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.test.assertLocalName
 import de.fraunhofer.aisec.cpg.testcases.testFrontend
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
@@ -117,7 +118,6 @@ class FlowQueriesTest {
                 type = AnalysisType.MAY,
                 predicate = { (it.astParent as? CallExpression)?.name?.localName == "baz" },
             )
-        print(queryResultMayA.printNicely())
         assertTrue(
             queryResultMayA.value,
             "For the MAY analysis, we can ignore the then statement which would violate that the data would arrive in baz.",
@@ -125,9 +125,40 @@ class FlowQueriesTest {
         queryResultMayA.children.forEach {
             // There are multiple paths which have their own query tree. The children here hold the
             // list of visited nodes in the value.
-            val path = it.children.singleOrNull()?.value as? List<Node>
+            val path = it.children.singleOrNull()?.value as? List<*>
             assertNotNull(path, "There should be a path represented by a list of nodes")
             path.forEach { node ->
+                assertIs<Node>(node, "The list should contain nodes")
+                assertLocalName(
+                    "main",
+                    node.firstParentOrNull<FunctionDeclaration>(),
+                    "We expect that all nodes are within the function \"main\". I.e., there's no node in foo.",
+                )
+            }
+        }
+
+        // Intraprocedural forward may analysis. The rest doesn't matter
+        val queryResultMayAMax1 =
+            dataFlowBase(
+                startNode = literal5,
+                direction = AnalysisDirection.FORWARD,
+                scope = INTRAPROCEDURAL(1),
+                type = AnalysisType.MAY,
+                predicate = { (it.astParent as? CallExpression)?.name?.localName == "baz" },
+            )
+        assertFalse(queryResultMayAMax1.value, "The path is just too short to arrive in baz.")
+        queryResultMayAMax1.children.forEach {
+            // There are multiple paths which have their own query tree. The children here hold the
+            // list of visited nodes in the value.
+            val path = it.children.singleOrNull()?.value as? List<*>
+            assertNotNull(path, "There should be a path represented by a list of nodes")
+            assertEquals(
+                2,
+                path.size,
+                "The maxSize is set to 1, so there should be the start node and only one more element in the path",
+            )
+            path.forEach { node ->
+                assertIs<Node>(node, "The list should contain nodes")
                 assertLocalName(
                     "main",
                     node.firstParentOrNull<FunctionDeclaration>(),
@@ -145,7 +176,6 @@ class FlowQueriesTest {
                 type = AnalysisType.MUST,
                 predicate = { (it.astParent as? CallExpression)?.name?.localName == "baz" },
             )
-        print(queryResultMustA.printNicely())
         assertFalse(
             queryResultMustA.value,
             "For the MUST analysis, we cannot ignore the then statement which violates that the data arrive in baz.",
@@ -153,9 +183,10 @@ class FlowQueriesTest {
         queryResultMustA.children.forEach {
             // There are multiple paths which have their own query tree. The children here hold the
             // list of visited nodes in the value.
-            val path = it.children.singleOrNull()?.value as? List<Node>
+            val path = it.children.singleOrNull()?.value as? List<*>
             assertNotNull(path, "There should be a path represented by a list of nodes")
             path.forEach { node ->
+                assertIs<Node>(node, "The list should contain nodes")
                 assertLocalName(
                     "main",
                     node.firstParentOrNull<FunctionDeclaration>(),
@@ -174,7 +205,6 @@ class FlowQueriesTest {
                 type = AnalysisType.MAY,
                 predicate = { (it.astParent as? CallExpression)?.name?.localName == "baz" },
             )
-        print(queryResultMayB.printNicely())
         assertTrue(
             queryResultMayB.value,
             "For the MAY analysis, we can ignore the else statement which violates that the value in \"b\" arrives in baz.",
@@ -182,9 +212,10 @@ class FlowQueriesTest {
         queryResultMayB.children.forEach {
             // There are multiple paths which have their own query tree. The children here hold the
             // list of visited nodes in the value.
-            val path = it.children.singleOrNull()?.value as? List<Node>
+            val path = it.children.singleOrNull()?.value as? List<*>
             assertNotNull(path, "There should be a path represented by a list of nodes")
             path.forEach { node ->
+                assertIs<Node>(node, "The list should contain nodes")
                 assertLocalName(
                     "main",
                     node.firstParentOrNull<FunctionDeclaration>(),
@@ -203,7 +234,6 @@ class FlowQueriesTest {
                 type = AnalysisType.MUST,
                 predicate = { (it.astParent as? CallExpression)?.name?.localName == "baz" },
             )
-        print(queryResultMustB.printNicely())
         assertFalse(
             queryResultMustB.value,
             "For the MUST analysis, we cannot ignore the else statement which violates that the value in \"b\" arrives in baz.",
@@ -211,9 +241,10 @@ class FlowQueriesTest {
         queryResultMustB.children.forEach {
             // There are multiple paths which have their own query tree. The children here hold the
             // list of visited nodes in the value.
-            val path = it.children.singleOrNull()?.value as? List<Node>
+            val path = it.children.singleOrNull()?.value as? List<*>
             assertNotNull(path, "There should be a path represented by a list of nodes")
             path.forEach { node ->
+                assertIs<Node>(node, "The list should contain nodes")
                 assertLocalName(
                     "main",
                     node.firstParentOrNull<FunctionDeclaration>(),
@@ -252,7 +283,6 @@ class FlowQueriesTest {
                         (it.astParent as? CallExpression)?.name?.localName == "baz"
                 },
             )
-        print(queryResultMay.printNicely())
         assertTrue(
             queryResultMay.value,
             "For the MAY analysis, we can ignore the else statement which violates that the value in \"b\" arrives in baz.",
@@ -260,9 +290,10 @@ class FlowQueriesTest {
         queryResultMay.children.forEach {
             // There are multiple paths which have their own query tree. The children here hold the
             // list of visited nodes in the value.
-            val path = it.children.singleOrNull()?.value as? List<Node>
+            val path = it.children.singleOrNull()?.value as? List<*>
             assertNotNull(path, "There should be a path represented by a list of nodes")
             path.forEach { node ->
+                assertIs<Node>(node, "The list should contain nodes")
                 assertLocalName(
                     "main",
                     node.firstParentOrNull<FunctionDeclaration>(),
@@ -284,7 +315,6 @@ class FlowQueriesTest {
                         (it.astParent as? CallExpression)?.name?.localName == "baz"
                 },
             )
-        print(queryResultMust.printNicely())
         assertFalse(
             queryResultMust.value,
             "For the MUST analysis, we cannot ignore the else statement which violates that the value in \"b\" arrives in baz and in addition, there's the path which won't reach the \"5\".",
@@ -292,9 +322,10 @@ class FlowQueriesTest {
         queryResultMust.children.forEach {
             // There are multiple paths which have their own query tree. The children here hold the
             // list of visited nodes in the value.
-            val path = it.children.singleOrNull()?.value as? List<Node>
+            val path = it.children.singleOrNull()?.value as? List<*>
             assertNotNull(path, "There should be a path represented by a list of nodes")
             path.forEach { node ->
+                assertIs<Node>(node, "The list should contain nodes")
                 assertLocalName(
                     "main",
                     node.firstParentOrNull<FunctionDeclaration>(),
@@ -346,7 +377,6 @@ class FlowQueriesTest {
                 type = AnalysisType.MAY,
                 predicate = { (it as? Literal<*>)?.value == 5 },
             )
-        print(queryResultMayA.printNicely())
         assertTrue(
             queryResultMayA.value,
             "For the MAY analysis, we can ignore the then statement which would violate that the \"5\" would arrive in baz.",
@@ -354,9 +384,43 @@ class FlowQueriesTest {
         queryResultMayA.children.forEach {
             // There are multiple paths which have their own query tree. The children here hold the
             // list of visited nodes in the value.
-            val path = it.children.singleOrNull()?.value as? List<Node>
+            val path = it.children.singleOrNull()?.value as? List<*>
             assertNotNull(path, "There should be a path represented by a list of nodes")
             path.forEach { node ->
+                assertIs<Node>(node, "The list should contain nodes")
+                assertLocalName(
+                    "main",
+                    node.firstParentOrNull<FunctionDeclaration>(),
+                    "We expect that all nodes are within the function \"main\". I.e., there's no node in foo.",
+                )
+            }
+        }
+
+        // Intraprocedural backward may analysis but we stop too early. The rest doesn't matter
+        val queryResultMayAMax1 =
+            dataFlowBase(
+                startNode = bazARef,
+                direction = AnalysisDirection.BACKWARD,
+                scope = INTRAPROCEDURAL(1),
+                type = AnalysisType.MAY,
+                predicate = { (it as? Literal<*>)?.value == 5 },
+            )
+        assertFalse(
+            queryResultMayAMax1.value,
+            "The path is just too short to reach the value \"5\"",
+        )
+        queryResultMayAMax1.children.forEach {
+            // There are multiple paths which have their own query tree. The children here hold the
+            // list of visited nodes in the value.
+            val path = it.children.singleOrNull()?.value as? List<*>
+            assertNotNull(path, "There should be a path represented by a list of nodes")
+            assertEquals(
+                2,
+                path.size,
+                "The maxSize is set to 1, so there should be the start node and only one more element in the path",
+            )
+            path.forEach { node ->
+                assertIs<Node>(node, "The list should contain nodes")
                 assertLocalName(
                     "main",
                     node.firstParentOrNull<FunctionDeclaration>(),
@@ -374,7 +438,6 @@ class FlowQueriesTest {
                 type = AnalysisType.MUST,
                 predicate = { (it as? Literal<*>)?.value == 5 },
             )
-        print(queryResultMustA.printNicely())
         assertFalse(
             queryResultMustA.value,
             "For the MUST analysis, we cannot ignore the then statement which violates that the \"5\" arrives in baz.",
@@ -382,9 +445,10 @@ class FlowQueriesTest {
         queryResultMustA.children.forEach {
             // There are multiple paths which have their own query tree. The children here hold the
             // list of visited nodes in the value.
-            val path = it.children.singleOrNull()?.value as? List<Node>
+            val path = it.children.singleOrNull()?.value as? List<*>
             assertNotNull(path, "There should be a path represented by a list of nodes")
             path.forEach { node ->
+                assertIs<Node>(node, "The list should contain nodes")
                 assertLocalName(
                     "main",
                     node.firstParentOrNull<FunctionDeclaration>(),
@@ -403,7 +467,6 @@ class FlowQueriesTest {
                 type = AnalysisType.MAY,
                 predicate = { (it as? Literal<*>)?.value == 5 },
             )
-        print(queryResultMayBTo5.printNicely())
         assertFalse(
             queryResultMayBTo5.value,
             "For the MAY analysis, we can ignore the direct route which violates that reaches the \"5\" but we cannot get through the function call on the path.",
@@ -411,9 +474,10 @@ class FlowQueriesTest {
         queryResultMayBTo5.children.forEach {
             // There are multiple paths which have their own query tree. The children here hold the
             // list of visited nodes in the value.
-            val path = it.children.singleOrNull()?.value as? List<Node>
+            val path = it.children.singleOrNull()?.value as? List<*>
             assertNotNull(path, "There should be a path represented by a list of nodes")
             path.forEach { node ->
+                assertIs<Node>(node, "The list should contain nodes")
                 assertLocalName(
                     "main",
                     node.firstParentOrNull<FunctionDeclaration>(),
@@ -432,7 +496,6 @@ class FlowQueriesTest {
                 type = AnalysisType.MUST,
                 predicate = { (it as? Literal<*>)?.value == 5 },
             )
-        print(queryResultMustBTo5.printNicely())
         assertFalse(
             queryResultMustBTo5.value,
             "For the MUST analysis, we cannot ignore the direct route which violates that reaches the \"5\" and we cannot get through the function call on the path.",
@@ -440,9 +503,10 @@ class FlowQueriesTest {
         queryResultMustBTo5.children.forEach {
             // There are multiple paths which have their own query tree. The children here hold the
             // list of visited nodes in the value.
-            val path = it.children.singleOrNull()?.value as? List<Node>
+            val path = it.children.singleOrNull()?.value as? List<*>
             assertNotNull(path, "There should be a path represented by a list of nodes")
             path.forEach { node ->
+                assertIs<Node>(node, "The list should contain nodes")
                 assertLocalName(
                     "main",
                     node.firstParentOrNull<FunctionDeclaration>(),
@@ -461,7 +525,6 @@ class FlowQueriesTest {
                 type = AnalysisType.MAY,
                 predicate = { (it as? Literal<*>)?.value == "bla" },
             )
-        print(queryResultMayBToBla.printNicely())
         assertTrue(
             queryResultMayBToBla.value,
             "For the MAY analysis, we can ignore the direct route which violates that reaches the \"bla\".",
@@ -469,9 +532,10 @@ class FlowQueriesTest {
         queryResultMayBToBla.children.forEach {
             // There are multiple paths which have their own query tree. The children here hold the
             // list of visited nodes in the value.
-            val path = it.children.singleOrNull()?.value as? List<Node>
+            val path = it.children.singleOrNull()?.value as? List<*>
             assertNotNull(path, "There should be a path represented by a list of nodes")
             path.forEach { node ->
+                assertIs<Node>(node, "The list should contain nodes")
                 assertLocalName(
                     "main",
                     node.firstParentOrNull<FunctionDeclaration>(),
@@ -490,7 +554,6 @@ class FlowQueriesTest {
                 type = AnalysisType.MUST,
                 predicate = { (it as? Literal<*>)?.value == "bla" },
             )
-        print(queryResultMustBToBla.printNicely())
         assertFalse(
             queryResultMustBToBla.value,
             "For the MUST analysis, we cannot ignore the direct route which violates that reaches the \"bla\".",
@@ -498,9 +561,10 @@ class FlowQueriesTest {
         queryResultMustBToBla.children.forEach {
             // There are multiple paths which have their own query tree. The children here hold the
             // list of visited nodes in the value.
-            val path = it.children.singleOrNull()?.value as? List<Node>
+            val path = it.children.singleOrNull()?.value as? List<*>
             assertNotNull(path, "There should be a path represented by a list of nodes")
             path.forEach { node ->
+                assertIs<Node>(node, "The list should contain nodes")
                 assertLocalName(
                     "main",
                     node.firstParentOrNull<FunctionDeclaration>(),

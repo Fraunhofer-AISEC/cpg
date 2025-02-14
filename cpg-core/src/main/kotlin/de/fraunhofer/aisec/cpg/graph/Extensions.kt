@@ -758,6 +758,10 @@ inline fun Node.followXUntilHit(
         // No further nodes in the path and the path criteria are not satisfied.
         if (nextNodes.isEmpty() && collectFailedPaths) failedPaths.add(currentPath.first)
 
+        // Increment the counter because we add the node in nextNodes. Be careful to not increment
+        // it further down (in the loop) again.
+        currentContext++
+
         for (next in nextNodes) {
             // Copy the path for each outgoing CDG edge and add the next node
             val nextPath = currentPath.first.toMutableList()
@@ -779,9 +783,8 @@ inline fun Node.followXUntilHit(
                     (findAllPossiblePaths ||
                         (next !in alreadySeenNodes && worklist.none { next in it.first }))
             ) {
-                currentContext++
 
-                val newContext =
+                var newContext =
                     if (nextNodes.size > 1) {
                         currentContext.clone()
                     } else {
