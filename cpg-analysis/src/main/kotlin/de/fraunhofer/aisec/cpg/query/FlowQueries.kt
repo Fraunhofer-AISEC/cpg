@@ -274,16 +274,85 @@ private fun executionPathBase(
     }
 }
 
-/** Checks if a data flow is possible between the nodes [from] as a source and [to] as sink. */
+fun dataFlowWithValidator(
+    source: Node,
+    validatorPredicate: (Node) -> Boolean,
+    sinkPredicate: (Node) -> Boolean,
+    scope: AnalysisScope,
+    sensitivities: AnalysisSensitivities,
+): QueryTree<Boolean> {
+    val flowsToValidator =
+        source.alwaysFlowsTo(validatorPredicate, true, scope = scope, sensitivities = sensitivities)
+    val resultChildren = mutableListOf<QueryTree<Boolean>>()
+    for (child in (flowsToValidator.children as List<QueryTree<Boolean>>)) {
+        // child is a QueryTree<Boolean> whose children consist of a list with a single item of type
+        // QueryTree<List<Node>>.
+        val nodesOnPath = (child.children.singleOrNull() as? QueryTree<List<Node>>)?.value
+        // We check if any node in the List<Node> fulfills sinkPredicate.
+        val sinksOnPath =
+            nodesOnPath?.filter { node ->
+                sinkPredicate(node) &&
+                    dataFlowBase(
+                            startNode = source,
+                            predicate = { it == node },
+                            direction = AnalysisDirection.FORWARD,
+                            type = AnalysisType.MAY,
+                            sensitivities = sensitivities,
+                            scope = scope,
+                            verbose = false,
+                        )
+                        .value
+            } ?: listOf()
+        if (sinksOnPath.isNotEmpty()) {
+            // There's at least one node on the path between source and validatorPredicate which
+            // qualifies as sink. This means, this subtree does not fulfill our requirement. We
+            // change the value of this subtree and update the string.
+            resultChildren.add(
+                QueryTree(
+                    value = false,
+                    children =
+                        mutableListOf(
+                            QueryTree(
+                                value = nodesOnPath,
+                                stringRepresentation = "Path between the source and validator",
+                            ),
+                            QueryTree(
+                                value = sinksOnPath,
+                                stringRepresentation = "The sinks on the path",
+                            ),
+                        ),
+                    stringRepresentation =
+                        "The path between $source and the sink(s) $sinksOnPath is shorter than the path to the validator ${nodesOnPath?.lastOrNull()}",
+                    node = source,
+                )
+            )
+        } else {
+            // There was no sink on the path. We're happy and keep the child as-is for the result.
+            resultChildren.add(child)
+        }
+    }
+    val value = resultChildren.all { it.value }
+    return QueryTree(
+        value = value,
+        children = resultChildren.toMutableList(),
+        stringRepresentation =
+            if (value)
+                "All paths from $source first run through a validator before reaching a sink or never reach a sink."
+            else "Some paths from $source reach a sink before visiting a validator",
+        node = source,
+    )
+}
+
+/** Checks if a data flow is possible between the nodes [source] and [sink]. */
 fun dataFlow(
-    from: Node,
-    to: Node,
+    source: Node,
+    sink: Node,
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
 ) =
     dataFlowBase(
-        startNode = from,
-        { it == to },
+        startNode = source,
+        { it == sink },
         direction = AnalysisDirection.FORWARD,
         type = AnalysisType.MAY,
         sensitivities = AnalysisSensitivity.FIELD_SENSITIVE + AnalysisSensitivity.CONTEXT_SENSITIVE,
@@ -291,18 +360,15 @@ fun dataFlow(
         verbose = collectFailedPaths || findAllPossiblePaths,
     )
 
-/**
- * Checks if a data flow is possible between the nodes [from] as a source and a node fulfilling
- * [predicate].
- */
+/** Checks if a data flow is possible between the [source] and a sink fulfilling [predicate]. */
 fun dataFlow(
-    from: Node,
+    source: Node,
     predicate: (Node) -> Boolean,
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
 ) =
     dataFlowBase(
-        startNode = from,
+        startNode = source,
         predicate = predicate,
         direction = AnalysisDirection.FORWARD,
         type = AnalysisType.MAY,
