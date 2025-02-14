@@ -657,7 +657,7 @@ fun Node.followPrevPDGUntilHit(
                 nextNodes.addAll(
                     (currentNode as? FunctionDeclaration)?.usages?.mapNotNull {
                         val result =
-                            if (interproceduralMaxDepth?.let { ctx.callStack.depth >= it } == true)
+                            if (interproceduralMaxDepth?.let { ctx.callStack.depth >= it } != true)
                                 it.astParent as? CallExpression
                             else null
                         result?.let { ctx.callStack.push(it) }
@@ -699,7 +699,7 @@ fun Node.followPrevCDGUntilHit(
                 nextNodes.addAll(
                     (currentNode as? FunctionDeclaration)?.usages?.mapNotNull {
                         val result =
-                            if (interproceduralMaxDepth?.let { ctx.callStack.depth >= it } == true)
+                            if (interproceduralMaxDepth?.let { ctx.callStack.depth >= it } != true)
                                 it.astParent as? CallExpression
                             else null
                         result?.let { ctx.callStack.push(it) }
@@ -869,7 +869,7 @@ fun Node.followNextDFGEdgesUntilHit(
                     if (
                         interproceduralAnalysis &&
                             contextSensitive &&
-                            interproceduralMaxDepth?.let { ctx.callStack.depth >= it } == true &&
+                            interproceduralMaxDepth?.let { ctx.callStack.depth >= it } != true &&
                             it is ContextSensitiveDataflow &&
                             it.callingContext is CallingContextIn
                     ) {
@@ -958,7 +958,7 @@ fun Node.followNextEOGEdgesUntilHit(
         x = { currentNode, ctx, _ ->
             if (
                 interproceduralAnalysis &&
-                    interproceduralMaxDepth?.let { ctx.callStack.depth >= it } == true &&
+                    interproceduralMaxDepth?.let { ctx.callStack.depth >= it } != true &&
                     currentNode is CallExpression &&
                     currentNode.invokes.isNotEmpty()
             ) {
@@ -1043,7 +1043,7 @@ fun Node.followPrevEOGEdgesUntilHit(
                     ctx.callStack.pop().reachablePrevEOG
                 }
                 interproceduralAnalysis &&
-                    interproceduralMaxDepth?.let { ctx.callStack.depth >= it } == true &&
+                    interproceduralMaxDepth?.let { ctx.callStack.depth >= it } != true &&
                     currentNode is CallExpression &&
                     currentNode.invokes.isNotEmpty() -> {
                     // We're in the call expression. Push it on the stack, go to all last EOG
