@@ -984,7 +984,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         handlePositionalArguments(positionalArguments, args)
 
         args.vararg?.let { handleArgument(it, isPosOnly = false, isVariadic = true) }
-        args.kwarg?.let { handleArgument(it, isPosOnly = false, isVariadic = false) }
+        args.kwarg?.let { handleArgument(it, isPosOnly = false, isVariadic = true) }
 
         handleKeywordOnlyArguments(args)
     }

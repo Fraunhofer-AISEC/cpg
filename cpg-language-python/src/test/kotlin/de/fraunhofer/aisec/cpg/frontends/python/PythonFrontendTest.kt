@@ -47,6 +47,7 @@ import de.fraunhofer.aisec.cpg.passes.ControlDependenceGraphPass
 import de.fraunhofer.aisec.cpg.sarif.Region
 import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
+import kotlin.io.path.Path
 import kotlin.test.*
 
 class PythonFrontendTest : BaseTest() {
@@ -1897,5 +1898,23 @@ class PythonFrontendTest : BaseTest() {
         val expectedSuper = result.records["Foobar"]
         assertNotNull(expectedSuper)
         assertEquals(expectedSuper, clsSuper.recordDeclaration)
+    }
+
+    @Test
+    fun testHttpCinder() {
+        val topLevel = Path("/home/lshala/repos/python-cinderclient")
+        val config =
+            TranslationConfiguration.builder()
+                .sourceLocations(listOf(topLevel.resolve("cinderclient").toFile()))
+                .topLevel(topLevel.toFile())
+                .defaultPasses()
+                .registerLanguage<PythonLanguage>()
+                .exclusionPatterns("tests")
+                .useParallelFrontends(true)
+                .build()
+
+        val translationManager = TranslationManager.builder().config(config).build()
+        val result = translationManager.analyze().get()
+        val tu = result.components.first().translationUnits
     }
 }
