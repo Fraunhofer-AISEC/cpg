@@ -80,7 +80,14 @@ enum class AnalysisSensitivity {
      * Differentiate between fields, attributes, known keys or known indices of objects. This does
      * not include computing possible indices or keys if they are not given as a literal.
      */
-    FIELD_SENSITIVE;
+    FIELD_SENSITIVE,
+
+    /**
+     * Also consider implicit flows during the dataflow analysis. E.g. if a condition depends on the
+     * value we're interested in, different behaviors in the branches can leak data and thus, the
+     * dependencies of this should also be flagged.
+     */
+    IMPLICIT;
 
     operator fun plus(other: AnalysisSensitivity): AnalysisSensitivities {
         return listOf(this, other)
