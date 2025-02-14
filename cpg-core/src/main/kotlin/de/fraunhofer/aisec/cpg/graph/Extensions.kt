@@ -646,16 +646,22 @@ fun Node.followPrevPDGUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
     interproceduralAnalysis: Boolean = false,
+    interproceduralMaxDepth: Int? = null,
     earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
-        x = { currentNode, _, _ ->
+        x = { currentNode, ctx, _ ->
             val nextNodes = currentNode.prevPDG.toMutableList()
             if (interproceduralAnalysis) {
                 nextNodes.addAll(
                     (currentNode as? FunctionDeclaration)?.usages?.mapNotNull {
-                        it.astParent as? CallExpression
+                        val result =
+                            if (interproceduralMaxDepth?.let { ctx.callStack.depth >= it } == true)
+                                it.astParent as? CallExpression
+                            else null
+                        result?.let { ctx.callStack.push(it) }
+                        result
                     } ?: listOf()
                 )
             }
@@ -682,16 +688,22 @@ fun Node.followPrevCDGUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
     interproceduralAnalysis: Boolean = false,
+    interproceduralMaxDepth: Int? = null,
     earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
-        x = { currentNode, _, _ ->
+        x = { currentNode, ctx, _ ->
             val nextNodes = currentNode.prevCDG.toMutableList()
             if (interproceduralAnalysis) {
                 nextNodes.addAll(
                     (currentNode as? FunctionDeclaration)?.usages?.mapNotNull {
-                        it.astParent as? CallExpression
+                        val result =
+                            if (interproceduralMaxDepth?.let { ctx.callStack.depth >= it } == true)
+                                it.astParent as? CallExpression
+                            else null
+                        result?.let { ctx.callStack.push(it) }
+                        result
                     } ?: listOf()
                 )
             }
@@ -822,6 +834,7 @@ fun Node.followNextDFGEdgesUntilHit(
     useIndexStack: Boolean = true,
     interproceduralAnalysis: Boolean = true,
     contextSensitive: Boolean = true,
+    interproceduralMaxDepth: Int? = null,
     earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
@@ -856,6 +869,7 @@ fun Node.followNextDFGEdgesUntilHit(
                     if (
                         interproceduralAnalysis &&
                             contextSensitive &&
+                            interproceduralMaxDepth?.let { ctx.callStack.depth >= it } == true &&
                             it is ContextSensitiveDataflow &&
                             it.callingContext is CallingContextIn
                     ) {
@@ -936,6 +950,7 @@ fun Node.followNextEOGEdgesUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
     interproceduralAnalysis: Boolean = true,
+    interproceduralMaxDepth: Int? = null,
     earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
@@ -943,6 +958,7 @@ fun Node.followNextEOGEdgesUntilHit(
         x = { currentNode, ctx, _ ->
             if (
                 interproceduralAnalysis &&
+                    interproceduralMaxDepth?.let { ctx.callStack.depth >= it } == true &&
                     currentNode is CallExpression &&
                     currentNode.invokes.isNotEmpty()
             ) {
@@ -1005,6 +1021,7 @@ fun Node.followPrevEOGEdgesUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
     interproceduralAnalysis: Boolean = true,
+    interproceduralMaxDepth: Int? = null,
     earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
@@ -1026,6 +1043,7 @@ fun Node.followPrevEOGEdgesUntilHit(
                     ctx.callStack.pop().reachablePrevEOG
                 }
                 interproceduralAnalysis &&
+                    interproceduralMaxDepth?.let { ctx.callStack.depth >= it } == true &&
                     currentNode is CallExpression &&
                     currentNode.invokes.isNotEmpty() -> {
                     // We're in the call expression. Push it on the stack, go to all last EOG

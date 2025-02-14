@@ -122,9 +122,7 @@ fun dataFlowBase(
     val contextSensitive = AnalysisSensitivity.CONTEXT_SENSITIVE in sensitivities
     val interproceduralAnalysis = scope is INTERPROCEDURAL
     val earlyTermination = { n: Node, ctx: Context ->
-        earlyTermination?.let { it(n) } == true &&
-            scope.maxSteps?.let { ctx.steps >= it } == true &&
-            (scope as? INTERPROCEDURAL)?.maxCallDepth?.let { ctx.callStack.depth >= it } == true
+        earlyTermination?.let { it(n) } == true && scope.maxSteps?.let { ctx.steps >= it } == true
     }
     val evalRes =
         when (direction) {
@@ -224,9 +222,7 @@ fun executionPathBase(
     val findAllPossiblePaths = type == AnalysisType.MUST || verbose
     val interproceduralAnalysis = scope is INTERPROCEDURAL
     val earlyTermination = { n: Node, ctx: Context ->
-        earlyTermination?.let { it(n) } == true &&
-            scope.maxSteps?.let { ctx.steps >= it } == true &&
-            (scope as? INTERPROCEDURAL)?.maxCallDepth?.let { ctx.callStack.depth >= it } == true
+        earlyTermination?.let { it(n) } == true && scope.maxSteps?.let { ctx.steps >= it } == true
     }
     val evalRes =
         when (direction) {
@@ -467,9 +463,7 @@ fun Node.alwaysFlowsTo(
             )
             .flatten()
     val earlyTerminationPredicate = { n: Node, ctx: Context ->
-        earlyTermination?.let { it(n) } == true &&
-            scope.maxSteps?.let { ctx.steps >= it } == true &&
-            (scope as? INTERPROCEDURAL)?.maxCallDepth?.let { ctx.callStack.depth >= it } == true
+        earlyTermination?.let { it(n) } == true && scope.maxSteps?.let { ctx.steps >= it } == true
         (!allowOverwritingValue &&
             // TODO: This should be replaced with some check if the memory location/whatever
             // where the data is kept is (partially) written to.
