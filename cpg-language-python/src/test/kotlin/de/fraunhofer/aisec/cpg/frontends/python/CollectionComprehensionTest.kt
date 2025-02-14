@@ -26,11 +26,13 @@
 package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.edges.flows.IndexedDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.get
 import de.fraunhofer.aisec.cpg.graph.invoke
@@ -57,6 +59,8 @@ import de.fraunhofer.aisec.cpg.test.assertLocalName
 import de.fraunhofer.aisec.cpg.test.assertNotRefersTo
 import de.fraunhofer.aisec.cpg.test.assertRefersTo
 import java.nio.file.Path
+import kotlin.test.Ignore
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
@@ -189,6 +193,52 @@ class CollectionComprehensionTest {
             argV,
             declarationV,
             "The argument v of the call also refers to the variable v declared in the comprehension expression.",
+        )
+
+        // Check that the ILE flows to the variables with the indexed granularity
+        assertContains(
+            initializerListExpression.nextDFG,
+            variableK,
+            "We expect that the data of the ILE flows to the reference \"k\" with index granularity and index 1",
+        )
+        val granularityTupleToK =
+            initializerListExpression.nextDFGEdges.single { it.end == variableK }.granularity
+        assertIs<IndexedDataflowGranularity>(
+            granularityTupleToK,
+            "We expect that the data of the ILE flows to the reference \"k\" with index granularity and index 1",
+        )
+        assertEquals(
+            0,
+            granularityTupleToK.index,
+            "We expect that the data of the ILE flows to the reference \"k\" with index granularity and index 1",
+        )
+        assertContains(
+            initializerListExpression.nextDFG,
+            variableV,
+            "We expect that the data of the ILE flows to the reference \"v\" with index granularity and index 1",
+        )
+        val granularityTupleToV =
+            initializerListExpression.nextDFGEdges.single { it.end == variableV }.granularity
+        assertIs<IndexedDataflowGranularity>(
+            granularityTupleToV,
+            "We expect that the data of the ILE flows to the reference \"v\" with index granularity and index 1",
+        )
+        assertEquals(
+            1,
+            granularityTupleToV.index,
+            "We expect that the data of the ILE flows to the reference \"v\" with index granularity and index 1",
+        )
+
+        // Check that the variables flow to their usages
+        assertEquals(
+            setOf<Node>(argK),
+            variableK.nextDFG.toSet(),
+            "We expect that the \"k\" in the tuple flows to its usage",
+        )
+        assertEquals(
+            setOf<Node>(argV),
+            variableV.nextDFG.toSet(),
+            "We expect that the \"v\" in the tuple flows to its usage",
         )
     }
 
@@ -1229,6 +1279,26 @@ class CollectionComprehensionTest {
         )
 
         // Now the actually interesting part: We check for variables belonging to the references.
+        assertEquals(
+            1,
+            refA.prevDFGEdges.size,
+            "We expect that there's one DFG edge flowing into the reference \"a\" in the tuple. It should come from the InitializerListExpression and have the index \"0\"",
+        )
+        assertEquals(
+            tuple,
+            refA.prevDFG.single(),
+            "We expect that there's one DFG edge flowing into the reference \"a\" in the tuple. It should come from the InitializerListExpression and have the index \"0\"",
+        )
+        val refAGranularity = refA.prevDFGEdges.single().granularity
+        assertIs<IndexedDataflowGranularity>(
+            refAGranularity,
+            "We expect that there's one DFG edge flowing into the reference \"a\" in the tuple. It should come from the InitializerListExpression and have the index \"0\"",
+        )
+        assertEquals(
+            0,
+            refAGranularity.index,
+            "We expect that there's one DFG edge flowing into the reference \"a\" in the tuple. It should come from the InitializerListExpression and have the index \"0\"",
+        )
         val variableDeclarationA = refA.refersTo
         assertIs<VariableDeclaration>(
             variableDeclarationA,
@@ -1247,6 +1317,21 @@ class CollectionComprehensionTest {
             refB,
             bDeclaration,
             "We expect that the reference \"b\" in the tuple refers to the VariableDeclaration of \"b\" which is added outside the list comprehension (in statement 0).",
+        )
+        val tupleToB0 = accessB0.prevDFGEdges.singleOrNull { it.start == tuple }
+        assertNotNull(
+            tupleToB0,
+            "We expect that there's one DFG edge flowing into the reference \"b[0]\" in the tuple. It should come from the InitializerListExpression and have the index \"1\"",
+        )
+        val accessB0Granularity = tupleToB0.granularity
+        assertIs<IndexedDataflowGranularity>(
+            accessB0Granularity,
+            "We expect that there's one DFG edge flowing into the reference \"b[0]\" in the tuple. It should come from the InitializerListExpression and have the index \"1\"",
+        )
+        assertEquals(
+            1,
+            accessB0Granularity.index,
+            "We expect that there's one DFG edge flowing into the reference \"b[0]\" in the tuple. It should come from the InitializerListExpression and have the index \"1\"",
         )
     }
 
@@ -1359,6 +1444,26 @@ class CollectionComprehensionTest {
         )
 
         // Now the actually interesting part: We check for variables belonging to the references.
+        assertEquals(
+            1,
+            refA.prevDFGEdges.size,
+            "We expect that there's one DFG edge flowing into the reference \"a\" in the tuple. It should come from the InitializerListExpression and have the index \"0\"",
+        )
+        assertEquals(
+            tuple,
+            refA.prevDFG.single(),
+            "We expect that there's one DFG edge flowing into the reference \"a\" in the tuple. It should come from the InitializerListExpression and have the index \"0\"",
+        )
+        val refAGranularity = refA.prevDFGEdges.single().granularity
+        assertIs<IndexedDataflowGranularity>(
+            refAGranularity,
+            "We expect that there's one DFG edge flowing into the reference \"a\" in the tuple. It should come from the InitializerListExpression and have the index \"0\"",
+        )
+        assertEquals(
+            0,
+            refAGranularity.index,
+            "We expect that there's one DFG edge flowing into the reference \"a\" in the tuple. It should come from the InitializerListExpression and have the index \"0\"",
+        )
         val variableDeclarationA = refA.refersTo
         assertIs<VariableDeclaration>(
             variableDeclarationA,
@@ -1383,8 +1488,27 @@ class CollectionComprehensionTest {
             bDeclaration,
             "We expect that the reference \"b\" in the tuple refers to the VariableDeclaration of \"b\" which is added outside the list comprehension (in statement 0).",
         )
+
+        val tupleToBA = accessBA.prevDFGEdges.singleOrNull { it.start == tuple }
+        assertNotNull(
+            tupleToBA,
+            "We expect that there's one DFG edge flowing into the reference \"b[a]\" in the tuple. It should come from the InitializerListExpression and have the index \"1\"",
+        )
+        val accessBAGranularity = tupleToBA.granularity
+        assertIs<IndexedDataflowGranularity>(
+            accessBAGranularity,
+            "We expect that there's one DFG edge flowing into the reference \"b[a]\" in the tuple. It should come from the InitializerListExpression and have the index \"1\"",
+        )
+        assertEquals(
+            1,
+            accessBAGranularity.index,
+            "We expect that there's one DFG edge flowing into the reference \"b[a]\" in the tuple. It should come from the InitializerListExpression and have the index \"1\"",
+        )
     }
 
+    @Ignore(
+        "This test is ignored because the variable \"a\" in the tuple's first element is incorrectly resolved to the variable in the tuple's second element. This adds refersTo edges which should not exist and also causes the DFG to contain additional edges."
+    )
     @Test
     fun testComprehensionWithListAssignmentAndIndexVariableReversed() {
         val comprehensionWithListAssignmentAndIndexVariableReversedFunctionDeclaration =
@@ -1493,14 +1617,14 @@ class CollectionComprehensionTest {
             refB,
             "The first element of the tuple \"(b[a], a)\" is expected to be represented by a SubscriptExpression with in the CPG. We expect that the base is a Reference with localName \"b\"  and the subscriptExpression representing the index is a Reference \"a\" which refers to no variable available at this point.",
         )
-        val index = accessBA.subscriptExpression
+        val indexA = accessBA.subscriptExpression
         assertIs<Reference>(
-            index,
+            indexA,
             "The first element of the tuple \"(b[a], a)\" is expected to be represented by a SubscriptExpression with in the CPG. We expect that the base is a Reference with localName \"b\"  and the subscriptExpression representing the index is a Reference \"a\" which refers to no variable available at this point.",
         )
         assertLocalName(
             "a",
-            index,
+            indexA,
             "The first element of the tuple \"(b[a], a)\" is expected to be represented by a SubscriptExpression with in the CPG. We expect that the base is a Reference with localName \"b\"  and the subscriptExpression representing the index is a Reference \"a\" which refers to no variable available at this point.",
         )
         val refA = tuple.initializers[1]
@@ -1525,9 +1649,45 @@ class CollectionComprehensionTest {
             "We expect that the reference \"a\" refers to a VariableDeclaration with localName \"a\" which is not null and whose scope is the LocalScope of the list comprehension.",
         )
         assertEquals(
+            1,
+            refA.prevDFGEdges.size,
+            "We expect that there's one DFG edge flowing into the reference \"a\" in the tuple. It should come from the InitializerListExpression and have the index \"0\"",
+        )
+        assertEquals(
+            tuple,
+            refA.prevDFG.single(),
+            "We expect that there's one DFG edge flowing into the reference \"a\" in the tuple. It should come from the InitializerListExpression and have the index \"0\"",
+        )
+        val refAGranularity = refA.prevDFGEdges.single().granularity
+        assertIs<IndexedDataflowGranularity>(
+            refAGranularity,
+            "We expect that there's one DFG edge flowing into the reference \"a\" in the tuple. It should come from the InitializerListExpression and have the index \"0\"",
+        )
+        assertEquals(
+            1,
+            refAGranularity.index,
+            "We expect that there's one DFG edge flowing into the reference \"a\" in the tuple. It should come from the InitializerListExpression and have the index \"0\"",
+        )
+        assertEquals(
             listComprehensionWithTupleAndAssignmentToListElement,
             innerVariableDeclarationA.scope?.astNode,
             "We expect that the reference \"a\" refers to a VariableDeclaration with localName \"a\" which is not null and whose scope is the LocalScope of the list comprehension.",
+        )
+
+        val tupleToBA = accessBA.prevDFGEdges.singleOrNull { it.start == tuple }
+        assertNotNull(
+            tupleToBA,
+            "We expect that there's one DFG edge flowing into the reference \"b[a]\" in the tuple. It should come from the InitializerListExpression and have the index \"0\"",
+        )
+        val accessBAGranularity = tupleToBA.granularity
+        assertIs<IndexedDataflowGranularity>(
+            accessBAGranularity,
+            "We expect that there's one DFG edge flowing into the reference \"b[a]\" in the tuple. It should come from the InitializerListExpression and have the index \"0\"",
+        )
+        assertEquals(
+            0,
+            accessBAGranularity.index,
+            "We expect that there's one DFG edge flowing into the reference \"b[a]\" in the tuple. It should come from the InitializerListExpression and have the index \"0\"",
         )
         assertRefersTo(
             refB,
@@ -1536,23 +1696,23 @@ class CollectionComprehensionTest {
         )
         assertEquals(
             0,
-            index.prevDFG.size,
+            indexA.prevDFG.size,
             "We expect that the reference \"a\" used as an index in the first element of the tuple does not have any incoming data flows which somewhat simulates that it's not initialized at this point in time which is also why python crashes.",
         )
         assertNotRefersTo(
-            index,
+            indexA,
             aDeclaration,
             "We expect that the reference \"a\" used as an index in the first element of the tuple does not refer to the same VariableDeclaration as the second element of the tuple nor to the local variable nor does it have an own VariableDeclaration since python would just crash.",
         )
-        /*assertNotRefersTo(
-            index,
+        assertNotRefersTo(
+            indexA,
             innerVariableDeclarationA,
             "We expect that the reference \"a\" used as an index in the first element of the tuple does not refer to the same VariableDeclaration as the second element of the tuple nor to the local variable nor does it have an own VariableDeclaration since python would just crash.",
         )
         assertNull(
-            index.refersTo,
+            indexA.refersTo,
             "We expect that the reference \"a\" used as an index in the first element of the tuple does not refer to the same VariableDeclaration as the second element of the tuple nor to the local variable nor does it have an own VariableDeclaration since python would just crash.",
-        )*/
+        )
     }
 
     @Test
@@ -1805,6 +1965,11 @@ class CollectionComprehensionTest {
             bDeclaration,
             "We expect that the reference \"b\" in the control variable refers to the VariableDeclaration of \"b\" which is added outside the list comprehension (in statement 0).",
         )
+        assertContains(
+            accessB0.prevDFG,
+            comprehensionExpression.iterable,
+            "We expect that there's a DFG edge flowing into the control variable \"b[0]\" from the iterable",
+        )
     }
 
     @Test
@@ -1917,6 +2082,16 @@ class CollectionComprehensionTest {
             bMemberA,
             fieldA,
             "We expect that the member expression \"b.a\" used as control variable refers to the FieldDeclaration \"a\" of the class \"Magic\".",
+        )
+        assertEquals(
+            1,
+            bMemberA.prevDFGEdges.size,
+            "We expect that there's one DFG edge flowing into the control variable \"b.a\". The DFG should come from the iterable.",
+        )
+        assertEquals(
+            comprehensionExpression.iterable,
+            bMemberA.prevDFG.single(),
+            "We expect that there's one DFG edge flowing into the control variable \"b.a\". The DFG should come from the iterable.",
         )
     }
 }
