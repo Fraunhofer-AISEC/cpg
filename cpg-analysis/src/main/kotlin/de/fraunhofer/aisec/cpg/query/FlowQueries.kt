@@ -104,18 +104,23 @@ enum class AnalysisSensitivity {
 
 private fun dataFlowBase(
     startNode: Node,
-    predicate: (Node) -> Boolean,
     direction: AnalysisDirection,
     type: AnalysisType,
     sensitivities: AnalysisSensitivities,
     scope: AnalysisScope,
     verbose: Boolean = true,
+    earlyTermination: ((Node) -> Boolean)? = null,
+    predicate: (Node) -> Boolean,
 ): QueryTree<Boolean> {
     val collectFailedPaths = type == AnalysisType.MUST || verbose
     val findAllPossiblePaths = type == AnalysisType.MUST || verbose
     val useIndexStack = AnalysisSensitivity.FIELD_SENSITIVE in sensitivities
     val contextSensitive = AnalysisSensitivity.CONTEXT_SENSITIVE in sensitivities
     val interproceduralAnalysis = scope is INTERPROCEDURAL
+    val earlyTermination = { n: Node, ctx: Context ->
+        earlyTermination?.let { it(n) } != false &&
+            (scope as? MAX_STEPS)?.steps?.let { ctx.steps >= it } != false
+    }
     val evalRes =
         when (direction) {
             AnalysisDirection.FORWARD -> {
@@ -125,6 +130,7 @@ private fun dataFlowBase(
                     useIndexStack = useIndexStack,
                     contextSensitive = contextSensitive,
                     interproceduralAnalysis = interproceduralAnalysis,
+                    earlyTermination = earlyTermination,
                     predicate = predicate,
                 )
             }
@@ -135,6 +141,7 @@ private fun dataFlowBase(
                     useIndexStack = useIndexStack,
                     contextSensitive = contextSensitive,
                     interproceduralAnalysis = interproceduralAnalysis,
+                    earlyTermination = earlyTermination,
                     predicate = predicate,
                 )
             }
@@ -145,6 +152,7 @@ private fun dataFlowBase(
                     useIndexStack = useIndexStack,
                     contextSensitive = contextSensitive,
                     interproceduralAnalysis = interproceduralAnalysis,
+                    earlyTermination = earlyTermination,
                     predicate = predicate,
                 ) +
                     startNode.followPrevDFGEdgesUntilHit(
@@ -153,6 +161,7 @@ private fun dataFlowBase(
                         useIndexStack = useIndexStack,
                         contextSensitive = contextSensitive,
                         interproceduralAnalysis = interproceduralAnalysis,
+                        earlyTermination = earlyTermination,
                         predicate = predicate,
                     )
             }
@@ -199,15 +208,20 @@ private fun dataFlowBase(
 
 private fun executionPathBase(
     startNode: Node,
-    predicate: (Node) -> Boolean,
     direction: AnalysisDirection,
     type: AnalysisType,
     scope: AnalysisScope,
     verbose: Boolean = true,
+    earlyTermination: ((Node) -> Boolean)? = null,
+    predicate: (Node) -> Boolean,
 ): QueryTree<Boolean> {
     val collectFailedPaths = type == AnalysisType.MUST || verbose
     val findAllPossiblePaths = type == AnalysisType.MUST || verbose
     val interproceduralAnalysis = scope is INTERPROCEDURAL
+    val earlyTermination = { n: Node, ctx: Context ->
+        earlyTermination?.let { it(n) } != false &&
+            (scope as? MAX_STEPS)?.steps?.let { ctx.steps >= it } != false
+    }
     val evalRes =
         when (direction) {
             AnalysisDirection.FORWARD -> {
@@ -215,6 +229,7 @@ private fun executionPathBase(
                     collectFailedPaths = collectFailedPaths,
                     findAllPossiblePaths = findAllPossiblePaths,
                     interproceduralAnalysis = interproceduralAnalysis,
+                    earlyTermination = earlyTermination,
                     predicate = predicate,
                 )
             }
@@ -223,6 +238,7 @@ private fun executionPathBase(
                     collectFailedPaths = collectFailedPaths,
                     findAllPossiblePaths = findAllPossiblePaths,
                     interproceduralAnalysis = interproceduralAnalysis,
+                    earlyTermination = earlyTermination,
                     predicate = predicate,
                 )
             }
@@ -231,12 +247,14 @@ private fun executionPathBase(
                     collectFailedPaths = collectFailedPaths,
                     findAllPossiblePaths = findAllPossiblePaths,
                     interproceduralAnalysis = interproceduralAnalysis,
+                    earlyTermination = earlyTermination,
                     predicate = predicate,
                 ) +
                     startNode.followPrevEOGEdgesUntilHit(
                         collectFailedPaths = collectFailedPaths,
                         findAllPossiblePaths = findAllPossiblePaths,
                         interproceduralAnalysis = interproceduralAnalysis,
+                        earlyTermination = earlyTermination,
                         predicate = predicate,
                     )
             }
@@ -289,7 +307,13 @@ fun dataFlowWithValidator(
     sensitivities: AnalysisSensitivities,
 ): QueryTree<Boolean> {
     val flowsToValidator =
-        source.alwaysFlowsTo(validatorPredicate, true, scope = scope, sensitivities = sensitivities)
+        source.alwaysFlowsTo(
+            allowOverwritingValue = true,
+            earlyTermination = sinkPredicate,
+            scope = scope,
+            sensitivities = sensitivities,
+            predicate = validatorPredicate,
+        )
     val resultChildren = mutableListOf<QueryTree<Boolean>>()
     for (child in (flowsToValidator.children as List<QueryTree<Boolean>>)) {
         // child is a QueryTree<Boolean> whose children consist of a list with a single item of type
@@ -359,12 +383,12 @@ fun dataFlow(
 ) =
     dataFlowBase(
         startNode = source,
-        { it == sink },
         direction = AnalysisDirection.FORWARD,
         type = AnalysisType.MAY,
         sensitivities = AnalysisSensitivity.FIELD_SENSITIVE + AnalysisSensitivity.CONTEXT_SENSITIVE,
         scope = INTERPROCEDURAL(),
         verbose = collectFailedPaths || findAllPossiblePaths,
+        predicate = { it == sink },
     )
 
 /** Checks if a data flow is possible between the [source] and a sink fulfilling [predicate]. */
@@ -376,12 +400,12 @@ fun dataFlow(
 ) =
     dataFlowBase(
         startNode = source,
-        predicate = predicate,
         direction = AnalysisDirection.FORWARD,
         type = AnalysisType.MAY,
         sensitivities = AnalysisSensitivity.FIELD_SENSITIVE + AnalysisSensitivity.CONTEXT_SENSITIVE,
         scope = INTERPROCEDURAL(),
         verbose = collectFailedPaths || findAllPossiblePaths,
+        predicate = predicate,
     )
 
 /** Checks if a path of execution flow is possible between the nodes [from] and [to]. */
@@ -424,84 +448,71 @@ fun executionPathBackwards(to: Node, predicate: (Node) -> Boolean) =
     )
 
 fun Node.alwaysFlowsTo(
-    predicate: (Node) -> Boolean,
     allowOverwritingValue: Boolean = false,
+    earlyTermination: ((Node) -> Boolean)? = null,
     scope: AnalysisScope,
     sensitivities: AnalysisSensitivities,
+    predicate: (Node) -> Boolean,
 ): QueryTree<Boolean> {
-    val nextDFGPaths = this.collectAllNextDFGPaths().flatten()
-    val executionPaths = this.collectAllNextEOGPaths()
-    var result = true
-    val children = mutableListOf<QueryTree<Boolean>>()
-    for (executionPath in executionPaths) {
-        var foundMatch = false
-        for ((i, step) in executionPath.withIndex()) {
-            // Check if there's a (partial) write to the memory address keeping the data of this
-            if (
-                !allowOverwritingValue &&
-                    // TODO: This should be replaced with some check if the memory location/whatever
-                    // where the data is kept is (partially) written to.
-                    this in step.prevDFG &&
-                    (step as? Reference)?.access == AccessValues.WRITE
-            ) {
-                result = false
-                children.add(
-                    QueryTree(
-                        value = false,
-                        children = mutableListOf(QueryTree(executionPath.subList(0, i))),
-                        stringRepresentation =
-                            "Node $step overwrites (some) data of $this before reaching a node matching the predicate",
-                        node = this,
-                    )
-                )
-                foundMatch = true
-                break
-            }
-            // Check if the node matches the predicate and there's a data flow path
-            if (predicate(step) && step in nextDFGPaths) {
-                children.add(
-                    QueryTree(
-                        value = true,
-                        children = mutableListOf(QueryTree(executionPath.subList(0, i))),
-                        stringRepresentation =
-                            "Node $step fulfills the predicate is reachable from $this",
-                        node = this,
-                    )
-                )
-                foundMatch = true
-                break
-            }
+    val nextDFGPaths =
+        this.collectAllNextDFGPaths(
+                interproceduralAnalysis = scope is INTERPROCEDURAL,
+                contextSensitive = AnalysisSensitivity.CONTEXT_SENSITIVE in sensitivities,
+            )
+            .flatten()
+    val earlyTerminationPredicate = { n: Node, ctx: Context ->
+        earlyTermination?.let { it(n) } != false &&
+            (scope as? MAX_STEPS)?.steps?.let { ctx.steps >= it } != false &&
+            (!allowOverwritingValue &&
+                // TODO: This should be replaced with some check if the memory location/whatever
+                // where the data is kept is (partially) written to.
+                this in n.prevDFG &&
+                (n as? Reference)?.access == AccessValues.WRITE)
+    }
+    val nextEOGEvaluation =
+        this.followNextEOGEdgesUntilHit(
+            collectFailedPaths = true,
+            findAllPossiblePaths = true,
+            interproceduralAnalysis = scope is INTERPROCEDURAL,
+            earlyTermination = earlyTerminationPredicate,
+        ) {
+            predicate(it) && it in nextDFGPaths
         }
-        if (foundMatch == false) {
-            result = false
-            children.add(
+    val allChildren =
+        nextEOGEvaluation.failed.map {
+            QueryTree(
+                value = false,
+                children = mutableListOf(QueryTree(value = it)),
+                stringRepresentation =
+                    "The EOG path reached the end  " +
+                        if (earlyTermination != null)
+                            "(or ${it.lastOrNull()} which a predicate marking the end) "
+                        else "" + "before passing through a node matching the required predicate.",
+                node = this,
+            )
+        } +
+            nextEOGEvaluation.fulfilled.map {
                 QueryTree(
-                    value = false,
-                    children = mutableListOf(QueryTree(executionPath)),
+                    value = true,
+                    children = mutableListOf(QueryTree(value = it)),
                     stringRepresentation =
-                        "Reached the end of the EOG reachable from $this without fulfilling the predicate",
+                        "The EOG path reached the node ${it.lastOrNull()} matching the required predicate" +
+                            if (earlyTermination != null)
+                                " before reaching a node matching the early termination predicate"
+                            else "",
                     node = this,
                 )
-            )
-        }
-    }
+            }
     return QueryTree(
-        result,
-        children.toMutableList(),
+        value = nextEOGEvaluation.failed.isEmpty(),
+        children = allChildren.toMutableList(),
         stringRepresentation =
-            if (result) {
+            if (nextEOGEvaluation.failed.isEmpty()) {
                 "All EOG paths fulfilled the predicate"
             } else {
                 "Some EOG paths failed to fulfill the predicate"
             },
         node = this,
-    )
-    return executionPathBase(
-        this,
-        predicate = { predicate(it) && it in nextDFGPaths },
-        direction = AnalysisDirection.FORWARD,
-        type = AnalysisType.MUST,
-        scope = INTERPROCEDURAL(),
     )
 }
 
