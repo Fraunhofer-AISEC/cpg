@@ -89,11 +89,7 @@ open class Reference : Expression(), HasType.TypeObserver, HasAliases {
 
     override var aliases = mutableSetOf<HasAliases>()
 
-    /**
-     * Is this reference used for writing data instead of just reading it? Determines dataflow
-     * direction
-     */
-    var access = AccessValues.READ
+    override var access = AccessValues.READ
     var isStaticAccess = false
 
     /**
@@ -168,7 +164,7 @@ open class Reference : Expression(), HasType.TypeObserver, HasAliases {
      * [resolutionHelper] and [scope]. Its purpose is to cache symbol resolutions, similar to LLVMs
      * system of Unified Symbol Resolution (USR). Please be aware, that this tag is not guaranteed
      * to be 100 % unique, especially if the language frontend is missing [Node.location]
-     * information (of the [Scope.astNode]. Therefore, its usage should be similar to a [hashCode],
+     * information (of the [scope.astNode]). Therefore, its usage should be similar to a [hashCode],
      * so that in case of an equal hash-code, a [equals] comparison (in this case of the [scope]) is
      * needed.
      */
