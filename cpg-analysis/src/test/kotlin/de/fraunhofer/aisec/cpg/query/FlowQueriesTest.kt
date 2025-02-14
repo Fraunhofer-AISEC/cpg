@@ -287,7 +287,7 @@ class FlowQueriesTest {
         print(queryResultMust.printNicely())
         assertFalse(
             queryResultMust.value,
-            "For the MUST analysis, we cannot ignore the else statement which violates that the value in \"b\" arrives in baz.",
+            "For the MUST analysis, we cannot ignore the else statement which violates that the value in \"b\" arrives in baz and in addition, there's the path which won't reach the \"5\".",
         )
         queryResultMust.children.forEach {
             // There are multiple paths which have their own query tree. The children here hold the
@@ -393,22 +393,22 @@ class FlowQueriesTest {
             }
         }
 
-        // Intraprocedural bidirectional may analysis. The rest doesn't matter. We should also
-        // arrive at baz forward.
-        val queryResultMayB =
+        // Intraprocedural bidirectional may analysis. The rest doesn't matter. We should not arrive
+        // at the 5 because there's a function call on the path.
+        val queryResultMayBTo5 =
             dataFlowBase(
                 startNode = refB,
                 direction = AnalysisDirection.BACKWARD,
                 scope = INTRAPROCEDURAL(),
                 type = AnalysisType.MAY,
-                predicate = { (it.astParent as? CallExpression)?.name?.localName == "baz" },
+                predicate = { (it as? Literal<*>)?.value == 5 },
             )
-        print(queryResultMayB.printNicely())
-        assertTrue(
-            queryResultMayB.value,
-            "For the MAY analysis, we can ignore the direct route which violates that the value in \"b\" arrives in baz.",
+        print(queryResultMayBTo5.printNicely())
+        assertFalse(
+            queryResultMayBTo5.value,
+            "For the MAY analysis, we can ignore the direct route which violates that reaches the \"5\" but we cannot get through the function call on the path.",
         )
-        queryResultMayB.children.forEach {
+        queryResultMayBTo5.children.forEach {
             // There are multiple paths which have their own query tree. The children here hold the
             // list of visited nodes in the value.
             val path = it.children.singleOrNull()?.value as? List<Node>
@@ -424,20 +424,78 @@ class FlowQueriesTest {
 
         // Intraprocedural forward may analysis. The rest doesn't matter. Either arrive at the 5
         // (backwards) or in baz (forward).
-        val queryResultMustB =
+        val queryResultMustBTo5 =
             dataFlowBase(
                 startNode = refB,
                 direction = AnalysisDirection.BACKWARD,
                 scope = INTRAPROCEDURAL(),
                 type = AnalysisType.MUST,
-                predicate = { (it.astParent as? CallExpression)?.name?.localName == "baz" },
+                predicate = { (it as? Literal<*>)?.value == 5 },
             )
-        print(queryResultMustB.printNicely())
+        print(queryResultMustBTo5.printNicely())
         assertFalse(
-            queryResultMustB.value,
-            "For the MUST analysis, we cannot ignore the direct route which violates that the value in \"b\" arrives in baz.",
+            queryResultMustBTo5.value,
+            "For the MUST analysis, we cannot ignore the direct route which violates that reaches the \"5\" and we cannot get through the function call on the path.",
         )
-        queryResultMustB.children.forEach {
+        queryResultMustBTo5.children.forEach {
+            // There are multiple paths which have their own query tree. The children here hold the
+            // list of visited nodes in the value.
+            val path = it.children.singleOrNull()?.value as? List<Node>
+            assertNotNull(path, "There should be a path represented by a list of nodes")
+            path.forEach { node ->
+                assertLocalName(
+                    "main",
+                    node.firstParentOrNull<FunctionDeclaration>(),
+                    "We expect that all nodes are within the function \"main\". I.e., there's no node in foo.",
+                )
+            }
+        }
+
+        // Intraprocedural bidirectional may analysis. The rest doesn't matter. We should arrive at
+        // the value "bla".
+        val queryResultMayBToBla =
+            dataFlowBase(
+                startNode = refB,
+                direction = AnalysisDirection.BACKWARD,
+                scope = INTRAPROCEDURAL(),
+                type = AnalysisType.MAY,
+                predicate = { (it as? Literal<*>)?.value == "bla" },
+            )
+        print(queryResultMayBToBla.printNicely())
+        assertTrue(
+            queryResultMayBToBla.value,
+            "For the MAY analysis, we can ignore the direct route which violates that reaches the \"bla\".",
+        )
+        queryResultMayBToBla.children.forEach {
+            // There are multiple paths which have their own query tree. The children here hold the
+            // list of visited nodes in the value.
+            val path = it.children.singleOrNull()?.value as? List<Node>
+            assertNotNull(path, "There should be a path represented by a list of nodes")
+            path.forEach { node ->
+                assertLocalName(
+                    "main",
+                    node.firstParentOrNull<FunctionDeclaration>(),
+                    "We expect that all nodes are within the function \"main\". I.e., there's no node in foo.",
+                )
+            }
+        }
+
+        // Intraprocedural forward may analysis. The rest doesn't matter. Either arrive at the value
+        // "bla".
+        val queryResultMustBToBla =
+            dataFlowBase(
+                startNode = refB,
+                direction = AnalysisDirection.BACKWARD,
+                scope = INTRAPROCEDURAL(),
+                type = AnalysisType.MUST,
+                predicate = { (it as? Literal<*>)?.value == "bla" },
+            )
+        print(queryResultMustBToBla.printNicely())
+        assertFalse(
+            queryResultMustBToBla.value,
+            "For the MUST analysis, we cannot ignore the direct route which violates that reaches the \"bla\".",
+        )
+        queryResultMustBToBla.children.forEach {
             // There are multiple paths which have their own query tree. The children here hold the
             // list of visited nodes in the value.
             val path = it.children.singleOrNull()?.value as? List<Node>
