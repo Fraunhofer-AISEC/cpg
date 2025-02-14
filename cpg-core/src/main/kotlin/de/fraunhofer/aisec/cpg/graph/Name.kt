@@ -74,6 +74,22 @@ class Name(
     public override fun clone(): Name = Name(localName, parent?.clone(), delimiter)
 
     /**
+     * This function splits a fully qualified name into its parts. For example,
+     * `my::namespace::name` would be split into `["my", "my::namespace", "my::namespace::name"]`.
+     */
+    fun split(): List<Name> {
+        val list = mutableListOf<Name>()
+
+        var current: Name? = this
+        while (current != null) {
+            list.add(current)
+            current = current.parent
+        }
+
+        return list
+    }
+
+    /**
      * Returns the string representation of this name using a fully qualified name notation with the
      * specified [delimiter].
      */

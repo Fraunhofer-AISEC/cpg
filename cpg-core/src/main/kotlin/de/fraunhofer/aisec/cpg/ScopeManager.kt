@@ -545,7 +545,7 @@ class ScopeManager : ScopeProvider {
         // First, we need to check, whether we have some kind of scoping.
         if (n.isQualified()) {
             // We need to check, whether we have an alias for the name's parent in this file
-            n = resolveParentAlias(n, scope)
+            n = resolveName(n, scope) ?: n
 
             // extract the scope name, it is usually a name space, but could probably be something
             // else as well in other languages
@@ -571,19 +571,45 @@ class ScopeManager : ScopeProvider {
      * This function resolves a name alias (contained in an import alias) for the [Name.parent] of
      * the given [Name]. It also does this recursively.
      */
-    fun resolveParentAlias(name: Name, scope: Scope?): Name {
-        if (name.parent == null) {
-            return name
+    fun resolveName(name: Name, scope: Scope?): Name? {
+        val names = name.split().toMutableList()
+        val finalNames = mutableListOf<Name>()
+
+        var current: Name? = null
+        var currentScope = scope
+        var parent: Name? = null
+        while (names.isNotEmpty()) {
+            current = names.removeLast()
+
+            // Adjust the parent name
+            current = adjustNameIfNecessary(parent, current.parent, current)
+
+            val newScope =
+                currentScope
+                    ?.lookupSymbol(current.localName) {
+                        it is NamespaceDeclaration || it is RecordDeclaration
+                    }
+                    ?.map { nameScopeMap[it.name] }
+                    ?.toSet()
+                    ?.singleOrNull()
+
+            // Set this name as the new parent
+            parent =
+                if (newScope != null && newScope.name.localName != current.localName) {
+                    newScope.name
+                } else {
+                    current
+                }
         }
 
-        val parentName = resolveParentAlias(name.parent, scope)
+        /*val (parentName, parentScope) = resolveName(name.parent, scope)
 
         val newName = adjustNameIfNecessary(parentName, name.parent, name)
 
         // Look for an alias in the current scope. This is also resolves partial FQNs to their full
         // FQN
         var newScope =
-            scope
+            parentScope
                 ?.lookupSymbol(parentName.localName) {
                     it is NamespaceDeclaration || it is RecordDeclaration
                 }
@@ -592,7 +618,7 @@ class ScopeManager : ScopeProvider {
                 ?.singleOrNull()
         if (newScope != null) {
             // This is probably an already resolved alias so, we take this one
-            return adjustNameIfNecessary(newScope.name, parentName, newName)
+            return Pair(adjustNameIfNecessary(newScope.name, parentName, newName), newScope)
         }
 
         // Some special handling of typedefs; this should somehow be merged with the above but not
@@ -603,13 +629,17 @@ class ScopeManager : ScopeProvider {
         val decl =
             scope?.lookupSymbol(parentName.localName)?.singleOrNull { it is TypedefDeclaration }
         if ((decl as? TypedefDeclaration) != null) {
-            return adjustNameIfNecessary(decl.type.name, parentName, newName)
-        }
+            return Pair(adjustNameIfNecessary(decl.type.name, parentName, newName), newScope)
+        }*/
 
-        return newName
+        return current
     }
 
-    private fun adjustNameIfNecessary(newParentName: Name, oldParentName: Name, name: Name): Name =
+    private fun adjustNameIfNecessary(
+        newParentName: Name?,
+        oldParentName: Name?,
+        name: Name,
+    ): Name =
         if (newParentName != oldParentName) {
             Name(name.localName, newParentName, delimiter = name.delimiter)
         } else {
