@@ -277,7 +277,6 @@ fun Node.followPrevDFGEdgesUntilHit(
     earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
-    // TODO: This method lacks context sensitive steps
     return followXUntilHit(
         x = { currentNode, ctx, path ->
             if (
@@ -303,9 +302,19 @@ fun Node.followPrevDFGEdgesUntilHit(
                     }
                     .map { it.start }
             } else {
-                // We don't have to care about poping stuff from the stack. Maybe we can push
-                // something but we accept everything.
+                // We don't have to care about poping stuff from the stack.
+                // First, let's take care of pushing any information on the stacks (index, calling
+                // context)
                 currentNode.prevDFGEdges.forEach {
+                    if (
+                        interproceduralAnalysis &&
+                            contextSensitive &&
+                            it is ContextSensitiveDataflow &&
+                            it.callingContext is CallingContextOut
+                    ) {
+                        // Push the call of our calling context to the stack
+                        ctx.callStack.push(it.callingContext.call)
+                    }
                     if (
                         it.start is InitializerListExpression &&
                             it.granularity is IndexedDataflowGranularity
@@ -315,7 +324,48 @@ fun Node.followPrevDFGEdgesUntilHit(
                         ctx.indexStack.push(it.granularity as IndexedDataflowGranularity)
                     }
                 }
-                currentNode.prevDFG
+
+                // We need to filter out the edges which based on the stack
+                val selected =
+                    currentNode.prevDFGEdges
+                        .filter {
+                            if (
+                                interproceduralAnalysis &&
+                                    contextSensitive &&
+                                    ctx.callStack.isEmpty()
+                            ) {
+                                true
+                            } else if (
+                                interproceduralAnalysis &&
+                                    contextSensitive &&
+                                    it is ContextSensitiveDataflow &&
+                                    it.callingContext is CallingContextIn
+                            ) {
+                                // We are only interested in outgoing edges from our current
+                                // "call-in", i.e., the call expression that is on the stack.
+                                ctx.callStack.top == it.callingContext.call
+                            } else if (it is ContextSensitiveDataflow && !interproceduralAnalysis) {
+                                false
+                            } else {
+                                true
+                            }
+                        }
+                        .map { it.start }
+
+                // Let's do any remaining pop'ing
+                currentNode.prevDFGEdges.forEach {
+                    if (
+                        interproceduralAnalysis &&
+                            contextSensitive &&
+                            it is ContextSensitiveDataflow &&
+                            it.callingContext is CallingContextIn
+                    ) {
+                        // Pop the current call, if it's on top
+                        ctx.callStack.popIfOnTop(it.callingContext.call)
+                    }
+                }
+
+                selected
             }
         },
         collectFailedPaths = collectFailedPaths,
