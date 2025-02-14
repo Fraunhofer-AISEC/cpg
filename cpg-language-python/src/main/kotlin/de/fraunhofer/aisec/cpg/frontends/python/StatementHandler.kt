@@ -629,7 +629,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             // Todo add all files according to our import name, from externalSources to
             // importedSources
             var currentName = importName
-            while (currentName.parent?.isNotEmpty() == true) {
+            while (currentName.isNotEmpty()) {
                 var importPath = currentName.toString().replace(language.namespaceDelimiter, "/")
 
                 language.fileExtensions.forEach { fileExtension ->
