@@ -547,12 +547,12 @@ class FlowQueriesTest {
             "There is only one path which goes from the variable through print to baz.",
         )
 
-        val resultLinearFails = FlowQueriesTest.validatorDataflowLinear()
-        val linearStartAFails = resultLinearFails.variables["a"]
-        assertNotNull(linearStartAFails, "There's a variable \"a\" in main")
-        val linearResultFails =
+        val resultLinearWithB = FlowQueriesTest.validatorDataflowLinear()
+        val linearStartAWithB = resultLinearWithB.variables["a"]
+        assertNotNull(linearStartAWithB, "There's a variable \"a\" in main")
+        val linearResultWithB =
             dataFlowWithValidator(
-                source = linearStartAFails,
+                source = linearStartAWithB,
                 validatorPredicate = { node ->
                     (node.astParent as? CallExpression)?.name?.localName == "print"
                 },
@@ -562,8 +562,27 @@ class FlowQueriesTest {
                 scope = INTRAPROCEDURAL(),
             )
         assertTrue(
-            linearResultFails.value,
+            linearResultWithB.value,
             "There is only one path which goes from the variable through print(b) to baz.",
+        )
+
+        val resultLinearWithBInterProc = FlowQueriesTest.validatorDataflowLinearWithCall()
+        val linearStartAWithBInterProc = resultLinearWithBInterProc.variables["a"]
+        assertNotNull(linearStartAWithBInterProc, "There's a variable \"a\" in main")
+        val linearResultWithBInterProc =
+            dataFlowWithValidator(
+                source = linearStartAWithBInterProc,
+                validatorPredicate = { node ->
+                    (node.astParent as? CallExpression)?.name?.localName == "print"
+                },
+                sinkPredicate = { node ->
+                    (node.astParent as? CallExpression)?.name?.localName == "baz"
+                },
+                scope = INTRAPROCEDURAL(),
+            )
+        assertFalse(
+            linearResultWithBInterProc.value,
+            "The path using \"b\" cannot be found because we have to go through the function call \"foo\".",
         )
 
         val resultIf = FlowQueriesTest.validatorDataflowIfSimple()
@@ -604,6 +623,25 @@ class FlowQueriesTest {
             "There is a path which goes through the \"else\" branch but prints b before reaching baz.",
         )
 
+        val resultIfWithBInterProc = FlowQueriesTest.validatorDataflowIfWithCall()
+        val ifStartAWithBInterProc = resultIfWithBInterProc.variables["a"]
+        assertNotNull(ifStartAWithBInterProc, "There's a variable \"a\" in main")
+        val ifResultWithBInterProc =
+            dataFlowWithValidator(
+                source = ifStartAWithBInterProc,
+                validatorPredicate = { node ->
+                    (node.astParent as? CallExpression)?.name?.localName == "print"
+                },
+                sinkPredicate = { node ->
+                    (node.astParent as? CallExpression)?.name?.localName == "baz"
+                },
+                scope = INTRAPROCEDURAL(),
+            )
+        assertFalse(
+            ifResultWithBInterProc.value,
+            "The path using \"b\" cannot be found because we have to go through the function call \"foo\".",
+        )
+
         val resultIfElse = FlowQueriesTest.validatorDataflowIfElseSimple()
         val ifElseStartA = resultIfElse.variables["a"]
         assertNotNull(ifElseStartA, "There's a variable \"a\" in main")
@@ -635,5 +673,24 @@ class FlowQueriesTest {
                 scope = INTRAPROCEDURAL(),
             )
         assertTrue(ifElseWithBResult.value, "Both paths go from the variable through print to baz.")
+
+        val resultIfElseWithBInterProc = FlowQueriesTest.validatorDataflowIfElseWithCall()
+        val ifElseStartAWithBInterProc = resultIfElseWithBInterProc.variables["a"]
+        assertNotNull(ifElseStartAWithBInterProc, "There's a variable \"a\" in main")
+        val ifElseWithBResultInterProc =
+            dataFlowWithValidator(
+                source = ifElseStartAWithBInterProc,
+                validatorPredicate = { node ->
+                    (node.astParent as? CallExpression)?.name?.localName == "print"
+                },
+                sinkPredicate = { node ->
+                    (node.astParent as? CallExpression)?.name?.localName == "baz"
+                },
+                scope = INTRAPROCEDURAL(),
+            )
+        assertFalse(
+            ifElseWithBResultInterProc.value,
+            "The path using \"b\" cannot be found because we have to go through the function call \"foo\".",
+        )
     }
 }
