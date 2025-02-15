@@ -347,6 +347,11 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
 
                 // Register the type with the type system
                 frontend.typeManager.registerType(record.toType())
+
+                // Make sure to add the scope to the scope manager
+                frontend.scopeManager.enterScope(record)
+                frontend.scopeManager.leaveScope(record)
+
                 record
             }
         }
