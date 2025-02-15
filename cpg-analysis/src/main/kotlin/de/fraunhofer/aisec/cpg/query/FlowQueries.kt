@@ -308,71 +308,12 @@ fun dataFlowWithValidator(
     scope: AnalysisScope,
     vararg sensitivities: AnalysisSensitivity,
 ): QueryTree<Boolean> {
-    val flowsToValidator =
-        source.alwaysFlowsTo(
-            allowOverwritingValue = true,
-            earlyTermination = sinkPredicate,
-            scope = scope,
-            sensitivities = sensitivities,
-            predicate = validatorPredicate,
-        )
-    val resultChildren = mutableListOf<QueryTree<Boolean>>()
-    for (child in (flowsToValidator.children as List<QueryTree<Boolean>>)) {
-        // child is a QueryTree<Boolean> whose children consist of a list with a single item of type
-        // QueryTree<List<Node>>.
-        val nodesOnPath = (child.children.singleOrNull() as? QueryTree<List<Node>>)?.value
-        // We check if any node in the List<Node> fulfills sinkPredicate.
-        val sinksOnPath =
-            nodesOnPath?.filter { node ->
-                sinkPredicate(node) &&
-                    dataFlowBase(
-                            startNode = source,
-                            predicate = { it == node },
-                            direction = AnalysisDirection.FORWARD,
-                            type = AnalysisType.MAY,
-                            sensitivities = sensitivities,
-                            scope = scope,
-                            verbose = false,
-                        )
-                        .value
-            } ?: listOf()
-        if (sinksOnPath.isNotEmpty()) {
-            // There's at least one node on the path between source and validatorPredicate which
-            // qualifies as sink. This means, this subtree does not fulfill our requirement. We
-            // change the value of this subtree and update the string.
-            resultChildren.add(
-                QueryTree(
-                    value = false,
-                    children =
-                        mutableListOf(
-                            QueryTree(
-                                value = nodesOnPath,
-                                stringRepresentation = "Path between the source and validator",
-                            ),
-                            QueryTree(
-                                value = sinksOnPath,
-                                stringRepresentation = "The sinks on the path",
-                            ),
-                        ),
-                    stringRepresentation =
-                        "The path between $source and the sink(s) $sinksOnPath is shorter than the path to the validator ${nodesOnPath?.lastOrNull()}",
-                    node = source,
-                )
-            )
-        } else {
-            // There was no sink on the path. We're happy and keep the child as-is for the result.
-            resultChildren.add(child)
-        }
-    }
-    val value = resultChildren.all { it.value }
-    return QueryTree(
-        value = value,
-        children = resultChildren.toMutableList(),
-        stringRepresentation =
-            if (value)
-                "All paths from $source first run through a validator before reaching a sink or never reach a sink."
-            else "Some paths from $source reach a sink before visiting a validator",
-        node = source,
+    return source.alwaysFlowsTo(
+        allowOverwritingValue = true,
+        earlyTermination = sinkPredicate,
+        scope = scope,
+        sensitivities = sensitivities,
+        predicate = validatorPredicate,
     )
 }
 
@@ -463,12 +404,13 @@ fun Node.alwaysFlowsTo(
             )
             .flatten()
     val earlyTerminationPredicate = { n: Node, ctx: Context ->
-        earlyTermination?.let { it(n) } == true || scope.maxSteps?.let { ctx.steps >= it } == true
-        (!allowOverwritingValue &&
-            // TODO: This should be replaced with some check if the memory location/whatever
-            // where the data is kept is (partially) written to.
-            this in n.prevDFG &&
-            (n as? Reference)?.access == AccessValues.WRITE)
+        earlyTermination?.let { it(n) } == true ||
+            scope.maxSteps?.let { ctx.steps >= it } == true ||
+            (!allowOverwritingValue &&
+                // TODO: This should be replaced with some check if the memory location/whatever
+                // where the data is kept is (partially) written to.
+                this in n.prevDFG &&
+                (n as? Reference)?.access == AccessValues.WRITE)
     }
     val nextEOGEvaluation =
         this.followNextEOGEdgesUntilHit(

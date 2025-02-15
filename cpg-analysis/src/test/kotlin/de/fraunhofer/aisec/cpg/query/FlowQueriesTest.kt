@@ -90,6 +90,236 @@ class FlowQueriesTest {
             }
         }
 
+    fun validatorDataflowLinear(
+        config: TranslationConfiguration =
+            TranslationConfiguration.builder()
+                .defaultPasses()
+                .registerLanguage(TestLanguage("."))
+                .build()
+    ) =
+        testFrontend(config).build {
+            translationResult {
+                translationUnit("Dataflow.java") {
+                    function("foo", t("string")) {
+                        param("arg", t("int"))
+                        body { returnStmt { call("toString") { ref("arg") } } }
+                    }
+
+                    function("main", void()) {
+                        param("args", t("string").array())
+                        body {
+                            declare { variable("a", t("int")) { literal(5, t("int")) } }
+
+                            declare {
+                                variable("b", t("string")) {
+                                    literal("bla", t("string")) +
+                                        ref("a") +
+                                        call("foo") { call("bar") }
+                                }
+                            }
+                            call("print") { ref("b") }
+
+                            call("baz") { ref("a") + ref("b") }
+                        }
+                    }
+                }
+            }
+        }
+
+    fun validatorDataflowIf(
+        config: TranslationConfiguration =
+            TranslationConfiguration.builder()
+                .defaultPasses()
+                .registerLanguage(TestLanguage("."))
+                .build()
+    ) =
+        testFrontend(config).build {
+            translationResult {
+                translationUnit("Dataflow.java") {
+                    function("foo", t("string")) {
+                        param("arg", t("int"))
+                        body { returnStmt { call("toString") { ref("arg") } } }
+                    }
+
+                    function("main", void()) {
+                        param("args", t("string").array())
+                        body {
+                            declare { variable("a", t("int")) { literal(5, t("int")) } }
+
+                            declare {
+                                variable("b", t("string")) {
+                                    literal("bla", t("string")) +
+                                        ref("a") +
+                                        call("foo") { call("bar") }
+                                }
+                            }
+
+                            ifStmt {
+                                condition { ref("b") eq literal("test", t("string")) }
+                                thenStmt { call("print") { ref("a") } }
+                            }
+                            call("print") { ref("b") }
+
+                            call("baz") { ref("a") + ref("b") }
+                        }
+                    }
+                }
+            }
+        }
+
+    fun validatorDataflowIfElse(
+        config: TranslationConfiguration =
+            TranslationConfiguration.builder()
+                .defaultPasses()
+                .registerLanguage(TestLanguage("."))
+                .build()
+    ) =
+        testFrontend(config).build {
+            translationResult {
+                translationUnit("Dataflow.java") {
+                    function("foo", t("string")) {
+                        param("arg", t("int"))
+                        body { returnStmt { call("toString") { ref("arg") } } }
+                    }
+
+                    function("main", void()) {
+                        param("args", t("string").array())
+                        body {
+                            declare { variable("a", t("int")) { literal(5, t("int")) } }
+
+                            declare {
+                                variable("b", t("string")) {
+                                    literal("bla", t("string")) +
+                                        ref("a") +
+                                        call("foo") { call("bar") }
+                                }
+                            }
+
+                            ifStmt {
+                                condition { ref("b") eq literal("test", t("string")) }
+                                thenStmt { call("print") { ref("a") } }
+                                elseStmt { call("print") { ref("b") } }
+                                call("print") { ref("b") }
+                            }
+
+                            call("baz") { ref("a") + ref("b") }
+                        }
+                    }
+                }
+            }
+        }
+
+    fun validatorDataflowLinearSimple(
+        config: TranslationConfiguration =
+            TranslationConfiguration.builder()
+                .defaultPasses()
+                .registerLanguage(TestLanguage("."))
+                .build()
+    ) =
+        testFrontend(config).build {
+            translationResult {
+                translationUnit("Dataflow.java") {
+                    function("foo", t("string")) {
+                        param("arg", t("int"))
+                        body { returnStmt { call("toString") { ref("arg") } } }
+                    }
+
+                    function("main", void()) {
+                        param("args", t("string").array())
+                        body {
+                            declare { variable("a", t("int")) { literal(5, t("int")) } }
+
+                            declare {
+                                variable("b", t("string")) {
+                                    literal("bla", t("string")) + call("foo") { call("bar") }
+                                }
+                            }
+                            call("print") { ref("a") }
+
+                            call("baz") { ref("a") + ref("b") }
+                        }
+                    }
+                }
+            }
+        }
+
+    fun validatorDataflowIfSimple(
+        config: TranslationConfiguration =
+            TranslationConfiguration.builder()
+                .defaultPasses()
+                .registerLanguage(TestLanguage("."))
+                .build()
+    ) =
+        testFrontend(config).build {
+            translationResult {
+                translationUnit("Dataflow.java") {
+                    function("foo", t("string")) {
+                        param("arg", t("int"))
+                        body { returnStmt { call("toString") { ref("arg") } } }
+                    }
+
+                    function("main", void()) {
+                        param("args", t("string").array())
+                        body {
+                            declare { variable("a", t("int")) { literal(5, t("int")) } }
+
+                            declare {
+                                variable("b", t("string")) {
+                                    literal("bla", t("string")) + call("foo") { call("bar") }
+                                }
+                            }
+
+                            ifStmt {
+                                condition { ref("b") eq literal("test", t("string")) }
+                                thenStmt { call("print") { ref("a") } }
+                            }
+
+                            call("baz") { ref("a") + ref("b") }
+                        }
+                    }
+                }
+            }
+        }
+
+    fun validatorDataflowIfElseSimple(
+        config: TranslationConfiguration =
+            TranslationConfiguration.builder()
+                .defaultPasses()
+                .registerLanguage(TestLanguage("."))
+                .build()
+    ) =
+        testFrontend(config).build {
+            translationResult {
+                translationUnit("Dataflow.java") {
+                    function("foo", t("string")) {
+                        param("arg", t("int"))
+                        body { returnStmt { call("toString") { ref("arg") } } }
+                    }
+
+                    function("main", void()) {
+                        param("args", t("string").array())
+                        body {
+                            declare { variable("a", t("int")) { literal(5, t("int")) } }
+
+                            declare {
+                                variable("b", t("string")) {
+                                    literal("bla", t("string")) + call("foo") { call("bar") }
+                                }
+                            }
+
+                            ifStmt {
+                                condition { ref("b") eq literal("test", t("string")) }
+                                thenStmt { call("print") { ref("a") } }
+                                elseStmt { call("print") { ref("a") } }
+                            }
+
+                            call("baz") { ref("a") + ref("b") }
+                        }
+                    }
+                }
+            }
+        }
+
     @Test
     fun testIntraproceduralForwardDFG() {
         val result = verySimpleDataflow()
@@ -572,5 +802,100 @@ class FlowQueriesTest {
                 )
             }
         }
+    }
+
+    @Test
+    fun testValidatorDFGSimple() {
+        val resultLinear = validatorDataflowLinearSimple()
+        val linearStartA = resultLinear.variables["a"]
+        assertNotNull(linearStartA, "There's a variable \"a\" in main")
+        val linearResult =
+            dataFlowWithValidator(
+                source = linearStartA,
+                validatorPredicate = { node ->
+                    (node.astParent as? CallExpression)?.name?.localName == "print"
+                },
+                sinkPredicate = { node ->
+                    (node.astParent as? CallExpression)?.name?.localName == "baz"
+                },
+                scope = INTRAPROCEDURAL(),
+            )
+        assertTrue(
+            linearResult.value,
+            "There is only one path which goes from the variable through print to baz.",
+        )
+
+        val resultLinearFails = validatorDataflowLinear()
+        val linearStartAFails = resultLinearFails.variables["a"]
+        assertNotNull(linearStartAFails, "There's a variable \"a\" in main")
+        val linearResultFails =
+            dataFlowWithValidator(
+                source = linearStartAFails,
+                validatorPredicate = { node ->
+                    (node.astParent as? CallExpression)?.name?.localName == "print"
+                },
+                sinkPredicate = { node ->
+                    (node.astParent as? CallExpression)?.name?.localName == "baz"
+                },
+                scope = INTRAPROCEDURAL(),
+            )
+        assertTrue(
+            linearResultFails.value,
+            "There is only one path which goes from the variable through print(b) to baz.",
+        )
+
+        val resultIf = validatorDataflowIfSimple()
+        val ifStartA = resultIf.variables["a"]
+        assertNotNull(ifStartA, "There's a variable \"a\" in main")
+        val ifResult =
+            dataFlowWithValidator(
+                source = ifStartA,
+                validatorPredicate = { node ->
+                    (node.astParent as? CallExpression)?.name?.localName == "print"
+                },
+                sinkPredicate = { node ->
+                    (node.astParent as? CallExpression)?.name?.localName == "baz"
+                },
+                scope = INTRAPROCEDURAL(),
+            )
+        assertFalse(
+            ifResult.value,
+            "There is a path which goes through the \"else\" branch without passing print before reaching baz.",
+        )
+
+        val resultIfWithB = validatorDataflowIf()
+        val ifStartAWithB = resultIfWithB.variables["a"]
+        assertNotNull(ifStartAWithB, "There's a variable \"a\" in main")
+        val ifResultWithB =
+            dataFlowWithValidator(
+                source = ifStartAWithB,
+                validatorPredicate = { node ->
+                    (node.astParent as? CallExpression)?.name?.localName == "print"
+                },
+                sinkPredicate = { node ->
+                    (node.astParent as? CallExpression)?.name?.localName == "baz"
+                },
+                scope = INTRAPROCEDURAL(),
+            )
+        assertTrue(
+            ifResultWithB.value,
+            "There is a path which goes through the \"else\" branch but prints b before reaching baz.",
+        )
+
+        val resultIfElse = validatorDataflowIfElseSimple()
+        val ifElseStartA = resultIfElse.variables["a"]
+        assertNotNull(ifElseStartA, "There's a variable \"a\" in main")
+        val ifElseResult =
+            dataFlowWithValidator(
+                source = ifElseStartA,
+                validatorPredicate = { node ->
+                    (node.astParent as? CallExpression)?.name?.localName == "print"
+                },
+                sinkPredicate = { node ->
+                    (node.astParent as? CallExpression)?.name?.localName == "baz"
+                },
+                scope = INTRAPROCEDURAL(),
+            )
+        assertTrue(ifElseResult.value, "Both paths go from the variable through print to baz.")
     }
 }
