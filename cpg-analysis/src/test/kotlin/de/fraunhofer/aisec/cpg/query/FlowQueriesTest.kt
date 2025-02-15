@@ -693,4 +693,64 @@ class FlowQueriesTest {
             "The path using \"b\" cannot be found because we have to go through the function call \"foo\".",
         )
     }
+
+    @Test
+    fun testValidatorDFGSimpleInterprocedural() {
+        val resultLinearWithBInterProc = FlowQueriesTest.validatorDataflowLinearWithCall()
+        val linearStartAWithBInterProc = resultLinearWithBInterProc.variables["a"]
+        assertNotNull(linearStartAWithBInterProc, "There's a variable \"a\" in main")
+        val linearResultWithBInterProc =
+            dataFlowWithValidator(
+                source = linearStartAWithBInterProc,
+                validatorPredicate = { node ->
+                    (node.astParent as? CallExpression)?.name?.localName == "print"
+                },
+                sinkPredicate = { node ->
+                    (node.astParent as? CallExpression)?.name?.localName == "baz"
+                },
+                scope = INTERPROCEDURAL(),
+            )
+        assertTrue(
+            linearResultWithBInterProc.value,
+            "There is only one path which goes from the variable through print(b) to baz.",
+        )
+
+        val resultIfWithBInterProc = FlowQueriesTest.validatorDataflowIfWithCall()
+        val ifStartAWithBInterProc = resultIfWithBInterProc.variables["a"]
+        assertNotNull(ifStartAWithBInterProc, "There's a variable \"a\" in main")
+        val ifResultWithBInterProc =
+            dataFlowWithValidator(
+                source = ifStartAWithBInterProc,
+                validatorPredicate = { node ->
+                    (node.astParent as? CallExpression)?.name?.localName == "print"
+                },
+                sinkPredicate = { node ->
+                    (node.astParent as? CallExpression)?.name?.localName == "baz"
+                },
+                scope = INTERPROCEDURAL(),
+            )
+        assertTrue(
+            ifResultWithBInterProc.value,
+            "There is a path which goes through the \"else\" branch but prints b before reaching baz.",
+        )
+
+        val resultIfElseWithBInterProc = FlowQueriesTest.validatorDataflowIfElseWithCall()
+        val ifElseStartAWithBInterProc = resultIfElseWithBInterProc.variables["a"]
+        assertNotNull(ifElseStartAWithBInterProc, "There's a variable \"a\" in main")
+        val ifElseWithBResultInterProc =
+            dataFlowWithValidator(
+                source = ifElseStartAWithBInterProc,
+                validatorPredicate = { node ->
+                    (node.astParent as? CallExpression)?.name?.localName == "print"
+                },
+                sinkPredicate = { node ->
+                    (node.astParent as? CallExpression)?.name?.localName == "baz"
+                },
+                scope = INTERPROCEDURAL(),
+            )
+        assertTrue(
+            ifElseWithBResultInterProc.value,
+            "Both paths go from the variable through print to baz.",
+        )
+    }
 }
