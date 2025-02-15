@@ -301,6 +301,11 @@ fun executionPathBase(
     }
 }
 
+/**
+ * This function tracks if the data in [sorurce] always flow through a node which fulfills
+ * [validatorPredicate] before reaching a sink which is specified by [sinkPredicate]. The analysis
+ * can be configured with [scope] and [sensitivities].
+ */
 fun dataFlowWithValidator(
     source: Node,
     validatorPredicate: (Node) -> Boolean,
@@ -390,6 +395,13 @@ fun executionPathBackwards(to: Node, predicate: (Node) -> Boolean) =
         verbose = true,
     )
 
+/**
+ * This function tracks if the data in [this] always flow through a node which fulfills [predicate].
+ * An early termination can be specified by the predicate [earlyTermination].
+ * [allowOverwritingValue] can be used to configure if overwriting the value (or part of it) results
+ * in a failure of the requirement (if `false`) or if it does not affect the evaluation. The
+ * analysis can be configured with [scope] and [sensitivities].
+ */
 fun Node.alwaysFlowsTo(
     allowOverwritingValue: Boolean = false,
     earlyTermination: ((Node) -> Boolean)? = null,
