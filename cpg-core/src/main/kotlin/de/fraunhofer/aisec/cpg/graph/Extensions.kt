@@ -994,7 +994,7 @@ fun Node.followNextEOGEdgesUntilHit(
 
 /**
  * Returns a [Collection] of last nodes in the EOG of this [FunctionDeclaration]. If there's no
- * body, it will return a list of this function declaration.
+ * function body, it will return a list of this function declaration.
  */
 val FunctionDeclaration.lastEOGNodes: Collection<Node>
     get() {
