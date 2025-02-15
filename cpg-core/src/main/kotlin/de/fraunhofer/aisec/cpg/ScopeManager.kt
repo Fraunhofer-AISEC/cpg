@@ -47,7 +47,7 @@ import org.slf4j.LoggerFactory
  *
  * Language frontends MUST call [enterScope] and [leaveScope] when they encounter nodes that modify
  * the scope and [resetToGlobal] when they first handle a new [TranslationUnitDeclaration].
- * Afterwards the currently valid "stack" of scopes within the tree can be accessed.
+ * Afterward the currently valid "stack" of scopes within the tree can be accessed.
  *
  * If a language frontend encounters a [Declaration] node, it MUST call [addDeclaration], rather
  * than adding the declaration to the node itself. This ensures that all declarations are properly
@@ -153,9 +153,8 @@ class ScopeManager : ScopeProvider {
                     existing.astNode = entry.value.astNode
 
                     // now it gets more tricky. we also need to "redirect" the AST nodes in the sub
-                    // scope manager to our
-                    // existing NameScope (currently, they point to their own, invalid copy of the
-                    // NameScope).
+                    // scope manager to our existing NameScope (currently, they point to their own,
+                    // invalid copy of the NameScope).
                     //
                     // The only way to do this, is to filter for the particular
                     // scope (the value of the map) and return the keys (the nodes)
@@ -171,6 +170,8 @@ class ScopeManager : ScopeProvider {
                     nameScopeMap[entry.key] = entry.value
                 }
             }
+
+            // Update global scope for all
 
             // We need to make sure that we do not put the "null" key (aka the global scope) of the
             // individual scope manager into our map, otherwise we would overwrite our merged global
@@ -569,9 +570,9 @@ class ScopeManager : ScopeProvider {
     }
 
     /**
-     * This function looks up a [Scope] by its [name]. The reason why this is necessary is that the
-     * [name] could potentially include aliases set by an [ImportDeclaration] and therefore can not
-     * directly be found in the [nameScopeMap].
+     * This function looks up a [Scope] by its [name] relative to [startScope]. The reason why this
+     * is necessary is that the [name] could potentially include aliases set by an
+     * [ImportDeclaration] and therefore can not directly be found in the [nameScopeMap].
      *
      * It works by splitting the name into its parts and then iteratively looking up the scope for
      * each part, starting at the "beginning". For example if we have a name `A::B::C`, we first
@@ -581,10 +582,9 @@ class ScopeManager : ScopeProvider {
      * If no scope is found at any point in the chain, `null` is returned.
      *
      * @param name the name to look up
-     * @param startScope the scope to start the lookup in. If null, the current scope is used.
-     * @return the scope, if it exists
+     * @param startScope the scope to start the lookup in
      */
-    fun lookupScopeByName(name: Name, startScope: Scope? = currentScope): Scope? {
+    fun lookupScopeByName(name: Name, startScope: Scope?): Scope? {
         val parts = name.splitTo(mutableListOf())
         var part: Name? = name
         var scope = startScope
