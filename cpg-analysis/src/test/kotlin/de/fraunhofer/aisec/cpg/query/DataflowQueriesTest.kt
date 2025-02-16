@@ -40,7 +40,7 @@ import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-class FlowQueriesTest {
+class DataflowQueriesTest {
 
     @Test
     fun testIntraproceduralForwardDFG() {
