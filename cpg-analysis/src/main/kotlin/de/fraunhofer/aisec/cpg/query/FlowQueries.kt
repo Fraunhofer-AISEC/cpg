@@ -112,10 +112,13 @@ enum class AnalysisSensitivity {
  * Follows the [de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow] edges from [startNode] in the
  * given [direction] (default: Forward analysis) until reaching a node fulfilling [predicate].
  *
- * The analysis can be used as must or may analysis by setting the [type] parameter (default:
- * [AnalysisType.MAY].
+ * The interpretation of the analysis result can be configured as must analysis (all paths have to
+ * fulfill the criterion) or may analysis (at least one path has to fulfill the criterion) by
+ * setting the [type] parameter (default: [AnalysisType.MAY]). Note that this only reasons about
+ * existing DFG paths, and it might not be sufficient if you actually want a guarantee that some
+ * action always happens with the data. In this case, you may need to check the [executionPath].
  *
- * The [sensitivities] can also be configured to a certain extent. The analysis can be ran as
+ * The [sensitivities] can also be configured to a certain extent. The analysis can be run as
  * interprocedural or intraprocedural analysis. If [earlyTermination] is not `null`, this can be
  * used as a criterion to make the query fail if this predicate is fulfilled before [predicate].
  */
@@ -223,6 +226,18 @@ fun dataFlow(
     }
 }
 
+/**
+ * Follows the [de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder] edges from [startNode] in
+ * the given [direction] (default: [Forward] analysis) until reaching a node fulfilling [predicate].
+ *
+ * The interpretation of the analysis result can be configured as must analysis (all paths have to
+ * fulfill the criterion) or may analysis (at least one path has to fulfill the criterion) by
+ * setting the [type] parameter (default: [AnalysisType.MAY]).
+ *
+ * The analysis can be run as interprocedural or intraprocedural analysis by setting [scope]. If
+ * [earlyTermination] is not `null`, this can be used as a criterion to make the query fail if this
+ * predicate is fulfilled before [predicate].
+ */
 fun executionPath(
     startNode: Node,
     direction: AnalysisDirection = Forward(),
