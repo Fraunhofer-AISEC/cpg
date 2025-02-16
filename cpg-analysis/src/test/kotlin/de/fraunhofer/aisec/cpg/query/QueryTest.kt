@@ -571,7 +571,7 @@ class QueryTest {
                     result
                         .all<FunctionDeclaration>(
                             { it.name.localName == "print" },
-                            { n2 -> dataFlow(n1, n2.parameters[0]).value },
+                            { n2 -> dataFlowBase(n1) { node -> node == n2.parameters[0] }.value },
                         )
                         .first
                 },
@@ -586,7 +586,7 @@ class QueryTest {
                 { n1 ->
                     result.allExtended<FunctionDeclaration>(
                         { it.name.localName == "print" },
-                        { n2 -> dataFlow(n1, n2.parameters[0]) },
+                        { n2 -> dataFlowBase(n1) { node -> node == n2.parameters[0] } },
                     )
                 },
             )
@@ -601,7 +601,7 @@ class QueryTest {
                     result
                         .all<FunctionDeclaration>(
                             { it.name.localName == "print" },
-                            { n2 -> dataFlow(n1, n2.parameters[0]).value },
+                            { n2 -> dataFlowBase(n1) { node -> node == n2.parameters[0] }.value },
                         )
                         .first
                 },
@@ -616,7 +616,7 @@ class QueryTest {
                 { n1 ->
                     result.allExtended<FunctionDeclaration>(
                         { it.name.localName == "print" },
-                        { n2 -> dataFlow(n1, n2.parameters[0]) },
+                        { n2 -> dataFlowBase(n1) { node -> node == n2.parameters[0] } },
                     )
                 },
             )

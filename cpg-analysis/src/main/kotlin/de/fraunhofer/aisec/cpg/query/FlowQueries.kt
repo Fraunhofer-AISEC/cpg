@@ -112,7 +112,8 @@ fun dataFlowBase(
     startNode: Node,
     direction: AnalysisDirection = Forward(),
     type: AnalysisType = AnalysisType.MAY,
-    vararg sensitivities: AnalysisSensitivity,
+    vararg sensitivities: AnalysisSensitivity =
+        AnalysisSensitivity.FIELD_SENSITIVE + AnalysisSensitivity.CONTEXT_SENSITIVE,
     scope: AnalysisScope = Interprocedural(),
     verbose: Boolean = true,
     earlyTermination: ((Node) -> Boolean)? = null,
@@ -323,23 +324,6 @@ fun dataFlowWithValidator(
         predicate = validatorPredicate,
     )
 }
-
-/** Checks if a data flow is possible between the nodes [source] and [sink]. */
-fun dataFlow(
-    source: Node,
-    sink: Node,
-    collectFailedPaths: Boolean = true,
-    findAllPossiblePaths: Boolean = true,
-) =
-    dataFlowBase(
-        startNode = source,
-        direction = Forward(),
-        type = AnalysisType.MAY,
-        sensitivities = AnalysisSensitivity.FIELD_SENSITIVE + AnalysisSensitivity.CONTEXT_SENSITIVE,
-        scope = Interprocedural(),
-        verbose = collectFailedPaths || findAllPossiblePaths,
-        predicate = { it == sink },
-    )
 
 /** Checks if a data flow is possible between the [source] and a sink fulfilling [predicate]. */
 fun dataFlow(
