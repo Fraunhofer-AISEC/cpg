@@ -52,14 +52,16 @@ class Interprocedural(val maxCallDepth: Int? = null, maxSteps: Int? = null) :
     AnalysisScope(maxSteps)
 
 /** Determines in which direction we follow the edges. */
-enum class AnalysisDirection {
-    /** Follow the order of the EOG */
-    FORWARD,
-    /** Against the order of the EOG */
-    BACKWARD,
-    /** In and against the order of the EOG */
-    BIDIRECTIONAL,
-}
+sealed class AnalysisDirection
+
+/** Follow the order of the EOG */
+class FORWARD() : AnalysisDirection()
+
+/** Against the order of the EOG */
+class BACKWARD() : AnalysisDirection()
+
+/** In and against the order of the EOG */
+class BIDIRECTIONAL() : AnalysisDirection()
 
 /** Determines if the predicate must or may hold */
 enum class AnalysisType {
@@ -126,7 +128,7 @@ fun dataFlowBase(
     }
     val evalRes =
         when (direction) {
-            AnalysisDirection.FORWARD -> {
+            is FORWARD -> {
                 startNode.followNextDFGEdgesUntilHit(
                     collectFailedPaths = collectFailedPaths,
                     findAllPossiblePaths = findAllPossiblePaths,
@@ -137,7 +139,7 @@ fun dataFlowBase(
                     predicate = predicate,
                 )
             }
-            AnalysisDirection.BACKWARD -> {
+            is BACKWARD -> {
                 startNode.followPrevDFGEdgesUntilHit(
                     collectFailedPaths = collectFailedPaths,
                     findAllPossiblePaths = findAllPossiblePaths,
@@ -148,7 +150,7 @@ fun dataFlowBase(
                     predicate = predicate,
                 )
             }
-            AnalysisDirection.BIDIRECTIONAL -> {
+            is BIDIRECTIONAL -> {
                 startNode.followNextDFGEdgesUntilHit(
                     collectFailedPaths = collectFailedPaths,
                     findAllPossiblePaths = findAllPossiblePaths,
@@ -226,7 +228,7 @@ fun executionPathBase(
     }
     val evalRes =
         when (direction) {
-            AnalysisDirection.FORWARD -> {
+            is FORWARD -> {
                 startNode.followNextEOGEdgesUntilHit(
                     collectFailedPaths = collectFailedPaths,
                     findAllPossiblePaths = findAllPossiblePaths,
@@ -235,7 +237,7 @@ fun executionPathBase(
                     predicate = predicate,
                 )
             }
-            AnalysisDirection.BACKWARD -> {
+            is BACKWARD -> {
                 startNode.followPrevEOGEdgesUntilHit(
                     collectFailedPaths = collectFailedPaths,
                     findAllPossiblePaths = findAllPossiblePaths,
@@ -244,7 +246,7 @@ fun executionPathBase(
                     predicate = predicate,
                 )
             }
-            AnalysisDirection.BIDIRECTIONAL -> {
+            is BIDIRECTIONAL -> {
                 startNode.followNextEOGEdgesUntilHit(
                     collectFailedPaths = collectFailedPaths,
                     findAllPossiblePaths = findAllPossiblePaths,
@@ -302,7 +304,7 @@ fun executionPathBase(
 }
 
 /**
- * This function tracks if the data in [sorurce] always flow through a node which fulfills
+ * This function tracks if the data in [source] always flow through a node which fulfills
  * [validatorPredicate] before reaching a sink which is specified by [sinkPredicate]. The analysis
  * can be configured with [scope] and [sensitivities].
  */
@@ -331,7 +333,7 @@ fun dataFlow(
 ) =
     dataFlowBase(
         startNode = source,
-        direction = AnalysisDirection.FORWARD,
+        direction = FORWARD(),
         type = AnalysisType.MAY,
         sensitivities = AnalysisSensitivity.FIELD_SENSITIVE + AnalysisSensitivity.CONTEXT_SENSITIVE,
         scope = Interprocedural(),
@@ -348,7 +350,7 @@ fun dataFlow(
 ) =
     dataFlowBase(
         startNode = source,
-        direction = AnalysisDirection.FORWARD,
+        direction = FORWARD(),
         type = AnalysisType.MAY,
         sensitivities = AnalysisSensitivity.FIELD_SENSITIVE + AnalysisSensitivity.CONTEXT_SENSITIVE,
         scope = Interprocedural(),
@@ -361,7 +363,7 @@ fun executionPath(from: Node, to: Node) =
     executionPathBase(
         startNode = from,
         predicate = { it == to },
-        direction = AnalysisDirection.FORWARD,
+        direction = FORWARD(),
         type = AnalysisType.MAY,
         scope = Interprocedural(),
         verbose = true,
@@ -375,7 +377,7 @@ fun executionPath(from: Node, predicate: (Node) -> Boolean) =
     executionPathBase(
         startNode = from,
         predicate = predicate,
-        direction = AnalysisDirection.FORWARD,
+        direction = FORWARD(),
         type = AnalysisType.MAY,
         scope = Interprocedural(),
         verbose = true,
@@ -389,7 +391,7 @@ fun executionPathBackwards(to: Node, predicate: (Node) -> Boolean) =
     executionPathBase(
         startNode = to,
         predicate = predicate,
-        direction = AnalysisDirection.BACKWARD,
+        direction = BACKWARD(),
         type = AnalysisType.MAY,
         scope = Interprocedural(),
         verbose = true,
