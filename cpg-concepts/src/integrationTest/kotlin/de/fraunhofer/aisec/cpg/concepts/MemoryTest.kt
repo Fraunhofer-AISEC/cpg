@@ -40,8 +40,8 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeleteExpression
 import de.fraunhofer.aisec.cpg.query.AnalysisType
 import de.fraunhofer.aisec.cpg.query.Forward
 import de.fraunhofer.aisec.cpg.query.Interprocedural
-import de.fraunhofer.aisec.cpg.query.dataFlowBase
-import de.fraunhofer.aisec.cpg.query.executionPathBase
+import de.fraunhofer.aisec.cpg.query.dataFlow
+import de.fraunhofer.aisec.cpg.query.executionPath
 import de.fraunhofer.aisec.cpg.test.analyze
 import java.io.File
 import kotlin.test.*
@@ -101,7 +101,7 @@ class MemoryTest {
         // Key is used in encryption
         var tree =
             key.underlyingNode?.let {
-                dataFlowBase(it) { node -> node.overlayEdges.any { edge -> edge.end is Encrypt } }
+                dataFlow(it) { node -> node.overlayEdges.any { edge -> edge.end is Encrypt } }
             }
         assertNotNull(tree)
         assertEquals(true, tree.value)
@@ -109,7 +109,7 @@ class MemoryTest {
         // Tree is deleted in all paths
         tree =
             key.underlyingNode?.let {
-                executionPathBase(
+                executionPath(
                     startNode = it,
                     predicate = { node ->
                         node.overlayEdges.any { edge -> edge.end is DeAllocate }

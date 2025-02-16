@@ -63,7 +63,7 @@ class DataflowQueriesTest {
 
         // Intraprocedural forward may analysis. The rest doesn't matter
         val queryResultMayA =
-            dataFlowBase(
+            dataFlow(
                 startNode = literal5,
                 direction = Forward(),
                 scope = Intraprocedural(),
@@ -91,7 +91,7 @@ class DataflowQueriesTest {
 
         // Intraprocedural forward may analysis. The rest doesn't matter
         val queryResultMayAMax1 =
-            dataFlowBase(
+            dataFlow(
                 startNode = literal5,
                 direction = Forward(),
                 scope = Intraprocedural(1),
@@ -121,7 +121,7 @@ class DataflowQueriesTest {
 
         // Intraprocedural forward may analysis. The rest doesn't matter
         val queryResultMustA =
-            dataFlowBase(
+            dataFlow(
                 startNode = literal5,
                 direction = Forward(),
                 scope = Intraprocedural(),
@@ -150,7 +150,7 @@ class DataflowQueriesTest {
         // Intraprocedural bidirectional may analysis. The rest doesn't matter. We should also
         // arrive at baz forward.
         val queryResultMayB =
-            dataFlowBase(
+            dataFlow(
                 startNode = refB,
                 direction = Forward(),
                 scope = Intraprocedural(),
@@ -179,7 +179,7 @@ class DataflowQueriesTest {
         // Intraprocedural forward may analysis. The rest doesn't matter. Either arrive at the 5
         // (backwards) or in baz (forward).
         val queryResultMustB =
-            dataFlowBase(
+            dataFlow(
                 startNode = refB,
                 direction = Forward(),
                 scope = Intraprocedural(),
@@ -225,7 +225,7 @@ class DataflowQueriesTest {
         // Intraprocedural bidirectional may analysis. The rest doesn't matter. Either arrive at the
         // 5 (backwards) or in baz (forward).
         val queryResultMay =
-            dataFlowBase(
+            dataFlow(
                 startNode = refB,
                 direction = Bidirectional(),
                 scope = Intraprocedural(),
@@ -257,7 +257,7 @@ class DataflowQueriesTest {
         // Intraprocedural forward may analysis. The rest doesn't matter. Either arrive at the 5
         // (backwards) or in baz (forward).
         val queryResultMust =
-            dataFlowBase(
+            dataFlow(
                 startNode = refB,
                 direction = Bidirectional(),
                 scope = Intraprocedural(),
@@ -322,7 +322,7 @@ class DataflowQueriesTest {
 
         // Intraprocedural backward may analysis. The rest doesn't matter
         val queryResultMayA =
-            dataFlowBase(
+            dataFlow(
                 startNode = bazARef,
                 direction = Backward(),
                 scope = Intraprocedural(),
@@ -350,7 +350,7 @@ class DataflowQueriesTest {
 
         // Intraprocedural backward may analysis but we stop too early. The rest doesn't matter
         val queryResultMayAMax1 =
-            dataFlowBase(
+            dataFlow(
                 startNode = bazARef,
                 direction = Backward(),
                 scope = Intraprocedural(1),
@@ -383,7 +383,7 @@ class DataflowQueriesTest {
 
         // Intraprocedural forward may analysis. The rest doesn't matter
         val queryResultMustA =
-            dataFlowBase(
+            dataFlow(
                 startNode = bazARef,
                 direction = Backward(),
                 scope = Intraprocedural(),
@@ -412,7 +412,7 @@ class DataflowQueriesTest {
         // Intraprocedural bidirectional may analysis. The rest doesn't matter. We should not arrive
         // at the 5 because there's a function call on the path.
         val queryResultMayBTo5 =
-            dataFlowBase(
+            dataFlow(
                 startNode = refB,
                 direction = Backward(),
                 scope = Intraprocedural(),
@@ -441,7 +441,7 @@ class DataflowQueriesTest {
         // Intraprocedural forward may analysis. The rest doesn't matter. Either arrive at the 5
         // (backwards) or in baz (forward).
         val queryResultMustBTo5 =
-            dataFlowBase(
+            dataFlow(
                 startNode = refB,
                 direction = Backward(),
                 scope = Intraprocedural(),
@@ -470,7 +470,7 @@ class DataflowQueriesTest {
         // Intraprocedural bidirectional may analysis. The rest doesn't matter. We should arrive at
         // the value "bla".
         val queryResultMayBToBla =
-            dataFlowBase(
+            dataFlow(
                 startNode = refB,
                 direction = Backward(),
                 scope = Intraprocedural(),
@@ -499,7 +499,7 @@ class DataflowQueriesTest {
         // Intraprocedural forward may analysis. The rest doesn't matter. Either arrive at the value
         // "bla".
         val queryResultMustBToBla =
-            dataFlowBase(
+            dataFlow(
                 startNode = refB,
                 direction = Backward(),
                 scope = Intraprocedural(),

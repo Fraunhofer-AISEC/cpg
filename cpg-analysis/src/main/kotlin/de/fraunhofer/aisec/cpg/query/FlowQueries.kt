@@ -108,7 +108,18 @@ enum class AnalysisSensitivity {
     }
 }
 
-fun dataFlowBase(
+/**
+ * Follows the [de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow] edges from [startNode] in the
+ * given [direction] (default: Forward analysis) until reaching a node fulfilling [predicate].
+ *
+ * The analysis can be used as must or may analysis by setting the [type] parameter (default:
+ * [AnalysisType.MAY].
+ *
+ * The [sensitivities] can also be configured to a certain extent. The analysis can be ran as
+ * interprocedural or intraprocedural analysis. If [earlyTermination] is not `null`, this can be
+ * used as a criterion to make the query fail if this predicate is fulfilled before [predicate].
+ */
+fun dataFlow(
     startNode: Node,
     direction: AnalysisDirection = Forward(),
     type: AnalysisType = AnalysisType.MAY,
@@ -212,7 +223,7 @@ fun dataFlowBase(
     }
 }
 
-fun executionPathBase(
+fun executionPath(
     startNode: Node,
     direction: AnalysisDirection = Forward(),
     type: AnalysisType = AnalysisType.MAY,
@@ -324,23 +335,6 @@ fun dataFlowWithValidator(
         predicate = validatorPredicate,
     )
 }
-
-/** Checks if a data flow is possible between the [source] and a sink fulfilling [predicate]. */
-fun dataFlow(
-    source: Node,
-    predicate: (Node) -> Boolean,
-    collectFailedPaths: Boolean = true,
-    findAllPossiblePaths: Boolean = true,
-) =
-    dataFlowBase(
-        startNode = source,
-        direction = Forward(),
-        type = AnalysisType.MAY,
-        sensitivities = AnalysisSensitivity.FIELD_SENSITIVE + AnalysisSensitivity.CONTEXT_SENSITIVE,
-        scope = Interprocedural(),
-        verbose = collectFailedPaths || findAllPossiblePaths,
-        predicate = predicate,
-    )
 
 /**
  * This function tracks if the data in [this] always flow through a node which fulfills [predicate].

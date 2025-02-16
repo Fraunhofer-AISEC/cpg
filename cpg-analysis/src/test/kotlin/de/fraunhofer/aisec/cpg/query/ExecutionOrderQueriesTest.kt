@@ -47,7 +47,7 @@ class ExecutionOrderQueriesTest {
         assertNotNull(callBaz)
 
         val value5MayReach10 =
-            executionPathBase(
+            executionPath(
                 startNode = literal5,
                 direction = Forward(),
                 type = AnalysisType.MAY,
@@ -60,7 +60,7 @@ class ExecutionOrderQueriesTest {
         )
 
         val value5MustReach10 =
-            executionPathBase(
+            executionPath(
                 startNode = literal5,
                 direction = Forward(),
                 type = AnalysisType.MUST,
@@ -73,7 +73,7 @@ class ExecutionOrderQueriesTest {
         )
 
         val value5MustReachBaz =
-            executionPathBase(
+            executionPath(
                 startNode = literal5,
                 direction = Forward(),
                 type = AnalysisType.MUST,
@@ -96,7 +96,7 @@ class ExecutionOrderQueriesTest {
         val callBaz = result.calls["baz"]
         assertNotNull(callBaz)
         val callBazMayReach10 =
-            executionPathBase(
+            executionPath(
                 startNode = callBaz,
                 direction = Backward(),
                 type = AnalysisType.MAY,
@@ -109,7 +109,7 @@ class ExecutionOrderQueriesTest {
         )
 
         val callBazMustReach10 =
-            executionPathBase(
+            executionPath(
                 startNode = callBaz,
                 direction = Backward(),
                 type = AnalysisType.MUST,
@@ -122,7 +122,7 @@ class ExecutionOrderQueriesTest {
         )
 
         val callBazMustReach5 =
-            executionPathBase(
+            executionPath(
                 startNode = callBaz,
                 direction = Backward(),
                 type = AnalysisType.MUST,
@@ -149,7 +149,7 @@ class ExecutionOrderQueriesTest {
         assertNotNull(callBaz)
 
         val literal10MayReachBaz =
-            executionPathBase(
+            executionPath(
                 startNode = literal10,
                 direction = Bidirectional(),
                 type = AnalysisType.MAY,
@@ -162,7 +162,7 @@ class ExecutionOrderQueriesTest {
         )
 
         val literal10MayReach5 =
-            executionPathBase(
+            executionPath(
                 startNode = literal10,
                 direction = Bidirectional(),
                 type = AnalysisType.MAY,
@@ -178,7 +178,7 @@ class ExecutionOrderQueriesTest {
         // probably more interesting to figure out whether there's always a path either before or
         // after the node. Then, the naming could be confusing though
         val literal10MustReachBaz =
-            executionPathBase(
+            executionPath(
                 startNode = literal10,
                 direction = Bidirectional(),
                 type = AnalysisType.MUST,
@@ -191,7 +191,7 @@ class ExecutionOrderQueriesTest {
         )
 
         val literal10MustReach5 =
-            executionPathBase(
+            executionPath(
                 startNode = literal10,
                 direction = Bidirectional(),
                 type = AnalysisType.MUST,
@@ -204,7 +204,7 @@ class ExecutionOrderQueriesTest {
         )
 
         val literal10MustReachBazOr5 =
-            executionPathBase(
+            executionPath(
                 startNode = literal10,
                 direction = Bidirectional(),
                 type = AnalysisType.MUST,

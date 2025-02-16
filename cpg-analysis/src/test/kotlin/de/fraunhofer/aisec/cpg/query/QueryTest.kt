@@ -104,7 +104,7 @@ class QueryTest {
 
         val queryTreeResult =
             result.all<CallExpression>({ it.name.localName == "free" }) { outer ->
-                !executionPathBase(outer) {
+                !executionPath(outer) {
                         (it as? Reference)?.refersTo == (outer.arguments[0] as? Reference)?.refersTo
                     }
                     .value
@@ -117,7 +117,7 @@ class QueryTest {
                 { it.name.localName == "free" },
                 { outer ->
                     not(
-                        executionPathBase(outer) {
+                        executionPath(outer) {
                             (it as? Reference)?.refersTo ==
                                 (outer.arguments[0] as? Reference)?.refersTo
                         }
@@ -134,7 +134,7 @@ class QueryTest {
 
         val queryTreeResult =
             result.all<CallExpression>({ it.name.localName == "free" }) { outer ->
-                !executionPathBase(outer) {
+                !executionPath(outer) {
                         (it as? CallExpression)?.name?.localName == "free" &&
                             (it.arguments[0] as? Reference)?.refersTo ==
                                 (outer.arguments[0] as? Reference)?.refersTo
@@ -149,7 +149,7 @@ class QueryTest {
                 { it.name.localName == "free" },
                 { outer ->
                     not(
-                        executionPathBase(outer) {
+                        executionPath(outer) {
                             (it as? CallExpression)?.name?.localName == "free" &&
                                 (it.arguments[0] as? Reference)?.refersTo ==
                                     (outer.arguments[0] as? Reference)?.refersTo
@@ -571,7 +571,7 @@ class QueryTest {
                     result
                         .all<FunctionDeclaration>(
                             { it.name.localName == "print" },
-                            { n2 -> dataFlowBase(n1) { node -> node == n2.parameters[0] }.value },
+                            { n2 -> dataFlow(n1) { node -> node == n2.parameters[0] }.value },
                         )
                         .first
                 },
@@ -586,7 +586,7 @@ class QueryTest {
                 { n1 ->
                     result.allExtended<FunctionDeclaration>(
                         { it.name.localName == "print" },
-                        { n2 -> dataFlowBase(n1) { node -> node == n2.parameters[0] } },
+                        { n2 -> dataFlow(n1) { node -> node == n2.parameters[0] } },
                     )
                 },
             )
@@ -601,7 +601,7 @@ class QueryTest {
                     result
                         .all<FunctionDeclaration>(
                             { it.name.localName == "print" },
-                            { n2 -> dataFlowBase(n1) { node -> node == n2.parameters[0] }.value },
+                            { n2 -> dataFlow(n1) { node -> node == n2.parameters[0] }.value },
                         )
                         .first
                 },
@@ -616,7 +616,7 @@ class QueryTest {
                 { n1 ->
                     result.allExtended<FunctionDeclaration>(
                         { it.name.localName == "print" },
-                        { n2 -> dataFlowBase(n1) { node -> node == n2.parameters[0] } },
+                        { n2 -> dataFlow(n1) { node -> node == n2.parameters[0] } },
                     )
                 },
             )
