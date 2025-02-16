@@ -51,7 +51,7 @@ class ExecutionOrderQueriesTest {
                 startNode = literal5,
                 direction = AnalysisDirection.FORWARD,
                 type = AnalysisType.MAY,
-                scope = INTRAPROCEDURAL(),
+                scope = Intraprocedural(),
                 predicate = { node -> node == literal10 },
             )
         assertTrue(
@@ -64,7 +64,7 @@ class ExecutionOrderQueriesTest {
                 startNode = literal5,
                 direction = AnalysisDirection.FORWARD,
                 type = AnalysisType.MUST,
-                scope = INTRAPROCEDURAL(),
+                scope = Intraprocedural(),
                 predicate = { node -> node == literal10 },
             )
         assertFalse(
@@ -77,7 +77,7 @@ class ExecutionOrderQueriesTest {
                 startNode = literal5,
                 direction = AnalysisDirection.FORWARD,
                 type = AnalysisType.MUST,
-                scope = INTRAPROCEDURAL(),
+                scope = Intraprocedural(),
                 predicate = { node -> node == callBaz },
             )
         assertTrue(value5MustReachBaz.value, "All EOG paths starting at 5 reach the call to baz.")
@@ -100,7 +100,7 @@ class ExecutionOrderQueriesTest {
                 startNode = callBaz,
                 direction = AnalysisDirection.BACKWARD,
                 type = AnalysisType.MAY,
-                scope = INTRAPROCEDURAL(),
+                scope = Intraprocedural(),
                 predicate = { node -> node == literal10 },
             )
         assertTrue(
@@ -113,7 +113,7 @@ class ExecutionOrderQueriesTest {
                 startNode = callBaz,
                 direction = AnalysisDirection.BACKWARD,
                 type = AnalysisType.MUST,
-                scope = INTRAPROCEDURAL(),
+                scope = Intraprocedural(),
                 predicate = { node -> node == literal10 },
             )
         assertFalse(
@@ -126,7 +126,7 @@ class ExecutionOrderQueriesTest {
                 startNode = callBaz,
                 direction = AnalysisDirection.BACKWARD,
                 type = AnalysisType.MUST,
-                scope = INTRAPROCEDURAL(),
+                scope = Intraprocedural(),
                 predicate = { node -> node == literal5 },
             )
         assertTrue(
@@ -153,7 +153,7 @@ class ExecutionOrderQueriesTest {
                 startNode = literal10,
                 direction = AnalysisDirection.BIDIRECTIONAL,
                 type = AnalysisType.MAY,
-                scope = INTRAPROCEDURAL(),
+                scope = Intraprocedural(),
                 predicate = { node -> node == callBaz },
             )
         assertTrue(
@@ -166,7 +166,7 @@ class ExecutionOrderQueriesTest {
                 startNode = literal10,
                 direction = AnalysisDirection.BIDIRECTIONAL,
                 type = AnalysisType.MAY,
-                scope = INTRAPROCEDURAL(),
+                scope = Intraprocedural(),
                 predicate = { node -> node == literal5 },
             )
         assertTrue(
@@ -179,7 +179,7 @@ class ExecutionOrderQueriesTest {
                 startNode = literal10,
                 direction = AnalysisDirection.BIDIRECTIONAL,
                 type = AnalysisType.MUST,
-                scope = INTRAPROCEDURAL(),
+                scope = Intraprocedural(),
                 predicate = { node -> node == callBaz },
             )
         assertFalse(
@@ -192,7 +192,7 @@ class ExecutionOrderQueriesTest {
                 startNode = literal10,
                 direction = AnalysisDirection.BIDIRECTIONAL,
                 type = AnalysisType.MUST,
-                scope = INTRAPROCEDURAL(),
+                scope = Intraprocedural(),
                 predicate = { node -> node == literal5 },
             )
         assertFalse(
@@ -205,7 +205,7 @@ class ExecutionOrderQueriesTest {
                 startNode = literal10,
                 direction = AnalysisDirection.BIDIRECTIONAL,
                 type = AnalysisType.MUST,
-                scope = INTRAPROCEDURAL(),
+                scope = Intraprocedural(),
                 predicate = { node -> node == callBaz || node == literal5 },
             )
         assertTrue(

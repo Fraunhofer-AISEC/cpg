@@ -41,14 +41,14 @@ sealed class AnalysisScope(val maxSteps: Int? = null)
  * Only intraprocedural analysis. [maxSteps] defines the total number of steps we will follow in the
  * graph (unlimited depth if `null`).
  */
-class INTRAPROCEDURAL(maxSteps: Int? = null) : AnalysisScope(maxSteps)
+class Intraprocedural(maxSteps: Int? = null) : AnalysisScope(maxSteps)
 
 /**
  * Enable interprocedural analysis. [maxCallDepth] defines how many function calls we follow at most
  * (unlimited depth if `null`). [maxSteps] defines the total number of steps we will follow in the
  * graph (unlimited depth if `null`).
  */
-class INTERPROCEDURAL(val maxCallDepth: Int? = null, maxSteps: Int? = null) :
+class Interprocedural(val maxCallDepth: Int? = null, maxSteps: Int? = null) :
     AnalysisScope(maxSteps)
 
 /** Determines in which direction we follow the edges. */
@@ -120,7 +120,7 @@ fun dataFlowBase(
     val findAllPossiblePaths = type == AnalysisType.MUST || verbose
     val useIndexStack = AnalysisSensitivity.FIELD_SENSITIVE in sensitivities
     val contextSensitive = AnalysisSensitivity.CONTEXT_SENSITIVE in sensitivities
-    val interproceduralAnalysis = scope is INTERPROCEDURAL
+    val interproceduralAnalysis = scope is Interprocedural
     val earlyTermination = { n: Node, ctx: Context ->
         earlyTermination?.let { it(n) } == true || scope.maxSteps?.let { ctx.steps >= it } == true
     }
@@ -220,7 +220,7 @@ fun executionPathBase(
 ): QueryTree<Boolean> {
     val collectFailedPaths = type == AnalysisType.MUST || verbose
     val findAllPossiblePaths = type == AnalysisType.MUST || verbose
-    val interproceduralAnalysis = scope is INTERPROCEDURAL
+    val interproceduralAnalysis = scope is Interprocedural
     val earlyTermination = { n: Node, ctx: Context ->
         earlyTermination?.let { it(n) } == true || scope.maxSteps?.let { ctx.steps >= it } == true
     }
@@ -334,7 +334,7 @@ fun dataFlow(
         direction = AnalysisDirection.FORWARD,
         type = AnalysisType.MAY,
         sensitivities = AnalysisSensitivity.FIELD_SENSITIVE + AnalysisSensitivity.CONTEXT_SENSITIVE,
-        scope = INTERPROCEDURAL(),
+        scope = Interprocedural(),
         verbose = collectFailedPaths || findAllPossiblePaths,
         predicate = { it == sink },
     )
@@ -351,7 +351,7 @@ fun dataFlow(
         direction = AnalysisDirection.FORWARD,
         type = AnalysisType.MAY,
         sensitivities = AnalysisSensitivity.FIELD_SENSITIVE + AnalysisSensitivity.CONTEXT_SENSITIVE,
-        scope = INTERPROCEDURAL(),
+        scope = Interprocedural(),
         verbose = collectFailedPaths || findAllPossiblePaths,
         predicate = predicate,
     )
@@ -363,7 +363,7 @@ fun executionPath(from: Node, to: Node) =
         predicate = { it == to },
         direction = AnalysisDirection.FORWARD,
         type = AnalysisType.MAY,
-        scope = INTERPROCEDURAL(),
+        scope = Interprocedural(),
         verbose = true,
     )
 
@@ -377,7 +377,7 @@ fun executionPath(from: Node, predicate: (Node) -> Boolean) =
         predicate = predicate,
         direction = AnalysisDirection.FORWARD,
         type = AnalysisType.MAY,
-        scope = INTERPROCEDURAL(),
+        scope = Interprocedural(),
         verbose = true,
     )
 
@@ -391,7 +391,7 @@ fun executionPathBackwards(to: Node, predicate: (Node) -> Boolean) =
         predicate = predicate,
         direction = AnalysisDirection.BACKWARD,
         type = AnalysisType.MAY,
-        scope = INTERPROCEDURAL(),
+        scope = Interprocedural(),
         verbose = true,
     )
 
@@ -411,7 +411,7 @@ fun Node.alwaysFlowsTo(
 ): QueryTree<Boolean> {
     val nextDFGPaths =
         this.collectAllNextDFGPaths(
-                interproceduralAnalysis = scope is INTERPROCEDURAL,
+                interproceduralAnalysis = scope is Interprocedural,
                 contextSensitive = AnalysisSensitivity.CONTEXT_SENSITIVE in sensitivities,
             )
             .flatten()
@@ -428,7 +428,7 @@ fun Node.alwaysFlowsTo(
         this.followNextEOGEdgesUntilHit(
             collectFailedPaths = true,
             findAllPossiblePaths = true,
-            interproceduralAnalysis = scope is INTERPROCEDURAL,
+            interproceduralAnalysis = scope is Interprocedural,
             earlyTermination = earlyTerminationPredicate,
         ) {
             predicate(it) && it in nextDFGPaths

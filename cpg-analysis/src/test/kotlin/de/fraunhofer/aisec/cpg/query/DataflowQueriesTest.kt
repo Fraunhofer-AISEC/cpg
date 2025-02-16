@@ -66,7 +66,7 @@ class DataflowQueriesTest {
             dataFlowBase(
                 startNode = literal5,
                 direction = AnalysisDirection.FORWARD,
-                scope = INTRAPROCEDURAL(),
+                scope = Intraprocedural(),
                 type = AnalysisType.MAY,
                 predicate = { (it.astParent as? CallExpression)?.name?.localName == "baz" },
             )
@@ -94,7 +94,7 @@ class DataflowQueriesTest {
             dataFlowBase(
                 startNode = literal5,
                 direction = AnalysisDirection.FORWARD,
-                scope = INTRAPROCEDURAL(1),
+                scope = Intraprocedural(1),
                 type = AnalysisType.MAY,
                 predicate = { (it.astParent as? CallExpression)?.name?.localName == "baz" },
             )
@@ -124,7 +124,7 @@ class DataflowQueriesTest {
             dataFlowBase(
                 startNode = literal5,
                 direction = AnalysisDirection.FORWARD,
-                scope = INTRAPROCEDURAL(),
+                scope = Intraprocedural(),
                 type = AnalysisType.MUST,
                 predicate = { (it.astParent as? CallExpression)?.name?.localName == "baz" },
             )
@@ -153,7 +153,7 @@ class DataflowQueriesTest {
             dataFlowBase(
                 startNode = refB,
                 direction = AnalysisDirection.FORWARD,
-                scope = INTRAPROCEDURAL(),
+                scope = Intraprocedural(),
                 type = AnalysisType.MAY,
                 predicate = { (it.astParent as? CallExpression)?.name?.localName == "baz" },
             )
@@ -182,7 +182,7 @@ class DataflowQueriesTest {
             dataFlowBase(
                 startNode = refB,
                 direction = AnalysisDirection.FORWARD,
-                scope = INTRAPROCEDURAL(),
+                scope = Intraprocedural(),
                 type = AnalysisType.MUST,
                 predicate = { (it.astParent as? CallExpression)?.name?.localName == "baz" },
             )
@@ -228,7 +228,7 @@ class DataflowQueriesTest {
             dataFlowBase(
                 startNode = refB,
                 direction = AnalysisDirection.BIDIRECTIONAL,
-                scope = INTRAPROCEDURAL(),
+                scope = Intraprocedural(),
                 type = AnalysisType.MAY,
                 predicate = {
                     (it as? Literal<*>)?.value == 5 ||
@@ -260,7 +260,7 @@ class DataflowQueriesTest {
             dataFlowBase(
                 startNode = refB,
                 direction = AnalysisDirection.BIDIRECTIONAL,
-                scope = INTRAPROCEDURAL(),
+                scope = Intraprocedural(),
                 type = AnalysisType.MUST,
                 predicate = {
                     (it as? Literal<*>)?.value == 5 ||
@@ -325,7 +325,7 @@ class DataflowQueriesTest {
             dataFlowBase(
                 startNode = bazARef,
                 direction = AnalysisDirection.BACKWARD,
-                scope = INTRAPROCEDURAL(),
+                scope = Intraprocedural(),
                 type = AnalysisType.MAY,
                 predicate = { (it as? Literal<*>)?.value == 5 },
             )
@@ -353,7 +353,7 @@ class DataflowQueriesTest {
             dataFlowBase(
                 startNode = bazARef,
                 direction = AnalysisDirection.BACKWARD,
-                scope = INTRAPROCEDURAL(1),
+                scope = Intraprocedural(1),
                 type = AnalysisType.MAY,
                 predicate = { (it as? Literal<*>)?.value == 5 },
             )
@@ -386,7 +386,7 @@ class DataflowQueriesTest {
             dataFlowBase(
                 startNode = bazARef,
                 direction = AnalysisDirection.BACKWARD,
-                scope = INTRAPROCEDURAL(),
+                scope = Intraprocedural(),
                 type = AnalysisType.MUST,
                 predicate = { (it as? Literal<*>)?.value == 5 },
             )
@@ -415,7 +415,7 @@ class DataflowQueriesTest {
             dataFlowBase(
                 startNode = refB,
                 direction = AnalysisDirection.BACKWARD,
-                scope = INTRAPROCEDURAL(),
+                scope = Intraprocedural(),
                 type = AnalysisType.MAY,
                 predicate = { (it as? Literal<*>)?.value == 5 },
             )
@@ -444,7 +444,7 @@ class DataflowQueriesTest {
             dataFlowBase(
                 startNode = refB,
                 direction = AnalysisDirection.BACKWARD,
-                scope = INTRAPROCEDURAL(),
+                scope = Intraprocedural(),
                 type = AnalysisType.MUST,
                 predicate = { (it as? Literal<*>)?.value == 5 },
             )
@@ -473,7 +473,7 @@ class DataflowQueriesTest {
             dataFlowBase(
                 startNode = refB,
                 direction = AnalysisDirection.BACKWARD,
-                scope = INTRAPROCEDURAL(),
+                scope = Intraprocedural(),
                 type = AnalysisType.MAY,
                 predicate = { (it as? Literal<*>)?.value == "bla" },
             )
@@ -502,7 +502,7 @@ class DataflowQueriesTest {
             dataFlowBase(
                 startNode = refB,
                 direction = AnalysisDirection.BACKWARD,
-                scope = INTRAPROCEDURAL(),
+                scope = Intraprocedural(),
                 type = AnalysisType.MUST,
                 predicate = { (it as? Literal<*>)?.value == "bla" },
             )
@@ -540,7 +540,7 @@ class DataflowQueriesTest {
                 sinkPredicate = { node ->
                     (node.astParent as? CallExpression)?.name?.localName == "baz"
                 },
-                scope = INTRAPROCEDURAL(),
+                scope = Intraprocedural(),
             )
         assertTrue(
             linearResult.value,
@@ -559,7 +559,7 @@ class DataflowQueriesTest {
                 sinkPredicate = { node ->
                     (node.astParent as? CallExpression)?.name?.localName == "baz"
                 },
-                scope = INTRAPROCEDURAL(),
+                scope = Intraprocedural(),
             )
         assertTrue(
             linearResultWithB.value,
@@ -578,7 +578,7 @@ class DataflowQueriesTest {
                 sinkPredicate = { node ->
                     (node.astParent as? CallExpression)?.name?.localName == "baz"
                 },
-                scope = INTRAPROCEDURAL(),
+                scope = Intraprocedural(),
             )
         assertFalse(
             linearResultWithBInterProc.value,
@@ -597,7 +597,7 @@ class DataflowQueriesTest {
                 sinkPredicate = { node ->
                     (node.astParent as? CallExpression)?.name?.localName == "baz"
                 },
-                scope = INTRAPROCEDURAL(),
+                scope = Intraprocedural(),
             )
         assertFalse(
             ifResult.value,
@@ -616,7 +616,7 @@ class DataflowQueriesTest {
                 sinkPredicate = { node ->
                     (node.astParent as? CallExpression)?.name?.localName == "baz"
                 },
-                scope = INTRAPROCEDURAL(),
+                scope = Intraprocedural(),
             )
         assertTrue(
             ifResultWithB.value,
@@ -635,7 +635,7 @@ class DataflowQueriesTest {
                 sinkPredicate = { node ->
                     (node.astParent as? CallExpression)?.name?.localName == "baz"
                 },
-                scope = INTRAPROCEDURAL(),
+                scope = Intraprocedural(),
             )
         assertFalse(
             ifResultWithBInterProc.value,
@@ -654,7 +654,7 @@ class DataflowQueriesTest {
                 sinkPredicate = { node ->
                     (node.astParent as? CallExpression)?.name?.localName == "baz"
                 },
-                scope = INTRAPROCEDURAL(),
+                scope = Intraprocedural(),
             )
         assertTrue(ifElseResult.value, "Both paths go from the variable through print to baz.")
 
@@ -670,7 +670,7 @@ class DataflowQueriesTest {
                 sinkPredicate = { node ->
                     (node.astParent as? CallExpression)?.name?.localName == "baz"
                 },
-                scope = INTRAPROCEDURAL(),
+                scope = Intraprocedural(),
             )
         assertTrue(ifElseWithBResult.value, "Both paths go from the variable through print to baz.")
 
@@ -686,7 +686,7 @@ class DataflowQueriesTest {
                 sinkPredicate = { node ->
                     (node.astParent as? CallExpression)?.name?.localName == "baz"
                 },
-                scope = INTRAPROCEDURAL(),
+                scope = Intraprocedural(),
             )
         assertFalse(
             ifElseWithBResultInterProc.value,
@@ -708,7 +708,7 @@ class DataflowQueriesTest {
                 sinkPredicate = { node ->
                     (node.astParent as? CallExpression)?.name?.localName == "baz"
                 },
-                scope = INTERPROCEDURAL(),
+                scope = Interprocedural(),
             )
         assertTrue(
             linearResultWithBInterProc.value,
@@ -727,7 +727,7 @@ class DataflowQueriesTest {
                 sinkPredicate = { node ->
                     (node.astParent as? CallExpression)?.name?.localName == "baz"
                 },
-                scope = INTERPROCEDURAL(),
+                scope = Interprocedural(),
             )
         assertTrue(
             ifResultWithBInterProc.value,
@@ -746,7 +746,7 @@ class DataflowQueriesTest {
                 sinkPredicate = { node ->
                     (node.astParent as? CallExpression)?.name?.localName == "baz"
                 },
-                scope = INTERPROCEDURAL(),
+                scope = Interprocedural(),
             )
         assertTrue(
             ifElseWithBResultInterProc.value,

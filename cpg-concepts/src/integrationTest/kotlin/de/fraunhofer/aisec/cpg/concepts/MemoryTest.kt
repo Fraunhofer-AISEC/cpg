@@ -39,7 +39,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeleteExpression
 import de.fraunhofer.aisec.cpg.query.AnalysisDirection
 import de.fraunhofer.aisec.cpg.query.AnalysisType
-import de.fraunhofer.aisec.cpg.query.INTERPROCEDURAL
+import de.fraunhofer.aisec.cpg.query.Interprocedural
 import de.fraunhofer.aisec.cpg.query.dataFlow
 import de.fraunhofer.aisec.cpg.query.executionPathBase
 import de.fraunhofer.aisec.cpg.test.analyze
@@ -119,7 +119,7 @@ class MemoryTest {
                     },
                     direction = AnalysisDirection.FORWARD,
                     type = AnalysisType.MUST,
-                    scope = INTERPROCEDURAL(),
+                    scope = Interprocedural(),
                     verbose = true,
                 )
             }
