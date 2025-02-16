@@ -49,7 +49,7 @@ class ExecutionOrderQueriesTest {
         val value5MayReach10 =
             executionPathBase(
                 startNode = literal5,
-                direction = FORWARD(),
+                direction = Forward(),
                 type = AnalysisType.MAY,
                 scope = Intraprocedural(),
                 predicate = { node -> node == literal10 },
@@ -62,7 +62,7 @@ class ExecutionOrderQueriesTest {
         val value5MustReach10 =
             executionPathBase(
                 startNode = literal5,
-                direction = FORWARD(),
+                direction = Forward(),
                 type = AnalysisType.MUST,
                 scope = Intraprocedural(),
                 predicate = { node -> node == literal10 },
@@ -75,7 +75,7 @@ class ExecutionOrderQueriesTest {
         val value5MustReachBaz =
             executionPathBase(
                 startNode = literal5,
-                direction = FORWARD(),
+                direction = Forward(),
                 type = AnalysisType.MUST,
                 scope = Intraprocedural(),
                 predicate = { node -> node == callBaz },
@@ -98,7 +98,7 @@ class ExecutionOrderQueriesTest {
         val callBazMayReach10 =
             executionPathBase(
                 startNode = callBaz,
-                direction = BACKWARD(),
+                direction = Backward(),
                 type = AnalysisType.MAY,
                 scope = Intraprocedural(),
                 predicate = { node -> node == literal10 },
@@ -111,7 +111,7 @@ class ExecutionOrderQueriesTest {
         val callBazMustReach10 =
             executionPathBase(
                 startNode = callBaz,
-                direction = BACKWARD(),
+                direction = Backward(),
                 type = AnalysisType.MUST,
                 scope = Intraprocedural(),
                 predicate = { node -> node == literal10 },
@@ -124,7 +124,7 @@ class ExecutionOrderQueriesTest {
         val callBazMustReach5 =
             executionPathBase(
                 startNode = callBaz,
-                direction = BACKWARD(),
+                direction = Backward(),
                 type = AnalysisType.MUST,
                 scope = Intraprocedural(),
                 predicate = { node -> node == literal5 },
@@ -151,7 +151,7 @@ class ExecutionOrderQueriesTest {
         val literal10MayReachBaz =
             executionPathBase(
                 startNode = literal10,
-                direction = BIDIRECTIONAL(),
+                direction = Bidirectional(),
                 type = AnalysisType.MAY,
                 scope = Intraprocedural(),
                 predicate = { node -> node == callBaz },
@@ -164,7 +164,7 @@ class ExecutionOrderQueriesTest {
         val literal10MayReach5 =
             executionPathBase(
                 startNode = literal10,
-                direction = BIDIRECTIONAL(),
+                direction = Bidirectional(),
                 type = AnalysisType.MAY,
                 scope = Intraprocedural(),
                 predicate = { node -> node == literal5 },
@@ -180,7 +180,7 @@ class ExecutionOrderQueriesTest {
         val literal10MustReachBaz =
             executionPathBase(
                 startNode = literal10,
-                direction = BIDIRECTIONAL(),
+                direction = Bidirectional(),
                 type = AnalysisType.MUST,
                 scope = Intraprocedural(),
                 predicate = { node -> node == callBaz },
@@ -193,7 +193,7 @@ class ExecutionOrderQueriesTest {
         val literal10MustReach5 =
             executionPathBase(
                 startNode = literal10,
-                direction = BIDIRECTIONAL(),
+                direction = Bidirectional(),
                 type = AnalysisType.MUST,
                 scope = Intraprocedural(),
                 predicate = { node -> node == literal5 },
@@ -206,7 +206,7 @@ class ExecutionOrderQueriesTest {
         val literal10MustReachBazOr5 =
             executionPathBase(
                 startNode = literal10,
-                direction = BIDIRECTIONAL(),
+                direction = Bidirectional(),
                 type = AnalysisType.MUST,
                 scope = Intraprocedural(),
                 predicate = { node -> node == callBaz || node == literal5 },

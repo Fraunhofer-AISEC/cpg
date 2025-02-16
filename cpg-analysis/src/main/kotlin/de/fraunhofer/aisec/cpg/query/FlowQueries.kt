@@ -55,13 +55,13 @@ class Interprocedural(val maxCallDepth: Int? = null, maxSteps: Int? = null) :
 sealed class AnalysisDirection
 
 /** Follow the order of the EOG */
-class FORWARD() : AnalysisDirection()
+class Forward() : AnalysisDirection()
 
 /** Against the order of the EOG */
-class BACKWARD() : AnalysisDirection()
+class Backward() : AnalysisDirection()
 
 /** In and against the order of the EOG */
-class BIDIRECTIONAL() : AnalysisDirection()
+class Bidirectional() : AnalysisDirection()
 
 /** Determines if the predicate must or may hold */
 enum class AnalysisType {
@@ -110,7 +110,7 @@ enum class AnalysisSensitivity {
 
 fun dataFlowBase(
     startNode: Node,
-    direction: AnalysisDirection = FORWARD(),
+    direction: AnalysisDirection = Forward(),
     type: AnalysisType = AnalysisType.MAY,
     vararg sensitivities: AnalysisSensitivity,
     scope: AnalysisScope = Interprocedural(),
@@ -128,7 +128,7 @@ fun dataFlowBase(
     }
     val evalRes =
         when (direction) {
-            is FORWARD -> {
+            is Forward -> {
                 startNode.followNextDFGEdgesUntilHit(
                     collectFailedPaths = collectFailedPaths,
                     findAllPossiblePaths = findAllPossiblePaths,
@@ -139,7 +139,7 @@ fun dataFlowBase(
                     predicate = predicate,
                 )
             }
-            is BACKWARD -> {
+            is Backward -> {
                 startNode.followPrevDFGEdgesUntilHit(
                     collectFailedPaths = collectFailedPaths,
                     findAllPossiblePaths = findAllPossiblePaths,
@@ -150,7 +150,7 @@ fun dataFlowBase(
                     predicate = predicate,
                 )
             }
-            is BIDIRECTIONAL -> {
+            is Bidirectional -> {
                 startNode.followNextDFGEdgesUntilHit(
                     collectFailedPaths = collectFailedPaths,
                     findAllPossiblePaths = findAllPossiblePaths,
@@ -213,7 +213,7 @@ fun dataFlowBase(
 
 fun executionPathBase(
     startNode: Node,
-    direction: AnalysisDirection = FORWARD(),
+    direction: AnalysisDirection = Forward(),
     type: AnalysisType = AnalysisType.MAY,
     scope: AnalysisScope = Interprocedural(),
     verbose: Boolean = true,
@@ -228,7 +228,7 @@ fun executionPathBase(
     }
     val evalRes =
         when (direction) {
-            is FORWARD -> {
+            is Forward -> {
                 startNode.followNextEOGEdgesUntilHit(
                     collectFailedPaths = collectFailedPaths,
                     findAllPossiblePaths = findAllPossiblePaths,
@@ -237,7 +237,7 @@ fun executionPathBase(
                     predicate = predicate,
                 )
             }
-            is BACKWARD -> {
+            is Backward -> {
                 startNode.followPrevEOGEdgesUntilHit(
                     collectFailedPaths = collectFailedPaths,
                     findAllPossiblePaths = findAllPossiblePaths,
@@ -246,7 +246,7 @@ fun executionPathBase(
                     predicate = predicate,
                 )
             }
-            is BIDIRECTIONAL -> {
+            is Bidirectional -> {
                 startNode.followNextEOGEdgesUntilHit(
                     collectFailedPaths = collectFailedPaths,
                     findAllPossiblePaths = findAllPossiblePaths,
@@ -333,7 +333,7 @@ fun dataFlow(
 ) =
     dataFlowBase(
         startNode = source,
-        direction = FORWARD(),
+        direction = Forward(),
         type = AnalysisType.MAY,
         sensitivities = AnalysisSensitivity.FIELD_SENSITIVE + AnalysisSensitivity.CONTEXT_SENSITIVE,
         scope = Interprocedural(),
@@ -350,7 +350,7 @@ fun dataFlow(
 ) =
     dataFlowBase(
         startNode = source,
-        direction = FORWARD(),
+        direction = Forward(),
         type = AnalysisType.MAY,
         sensitivities = AnalysisSensitivity.FIELD_SENSITIVE + AnalysisSensitivity.CONTEXT_SENSITIVE,
         scope = Interprocedural(),

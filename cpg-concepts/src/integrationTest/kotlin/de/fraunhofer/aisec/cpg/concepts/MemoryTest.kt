@@ -38,7 +38,7 @@ import de.fraunhofer.aisec.cpg.graph.concepts.memory.MemoryManagementMode
 import de.fraunhofer.aisec.cpg.graph.edges.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeleteExpression
 import de.fraunhofer.aisec.cpg.query.AnalysisType
-import de.fraunhofer.aisec.cpg.query.FORWARD
+import de.fraunhofer.aisec.cpg.query.Forward
 import de.fraunhofer.aisec.cpg.query.Interprocedural
 import de.fraunhofer.aisec.cpg.query.dataFlow
 import de.fraunhofer.aisec.cpg.query.executionPathBase
@@ -117,7 +117,7 @@ class MemoryTest {
                     predicate = { node ->
                         node.overlayEdges.any { edge -> edge.end is DeAllocate }
                     },
-                    direction = FORWARD(),
+                    direction = Forward(),
                     type = AnalysisType.MUST,
                     scope = Interprocedural(),
                     verbose = true,
