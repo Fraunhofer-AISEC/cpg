@@ -56,7 +56,7 @@ class ExecutionOrderQueriesTest {
             )
         assertTrue(
             value5MayReach10.value,
-            "Theres a EOG path between the 5 and the 10. For the may-analysis, we can ignore the failing path.",
+            "Theres an EOG path between the 5 and the 10. For the may-analysis, we can ignore the failing path.",
         )
 
         val value5MustReach10 =
@@ -69,7 +69,7 @@ class ExecutionOrderQueriesTest {
             )
         assertFalse(
             value5MustReach10.value,
-            "Theres a EOG path between the 5 and the 10. For the must-analysis, we cannot ignore the failing path.",
+            "Theres an EOG path between the 5 and the 10. For the must-analysis, we cannot ignore the failing path.",
         )
 
         val value5MustReachBaz =
@@ -105,7 +105,7 @@ class ExecutionOrderQueriesTest {
             )
         assertTrue(
             callBazMayReach10.value,
-            "Theres a EOG path between the call to baz and the 10. For the may-analysis, we can ignore the failing path.",
+            "Theres a backward EOG path between the call to baz and the 10. For the may-analysis, we can ignore the failing path.",
         )
 
         val callBazMustReach10 =
@@ -158,7 +158,7 @@ class ExecutionOrderQueriesTest {
             )
         assertTrue(
             literal10MayReachBaz.value,
-            "Theres a EOG path between the 10 and the call to baz. For the may-analysis, we can ignore the failing path.",
+            "Theres an EOG path between the 10 and the call to baz. For the may-analysis, we can ignore the failing path.",
         )
 
         val literal10MayReach5 =
@@ -171,9 +171,12 @@ class ExecutionOrderQueriesTest {
             )
         assertTrue(
             literal10MayReach5.value,
-            "Theres a EOG path between the 10 and the call to baz. For the may-analysis, we can ignore the failing path.",
+            "Theres an EOG path between the 10 and the call to baz. For the may-analysis, we can ignore the failing path.",
         )
 
+        // TODO: I'm not sure if this actually makes sense (i.e., if we need such a thing). It is
+        // probably more interesting to figure out whether there's always a path either before or
+        // after the node. Then, the naming could be confusing though
         val literal10MustReachBaz =
             executionPathBase(
                 startNode = literal10,
@@ -184,7 +187,7 @@ class ExecutionOrderQueriesTest {
             )
         assertFalse(
             literal10MustReachBaz.value,
-            "Theres a EOG path between the 10 and the call to baz. For the must-analysis, we cannot ignore the failing backward path.",
+            "Theres an EOG path between the 10 and the call to baz. For the must-analysis, we cannot ignore the failing backward path.",
         )
 
         val literal10MustReach5 =
@@ -196,8 +199,8 @@ class ExecutionOrderQueriesTest {
                 predicate = { node -> node == literal5 },
             )
         assertFalse(
-            literal10MustReachBaz.value,
-            "Theres a EOG path between the 10 and the 5. For the must-analysis, we cannot ignore the failing forward path.",
+            literal10MustReach5.value,
+            "Theres an EOG path between the 10 and the 5. For the must-analysis, we cannot ignore the failing forward path.",
         )
 
         val literal10MustReachBazOr5 =
