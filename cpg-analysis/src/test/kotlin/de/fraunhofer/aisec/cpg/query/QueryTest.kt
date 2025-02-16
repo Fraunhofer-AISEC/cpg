@@ -104,7 +104,7 @@ class QueryTest {
 
         val queryTreeResult =
             result.all<CallExpression>({ it.name.localName == "free" }) { outer ->
-                !executionPath(outer) {
+                !executionPathBase(outer) {
                         (it as? Reference)?.refersTo == (outer.arguments[0] as? Reference)?.refersTo
                     }
                     .value
@@ -117,7 +117,7 @@ class QueryTest {
                 { it.name.localName == "free" },
                 { outer ->
                     not(
-                        executionPath(outer) {
+                        executionPathBase(outer) {
                             (it as? Reference)?.refersTo ==
                                 (outer.arguments[0] as? Reference)?.refersTo
                         }
@@ -134,10 +134,10 @@ class QueryTest {
 
         val queryTreeResult =
             result.all<CallExpression>({ it.name.localName == "free" }) { outer ->
-                !executionPath(outer) {
+                !executionPathBase(outer) {
                         (it as? CallExpression)?.name?.localName == "free" &&
-                            ((it as? CallExpression)?.arguments?.getOrNull(0) as? Reference)
-                                ?.refersTo == (outer.arguments[0] as? Reference)?.refersTo
+                            (it.arguments[0] as? Reference)?.refersTo ==
+                                (outer.arguments[0] as? Reference)?.refersTo
                     }
                     .value
             }
@@ -149,10 +149,10 @@ class QueryTest {
                 { it.name.localName == "free" },
                 { outer ->
                     not(
-                        executionPath(outer) {
+                        executionPathBase(outer) {
                             (it as? CallExpression)?.name?.localName == "free" &&
-                                ((it as? CallExpression)?.arguments?.getOrNull(0) as? Reference)
-                                    ?.refersTo == (outer.arguments[0] as? Reference)?.refersTo
+                                (it.arguments[0] as? Reference)?.refersTo ==
+                                    (outer.arguments[0] as? Reference)?.refersTo
                         }
                     )
                 },

@@ -359,20 +359,6 @@ fun dataFlow(
     )
 
 /**
- * Checks if a path of execution flow is possible starting at the node [from] and fulfilling the
- * requirement specified in [predicate].
- */
-fun executionPath(from: Node, predicate: (Node) -> Boolean) =
-    executionPathBase(
-        startNode = from,
-        predicate = predicate,
-        direction = FORWARD(),
-        type = AnalysisType.MAY,
-        scope = Interprocedural(),
-        verbose = true,
-    )
-
-/**
  * This function tracks if the data in [this] always flow through a node which fulfills [predicate].
  * An early termination can be specified by the predicate [earlyTermination].
  * [allowOverwritingValue] can be used to configure if overwriting the value (or part of it) results
