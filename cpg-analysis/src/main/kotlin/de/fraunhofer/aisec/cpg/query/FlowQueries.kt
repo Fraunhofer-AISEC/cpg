@@ -110,10 +110,10 @@ enum class AnalysisSensitivity {
 
 fun dataFlowBase(
     startNode: Node,
-    direction: AnalysisDirection,
-    type: AnalysisType,
+    direction: AnalysisDirection = FORWARD(),
+    type: AnalysisType = AnalysisType.MAY,
     vararg sensitivities: AnalysisSensitivity,
-    scope: AnalysisScope,
+    scope: AnalysisScope = Interprocedural(),
     verbose: Boolean = true,
     earlyTermination: ((Node) -> Boolean)? = null,
     predicate: (Node) -> Boolean,
@@ -213,9 +213,9 @@ fun dataFlowBase(
 
 fun executionPathBase(
     startNode: Node,
-    direction: AnalysisDirection,
-    type: AnalysisType,
-    scope: AnalysisScope,
+    direction: AnalysisDirection = FORWARD(),
+    type: AnalysisType = AnalysisType.MAY,
+    scope: AnalysisScope = Interprocedural(),
     verbose: Boolean = true,
     earlyTermination: ((Node) -> Boolean)? = null,
     predicate: (Node) -> Boolean,
@@ -358,17 +358,6 @@ fun dataFlow(
         predicate = predicate,
     )
 
-/** Checks if a path of execution flow is possible between the nodes [from] and [to]. */
-fun executionPath(from: Node, to: Node) =
-    executionPathBase(
-        startNode = from,
-        predicate = { it == to },
-        direction = FORWARD(),
-        type = AnalysisType.MAY,
-        scope = Interprocedural(),
-        verbose = true,
-    )
-
 /**
  * Checks if a path of execution flow is possible starting at the node [from] and fulfilling the
  * requirement specified in [predicate].
@@ -378,20 +367,6 @@ fun executionPath(from: Node, predicate: (Node) -> Boolean) =
         startNode = from,
         predicate = predicate,
         direction = FORWARD(),
-        type = AnalysisType.MAY,
-        scope = Interprocedural(),
-        verbose = true,
-    )
-
-/**
- * Checks if a path of execution flow is possible ending at the node [to] and fulfilling the
- * requirement specified in [predicate].
- */
-fun executionPathBackwards(to: Node, predicate: (Node) -> Boolean) =
-    executionPathBase(
-        startNode = to,
-        predicate = predicate,
-        direction = BACKWARD(),
         type = AnalysisType.MAY,
         scope = Interprocedural(),
         verbose = true,
