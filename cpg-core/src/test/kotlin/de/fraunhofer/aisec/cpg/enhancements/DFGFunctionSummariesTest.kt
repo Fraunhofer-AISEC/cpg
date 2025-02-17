@@ -382,7 +382,6 @@ class DFGFunctionSummariesTest {
                 TranslationConfiguration.builder()
                     .registerLanguage(TestLanguage("."))
                     .registerFunctionSummaries(File("src/test/resources/function-dfg.yml"))
-                    .registerPass<PointsToPass>()
                     .inferenceConfiguration(
                         InferenceConfiguration.builder()
                             .inferDfgForUnresolvedCalls(true)
