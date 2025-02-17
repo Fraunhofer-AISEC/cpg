@@ -32,18 +32,76 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import kotlin.collections.all
 
+fun FulfilledAndFailedPaths.toQueryTree(
+    startNode: Node,
+    queryType: String,
+): List<QueryTree<Boolean>> {
+    return this.fulfilled.map {
+        QueryTree(
+            true,
+            mutableListOf(QueryTree(it)),
+            "$queryType from $startNode to ${it.last()} fulfills the requirement",
+            startNode,
+        )
+    } +
+        this.failed.map {
+            QueryTree(
+                false,
+                mutableListOf(QueryTree(it)),
+                "$queryType from $startNode to ${it.last()} does not fulfill the requirement",
+                startNode,
+            )
+        }
+}
+
 /** Determines if the predicate must or may hold */
-enum class AnalysisType {
-    /**
-     * The predicate must hold, i.e., all paths fulfill the property/requirement. No path violates
-     * the property/requirement.
-     */
-    MUST,
-    /**
-     * The predicate may hold, i.e., there is at least one path which fulfills the
-     * property/requirement.
-     */
-    MAY,
+sealed class AnalysisType {
+    abstract fun createQueryTree(
+        evalRes: FulfilledAndFailedPaths,
+        startNode: Node,
+        queryType: String,
+    ): QueryTree<Boolean>
+}
+
+/**
+ * The predicate must hold, i.e., all paths fulfill the property/requirement. No path violates the
+ * property/requirement.
+ */
+class MustAnalysis() : AnalysisType() {
+    override fun createQueryTree(
+        evalRes: FulfilledAndFailedPaths,
+        startNode: Node,
+        queryType: String,
+    ): QueryTree<Boolean> {
+        val allPaths = evalRes.toQueryTree(startNode, queryType)
+
+        return QueryTree(
+            evalRes.failed.isEmpty(),
+            allPaths.toMutableList(),
+            "$queryType from $startNode to ${evalRes.fulfilled.map { it.last() }}",
+            startNode,
+        )
+    }
+}
+
+/**
+ * The predicate may hold, i.e., there is at least one path which fulfills the property/requirement.
+ */
+class MayAnalysis() : AnalysisType() {
+    override fun createQueryTree(
+        evalRes: FulfilledAndFailedPaths,
+        startNode: Node,
+        queryType: String,
+    ): QueryTree<Boolean> {
+        val allPaths = evalRes.toQueryTree(startNode, queryType)
+
+        return QueryTree(
+            evalRes.fulfilled.isNotEmpty(),
+            allPaths.toMutableList(),
+            "$queryType from $startNode to ${evalRes.fulfilled.map { it.last() }}",
+            startNode,
+        )
+    }
 }
 
 /**
@@ -52,9 +110,9 @@ enum class AnalysisType {
  *
  * The interpretation of the analysis result can be configured as must analysis (all paths have to
  * fulfill the criterion) or may analysis (at least one path has to fulfill the criterion) by
- * setting the [type] parameter (default: [AnalysisType.MAY]). Note that this only reasons about
- * existing DFG paths, and it might not be sufficient if you actually want a guarantee that some
- * action always happens with the data. In this case, you may need to check the [executionPath].
+ * setting the [type] parameter (default: [MayAnalysis]). Note that this only reasons about existing
+ * DFG paths, and it might not be sufficient if you actually want a guarantee that some action
+ * always happens with the data. In this case, you may need to check the [executionPath].
  *
  * The [sensitivities] can also be configured to a certain extent. The analysis can be run as
  * interprocedural or intraprocedural analysis. If [earlyTermination] is not `null`, this can be
@@ -63,15 +121,15 @@ enum class AnalysisType {
 fun dataFlow(
     startNode: Node,
     direction: AnalysisDirection = Forward(),
-    type: AnalysisType = AnalysisType.MAY,
+    type: AnalysisType = MayAnalysis(),
     vararg sensitivities: AnalysisSensitivity = FieldSensitive() + ContextSensitive(),
     scope: AnalysisScope = Interprocedural(),
     verbose: Boolean = true,
     earlyTermination: ((Node) -> Boolean)? = null,
     predicate: (Node) -> Boolean,
 ): QueryTree<Boolean> {
-    val collectFailedPaths = type == AnalysisType.MUST || verbose
-    val findAllPossiblePaths = type == AnalysisType.MUST || verbose
+    val collectFailedPaths = type is MustAnalysis || verbose
+    val findAllPossiblePaths = type is MustAnalysis || verbose
     val earlyTermination = { n: Node, ctx: Context -> earlyTermination?.let { it(n) } == true }
 
     val evalRes =
@@ -93,44 +151,7 @@ fun dataFlow(
                     )
             }
 
-    val allPaths =
-        evalRes.fulfilled
-            .map {
-                QueryTree(
-                    true,
-                    mutableListOf(QueryTree(it)),
-                    "data flow from $startNode to ${it.last()} fulfills the requirement",
-                    startNode,
-                )
-            }
-            .toMutableList()
-    if (type == AnalysisType.MUST || verbose)
-        allPaths +=
-            evalRes.failed.map {
-                QueryTree(
-                    false,
-                    mutableListOf(QueryTree(it)),
-                    "data flow from $startNode to ${it.last()} does not fulfill the requirement",
-                    startNode,
-                )
-            }
-
-    return when (type) {
-        AnalysisType.MUST ->
-            QueryTree(
-                evalRes.failed.isEmpty(),
-                allPaths.toMutableList(),
-                "data flow from $startNode to ${evalRes.fulfilled.map { it.last() }}",
-                startNode,
-            )
-        AnalysisType.MAY ->
-            QueryTree(
-                evalRes.fulfilled.isNotEmpty(),
-                allPaths.toMutableList(),
-                "data flow from $startNode to ${evalRes.fulfilled.map { it.last() }}",
-                startNode,
-            )
-    }
+    return type.createQueryTree(evalRes = evalRes, startNode = startNode, queryType = "data flow")
 }
 
 /**
@@ -139,7 +160,7 @@ fun dataFlow(
  *
  * The interpretation of the analysis result can be configured as must analysis (all paths have to
  * fulfill the criterion) or may analysis (at least one path has to fulfill the criterion) by
- * setting the [type] parameter (default: [AnalysisType.MAY]).
+ * setting the [type] parameter (default: [MayAnalysis]).
  *
  * The analysis can be run as interprocedural or intraprocedural analysis by setting [scope]. If
  * [earlyTermination] is not `null`, this can be used as a criterion to make the query fail if this
@@ -148,18 +169,16 @@ fun dataFlow(
 fun executionPath(
     startNode: Node,
     direction: AnalysisDirection = Forward(),
-    type: AnalysisType = AnalysisType.MAY,
+    type: AnalysisType = MayAnalysis(),
     scope: AnalysisScope = Interprocedural(),
     verbose: Boolean = true,
     earlyTermination: ((Node) -> Boolean)? = null,
     predicate: (Node) -> Boolean,
 ): QueryTree<Boolean> {
-    val collectFailedPaths = type == AnalysisType.MUST || verbose
-    val findAllPossiblePaths = type == AnalysisType.MUST || verbose
+    val collectFailedPaths = type is MustAnalysis || verbose
+    val findAllPossiblePaths = type is MustAnalysis || verbose
     val interproceduralAnalysis = scope is Interprocedural
-    val earlyTermination = { n: Node, ctx: Context ->
-        earlyTermination?.let { it(n) } == true || scope.maxSteps?.let { ctx.steps >= it } == true
-    }
+    val earlyTermination = { n: Node, ctx: Context -> earlyTermination?.let { it(n) } == true }
     val evalRes =
         when (direction) {
             is Forward -> {
@@ -197,44 +216,11 @@ fun executionPath(
                     )
             }
         }
-    val allPaths =
-        evalRes.fulfilled
-            .map {
-                QueryTree(
-                    true,
-                    mutableListOf(QueryTree(it)),
-                    "execution path from $startNode to ${it.last()} fulfills the requirement",
-                    startNode,
-                )
-            }
-            .toMutableList()
-    if (type == AnalysisType.MUST || verbose)
-        allPaths +=
-            evalRes.failed.map {
-                QueryTree(
-                    false,
-                    mutableListOf(QueryTree(it)),
-                    "execution path from $startNode to ${it.last()} does not fulfill the requirement",
-                    startNode,
-                )
-            }
-
-    return when (type) {
-        AnalysisType.MUST ->
-            QueryTree(
-                evalRes.failed.isEmpty(),
-                allPaths.toMutableList(),
-                "execution path from $startNode to ${evalRes.fulfilled.map { it.last() }}",
-                startNode,
-            )
-        AnalysisType.MAY ->
-            QueryTree(
-                evalRes.fulfilled.isNotEmpty(),
-                allPaths.toMutableList(),
-                "execution path from $startNode to ${evalRes.fulfilled.map { it.last() }}",
-                startNode,
-            )
-    }
+    return type.createQueryTree(
+        evalRes = evalRes,
+        startNode = startNode,
+        queryType = "execution path",
+    )
 }
 
 /**
@@ -280,7 +266,6 @@ fun Node.alwaysFlowsTo(
             .flatten()
     val earlyTerminationPredicate = { n: Node, ctx: Context ->
         earlyTermination?.let { it(n) } == true ||
-            scope.maxSteps?.let { ctx.steps >= it } == true ||
             (!allowOverwritingValue &&
                 // TODO: This should be replaced with some check if the memory location/whatever
                 // where the data is kept is (partially) written to.
