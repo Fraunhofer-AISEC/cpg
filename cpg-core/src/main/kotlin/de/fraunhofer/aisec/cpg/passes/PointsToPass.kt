@@ -40,13 +40,14 @@ import de.fraunhofer.aisec.cpg.helpers.functional.*
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.Pair
 import kotlin.collections.filter
 import kotlin.collections.map
 import kotlin.let
 import kotlin.text.contains
 
-val nodesCreatingUnknownValues = HashMap<Pair<Node, Name>, MemoryAddress>()
+val nodesCreatingUnknownValues = ConcurrentHashMap<Pair<Node, Name>, MemoryAddress>()
 
 typealias StateEntry = TupleLattice<PowersetLattice.Element<Node>, PowersetLattice.Element<Node>>
 

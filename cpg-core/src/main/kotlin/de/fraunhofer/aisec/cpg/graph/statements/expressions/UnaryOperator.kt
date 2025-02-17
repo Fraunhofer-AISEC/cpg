@@ -75,7 +75,7 @@ class UnaryOperator :
         if (operatorCode == "++" || operatorCode == "--") {
             (input as? Reference)?.dfgHandlerHint = true
         }
-        
+
         var access =
             if (operatorCode == "++" || operatorCode == "--") {
                 AccessValues.READWRITE
