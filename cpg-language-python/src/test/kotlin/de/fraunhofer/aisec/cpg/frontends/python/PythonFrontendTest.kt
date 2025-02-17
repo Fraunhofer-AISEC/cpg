@@ -1843,4 +1843,64 @@ class PythonFrontendTest : BaseTest() {
         val refersTo = foo.refs("fooA").map { it.refersTo }
         refersTo.forEach { refersTo -> assertIs<ParameterDeclaration>(refersTo) }
     }
+
+    @Test
+    fun testSuperclassImportFullPath() {
+        val topLevel = Path.of("src", "test")
+        val result =
+            analyze(
+                listOf(
+                    topLevel
+                        .resolve("resources/python/superclasses/superclass_import_full_path.py")
+                        .toFile(),
+                    topLevel.resolve("resources/python/superclasses/superclass.py").toFile(),
+                ),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(result)
+
+        val clsBase = result.records["base"]
+        assertNotNull(clsBase)
+
+        val clsSuper = clsBase.superClasses.firstOrNull()
+        assertNotNull(clsSuper)
+        assertIs<ObjectType>(clsSuper)
+
+        val expectedSuper = result.records["Foobar"]
+        assertNotNull(expectedSuper)
+        assertEquals(expectedSuper, clsSuper.recordDeclaration)
+    }
+
+    @Test
+    fun testSuperclassImportModuleAlias() {
+        val topLevel = Path.of("src", "test")
+        val result =
+            analyze(
+                listOf(
+                    topLevel
+                        .resolve("resources/python/superclasses/superclass_import_module_alias.py")
+                        .toFile(),
+                    topLevel.resolve("resources/python/superclasses/superclass.py").toFile(),
+                ),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(result)
+
+        val clsBase = result.records["base"]
+        assertNotNull(clsBase)
+
+        val clsSuper = clsBase.superClasses.firstOrNull()
+        assertNotNull(clsSuper)
+        assertIs<ObjectType>(clsSuper)
+
+        val expectedSuper = result.records["Foobar"]
+        assertNotNull(expectedSuper)
+        assertEquals(expectedSuper, clsSuper.recordDeclaration)
+    }
 }

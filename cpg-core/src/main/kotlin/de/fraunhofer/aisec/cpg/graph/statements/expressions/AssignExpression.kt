@@ -105,6 +105,12 @@ class AssignExpression :
                         )
                     }
                 }
+                end.access =
+                    if (isSimpleAssignment) {
+                        AccessValues.WRITE
+                    } else {
+                        AccessValues.READWRITE
+                    }
             }
         )
     var lhs by unwrapping(AssignExpression::lhsEdges)

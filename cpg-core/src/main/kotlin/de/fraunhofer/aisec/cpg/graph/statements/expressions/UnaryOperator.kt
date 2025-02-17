@@ -72,14 +72,17 @@ class UnaryOperator :
     var isPrefix = false
 
     private fun changeExpressionAccess() {
-        var access = AccessValues.READ
         if (operatorCode == "++" || operatorCode == "--") {
-            access = AccessValues.READWRITE
             (input as? Reference)?.dfgHandlerHint = true
         }
-        if (input is Reference) {
-            (input as? Reference)?.access = access
-        }
+        
+        var access =
+            if (operatorCode == "++" || operatorCode == "--") {
+                AccessValues.READWRITE
+            } else {
+                this.access
+            }
+        this.input.access = access
     }
 
     override fun toString(): String {
@@ -129,11 +132,13 @@ class UnaryOperator :
 
     override fun addArgument(expression: Expression) {
         this.input = expression
+        this.input.access = access
     }
 
     override fun replaceArgument(old: Expression, new: Expression): Boolean {
         if (this.input == old) {
             this.input = new
+            this.input.access = access
             return true
         }
 
@@ -162,6 +167,12 @@ class UnaryOperator :
     }
 
     override fun hashCode() = super.hashCode()
+
+    override var access = AccessValues.READ
+        set(value) {
+            field = value
+            this.input.access = value
+        }
 
     companion object {
         const val OPERATOR_POSTFIX_INCREMENT = "++"

@@ -84,6 +84,7 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                             param,
                             callingContext = CallingContextOut(call),
                         )
+                        arg.access = AccessValues.READWRITE
                         (arg as? Reference)?.let {
                             // The access value stays on READ. Even if it's a pointer, only the
                             // dereference will be written.
@@ -403,12 +404,13 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      */
     protected fun handleInitializerListExpression(node: InitializerListExpression) {
         node.initializers.forEachIndexed { idx, it ->
+            val astParent = node.astParent
             if (
-                node.astParent is AssignExpression &&
-                    node in (node.astParent as AssignExpression).lhs
+                astParent is AssignExpression && node in astParent.lhs ||
+                    astParent is ComprehensionExpression && node == astParent.variable
             ) {
-                // If we're the target of an assignment, the DFG flows from the node to the
-                // initializers.
+                // If we're the target of an assignment or the variable of a comprehension
+                // expression, the DFG flows from the node to the initializers.
                 node.nextDFGEdges.add(it) { granularity = indexed(idx) }
             } else {
                 node.prevDFGEdges.add(it) { granularity = indexed(idx) }

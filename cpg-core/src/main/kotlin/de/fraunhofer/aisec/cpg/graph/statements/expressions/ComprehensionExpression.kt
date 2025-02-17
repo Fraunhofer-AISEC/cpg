@@ -41,12 +41,7 @@ class ComprehensionExpression : Expression(), ArgumentHolder {
     var variableEdge =
         astEdgeOf<Statement>(
             of = ProblemExpression("Missing variableEdge in ${this::class}"),
-            onChanged = { _, new ->
-                val end = new?.end
-                if (end is Reference) {
-                    end.access = AccessValues.WRITE
-                }
-            },
+            onChanged = { _, new -> (new?.end as? Expression)?.access = AccessValues.WRITE },
         )
 
     /**
