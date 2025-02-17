@@ -518,14 +518,14 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertTrue(statements[1] is BinaryOperator)
     }
 
-    @Ignore
     @Test
     @Throws(Exception::class)
-    fun testUnaryOperator() {
-        val file = File("src/test/resources/unaryoperator.cpp")
+    fun testPointerDereference() {
+        val file = File("src/test/resources/pointerdereference.cpp")
         val unit =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
+                it.registerPass<PointsToPass>()
             }
         val statements = unit.declarations<FunctionDeclaration>(0)?.statements
         assertNotNull(statements)
@@ -595,14 +595,20 @@ internal class CXXLanguageFrontendTest : BaseTest() {
 
         val literal7 = cAssignment.rhs<Literal<Int>>()
         assertNotNull(literal7)
-        assertEquals(setOf<Node>(cDeref), literal7.nextDFG)
+        assertEquals(3, literal7.nextFullDFG.size)
 
         val cNextUsageStmt = statements[++line] as AssignExpression
         val cNextUsage = cNextUsageStmt.rhs<PointerDereference>()
+        val ptrDeref = cNextUsageStmt.lhs<PointerDereference>()
         assertNotNull(cNextUsage)
-        assertEquals(setOf<Node>(cNextUsage), cDeref.nextDFG)
-
-        // TODO: this no longer tests UnaryOperator -> move to test PointerDereference
+        assertEquals(
+            setOf<Node>(
+                cNextUsage as PointerDereference,
+                cDeref as PointerDereference,
+                ptrDeref as PointerDereference,
+            ),
+            literal7.nextFullDFG.toSet(),
+        )
     }
 
     @Test
