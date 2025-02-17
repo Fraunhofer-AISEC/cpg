@@ -201,35 +201,32 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
         startState = initializeParameters(lattice, node.parameters, startState)
 
-        val finalState = lattice.iterateEOG(node.nextEOGEdges, startState, ::transfer)
+        var finalState = lattice.iterateEOG(node.nextEOGEdges, startState, ::transfer)
 
         /* Store function summary for this FunctionDeclaration. */
-        storeFunctionSummary(node, finalState)
+        finalState = storeFunctionSummary(lattice, node, finalState)
 
         for ((key, value) in finalState.generalState) {
             // All nodes in the state get new memoryValues, Expressions and Declarations
             // additionally get new MemoryAddresses
             val newPrevDFGs = value.second
             val newMemoryAddresses = value.first
-            if (newPrevDFGs.isNotEmpty()) {
-                //                key.prevDFG.clear()
-                newPrevDFGs.forEach { prev ->
-                    val entry = edgePropertiesMap[Pair(key, prev)]
-                    var context: CallingContext? = null
-                    val granularity =
-                        when (entry) {
-                            is PointerDataflowGranularity -> entry
-                            is CallingContext -> {
-                                context = entry
-                                default()
-                            }
-                            else -> {
-                                default()
-                            }
+            newPrevDFGs.forEach { prev ->
+                val entry = edgePropertiesMap[Pair(key, prev)]
+                var context: CallingContext? = null
+                val granularity =
+                    when (entry) {
+                        is Granularity -> entry
+                        is CallingContext -> {
+                            context = entry
+                            default()
                         }
-                    if (context == null) key.prevDFGEdges += Dataflow(prev, key, granularity)
-                    else key.prevDFGEdges.addContextSensitive(prev, granularity, context)
-                }
+                        else -> {
+                            default()
+                        }
+                    }
+                if (context == null) key.prevDFGEdges += Dataflow(prev, key, granularity)
+                else key.prevDFGEdges.addContextSensitive(prev, granularity, context)
             }
             if (newMemoryAddresses.isNotEmpty()) {
                 when (key) {
@@ -249,7 +246,12 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         }
     }
 
-    private fun storeFunctionSummary(node: FunctionDeclaration, doubleState: PointsToStateElement) {
+    private fun storeFunctionSummary(
+        lattice: PointsToState,
+        node: FunctionDeclaration,
+        doubleState: PointsToStateElement,
+    ): PointsToStateElement {
+        var doubleState = doubleState
         node.parameters.forEach { param ->
             // Collect all addresses of the parameter that we can use as index to look up possible
             // new values
@@ -302,6 +304,27 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                     subAccessName,
                                 )
                             )
+                        var pmv = param.memoryValue
+                        for (i in 0..<dstValueDepth - 1) {
+                            pmv = pmv?.memoryValue
+                        }
+                        if (pmv != null) {
+                            doubleState =
+                                lattice.push(
+                                    doubleState,
+                                    pmv,
+                                    StateEntryElement(
+                                        PowersetLattice.Element(),
+                                        PowersetLattice.Element(value),
+                                    ),
+                                )
+                            // If we only wrote to a field, we add an entry to the edgePropertiesMap
+                            // to mark it as partial Dataflow
+                            if (subAccessName.isNotEmpty()) {
+                                edgePropertiesMap[Pair(pmv, value)] =
+                                    PartialDataflowGranularity(FieldDeclaration())
+                            }
+                        }
                     }
             }
         }
@@ -309,6 +332,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         if (node.functionSummary.isEmpty()) {
             node.functionSummary.computeIfAbsent(ReturnStatement()) { mutableSetOf() }
         }
+
+        return doubleState
     }
 
     protected fun transfer(
