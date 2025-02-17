@@ -28,14 +28,28 @@ package de.fraunhofer.aisec.cpg.query
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+
+sealed class StepSelector() {
+    /**
+     * Returns `true` if the given [edge] will be followed giving the provided [context] under the
+     * provided configuration.
+     */
+    abstract fun followEdge(edge: Edge<Node>, ctx: Context): Boolean
+}
 
 /**
  * Determines how far we want to follow edges within the analysis. [maxSteps] defines the total
  * number of steps we will follow in the graph (unlimited depth if `null`).
  */
-sealed class AnalysisScope(val maxSteps: Int? = null)
+sealed class AnalysisScope(val maxSteps: Int? = null) : StepSelector() {
+    override fun followEdge(edge: Edge<Node>, ctx: Context): Boolean {
+        // Follow the edge if maxSteps is null or if maxSteps < ctx.steps
+        return this.maxSteps == null || maxSteps < ctx.steps
+    }
+}
 
 /**
  * Only intraprocedural analysis. [maxSteps] defines the total number of steps we will follow in the
@@ -49,10 +63,21 @@ class Intraprocedural(maxSteps: Int? = null) : AnalysisScope(maxSteps)
  * graph (unlimited depth if `null`).
  */
 class Interprocedural(val maxCallDepth: Int? = null, maxSteps: Int? = null) :
-    AnalysisScope(maxSteps)
+    AnalysisScope(maxSteps) {
+    override fun followEdge(edge: Edge<Node>, ctx: Context): Boolean {
+        // Follow the edge if we're still in the maxSteps range and (if maxCallDepth is null or the
+        // call stack is not deeper yet)
+        return super.followEdge(edge, ctx) &&
+            (maxCallDepth == null || ctx.callStack.depth < maxCallDepth)
+    }
+}
 
 /** Determines in which direction we follow the edges. */
-sealed class AnalysisDirection
+sealed class AnalysisDirection : StepSelector() {
+    override fun followEdge(edge: Edge<Node>, ctx: Context): Boolean {
+        return true
+    }
+}
 
 /** Follow the order of the EOG */
 class Forward() : AnalysisDirection()
