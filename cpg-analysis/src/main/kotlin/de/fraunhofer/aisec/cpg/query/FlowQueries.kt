@@ -27,6 +27,8 @@ package de.fraunhofer.aisec.cpg.query
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.AccessValues
+import de.fraunhofer.aisec.cpg.graph.AnalysisSensitivity
+import de.fraunhofer.aisec.cpg.graph.FilterUnreachableEOG
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
@@ -177,45 +179,27 @@ fun executionPath(
 ): QueryTree<Boolean> {
     val collectFailedPaths = type is MustAnalysis || verbose
     val findAllPossiblePaths = type is MustAnalysis || verbose
-    val interproceduralAnalysis = scope is Interprocedural
     val earlyTermination = { n: Node, ctx: Context -> earlyTermination?.let { it(n) } == true }
+
     val evalRes =
-        when (direction) {
-            is Forward -> {
-                startNode.followNextEOGEdgesUntilHit(
-                    collectFailedPaths = collectFailedPaths,
-                    findAllPossiblePaths = findAllPossiblePaths,
-                    interproceduralAnalysis = interproceduralAnalysis,
-                    earlyTermination = earlyTermination,
-                    predicate = predicate,
-                )
+        if (direction is Bidirectional) {
+                arrayOf(Forward(), Backward())
+            } else {
+                arrayOf(direction)
             }
-            is Backward -> {
-                startNode.followPrevEOGEdgesUntilHit(
-                    collectFailedPaths = collectFailedPaths,
-                    findAllPossiblePaths = findAllPossiblePaths,
-                    interproceduralAnalysis = interproceduralAnalysis,
-                    earlyTermination = earlyTermination,
-                    predicate = predicate,
-                )
-            }
-            is Bidirectional -> {
-                startNode.followNextEOGEdgesUntilHit(
-                    collectFailedPaths = collectFailedPaths,
-                    findAllPossiblePaths = findAllPossiblePaths,
-                    interproceduralAnalysis = interproceduralAnalysis,
-                    earlyTermination = earlyTermination,
-                    predicate = predicate,
-                ) +
-                    startNode.followPrevEOGEdgesUntilHit(
+            .fold(FulfilledAndFailedPaths(listOf(), listOf())) { result, direction ->
+                result +
+                    startNode.followEOGEdgesUntilHit(
                         collectFailedPaths = collectFailedPaths,
                         findAllPossiblePaths = findAllPossiblePaths,
-                        interproceduralAnalysis = interproceduralAnalysis,
+                        direction = direction,
+                        sensitivities = FilterUnreachableEOG() + ContextSensitive(),
+                        scope = scope,
                         earlyTermination = earlyTermination,
                         predicate = predicate,
                     )
             }
-        }
+
     return type.createQueryTree(
         evalRes = evalRes,
         startNode = startNode,
@@ -273,10 +257,11 @@ fun Node.alwaysFlowsTo(
                 (n as? Reference)?.access == AccessValues.WRITE)
     }
     val nextEOGEvaluation =
-        this.followNextEOGEdgesUntilHit(
+        this.followEOGEdgesUntilHit(
             collectFailedPaths = true,
             findAllPossiblePaths = true,
-            interproceduralAnalysis = scope is Interprocedural,
+            scope = scope,
+            sensitivities = sensitivities,
             earlyTermination = earlyTerminationPredicate,
         ) {
             predicate(it) && it in nextDFGPaths

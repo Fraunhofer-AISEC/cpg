@@ -375,7 +375,8 @@ class ShortcutsTest {
 
         val attrAssignment = assignExpr.lhs.first()
 
-        val paramPassed = attrAssignment.followPrevEOGEdgesUntilHit { it is Literal<*> }
+        val paramPassed =
+            attrAssignment.followEOGEdgesUntilHit(direction = Backward()) { it is Literal<*> }
         assertEquals(1, paramPassed.fulfilled.size)
         assertEquals(0, paramPassed.failed.size)
         val lastFulfilled = paramPassed.fulfilled[0].last()
@@ -403,7 +404,7 @@ class ShortcutsTest {
         // - the then/then (fails)
         // - the then/else (fails)
         val paramPassedIntraproceduralOnly =
-            ifCondition.followNextEOGEdgesUntilHit(interproceduralAnalysis = false) {
+            ifCondition.followEOGEdgesUntilHit(direction = Forward(), scope = Intraprocedural()) {
                 it is AssignExpression &&
                     it.operatorCode == "=" &&
                     (it.rhs.first() as? Reference)?.refersTo ==
@@ -417,7 +418,7 @@ class ShortcutsTest {
         // - the then/then and 3 paths when we enter magic2 through this path (=> 3 fails)
         // - the then/else and 3 paths when we enter magic2 through this path (=> 3 fails)
         val paramPassedInterprocedural =
-            ifCondition.followNextEOGEdgesUntilHit(interproceduralAnalysis = true) {
+            ifCondition.followEOGEdgesUntilHit(direction = Forward(), scope = Intraprocedural()) {
                 it is AssignExpression &&
                     it.operatorCode == "=" &&
                     (it.rhs.first() as? Reference)?.refersTo ==

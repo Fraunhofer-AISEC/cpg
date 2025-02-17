@@ -267,6 +267,44 @@ fun Node.collectAllPrevFullDFGPaths(): List<List<Node>> {
  * Hence, if "fulfilled" is a non-empty list, a data flow from [this] to such a node is **possible
  * but not mandatory**. If the list "failed" is empty, the data flow is mandatory.
  */
+fun Node.followEOGEdgesUntilHit(
+    collectFailedPaths: Boolean = true,
+    findAllPossiblePaths: Boolean = true,
+    direction: AnalysisDirection = Forward(),
+    vararg sensitivities: AnalysisSensitivity = FilterUnreachableEOG() + ContextSensitive(),
+    scope: AnalysisScope = Interprocedural(),
+    earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
+    predicate: (Node) -> Boolean,
+): FulfilledAndFailedPaths {
+
+    return this.followXUntilHit(
+        x = { currentNode, ctx, path ->
+            direction.pickNextStep(currentNode, scope, GraphToFollow.EOG, ctx).mapNotNull { edge ->
+                val newCtx = ctx.clone()
+                if (
+                    scope.followEdge(currentNode, edge, newCtx, direction) &&
+                        sensitivities.all { it.followEdge(currentNode, edge, newCtx, direction) }
+                ) {
+                    Pair(direction.unwrapNextStepFromEdge(edge), newCtx)
+                } else null
+            }
+        },
+        collectFailedPaths = collectFailedPaths,
+        findAllPossiblePaths = findAllPossiblePaths,
+        earlyTermination = earlyTermination,
+        predicate = predicate,
+    )
+}
+
+/**
+ * Returns an instance of [FulfilledAndFailedPaths] where [FulfilledAndFailedPaths.fulfilled]
+ * contains all possible shortest data flow paths between the starting node [this] and the end node
+ * fulfilling [predicate]. The paths are represented as lists of nodes. Paths which do not end at
+ * such a node are included in [FulfilledAndFailedPaths.failed].
+ *
+ * Hence, if "fulfilled" is a non-empty list, a data flow from [this] to such a node is **possible
+ * but not mandatory**. If the list "failed" is empty, the data flow is mandatory.
+ */
 fun Node.followDFGEdgesUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
@@ -279,22 +317,15 @@ fun Node.followDFGEdgesUntilHit(
 
     return this.followXUntilHit(
         x = { currentNode, ctx, path ->
-            if (direction is Forward) {
-                    currentNode.nextDFGEdges
-                } else {
-                    currentNode.prevDFGEdges
-                }
-                .mapNotNull { edge ->
-                    val newCtx = ctx.clone()
-                    if (
-                        scope.followEdge(currentNode, edge, newCtx, direction) &&
-                            sensitivities.all {
-                                it.followEdge(currentNode, edge, newCtx, direction)
-                            }
-                    ) {
-                        Pair(direction.unwrapNextStepFromEdge(edge), newCtx)
-                    } else null
-                }
+            direction.pickNextStep(currentNode, scope, GraphToFollow.DFG, ctx).mapNotNull { edge ->
+                val newCtx = ctx.clone()
+                if (
+                    scope.followEdge(currentNode, edge, newCtx, direction) &&
+                        sensitivities.all { it.followEdge(currentNode, edge, newCtx, direction) }
+                ) {
+                    Pair(direction.unwrapNextStepFromEdge(edge), newCtx)
+                } else null
+            }
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
@@ -421,10 +452,10 @@ fun Node.collectAllNextFullDFGPaths(): List<List<Node>> {
 fun Node.collectAllNextEOGPaths(interproceduralAnalysis: Boolean = true): List<List<Node>> {
     // We make everything fail to reach the end of the CDG. Then, we use the stuff collected in the
     // failed paths (everything)
-    return this.followNextEOGEdgesUntilHit(
+    return this.followEOGEdgesUntilHit(
             collectFailedPaths = true,
             findAllPossiblePaths = true,
-            interproceduralAnalysis = interproceduralAnalysis,
+            scope = if (interproceduralAnalysis) Interprocedural() else Intraprocedural(),
         ) {
             false
         }
@@ -438,7 +469,11 @@ fun Node.collectAllNextEOGPaths(interproceduralAnalysis: Boolean = true): List<L
 fun Node.collectAllPrevEOGPaths(interproceduralAnalysis: Boolean): List<List<Node>> {
     // We make everything fail to reach the end of the CDG. Then, we use the stuff collected in the
     // failed paths (everything)
-    return this.followPrevEOGEdgesUntilHit(collectFailedPaths = true, findAllPossiblePaths = true) {
+    return this.followEOGEdgesUntilHit(
+            direction = Backward(),
+            collectFailedPaths = true,
+            findAllPossiblePaths = true,
+        ) {
             false
         }
         .failed
@@ -820,62 +855,9 @@ val FunctionDeclaration.lastEOGNodes: Collection<Node>
 val Node.reachablePrevEOG: Collection<Node>
     get() = this.prevEOGEdges.filter { it.unreachable != true }.map { it.start }
 
-/**
- * Returns an instance of [FulfilledAndFailedPaths] where [FulfilledAndFailedPaths.fulfilled]
- * contains all possible shortest evaluation paths between the end node [this] and the start node
- * fulfilling [predicate]. The paths are represented as lists of nodes. Paths which do not end at
- * such a node are included in [FulfilledAndFailedPaths.failed].
- *
- * Hence, if "fulfilled" is a non-empty list, the execution of a statement fulfilling the predicate
- * is possible after executing [this] **possible but not mandatory**. If the list "failed" is empty,
- * such a statement is always executed.
- */
-fun Node.followPrevEOGEdgesUntilHit(
-    collectFailedPaths: Boolean = true,
-    findAllPossiblePaths: Boolean = true,
-    interproceduralAnalysis: Boolean = true,
-    interproceduralMaxDepth: Int? = null,
-    earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
-    predicate: (Node) -> Boolean,
-): FulfilledAndFailedPaths {
-
-    return followXUntilHit(
-        x = { currentNode, ctx, _ ->
-            when {
-                interproceduralAnalysis &&
-                    currentNode is FunctionDeclaration &&
-                    ctx.callStack.isEmpty() -> {
-                    // We're at the beginning of a function. If the stack is empty, we jump to
-                    // all calls of this function.
-                    currentNode.calledBy.flatMap { it.reachablePrevEOG.map { it to ctx } }
-                }
-                interproceduralAnalysis && currentNode is FunctionDeclaration -> {
-                    // We're at the beginning of a function. If there's something on the stack,
-                    // we ended up here by following the respective call expression, and we jump
-                    // back there.
-                    ctx.callStack.pop().reachablePrevEOG.map { it to ctx }
-                }
-                interproceduralAnalysis &&
-                    interproceduralMaxDepth?.let { ctx.callStack.depth >= it } != true &&
-                    currentNode is CallExpression &&
-                    currentNode.invokes.isNotEmpty() -> {
-                    // We're in the call expression. Push it on the stack, go to all last EOG
-                    // nodes in the functions which are invoked and continue there.
-                    ctx.callStack.push(currentNode)
-
-                    currentNode.invokes.flatMap { it.lastEOGNodes.map { it to ctx } }
-                }
-                else -> {
-                    currentNode.reachablePrevEOG.map { it to ctx }
-                }
-            }
-        },
-        collectFailedPaths = collectFailedPaths,
-        findAllPossiblePaths = findAllPossiblePaths,
-        earlyTermination = earlyTermination,
-        predicate = predicate,
-    )
-}
+/** Returns only potentially reachable previous EOG edges. */
+val Node.reachableNextEOG: Collection<Node>
+    get() = this.nextEOGEdges.filter { it.unreachable != true }.map { it.end }
 
 /**
  * Returns a list of edges which are from the evaluation order between the starting node [this] and
