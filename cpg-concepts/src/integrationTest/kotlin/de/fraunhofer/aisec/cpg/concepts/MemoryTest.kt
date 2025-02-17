@@ -28,6 +28,8 @@ package de.fraunhofer.aisec.cpg.concepts
 import de.fraunhofer.aisec.cpg.TranslationResult.Companion.DEFAULT_APPLICATION_NAME
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.Forward
+import de.fraunhofer.aisec.cpg.graph.Interprocedural
 import de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.Cipher
 import de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.Encrypt
 import de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.GetSecret
@@ -38,8 +40,6 @@ import de.fraunhofer.aisec.cpg.graph.concepts.memory.MemoryManagementMode
 import de.fraunhofer.aisec.cpg.graph.edges.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeleteExpression
 import de.fraunhofer.aisec.cpg.query.AnalysisType
-import de.fraunhofer.aisec.cpg.query.Forward
-import de.fraunhofer.aisec.cpg.query.Interprocedural
 import de.fraunhofer.aisec.cpg.query.dataFlow
 import de.fraunhofer.aisec.cpg.query.executionPath
 import de.fraunhofer.aisec.cpg.test.analyze

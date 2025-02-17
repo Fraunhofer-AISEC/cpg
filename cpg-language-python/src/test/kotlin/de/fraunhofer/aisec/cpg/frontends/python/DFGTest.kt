@@ -29,7 +29,6 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.flows.IndexedDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.followNextDFGEdgesUntilHit
-import de.fraunhofer.aisec.cpg.graph.followPrevDFGEdgesUntilHit
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
@@ -215,9 +214,11 @@ class DFGTest {
         assertNotNull(aReturned)
         val bReturned = returnTuple.refs["b"]
         assertNotNull(bReturned)
-        val backwardsPathCToA = cRead.followPrevDFGEdgesUntilHit { it == aReturned }.fulfilled
+        val backwardsPathCToA =
+            cRead.followDFGEdgesUntilHit(direction = Backward()) { it == aReturned }.fulfilled
         assertEquals(1, backwardsPathCToA.size)
-        val backwardsPathCToB = cRead.followPrevDFGEdgesUntilHit { it == bReturned }.fulfilled
+        val backwardsPathCToB =
+            cRead.followDFGEdgesUntilHit(direction = Backward()) { it == bReturned }.fulfilled
         assertEquals(0, backwardsPathCToB.size)
 
         val forwardsPathAToC = aReturned.followNextDFGEdgesUntilHit { it == cRead }.fulfilled

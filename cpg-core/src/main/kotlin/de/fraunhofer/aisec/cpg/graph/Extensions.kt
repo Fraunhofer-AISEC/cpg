@@ -260,113 +260,37 @@ fun Node.collectAllPrevFullDFGPaths(): List<List<Node>> {
 
 /**
  * Returns an instance of [FulfilledAndFailedPaths] where [FulfilledAndFailedPaths.fulfilled]
- * contains all possible shortest data flow paths (with any
- * [de.fraunhofer.aisec.cpg.graph.edges.flows.Granularity]) between the end node [this] and the
- * starting node fulfilling [predicate]. The paths are represented as lists of nodes. Paths which do
- * not end at such a node are included in [FulfilledAndFailedPaths.failed].
+ * contains all possible shortest data flow paths between the starting node [this] and the end node
+ * fulfilling [predicate]. The paths are represented as lists of nodes. Paths which do not end at
+ * such a node are included in [FulfilledAndFailedPaths.failed].
  *
  * Hence, if "fulfilled" is a non-empty list, a data flow from [this] to such a node is **possible
  * but not mandatory**. If the list "failed" is empty, the data flow is mandatory.
  */
-fun Node.followPrevDFGEdgesUntilHit(
+fun Node.followDFGEdgesUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
-    useIndexStack: Boolean = true,
-    contextSensitive: Boolean = true,
-    interproceduralAnalysis: Boolean = true,
+    direction: AnalysisDirection = Forward(),
+    vararg sensitivities: AnalysisSensitivity = FieldSensitive() + ContextSensitive(),
+    scope: AnalysisScope = Interprocedural(),
     earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
-    return followXUntilHit(
+
+    return this.followXUntilHit(
         x = { currentNode, ctx, path ->
-            if (
-                useIndexStack &&
-                    currentNode is InitializerListExpression &&
-                    ctx.indexStack.isEmpty() != true
-            ) {
-                // There's something on the stack. Get the relevant parts
-                currentNode.prevDFGEdges
-                    .filter {
-                        if (
-                            it.start in currentNode.initializers &&
-                                it.granularity is IndexedDataflowGranularity
-                        ) {
-                            // currentNode is the ILE, it is the child and the prevDFG (e.g. read
-                            // from).
-                            // We try to pop from the stack and only select the elements with the
-                            // matching index.
-                            ctx.indexStack.popIfOnTop(it.granularity as IndexedDataflowGranularity)
-                        } else {
-                            true
-                        }
-                    }
-                    .map { it.start }
-            } else {
-                // We don't have to care about poping stuff from the stack.
-                // First, let's take care of pushing any information on the stacks (index, calling
-                // context)
-                currentNode.prevDFGEdges.forEach {
-                    if (
-                        interproceduralAnalysis &&
-                            contextSensitive &&
-                            it is ContextSensitiveDataflow &&
-                            it.callingContext is CallingContextOut
-                    ) {
-                        // Push the call of our calling context to the stack
-                        ctx.callStack.push(it.callingContext.call)
-                    }
-                    if (
-                        it.start is InitializerListExpression &&
-                            it.granularity is IndexedDataflowGranularity
-                    ) {
-                        // CurrentNode is the child and nextDFG goes to ILE => currentNode's written
-                        // to. Push to stack
-                        ctx.indexStack.push(it.granularity as IndexedDataflowGranularity)
-                    }
-                }
-
-                // We need to filter out the edges which based on the stack
-                val selected =
+            if (direction is Forward) {
+                    currentNode.nextDFGEdges
+                } else {
                     currentNode.prevDFGEdges
-                        .filter {
-                            if (
-                                interproceduralAnalysis &&
-                                    contextSensitive &&
-                                    ctx.callStack.isEmpty()
-                            ) {
-                                true
-                            } else if (
-                                interproceduralAnalysis &&
-                                    contextSensitive &&
-                                    it is ContextSensitiveDataflow &&
-                                    it.callingContext is CallingContextIn
-                            ) {
-                                // We are only interested in outgoing edges from our current
-                                // "call-in", i.e., the call expression that is on the stack.
-                                ctx.callStack.top == it.callingContext.call
-                            } else if (it is ContextSensitiveDataflow && !interproceduralAnalysis) {
-                                false
-                            } else {
-                                true
-                            }
-                        }
-                        .map { it.start }
-
-                // Let's do any remaining pop'ing
-                currentNode.prevDFGEdges.forEach {
-                    if (
-                        interproceduralAnalysis &&
-                            contextSensitive &&
-                            it is ContextSensitiveDataflow &&
-                            it.callingContext is CallingContextIn
-                    ) {
-                        // Pop the current call, if it's on top
-                        ctx.callStack.popIfOnTop(it.callingContext.call)
-                    }
                 }
-
-                selected
-            }
+                .filter { edge ->
+                    // TODO: There's a problem with the context which should be copied for each
+                    // (potential) path.
+                    scope.followEdge(currentNode, edge, ctx, direction) &&
+                        sensitivities.all { it.followEdge(currentNode, edge, ctx, direction) }
+                }
+                .map { direction.unwrapNextStepFromEdge(it) }
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
@@ -1153,11 +1077,11 @@ fun Node.followPrevFullDFG(predicate: (Node) -> Boolean): MutableList<Node>? {
  * It returns only a single possible path even if multiple paths are possible.
  */
 fun Node.followPrevDFG(predicate: (Node) -> Boolean): MutableList<Node>? {
-    return followPrevDFGEdgesUntilHit(
+    return followDFGEdgesUntilHit(
             collectFailedPaths = false,
             findAllPossiblePaths = false,
             predicate = predicate,
-            useIndexStack = true,
+            direction = Backward(),
         )
         .fulfilled
         .minByOrNull { it.size }
