@@ -161,13 +161,12 @@ class ContextSensitive() : AnalysisSensitivity() {
             // Forward analysis
             if (edge.callingContext is CallingContextIn) {
                 // Push the call of our calling context to the stack
-                ctx.callStack.push((edge.callingContext as CallingContextIn).call)
+                ctx.callStack.push(edge.callingContext.call)
                 true
             } else if (edge.callingContext is CallingContextOut) {
                 // We are only interested in outgoing edges from our current
                 // "call-in", i.e., the call expression that is on the stack.
-                ctx.callStack.isEmpty() ||
-                    ctx.callStack.popIfOnTop((edge.callingContext as CallingContextOut).call)
+                ctx.callStack.isEmpty() || ctx.callStack.popIfOnTop(edge.callingContext.call)
             } else {
                 true
             }
@@ -175,13 +174,12 @@ class ContextSensitive() : AnalysisSensitivity() {
             // Backward analysis
             if (edge.callingContext is CallingContextOut) {
                 // Push the call of our calling context to the stack
-                ctx.callStack.push((edge.callingContext as CallingContextOut).call)
+                ctx.callStack.push(edge.callingContext.call)
                 true
             } else if (edge.callingContext is CallingContextIn) {
                 // We are only interested in outgoing edges from our current
                 // "call-in", i.e., the call expression that is on the stack.
-                ctx.callStack.isEmpty() ||
-                    ctx.callStack.popIfOnTop((edge.callingContext as CallingContextIn).call)
+                ctx.callStack.isEmpty() || ctx.callStack.popIfOnTop(edge.callingContext.call)
             } else {
                 true
             }

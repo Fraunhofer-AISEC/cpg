@@ -67,7 +67,7 @@ class DataflowQueriesTest {
                 startNode = literal5,
                 direction = Forward(),
                 scope = Intraprocedural(),
-                type = AnalysisType.MAY,
+                type = MayAnalysis(),
                 predicate = { (it.astParent as? CallExpression)?.name?.localName == "baz" },
             )
         assertTrue(
@@ -95,7 +95,7 @@ class DataflowQueriesTest {
                 startNode = literal5,
                 direction = Forward(),
                 scope = Intraprocedural(1),
-                type = AnalysisType.MAY,
+                type = MayAnalysis(),
                 predicate = { (it.astParent as? CallExpression)?.name?.localName == "baz" },
             )
         assertFalse(queryResultMayAMax1.value, "The path is just too short to arrive in baz.")
@@ -125,7 +125,7 @@ class DataflowQueriesTest {
                 startNode = literal5,
                 direction = Forward(),
                 scope = Intraprocedural(),
-                type = AnalysisType.MUST,
+                type = MustAnalysis(),
                 predicate = { (it.astParent as? CallExpression)?.name?.localName == "baz" },
             )
         assertFalse(
@@ -154,7 +154,7 @@ class DataflowQueriesTest {
                 startNode = refB,
                 direction = Forward(),
                 scope = Intraprocedural(),
-                type = AnalysisType.MAY,
+                type = MayAnalysis(),
                 predicate = { (it.astParent as? CallExpression)?.name?.localName == "baz" },
             )
         assertTrue(
@@ -183,7 +183,7 @@ class DataflowQueriesTest {
                 startNode = refB,
                 direction = Forward(),
                 scope = Intraprocedural(),
-                type = AnalysisType.MUST,
+                type = MustAnalysis(),
                 predicate = { (it.astParent as? CallExpression)?.name?.localName == "baz" },
             )
         assertFalse(
@@ -229,7 +229,7 @@ class DataflowQueriesTest {
                 startNode = refB,
                 direction = Bidirectional(),
                 scope = Intraprocedural(),
-                type = AnalysisType.MAY,
+                type = MayAnalysis(),
                 predicate = {
                     (it as? Literal<*>)?.value == 5 ||
                         (it.astParent as? CallExpression)?.name?.localName == "baz"
@@ -261,7 +261,7 @@ class DataflowQueriesTest {
                 startNode = refB,
                 direction = Bidirectional(),
                 scope = Intraprocedural(),
-                type = AnalysisType.MUST,
+                type = MustAnalysis(),
                 predicate = {
                     (it as? Literal<*>)?.value == 5 ||
                         (it.astParent as? CallExpression)?.name?.localName == "baz"
@@ -326,7 +326,7 @@ class DataflowQueriesTest {
                 startNode = bazARef,
                 direction = Backward(),
                 scope = Intraprocedural(),
-                type = AnalysisType.MAY,
+                type = MayAnalysis(),
                 predicate = { (it as? Literal<*>)?.value == 5 },
             )
         assertTrue(
@@ -354,7 +354,7 @@ class DataflowQueriesTest {
                 startNode = bazARef,
                 direction = Backward(),
                 scope = Intraprocedural(1),
-                type = AnalysisType.MAY,
+                type = MayAnalysis(),
                 predicate = { (it as? Literal<*>)?.value == 5 },
             )
         assertFalse(
@@ -387,7 +387,7 @@ class DataflowQueriesTest {
                 startNode = bazARef,
                 direction = Backward(),
                 scope = Intraprocedural(),
-                type = AnalysisType.MUST,
+                type = MustAnalysis(),
                 predicate = { (it as? Literal<*>)?.value == 5 },
             )
         assertFalse(
@@ -416,7 +416,7 @@ class DataflowQueriesTest {
                 startNode = refB,
                 direction = Backward(),
                 scope = Intraprocedural(),
-                type = AnalysisType.MAY,
+                type = MayAnalysis(),
                 predicate = { (it as? Literal<*>)?.value == 5 },
             )
         assertFalse(
@@ -445,7 +445,7 @@ class DataflowQueriesTest {
                 startNode = refB,
                 direction = Backward(),
                 scope = Intraprocedural(),
-                type = AnalysisType.MUST,
+                type = MustAnalysis(),
                 predicate = { (it as? Literal<*>)?.value == 5 },
             )
         assertFalse(
@@ -474,7 +474,7 @@ class DataflowQueriesTest {
                 startNode = refB,
                 direction = Backward(),
                 scope = Intraprocedural(),
-                type = AnalysisType.MAY,
+                type = MayAnalysis(),
                 predicate = { (it as? Literal<*>)?.value == "bla" },
             )
         assertTrue(
@@ -503,7 +503,7 @@ class DataflowQueriesTest {
                 startNode = refB,
                 direction = Backward(),
                 scope = Intraprocedural(),
-                type = AnalysisType.MUST,
+                type = MustAnalysis(),
                 predicate = { (it as? Literal<*>)?.value == "bla" },
             )
         assertFalse(
