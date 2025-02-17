@@ -163,12 +163,11 @@ class ContextSensitive() : AnalysisSensitivity() {
                 // Push the call of our calling context to the stack
                 ctx.callStack.push((edge.callingContext as CallingContextIn).call)
                 true
-            } else if (ctx.callStack.isEmpty()) {
-                true
             } else if (edge.callingContext is CallingContextOut) {
                 // We are only interested in outgoing edges from our current
                 // "call-in", i.e., the call expression that is on the stack.
-                ctx.callStack.popIfOnTop((edge.callingContext as CallingContextOut).call)
+                ctx.callStack.isEmpty() ||
+                    ctx.callStack.popIfOnTop((edge.callingContext as CallingContextOut).call)
             } else {
                 true
             }
@@ -178,12 +177,11 @@ class ContextSensitive() : AnalysisSensitivity() {
                 // Push the call of our calling context to the stack
                 ctx.callStack.push((edge.callingContext as CallingContextOut).call)
                 true
-            } else if (ctx.callStack.isEmpty()) {
-                true
             } else if (edge.callingContext is CallingContextIn) {
                 // We are only interested in outgoing edges from our current
                 // "call-in", i.e., the call expression that is on the stack.
-                ctx.callStack.popIfOnTop((edge.callingContext as CallingContextIn).call)
+                ctx.callStack.isEmpty() ||
+                    ctx.callStack.popIfOnTop((edge.callingContext as CallingContextIn).call)
             } else {
                 true
             }
@@ -214,7 +212,8 @@ class FieldSensitive() : AnalysisSensitivity() {
                 // from).
                 // We try to pop from the stack and only select the elements with the
                 // matching index.
-                ctx.indexStack.popIfOnTop(edge.granularity as IndexedDataflowGranularity)
+                ctx.indexStack.isEmpty() ||
+                    ctx.indexStack.popIfOnTop(edge.granularity as IndexedDataflowGranularity)
             } else if (
                 analysisDirection?.unwrapNextStepFromEdge(edge) is InitializerListExpression &&
                     edge.granularity is IndexedDataflowGranularity
