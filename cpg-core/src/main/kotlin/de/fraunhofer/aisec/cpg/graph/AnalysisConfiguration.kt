@@ -42,7 +42,7 @@ interface StepSelector {
         currentNode: Node,
         edge: Edge<Node>,
         ctx: Context,
-        analysisDirection: AnalysisDirection? = null,
+        analysisDirection: AnalysisDirection,
     ): Boolean
 }
 
@@ -50,17 +50,7 @@ interface StepSelector {
  * Determines how far we want to follow edges within the analysis. [maxSteps] defines the total
  * number of steps we will follow in the graph (unlimited depth if `null`).
  */
-sealed class AnalysisScope(val maxSteps: Int? = null) : StepSelector {
-    override fun followEdge(
-        currentNode: Node,
-        edge: Edge<Node>,
-        ctx: Context,
-        analysisDirection: AnalysisDirection?,
-    ): Boolean {
-        // Follow the edge if maxSteps is null or if maxSteps < ctx.steps
-        return this.maxSteps == null || maxSteps <= ctx.steps
-    }
-}
+sealed class AnalysisScope(val maxSteps: Int? = null) : StepSelector
 
 /**
  * Only intraprocedural analysis. [maxSteps] defines the total number of steps we will follow in the
@@ -71,7 +61,7 @@ class Intraprocedural(maxSteps: Int? = null) : AnalysisScope(maxSteps) {
         currentNode: Node,
         edge: Edge<Node>,
         ctx: Context,
-        analysisDirection: AnalysisDirection?,
+        analysisDirection: AnalysisDirection,
     ): Boolean {
         // Follow the edge if we're still in the maxSteps range and not an edge across function
         // boundaries.
@@ -90,7 +80,7 @@ class Interprocedural(val maxCallDepth: Int? = null, maxSteps: Int? = null) :
         currentNode: Node,
         edge: Edge<Node>,
         ctx: Context,
-        analysisDirection: AnalysisDirection?,
+        analysisDirection: AnalysisDirection,
     ): Boolean {
         // Follow the edge if we're still in the maxSteps range and (if maxCallDepth is null or the
         // call stack is not deeper yet)
@@ -100,23 +90,26 @@ class Interprocedural(val maxCallDepth: Int? = null, maxSteps: Int? = null) :
 }
 
 /** Determines in which direction we follow the edges. */
-sealed class AnalysisDirection : StepSelector {
-    override fun followEdge(
-        currentNode: Node,
-        edge: Edge<Node>,
-        ctx: Context,
-        analysisDirection: AnalysisDirection?,
-    ): Boolean {
-        return true
-    }
-
+sealed class AnalysisDirection {
     abstract fun unwrapNextStepFromEdge(edge: Edge<Node>): Node
+
+    abstract fun edgeRequiresCallPush(edge: Edge<Node>): Boolean
+
+    abstract fun edgeRequiresCallPop(edge: Edge<Node>): Boolean
 }
 
 /** Follow the order of the EOG */
 class Forward() : AnalysisDirection() {
     override fun unwrapNextStepFromEdge(edge: Edge<Node>): Node {
         return edge.end
+    }
+
+    override fun edgeRequiresCallPush(edge: Edge<Node>): Boolean {
+        return edge is ContextSensitiveDataflow && edge.callingContext is CallingContextIn
+    }
+
+    override fun edgeRequiresCallPop(edge: Edge<Node>): Boolean {
+        return edge is ContextSensitiveDataflow && edge.callingContext is CallingContextOut
     }
 }
 
@@ -125,11 +118,27 @@ class Backward() : AnalysisDirection() {
     override fun unwrapNextStepFromEdge(edge: Edge<Node>): Node {
         return edge.start
     }
+
+    override fun edgeRequiresCallPush(edge: Edge<Node>): Boolean {
+        return edge is ContextSensitiveDataflow && edge.callingContext is CallingContextOut
+    }
+
+    override fun edgeRequiresCallPop(edge: Edge<Node>): Boolean {
+        return edge is ContextSensitiveDataflow && edge.callingContext is CallingContextIn
+    }
 }
 
 /** In and against the order of the EOG */
 class Bidirectional() : AnalysisDirection() {
     override fun unwrapNextStepFromEdge(edge: Edge<Node>): Node {
+        TODO("Not yet implemented")
+    }
+
+    override fun edgeRequiresCallPush(edge: Edge<Node>): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override fun edgeRequiresCallPop(edge: Edge<Node>): Boolean {
         TODO("Not yet implemented")
     }
 }
@@ -155,34 +164,21 @@ class ContextSensitive() : AnalysisSensitivity() {
         currentNode: Node,
         edge: Edge<Node>,
         ctx: Context,
-        analysisDirection: AnalysisDirection?,
+        analysisDirection: AnalysisDirection,
     ): Boolean {
-        return if (edge is ContextSensitiveDataflow && analysisDirection is Forward) {
-            // Forward analysis
-            if (edge.callingContext is CallingContextIn) {
-                // Push the call of our calling context to the stack
-                ctx.callStack.push(edge.callingContext.call)
-                true
-            } else if (edge.callingContext is CallingContextOut) {
-                // We are only interested in outgoing edges from our current
-                // "call-in", i.e., the call expression that is on the stack.
-                ctx.callStack.isEmpty() || ctx.callStack.popIfOnTop(edge.callingContext.call)
-            } else {
-                true
+        return if (analysisDirection.edgeRequiresCallPush(edge)) {
+            // Push the call of our calling context to the stack
+            (edge as? ContextSensitiveDataflow)?.callingContext?.call?.let {
+                ctx.callStack.push(it)
             }
-        } else if (edge is ContextSensitiveDataflow && analysisDirection is Backward) {
-            // Backward analysis
-            if (edge.callingContext is CallingContextOut) {
-                // Push the call of our calling context to the stack
-                ctx.callStack.push(edge.callingContext.call)
-                true
-            } else if (edge.callingContext is CallingContextIn) {
-                // We are only interested in outgoing edges from our current
-                // "call-in", i.e., the call expression that is on the stack.
-                ctx.callStack.isEmpty() || ctx.callStack.popIfOnTop(edge.callingContext.call)
-            } else {
-                true
-            }
+            true
+        } else if (analysisDirection.edgeRequiresCallPop(edge)) {
+            // We are only interested in outgoing edges from our current
+            // "call-in", i.e., the call expression that is on the stack.
+            ctx.callStack.isEmpty() ||
+                (edge as? ContextSensitiveDataflow)?.callingContext?.call?.let {
+                    ctx.callStack.popIfOnTop(it)
+                } == true
         } else {
             true
         }
@@ -198,12 +194,12 @@ class FieldSensitive() : AnalysisSensitivity() {
         currentNode: Node,
         edge: Edge<Node>,
         ctx: Context,
-        analysisDirection: AnalysisDirection?,
+        analysisDirection: AnalysisDirection,
     ): Boolean {
         return if (edge is Dataflow) {
             if (
                 currentNode is InitializerListExpression &&
-                    analysisDirection?.unwrapNextStepFromEdge(edge) in currentNode.initializers &&
+                    analysisDirection.unwrapNextStepFromEdge(edge) in currentNode.initializers &&
                     edge.granularity is IndexedDataflowGranularity
             ) {
                 // currentNode is the ILE, it is the child and the next (e.g. read
@@ -213,7 +209,7 @@ class FieldSensitive() : AnalysisSensitivity() {
                 ctx.indexStack.isEmpty() ||
                     ctx.indexStack.popIfOnTop(edge.granularity as IndexedDataflowGranularity)
             } else if (
-                analysisDirection?.unwrapNextStepFromEdge(edge) is InitializerListExpression &&
+                analysisDirection.unwrapNextStepFromEdge(edge) is InitializerListExpression &&
                     edge.granularity is IndexedDataflowGranularity
             ) {
                 // CurrentNode is the child and nextDFG goes to ILE => currentNode's written
@@ -239,8 +235,8 @@ class Implicit() : AnalysisSensitivity() {
         currentNode: Node,
         edge: Edge<Node>,
         ctx: Context,
-        analysisDirection: AnalysisDirection?,
+        analysisDirection: AnalysisDirection,
     ): Boolean {
-        return true
+        TODO("Not yet implemented. Actually requires following PDG instead of DFG edges...")
     }
 }
