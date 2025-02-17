@@ -1899,22 +1899,4 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(expectedSuper)
         assertEquals(expectedSuper, clsSuper.recordDeclaration)
     }
-
-    @Test
-    fun testHttpCinder() {
-        val topLevel = Path("/home/lshala/repos/python-cinderclient")
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(listOf(topLevel.resolve("cinderclient").toFile()))
-                .topLevel(topLevel.toFile())
-                .defaultPasses()
-                .registerLanguage<PythonLanguage>()
-                .exclusionPatterns("tests")
-                .useParallelFrontends(true)
-                .build()
-
-        val translationManager = TranslationManager.builder().config(config).build()
-        val result = translationManager.analyze().get()
-        val tu = result.components.first().translationUnits
-    }
 }

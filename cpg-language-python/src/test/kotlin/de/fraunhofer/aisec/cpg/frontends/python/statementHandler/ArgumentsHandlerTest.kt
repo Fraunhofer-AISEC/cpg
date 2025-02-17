@@ -173,7 +173,7 @@ class ArgumentsHandlerTest {
 
         val kwArgs = func.parameters["kwargs"]
         assertNotNull(kwArgs, "Failed to find kw args")
-        // TODO: assertEquals(false, kwArgs.isVariadic)
+        assertEquals(true, kwArgs.isVariadic)
     }
 
     @Test
