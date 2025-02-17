@@ -29,23 +29,36 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
+import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
+import de.fraunhofer.aisec.cpg.graph.edges.flows.IndexedDataflowGranularity
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 
-sealed class StepSelector() {
+interface StepSelector {
     /**
-     * Returns `true` if the given [edge] will be followed giving the provided [context] under the
+     * Returns `true` if the given [edge] will be followed giving the provided [ctx] under the
      * provided configuration.
      */
-    abstract fun followEdge(edge: Edge<Node>, ctx: Context): Boolean
+    fun followEdge(
+        currentNode: Node,
+        edge: Edge<Node>,
+        ctx: Context,
+        analysisDirection: AnalysisDirection? = null,
+    ): Boolean
 }
 
 /**
  * Determines how far we want to follow edges within the analysis. [maxSteps] defines the total
  * number of steps we will follow in the graph (unlimited depth if `null`).
  */
-sealed class AnalysisScope(val maxSteps: Int? = null) : StepSelector() {
-    override fun followEdge(edge: Edge<Node>, ctx: Context): Boolean {
+sealed class AnalysisScope(val maxSteps: Int? = null) : StepSelector {
+    override fun followEdge(
+        currentNode: Node,
+        edge: Edge<Node>,
+        ctx: Context,
+        analysisDirection: AnalysisDirection?,
+    ): Boolean {
         // Follow the edge if maxSteps is null or if maxSteps < ctx.steps
         return this.maxSteps == null || maxSteps < ctx.steps
     }
@@ -64,29 +77,53 @@ class Intraprocedural(maxSteps: Int? = null) : AnalysisScope(maxSteps)
  */
 class Interprocedural(val maxCallDepth: Int? = null, maxSteps: Int? = null) :
     AnalysisScope(maxSteps) {
-    override fun followEdge(edge: Edge<Node>, ctx: Context): Boolean {
+    override fun followEdge(
+        currentNode: Node,
+        edge: Edge<Node>,
+        ctx: Context,
+        analysisDirection: AnalysisDirection?,
+    ): Boolean {
         // Follow the edge if we're still in the maxSteps range and (if maxCallDepth is null or the
         // call stack is not deeper yet)
-        return super.followEdge(edge, ctx) &&
+        return super.followEdge(currentNode, edge, ctx) &&
             (maxCallDepth == null || ctx.callStack.depth < maxCallDepth)
     }
 }
 
 /** Determines in which direction we follow the edges. */
-sealed class AnalysisDirection : StepSelector() {
-    override fun followEdge(edge: Edge<Node>, ctx: Context): Boolean {
+sealed class AnalysisDirection : StepSelector {
+    override fun followEdge(
+        currentNode: Node,
+        edge: Edge<Node>,
+        ctx: Context,
+        analysisDirection: AnalysisDirection?,
+    ): Boolean {
         return true
     }
+
+    abstract fun unwrapNextStepFromEdge(edge: Edge<Node>): Node
 }
 
 /** Follow the order of the EOG */
-class Forward() : AnalysisDirection()
+class Forward() : AnalysisDirection() {
+    override fun unwrapNextStepFromEdge(edge: Edge<Node>): Node {
+        return edge.end
+    }
+}
 
 /** Against the order of the EOG */
-class Backward() : AnalysisDirection()
+class Backward() : AnalysisDirection() {
+    override fun unwrapNextStepFromEdge(edge: Edge<Node>): Node {
+        return edge.start
+    }
+}
 
 /** In and against the order of the EOG */
-class Bidirectional() : AnalysisDirection()
+class Bidirectional() : AnalysisDirection() {
+    override fun unwrapNextStepFromEdge(edge: Edge<Node>): Node {
+        TODO("Not yet implemented")
+    }
+}
 
 /** Determines if the predicate must or may hold */
 enum class AnalysisType {
@@ -103,23 +140,7 @@ enum class AnalysisType {
 }
 
 /** Configures the sensitivity of the analysis. */
-enum class AnalysisSensitivity {
-    /** Consider the calling context when following paths (e.g. based on a call stack). */
-    CONTEXT_SENSITIVE,
-
-    /**
-     * Differentiate between fields, attributes, known keys or known indices of objects. This does
-     * not include computing possible indices or keys if they are not given as a literal.
-     */
-    FIELD_SENSITIVE,
-
-    /**
-     * Also consider implicit flows during the dataflow analysis. E.g. if a condition depends on the
-     * value we're interested in, different behaviors in the branches can leak data and thus, the
-     * dependencies of this should also be flagged.
-     */
-    IMPLICIT;
-
+sealed class AnalysisSensitivity : StepSelector {
     operator fun plus(other: AnalysisSensitivity) = arrayOf(this, other)
 
     operator fun List<AnalysisSensitivity>.plus(
@@ -130,6 +151,74 @@ enum class AnalysisSensitivity {
 
     operator fun plus(other: Array<AnalysisSensitivity>): Array<AnalysisSensitivity> {
         return arrayOf(*other, this)
+    }
+}
+
+/** Consider the calling context when following paths (e.g. based on a call stack). */
+class ContextSensitive() : AnalysisSensitivity() {
+    override fun followEdge(
+        currentNode: Node,
+        edge: Edge<Node>,
+        ctx: Context,
+        analysisDirection: AnalysisDirection?,
+    ): Boolean {
+        TODO("Not yet implemented")
+    }
+}
+
+/**
+ * Differentiate between fields, attributes, known keys or known indices of objects. This does not
+ * include computing possible indices or keys if they are not given as a literal.
+ */
+class FieldSensitive() : AnalysisSensitivity() {
+    override fun followEdge(
+        currentNode: Node,
+        edge: Edge<Node>,
+        ctx: Context,
+        analysisDirection: AnalysisDirection?,
+    ): Boolean {
+        return if (edge is Dataflow) {
+            // Forward analysis
+            if (
+                currentNode is InitializerListExpression &&
+                    analysisDirection?.unwrapNextStepFromEdge(edge) in currentNode.initializers &&
+                    edge.granularity is IndexedDataflowGranularity
+            ) {
+                // currentNode is the ILE, it is the child and the next (e.g. read
+                // from).
+                // We try to pop from the stack and only select the elements with the
+                // matching index.
+                ctx.indexStack.popIfOnTop(edge.granularity as IndexedDataflowGranularity)
+            } else if (
+                analysisDirection?.unwrapNextStepFromEdge(edge) is InitializerListExpression &&
+                    edge.granularity is IndexedDataflowGranularity
+            ) {
+                // CurrentNode is the child and nextDFG goes to ILE => currentNode's written
+                // to. Push to stack
+                ctx.indexStack.push(edge.granularity as IndexedDataflowGranularity)
+                true
+            } else {
+                true
+            }
+        } else {
+            true
+        }
+    }
+}
+
+/**
+ * Also consider implicit flows during the dataflow analysis. E.g. if a condition depends on the
+ * value we're interested in, different behaviors in the branches can leak data and thus, the
+ * dependencies of this should also be flagged.
+ */
+class Implicit() : AnalysisSensitivity() {
+    override fun followEdge(
+        currentNode: Node,
+        edge: Edge<Node>,
+        ctx: Context,
+        analysisDirection: AnalysisDirection?,
+    ): Boolean {
+        return true
     }
 }
 
@@ -151,8 +240,7 @@ fun dataFlow(
     startNode: Node,
     direction: AnalysisDirection = Forward(),
     type: AnalysisType = AnalysisType.MAY,
-    vararg sensitivities: AnalysisSensitivity =
-        AnalysisSensitivity.FIELD_SENSITIVE + AnalysisSensitivity.CONTEXT_SENSITIVE,
+    vararg sensitivities: AnalysisSensitivity = FieldSensitive() + ContextSensitive(),
     scope: AnalysisScope = Interprocedural(),
     verbose: Boolean = true,
     earlyTermination: ((Node) -> Boolean)? = null,
@@ -160,8 +248,8 @@ fun dataFlow(
 ): QueryTree<Boolean> {
     val collectFailedPaths = type == AnalysisType.MUST || verbose
     val findAllPossiblePaths = type == AnalysisType.MUST || verbose
-    val useIndexStack = AnalysisSensitivity.FIELD_SENSITIVE in sensitivities
-    val contextSensitive = AnalysisSensitivity.CONTEXT_SENSITIVE in sensitivities
+    val useIndexStack = sensitivities.any { it is FieldSensitive }
+    val contextSensitive = sensitivities.any { it is ContextSensitive }
     val interproceduralAnalysis = scope is Interprocedural
     val earlyTermination = { n: Node, ctx: Context ->
         earlyTermination?.let { it(n) } == true || scope.maxSteps?.let { ctx.steps >= it } == true
@@ -393,7 +481,7 @@ fun Node.alwaysFlowsTo(
     val nextDFGPaths =
         this.collectAllNextDFGPaths(
                 interproceduralAnalysis = scope is Interprocedural,
-                contextSensitive = AnalysisSensitivity.CONTEXT_SENSITIVE in sensitivities,
+                contextSensitive = ContextSensitive() in sensitivities,
             )
             .flatten()
     val earlyTerminationPredicate = { n: Node, ctx: Context ->

@@ -637,9 +637,7 @@ class QueryTest {
                         predicate = { (it as? CallExpression)?.name.toString() == "Logger.log" },
                         allowOverwritingValue = false,
                         scope = Interprocedural(),
-                        sensitivities =
-                            AnalysisSensitivity.CONTEXT_SENSITIVE +
-                                AnalysisSensitivity.FIELD_SENSITIVE,
+                        sensitivities = ContextSensitive() + FieldSensitive(),
                     )
                 },
             )
@@ -661,9 +659,7 @@ class QueryTest {
                         predicate = { (it as? CallExpression)?.name.toString() == "Logger.log" },
                         allowOverwritingValue = false,
                         scope = Interprocedural(),
-                        sensitivities =
-                            AnalysisSensitivity.CONTEXT_SENSITIVE +
-                                AnalysisSensitivity.FIELD_SENSITIVE,
+                        sensitivities = ContextSensitive() + FieldSensitive(),
                     )
                 },
             )
@@ -685,9 +681,7 @@ class QueryTest {
                         predicate = { (it as? CallExpression)?.name.toString() == "Logger.log" },
                         allowOverwritingValue = false,
                         scope = Interprocedural(),
-                        sensitivities =
-                            AnalysisSensitivity.CONTEXT_SENSITIVE +
-                                AnalysisSensitivity.FIELD_SENSITIVE,
+                        sensitivities = ContextSensitive() + FieldSensitive(),
                     )
                 },
             )
