@@ -849,9 +849,19 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         }
                     // In the first step, we link the ParameterDeclaration to the PMV to be able to
                     // also access it outside the function
-                    if (src is ParameterDeclaration) src.memoryValue = pmv
-                    else {
-                        // Linke the PMVs with each other so that we can find them. This is
+                    if (src is ParameterDeclaration) {
+                        src.memoryValue = pmv
+                        doubleState =
+                            lattice.push(
+                                doubleState,
+                                pmv,
+                                StateEntryElement(
+                                    PowersetLattice.Element(),
+                                    PowersetLattice.Element(src),
+                                ),
+                            )
+                    } else {
+                        // Link the PMVs with each other so that we can find them. This is
                         // especially important outside the respective function where we don't have
                         // a state
                         (pmv.memoryAddress as ParameterMemoryValue).memoryValue = pmv
