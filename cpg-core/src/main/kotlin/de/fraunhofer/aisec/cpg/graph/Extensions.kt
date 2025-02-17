@@ -234,7 +234,7 @@ fun Node.followPrevFullDFGEdgesUntilHit(
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
-        x = { currentNode, _, _ -> currentNode.prevFullDFG },
+        x = { currentNode, ctx, _ -> currentNode.prevFullDFG.map { it to ctx } },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
         earlyTermination = earlyTermination,
@@ -284,13 +284,17 @@ fun Node.followDFGEdgesUntilHit(
                 } else {
                     currentNode.prevDFGEdges
                 }
-                .filter { edge ->
-                    // TODO: There's a problem with the context which should be copied for each
-                    // (potential) path.
-                    scope.followEdge(currentNode, edge, ctx, direction) &&
-                        sensitivities.all { it.followEdge(currentNode, edge, ctx, direction) }
+                .mapNotNull { edge ->
+                    val newCtx = ctx.clone()
+                    if (
+                        scope.followEdge(currentNode, edge, newCtx, direction) &&
+                            sensitivities.all {
+                                it.followEdge(currentNode, edge, newCtx, direction)
+                            }
+                    ) {
+                        Pair(direction.unwrapNextStepFromEdge(edge), newCtx)
+                    } else null
                 }
-                .map { direction.unwrapNextStepFromEdge(it) }
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
@@ -373,14 +377,24 @@ fun Node.collectAllNextDFGPaths(
 ): List<List<Node>> {
     // We make everything fail to reach the end of the CDG. Then, we use the stuff collected in the
     // failed paths (everything)
-    return this.followNextDFGEdgesUntilHit(
+    return followDFGEdgesUntilHit(
             collectFailedPaths = true,
             findAllPossiblePaths = true,
-            interproceduralAnalysis = interproceduralAnalysis,
-            contextSensitive = contextSensitive,
-        ) {
-            false
-        }
+            direction = Forward(),
+            sensitivities =
+                if (contextSensitive) {
+                    FieldSensitive() + ContextSensitive()
+                } else {
+                    arrayOf(FieldSensitive())
+                },
+            scope =
+                if (interproceduralAnalysis) {
+                    Interprocedural()
+                } else {
+                    Intraprocedural()
+                },
+            predicate = { false },
+        )
         .failed
 }
 
@@ -511,12 +525,12 @@ fun Node.followNextPDGUntilHit(
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
-        x = { currentNode, _, _ ->
+        x = { currentNode, ctx, _ ->
             val nextNodes = currentNode.nextPDG.toMutableList()
             if (interproceduralAnalysis) {
                 nextNodes.addAll((currentNode as? CallExpression)?.calls ?: listOf())
             }
-            nextNodes
+            nextNodes.map { it to ctx }
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
@@ -542,12 +556,12 @@ fun Node.followNextCDGUntilHit(
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
-        x = { currentNode, _, _ ->
+        x = { currentNode, ctx, _ ->
             val nextNodes = currentNode.nextCDG.toMutableList()
             if (interproceduralAnalysis) {
                 nextNodes.addAll((currentNode as? CallExpression)?.calls ?: listOf())
             }
-            nextNodes
+            nextNodes.map { it to ctx }
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
@@ -589,7 +603,7 @@ fun Node.followPrevPDGUntilHit(
                     } ?: listOf()
                 )
             }
-            nextNodes
+            nextNodes.map { it to ctx }
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
@@ -631,7 +645,7 @@ fun Node.followPrevCDGUntilHit(
                     } ?: listOf()
                 )
             }
-            nextNodes
+            nextNodes.map { it to ctx }
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
@@ -651,7 +665,7 @@ fun Node.followPrevCDGUntilHit(
  * not mandatory**. If the list "failed" is empty, the path is mandatory.
  */
 inline fun Node.followXUntilHit(
-    noinline x: (Node, Context, List<Node>) -> Collection<Node>,
+    noinline x: (Node, Context, List<Node>) -> Collection<Pair<Node, Context>>,
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
     context: Context = Context(steps = 0),
@@ -682,11 +696,7 @@ inline fun Node.followXUntilHit(
         // No further nodes in the path and the path criteria are not satisfied.
         if (nextNodes.isEmpty() && collectFailedPaths) failedPaths.add(currentPath.first)
 
-        // Increment the counter because we add the node in nextNodes. Be careful to not increment
-        // it further down (in the loop) again.
-        currentContext++
-
-        for (next in nextNodes) {
+        for ((next, newContext) in nextNodes) {
             // Copy the path for each outgoing CDG edge and add the next node
             val nextPath = currentPath.first.toMutableList()
             nextPath.add(next)
@@ -707,14 +717,7 @@ inline fun Node.followXUntilHit(
                     (findAllPossiblePaths ||
                         (next !in alreadySeenNodes && worklist.none { next in it.first }))
             ) {
-
-                var newContext =
-                    if (nextNodes.size > 1) {
-                        currentContext.clone()
-                    } else {
-                        currentContext
-                    }
-                worklist.add(Pair(nextPath, newContext))
+                worklist.add(Pair(nextPath, newContext.inc()))
             }
         }
     }
@@ -738,124 +741,7 @@ fun Node.followNextFullDFGEdgesUntilHit(
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
-        x = { currentNode, _, _ -> currentNode.nextFullDFG },
-        collectFailedPaths = collectFailedPaths,
-        findAllPossiblePaths = findAllPossiblePaths,
-        earlyTermination = earlyTermination,
-        predicate = predicate,
-    )
-}
-
-/**
- * Returns an instance of [FulfilledAndFailedPaths] where [FulfilledAndFailedPaths.fulfilled]
- * contains all possible shortest data flow paths (with [FullDataflowGranularity]) between the
- * starting node [this] and the end node fulfilling [predicate]. The paths are represented as lists
- * of nodes. Paths which do not end at such a node are included in [FulfilledAndFailedPaths.failed].
- *
- * Hence, if "fulfilled" is a non-empty list, a data flow from [this] to such a node is **possible
- * but not mandatory**. If the list "failed" is empty, the data flow is mandatory.
- */
-fun Node.followNextDFGEdgesUntilHit(
-    collectFailedPaths: Boolean = true,
-    findAllPossiblePaths: Boolean = true,
-    useIndexStack: Boolean = true,
-    interproceduralAnalysis: Boolean = true,
-    contextSensitive: Boolean = true,
-    interproceduralMaxDepth: Int? = null,
-    earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
-    predicate: (Node) -> Boolean,
-): FulfilledAndFailedPaths {
-    return followXUntilHit(
-        x = { currentNode, ctx, _ ->
-            if (
-                useIndexStack &&
-                    currentNode is InitializerListExpression &&
-                    !ctx.indexStack.isEmpty()
-            ) {
-                // There's something on the stack. Get the relevant parts
-                currentNode.nextDFGEdges
-                    .filter {
-                        if (
-                            it.end in currentNode.initializers &&
-                                it.granularity is IndexedDataflowGranularity
-                        ) {
-                            // currentNode is the ILE, it is the child and the next (e.g. read
-                            // from).
-                            // We try to pop from the stack and only select the elements with the
-                            // matching index.
-                            ctx.indexStack.popIfOnTop(it.granularity as IndexedDataflowGranularity)
-                        } else {
-                            true
-                        }
-                    }
-                    .map { it.end }
-            } else {
-                // First, let's take care of pushing any information on the stacks (index, calling
-                // context)
-                currentNode.nextDFGEdges.forEach {
-                    if (
-                        interproceduralAnalysis &&
-                            contextSensitive &&
-                            interproceduralMaxDepth?.let { ctx.callStack.depth >= it } != true &&
-                            it is ContextSensitiveDataflow &&
-                            it.callingContext is CallingContextIn
-                    ) {
-                        // Push the call of our calling context to the stack
-                        ctx.callStack.push(it.callingContext.call)
-                    }
-                    if (
-                        it.end is InitializerListExpression &&
-                            it.granularity is IndexedDataflowGranularity
-                    ) {
-                        // CurrentNode is the child and nextDFG goes to ILE => currentNode's written
-                        // to. Push to stack
-                        ctx.indexStack.push(it.granularity as IndexedDataflowGranularity)
-                    }
-                }
-
-                // We need to filter out the edges which based on the stack
-                val selected =
-                    currentNode.nextDFGEdges
-                        .filter {
-                            if (
-                                interproceduralAnalysis &&
-                                    contextSensitive &&
-                                    ctx.callStack.isEmpty()
-                            ) {
-                                true
-                            } else if (
-                                interproceduralAnalysis &&
-                                    contextSensitive &&
-                                    it is ContextSensitiveDataflow &&
-                                    it.callingContext is CallingContextOut
-                            ) {
-                                // We are only interested in outgoing edges from our current
-                                // "call-in", i.e., the call expression that is on the stack.
-                                ctx.callStack.top == it.callingContext.call
-                            } else if (it is ContextSensitiveDataflow && !interproceduralAnalysis) {
-                                false
-                            } else {
-                                true
-                            }
-                        }
-                        .map { it.end }
-
-                // Let's do any remaining pop'ing
-                currentNode.nextDFGEdges.forEach {
-                    if (
-                        interproceduralAnalysis &&
-                            contextSensitive &&
-                            it is ContextSensitiveDataflow &&
-                            it.callingContext is CallingContextOut
-                    ) {
-                        // Pop the current call, if it's on top
-                        ctx.callStack.popIfOnTop(it.callingContext.call)
-                    }
-                }
-
-                selected
-            }
-        },
+        x = { currentNode, ctx, _ -> currentNode.nextFullDFG.map { it to ctx } },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
         earlyTermination = earlyTermination,
@@ -892,7 +778,7 @@ fun Node.followNextEOGEdgesUntilHit(
                 // We follow the invokes edges and push the call expression on the call stack, so we
                 // can jump back here after processing the function.
                 ctx.callStack.push(currentNode)
-                currentNode.invokes
+                currentNode.invokes.map { it to ctx }
             } else if (
                 interproceduralAnalysis &&
                     (currentNode is ReturnStatement || currentNode.nextEOG.isEmpty())
@@ -901,12 +787,12 @@ fun Node.followNextEOGEdgesUntilHit(
                     (currentNode as? FunctionDeclaration
                             ?: currentNode.firstParentOrNull<FunctionDeclaration>())
                         ?.calledBy
-                        ?.flatMap { it.nextEOG } ?: setOf()
+                        ?.flatMap { it.nextEOG.map { it to ctx } } ?: setOf()
                 } else {
-                    ctx.callStack.pop().nextEOG
+                    ctx.callStack.pop().nextEOG.map { it to ctx }
                 }
             } else {
-                currentNode.nextEOGEdges.filter { it.unreachable != true }.map { it.end }
+                currentNode.nextEOGEdges.filter { it.unreachable != true }.map { it.end to ctx }
             }
         },
         collectFailedPaths = collectFailedPaths,
@@ -961,13 +847,13 @@ fun Node.followPrevEOGEdgesUntilHit(
                     ctx.callStack.isEmpty() -> {
                     // We're at the beginning of a function. If the stack is empty, we jump to
                     // all calls of this function.
-                    currentNode.calledBy.flatMap { it.reachablePrevEOG }
+                    currentNode.calledBy.flatMap { it.reachablePrevEOG.map { it to ctx } }
                 }
                 interproceduralAnalysis && currentNode is FunctionDeclaration -> {
                     // We're at the beginning of a function. If there's something on the stack,
                     // we ended up here by following the respective call expression, and we jump
                     // back there.
-                    ctx.callStack.pop().reachablePrevEOG
+                    ctx.callStack.pop().reachablePrevEOG.map { it to ctx }
                 }
                 interproceduralAnalysis &&
                     interproceduralMaxDepth?.let { ctx.callStack.depth >= it } != true &&
@@ -977,10 +863,10 @@ fun Node.followPrevEOGEdgesUntilHit(
                     // nodes in the functions which are invoked and continue there.
                     ctx.callStack.push(currentNode)
 
-                    currentNode.invokes.flatMap { it.lastEOGNodes }
+                    currentNode.invokes.flatMap { it.lastEOGNodes.map { it to ctx } }
                 }
                 else -> {
-                    currentNode.reachablePrevEOG
+                    currentNode.reachablePrevEOG.map { it to ctx }
                 }
             }
         },
