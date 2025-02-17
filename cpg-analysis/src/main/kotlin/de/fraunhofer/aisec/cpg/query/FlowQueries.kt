@@ -29,11 +29,15 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
+import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextIn
+import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
+import de.fraunhofer.aisec.cpg.graph.edges.flows.ContextSensitiveDataflow
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
 import de.fraunhofer.aisec.cpg.graph.edges.flows.IndexedDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import kotlin.collections.all
 
 interface StepSelector {
     /**
@@ -60,7 +64,7 @@ sealed class AnalysisScope(val maxSteps: Int? = null) : StepSelector {
         analysisDirection: AnalysisDirection?,
     ): Boolean {
         // Follow the edge if maxSteps is null or if maxSteps < ctx.steps
-        return this.maxSteps == null || maxSteps < ctx.steps
+        return this.maxSteps == null || maxSteps <= ctx.steps
     }
 }
 
@@ -68,7 +72,18 @@ sealed class AnalysisScope(val maxSteps: Int? = null) : StepSelector {
  * Only intraprocedural analysis. [maxSteps] defines the total number of steps we will follow in the
  * graph (unlimited depth if `null`).
  */
-class Intraprocedural(maxSteps: Int? = null) : AnalysisScope(maxSteps)
+class Intraprocedural(maxSteps: Int? = null) : AnalysisScope(maxSteps) {
+    override fun followEdge(
+        currentNode: Node,
+        edge: Edge<Node>,
+        ctx: Context,
+        analysisDirection: AnalysisDirection?,
+    ): Boolean {
+        // Follow the edge if we're still in the maxSteps range and not an edge across function
+        // boundaries.
+        return (this.maxSteps == null || ctx.steps < maxSteps) && edge !is ContextSensitiveDataflow
+    }
+}
 
 /**
  * Enable interprocedural analysis. [maxCallDepth] defines how many function calls we follow at most
@@ -85,7 +100,7 @@ class Interprocedural(val maxCallDepth: Int? = null, maxSteps: Int? = null) :
     ): Boolean {
         // Follow the edge if we're still in the maxSteps range and (if maxCallDepth is null or the
         // call stack is not deeper yet)
-        return super.followEdge(currentNode, edge, ctx) &&
+        return (this.maxSteps == null || ctx.steps < maxSteps) &&
             (maxCallDepth == null || ctx.callStack.depth < maxCallDepth)
     }
 }
@@ -162,7 +177,39 @@ class ContextSensitive() : AnalysisSensitivity() {
         ctx: Context,
         analysisDirection: AnalysisDirection?,
     ): Boolean {
-        TODO("Not yet implemented")
+        return if (edge is ContextSensitiveDataflow && analysisDirection is Forward) {
+            // Forward analysis
+            if (edge.callingContext is CallingContextIn) {
+                // Push the call of our calling context to the stack
+                ctx.callStack.push((edge.callingContext as CallingContextIn).call)
+                true
+            } else if (ctx.callStack.isEmpty()) {
+                true
+            } else if (edge.callingContext is CallingContextOut) {
+                // We are only interested in outgoing edges from our current
+                // "call-in", i.e., the call expression that is on the stack.
+                ctx.callStack.popIfOnTop((edge.callingContext as CallingContextOut).call)
+            } else {
+                true
+            }
+        } else if (edge is ContextSensitiveDataflow && analysisDirection is Backward) {
+            // Backward analysis
+            if (edge.callingContext is CallingContextOut) {
+                // Push the call of our calling context to the stack
+                ctx.callStack.push((edge.callingContext as CallingContextOut).call)
+                true
+            } else if (ctx.callStack.isEmpty()) {
+                true
+            } else if (edge.callingContext is CallingContextIn) {
+                // We are only interested in outgoing edges from our current
+                // "call-in", i.e., the call expression that is on the stack.
+                ctx.callStack.popIfOnTop((edge.callingContext as CallingContextIn).call)
+            } else {
+                true
+            }
+        } else {
+            true
+        }
     }
 }
 
@@ -178,7 +225,6 @@ class FieldSensitive() : AnalysisSensitivity() {
         analysisDirection: AnalysisDirection?,
     ): Boolean {
         return if (edge is Dataflow) {
-            // Forward analysis
             if (
                 currentNode is InitializerListExpression &&
                     analysisDirection?.unwrapNextStepFromEdge(edge) in currentNode.initializers &&
@@ -223,6 +269,47 @@ class Implicit() : AnalysisSensitivity() {
 }
 
 /**
+ * Returns an instance of [FulfilledAndFailedPaths] where [FulfilledAndFailedPaths.fulfilled]
+ * contains all possible shortest data flow paths (with [FullDataflowGranularity]) between the
+ * starting node [this] and the end node fulfilling [predicate]. The paths are represented as lists
+ * of nodes. Paths which do not end at such a node are included in [FulfilledAndFailedPaths.failed].
+ *
+ * Hence, if "fulfilled" is a non-empty list, a data flow from [this] to such a node is **possible
+ * but not mandatory**. If the list "failed" is empty, the data flow is mandatory.
+ */
+fun Node.followNextDFGEdgesUntilHitNew(
+    collectFailedPaths: Boolean = true,
+    findAllPossiblePaths: Boolean = true,
+    direction: AnalysisDirection = Forward(),
+    vararg sensitivities: AnalysisSensitivity = FieldSensitive() + ContextSensitive(),
+    scope: AnalysisScope = Interprocedural(),
+    earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
+    predicate: (Node) -> Boolean,
+): FulfilledAndFailedPaths {
+
+    return this.followXUntilHit(
+        x = { currentNode, ctx, path ->
+            if (direction is Forward) {
+                    currentNode.nextDFGEdges
+                } else {
+                    currentNode.prevDFGEdges
+                }
+                .filter { edge ->
+                    // TODO: There's a problem with the context which should be copied for each
+                    // (potential) path.
+                    scope.followEdge(currentNode, edge, ctx) &&
+                        sensitivities.all { it.followEdge(currentNode, edge, ctx) }
+                }
+                .map { direction.unwrapNextStepFromEdge(it) }
+        },
+        collectFailedPaths = collectFailedPaths,
+        findAllPossiblePaths = findAllPossiblePaths,
+        earlyTermination = earlyTermination,
+        predicate = predicate,
+    )
+}
+
+/**
  * Follows the [de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow] edges from [startNode] in the
  * given [direction] (default: Forward analysis) until reaching a node fulfilling [predicate].
  *
@@ -248,57 +335,27 @@ fun dataFlow(
 ): QueryTree<Boolean> {
     val collectFailedPaths = type == AnalysisType.MUST || verbose
     val findAllPossiblePaths = type == AnalysisType.MUST || verbose
-    val useIndexStack = sensitivities.any { it is FieldSensitive }
-    val contextSensitive = sensitivities.any { it is ContextSensitive }
-    val interproceduralAnalysis = scope is Interprocedural
-    val earlyTermination = { n: Node, ctx: Context ->
-        earlyTermination?.let { it(n) } == true || scope.maxSteps?.let { ctx.steps >= it } == true
-    }
+    val earlyTermination = { n: Node, ctx: Context -> earlyTermination?.let { it(n) } == true }
+
     val evalRes =
-        when (direction) {
-            is Forward -> {
-                startNode.followNextDFGEdgesUntilHit(
-                    collectFailedPaths = collectFailedPaths,
-                    findAllPossiblePaths = findAllPossiblePaths,
-                    useIndexStack = useIndexStack,
-                    contextSensitive = contextSensitive,
-                    interproceduralAnalysis = interproceduralAnalysis,
-                    earlyTermination = earlyTermination,
-                    predicate = predicate,
-                )
+        if (direction is Bidirectional) {
+                arrayOf(Forward(), Backward())
+            } else {
+                arrayOf(direction)
             }
-            is Backward -> {
-                startNode.followPrevDFGEdgesUntilHit(
-                    collectFailedPaths = collectFailedPaths,
-                    findAllPossiblePaths = findAllPossiblePaths,
-                    useIndexStack = useIndexStack,
-                    contextSensitive = contextSensitive,
-                    interproceduralAnalysis = interproceduralAnalysis,
-                    earlyTermination = earlyTermination,
-                    predicate = predicate,
-                )
-            }
-            is Bidirectional -> {
-                startNode.followNextDFGEdgesUntilHit(
-                    collectFailedPaths = collectFailedPaths,
-                    findAllPossiblePaths = findAllPossiblePaths,
-                    useIndexStack = useIndexStack,
-                    contextSensitive = contextSensitive,
-                    interproceduralAnalysis = interproceduralAnalysis,
-                    earlyTermination = earlyTermination,
-                    predicate = predicate,
-                ) +
-                    startNode.followPrevDFGEdgesUntilHit(
+            .fold(FulfilledAndFailedPaths(listOf(), listOf())) { result, direction ->
+                result +
+                    startNode.followNextDFGEdgesUntilHitNew(
                         collectFailedPaths = collectFailedPaths,
                         findAllPossiblePaths = findAllPossiblePaths,
-                        useIndexStack = useIndexStack,
-                        contextSensitive = contextSensitive,
-                        interproceduralAnalysis = interproceduralAnalysis,
+                        direction = direction,
+                        sensitivities = sensitivities,
+                        scope = scope,
                         earlyTermination = earlyTermination,
                         predicate = predicate,
                     )
             }
-        }
+
     val allPaths =
         evalRes.fulfilled
             .map {
