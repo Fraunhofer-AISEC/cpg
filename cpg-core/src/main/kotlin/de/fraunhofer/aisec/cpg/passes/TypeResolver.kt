@@ -134,7 +134,19 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                     "Removing type {} from the list of its own supertypes. This would create a type cycle that is not allowed.",
                     type,
                 )
-            type.superTypes.addAll(declaredType.superTypes.filter { it != type })
+            type.superTypes.addAll(
+                declaredType.superTypes.filter {
+                    if (it == this) {
+                        log.warn(
+                            "Removing type {} from the list of its own supertypes. This would create a type cycle that is not allowed.",
+                            this,
+                        )
+                        false
+                    } else {
+                        true
+                    }
+                }
+            )
             return true
         }
 
