@@ -253,7 +253,6 @@ val Type.ancestors: Set<Type.Ancestor>
 internal fun Type.getAncestors(depth: Int): Set<Type.Ancestor> {
     val types = mutableSetOf<Type.Ancestor>()
 
-
     if (superTypes.contains(this))
         log.warn(
             "Removing type {} from the list of its own supertypes. This would create a type cycle that is not allowed.",
