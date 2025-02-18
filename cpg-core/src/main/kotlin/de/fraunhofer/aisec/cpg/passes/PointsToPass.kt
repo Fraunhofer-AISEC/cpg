@@ -323,7 +323,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             // to mark it as partial Dataflow
                             if (subAccessName.isNotEmpty()) {
                                 edgePropertiesMap[Pair(pmv, value)] =
-                                    PartialDataflowGranularity(FieldDeclaration())
+                                    PartialDataflowGranularity(
+                                        FieldDeclaration().apply { name = Name(subAccessName) }
+                                    )
                             }
                         }
                     }
