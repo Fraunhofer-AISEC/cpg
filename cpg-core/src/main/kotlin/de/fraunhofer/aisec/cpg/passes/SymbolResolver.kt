@@ -742,10 +742,12 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 }
             }
             firstLevelCandidates.ifEmpty {
-                workingPossibleTypes
-                    .map { it.superTypeDeclarations }
-                    .map { getInvocationCandidatesFromParents(name, it) }
-                    .flatten()
+                workingPossibleTypes.flatMap {
+                    getInvocationCandidatesFromParents(
+                        name,
+                        it.superTypeDeclarations.filter { it !in possibleTypes }.toSet(),
+                    )
+                }
             }
         }
     }

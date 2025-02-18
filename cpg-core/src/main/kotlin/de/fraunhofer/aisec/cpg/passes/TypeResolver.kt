@@ -129,7 +129,12 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             type.declaredFrom = declares
             type.recordDeclaration = declares as? RecordDeclaration
             type.typeOrigin = Type.Origin.RESOLVED
-            type.superTypes.addAll(declaredType.superTypes)
+            if (declaredType.superTypes.contains(type))
+                log.warn(
+                    "Removing type {} from the list of its own supertypes. This would create a type cycle that is not allowed.",
+                    type,
+                )
+            type.superTypes.addAll(declaredType.superTypes.filter { it != type })
             return true
         }
 
