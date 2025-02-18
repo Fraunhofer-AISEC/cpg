@@ -37,6 +37,8 @@ import de.fraunhofer.aisec.cpg.graph.concepts.memory.LoadLibrary
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.evaluate
+import de.fraunhofer.aisec.cpg.graph.followPrevDFG
+import de.fraunhofer.aisec.cpg.graph.operationNodes
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.translationResult
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
@@ -77,13 +79,7 @@ class CXXDynamicLoadingPass(ctx: TranslationContext) : TranslationUnitPass(ctx) 
                     handleLibraryLoad(call, concept)
                 }
                 "dlsym" -> {
-                    // Try to find the matching dlopen call. The first argument is the handle to the
-                    // library. We can follow the DFG back to find the call to dlopen.
-
-                    LoadFunction(
-                        underlyingNode = call,
-                        concept = concept as Concept<DynamicLoadingOperation<FunctionDeclaration>>,
-                    )
+                    handleLoadFunction(call, concept)
                 }
                 else -> {
                     return
@@ -91,6 +87,43 @@ class CXXDynamicLoadingPass(ctx: TranslationContext) : TranslationUnitPass(ctx) 
             }
 
         concept.ops += op
+    }
+
+    /**
+     * This function handles the loading of a function. It creates a [LoadFunction] concept and adds
+     * it to the [DynamicLoading] concept. The tricky part is to find the [FunctionDeclaration] that
+     * is loaded.
+     */
+    @Suppress("UNCHECKED_CAST")
+    private fun handleLoadFunction(call: CallExpression, concept: DynamicLoading): LoadFunction {
+        // The first argument is the handle to the library. We can follow the DFG back to find the
+        // call to dlopen.
+        val path =
+            call.arguments.getOrNull(0)?.followPrevDFG {
+                it is CallExpression && it.operationNodes.any { it is LoadLibrary }
+            }
+
+        val loadLibrary =
+            path?.lastOrNull()?.operationNodes?.filterIsInstance<LoadLibrary>()?.singleOrNull()
+
+        val symbolName = call.arguments.getOrNull(1)?.evaluate() as? String
+        val candidates = loadLibrary?.findSymbol(symbolName)
+
+        val op =
+            LoadFunction(
+                underlyingNode = call,
+                concept = concept as Concept<DynamicLoadingOperation<FunctionDeclaration>>,
+                what = candidates?.singleOrNull() as FunctionDeclaration?,
+                loader = loadLibrary,
+            )
+
+        // We can help the dynamic invoke resolver by adding a DFG path from the function
+        // declaration to the assignment of our call (which is the next DFG)
+        call.nextFullDFG.forEach { assignee ->
+            candidates?.forEach { candidate -> assignee.prevDFG += candidate }
+        }
+
+        return op
     }
 
     /**

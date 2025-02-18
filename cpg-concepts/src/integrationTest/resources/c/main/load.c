@@ -5,7 +5,7 @@ int main() {
 
     int (*myfunc)(int);
 
-    *(void**)(&myfunc) = dlsym(lib, "myfunc");
+    myfunc = dlsym(lib, "myfunc");
     int a = myfunc(1);
 
     dlclose(lib);

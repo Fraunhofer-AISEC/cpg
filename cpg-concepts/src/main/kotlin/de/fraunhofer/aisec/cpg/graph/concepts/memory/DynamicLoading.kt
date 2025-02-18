@@ -28,8 +28,10 @@ package de.fraunhofer.aisec.cpg.graph.concepts.memory
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 
 /**
  * Represents an entity that loads a piece of code dynamically during runtime. Examples include a
@@ -64,7 +66,18 @@ class LoadLibrary(
         underlyingNode = underlyingNode,
         concept = concept,
         what = what,
-    )
+    ) {
+
+    /** Looks up symbol candidates for [symbol] in the [LoadLibrary.what]. */
+    fun findSymbol(symbol: Symbol?): List<Declaration> {
+        if (symbol == null) {
+            return listOf()
+        }
+
+        return this.what?.translationUnits?.flatMap { it.scope?.lookupSymbol(symbol) ?: listOf() }
+            ?: listOf()
+    }
+}
 
 /**
  * Represents an operation that loads a function during runtime. A common example would be a call to
