@@ -48,6 +48,11 @@ import org.neo4j.ogm.annotation.Transient
  */
 @NodeEntity
 abstract class Expression : Statement(), HasType {
+    /**
+     * Is this node used for writing data instead of just reading it? Determines dataflow direction
+     */
+    open var access: AccessValues = AccessValues.READ
+
     @Transient override val typeObservers: MutableSet<HasType.TypeObserver> = identitySetOf()
 
     override var language: Language<*> = UnknownLanguage

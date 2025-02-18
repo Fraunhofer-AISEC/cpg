@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.golang
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.helpers.Util
 
@@ -63,7 +64,13 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                 }
             }
 
-        val import = newImportDeclaration(import = name, alias = alias, rawNode = importSpec)
+        val import =
+            newImportDeclaration(
+                import = name,
+                alias = alias,
+                style = ImportStyle.IMPORT_NAMESPACE,
+                rawNode = importSpec,
+            )
         import.importURL = filename
 
         return import
@@ -340,6 +347,11 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
 
                 // Register the type with the type system
                 frontend.typeManager.registerType(record.toType())
+
+                // Make sure to add the scope to the scope manager
+                frontend.scopeManager.enterScope(record)
+                frontend.scopeManager.leaveScope(record)
+
                 record
             }
         }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,29 +23,32 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.edges
+package de.fraunhofer.aisec.cpg.frontends.python
 
-import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.newMethodDeclaration
-import de.fraunhofer.aisec.cpg.graph.newRecordDeclaration
 import kotlin.test.Test
-import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
-class EdgesTest {
+class SystemInformationTest {
     @Test
-    fun testUnwrap() {
-        with(TestLanguageFrontend()) {
-            var record = newRecordDeclaration("myRecord", kind = "class")
-            var method = newMethodDeclaration("myFunc")
-            record.methods += method
+    fun testVersionInfo() {
+        val empty = VersionInfo()
+        val v123_2 = VersionInfo(1, 2, 3)
+        val v123 = VersionInfo(1, 2, 3)
+        val v321 = VersionInfo(3, 2, 1)
+        val v121 = VersionInfo(1, 2, 1)
+        val v132 = VersionInfo(1, 3, 2)
+        val v124 = VersionInfo(1, 2, 4)
+        assertTrue(empty < v123)
+        assertTrue(v123_2.compareTo(v123) == 0)
+        assertTrue(v123 > empty)
+        assertTrue(v123 < v321)
+        assertTrue(v121 < v123)
+        assertTrue(v123 < v132)
+        assertTrue(v123 < v124)
 
-            assertEquals(1, record.methods.size)
-            assertEquals(method, record.methods.firstOrNull())
-
-            assertEquals(
-                "RecordDeclaration[name=myRecord,location=<null>,name=myRecord,kind=class,superTypeDeclarations=[],fields=[],methods=[MethodDeclaration[name=myFunc,location=<null>,parameters=[]]],constructors=[],records=[]]",
-                record.toString(),
-            )
-        }
+        assertTrue(v321 > v123)
+        assertTrue(v123 > v121)
+        assertTrue(v132 > v123)
+        assertTrue(v124 > v123)
     }
 }

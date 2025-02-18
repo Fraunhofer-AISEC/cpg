@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.SupportsParallelParsing
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
@@ -63,19 +64,19 @@ import kotlin.math.min
  * a value (on the first assignment).
  */
 @RegisterExtraPass(PythonAddDeclarationsPass::class)
+@SupportsParallelParsing(false) // https://github.com/Fraunhofer-AISEC/cpg/issues/2026
 class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: TranslationContext) :
     LanguageFrontend<Python.AST.AST, Python.AST.AST?>(language, ctx) {
     val lineSeparator = "\n" // TODO
     private val tokenTypeIndex = 0
     private val jep = JepSingleton // configure Jep
 
-    // val declarationHandler = DeclarationHandler(this)
-    // val specificationHandler = SpecificationHandler(this)
+    internal val declarationHandler = DeclarationHandler(this)
     internal var statementHandler = StatementHandler(this)
     internal var expressionHandler = ExpressionHandler(this)
 
     /**
-     * fileContent contains the whole file can be stored as a class field because the CPG creates a
+     * fileContent contains the whole file ca be stored as a class field because the CPG creates a
      * new [PythonLanguageFrontend] instance per file.
      */
     private lateinit var fileContent: String
@@ -164,9 +165,38 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
                 // No type information -> we return an autoType to infer things magically
                 autoType()
             }
+
             is Python.AST.Name -> {
                 this.typeOf(type.id)
             }
+
+            is Python.AST.Attribute -> {
+                var type = type
+                val names = mutableListOf<String>()
+
+                // Traverse nested attributes (e.g., `modules.a.Foobar`)
+                while (type is Python.AST.Attribute) {
+                    names.add(type.attr)
+                    val typeValue = type.value
+                    if (typeValue is Python.AST.Name) {
+                        names.add(typeValue.id)
+                        break
+                    }
+                    type = type.value
+                }
+                if (names.isNotEmpty()) {
+                    // As the AST provides attributes from outermost to innermost,
+                    // we need to reconstruct the Name hierarchy in reverse order.
+                    val parsedNames =
+                        names.foldRight(null as Name?) { child, parent ->
+                            Name(localName = child, parent = parent)
+                        }
+                    objectType(parsedNames ?: return unknownType())
+                } else {
+                    unknownType()
+                }
+            }
+
             else -> {
                 // The AST supplied us with some kind of type information, but we could not parse
                 // it, so we need to return the unknown type.
@@ -316,7 +346,14 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
 
         if (lastNamespace != null) {
             for (stmt in pythonASTModule.body) {
-                lastNamespace.statements += statementHandler.handle(stmt)
+                when (stmt) {
+                    // In order to be as compatible as possible with existing languages, we try to
+                    // add declarations directly to the class
+                    is Python.AST.Def -> declarationHandler.handle(stmt)
+                    // All other statements are added to the (static) statements block of the
+                    // namespace.
+                    else -> lastNamespace.statements += statementHandler.handle(stmt)
+                }
             }
         }
 
@@ -353,6 +390,22 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
 }
 
 /**
+ * Returns the version info from the [TranslationConfiguration] as [VersionInfo] or `null` if it was
+ * not specified.
+ */
+val TranslationConfiguration.versionInfo: VersionInfo?
+    get() {
+        // We need to populate the version info "in-order", to ensure that we do not
+        // set the micro version if minor and major are not set, i.e., there must not be a
+        // "gap" in the granularity of version numbers
+        return this.symbols["PYTHON_VERSION_MAJOR"]?.toLong()?.let { major ->
+            val minor = this.symbols["PYTHON_VERSION_MINOR"]?.toLong()
+            val micro = if (minor != null) this.symbols["PYTHON_VERSION_MICRO"]?.toLong() else null
+            VersionInfo(major, minor, micro)
+        }
+    }
+
+/**
  * Populate system information from defined symbols that represent our environment. We add it as an
  * overlay node to our [TranslationUnitDeclaration].
  */
@@ -363,17 +416,7 @@ fun populateSystemInformation(
     var sysInfo =
         SystemInformation(
             platform = config.symbols["PYTHON_PLATFORM"],
-            // We need to populate the version info "in-order", to ensure that we do not
-            // set the micro version if minor and major are not set, i.e., there must not be a
-            // "gap" in the granularity of version numbers
-            versionInfo =
-                config.symbols["PYTHON_VERSION_MAJOR"]?.toLong()?.let { major ->
-                    val minor = config.symbols["PYTHON_VERSION_MINOR"]?.toLong()
-                    val micro =
-                        if (minor != null) config.symbols["PYTHON_VERSION_MICRO"]?.toLong()
-                        else null
-                    VersionInfo(major, minor, micro)
-                },
+            versionInfo = config.versionInfo,
         )
     sysInfo.underlyingNode = tu
     return sysInfo

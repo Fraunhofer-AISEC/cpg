@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.scopes.TemplateScope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.passes.Pass
+import de.fraunhofer.aisec.cpg.passes.Pass.Companion.log
 import de.fraunhofer.aisec.cpg.passes.ResolveCallExpressionAmbiguityPass
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -253,7 +254,20 @@ internal fun Type.getAncestors(depth: Int): Set<Type.Ancestor> {
     val types = mutableSetOf<Type.Ancestor>()
 
     // Recursively call ourselves on our super types.
-    types += superTypes.flatMap { it.getAncestors(depth + 1) }
+    types +=
+        superTypes
+            .filter {
+                if (it == this) {
+                    log.warn(
+                        "Removing type {} from the list of its own supertypes. This would create a type cycle that is not allowed.",
+                        this,
+                    )
+                    false
+                } else {
+                    true
+                }
+            }
+            .flatMap { it.getAncestors(depth + 1) }
 
     // Since the chain starts with our type, we add ourselves to it
     types += Type.Ancestor(this, depth)
