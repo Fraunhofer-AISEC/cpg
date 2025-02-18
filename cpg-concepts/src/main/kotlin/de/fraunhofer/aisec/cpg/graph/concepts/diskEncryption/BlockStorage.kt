@@ -30,4 +30,4 @@ import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 
 /** Represents a block device. E.g. a hard disk. */
 class BlockStorage(underlyingNode: Node) :
-    Concept<BlockStorageOperation>(underlyingNode = underlyingNode), IsDiskEncryption
+    Concept(underlyingNode = underlyingNode), IsDiskEncryption

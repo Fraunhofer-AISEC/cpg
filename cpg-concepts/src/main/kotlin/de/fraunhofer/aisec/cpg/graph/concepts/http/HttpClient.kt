@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 
 /** Represents an [HttpClient]. */
 class HttpClient(underlyingNode: Node, val isTLS: Boolean) :
-    Concept<HttpClientOperation>(underlyingNode = underlyingNode)
+    Concept(underlyingNode = underlyingNode)
 
-abstract class HttpClientOperation(underlyingNode: Node, concept: Concept<HttpClientOperation>) :
+abstract class HttpClientOperation(underlyingNode: Node, concept: Concept) :
     Operation(underlyingNode = underlyingNode, concept = concept)
