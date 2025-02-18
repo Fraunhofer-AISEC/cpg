@@ -239,7 +239,7 @@ fun Node.followPrevFullDFGEdgesUntilHit(
         earlyTermination = earlyTermination,
         predicate = predicate,
         direction = Backward(GraphToFollow.DFG),
-        sensitivities = OnlyFullDFG() + ContextSensitive(),
+        sensitivities = OnlyFullDFG + ContextSensitive,
         scope = Interprocedural(),
     )
 }
@@ -273,7 +273,7 @@ fun Node.followEOGEdgesUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
     direction: AnalysisDirection = Forward(GraphToFollow.EOG),
-    vararg sensitivities: AnalysisSensitivity = FilterUnreachableEOG() + ContextSensitive(),
+    vararg sensitivities: AnalysisSensitivity = FilterUnreachableEOG + ContextSensitive,
     scope: AnalysisScope = Interprocedural(),
     earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
     predicate: (Node) -> Boolean,
@@ -302,7 +302,7 @@ fun Node.followDFGEdgesUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
     direction: AnalysisDirection = Forward(GraphToFollow.DFG),
-    vararg sensitivities: AnalysisSensitivity = FieldSensitive() + ContextSensitive(),
+    vararg sensitivities: AnalysisSensitivity = FieldSensitive + ContextSensitive,
     scope: AnalysisScope = Interprocedural(),
     earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
     predicate: (Node) -> Boolean,
@@ -398,9 +398,9 @@ fun Node.collectAllNextDFGPaths(
             direction = Forward(GraphToFollow.DFG),
             sensitivities =
                 if (contextSensitive) {
-                    FieldSensitive() + ContextSensitive()
+                    FieldSensitive + ContextSensitive
                 } else {
-                    arrayOf(FieldSensitive())
+                    arrayOf(FieldSensitive)
                 },
             scope =
                 if (interproceduralAnalysis) {
@@ -766,7 +766,7 @@ fun Node.followNextFullDFGEdgesUntilHit(
         earlyTermination = earlyTermination,
         predicate = predicate,
         direction = Forward(GraphToFollow.DFG),
-        sensitivities = OnlyFullDFG() + ContextSensitive(),
+        sensitivities = OnlyFullDFG + ContextSensitive,
         scope = Interprocedural(),
     )
 }

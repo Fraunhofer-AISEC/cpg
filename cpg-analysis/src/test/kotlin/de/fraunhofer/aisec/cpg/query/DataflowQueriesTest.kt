@@ -709,7 +709,7 @@ class DataflowQueriesTest {
                     (node.astParent as? CallExpression)?.name?.localName == "baz"
                 },
                 scope = Interprocedural(),
-                sensitivities = ContextSensitive() + FieldSensitive() + FilterUnreachableEOG(),
+                sensitivities = ContextSensitive + FieldSensitive + FilterUnreachableEOG,
             )
         assertTrue(
             linearResultWithBInterProc.value,

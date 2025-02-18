@@ -440,7 +440,7 @@ abstract class AnalysisSensitivity : StepSelector {
 }
 
 /** Only follow EOG edges if they are not marked as unreachable. */
-class FilterUnreachableEOG() : AnalysisSensitivity() {
+object FilterUnreachableEOG : AnalysisSensitivity() {
     override fun followEdge(
         currentNode: Node,
         edge: Edge<Node>,
@@ -452,7 +452,7 @@ class FilterUnreachableEOG() : AnalysisSensitivity() {
 }
 
 /** Only follow full DFG edges. */
-class OnlyFullDFG() : AnalysisSensitivity() {
+object OnlyFullDFG : AnalysisSensitivity() {
     override fun followEdge(
         currentNode: Node,
         edge: Edge<Node>,
@@ -464,7 +464,7 @@ class OnlyFullDFG() : AnalysisSensitivity() {
 }
 
 /** Consider the calling context when following paths (e.g. based on a call stack). */
-class ContextSensitive() : AnalysisSensitivity() {
+object ContextSensitive : AnalysisSensitivity() {
     override fun followEdge(
         currentNode: Node,
         edge: Edge<Node>,
@@ -501,7 +501,7 @@ class ContextSensitive() : AnalysisSensitivity() {
  * Differentiate between fields, attributes, known keys or known indices of objects. This does not
  * include computing possible indices or keys if they are not given as a literal.
  */
-class FieldSensitive() : AnalysisSensitivity() {
+object FieldSensitive : AnalysisSensitivity() {
     override fun followEdge(
         currentNode: Node,
         edge: Edge<Node>,
@@ -542,7 +542,7 @@ class FieldSensitive() : AnalysisSensitivity() {
  * value we're interested in, different behaviors in the branches can leak data and thus, the
  * dependencies of this should also be flagged.
  */
-class Implicit() : AnalysisSensitivity() {
+object Implicit : AnalysisSensitivity() {
     override fun followEdge(
         currentNode: Node,
         edge: Edge<Node>,

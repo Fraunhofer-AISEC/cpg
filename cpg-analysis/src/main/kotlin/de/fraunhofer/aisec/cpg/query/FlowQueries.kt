@@ -124,7 +124,7 @@ fun dataFlow(
     startNode: Node,
     direction: AnalysisDirection = Forward(GraphToFollow.DFG),
     type: AnalysisType = MayAnalysis(),
-    vararg sensitivities: AnalysisSensitivity = FieldSensitive() + ContextSensitive(),
+    vararg sensitivities: AnalysisSensitivity = FieldSensitive + ContextSensitive,
     scope: AnalysisScope = Interprocedural(),
     verbose: Boolean = true,
     earlyTermination: ((Node) -> Boolean)? = null,
@@ -193,7 +193,7 @@ fun executionPath(
                         collectFailedPaths = collectFailedPaths,
                         findAllPossiblePaths = findAllPossiblePaths,
                         direction = direction,
-                        sensitivities = FilterUnreachableEOG() + ContextSensitive(),
+                        sensitivities = FilterUnreachableEOG + ContextSensitive,
                         scope = scope,
                         earlyTermination = earlyTermination,
                         predicate = predicate,
@@ -240,13 +240,13 @@ fun Node.alwaysFlowsTo(
     earlyTermination: ((Node) -> Boolean)? = null,
     scope: AnalysisScope,
     vararg sensitivities: AnalysisSensitivity =
-        ContextSensitive() + FieldSensitive() + FilterUnreachableEOG(),
+        ContextSensitive + FieldSensitive + FilterUnreachableEOG,
     predicate: (Node) -> Boolean,
 ): QueryTree<Boolean> {
     val nextDFGPaths =
         this.collectAllNextDFGPaths(
                 interproceduralAnalysis = scope is Interprocedural,
-                contextSensitive = ContextSensitive() in sensitivities,
+                contextSensitive = ContextSensitive in sensitivities,
             )
             .flatten()
     val earlyTerminationPredicate = { n: Node, ctx: Context ->
