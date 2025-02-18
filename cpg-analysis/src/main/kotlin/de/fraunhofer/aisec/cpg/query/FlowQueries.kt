@@ -30,10 +30,15 @@ import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.AnalysisSensitivity
 import de.fraunhofer.aisec.cpg.graph.FilterUnreachableEOG
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import kotlin.collections.all
 
+/**
+ * Converts the [FulfilledAndFailedPaths] to a list of [QueryTree]s containing the failed and
+ * fulfilled paths.
+ */
 fun FulfilledAndFailedPaths.toQueryTree(
     startNode: Node,
     queryType: String,
@@ -56,7 +61,7 @@ fun FulfilledAndFailedPaths.toQueryTree(
         }
 }
 
-/** Determines if the predicate must or may hold */
+/** Determines if the predicate [Must] or [May] hold */
 sealed class AnalysisType {
     abstract fun createQueryTree(
         evalRes: FulfilledAndFailedPaths,
@@ -107,8 +112,8 @@ object May : AnalysisType() {
 }
 
 /**
- * Follows the [de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow] edges from [startNode] in the
- * given [direction] (default: Forward analysis) until reaching a node fulfilling [predicate].
+ * Follows the [Dataflow] edges from [startNode] in the given [direction] (default: Forward
+ * analysis) until reaching a node fulfilling [predicate].
  *
  * The interpretation of the analysis result can be configured as must analysis (all paths have to
  * fulfill the criterion) or may analysis (at least one path has to fulfill the criterion) by
@@ -117,7 +122,7 @@ object May : AnalysisType() {
  * happens with the data. In this case, you may need to check the [executionPath].
  *
  * The [sensitivities] can also be configured to a certain extent. The analysis can be run as
- * interprocedural or intraprocedural analysis. If [earlyTermination] is not `null`, this can be
+ * inter-procedural or intra-procedural analysis. If [earlyTermination] is not `null`, this can be
  * used as a criterion to make the query fail if this predicate is fulfilled before [predicate].
  */
 fun dataFlow(
