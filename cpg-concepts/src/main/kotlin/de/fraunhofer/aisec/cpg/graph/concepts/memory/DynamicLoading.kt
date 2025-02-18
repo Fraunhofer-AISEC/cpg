@@ -30,7 +30,6 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 
 /**
@@ -80,45 +79,24 @@ class LoadLibrary(
 }
 
 /**
- * Represents an operation that loads a function during runtime. A common example would be a call to
+ * Represents an operation that loads a symbol during runtime. A common example would be a call to
  * `dlsym` in C/C++.
  *
- * The [underlyingNode] is most likely a function call and [what] can point to a
- * [FunctionDeclaration] representing the function that we load.
+ * The [underlyingNode] is most likely a function call and [what] can point to a [Declaration]
+ * representing the symbol (e.g., a [FunctionDeclaration]) that we load.
  *
- * If we are loading a function from an external library, [loader] can point to the [LoadLibrary]
+ * If we are loading a symbol from an external library, [loader] can point to the [LoadLibrary]
  * operation that loaded the library.
  */
-class LoadFunction(
+class LoadSymbol<T : Declaration>(
     underlyingNode: Node,
-    concept: Concept<DynamicLoadingOperation<FunctionDeclaration>>,
-    /** Represents the function that we load in our graph. */
-    what: FunctionDeclaration? = null,
+    concept: Concept<DynamicLoadingOperation<T>>,
+    /** Represents the symbol's [Declaration] that we load in our graph. */
+    what: T? = null,
 
     /**
-     * If we are loading a function from an external library, this points to the [LoadLibrary]
+     * If we are loading a symbol from an external library, this points to the [LoadLibrary]
      * operation that loaded the library.
      */
-    loader: LoadLibrary? = null,
-) :
-    DynamicLoadingOperation<FunctionDeclaration>(
-        underlyingNode = underlyingNode,
-        concept = concept,
-        what = what,
-    )
-
-/**
- * Represents an operation that loads a record / class during runtime. A common example would be a
- * call to `Class.forName` in Java or approaches in Python to load classes dynamically.
- */
-class LoadRecord(
-    underlyingNode: Node,
-    concept: Concept<DynamicLoadingOperation<RecordDeclaration>>,
-    /** Represents the record that we load in our graph. */
-    what: RecordDeclaration? = null,
-) :
-    DynamicLoadingOperation<RecordDeclaration>(
-        underlyingNode = underlyingNode,
-        concept = concept,
-        what = what,
-    )
+    var loader: LoadLibrary? = null,
+) : DynamicLoadingOperation<T>(underlyingNode = underlyingNode, concept = concept, what = what)

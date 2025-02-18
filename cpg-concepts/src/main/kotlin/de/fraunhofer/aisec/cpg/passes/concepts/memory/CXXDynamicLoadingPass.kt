@@ -32,8 +32,8 @@ import de.fraunhofer.aisec.cpg.graph.conceptNodes
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.DynamicLoading
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.DynamicLoadingOperation
-import de.fraunhofer.aisec.cpg.graph.concepts.memory.LoadFunction
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.LoadLibrary
+import de.fraunhofer.aisec.cpg.graph.concepts.memory.LoadSymbol
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.evaluate
@@ -90,12 +90,15 @@ class CXXDynamicLoadingPass(ctx: TranslationContext) : TranslationUnitPass(ctx) 
     }
 
     /**
-     * This function handles the loading of a function. It creates a [LoadFunction] concept and adds
+     * This function handles the loading of a function. It creates a [LoadSymbol] concept and adds
      * it to the [DynamicLoading] concept. The tricky part is to find the [FunctionDeclaration] that
      * is loaded.
      */
     @Suppress("UNCHECKED_CAST")
-    private fun handleLoadFunction(call: CallExpression, concept: DynamicLoading): LoadFunction {
+    private fun handleLoadFunction(
+        call: CallExpression,
+        concept: DynamicLoading,
+    ): LoadSymbol<FunctionDeclaration> {
         // The first argument is the handle to the library. We can follow the DFG back to find the
         // call to dlopen.
         val path =
@@ -110,7 +113,7 @@ class CXXDynamicLoadingPass(ctx: TranslationContext) : TranslationUnitPass(ctx) 
         val candidates = loadLibrary?.findSymbol(symbolName)
 
         val op =
-            LoadFunction(
+            LoadSymbol(
                 underlyingNode = call,
                 concept = concept as Concept<DynamicLoadingOperation<FunctionDeclaration>>,
                 what = candidates?.singleOrNull() as FunctionDeclaration?,
