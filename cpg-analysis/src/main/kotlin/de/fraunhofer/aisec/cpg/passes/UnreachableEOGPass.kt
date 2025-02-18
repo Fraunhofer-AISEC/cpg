@@ -196,13 +196,13 @@ private fun handleWhileStatement(
     val (unreachableEdges, remainingEdges) =
         if (evalResult is Boolean && evalResult == true) {
             Pair(
-                n.nextEOGEdges.filter { e -> e.branch == true },
-                n.nextEOGEdges.filter { e -> e.branch != true },
+                n.nextEOGEdges.filter { e -> e.branch == false },
+                n.nextEOGEdges.filter { e -> e.branch != false },
             )
         } else if (evalResult is Boolean && evalResult == false) {
             Pair(
-                n.nextEOGEdges.filter { e -> e.branch == false },
-                n.nextEOGEdges.filter { e -> e.branch != false },
+                n.nextEOGEdges.filter { e -> e.branch == true },
+                n.nextEOGEdges.filter { e -> e.branch != true },
             )
         } else {
             Pair(listOf(), n.nextEOGEdges)
