@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.concepts.ConceptReference
 
 /** This concept represents an encrypted disk. */
 class DiskEncryption(underlyingNode: Node) :
-    Concept<DiskEncryptionOperation>(underlyingNode = underlyingNode), IsDiskEncryption {
+    Concept(underlyingNode = underlyingNode), IsDiskEncryption {
     /** The encryption target, i.e. the disk */
     var target: ConceptReference<BlockStorage>? = null
 

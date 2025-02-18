@@ -39,6 +39,13 @@ import org.neo4j.ogm.annotation.Relationship
  * overload operators thus changing semantics of array access.
  */
 class SubscriptExpression : Expression(), HasBase, HasType.TypeObserver, ArgumentHolder {
+    override var access = AccessValues.READ
+        set(value) {
+            field = value
+            // Propagate the access value to the array expression
+            arrayExpression.access = value
+        }
+
     @Relationship("ARRAY_EXPRESSION")
     var arrayExpressionEdge =
         astEdgeOf<Expression>(

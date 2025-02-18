@@ -35,7 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.OverlayNode
 abstract class Operation(
     underlyingNode: Node,
     /** The [Concept] this operation belongs to. */
-    open val concept: Concept<*>,
+    open val concept: Concept,
 ) : OverlayNode() {
     init {
         this.underlyingNode = underlyingNode
