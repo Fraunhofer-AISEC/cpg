@@ -30,8 +30,8 @@ import de.fraunhofer.aisec.cpg.analysis.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
+import de.fraunhofer.aisec.cpg.graph.statements.DoStatement
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.WhileStatement
 import de.fraunhofer.aisec.cpg.helpers.*
@@ -39,6 +39,7 @@ import de.fraunhofer.aisec.cpg.helpers.functional.Lattice
 import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.Order
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
+import kotlin.collections.get
 
 /**
  * A [Pass] which uses a simple logic to determine constant values and mark unreachable code regions
@@ -109,6 +110,9 @@ fun transfer(
         is WhileStatement -> {
             newState = handleWhileStatement(lattice, currentEdge, currentNode, newState)
         }
+        is DoStatement -> {
+            newState = handleDoStatement(lattice, currentEdge, currentNode, newState)
+        }
         else -> {
             // For all other edges, we simply propagate the reachability property of the edge
             // which made us come here.
@@ -134,11 +138,10 @@ fun transfer(
  */
 private fun handleIfStatement(
     lattice: UnreachabilityState,
-    enteringEdge: Edge<Node>,
+    enteringEdge: EvaluationOrder,
     n: IfStatement,
     state: UnreachabilityStateElement,
 ): UnreachabilityStateElement {
-    var newState = state
     val evalResult = ValueEvaluator().evaluate(n.condition)
 
     val (unreachableEdges, remainingEdges) =
@@ -158,16 +161,13 @@ private fun handleIfStatement(
             Pair(listOf(), n.nextEOGEdges)
         }
 
-    // These edges are definitely unreachable
-    unreachableEdges.forEach { newState = lattice.push(newState, it, Reachability.UNREACHABLE) }
-
-    // For all other edges, we simply propagate the reachability property of the edge which
-    // made us come here.
-    remainingEdges.forEach {
-        newState =
-            lattice.push(newState, it, newState[enteringEdge]?.reachability ?: Reachability.BOTTOM)
-    }
-    return newState
+    return propagateState(
+        unreachableEdges = unreachableEdges,
+        remainingEdges = remainingEdges,
+        enteringEdge = enteringEdge,
+        state = state,
+        lattice = lattice,
+    )
 }
 
 /**
@@ -179,11 +179,10 @@ private fun handleIfStatement(
  */
 private fun handleWhileStatement(
     lattice: UnreachabilityState,
-    enteringEdge: Edge<Node>,
+    enteringEdge: EvaluationOrder,
     n: WhileStatement,
     state: UnreachabilityStateElement,
 ): UnreachabilityStateElement {
-    var newState = state
     /*
      * Note: It does not understand that code like
      * x = true; while(x) {...; x = false;}
@@ -197,18 +196,73 @@ private fun handleWhileStatement(
     val (unreachableEdges, remainingEdges) =
         if (evalResult is Boolean && evalResult == true) {
             Pair(
-                n.nextEOGEdges.filter { e -> e.index == 1 },
-                n.nextEOGEdges.filter { e -> e.index != 1 },
+                n.nextEOGEdges.filter { e -> e.branch == true },
+                n.nextEOGEdges.filter { e -> e.branch != true },
             )
         } else if (evalResult is Boolean && evalResult == false) {
             Pair(
-                n.nextEOGEdges.filter { e -> e.index == 0 },
-                n.nextEOGEdges.filter { e -> e.index != 0 },
+                n.nextEOGEdges.filter { e -> e.branch == false },
+                n.nextEOGEdges.filter { e -> e.branch != false },
             )
         } else {
             Pair(listOf(), n.nextEOGEdges)
         }
 
+    return propagateState(
+        unreachableEdges = unreachableEdges,
+        remainingEdges = remainingEdges,
+        enteringEdge = enteringEdge,
+        state = state,
+        lattice = lattice,
+    )
+}
+
+/**
+ * Evaluates the condition of the [DoStatement] [n] (which is the end node of [enteringEdge]). If it
+ * is always true, then the edge to the code after the loop receives the [state]
+ * [Reachability.UNREACHABLE]. If the condition is always true, then the edge after the loop body
+ * receives the [state] [Reachability.UNREACHABLE]. All other cases simply copy the state which led
+ * us here.
+ */
+private fun handleDoStatement(
+    lattice: UnreachabilityState,
+    enteringEdge: EvaluationOrder,
+    n: DoStatement,
+    state: UnreachabilityStateElement,
+): UnreachabilityStateElement {
+    val evalResult = ValueEvaluator().evaluate(n.condition)
+
+    val (unreachableEdges, remainingEdges) =
+        if (evalResult is Boolean && evalResult == true) {
+            Pair(
+                n.nextEOGEdges.filter { e -> e.branch == false },
+                n.nextEOGEdges.filter { e -> e.branch != false },
+            )
+        } else if (evalResult is Boolean && evalResult == false) {
+            Pair(
+                n.nextEOGEdges.filter { e -> e.branch == true },
+                n.nextEOGEdges.filter { e -> e.branch != true },
+            )
+        } else {
+            Pair(listOf(), n.nextEOGEdges)
+        }
+    return propagateState(
+        unreachableEdges = unreachableEdges,
+        remainingEdges = remainingEdges,
+        enteringEdge = enteringEdge,
+        state = state,
+        lattice = lattice,
+    )
+}
+
+private fun propagateState(
+    unreachableEdges: List<EvaluationOrder>,
+    remainingEdges: List<EvaluationOrder>,
+    enteringEdge: EvaluationOrder,
+    state: UnreachabilityStateElement,
+    lattice: UnreachabilityState,
+): UnreachabilityStateElement {
+    var newState = state
     // These edges are definitely unreachable
     unreachableEdges.forEach { newState = lattice.push(newState, it, Reachability.UNREACHABLE) }
 
