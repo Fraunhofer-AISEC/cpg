@@ -32,14 +32,15 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.statements.DoStatement
+import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
+import de.fraunhofer.aisec.cpg.graph.statements.LoopStatement
 import de.fraunhofer.aisec.cpg.graph.statements.WhileStatement
 import de.fraunhofer.aisec.cpg.helpers.*
 import de.fraunhofer.aisec.cpg.helpers.functional.Lattice
 import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.Order
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
-import kotlin.collections.get
 
 /**
  * A [Pass] which uses a simple logic to determine constant values and mark unreachable code regions
@@ -107,11 +108,8 @@ fun transfer(
         is IfStatement -> {
             newState = handleIfStatement(lattice, currentEdge, currentNode, newState)
         }
-        is WhileStatement -> {
-            newState = handleWhileStatement(lattice, currentEdge, currentNode, newState)
-        }
-        is DoStatement -> {
-            newState = handleDoStatement(lattice, currentEdge, currentNode, newState)
+        is LoopStatement -> {
+            newState = handleLoopStatement(lattice, currentEdge, currentNode, newState)
         }
         else -> {
             // For all other edges, we simply propagate the reachability property of the edge
@@ -171,66 +169,26 @@ private fun handleIfStatement(
 }
 
 /**
- * Evaluates the condition of the [WhileStatement] [n] (which is the end node of [enteringEdge]). If
- * it is always true, then the edge to the code after the loop receives the [state]
- * [Reachability.UNREACHABLE]. If the condition is always false, then the edge to the loop body
- * receives the [state] [Reachability.UNREACHABLE]. All other cases simply copy the state which led
- * us here.
- */
-private fun handleWhileStatement(
-    lattice: UnreachabilityState,
-    enteringEdge: EvaluationOrder,
-    n: WhileStatement,
-    state: UnreachabilityStateElement,
-): UnreachabilityStateElement {
-    /*
-     * Note: It does not understand that code like
-     * x = true; while(x) {...; x = false;}
-     * makes the loop execute at least once.
-     * Apparently, the CPG does not offer the required functionality to
-     * differentiate between the first and subsequent evaluations of the
-     * condition.
-     */
-    val evalResult = ValueEvaluator().evaluate(n.condition)
-
-    val (unreachableEdges, remainingEdges) =
-        if (evalResult is Boolean && evalResult == true) {
-            Pair(
-                n.nextEOGEdges.filter { e -> e.branch == false },
-                n.nextEOGEdges.filter { e -> e.branch != false },
-            )
-        } else if (evalResult is Boolean && evalResult == false) {
-            Pair(
-                n.nextEOGEdges.filter { e -> e.branch == true },
-                n.nextEOGEdges.filter { e -> e.branch != true },
-            )
-        } else {
-            Pair(listOf(), n.nextEOGEdges)
-        }
-
-    return propagateState(
-        unreachableEdges = unreachableEdges,
-        remainingEdges = remainingEdges,
-        enteringEdge = enteringEdge,
-        state = state,
-        lattice = lattice,
-    )
-}
-
-/**
- * Evaluates the condition of the [DoStatement] [n] (which is the end node of [enteringEdge]). If it
- * is always true, then the edge to the code after the loop receives the [state]
+ * Evaluates the condition of the [LoopStatement] [n] (which is the end node of [enteringEdge]). If
+ * it is always false, then the edge to the code inside the loop receives the [state]
  * [Reachability.UNREACHABLE]. If the condition is always true, then the edge after the loop body
  * receives the [state] [Reachability.UNREACHABLE]. All other cases simply copy the state which led
  * us here.
  */
-private fun handleDoStatement(
+private fun handleLoopStatement(
     lattice: UnreachabilityState,
     enteringEdge: EvaluationOrder,
-    n: DoStatement,
+    n: LoopStatement,
     state: UnreachabilityStateElement,
 ): UnreachabilityStateElement {
-    val evalResult = ValueEvaluator().evaluate(n.condition)
+    val condition =
+        when (n) {
+            is WhileStatement -> n.condition
+            is DoStatement -> n.condition
+            is ForStatement -> n.condition
+            else -> return state
+        }
+    val evalResult = ValueEvaluator().evaluate(condition)
 
     val (unreachableEdges, remainingEdges) =
         if (evalResult is Boolean && evalResult == true) {
