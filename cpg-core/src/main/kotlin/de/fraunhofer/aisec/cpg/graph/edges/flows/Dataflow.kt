@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.edges.flows
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeSet
@@ -76,6 +77,12 @@ class IndexedDataflowGranularity(
     }
 }
 
+/**
+ * This dataflow granularity is used to represent data flows to and from overlay nodes. They represent more
+ * abstract data flows that the user is supposed to be finding in his
+ */
+data object OverlayDataFlowGranularity : Granularity
+
 /** Creates a new [FullDataflowGranularity]. */
 fun full(): Granularity {
     return FullDataflowGranularity
@@ -113,8 +120,15 @@ open class Dataflow(
     @Convert(DataflowGranularityConverter::class)
     @JsonIgnore
     var granularity: Granularity = default(),
-) : Edge<Node>(start, end) {
+) : Edge<Node>(start, end), OverlayingEdge {
     override var labels = setOf("DFG")
+
+    /**
+     * Whether the Edge is moving in or out from the overlay network is defined by its connected nodes.
+     */
+    override var overlaying: Boolean
+        get() = end is OverlayNode || start is OverlayNode
+        set(value) {}
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
