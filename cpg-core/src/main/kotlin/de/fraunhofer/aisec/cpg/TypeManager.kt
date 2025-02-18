@@ -253,7 +253,7 @@ internal fun Type.getAncestors(depth: Int): Set<Type.Ancestor> {
     val types = mutableSetOf<Type.Ancestor>()
 
     // Recursively call ourselves on our super types.
-    types += superTypes.flatMap { it.getAncestors(depth + 1) }
+    types += superTypes.filter { it != this }.flatMap { it.getAncestors(depth + 1) }
 
     // Since the chain starts with our type, we add ourselves to it
     types += Type.Ancestor(this, depth)
