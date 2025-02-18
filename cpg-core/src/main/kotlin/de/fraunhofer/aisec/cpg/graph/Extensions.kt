@@ -233,12 +233,14 @@ fun Node.followPrevFullDFGEdgesUntilHit(
     earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
-    return followXUntilHit(
-        x = { currentNode, ctx, _ -> currentNode.prevFullDFG.map { it to ctx } },
+    return followDFGEdgesUntilHit(
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
         earlyTermination = earlyTermination,
         predicate = predicate,
+        direction = Backward(GraphToFollow.DFG),
+        sensitivities = OnlyFullDFG() + ContextSensitive(),
+        scope = Interprocedural(),
     )
 }
 
@@ -276,7 +278,6 @@ fun Node.followEOGEdgesUntilHit(
     earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
-
     return this.followXUntilHit(
         x = { currentNode, ctx, path ->
             direction.pickNextStep(currentNode, scope, ctx, sensitivities = sensitivities)
@@ -306,7 +307,6 @@ fun Node.followDFGEdgesUntilHit(
     earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
-
     return this.followXUntilHit(
         x = { currentNode, ctx, path ->
             direction.pickNextStep(currentNode, scope, ctx, sensitivities = sensitivities)
@@ -457,6 +457,7 @@ fun Node.collectAllPrevEOGPaths(interproceduralAnalysis: Boolean): List<List<Nod
             direction = Backward(GraphToFollow.EOG),
             collectFailedPaths = true,
             findAllPossiblePaths = true,
+            scope = if (interproceduralAnalysis) Interprocedural() else Intraprocedural(),
         ) {
             false
         }
@@ -759,12 +760,14 @@ fun Node.followNextFullDFGEdgesUntilHit(
     earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
-    return followXUntilHit(
-        x = { currentNode, ctx, _ -> currentNode.nextFullDFG.map { it to ctx } },
+    return followDFGEdgesUntilHit(
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
         earlyTermination = earlyTermination,
         predicate = predicate,
+        direction = Backward(GraphToFollow.DFG),
+        sensitivities = OnlyFullDFG() + ContextSensitive(),
+        scope = Interprocedural(),
     )
 }
 
