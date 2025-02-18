@@ -195,4 +195,10 @@ class ArgumentsHandlerTest {
         assertNotNull(parameterC?.default, "Expected the parameter `c` to have a default value.")
         assertEquals(2.toLong(), parameterC.default?.evaluate())
     }
+
+    @Test
+    fun testSignatureMatch() {
+        val func = result.functions["call"]
+        assertNotNull(func)
+    }
 }
