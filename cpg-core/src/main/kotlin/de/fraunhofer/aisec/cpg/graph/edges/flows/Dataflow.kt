@@ -77,12 +77,6 @@ class IndexedDataflowGranularity(
     }
 }
 
-/**
- * This dataflow granularity is used to represent data flows to and from overlay nodes. They represent more
- * abstract data flows that the user is supposed to be finding in his
- */
-data object OverlayDataFlowGranularity : Granularity
-
 /** Creates a new [FullDataflowGranularity]. */
 fun full(): Granularity {
     return FullDataflowGranularity
