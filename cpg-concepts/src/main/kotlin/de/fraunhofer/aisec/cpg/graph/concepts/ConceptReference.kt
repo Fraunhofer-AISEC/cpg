@@ -29,14 +29,12 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
 
 /**
- * Represents an operation executed on/with a [Concept] (stored in [concept]). This is typically a
- * `write` on a file or log object or an `execute` on a database.
+ * Represents a reference to a [Concept]. This is similar to the standard
+ * [de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference] idea.
+ *
+ * @param concept The referenced [Concept]
  */
-abstract class Operation(
-    underlyingNode: Node,
-    /** The [Concept] this operation belongs to. */
-    open val concept: Concept,
-) : OverlayNode() {
+class ConceptReference<T : Concept>(underlyingNode: Node, val concept: T?) : OverlayNode() {
     init {
         this.underlyingNode = underlyingNode
     }

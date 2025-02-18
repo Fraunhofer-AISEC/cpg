@@ -35,8 +35,8 @@ import de.fraunhofer.aisec.cpg.graph.concepts.Operation
  * @return A set containing all [Concept] nodes found in the overlays of the [Node] and its
  *   children.
  */
-val Node.conceptNodes: Set<Concept<*>>
-    get() = this.nodes.flatMapTo(mutableSetOf()) { it.overlays.filterIsInstance<Concept<*>>() }
+val Node.conceptNodes: Set<Concept>
+    get() = this.nodes.flatMapTo(mutableSetOf()) { it.overlays.filterIsInstance<Concept>() }
 
 /**
  * Retrieves a set of all [Operation] nodes associated with this [Node] and its AST children
