@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.python
 import de.fraunhofer.aisec.cpg.InferenceConfiguration
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
+import de.fraunhofer.aisec.cpg.ancestors
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
@@ -1897,5 +1898,23 @@ class PythonFrontendTest : BaseTest() {
         val expectedSuper = result.records["Foobar"]
         assertNotNull(expectedSuper)
         assertEquals(expectedSuper, clsSuper.recordDeclaration)
+    }
+
+    @Test
+    fun testSuperclassIncorrect() {
+        val topLevel = Path.of("src", "test")
+        val result =
+            analyze(
+                listOf(topLevel.resolve("resources/python/superclasses/incorrect.py").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(result)
+
+        var myClass = result.finalCtx.typeManager.firstOrderTypes["MyClass"]
+        assertNotNull(myClass)
+        assertNotNull(myClass.ancestors)
     }
 }
