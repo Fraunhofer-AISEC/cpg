@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.graph.edges.flows
 
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeList
 import de.fraunhofer.aisec.cpg.graph.edges.collections.MirroredEdgeCollection
@@ -54,7 +53,7 @@ class EvaluationOrder(
      * Otherwise, this property is null.
      */
     var branch: Boolean? = null,
-) : Edge<Node>(start, end), OverlayingEdge {
+) : Edge<Node>(start, end) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is EvaluationOrder) return false
@@ -71,13 +70,6 @@ class EvaluationOrder(
     }
 
     override var labels = setOf("EOG")
-    
-    /**
-     * Whether the Edge is moving in or out from the overlay network is defined by its connected nodes.
-     */
-    override var overlaying: Boolean
-        get() = end is OverlayNode || start is OverlayNode
-        set(value) {}
 }
 
 /**
