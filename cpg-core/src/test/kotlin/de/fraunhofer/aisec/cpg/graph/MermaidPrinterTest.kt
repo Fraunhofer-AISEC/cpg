@@ -37,7 +37,21 @@ class MermaidPrinterTest {
         val graph = GraphExamples.getDataflowClass()
         val sc = graph.functions["main"].variables["sc"]
         assertNotNull(sc)
-        println(sc.printDFG())
+
+        val p = sc.printDFG()
+        println(p)
+        assertContains(p, "DFG")
+    }
+
+    @Test
+    fun testPrintEOG() {
+        val graph = GraphExamples.getDataflowClass()
+        val sc = graph.functions["main"].variables["sc"]
+        assertNotNull(sc)
+
+        val p = sc.printEOG()
+        println(p)
+        assertContains(p, "EOG")
     }
 
     @Test
