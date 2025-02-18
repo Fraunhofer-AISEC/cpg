@@ -111,6 +111,8 @@ fun transfer(
         is LoopStatement -> {
             newState = handleLoopStatement(lattice, currentEdge, currentNode, newState)
         }
+        // TODO: Add handling of SwitchStatement once we have a good way to follow the EOG edges for
+        // them (e.g. based on the branching condition or similar).
         else -> {
             // For all other edges, we simply propagate the reachability property of the edge
             // which made us come here.
