@@ -185,8 +185,7 @@ class Forward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) {
                                 sensitivities = sensitivities,
                             )
                         // This is a bit more tricky because we need to go to nextEOGEdges when we
-                        // return
-                        // to the CallExpression. Therefore, we make one more step.
+                        // return to the CallExpression. Therefore, we make one more step.
                         filteredReturnedTo.flatMap { (nextEdge, newCtx) ->
                             // nextEdge.start is the call expression.
                             filterEdges(
