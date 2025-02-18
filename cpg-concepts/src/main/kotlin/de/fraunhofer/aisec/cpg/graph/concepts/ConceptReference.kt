@@ -34,7 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.OverlayNode
  *
  * @param concept The referenced [Concept]
  */
-abstract class ConceptReference<T : Operation>(underlyingNode: Node, val concept: Concept<T>) :
+abstract class ConceptReference<T : Concept<*>>(underlyingNode: Node, val concept: T) :
     OverlayNode() {
     init {
         this.underlyingNode = underlyingNode

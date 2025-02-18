@@ -27,16 +27,17 @@ package de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption
 
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
+import de.fraunhofer.aisec.cpg.graph.concepts.ConceptReference
 
 /** This concept represents an encrypted disk. */
 class DiskEncryption(underlyingNode: Node) :
     Concept<DiskEncryptionOperation>(underlyingNode = underlyingNode), IsDiskEncryption {
     /** The encryption target, i.e. the disk */
-    var target: BlockStorage? = null
+    var target: ConceptReference<BlockStorage>? = null
 
     /** The cipher suite used for disk encryption */
-    var cipher: Cipher? = null
+    var cipher: ConceptReference<Cipher>? = null
 
     /** The encryption key used for disk encryption */
-    var key: Secret? = null
+    var key: ConceptReference<Secret>? = null
 }
