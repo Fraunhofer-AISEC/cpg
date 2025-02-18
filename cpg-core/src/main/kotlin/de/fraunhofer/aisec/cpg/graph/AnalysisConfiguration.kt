@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
 import de.fraunhofer.aisec.cpg.graph.edges.flows.ContextSensitiveDataflow
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
+import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.IndexedDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Invoke
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
@@ -39,6 +40,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
 import kotlin.collections.mapNotNull
 
+/** A generic interface used to determine potential next steps. */
 interface StepSelector {
     /**
      * Returns `true` if the given [edge] will be followed giving the provided [ctx] under the
@@ -97,13 +99,26 @@ class Interprocedural(val maxCallDepth: Int? = null, maxSteps: Int? = null) :
     }
 }
 
+/**
+ * Used to determine which subgraph will be followed. Currently, we support the [DFG] and [EOG].
+ * Note that this may be used to follow other edges as well (e.g. the PDG for DFG and [Invoke] edges
+ * for EOG).
+ */
 enum class GraphToFollow {
     DFG,
     EOG,
 }
 
-/** Determines in which direction we follow the edges. */
+/**
+ * Determines in which direction we follow the edges. Must determine which sub-graph we want to
+ * follow.
+ */
 sealed class AnalysisDirection(val graphToFollow: GraphToFollow) {
+    /**
+     * Determines which nodes are in the next step and also updates the context accordingly. It must
+     * be configured with the [currentNode], the [scope] of the analysis, the current [Context][ctx]
+     * and the [sensitivities] which should be used by the analysis.
+     */
     abstract fun pickNextStep(
         currentNode: Node,
         scope: AnalysisScope,
@@ -111,12 +126,28 @@ sealed class AnalysisDirection(val graphToFollow: GraphToFollow) {
         vararg sensitivities: AnalysisSensitivity,
     ): Collection<Pair<Node, Context>>
 
+    /**
+     * Considering the [edge], it determines which node (start or end of the edge) will be used as
+     * next step.
+     */
     abstract fun unwrapNextStepFromEdge(edge: Edge<Node>): Node
 
+    /**
+     * Determines if the [edge] starting at [currentNode] requires to push a [CallExpression] on the
+     * stack.
+     */
     abstract fun edgeRequiresCallPush(currentNode: Node, edge: Edge<Node>): Boolean
 
+    /**
+     * Determines if the [edge] starting at [currentNode] requires to pop a [CallExpression] from
+     * the stack.
+     */
     abstract fun edgeRequiresCallPop(currentNode: Node, edge: Edge<Node>): Boolean
 
+    /**
+     * Filters all provided [edges] and checks if they are in [scope] and fulfill the provided
+     * [sensitivities] under the given [Context][ctx].
+     */
     internal fun filterEdges(
         currentNode: Node,
         edges: Collection<Edge<Node>>,
@@ -394,7 +425,7 @@ class Bidirectional(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFol
 }
 
 /** Configures the sensitivity of the analysis. */
-sealed class AnalysisSensitivity : StepSelector {
+abstract class AnalysisSensitivity : StepSelector {
     operator fun plus(other: AnalysisSensitivity) = arrayOf(this, other)
 
     operator fun List<AnalysisSensitivity>.plus(
@@ -408,6 +439,7 @@ sealed class AnalysisSensitivity : StepSelector {
     }
 }
 
+/** Only follow EOG edges if they are not marked as unreachable. */
 class FilterUnreachableEOG() : AnalysisSensitivity() {
     override fun followEdge(
         currentNode: Node,
@@ -416,6 +448,18 @@ class FilterUnreachableEOG() : AnalysisSensitivity() {
         analysisDirection: AnalysisDirection,
     ): Boolean {
         return edge !is EvaluationOrder || edge.unreachable != true
+    }
+}
+
+/** Only follow full DFG edges. */
+class OnlyFullDFG() : AnalysisSensitivity() {
+    override fun followEdge(
+        currentNode: Node,
+        edge: Edge<Node>,
+        ctx: Context,
+        analysisDirection: AnalysisDirection,
+    ): Boolean {
+        return edge !is Dataflow || edge.granularity is FullDataflowGranularity
     }
 }
 
