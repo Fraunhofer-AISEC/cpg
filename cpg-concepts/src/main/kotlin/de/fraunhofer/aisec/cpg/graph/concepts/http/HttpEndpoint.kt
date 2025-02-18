@@ -36,7 +36,7 @@ class HttpEndpoint(
     val path: String,
     val arguments: List<Node>,
     val supportedAuthentications: MutableList<String>,
-) : Concept<HttpEndpointOperation>(underlyingNode = underlyingNode)
+) : Concept(underlyingNode = underlyingNode)
 
 enum class HttpMethod {
     GET,
@@ -50,7 +50,5 @@ enum class HttpMethod {
     DELETE,
 }
 
-abstract class HttpEndpointOperation(
-    underlyingNode: Node,
-    concept: Concept<HttpEndpointOperation>,
-) : Operation(underlyingNode, concept)
+abstract class HttpEndpointOperation(underlyingNode: Node, concept: Concept) :
+    Operation(underlyingNode, concept)
