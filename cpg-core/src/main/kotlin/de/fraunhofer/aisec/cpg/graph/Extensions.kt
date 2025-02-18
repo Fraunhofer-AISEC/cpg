@@ -765,7 +765,7 @@ fun Node.followNextFullDFGEdgesUntilHit(
         findAllPossiblePaths = findAllPossiblePaths,
         earlyTermination = earlyTermination,
         predicate = predicate,
-        direction = Backward(GraphToFollow.DFG),
+        direction = Forward(GraphToFollow.DFG),
         sensitivities = OnlyFullDFG() + ContextSensitive(),
         scope = Interprocedural(),
     )
