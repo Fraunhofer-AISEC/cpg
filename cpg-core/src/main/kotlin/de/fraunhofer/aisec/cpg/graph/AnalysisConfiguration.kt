@@ -167,7 +167,7 @@ sealed class AnalysisDirection(val graphToFollow: GraphToFollow) {
     }
 }
 
-/** Follow the order of the EOG */
+/** Follow the order of the [graphToFollow] */
 class Forward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) {
     override fun pickNextStep(
         currentNode: Node,
@@ -285,7 +285,7 @@ class Forward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) {
     }
 }
 
-/** Against the order of the EOG */
+/** Against the order of the [graphToFollow] */
 class Backward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) {
     override fun pickNextStep(
         currentNode: Node,

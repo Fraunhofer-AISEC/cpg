@@ -67,7 +67,7 @@ class DataflowQueriesTest {
                 startNode = literal5,
                 direction = Forward(GraphToFollow.DFG),
                 scope = Intraprocedural(),
-                type = MayAnalysis(),
+                type = May,
                 predicate = { (it.astParent as? CallExpression)?.name?.localName == "baz" },
             )
         assertTrue(
@@ -95,7 +95,7 @@ class DataflowQueriesTest {
                 startNode = literal5,
                 direction = Forward(GraphToFollow.DFG),
                 scope = Intraprocedural(1),
-                type = MayAnalysis(),
+                type = May,
                 predicate = { (it.astParent as? CallExpression)?.name?.localName == "baz" },
             )
         assertFalse(queryResultMayAMax1.value, "The path is just too short to arrive in baz.")
@@ -125,7 +125,7 @@ class DataflowQueriesTest {
                 startNode = literal5,
                 direction = Forward(GraphToFollow.DFG),
                 scope = Intraprocedural(),
-                type = MustAnalysis(),
+                type = Must,
                 predicate = { (it.astParent as? CallExpression)?.name?.localName == "baz" },
             )
         assertFalse(
@@ -154,7 +154,7 @@ class DataflowQueriesTest {
                 startNode = refB,
                 direction = Forward(GraphToFollow.DFG),
                 scope = Intraprocedural(),
-                type = MayAnalysis(),
+                type = May,
                 predicate = { (it.astParent as? CallExpression)?.name?.localName == "baz" },
             )
         assertTrue(
@@ -183,7 +183,7 @@ class DataflowQueriesTest {
                 startNode = refB,
                 direction = Forward(GraphToFollow.DFG),
                 scope = Intraprocedural(),
-                type = MustAnalysis(),
+                type = Must,
                 predicate = { (it.astParent as? CallExpression)?.name?.localName == "baz" },
             )
         assertFalse(
@@ -229,7 +229,7 @@ class DataflowQueriesTest {
                 startNode = refB,
                 direction = Bidirectional(GraphToFollow.DFG),
                 scope = Intraprocedural(),
-                type = MayAnalysis(),
+                type = May,
                 predicate = {
                     (it as? Literal<*>)?.value == 5 ||
                         (it.astParent as? CallExpression)?.name?.localName == "baz"
@@ -261,7 +261,7 @@ class DataflowQueriesTest {
                 startNode = refB,
                 direction = Bidirectional(GraphToFollow.DFG),
                 scope = Intraprocedural(),
-                type = MustAnalysis(),
+                type = Must,
                 predicate = {
                     (it as? Literal<*>)?.value == 5 ||
                         (it.astParent as? CallExpression)?.name?.localName == "baz"
@@ -326,7 +326,7 @@ class DataflowQueriesTest {
                 startNode = bazARef,
                 direction = Backward(GraphToFollow.DFG),
                 scope = Intraprocedural(),
-                type = MayAnalysis(),
+                type = May,
                 predicate = { (it as? Literal<*>)?.value == 5 },
             )
         assertTrue(
@@ -354,7 +354,7 @@ class DataflowQueriesTest {
                 startNode = bazARef,
                 direction = Backward(GraphToFollow.DFG),
                 scope = Intraprocedural(1),
-                type = MayAnalysis(),
+                type = May,
                 predicate = { (it as? Literal<*>)?.value == 5 },
             )
         assertFalse(
@@ -387,7 +387,7 @@ class DataflowQueriesTest {
                 startNode = bazARef,
                 direction = Backward(GraphToFollow.DFG),
                 scope = Intraprocedural(),
-                type = MustAnalysis(),
+                type = Must,
                 predicate = { (it as? Literal<*>)?.value == 5 },
             )
         assertFalse(
@@ -416,7 +416,7 @@ class DataflowQueriesTest {
                 startNode = refB,
                 direction = Backward(GraphToFollow.DFG),
                 scope = Intraprocedural(),
-                type = MayAnalysis(),
+                type = May,
                 predicate = { (it as? Literal<*>)?.value == 5 },
             )
         assertFalse(
@@ -445,7 +445,7 @@ class DataflowQueriesTest {
                 startNode = refB,
                 direction = Backward(GraphToFollow.DFG),
                 scope = Intraprocedural(),
-                type = MustAnalysis(),
+                type = Must,
                 predicate = { (it as? Literal<*>)?.value == 5 },
             )
         assertFalse(
@@ -474,7 +474,7 @@ class DataflowQueriesTest {
                 startNode = refB,
                 direction = Backward(GraphToFollow.DFG),
                 scope = Intraprocedural(),
-                type = MayAnalysis(),
+                type = May,
                 predicate = { (it as? Literal<*>)?.value == "bla" },
             )
         assertTrue(
@@ -503,7 +503,7 @@ class DataflowQueriesTest {
                 startNode = refB,
                 direction = Backward(GraphToFollow.DFG),
                 scope = Intraprocedural(),
-                type = MustAnalysis(),
+                type = Must,
                 predicate = { (it as? Literal<*>)?.value == "bla" },
             )
         assertFalse(

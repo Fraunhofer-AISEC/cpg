@@ -50,7 +50,7 @@ class ExecutionOrderQueriesTest {
             executionPath(
                 startNode = literal5,
                 direction = Forward(GraphToFollow.EOG),
-                type = MayAnalysis(),
+                type = May,
                 scope = Intraprocedural(),
                 predicate = { node -> node == literal10 },
             )
@@ -63,7 +63,7 @@ class ExecutionOrderQueriesTest {
             executionPath(
                 startNode = literal5,
                 direction = Forward(GraphToFollow.EOG),
-                type = MustAnalysis(),
+                type = Must,
                 scope = Intraprocedural(),
                 predicate = { node -> node == literal10 },
             )
@@ -76,7 +76,7 @@ class ExecutionOrderQueriesTest {
             executionPath(
                 startNode = literal5,
                 direction = Forward(GraphToFollow.EOG),
-                type = MustAnalysis(),
+                type = Must,
                 scope = Intraprocedural(),
                 predicate = { node -> node == callBaz },
             )
@@ -99,7 +99,7 @@ class ExecutionOrderQueriesTest {
             executionPath(
                 startNode = callBaz,
                 direction = Backward(GraphToFollow.EOG),
-                type = MayAnalysis(),
+                type = May,
                 scope = Intraprocedural(),
                 predicate = { node -> node == literal10 },
             )
@@ -112,7 +112,7 @@ class ExecutionOrderQueriesTest {
             executionPath(
                 startNode = callBaz,
                 direction = Backward(GraphToFollow.EOG),
-                type = MustAnalysis(),
+                type = Must,
                 scope = Intraprocedural(),
                 predicate = { node -> node == literal10 },
             )
@@ -125,7 +125,7 @@ class ExecutionOrderQueriesTest {
             executionPath(
                 startNode = callBaz,
                 direction = Backward(GraphToFollow.EOG),
-                type = MustAnalysis(),
+                type = Must,
                 scope = Intraprocedural(),
                 predicate = { node -> node == literal5 },
             )
@@ -152,7 +152,7 @@ class ExecutionOrderQueriesTest {
             executionPath(
                 startNode = literal10,
                 direction = Bidirectional(GraphToFollow.EOG),
-                type = MayAnalysis(),
+                type = May,
                 scope = Intraprocedural(),
                 predicate = { node -> node == callBaz },
             )
@@ -165,7 +165,7 @@ class ExecutionOrderQueriesTest {
             executionPath(
                 startNode = literal10,
                 direction = Bidirectional(GraphToFollow.EOG),
-                type = MayAnalysis(),
+                type = May,
                 scope = Intraprocedural(),
                 predicate = { node -> node == literal5 },
             )
@@ -181,7 +181,7 @@ class ExecutionOrderQueriesTest {
             executionPath(
                 startNode = literal10,
                 direction = Bidirectional(GraphToFollow.EOG),
-                type = MustAnalysis(),
+                type = Must,
                 scope = Intraprocedural(),
                 predicate = { node -> node == callBaz },
             )
@@ -194,7 +194,7 @@ class ExecutionOrderQueriesTest {
             executionPath(
                 startNode = literal10,
                 direction = Bidirectional(GraphToFollow.EOG),
-                type = MustAnalysis(),
+                type = Must,
                 scope = Intraprocedural(),
                 predicate = { node -> node == literal5 },
             )
@@ -207,7 +207,7 @@ class ExecutionOrderQueriesTest {
             executionPath(
                 startNode = literal10,
                 direction = Bidirectional(GraphToFollow.EOG),
-                type = MustAnalysis(),
+                type = Must,
                 scope = Intraprocedural(),
                 predicate = { node -> node == callBaz || node == literal5 },
             )
