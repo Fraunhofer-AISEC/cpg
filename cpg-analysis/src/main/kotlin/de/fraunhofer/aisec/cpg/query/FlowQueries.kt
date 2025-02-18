@@ -122,7 +122,7 @@ class MayAnalysis() : AnalysisType() {
  */
 fun dataFlow(
     startNode: Node,
-    direction: AnalysisDirection = Forward(),
+    direction: AnalysisDirection = Forward(GraphToFollow.DFG),
     type: AnalysisType = MayAnalysis(),
     vararg sensitivities: AnalysisSensitivity = FieldSensitive() + ContextSensitive(),
     scope: AnalysisScope = Interprocedural(),
@@ -136,7 +136,7 @@ fun dataFlow(
 
     val evalRes =
         if (direction is Bidirectional) {
-                arrayOf(Forward(), Backward())
+                arrayOf(Forward(GraphToFollow.DFG), Backward(GraphToFollow.DFG))
             } else {
                 arrayOf(direction)
             }
@@ -170,7 +170,7 @@ fun dataFlow(
  */
 fun executionPath(
     startNode: Node,
-    direction: AnalysisDirection = Forward(),
+    direction: AnalysisDirection = Forward(GraphToFollow.EOG),
     type: AnalysisType = MayAnalysis(),
     scope: AnalysisScope = Interprocedural(),
     verbose: Boolean = true,
@@ -183,7 +183,7 @@ fun executionPath(
 
     val evalRes =
         if (direction is Bidirectional) {
-                arrayOf(Forward(), Backward())
+                arrayOf(Forward(GraphToFollow.EOG), Backward(GraphToFollow.EOG))
             } else {
                 arrayOf(direction)
             }
@@ -239,7 +239,8 @@ fun Node.alwaysFlowsTo(
     allowOverwritingValue: Boolean = false,
     earlyTermination: ((Node) -> Boolean)? = null,
     scope: AnalysisScope,
-    vararg sensitivities: AnalysisSensitivity,
+    vararg sensitivities: AnalysisSensitivity =
+        ContextSensitive() + FieldSensitive() + FilterUnreachableEOG(),
     predicate: (Node) -> Boolean,
 ): QueryTree<Boolean> {
     val nextDFGPaths =

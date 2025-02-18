@@ -214,10 +214,14 @@ class DFGTest {
         val bReturned = returnTuple.refs["b"]
         assertNotNull(bReturned)
         val backwardsPathCToA =
-            cRead.followDFGEdgesUntilHit(direction = Backward()) { it == aReturned }.fulfilled
+            cRead
+                .followDFGEdgesUntilHit(direction = Backward(GraphToFollow.DFG)) { it == aReturned }
+                .fulfilled
         assertEquals(1, backwardsPathCToA.size)
         val backwardsPathCToB =
-            cRead.followDFGEdgesUntilHit(direction = Backward()) { it == bReturned }.fulfilled
+            cRead
+                .followDFGEdgesUntilHit(direction = Backward(GraphToFollow.DFG)) { it == bReturned }
+                .fulfilled
         assertEquals(0, backwardsPathCToB.size)
 
         val forwardsPathAToC = aReturned.followDFGEdgesUntilHit { it == cRead }.fulfilled

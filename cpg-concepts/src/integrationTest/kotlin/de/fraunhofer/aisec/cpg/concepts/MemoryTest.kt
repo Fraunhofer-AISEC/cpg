@@ -114,7 +114,7 @@ class MemoryTest {
                     predicate = { node ->
                         node.overlayEdges.any { edge -> edge.end is DeAllocate }
                     },
-                    direction = Forward(),
+                    direction = Forward(GraphToFollow.EOG),
                     type = MustAnalysis(),
                     scope = Interprocedural(),
                     verbose = true,

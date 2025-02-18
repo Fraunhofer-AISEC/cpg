@@ -37,6 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.Invoke
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
+import kotlin.collections.mapNotNull
 
 interface StepSelector {
     /**
@@ -102,49 +103,126 @@ enum class GraphToFollow {
 }
 
 /** Determines in which direction we follow the edges. */
-sealed class AnalysisDirection {
+sealed class AnalysisDirection(val graphToFollow: GraphToFollow) {
     abstract fun pickNextStep(
         currentNode: Node,
         scope: AnalysisScope,
-        graphToFollow: GraphToFollow,
         ctx: Context,
-    ): Collection<Edge<Node>>
+        vararg sensitivities: AnalysisSensitivity,
+    ): Collection<Pair<Node, Context>>
 
     abstract fun unwrapNextStepFromEdge(edge: Edge<Node>): Node
 
     abstract fun edgeRequiresCallPush(currentNode: Node, edge: Edge<Node>): Boolean
 
     abstract fun edgeRequiresCallPop(currentNode: Node, edge: Edge<Node>): Boolean
+
+    internal fun filterEdges(
+        currentNode: Node,
+        edges: Collection<Edge<Node>>,
+        ctx: Context,
+        scope: AnalysisScope,
+        vararg sensitivities: AnalysisSensitivity,
+    ): Collection<Pair<Edge<Node>, Context>> {
+        return edges.mapNotNull { edge ->
+            val newCtx = ctx.clone()
+            if (
+                scope.followEdge(currentNode, edge, newCtx, this) &&
+                    sensitivities.all { it.followEdge(currentNode, edge, newCtx, this) }
+            ) {
+                Pair(edge, newCtx)
+            } else null
+        }
+    }
 }
 
 /** Follow the order of the EOG */
-class Forward() : AnalysisDirection() {
+class Forward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) {
     override fun pickNextStep(
         currentNode: Node,
         scope: AnalysisScope,
-        graphToFollow: GraphToFollow,
         ctx: Context,
-    ): Collection<Edge<Node>> {
-        return if (graphToFollow == GraphToFollow.DFG) {
-            currentNode.nextDFGEdges
-        } else {
-            // TODO: This is a bit more tricky because we need to go to nextEOGEdges when we return
-            // to the CallExpression.
-            val interprocedural =
-                if (currentNode is CallExpression && currentNode.invokes.isNotEmpty()) {
-                    currentNode.invokeEdges as Collection<Edge<Node>>
-                } else if (currentNode is ReturnStatement || currentNode.nextEOG.isEmpty()) {
-                    (currentNode as? FunctionDeclaration
-                            ?: currentNode.firstParentOrNull<FunctionDeclaration>())
-                        ?.calledByEdges as Collection<Edge<Node>>? ?: setOf()
-                } else {
-                    currentNode.nextEOGEdges
-                }
+        vararg sensitivities: AnalysisSensitivity,
+    ): Collection<Pair<Node, Context>> {
+        return when (graphToFollow) {
+            GraphToFollow.DFG -> {
+                filterEdges(
+                        currentNode = currentNode,
+                        edges = currentNode.nextDFGEdges,
+                        ctx = ctx,
+                        scope = scope,
+                        sensitivities = sensitivities,
+                    )
+                    .map { (edge, newCtx) -> this.unwrapNextStepFromEdge(edge) to newCtx }
+            }
+            GraphToFollow.EOG -> {
+                val interprocedural =
+                    if (currentNode is CallExpression && currentNode.invokes.isNotEmpty()) {
+                        // Enter the functions/methods which are/can be invoked here
+                        val called = currentNode.invokeEdges as Collection<Edge<Node>>
 
-            if (interprocedural.any { scope.followEdge(currentNode, it, ctx, this) }) {
-                interprocedural
-            } else {
-                currentNode.nextEOGEdges
+                        filterEdges(
+                                currentNode = currentNode,
+                                edges = called,
+                                ctx = ctx,
+                                scope = scope,
+                                sensitivities = sensitivities,
+                            )
+                            .map { (edge, newCtx) -> this.unwrapNextStepFromEdge(edge) to newCtx }
+                    } else if (currentNode is ReturnStatement || currentNode.nextEOG.isEmpty()) {
+                        // Return from the functions/methods which have been invoked.
+                        val returnedTo =
+                            (currentNode as? FunctionDeclaration
+                                    ?: currentNode.firstParentOrNull<FunctionDeclaration>())
+                                ?.calledByEdges as Collection<Edge<Node>>? ?: setOf()
+
+                        val filteredReturnedTo =
+                            filterEdges(
+                                currentNode = currentNode,
+                                edges = returnedTo,
+                                ctx = ctx,
+                                scope = scope,
+                                sensitivities = sensitivities,
+                            )
+                        // This is a bit more tricky because we need to go to nextEOGEdges when we
+                        // return
+                        // to the CallExpression. Therefore, we make one more step.
+                        filteredReturnedTo.flatMap { (nextEdge, newCtx) ->
+                            // nextEdge.start is the call expression.
+                            filterEdges(
+                                    currentNode = nextEdge.start,
+                                    edges = nextEdge.start.nextEOGEdges,
+                                    ctx = newCtx,
+                                    scope = scope,
+                                    sensitivities = sensitivities,
+                                )
+                                .map { (edge, moreNewCtx) ->
+                                    this.unwrapNextStepFromEdge(edge) to moreNewCtx
+                                }
+                        }
+                    } else {
+                        filterEdges(
+                                currentNode = currentNode,
+                                edges = currentNode.nextEOGEdges,
+                                ctx = ctx,
+                                scope = scope,
+                                sensitivities = sensitivities,
+                            )
+                            .map { (edge, newCtx) -> this.unwrapNextStepFromEdge(edge) to newCtx }
+                    }
+
+                if (interprocedural.isNotEmpty()) {
+                    interprocedural
+                } else {
+                    filterEdges(
+                            currentNode = currentNode,
+                            edges = currentNode.nextEOGEdges,
+                            ctx = ctx,
+                            scope = scope,
+                            sensitivities = sensitivities,
+                        )
+                        .map { (edge, newCtx) -> this.unwrapNextStepFromEdge(edge) to newCtx }
+                }
             }
         }
     }
@@ -154,39 +232,111 @@ class Forward() : AnalysisDirection() {
     }
 
     override fun edgeRequiresCallPush(currentNode: Node, edge: Edge<Node>): Boolean {
-        return (edge is ContextSensitiveDataflow && edge.callingContext is CallingContextIn) ||
-            (edge is Invoke && currentNode is CallExpression)
+        return when (graphToFollow) {
+            GraphToFollow.DFG -> {
+                edge is ContextSensitiveDataflow && edge.callingContext is CallingContextIn
+            }
+            GraphToFollow.EOG -> {
+                edge is Invoke && currentNode is CallExpression
+            }
+        }
     }
 
     override fun edgeRequiresCallPop(currentNode: Node, edge: Edge<Node>): Boolean {
-        return (edge is ContextSensitiveDataflow && edge.callingContext is CallingContextOut) ||
-            (edge is Invoke && (currentNode is ReturnStatement || currentNode.nextEOG.isEmpty()))
+        return when (graphToFollow) {
+            GraphToFollow.DFG -> {
+                edge is ContextSensitiveDataflow && edge.callingContext is CallingContextOut
+            }
+
+            GraphToFollow.EOG -> {
+                edge is Invoke && (currentNode is ReturnStatement || currentNode.nextEOG.isEmpty())
+            }
+        }
     }
 }
 
 /** Against the order of the EOG */
-class Backward() : AnalysisDirection() {
+class Backward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) {
     override fun pickNextStep(
         currentNode: Node,
         scope: AnalysisScope,
-        graphToFollow: GraphToFollow,
         ctx: Context,
-    ): Collection<Edge<Node>> {
-        return if (graphToFollow == GraphToFollow.DFG) {
-            currentNode.prevDFGEdges
-        } else {
-            val interprocedural =
-                if (currentNode is CallExpression && currentNode.invokes.isNotEmpty()) {
-                    currentNode.invokeEdges as Collection<Edge<Node>>
-                } else if (currentNode is FunctionDeclaration) {
-                    currentNode.calledByEdges as Collection<Edge<Node>>
+        vararg sensitivities: AnalysisSensitivity,
+    ): Collection<Pair<Node, Context>> {
+        return when (graphToFollow) {
+            GraphToFollow.DFG -> {
+                filterEdges(
+                        currentNode = currentNode,
+                        edges = currentNode.prevDFGEdges,
+                        ctx = ctx,
+                        scope = scope,
+                        sensitivities = sensitivities,
+                    )
+                    .map { (edge, newCtx) -> this.unwrapNextStepFromEdge(edge) to newCtx }
+            }
+
+            GraphToFollow.EOG -> {
+                val interprocedural =
+                    if (currentNode is CallExpression && currentNode.invokes.isNotEmpty()) {
+                        val returnedFrom = currentNode.invokeEdges as Collection<Edge<Node>>
+
+                        filterEdges(
+                                currentNode = currentNode,
+                                edges = returnedFrom,
+                                ctx = ctx,
+                                scope,
+                                sensitivities = sensitivities,
+                            )
+                            .map { (edge, newCtx) -> this.unwrapNextStepFromEdge(edge) to newCtx }
+                    } else if (currentNode is FunctionDeclaration) {
+                        val calledBy = currentNode.calledByEdges as Collection<Edge<Node>>
+
+                        val filteredCalledBy =
+                            filterEdges(
+                                currentNode = currentNode,
+                                edges = calledBy,
+                                ctx = ctx,
+                                scope = scope,
+                                sensitivities = sensitivities,
+                            )
+                        // This is a bit more tricky because we need to go to prevEOGEdges when we
+                        // return to the CallExpression. Therefore, we make one more step.
+                        filteredCalledBy.flatMap { (nextEdge, newCtx) ->
+                            // nextEdge.start is the call expression
+                            filterEdges(
+                                    currentNode = nextEdge.start,
+                                    edges = nextEdge.start.prevEOGEdges,
+                                    ctx = newCtx,
+                                    scope = scope,
+                                    sensitivities = sensitivities,
+                                )
+                                .map { (edge, moreNewCtx) ->
+                                    this.unwrapNextStepFromEdge(edge) to moreNewCtx
+                                }
+                        }
+                    } else {
+                        filterEdges(
+                                currentNode = currentNode,
+                                edges = currentNode.prevEOGEdges,
+                                ctx = ctx,
+                                scope = scope,
+                                sensitivities = sensitivities,
+                            )
+                            .map { (edge, newCtx) -> this.unwrapNextStepFromEdge(edge) to newCtx }
+                    }
+
+                if (interprocedural.isNotEmpty()) {
+                    interprocedural
                 } else {
-                    currentNode.prevEOGEdges
+                    filterEdges(
+                            currentNode = currentNode,
+                            edges = currentNode.prevEOGEdges,
+                            ctx = ctx,
+                            scope = scope,
+                            sensitivities = sensitivities,
+                        )
+                        .map { (edge, newCtx) -> this.unwrapNextStepFromEdge(edge) to newCtx }
                 }
-            if (interprocedural.any { scope.followEdge(currentNode, it, ctx, this) }) {
-                interprocedural
-            } else {
-                currentNode.prevEOGEdges
             }
         }
     }
@@ -196,24 +346,38 @@ class Backward() : AnalysisDirection() {
     }
 
     override fun edgeRequiresCallPush(currentNode: Node, edge: Edge<Node>): Boolean {
-        return (edge is ContextSensitiveDataflow && edge.callingContext is CallingContextOut) ||
-            (edge is Invoke && currentNode is CallExpression)
+        return when (graphToFollow) {
+            GraphToFollow.DFG -> {
+                edge is ContextSensitiveDataflow && edge.callingContext is CallingContextOut
+            }
+
+            GraphToFollow.EOG -> {
+                edge is Invoke && currentNode is CallExpression
+            }
+        }
     }
 
     override fun edgeRequiresCallPop(currentNode: Node, edge: Edge<Node>): Boolean {
-        return (edge is ContextSensitiveDataflow && edge.callingContext is CallingContextIn) ||
-            (edge is Invoke && currentNode is FunctionDeclaration)
+        return when (graphToFollow) {
+            GraphToFollow.DFG -> {
+                edge is ContextSensitiveDataflow && edge.callingContext is CallingContextIn
+            }
+
+            GraphToFollow.EOG -> {
+                edge is Invoke && currentNode is FunctionDeclaration
+            }
+        }
     }
 }
 
 /** In and against the order of the EOG */
-class Bidirectional() : AnalysisDirection() {
+class Bidirectional(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) {
     override fun pickNextStep(
         currentNode: Node,
         scope: AnalysisScope,
-        graphToFollow: GraphToFollow,
         ctx: Context,
-    ): Collection<Edge<Node>> {
+        vararg sensitivities: AnalysisSensitivity,
+    ): Collection<Pair<Node, Context>> {
         TODO("Not yet implemented")
     }
 

@@ -65,7 +65,7 @@ class DataflowQueriesTest {
         val queryResultMayA =
             dataFlow(
                 startNode = literal5,
-                direction = Forward(),
+                direction = Forward(GraphToFollow.DFG),
                 scope = Intraprocedural(),
                 type = MayAnalysis(),
                 predicate = { (it.astParent as? CallExpression)?.name?.localName == "baz" },
@@ -93,7 +93,7 @@ class DataflowQueriesTest {
         val queryResultMayAMax1 =
             dataFlow(
                 startNode = literal5,
-                direction = Forward(),
+                direction = Forward(GraphToFollow.DFG),
                 scope = Intraprocedural(1),
                 type = MayAnalysis(),
                 predicate = { (it.astParent as? CallExpression)?.name?.localName == "baz" },
@@ -123,7 +123,7 @@ class DataflowQueriesTest {
         val queryResultMustA =
             dataFlow(
                 startNode = literal5,
-                direction = Forward(),
+                direction = Forward(GraphToFollow.DFG),
                 scope = Intraprocedural(),
                 type = MustAnalysis(),
                 predicate = { (it.astParent as? CallExpression)?.name?.localName == "baz" },
@@ -152,7 +152,7 @@ class DataflowQueriesTest {
         val queryResultMayB =
             dataFlow(
                 startNode = refB,
-                direction = Forward(),
+                direction = Forward(GraphToFollow.DFG),
                 scope = Intraprocedural(),
                 type = MayAnalysis(),
                 predicate = { (it.astParent as? CallExpression)?.name?.localName == "baz" },
@@ -181,7 +181,7 @@ class DataflowQueriesTest {
         val queryResultMustB =
             dataFlow(
                 startNode = refB,
-                direction = Forward(),
+                direction = Forward(GraphToFollow.DFG),
                 scope = Intraprocedural(),
                 type = MustAnalysis(),
                 predicate = { (it.astParent as? CallExpression)?.name?.localName == "baz" },
@@ -227,7 +227,7 @@ class DataflowQueriesTest {
         val queryResultMay =
             dataFlow(
                 startNode = refB,
-                direction = Bidirectional(),
+                direction = Bidirectional(GraphToFollow.DFG),
                 scope = Intraprocedural(),
                 type = MayAnalysis(),
                 predicate = {
@@ -259,7 +259,7 @@ class DataflowQueriesTest {
         val queryResultMust =
             dataFlow(
                 startNode = refB,
-                direction = Bidirectional(),
+                direction = Bidirectional(GraphToFollow.DFG),
                 scope = Intraprocedural(),
                 type = MustAnalysis(),
                 predicate = {
@@ -324,7 +324,7 @@ class DataflowQueriesTest {
         val queryResultMayA =
             dataFlow(
                 startNode = bazARef,
-                direction = Backward(),
+                direction = Backward(GraphToFollow.DFG),
                 scope = Intraprocedural(),
                 type = MayAnalysis(),
                 predicate = { (it as? Literal<*>)?.value == 5 },
@@ -352,7 +352,7 @@ class DataflowQueriesTest {
         val queryResultMayAMax1 =
             dataFlow(
                 startNode = bazARef,
-                direction = Backward(),
+                direction = Backward(GraphToFollow.DFG),
                 scope = Intraprocedural(1),
                 type = MayAnalysis(),
                 predicate = { (it as? Literal<*>)?.value == 5 },
@@ -385,7 +385,7 @@ class DataflowQueriesTest {
         val queryResultMustA =
             dataFlow(
                 startNode = bazARef,
-                direction = Backward(),
+                direction = Backward(GraphToFollow.DFG),
                 scope = Intraprocedural(),
                 type = MustAnalysis(),
                 predicate = { (it as? Literal<*>)?.value == 5 },
@@ -414,7 +414,7 @@ class DataflowQueriesTest {
         val queryResultMayBTo5 =
             dataFlow(
                 startNode = refB,
-                direction = Backward(),
+                direction = Backward(GraphToFollow.DFG),
                 scope = Intraprocedural(),
                 type = MayAnalysis(),
                 predicate = { (it as? Literal<*>)?.value == 5 },
@@ -443,7 +443,7 @@ class DataflowQueriesTest {
         val queryResultMustBTo5 =
             dataFlow(
                 startNode = refB,
-                direction = Backward(),
+                direction = Backward(GraphToFollow.DFG),
                 scope = Intraprocedural(),
                 type = MustAnalysis(),
                 predicate = { (it as? Literal<*>)?.value == 5 },
@@ -472,7 +472,7 @@ class DataflowQueriesTest {
         val queryResultMayBToBla =
             dataFlow(
                 startNode = refB,
-                direction = Backward(),
+                direction = Backward(GraphToFollow.DFG),
                 scope = Intraprocedural(),
                 type = MayAnalysis(),
                 predicate = { (it as? Literal<*>)?.value == "bla" },
@@ -501,7 +501,7 @@ class DataflowQueriesTest {
         val queryResultMustBToBla =
             dataFlow(
                 startNode = refB,
-                direction = Backward(),
+                direction = Backward(GraphToFollow.DFG),
                 scope = Intraprocedural(),
                 type = MustAnalysis(),
                 predicate = { (it as? Literal<*>)?.value == "bla" },
@@ -709,6 +709,7 @@ class DataflowQueriesTest {
                     (node.astParent as? CallExpression)?.name?.localName == "baz"
                 },
                 scope = Interprocedural(),
+                sensitivities = ContextSensitive() + FieldSensitive() + FilterUnreachableEOG(),
             )
         assertTrue(
             linearResultWithBInterProc.value,

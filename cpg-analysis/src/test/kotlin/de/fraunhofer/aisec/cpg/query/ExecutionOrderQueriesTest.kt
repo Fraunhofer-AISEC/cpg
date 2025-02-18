@@ -49,7 +49,7 @@ class ExecutionOrderQueriesTest {
         val value5MayReach10 =
             executionPath(
                 startNode = literal5,
-                direction = Forward(),
+                direction = Forward(GraphToFollow.EOG),
                 type = MayAnalysis(),
                 scope = Intraprocedural(),
                 predicate = { node -> node == literal10 },
@@ -62,7 +62,7 @@ class ExecutionOrderQueriesTest {
         val value5MustReach10 =
             executionPath(
                 startNode = literal5,
-                direction = Forward(),
+                direction = Forward(GraphToFollow.EOG),
                 type = MustAnalysis(),
                 scope = Intraprocedural(),
                 predicate = { node -> node == literal10 },
@@ -75,7 +75,7 @@ class ExecutionOrderQueriesTest {
         val value5MustReachBaz =
             executionPath(
                 startNode = literal5,
-                direction = Forward(),
+                direction = Forward(GraphToFollow.EOG),
                 type = MustAnalysis(),
                 scope = Intraprocedural(),
                 predicate = { node -> node == callBaz },
@@ -98,7 +98,7 @@ class ExecutionOrderQueriesTest {
         val callBazMayReach10 =
             executionPath(
                 startNode = callBaz,
-                direction = Backward(),
+                direction = Backward(GraphToFollow.EOG),
                 type = MayAnalysis(),
                 scope = Intraprocedural(),
                 predicate = { node -> node == literal10 },
@@ -111,7 +111,7 @@ class ExecutionOrderQueriesTest {
         val callBazMustReach10 =
             executionPath(
                 startNode = callBaz,
-                direction = Backward(),
+                direction = Backward(GraphToFollow.EOG),
                 type = MustAnalysis(),
                 scope = Intraprocedural(),
                 predicate = { node -> node == literal10 },
@@ -124,7 +124,7 @@ class ExecutionOrderQueriesTest {
         val callBazMustReach5 =
             executionPath(
                 startNode = callBaz,
-                direction = Backward(),
+                direction = Backward(GraphToFollow.EOG),
                 type = MustAnalysis(),
                 scope = Intraprocedural(),
                 predicate = { node -> node == literal5 },
@@ -151,7 +151,7 @@ class ExecutionOrderQueriesTest {
         val literal10MayReachBaz =
             executionPath(
                 startNode = literal10,
-                direction = Bidirectional(),
+                direction = Bidirectional(GraphToFollow.EOG),
                 type = MayAnalysis(),
                 scope = Intraprocedural(),
                 predicate = { node -> node == callBaz },
@@ -164,7 +164,7 @@ class ExecutionOrderQueriesTest {
         val literal10MayReach5 =
             executionPath(
                 startNode = literal10,
-                direction = Bidirectional(),
+                direction = Bidirectional(GraphToFollow.EOG),
                 type = MayAnalysis(),
                 scope = Intraprocedural(),
                 predicate = { node -> node == literal5 },
@@ -180,7 +180,7 @@ class ExecutionOrderQueriesTest {
         val literal10MustReachBaz =
             executionPath(
                 startNode = literal10,
-                direction = Bidirectional(),
+                direction = Bidirectional(GraphToFollow.EOG),
                 type = MustAnalysis(),
                 scope = Intraprocedural(),
                 predicate = { node -> node == callBaz },
@@ -193,7 +193,7 @@ class ExecutionOrderQueriesTest {
         val literal10MustReach5 =
             executionPath(
                 startNode = literal10,
-                direction = Bidirectional(),
+                direction = Bidirectional(GraphToFollow.EOG),
                 type = MustAnalysis(),
                 scope = Intraprocedural(),
                 predicate = { node -> node == literal5 },
@@ -206,7 +206,7 @@ class ExecutionOrderQueriesTest {
         val literal10MustReachBazOr5 =
             executionPath(
                 startNode = literal10,
-                direction = Bidirectional(),
+                direction = Bidirectional(GraphToFollow.EOG),
                 type = MustAnalysis(),
                 scope = Intraprocedural(),
                 predicate = { node -> node == callBaz || node == literal5 },

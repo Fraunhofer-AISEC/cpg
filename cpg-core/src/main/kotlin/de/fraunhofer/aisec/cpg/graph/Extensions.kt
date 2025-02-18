@@ -270,7 +270,7 @@ fun Node.collectAllPrevFullDFGPaths(): List<List<Node>> {
 fun Node.followEOGEdgesUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
-    direction: AnalysisDirection = Forward(),
+    direction: AnalysisDirection = Forward(GraphToFollow.EOG),
     vararg sensitivities: AnalysisSensitivity = FilterUnreachableEOG() + ContextSensitive(),
     scope: AnalysisScope = Interprocedural(),
     earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
@@ -279,15 +279,7 @@ fun Node.followEOGEdgesUntilHit(
 
     return this.followXUntilHit(
         x = { currentNode, ctx, path ->
-            direction.pickNextStep(currentNode, scope, GraphToFollow.EOG, ctx).mapNotNull { edge ->
-                val newCtx = ctx.clone()
-                if (
-                    scope.followEdge(currentNode, edge, newCtx, direction) &&
-                        sensitivities.all { it.followEdge(currentNode, edge, newCtx, direction) }
-                ) {
-                    Pair(direction.unwrapNextStepFromEdge(edge), newCtx)
-                } else null
-            }
+            direction.pickNextStep(currentNode, scope, ctx, sensitivities = sensitivities)
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
@@ -308,7 +300,7 @@ fun Node.followEOGEdgesUntilHit(
 fun Node.followDFGEdgesUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
-    direction: AnalysisDirection = Forward(),
+    direction: AnalysisDirection = Forward(GraphToFollow.DFG),
     vararg sensitivities: AnalysisSensitivity = FieldSensitive() + ContextSensitive(),
     scope: AnalysisScope = Interprocedural(),
     earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
@@ -317,15 +309,7 @@ fun Node.followDFGEdgesUntilHit(
 
     return this.followXUntilHit(
         x = { currentNode, ctx, path ->
-            direction.pickNextStep(currentNode, scope, GraphToFollow.DFG, ctx).mapNotNull { edge ->
-                val newCtx = ctx.clone()
-                if (
-                    scope.followEdge(currentNode, edge, newCtx, direction) &&
-                        sensitivities.all { it.followEdge(currentNode, edge, newCtx, direction) }
-                ) {
-                    Pair(direction.unwrapNextStepFromEdge(edge), newCtx)
-                } else null
-            }
+            direction.pickNextStep(currentNode, scope, ctx, sensitivities = sensitivities)
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
@@ -411,7 +395,7 @@ fun Node.collectAllNextDFGPaths(
     return followDFGEdgesUntilHit(
             collectFailedPaths = true,
             findAllPossiblePaths = true,
-            direction = Forward(),
+            direction = Forward(GraphToFollow.DFG),
             sensitivities =
                 if (contextSensitive) {
                     FieldSensitive() + ContextSensitive()
@@ -470,7 +454,7 @@ fun Node.collectAllPrevEOGPaths(interproceduralAnalysis: Boolean): List<List<Nod
     // We make everything fail to reach the end of the CDG. Then, we use the stuff collected in the
     // failed paths (everything)
     return this.followEOGEdgesUntilHit(
-            direction = Backward(),
+            direction = Backward(GraphToFollow.EOG),
             collectFailedPaths = true,
             findAllPossiblePaths = true,
         ) {
@@ -785,59 +769,6 @@ fun Node.followNextFullDFGEdgesUntilHit(
 }
 
 /**
- * Returns an instance of [FulfilledAndFailedPaths] where [FulfilledAndFailedPaths.fulfilled]
- * contains all possible shortest evaluation paths between the starting node [this] and the end node
- * fulfilling [predicate]. The paths are represented as lists of nodes. Paths which do not end at
- * such a node are included in [FulfilledAndFailedPaths.failed].
- *
- * Hence, if "fulfilled" is a non-empty list, the execution of a statement fulfilling the predicate
- * is possible after executing [this] **possible but not mandatory**. If the list "failed" is empty,
- * such a statement is always executed.
- */
-fun Node.followNextEOGEdgesUntilHit(
-    collectFailedPaths: Boolean = true,
-    findAllPossiblePaths: Boolean = true,
-    interproceduralAnalysis: Boolean = true,
-    interproceduralMaxDepth: Int? = null,
-    earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
-    predicate: (Node) -> Boolean,
-): FulfilledAndFailedPaths {
-    return followXUntilHit(
-        x = { currentNode, ctx, _ ->
-            if (
-                interproceduralAnalysis &&
-                    interproceduralMaxDepth?.let { ctx.callStack.depth >= it } != true &&
-                    currentNode is CallExpression &&
-                    currentNode.invokes.isNotEmpty()
-            ) {
-                // We follow the invokes edges and push the call expression on the call stack, so we
-                // can jump back here after processing the function.
-                ctx.callStack.push(currentNode)
-                currentNode.invokes.map { it to ctx }
-            } else if (
-                interproceduralAnalysis &&
-                    (currentNode is ReturnStatement || currentNode.nextEOG.isEmpty())
-            ) {
-                if (ctx.callStack.isEmpty()) {
-                    (currentNode as? FunctionDeclaration
-                            ?: currentNode.firstParentOrNull<FunctionDeclaration>())
-                        ?.calledBy
-                        ?.flatMap { it.nextEOG.map { it to ctx } } ?: setOf()
-                } else {
-                    ctx.callStack.pop().nextEOG.map { it to ctx }
-                }
-            } else {
-                currentNode.nextEOGEdges.filter { it.unreachable != true }.map { it.end to ctx }
-            }
-        },
-        collectFailedPaths = collectFailedPaths,
-        findAllPossiblePaths = findAllPossiblePaths,
-        earlyTermination = earlyTermination,
-        predicate = predicate,
-    )
-}
-
-/**
  * Returns a [Collection] of last nodes in the EOG of this [FunctionDeclaration]. If there's no
  * function body, it will return a list of this function declaration.
  */
@@ -949,7 +880,7 @@ fun Node.followPrevDFG(predicate: (Node) -> Boolean): MutableList<Node>? {
             collectFailedPaths = false,
             findAllPossiblePaths = false,
             predicate = predicate,
-            direction = Backward(),
+            direction = Backward(GraphToFollow.DFG),
         )
         .fulfilled
         .minByOrNull { it.size }
