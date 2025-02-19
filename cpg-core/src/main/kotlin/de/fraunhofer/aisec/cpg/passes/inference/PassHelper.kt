@@ -83,7 +83,7 @@ fun Pass<*>.tryNamespaceInference(name: Name, source: Node): NamespaceDeclaratio
         holder = tryScopeInference(parentName, source)
     }
 
-    return (holder ?: scopeManager.globalScope?.astNode)
+    return (holder ?: source.translationUnit)
         ?.startInference(ctx)
         ?.inferNamespaceDeclaration(name, null, source)
 }
@@ -133,7 +133,7 @@ internal fun Pass<*>.tryRecordInference(type: Type, source: Node): RecordDeclara
     }
 
     val record =
-        (holder ?: scopeManager.globalScope?.astNode)
+        (holder ?: source.translationUnit)
             ?.startInference(ctx)
             ?.inferRecordDeclaration(type, kind, source)
 
