@@ -28,8 +28,6 @@ package de.fraunhofer.aisec.cpg.frontends.python
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.flows.IndexedDataflowGranularity
-import de.fraunhofer.aisec.cpg.graph.followNextDFGEdgesUntilHit
-import de.fraunhofer.aisec.cpg.graph.followPrevDFGEdgesUntilHit
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
@@ -215,14 +213,20 @@ class DFGTest {
         assertNotNull(aReturned)
         val bReturned = returnTuple.refs["b"]
         assertNotNull(bReturned)
-        val backwardsPathCToA = cRead.followPrevDFGEdgesUntilHit { it == aReturned }.fulfilled
+        val backwardsPathCToA =
+            cRead
+                .followDFGEdgesUntilHit(direction = Backward(GraphToFollow.DFG)) { it == aReturned }
+                .fulfilled
         assertEquals(1, backwardsPathCToA.size)
-        val backwardsPathCToB = cRead.followPrevDFGEdgesUntilHit { it == bReturned }.fulfilled
+        val backwardsPathCToB =
+            cRead
+                .followDFGEdgesUntilHit(direction = Backward(GraphToFollow.DFG)) { it == bReturned }
+                .fulfilled
         assertEquals(0, backwardsPathCToB.size)
 
-        val forwardsPathAToC = aReturned.followNextDFGEdgesUntilHit { it == cRead }.fulfilled
+        val forwardsPathAToC = aReturned.followDFGEdgesUntilHit { it == cRead }.fulfilled
         assertEquals(1, forwardsPathAToC.size)
-        val forwardsPathBToC = bReturned.followNextDFGEdgesUntilHit { it == cRead }.fulfilled
+        val forwardsPathBToC = bReturned.followDFGEdgesUntilHit { it == cRead }.fulfilled
         assertEquals(0, forwardsPathBToC.size)
     }
 
@@ -239,10 +243,7 @@ class DFGTest {
         assertNotNull(keyStartRef)
 
         val paths =
-            keyStartRef.followNextDFGEdgesUntilHit(
-                useIndexStack = true,
-                collectFailedPaths = false,
-            ) {
+            keyStartRef.followDFGEdgesUntilHit(collectFailedPaths = false) {
                 it is CallExpression &&
                     it.name.localName == "cipher_operation" &&
                     it.arguments[0].evaluate() == "encrypt"
