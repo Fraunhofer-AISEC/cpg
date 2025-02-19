@@ -75,8 +75,7 @@ abstract class Edge<NodeType : Node> : Persistable, Cloneable {
     abstract var labels: Set<String>
 
     /**
-     * Whether the Edge is pointing to or from the overlay network is defined by its connected
-     * nodes.
+     * `true` if one of the two nodes connected by the [Edge] is an overlay node.
      */
     val overlaying: Boolean
         get() = end is OverlayNode || start is OverlayNode
