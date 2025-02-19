@@ -2,7 +2,7 @@
 <html class="no-js">
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
-    <title>MemoryOperation</title>
+    <title>LoadLibrary</title>
 <link href="../../../images/logo-icon.svg" rel="icon" type="image/svg">    <script>var pathToRoot = "../../../";</script>
     <script>document.documentElement.classList.replace("no-js","js");</script>
     <script>const storage = localStorage.getItem("dokka-dark-mode")
@@ -43,7 +43,7 @@
         </button>
         <div class="navigation-controls--break ui-kit_mobile-only"></div>
         <div class="library-version" id="library-version">
-<dokka-template-command data="{&quot;@class&quot;:&quot;org.jetbrains.dokka.base.templating.ReplaceVersionsCommand&quot;,&quot;location&quot;:&quot;de.fraunhofer.aisec.cpg.graph.concepts.memory/-memory-operation/index.html&quot;}">main-SNAPSHOT</dokka-template-command>        </div>
+<dokka-template-command data="{&quot;@class&quot;:&quot;org.jetbrains.dokka.base.templating.ReplaceVersionsCommand&quot;,&quot;location&quot;:&quot;de.fraunhofer.aisec.cpg.graph.concepts.memory/-load-library/index.html&quot;}">main-SNAPSHOT</dokka-template-command>        </div>
         <div class="navigation-controls">
         <div class="filter-section filter-section_loading" id="filter-section">
                 <button class="platform-tag platform-selector jvm-like" data-active="" data-filter=":cpg-concepts:dokkaHtmlPartial/main">jvm</button>
@@ -91,28 +91,28 @@
                 </div>
             </div>
             <div id="main">
-<div class="main-content" data-page-type="classlike" id="content" pageids="cpg-concepts::de.fraunhofer.aisec.cpg.graph.concepts.memory/MemoryOperation///PointingToDeclaration//-374014486">
-  <div class="breadcrumbs"><a href="../../index.html">cpg-concepts</a><span class="delimiter">/</span><a href="../index.html">de.fraunhofer.aisec.cpg.graph.concepts.memory</a><span class="delimiter">/</span><span class="current">MemoryOperation</span></div>
+<div class="main-content" data-page-type="classlike" id="content" pageids="cpg-concepts::de.fraunhofer.aisec.cpg.graph.concepts.memory/LoadLibrary///PointingToDeclaration//-374014486">
+  <div class="breadcrumbs"><a href="../../index.html">cpg-concepts</a><span class="delimiter">/</span><a href="../index.html">de.fraunhofer.aisec.cpg.graph.concepts.memory</a><span class="delimiter">/</span><span class="current">LoadLibrary</span></div>
   <div class="cover ">
-    <h1 class="cover"><span>Memory</span><wbr><span><span>Operation</span></span></h1>
-    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-concepts:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">class </span><a href="index.html">MemoryOperation</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">underlyingNode<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>concept<span class="token operator">: </span><a href="../../de.fraunhofer.aisec.cpg.graph.concepts/-concept/index.html">Concept</a><span class="token operator">&lt;</span><span class="token keyword">out </span><a href="index.html">MemoryOperation</a><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span> : <a href="../../de.fraunhofer.aisec.cpg.graph.concepts/-operation/index.html">Operation</a>, <a href="../-is-memory/index.html">IsMemory</a></div><p class="paragraph">A common abstract class for memory operations.</p><h4 class="">Inheritors</h4><div class="table"><div class="table-row" data-filterable-current=":cpg-concepts:dokkaHtmlPartial/main" data-filterable-set=":cpg-concepts:dokkaHtmlPartial/main"><div class="main-subrow keyValue "><div class=""><span class="inline-flex"><div><a href="../-dynamic-loading-operation/index.html">DynamicLoadingOperation</a></div></span></div><div></div></div></div><div class="table-row" data-filterable-current=":cpg-concepts:dokkaHtmlPartial/main" data-filterable-set=":cpg-concepts:dokkaHtmlPartial/main"><div class="main-subrow keyValue "><div class=""><span class="inline-flex"><div><a href="../-allocate/index.html">Allocate</a></div></span></div><div></div></div></div><div class="table-row" data-filterable-current=":cpg-concepts:dokkaHtmlPartial/main" data-filterable-set=":cpg-concepts:dokkaHtmlPartial/main"><div class="main-subrow keyValue "><div class=""><span class="inline-flex"><div><a href="../-de-allocate/index.html">DeAllocate</a></div></span></div><div></div></div></div></div></div></div>
+    <h1 class="cover"><span>Load</span><wbr><span><span>Library</span></span></h1>
+    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-concepts:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="index.html">LoadLibrary</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">underlyingNode<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">, </span></span><span class="parameter ">concept<span class="token operator">: </span><a href="../../de.fraunhofer.aisec.cpg.graph.concepts/-concept/index.html">Concept</a><span class="token operator">&lt;</span><a href="../-dynamic-loading-operation/index.html">DynamicLoadingOperation</a><span class="token operator">&lt;</span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph/-component/index.html">Component</a><span class="token operator">&gt;</span><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">what<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph/-component/index.html">Component</a><span class="token operator">?</span></span></span><span class="token punctuation">)</span> : <a href="../-dynamic-loading-operation/index.html">DynamicLoadingOperation</a><span class="token operator">&lt;</span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph/-component/index.html">Component</a><span class="token operator">&gt; </span></div><p class="paragraph">Represents an operation that loads a shared library during runtime. A common example would be a call to <code class="lang-kotlin">dlopen</code> in C/C++.</p><p class="paragraph">The <a href="../../../cpg-concepts/de.fraunhofer.aisec.cpg.graph.concepts.memory/-load-library/underlying-node.html">underlyingNode</a> is most likely a function call and <a href="../../../cpg-concepts/de.fraunhofer.aisec.cpg.graph.concepts.memory/-load-library/what.html">what</a> can point to a <a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph/-component/index.html">Component</a> representing the library.</p></div></div>
   </div>
   <div class="tabbedcontent">
     <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="CONSTRUCTOR,TYPE,PROPERTY,FUNCTION">Members</button><button class="section-tab" data-togglable="CONSTRUCTOR,TYPE,PROPERTY,FUNCTION,EXTENSION_PROPERTY,EXTENSION_FUNCTION">Members &amp; Extensions</button></div>
     <div class="tabs-section-body">
       <div data-togglable="CONSTRUCTOR">
         <h2 class="">Constructors</h2>
-        <div class="table"><a data-name="1274913237%2FConstructors%2F-374014486" anchor-label="MemoryOperation" id="1274913237%2FConstructors%2F-374014486" data-filterable-set=":cpg-concepts:dokkaHtmlPartial/main"></a>
+        <div class="table"><a data-name="1353969405%2FConstructors%2F-374014486" anchor-label="LoadLibrary" id="1353969405%2FConstructors%2F-374014486" data-filterable-set=":cpg-concepts:dokkaHtmlPartial/main"></a>
           <div class="table-row" data-togglable="CONSTRUCTOR" data-filterable-current=":cpg-concepts:dokkaHtmlPartial/main" data-filterable-set=":cpg-concepts:dokkaHtmlPartial/main">
             <div class="main-subrow keyValue ">
               <div class=""><span class="inline-flex">
-                  <div><a href="-memory-operation.html"><span>Memory</span><wbr><span><span>Operation</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1274913237%2FConstructors%2F-374014486"></span>
+                  <div><a href="-load-library.html"><span>Load</span><wbr><span><span>Library</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1353969405%2FConstructors%2F-374014486"></span>
                     <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-concepts:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">constructor</span><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">underlyingNode<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">, </span></span><span class="parameter ">concept<span class="token operator">: </span><a href="../../de.fraunhofer.aisec.cpg.graph.concepts/-concept/index.html">Concept</a><span class="token operator">&lt;</span><span class="token keyword">out </span><a href="index.html">MemoryOperation</a><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-concepts:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">constructor</span><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">underlyingNode<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">, </span></span><span class="parameter ">concept<span class="token operator">: </span><a href="../../de.fraunhofer.aisec.cpg.graph.concepts/-concept/index.html">Concept</a><span class="token operator">&lt;</span><a href="../-dynamic-loading-operation/index.html">DynamicLoadingOperation</a><span class="token operator">&lt;</span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph/-component/index.html">Component</a><span class="token operator">&gt;</span><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">what<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph/-component/index.html">Component</a><span class="token operator">?</span></span></span><span class="token punctuation">)</span></div></div></div>
                 </div>
               </div>
             </div>
@@ -766,6 +766,21 @@
               </div>
             </div>
           </div>
+<a data-name="-1500840179%2FProperties%2F-374014486" anchor-label="what" id="-1500840179%2FProperties%2F-374014486" data-filterable-set=":cpg-concepts:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-concepts:dokkaHtmlPartial/main" data-filterable-set=":cpg-concepts:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../-dynamic-loading-operation/what.html"><span><span>what</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1500840179%2FProperties%2F-374014486"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-concepts:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">var </span><a href="../-dynamic-loading-operation/what.html">what</a><span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph/-component/index.html">Component</a><span class="token operator">?</span></div><div class="brief "><p class="paragraph">Represents the entity that we load during runtime.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
       <div data-togglable="FUNCTION">
@@ -811,6 +826,21 @@
               <div>
                 <div class="title">
                   <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-concepts:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">operator override </span><span class="token keyword">fun </span><a href="../-de-allocate/index.html#-813213452%2FFunctions%2F-374014486"><span class="token function">equals</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">other<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-any/index.html">Any</a><span class="token operator">?</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="248130794%2FFunctions%2F-374014486" anchor-label="findSymbol" id="248130794%2FFunctions%2F-374014486" data-filterable-set=":cpg-concepts:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-concepts:dokkaHtmlPartial/main" data-filterable-set=":cpg-concepts:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="find-symbol.html"><span>find</span><wbr><span><span>Symbol</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="248130794%2FFunctions%2F-374014486"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-concepts:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="find-symbol.html"><span class="token function">findSymbol</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">symbol<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.scopes/-symbol/index.html">Symbol</a><span class="token operator">?</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.declarations/-declaration/index.html">Declaration</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Looks up symbol candidates for <a href="find-symbol.html">symbol</a> in the <a href="../../../cpg-concepts/de.fraunhofer.aisec.cpg.graph.concepts.memory/-load-library/what.html">LoadLibrary.what</a>.</p></div></div></div>
                 </div>
               </div>
             </div>
