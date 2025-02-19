@@ -45,7 +45,7 @@ abstract class DynamicLoadingOperation<T : Node>(
     underlyingNode: Node,
     concept: Concept<DynamicLoadingOperation<T>>,
     /** Represents the entity that we load during runtime. */
-    var what: T? = null,
+    var what: T?,
 ) : MemoryOperation(underlyingNode = underlyingNode, concept = concept), IsMemory
 
 /**
@@ -59,7 +59,7 @@ class LoadLibrary(
     underlyingNode: Node,
     concept: Concept<DynamicLoadingOperation<Component>>,
     /** Represents the source code of library that we load in our graph. */
-    what: Component? = null,
+    what: Component?,
 ) :
     DynamicLoadingOperation<Component>(
         underlyingNode = underlyingNode,
@@ -92,11 +92,11 @@ class LoadSymbol<T : Declaration>(
     underlyingNode: Node,
     concept: Concept<DynamicLoadingOperation<T>>,
     /** Represents the symbol's [Declaration] that we load in our graph. */
-    what: T? = null,
+    what: T?,
 
     /**
      * If we are loading a symbol from an external library, this points to the [LoadLibrary]
      * operation that loaded the library.
      */
-    var loader: LoadLibrary? = null,
+    var loader: LoadLibrary?,
 ) : DynamicLoadingOperation<T>(underlyingNode = underlyingNode, concept = concept, what = what)
