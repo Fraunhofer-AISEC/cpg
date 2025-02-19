@@ -73,9 +73,6 @@ class ScopeManager : ScopeProvider {
     var currentScope: Scope? = null
         private set
 
-    /** Represents an alias with the name [to] for the particular name [from]. */
-    data class Alias(var from: Name, var to: Name)
-
     /** True, if the scope manager is currently in a [FunctionScope]. */
     val isInFunction: Boolean
         get() = this.firstScopeOrNull { it is FunctionScope } != null
@@ -519,8 +516,12 @@ class ScopeManager : ScopeProvider {
      * @param scope the current scope relevant for the name resolution, e.g. parent of node
      * @return a [ScopeExtraction] object with the scope of node.name and the alias-adjusted name
      */
-    fun extractScope(node: HasNameAndLocation, scope: Scope? = currentScope): ScopeExtraction? {
-        return extractScope(node.name, node.location, scope)
+    fun extractScope(
+        node: HasNameAndLocation,
+        language: Language<*> = node.language,
+        scope: Scope? = currentScope,
+    ): ScopeExtraction? {
+        return extractScope(node.name, language, node.location, scope)
     }
 
     /**
@@ -542,6 +543,7 @@ class ScopeManager : ScopeProvider {
      */
     fun extractScope(
         name: Name,
+        language: Language<*>? = null,
         location: PhysicalLocation? = null,
         scope: Scope? = currentScope,
     ): ScopeExtraction? {
@@ -552,7 +554,7 @@ class ScopeManager : ScopeProvider {
         // First, we need to check, whether we have some kind of scoping.
         if (scopeName != null) {
             // We need to check, whether we have an alias for the name's parent in this file
-            val scope = lookupScopeByName(scopeName, scope)
+            val scope = lookupScopeByName(scopeName, language, scope)
 
             if (scope == null) {
                 Util.warnWithFileLocation(
@@ -584,7 +586,7 @@ class ScopeManager : ScopeProvider {
      * @param name the name to look up
      * @param startScope the scope to start the lookup in
      */
-    fun lookupScopeByName(name: Name, startScope: Scope?): Scope? {
+    fun lookupScopeByName(name: Name, language: Language<*>?, startScope: Scope?): Scope? {
         val parts = name.splitTo(mutableListOf())
         var part: Name? = name
         var scope = startScope
@@ -601,7 +603,7 @@ class ScopeManager : ScopeProvider {
             // namespace (in different files), but they all (should) point to the same scope.
             scope =
                 scope
-                    .lookupSymbol(part.localName) {
+                    .lookupSymbol(part.localName, languageOnly = language) {
                         it is NamespaceDeclaration ||
                             it is RecordDeclaration ||
                             it is TypedefDeclaration
@@ -785,7 +787,7 @@ class ScopeManager : ScopeProvider {
         startScope: Scope? = currentScope,
         predicate: ((Declaration) -> Boolean)? = null,
     ): List<Declaration> {
-        val extractedScope = extractScope(name, location, startScope)
+        val extractedScope = extractScope(name, language, location, startScope)
         val scope: Scope?
         val n: Name
         if (extractedScope == null) {

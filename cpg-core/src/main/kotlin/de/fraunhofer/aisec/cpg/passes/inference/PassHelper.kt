@@ -176,7 +176,7 @@ internal fun Pass<*>.tryVariableInference(ref: Reference): VariableDeclaration? 
     } else if (ref.name.isQualified()) {
         // For now, we only infer globals at the top-most global level, i.e., no globals in
         // namespaces
-        val extractedScope = scopeManager.extractScope(ref, null)
+        val extractedScope = scopeManager.extractScope(ref, ref.language, null)
         when (val scope = extractedScope?.scope) {
             is NameScope -> {
                 log.warn(
