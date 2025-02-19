@@ -58,7 +58,7 @@ class Memory(underlyingNode: Node, mode: MemoryManagementMode) :
 interface IsMemory
 
 /** A common abstract class for memory operations. */
-abstract class MemoryOperation(underlyingNode: Node, concept: Concept<MemoryOperation>) :
+abstract class MemoryOperation(underlyingNode: Node, concept: Concept<out MemoryOperation>) :
     Operation(underlyingNode = underlyingNode, concept = concept), IsMemory
 
 /**

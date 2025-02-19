@@ -30,10 +30,7 @@ import de.fraunhofer.aisec.cpg.analysis.NumberSet
 import de.fraunhofer.aisec.cpg.analysis.SizeEvaluator
 import de.fraunhofer.aisec.cpg.analysis.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.types.Type
 
 /**
@@ -49,18 +46,33 @@ inline fun <reified T> Node.allExtended(
     noinline sel: ((T) -> Boolean)? = null,
     noinline mustSatisfy: (T) -> QueryTree<Boolean>,
 ): QueryTree<Boolean> {
-    val nodes = this.allChildrenWithOverlays(sel)
-
-    val queryChildren =
-        nodes.map { n ->
-            val res = mustSatisfy(n)
-            res.stringRepresentation = "Starting at $n: " + res.stringRepresentation
-            if (n is Node) {
-                res.node = n
-            }
-            res
-        }
+    val queryChildren = evaluateExtended(sel, mustSatisfy)
     return QueryTree(queryChildren.all { it.value }, queryChildren.toMutableList(), "all", this)
+}
+
+/**
+ * Evaluates the conditions specified in [mustSatisfy] hold for all nodes in the graph and returns
+ * the individual results.
+ *
+ * The optional argument [sel] can be used to filter nodes for which the condition has to be
+ * fulfilled. This filter should be rather simple in most cases since its evaluation is not part of
+ * the resulting reasoning chain.
+ *
+ * This method can be used similar to the logical implication to test "sel => mustSatisfy".
+ */
+inline fun <reified T> Node.evaluateExtended(
+    noinline sel: ((T) -> Boolean)? = null,
+    noinline mustSatisfy: (T) -> QueryTree<Boolean>,
+): List<QueryTree<Boolean>> {
+    val nodes = this.allChildrenWithOverlays(sel)
+    return nodes.map { n ->
+        val res = mustSatisfy(n)
+        res.stringRepresentation = "Starting at $n: " + res.stringRepresentation
+        if (n is Node) {
+            res.node = n
+        }
+        res
+    }
 }
 
 /**
@@ -90,17 +102,7 @@ inline fun <reified T> Node.existsExtended(
     noinline sel: ((T) -> Boolean)? = null,
     noinline mustSatisfy: (T) -> QueryTree<Boolean>,
 ): QueryTree<Boolean> {
-    val nodes = this.allChildrenWithOverlays(sel)
-
-    val queryChildren =
-        nodes.map { n ->
-            val res = mustSatisfy(n)
-            res.stringRepresentation = "Starting at $n: " + res.stringRepresentation
-            if (n is Node) {
-                res.node = n
-            }
-            res
-        }
+    val queryChildren = evaluateExtended(sel, mustSatisfy)
     return QueryTree(queryChildren.any { it.value }, queryChildren.toMutableList(), "exists", this)
 }
 
@@ -199,105 +201,6 @@ fun max(n: Node?, eval: ValueEvaluator = MultiValueEvaluator()): QueryTree<Numbe
     return QueryTree((evalRes as? NumberSet)?.max() ?: -1, mutableListOf(), "max($n)", n)
 }
 
-/** Checks if a data flow is possible between the nodes [from] as a source and [to] as sink. */
-fun dataFlow(
-    from: Node,
-    to: Node,
-    collectFailedPaths: Boolean = true,
-    findAllPossiblePaths: Boolean = true,
-    useIndexStack: Boolean = true,
-): QueryTree<Boolean> {
-    val evalRes =
-        from.followNextDFGEdgesUntilHit(
-            collectFailedPaths = collectFailedPaths,
-            findAllPossiblePaths = findAllPossiblePaths,
-            useIndexStack = useIndexStack,
-        ) {
-            it == to
-        }
-    val allPaths = evalRes.fulfilled.map { QueryTree(it) }.toMutableList()
-    if (collectFailedPaths) allPaths.addAll(evalRes.failed.map { QueryTree(it) })
-    return QueryTree(
-        evalRes.fulfilled.isNotEmpty(),
-        allPaths.toMutableList(),
-        "data flow from $from to $to",
-        from,
-    )
-}
-
-/**
- * Checks if a data flow is possible between the nodes [from] as a source and a node fulfilling
- * [predicate].
- */
-fun dataFlow(
-    from: Node,
-    predicate: (Node) -> Boolean,
-    collectFailedPaths: Boolean = true,
-    findAllPossiblePaths: Boolean = true,
-    useIndexStack: Boolean = true,
-): QueryTree<Boolean> {
-    val evalRes =
-        from.followNextDFGEdgesUntilHit(
-            collectFailedPaths = collectFailedPaths,
-            findAllPossiblePaths = findAllPossiblePaths,
-            useIndexStack = useIndexStack,
-            predicate = predicate,
-        )
-    val allPaths = evalRes.fulfilled.map { QueryTree(it) }.toMutableList()
-    if (collectFailedPaths) allPaths.addAll(evalRes.failed.map { QueryTree(it) })
-    return QueryTree(
-        evalRes.fulfilled.isNotEmpty(),
-        allPaths.toMutableList(),
-        "data flow from $from to ${evalRes.fulfilled.map { it.last() }}",
-        from,
-    )
-}
-
-/** Checks if a path of execution flow is possible between the nodes [from] and [to]. */
-fun executionPath(from: Node, to: Node): QueryTree<Boolean> {
-    val evalRes = from.followNextEOGEdgesUntilHit { it == to }
-    val allPaths = evalRes.fulfilled.map { QueryTree(it) }.toMutableList()
-    allPaths.addAll(evalRes.failed.map { QueryTree(it) })
-    return QueryTree(
-        evalRes.fulfilled.isNotEmpty(),
-        allPaths.toMutableList(),
-        "executionPath($from, $to)",
-        from,
-    )
-}
-
-/**
- * Checks if a path of execution flow is possible starting at the node [from] and fulfilling the
- * requirement specified in [predicate].
- */
-fun executionPath(from: Node, predicate: (Node) -> Boolean): QueryTree<Boolean> {
-    val evalRes = from.followNextEOGEdgesUntilHit(predicate = predicate)
-    val allPaths = evalRes.fulfilled.map { QueryTree(it) }.toMutableList()
-    allPaths.addAll(evalRes.failed.map { QueryTree(it) })
-    return QueryTree(
-        evalRes.fulfilled.isNotEmpty(),
-        allPaths.toMutableList(),
-        "executionPath($from, $predicate)",
-        from,
-    )
-}
-
-/**
- * Checks if a path of execution flow is possible ending at the node [to] and fulfilling the
- * requirement specified in [predicate].
- */
-fun executionPathBackwards(to: Node, predicate: (Node) -> Boolean): QueryTree<Boolean> {
-    val evalRes = to.followPrevEOGEdgesUntilHit(predicate = predicate)
-    val allPaths = evalRes.fulfilled.map { QueryTree(it) }.toMutableList()
-    allPaths.addAll(evalRes.failed.map { QueryTree(it) })
-    return QueryTree(
-        evalRes.fulfilled.isNotEmpty(),
-        allPaths.toMutableList(),
-        "executionPathBackwards($to, $predicate)",
-        to,
-    )
-}
-
 /** Calls [ValueEvaluator.evaluate] for this expression, thus trying to resolve a constant value. */
 operator fun Expression?.invoke(): QueryTree<Any?> {
     return QueryTree(this?.evaluate(), mutableListOf(QueryTree(this)), node = this)
@@ -376,68 +279,3 @@ val Expression.intValue: QueryTree<Int>?
         val evalRes = evaluate() as? Int ?: return null
         return QueryTree(evalRes, mutableListOf(), "$this", this)
     }
-
-/**
- * Does some magic to identify if the value which is in [from] also reaches [to]. To do so, it goes
- * some data flow steps backwards in the graph (ideally to find the last assignment) and then
- * follows this value to the node [to].
- */
-fun allNonLiteralsFromFlowTo(from: Node, to: Node, allPaths: List<List<Node>>): QueryTree<Boolean> {
-    return when (from) {
-        is CallExpression -> {
-            val prevEdges =
-                from.prevDFG
-                    .fold(mutableListOf<Node>()) { l, e ->
-                        if (e !is Literal<*>) {
-                            l.add(e)
-                        }
-                        l
-                    }
-                    .toMutableSet()
-            prevEdges.addAll(from.arguments)
-            // For a call, we collect the incoming data flows (typically only the arguments)
-            val prevQTs = prevEdges.map { allNonLiteralsFromFlowTo(it, to, allPaths) }
-            QueryTree(prevQTs.all { it.value }, prevQTs.toMutableList(), node = from)
-        }
-        is Literal<*> ->
-            QueryTree(
-                true,
-                mutableListOf(QueryTree(from)),
-                "DF Irrelevant for Literal node",
-                node = from,
-            )
-        else -> {
-            // We go one step back to see if that one goes into to but also check that no assignment
-            // to from happens in the paths between from and to
-            val prevQTs = from.prevFullDFG.map { dataFlow(it, to) }.toMutableSet()
-            // The base flows into a MemberExpression, but we don't care about such a partial
-            // flow and are only interested in the prevDFG setting the field (if it exists). So, if
-            // there are multiple edges, we filter out partial edges.
-
-            val noAssignmentToFrom =
-                allPaths.none {
-                    it.any { it2 ->
-                        if (it2 is AssignmentHolder) {
-                            it2.assignments.any { assign ->
-                                val prevMemberFromExpr = (from as? MemberExpression)?.prevDFG
-                                val nextMemberToExpr = (assign.target as? MemberExpression)?.nextDFG
-                                assign.target == from ||
-                                    prevMemberFromExpr != null &&
-                                        nextMemberToExpr != null &&
-                                        prevMemberFromExpr.any { it3 ->
-                                            nextMemberToExpr.contains(it3)
-                                        }
-                            }
-                        } else {
-                            false
-                        }
-                    }
-                }
-            QueryTree(
-                prevQTs.all { it.value } && noAssignmentToFrom,
-                prevQTs.toMutableList(),
-                node = from,
-            )
-        }
-    }
-}
