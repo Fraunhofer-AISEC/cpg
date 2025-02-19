@@ -67,11 +67,7 @@ import kotlin.collections.forEach
 fun Pass<*>.tryNamespaceInference(name: Name, source: Node): NamespaceDeclaration? {
     // Determine the scope where we want to start our inference
     val extractedScope =
-        scopeManager.extractScope(
-            name,
-            language = source.language,
-            location = source.location,
-        )
+        scopeManager.extractScope(name, language = source.language, location = source.location)
     var scope = extractedScope?.scope
 
     if (scope !is NameScope) {
@@ -417,9 +413,7 @@ internal fun Pass<*>.tryMethodInference(
     // other type declarations are already inferred by the type resolver at this stage.
     if (records.isEmpty()) {
         records =
-            listOfNotNull(
-                tryRecordInference(bestGuess?.root ?: call.unknownType(), source = call)
-            )
+            listOfNotNull(tryRecordInference(bestGuess?.root ?: call.unknownType(), source = call))
     }
     records = records.distinct()
 
