@@ -66,7 +66,12 @@ import kotlin.collections.forEach
  */
 fun Pass<*>.tryNamespaceInference(name: Name, locationHint: Node?): NamespaceDeclaration? {
     // Determine the scope where we want to start our inference
-    val extractedScope = scopeManager.extractScope(name, location = locationHint?.location)
+    val extractedScope =
+        scopeManager.extractScope(
+            name,
+            language = locationHint?.language,
+            location = locationHint?.location,
+        )
     var scope = extractedScope?.scope
 
     if (scope !is NameScope) {
@@ -103,7 +108,12 @@ internal fun Pass<*>.tryRecordInference(
         }
     // Determine the scope where we want to start our inference
     val extractedScope =
-        scopeManager.extractScope(type.name, location = locationHint?.location, scope = type.scope)
+        scopeManager.extractScope(
+            type.name,
+            language = locationHint?.language,
+            location = locationHint?.location,
+            scope = type.scope,
+        )
     var scope = extractedScope?.scope
 
     if (scope !is NameScope) {
