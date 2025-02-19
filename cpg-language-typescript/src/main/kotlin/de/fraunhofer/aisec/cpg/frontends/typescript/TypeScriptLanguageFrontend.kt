@@ -43,7 +43,6 @@ import java.io.File.createTempFile
 import java.io.FileReader
 import java.io.LineNumberReader
 import java.nio.file.Files
-import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 
 /**
@@ -236,7 +235,6 @@ class TypeScriptLanguageFrontend(
             newAnnotation(name, rawNode = node)
         }
     }
-
 }
 
 class Location(var file: String, var pos: Int, var end: Int)
