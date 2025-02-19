@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.concepts
 
+import de.fraunhofer.aisec.cpg.analysis.MultiValueEvaluator
 import de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.LoadLibrary
@@ -85,5 +86,11 @@ class DynamicLoadingTest {
             dlSym.operationNodes.filterIsInstance<LoadSymbol<FunctionDeclaration>>().singleOrNull()
         assertNotNull(loadSymbol)
         assertEquals(myFunc, loadSymbol.what)
+
+        val c = result.refs["c"]
+        assertNotNull(c)
+
+        val values = c.evaluate(MultiValueEvaluator())
+        assertEquals(setOf("{dlsym}", 2), values)
     }
 }

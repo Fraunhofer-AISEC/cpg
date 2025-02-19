@@ -36,11 +36,15 @@ import de.fraunhofer.aisec.cpg.graph.concepts.memory.LoadLibrary
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.LoadSymbol
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.evaluate
 import de.fraunhofer.aisec.cpg.graph.followPrevDFG
 import de.fraunhofer.aisec.cpg.graph.operationNodes
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.translationResult
+import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass
 import de.fraunhofer.aisec.cpg.passes.DynamicInvokeResolver
@@ -73,7 +77,7 @@ class CXXDynamicLoadingPass(ctx: TranslationContext) : TranslationUnitPass(ctx) 
     private fun handleCallExpression(call: CallExpression, tu: TranslationUnitDeclaration) {
         val concept = getConceptOrCreate<DynamicLoading>(tu)
 
-        val op =
+        val ops =
             when (call.name.toString()) {
                 "dlopen" -> {
                     handleLibraryLoad(call, concept)
@@ -86,7 +90,7 @@ class CXXDynamicLoadingPass(ctx: TranslationContext) : TranslationUnitPass(ctx) 
                 }
             }
 
-        concept.ops += op
+        concept.ops += ops
     }
 
     /**
@@ -98,7 +102,7 @@ class CXXDynamicLoadingPass(ctx: TranslationContext) : TranslationUnitPass(ctx) 
     private fun handleLoadFunction(
         call: CallExpression,
         concept: DynamicLoading,
-    ): LoadSymbol<FunctionDeclaration> {
+    ): List<LoadSymbol<out ValueDeclaration>> {
         // The first argument is the handle to the library. We can follow the DFG back to find the
         // call to dlopen.
         val path =
@@ -110,23 +114,35 @@ class CXXDynamicLoadingPass(ctx: TranslationContext) : TranslationUnitPass(ctx) 
             path?.lastOrNull()?.operationNodes?.filterIsInstance<LoadLibrary>()?.singleOrNull()
 
         val symbolName = call.arguments.getOrNull(1)?.evaluate() as? String
-        val candidates = loadLibrary?.findSymbol(symbolName)
+        var candidates = loadLibrary?.findSymbol(symbolName)
 
-        val op =
-            LoadSymbol(
-                underlyingNode = call,
-                concept = concept as Concept<DynamicLoadingOperation<FunctionDeclaration>>,
-                what = candidates?.singleOrNull() as FunctionDeclaration?,
-                loader = loadLibrary,
-            )
+        // We need to create one operation for each nextDFG (hopefully there is only one). This
+        // helps us to determine the type of the operation.
+        return call.nextFullDFG.filterIsInstance<Expression>().mapNotNull { assignee ->
+            val op =
+                if (assignee.type is FunctionPointerType) {
+                    candidates = candidates?.filterIsInstance<FunctionDeclaration>()
+                    LoadSymbol(
+                        underlyingNode = call,
+                        concept = concept as Concept<DynamicLoadingOperation<FunctionDeclaration>>,
+                        what = candidates?.singleOrNull(),
+                        loader = loadLibrary,
+                    )
+                } else {
+                    candidates = candidates?.filterIsInstance<VariableDeclaration>()
+                    LoadSymbol(
+                        underlyingNode = call,
+                        concept = concept as Concept<DynamicLoadingOperation<VariableDeclaration>>,
+                        what = candidates?.singleOrNull(),
+                        loader = loadLibrary,
+                    )
+                }
 
-        // We can help the dynamic invoke resolver by adding a DFG path from the function
-        // declaration to the assignment of our call (which is the next DFG)
-        call.nextFullDFG.forEach { assignee ->
+            // We can help the dynamic invoke resolver by adding a DFG path from the function
+            // declaration to the assignment of our call (which is the next DFG)
             candidates?.forEach { candidate -> assignee.prevDFG += candidate }
+            op
         }
-
-        return op
     }
 
     /**
@@ -135,7 +151,10 @@ class CXXDynamicLoadingPass(ctx: TranslationContext) : TranslationUnitPass(ctx) 
      * represents the [LoadLibrary.what].
      */
     @Suppress("UNCHECKED_CAST")
-    private fun handleLibraryLoad(call: CallExpression, concept: DynamicLoading): LoadLibrary {
+    private fun handleLibraryLoad(
+        call: CallExpression,
+        concept: DynamicLoading,
+    ): List<LoadLibrary> {
         // The first argument of dlopen is the path to the library. We can try to evaluate the
         // argument to check if it's a constant string.
         val path = call.arguments.getOrNull(0)?.evaluate() as? String
@@ -156,7 +175,7 @@ class CXXDynamicLoadingPass(ctx: TranslationContext) : TranslationUnitPass(ctx) 
                 what = component,
             )
 
-        return op
+        return listOf(op)
     }
 
     fun TranslationResult.findComponentForLibrary(libraryName: String): Component? {
