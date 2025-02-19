@@ -3,10 +3,13 @@
 int main() {
     void* lib = dlopen("libexample.so", RTLD_LAZY);
 
-    int (*myfunc)(int);
+    int (*b)(int);
 
-    myfunc = dlsym(lib, "myfunc");
-    int a = myfunc(1);
+    // does not work yet because of wrong DFG edges
+    //*(void **) (&b) = dlsym(lib, "myfunc");
+    // but the following works and is also a valid syntax
+    b = dlsym(lib, "myfunc");
+    int a = b(1);
 
     dlclose(lib);
 }

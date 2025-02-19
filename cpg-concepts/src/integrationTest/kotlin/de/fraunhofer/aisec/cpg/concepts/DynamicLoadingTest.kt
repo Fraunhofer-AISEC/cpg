@@ -74,9 +74,9 @@ class DynamicLoadingTest {
         assertNotNull(loadLibrary)
         assertEquals(libExample, loadLibrary.what)
 
-        val myFuncCall = result.calls["myfunc"]
-        assertNotNull(myFuncCall)
-        assertInvokes(myFuncCall, myFunc)
+        val bCall = result.calls["b"]
+        assertNotNull(bCall)
+        assertInvokes(bCall, myFunc)
 
         val dlSym = result.calls["dlsym"]
         assertNotNull(dlSym)
