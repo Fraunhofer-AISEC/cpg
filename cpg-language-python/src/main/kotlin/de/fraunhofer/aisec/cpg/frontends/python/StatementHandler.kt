@@ -41,7 +41,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.TryStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.Util
-import java.io.File
 import kotlin.collections.plusAssign
 
 class StatementHandler(frontend: PythonLanguageFrontend) :
@@ -540,7 +539,6 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 }
 
             addExternallyImportedToAnalysis(decl.name)
-            log.info("Importing with Name: " + imp.name)
             frontend.scopeManager.addDeclaration(decl)
             declStmt.declarationEdges += decl
         }
@@ -587,7 +585,6 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 if (imp.name == "*") {
                     // In the wildcard case, our "import" is the module name, and we set "wildcard"
                     // to true
-                    log.info("Importing wildcard from module: " + module)
                     addExternallyImportedToAnalysis(module)
                     newImportDeclaration(
                         module,
@@ -600,7 +597,6 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     val name = module.fqn(imp.name)
                     val alias = imp.asname
                     addExternallyImportedToAnalysis(name)
-                    log.info("Importing specific based on module: " + name)
                     if (alias != null) {
                         newImportDeclaration(
                             name,
@@ -626,8 +622,6 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
     private fun addExternallyImportedToAnalysis(importName: Name) {
         ctx?.let { ctx ->
-            // Todo add all files according to our import name, from externalSources to
-            // importedSources
             var currentName = importName
             while (currentName.isNotEmpty()) {
                 var importPath = currentName.toString().replace(language.namespaceDelimiter, "/")
@@ -637,38 +631,18 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     // Includes a file in the analysis, if it has the root path and
                     ctx.externalSources
                         .firstOrNull {
-                            it.relativeTo(Util.getRootPath(it, ctx.config.includePaths).toFile())
-                                .path == importPath + language.namespaceDelimiter + fileExtension
-                        }
-                        ?.let {
-                            ctx.importedSources += it
-                            // Todo potentially remove the name from some global list to reduce time
-                        }
-
-                    if (File(importPath).isDirectory) {
-
-                        // TOdo, then find __init__.py
-
-                        ctx.externalSources
-                            .firstOrNull {
+                            val relPath =
                                 it.relativeTo(
                                         Util.getRootPath(it, ctx.config.includePaths).toFile()
                                     )
-                                    .path ==
-                                    importPath +
-                                        "/" +
-                                        PythonLanguage.IDENTIFIER_INIT +
-                                        language.namespaceDelimiter +
-                                        fileExtension
-                            }
-                            ?.let {
-                                ctx.importedSources += it
-                                // Todo potentially remove the name from some global list to reduce
-                                // time
-                            }
-                    }
+                                    .path
+                            val ending = "." + fileExtension
+                            relPath == importPath + ending ||
+                                relPath ==
+                                    importPath + "/" + PythonLanguage.IDENTIFIER_INIT + ending
+                        }
+                        ?.let { ctx.importedSources += it }
                 }
-
                 currentName = currentName.parent ?: Name("")
             }
         }
