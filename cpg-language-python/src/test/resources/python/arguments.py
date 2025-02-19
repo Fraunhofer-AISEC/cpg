@@ -1,30 +1,23 @@
 def pos_only_and_args(a, b, /, c):
     pass
 
-
 def test_varargs(*args):
     pass
-
 
 def kwd_only_arg(*, arg):
     pass
 
-
 def kw_defaults(b=1, *, c=2, d, e=3):
     pass
-
 
 def kw_args(**kwargs):
     pass
 
-
-def kwArgsAndDefault(a, b=False, **kwargs):
+def kw_args_and_default(a, b=False, **kwargs):
     pass
-
 
 def defaults(b=1, c=2, *d, e):
     pass
-
 
 class MyClass:
     def my_method(self=5, d=3, e=1):
@@ -34,13 +27,13 @@ class MyClass:
         pass
 
     def call(self, a):
-        kwArgsAndDefault(a)
+        kw_args_and_default(a)
 
-    def call2(self, a, b):
-        kwArgsAndDefault(a, True)
+    def call2(self, a):
+        kw_args_and_default(a, True)
 
     def call3(self, a):
-        kwArgsAndDefault(a, foo=1, bar=2, baz=3)
+        kw_args_and_default(a, foo=1, bar=2, baz=3)
 
     def call4(self, a, b):
-        kwArgsAndDefault(a, True, foo=1, bar=2, baz=3)
+        kw_args_and_default(a, True, foo=1, bar=2, baz=3)

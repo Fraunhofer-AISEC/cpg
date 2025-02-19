@@ -198,7 +198,34 @@ class ArgumentsHandlerTest {
 
     @Test
     fun testSignatureMatch() {
-        val func = result.functions["call"]
-        assertNotNull(func)
+        val func = result.functions["kw_args_and_default"]
+        val funcDefault = func.parameters[1]
+        val funcKwargs = func.parameters[2]
+
+        val call = result.methods["call"]?.calls?.firstOrNull()
+        assertNotNull(call)
+
+        val call2 = result.methods["call2"]?.calls?.firstOrNull()
+        assertNotNull(call2)
+        assertContains(call2.invokes, func)
+        assertEquals(2, call2.arguments.size)
+
+        val defaultArg2 = call2.arguments[1]
+        assertContains(defaultArg2.nextDFG, funcDefault)
+
+        val call3 = result.methods["call3"]?.calls?.firstOrNull()
+        assertNotNull(call3)
+
+        listOf("foo", "bar", "baz").forEach { argName ->
+            val arg = call3.argumentEdges.find { it.name == argName }?.end
+            assertNotNull(arg)
+            assertContains(arg.nextDFG, funcKwargs)
+        }
+
+        val call4 = result.methods["call4"]?.calls?.firstOrNull()
+        assertNotNull(call4)
+        val defaultArg4 = call4.arguments[1]
+        assertNotNull(defaultArg4)
+        assertContains(defaultArg4.nextDFG, funcDefault)
     }
 }
