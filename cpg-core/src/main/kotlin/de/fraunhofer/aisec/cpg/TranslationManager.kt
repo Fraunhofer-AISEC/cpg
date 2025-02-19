@@ -157,8 +157,6 @@ private constructor(
             // Every Component needs to reprocess the sources
             var sourceLocations: List<File> = ctx.config.softwareComponents[sc] ?: listOf()
 
-            // Todo Here we need to dispatch to the correct frontend to do preproccessing
-
             val list =
                 sourceLocations.flatMap { file ->
                     if (file.isDirectory) {
@@ -263,8 +261,9 @@ private constructor(
         }
         ctx.externalSources
             .firstOrNull {
-                it.relativeTo(Util.getRootPath(it, ctx.config.includePaths).toFile()).path ==
-                    "__init__.pyi"
+                it.language?.isBuiltinsFile(
+                    it.relativeTo(Util.getRootPath(it, ctx.config.includePaths).toFile())
+                ) ?: false
             }
             ?.let { ctx.importedSources.add(it) }
 

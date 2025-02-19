@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.jvm
 
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.types.*
+import java.io.File
 import kotlin.reflect.KClass
 
 class JVMLanguage : Language<JVMLanguageFrontend>() {
@@ -56,4 +57,8 @@ class JVMLanguage : Language<JVMLanguageFrontend>() {
 
     override val compoundAssignmentOperators: Set<String>
         get() = setOf()
+
+    override fun isBuiltinsFile(file: File): Boolean {
+        return false
+    }
 }

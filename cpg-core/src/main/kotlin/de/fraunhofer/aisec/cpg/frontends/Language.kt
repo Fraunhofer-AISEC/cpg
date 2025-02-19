@@ -388,6 +388,8 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
             ref.candidates.singleOrNull()
         }
     }
+
+    abstract fun isBuiltinsFile(file: File): Boolean
 }
 
 /**
@@ -412,6 +414,12 @@ object UnknownLanguage : Language<Nothing>() {
     override val frontend: KClass<out Nothing> = Nothing::class
     override val builtInTypes: Map<String, Type> = mapOf()
     override val compoundAssignmentOperators: Set<String> = setOf()
+
+    override fun isBuiltinsFile(file: File): Boolean {
+        // Here we don't know if the file contains builtins, but it is irrelevant as we cant analyze
+        // it
+        return false
+    }
 }
 
 /**
@@ -423,6 +431,10 @@ object NoLanguage : Language<Nothing>() {
     override val frontend: KClass<out Nothing> = Nothing::class
     override val builtInTypes: Map<String, Type> = mapOf()
     override val compoundAssignmentOperators: Set<String> = setOf()
+
+    override fun isBuiltinsFile(file: File): Boolean {
+        return false
+    }
 }
 
 /**
@@ -435,6 +447,10 @@ class MultipleLanguages(val languages: Set<Language<*>>) : Language<Nothing>() {
     override val frontend: KClass<out Nothing> = Nothing::class
     override val builtInTypes: Map<String, Type> = mapOf()
     override val compoundAssignmentOperators: Set<String> = setOf()
+
+    override fun isBuiltinsFile(file: File): Boolean {
+        return languages.any { it.isBuiltinsFile(file) }
+    }
 }
 
 /**

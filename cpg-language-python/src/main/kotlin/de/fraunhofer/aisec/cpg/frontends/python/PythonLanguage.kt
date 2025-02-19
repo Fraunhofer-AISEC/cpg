@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation
+import java.io.File
 import kotlin.reflect.KClass
 import org.neo4j.ogm.annotation.Transient
 
@@ -226,6 +227,12 @@ class PythonLanguage :
         }
 
         return super.tryCast(type, targetType, hint, targetHint)
+    }
+
+    override fun isBuiltinsFile(file: File): Boolean {
+        return fileExtensions.any {
+            file.path == IDENTIFIER_INIT + language.namespaceDelimiter + it
+        }
     }
 
     companion object {

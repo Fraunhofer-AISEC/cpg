@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.types.*
+import java.io.File
 import kotlin.reflect.KClass
 
 /** The Ruby Language */
@@ -81,5 +82,9 @@ class RubyLanguage() :
         scopeManager: ScopeManager,
     ): Boolean {
         TODO("Not yet implemented")
+    }
+
+    override fun isBuiltinsFile(file: File): Boolean {
+        return false
     }
 }
