@@ -38,6 +38,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
 import de.fraunhofer.aisec.cpg.graph.evaluate
 import de.fraunhofer.aisec.cpg.graph.followPrevDFG
 import de.fraunhofer.aisec.cpg.graph.operationNodes
@@ -118,7 +119,7 @@ class CXXDynamicLoadingPass(ctx: TranslationContext) : TranslationUnitPass(ctx) 
 
         // We need to create one operation for each nextDFG (hopefully there is only one). This
         // helps us to determine the type of the operation.
-        return call.nextFullDFG.filterIsInstance<Expression>().mapNotNull { assignee ->
+        return call.nextFullDFG.filterIsInstance<Expression>().map { assignee ->
             val op =
                 if (assignee.type is FunctionPointerType) {
                     candidates = candidates?.filterIsInstance<FunctionDeclaration>()
@@ -138,9 +139,11 @@ class CXXDynamicLoadingPass(ctx: TranslationContext) : TranslationUnitPass(ctx) 
                     )
                 }
 
-            // We can help the dynamic invoke resolver by adding a DFG path from the function
-            // declaration to the assignment of our call (which is the next DFG)
-            candidates?.forEach { candidate -> assignee.prevDFG += candidate }
+            // We can help the dynamic invoke resolver by adding a DFG path from the declaration to
+            // the "return value" of dlsym
+            candidates?.forEach {
+                call.prevDFGEdges.addContextSensitive(it, callingContext = CallingContextOut(call))
+            }
             op
         }
     }

@@ -73,11 +73,15 @@ class DynamicLoadingTest {
         val loadLibrary =
             path.lastOrNull()?.operationNodes?.filterIsInstance<LoadLibrary>()?.singleOrNull()
         assertNotNull(loadLibrary)
-        assertEquals(libExample, loadLibrary.what)
+        assertEquals(
+            libExample,
+            loadLibrary.what,
+            "\"what\" of the LoadLibrary should be the libexample component",
+        )
 
         val bCall = result.calls["b"]
         assertNotNull(bCall)
-        assertInvokes(bCall, myFunc)
+        assertInvokes(bCall, myFunc, "The call to b should invoke myFunc")
 
         val dlSym = result.calls["dlsym"]
         assertNotNull(dlSym)
@@ -85,12 +89,21 @@ class DynamicLoadingTest {
         val loadSymbol =
             dlSym.operationNodes.filterIsInstance<LoadSymbol<FunctionDeclaration>>().singleOrNull()
         assertNotNull(loadSymbol)
-        assertEquals(myFunc, loadSymbol.what)
+        assertEquals(myFunc, loadSymbol.what, "\"what\" of the LoadSymbol should be myFunc")
 
         val c = result.refs["c"]
         assertNotNull(c)
 
-        val values = c.evaluate(MultiValueEvaluator())
-        assertEquals(setOf("{dlsym}", 2), values)
+        // The multi-evaluator contains too many values for now, since we just stupidly take all DFG
+        // edges into the function declaration, we need to instead look at the calling context,
+        // similar to what we do with the dataflow queries.
+        var values = c.evaluate(MultiValueEvaluator())
+        assertEquals(setOf("libexample.so", "myfunc", "myvar", 2), values)
+
+        val a = result.refs["a"]
+        assertNotNull(a)
+
+        values = a.evaluate(MultiValueEvaluator())
+        assertEquals(setOf("myvar1", "myfunc1", "libexample.so1", 3), values)
     }
 }

@@ -17,7 +17,7 @@ int main() {
     //*(void **) (&b) = dlsym(lib, "myfunc");
     // but the following works and is also a valid syntax
     b = dlsym(lib, "myfunc");
-    c = dlsym(lib, "myvar");
+    c = dlsym(lib, "myvar"); // c = 2
 
     int a = b(*c);
 
