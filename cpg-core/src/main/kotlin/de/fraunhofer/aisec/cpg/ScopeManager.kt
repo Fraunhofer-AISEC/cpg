@@ -543,7 +543,7 @@ class ScopeManager : ScopeProvider {
      */
     fun extractScope(
         name: Name,
-        language: Language<*>? = null,
+        language: Language<*>,
         location: PhysicalLocation? = null,
         scope: Scope? = currentScope,
     ): ScopeExtraction? {
@@ -672,7 +672,7 @@ class ScopeManager : ScopeProvider {
      *
      * @return the declaration, or null if it does not exist
      */
-    fun getRecordForName(name: Name, language: Language<*>?): RecordDeclaration? {
+    fun getRecordForName(name: Name, language: Language<*>): RecordDeclaration? {
         return lookupSymbolByName(name, language)
             .filterIsInstance<RecordDeclaration>()
             .singleOrNull()
@@ -782,7 +782,7 @@ class ScopeManager : ScopeProvider {
      */
     fun lookupSymbolByName(
         name: Name,
-        language: Language<*>?,
+        language: Language<*>,
         location: PhysicalLocation? = null,
         startScope: Scope? = currentScope,
         predicate: ((Declaration) -> Boolean)? = null,
@@ -846,7 +846,7 @@ class ScopeManager : ScopeProvider {
      */
     fun lookupTypeSymbolByName(
         name: Name,
-        language: Language<*>?,
+        language: Language<*>,
         startScope: Scope?,
     ): DeclaresType? {
         var symbols =
