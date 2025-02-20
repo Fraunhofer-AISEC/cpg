@@ -521,23 +521,34 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         val declStmt = newDeclarationStatement(rawNode = node)
         for (imp in node.names) {
             val alias = imp.asname
-            val decl =
-                if (alias != null) {
+            if (alias != null) {
+                // If we have an alias, we import the package with the alias and do NOT import the
+                // parent packages
+                val decl =
                     newImportDeclaration(
                         parseName(imp.name),
                         style = ImportStyle.IMPORT_NAMESPACE,
                         parseName(alias),
                         rawNode = imp,
                     )
-                } else {
-                    newImportDeclaration(
-                        parseName(imp.name),
-                        style = ImportStyle.IMPORT_NAMESPACE,
-                        rawNode = imp,
-                    )
+                frontend.scopeManager.addDeclaration(decl)
+                declStmt.declarationEdges += decl
+            } else {
+                // If we do not have an alias, we import all the packages along the path - unless we
+                // already have an import for the package in the scope
+                var importName: Name? = parseName(imp.name)
+                while (importName != null) {
+                    val decl =
+                        newImportDeclaration(
+                            importName,
+                            style = ImportStyle.IMPORT_NAMESPACE,
+                            rawNode = imp,
+                        )
+                    frontend.scopeManager.addDeclaration(decl)
+                    declStmt.declarationEdges += decl
+                    importName = importName.parent
                 }
-            frontend.scopeManager.addDeclaration(decl)
-            declStmt.declarationEdges += decl
+            }
         }
         return declStmt
     }
