@@ -13,11 +13,27 @@ def kw_defaults(b=1, *, c=2, d, e=3):
 def kw_args(**kwargs):
     pass
 
+def kw_args_and_default(a, b=False, **kwargs):
+    pass
+
 def defaults(b=1, c=2, *d, e):
     pass
 
 class MyClass:
     def my_method(self=5, d=3, e=1):
         pass
-    def method_with_some_defaults(self, a, b = 1, c = 2):
+
+    def method_with_some_defaults(self, a, b=1, c=2):
         pass
+
+    def call(self, a):
+        kw_args_and_default(a)
+
+    def call2(self, a):
+        kw_args_and_default(a, True)
+
+    def call3(self, a):
+        kw_args_and_default(a, foo=1, bar=2, baz=3)
+
+    def call4(self, a, b):
+        kw_args_and_default(a, True, foo=1, bar=2, baz=3)
