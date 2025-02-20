@@ -27,10 +27,19 @@ package de.fraunhofer.aisec.cpg.graph.concepts.arch
 
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
+import kotlin.reflect.full.isSubclassOf
 
 /** Represents an architecture of an operating system. */
 abstract class OperatingSystemArchitecture(underlyingNode: Node) :
-    Concept(underlyingNode = underlyingNode)
+    Concept(underlyingNode = underlyingNode) {
+    override fun equals(other: Any?): Boolean {
+        return other != null && other::class.isSubclassOf(this::class)
+    }
+
+    override fun hashCode(): Int {
+        return 31 + this::class.hashCode()
+    }
+}
 
 /** Represents a Win32 architecture, commonly found on Windows systems. */
 class Win32(underlyingNode: Node) : OperatingSystemArchitecture(underlyingNode = underlyingNode)
