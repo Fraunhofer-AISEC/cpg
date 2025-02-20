@@ -772,7 +772,7 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
                 ) {
                     it.typeName
                 } + type.typeName
-            type = FunctionType(name, paramTypes, listOf(type), language)
+            type = functionType(name, paramTypes, listOf(type), language)
         }
 
         // Lastly, there might be further nested declarators that adjust the type further.

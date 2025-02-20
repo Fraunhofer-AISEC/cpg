@@ -660,112 +660,81 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
             }
+        with(tu) {
+            val recordDeclaration = tu.records.firstOrNull()
+            assertNotNull(recordDeclaration)
+            assertLocalName("SomeClass", recordDeclaration)
+            assertEquals("class", recordDeclaration.kind)
+            assertEquals(2, recordDeclaration.fields.size)
 
-        val recordDeclaration = tu.records.firstOrNull()
-        assertNotNull(recordDeclaration)
-        assertLocalName("SomeClass", recordDeclaration)
-        assertEquals("class", recordDeclaration.kind)
-        assertEquals(2, recordDeclaration.fields.size)
+            val field = recordDeclaration.fields["field"]
+            assertNotNull(field)
 
-        val field = recordDeclaration.fields["field"]
-        assertNotNull(field)
+            val constant = recordDeclaration.fields["CONSTANT"]
+            assertNotNull(constant)
+            assertEquals(tu.incompleteType().reference(POINTER), field.type)
+            assertEquals(4, recordDeclaration.methods.size)
 
-        val constant = recordDeclaration.fields["CONSTANT"]
-        assertNotNull(constant)
-        assertEquals(tu.incompleteType().reference(POINTER), field.type)
-        assertEquals(4, recordDeclaration.methods.size)
+            val method = recordDeclaration.methods[0]
+            assertLocalName("method", method)
+            assertEquals(0, method.parameters.size)
+            assertEquals("()void*", method.type.typeName)
+            assertFalse(method.hasBody())
 
-        val method = recordDeclaration.methods[0]
-        assertLocalName("method", method)
-        assertEquals(0, method.parameters.size)
-        assertEquals("()void*", method.type.typeName)
-        assertFalse(method.hasBody())
+            var definition = method.definition as? MethodDeclaration
+            assertNotNull(definition)
+            assertLocalName("method", definition)
+            assertEquals(0, definition.parameters.size)
+            assertTrue(definition.isDefinition)
 
-        var definition = method.definition as? MethodDeclaration
-        assertNotNull(definition)
-        assertLocalName("method", definition)
-        assertEquals(0, definition.parameters.size)
-        assertTrue(definition.isDefinition)
+            val methodWithParam = recordDeclaration.methods[1]
+            assertLocalName("method", methodWithParam)
+            assertEquals(1, methodWithParam.parameters.size)
+            assertEquals(tu.primitiveType("int"), methodWithParam.parameters[0].type)
+            assertFullName("(int)void*", methodWithParam.type)
+            assertFalse(methodWithParam.hasBody())
 
-        val methodWithParam = recordDeclaration.methods[1]
-        assertLocalName("method", methodWithParam)
-        assertEquals(1, methodWithParam.parameters.size)
-        assertEquals(tu.primitiveType("int"), methodWithParam.parameters[0].type)
-        assertEquals(
-            FunctionType(
-                "(int)void*",
-                listOf(tu.primitiveType("int")),
-                listOf(tu.incompleteType().reference(POINTER)),
-                CPPLanguage(),
-            ),
-            methodWithParam.type,
-        )
-        assertFalse(methodWithParam.hasBody())
+            definition = methodWithParam.definition as MethodDeclaration
+            assertNotNull(definition)
+            assertLocalName("method", definition)
+            assertEquals(1, definition.parameters.size)
+            assertTrue(definition.isDefinition)
 
-        definition = methodWithParam.definition as MethodDeclaration
-        assertNotNull(definition)
-        assertLocalName("method", definition)
-        assertEquals(1, definition.parameters.size)
-        assertTrue(definition.isDefinition)
+            val inlineMethod = recordDeclaration.methods[2]
+            assertLocalName("inlineMethod", inlineMethod)
+            assertFullName("()void*", inlineMethod.type)
+            assertTrue(inlineMethod.hasBody())
 
-        val inlineMethod = recordDeclaration.methods[2]
-        assertLocalName("inlineMethod", inlineMethod)
-        assertEquals(
-            FunctionType(
-                "()void*",
-                listOf(),
-                listOf(tu.incompleteType().reference(POINTER)),
-                CPPLanguage(),
-            ),
-            inlineMethod.type,
-        )
-        assertTrue(inlineMethod.hasBody())
+            val inlineConstructor = recordDeclaration.constructors[0]
+            assertEquals(recordDeclaration.name.localName, inlineConstructor.name.localName)
+            assertFullName("()SomeClass", inlineConstructor.type)
+            assertTrue(inlineConstructor.hasBody())
 
-        val inlineConstructor = recordDeclaration.constructors[0]
-        assertEquals(recordDeclaration.name.localName, inlineConstructor.name.localName)
-        assertEquals(
-            FunctionType(
-                "()SomeClass",
-                listOf(),
-                listOf(tu.objectType("SomeClass")),
-                CPPLanguage(),
-            ),
-            inlineConstructor.type,
-        )
-        assertTrue(inlineConstructor.hasBody())
+            val constructorDefinition = tu.declarations<ConstructorDeclaration>(3)
+            assertNotNull(constructorDefinition)
+            assertEquals(1, constructorDefinition.parameters.size)
+            assertEquals(tu.primitiveType("int"), constructorDefinition.parameters[0].type)
+            assertFullName("(int)SomeClass", constructorDefinition.type)
+            assertTrue(constructorDefinition.hasBody())
 
-        val constructorDefinition = tu.declarations<ConstructorDeclaration>(3)
-        assertNotNull(constructorDefinition)
-        assertEquals(1, constructorDefinition.parameters.size)
-        assertEquals(tu.primitiveType("int"), constructorDefinition.parameters[0].type)
-        assertEquals(
-            FunctionType(
-                "(int)SomeClass",
-                listOf(tu.primitiveType("int")),
-                listOf(tu.objectType("SomeClass")),
-                CPPLanguage(),
-            ),
-            constructorDefinition.type,
-        )
-        assertTrue(constructorDefinition.hasBody())
+            val constructorDeclaration = recordDeclaration.constructors[1]
+            assertNotNull(constructorDeclaration)
+            assertFalse(constructorDeclaration.isDefinition)
+            assertEquals(constructorDefinition, constructorDeclaration.definition)
 
-        val constructorDeclaration = recordDeclaration.constructors[1]
-        assertNotNull(constructorDeclaration)
-        assertFalse(constructorDeclaration.isDefinition)
-        assertEquals(constructorDefinition, constructorDeclaration.definition)
+            val main = tu.functions["main"]
+            assertNotNull(main)
 
-        val main = tu.functions["main"]
-        assertNotNull(main)
+            val methodCallWithConstant = main.calls("method").getOrNull(1)
+            assertNotNull(methodCallWithConstant)
 
-        val methodCallWithConstant = main.calls("method").getOrNull(1)
-        assertNotNull(methodCallWithConstant)
+            val arg = methodCallWithConstant.arguments[0]
+            assertSame(constant, (arg as Reference).refersTo)
 
-        val arg = methodCallWithConstant.arguments[0]
-        assertSame(constant, (arg as Reference).refersTo)
-
-        val anotherMethod = tu.methods["anotherMethod"]
-        assertNotNull(anotherMethod)
-        assertFullName("OtherClass::anotherMethod", anotherMethod)
+            val anotherMethod = tu.methods["anotherMethod"]
+            assertNotNull(anotherMethod)
+            assertFullName("OtherClass::anotherMethod", anotherMethod)
+        }
     }
 
     @Test

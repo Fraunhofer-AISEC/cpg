@@ -50,8 +50,8 @@ abstract class LanguageFrontend<AstNode, TypeNode>(
 
     /**
      * The translation context, which contains all necessary managers used in this frontend parsing
-     * process. Note, that different contexts could passed to frontends, e.g., in parallel parsing
-     * to supply different managers to different frontends.
+     * process. Note, that different contexts could be passed to frontends, e.g., in parallel
+     * parsing to supply different managers to different frontends.
      */
     final override var ctx: TranslationContext,
 ) :
