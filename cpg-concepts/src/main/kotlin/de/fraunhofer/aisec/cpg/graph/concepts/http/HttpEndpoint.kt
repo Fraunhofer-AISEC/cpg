@@ -50,5 +50,6 @@ enum class HttpMethod {
     DELETE,
 }
 
+/** Base class for operations on an [HttpEndpoint]. */
 abstract class HttpEndpointOperation(underlyingNode: Node, concept: Concept) :
     Operation(underlyingNode, concept)
