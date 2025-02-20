@@ -69,7 +69,7 @@ class TupleDeclarationTest {
                                 newCallExpression(newReference("func")),
                             )
                         scopeManager.addDeclaration(tuple)
-                        tuple.elements.forEach { scopeManager.addDeclaration(it) }
+                        tuple.elements.forEach { scopeManager.addDeclaration(it, addToAST = false) }
 
                         function("main") { body { call("print") { ref("a") } } }
                     }
