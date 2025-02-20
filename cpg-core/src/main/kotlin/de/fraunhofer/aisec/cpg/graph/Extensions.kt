@@ -689,7 +689,6 @@ inline fun Node.followXUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
     continueAfterHit: Boolean = false,
-    context: Context = Context(),
     context: Context = Context(steps = 0),
     earlyTermination: (Node, Context) -> Boolean,
     predicate: (Node) -> Boolean,
