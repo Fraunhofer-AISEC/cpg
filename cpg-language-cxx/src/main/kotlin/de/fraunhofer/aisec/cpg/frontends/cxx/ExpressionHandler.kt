@@ -367,7 +367,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 newPointerDereference(base.name, rawNode = ctx).apply { this.input = base }
             else base,
             unknownType(),
-            /*if (ctx.isPointerDereference) "->" else */ ".",
+            if (ctx.isPointerDereference) "->" else ".",
             rawNode = ctx,
         )
     }

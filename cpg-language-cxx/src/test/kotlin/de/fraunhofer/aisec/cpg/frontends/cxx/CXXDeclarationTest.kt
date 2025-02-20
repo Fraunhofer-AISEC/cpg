@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.OperatorCallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.PointerDereference
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.test.*
 import java.io.File
@@ -270,7 +271,6 @@ class CXXDeclarationTest {
         assertInvokes(binaryOp1, plus.getOrNull(1))
     }
 
-    @Ignore
     @Test
     fun testMemberAccessOperator() {
         val file = File("src/test/resources/cxx/operators/member_access.cpp")
@@ -293,8 +293,8 @@ class CXXDeclarationTest {
         assertNotNull(size)
 
         val p = result.refs["p"]
-        assertNotNull(p)
-        assertEquals(proxy.toType(), p.type)
+        assertIs<PointerDereference>(p)
+        assertEquals(proxy.toType(), p.input.type)
 
         var sizeRef = result.memberExpressions["size"]
         assertNotNull(sizeRef)
@@ -308,7 +308,6 @@ class CXXDeclarationTest {
         assertInvokes(opCall, op)
     }
 
-    @Ignore
     @Test
     fun testCallExpressionOperator() {
         val file = File("src/test/resources/cxx/operators/call_expression.cpp")
@@ -334,8 +333,8 @@ class CXXDeclarationTest {
         assertNotNull(funcFoo)
 
         val p = result.refs["p"]
-        assertNotNull(p)
-        assertEquals(proxy.toType(), p.type)
+        assertIs<PointerDereference>(p)
+        assertEquals(proxy.toType(), p.input.type)
 
         var funcFooRef = result.memberExpressions["foo"]
         assertNotNull(funcFooRef)

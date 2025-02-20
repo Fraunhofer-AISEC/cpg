@@ -49,7 +49,11 @@ class MemberExpression : Reference(), HasOverloadedOperation, ArgumentHolder, Ha
         astEdgeOf<Expression>(
             ProblemExpression("could not parse base expression"),
             onChanged = { old, new ->
-                exchangeTypeObserver(old, new)
+                if (new?.end is PointerDereference) {
+                    exchangeTypeObserver(old, (new.end as? PointerDereference)?.inputEdge?.element)
+                } else {
+                    exchangeTypeObserver(old, new)
+                }
                 updateName()
             },
         )
@@ -98,7 +102,7 @@ class MemberExpression : Reference(), HasOverloadedOperation, ArgumentHolder, Ha
     override fun typeChanged(newType: Type, src: HasType) {
         // We are basically only interested in type changes from our base to update the naming. We
         // need to ignore actual changes to the type because otherwise things go horribly wrong
-        if (src == base) {
+        if (src == ((base as? PointerDereference)?.input ?: base)) {
             updateName()
         } else {
             super.typeChanged(newType, src)
@@ -106,6 +110,7 @@ class MemberExpression : Reference(), HasOverloadedOperation, ArgumentHolder, Ha
     }
 
     private fun updateName() {
-        this.name = base.type.root.name.fqn(name.localName)
+        val baseType = (base as? PointerDereference)?.input?.type ?: base.type
+        this.name = baseType.root.name.fqn(name.localName)
     }
 }
