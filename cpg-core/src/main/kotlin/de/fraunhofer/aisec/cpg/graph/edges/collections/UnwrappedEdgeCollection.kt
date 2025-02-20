@@ -87,9 +87,10 @@ abstract class UnwrappedEdgeCollection<NodeType : Node, EdgeType : Edge<NodeType
         return collection.resetTo(c)
     }
 
-    inner class Iterator(
-        var edgeIterator: MutableIterator<Edge<NodeType>>,
-    ) : MutableIterator<NodeType> {
+    override fun toString() = this.iterator().asSequence().toList().toString()
+
+    inner class Iterator(var edgeIterator: MutableIterator<Edge<NodeType>>) :
+        MutableIterator<NodeType> {
         override fun remove() {
             return edgeIterator.remove()
         }

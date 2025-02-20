@@ -92,7 +92,7 @@ object Util {
         n: Node?,
         cr: Connect = Connect.SUBTREE,
         predicate: ((EvaluationOrder) -> Boolean)? = null,
-        refs: List<Node?>
+        refs: List<Node?>,
     ): Boolean {
         if (n == null) {
             return false
@@ -157,15 +157,15 @@ object Util {
         astNode: AstNode,
         log: Logger,
         format: String?,
-        vararg arguments: Any?
+        vararg arguments: Any?,
     ) {
         log.warn(
             String.format(
                 "%s: %s",
                 PhysicalLocation.locationLink(lang.locationOf(astNode)),
-                format
+                format,
             ),
-            *arguments
+            *arguments,
         )
     }
 
@@ -179,15 +179,15 @@ object Util {
         astNode: AstNode,
         log: Logger,
         format: String?,
-        vararg arguments: Any?
+        vararg arguments: Any?,
     ) {
         log.error(
             String.format(
                 "%s: %s",
                 PhysicalLocation.locationLink(lang.locationOf(astNode)),
-                format
+                format,
             ),
-            *arguments
+            *arguments,
         )
     }
 
@@ -200,11 +200,11 @@ object Util {
         node: Node,
         log: Logger,
         format: String?,
-        vararg arguments: Any?
+        vararg arguments: Any?,
     ) {
         log.warn(
             String.format("%s: %s", PhysicalLocation.locationLink(node.location), format),
-            *arguments
+            *arguments,
         )
     }
 
@@ -217,11 +217,11 @@ object Util {
         location: PhysicalLocation?,
         log: Logger,
         format: String?,
-        vararg arguments: Any?
+        vararg arguments: Any?,
     ) {
         log.warn(
             String.format("%s: %s", PhysicalLocation.locationLink(location), format),
-            *arguments
+            *arguments,
         )
     }
 
@@ -234,11 +234,11 @@ object Util {
         node: Node?,
         log: Logger,
         format: String?,
-        vararg arguments: Any?
+        vararg arguments: Any?,
     ) {
         log.error(
             String.format("%s: %s", PhysicalLocation.locationLink(node?.location), format),
-            *arguments
+            *arguments,
         )
     }
 
@@ -252,11 +252,11 @@ object Util {
         node: Node?,
         log: Logger,
         format: String?,
-        vararg arguments: Any?
+        vararg arguments: Any?,
     ) {
         log.debug(
             String.format("%s: %s", PhysicalLocation.locationLink(node?.location), format),
-            *arguments
+            *arguments,
         )
     }
 
@@ -397,7 +397,7 @@ object Util {
                         // map all the following arguments to this variadic param
                         param.prevDFGEdges.addContextSensitive(
                             arguments[j],
-                            callingContext = CallingContextIn(call)
+                            callingContext = CallingContextIn(call),
                         )
                         j++
                     }
@@ -405,7 +405,7 @@ object Util {
                 } else {
                     param.prevDFGEdges.addContextSensitive(
                         arguments[j],
-                        callingContext = CallingContextIn(call)
+                        callingContext = CallingContextIn(call),
                     )
                 }
             }
@@ -458,7 +458,7 @@ object Util {
     fun addDFGEdgesForMutuallyExclusiveBranchingExpression(
         n: Node,
         branchingExp: Node?,
-        branchingDeclaration: Node?
+        branchingDeclaration: Node?,
     ) {
         var conditionNodes = mutableListOf<Node>()
         if (branchingExp != null) {
@@ -472,16 +472,16 @@ object Util {
 
     enum class Connect {
         NODE,
-        SUBTREE
+        SUBTREE,
     }
 
     enum class Quantifier {
         ANY,
-        ALL
+        ALL,
     }
 
     enum class Edge {
         ENTRIES,
-        EXITS
+        EXITS,
     }
 }

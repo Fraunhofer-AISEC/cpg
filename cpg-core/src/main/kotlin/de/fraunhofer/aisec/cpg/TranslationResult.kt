@@ -25,19 +25,24 @@
  */
 package de.fraunhofer.aisec.cpg
 
+import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.Component
-import de.fraunhofer.aisec.cpg.graph.Name
-import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.frontends.multiLanguage
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.helpers.MeasurementHolder
 import de.fraunhofer.aisec.cpg.helpers.StatisticsHolder
+import de.fraunhofer.aisec.cpg.passes.ImportDependencies
+import de.fraunhofer.aisec.cpg.passes.ImportResolver
 import de.fraunhofer.aisec.cpg.passes.Pass
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
+import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import org.neo4j.ogm.annotation.Relationship
+import org.neo4j.ogm.annotation.Transient
 
 /**
  * The global (intermediate) result of the translation. A [LanguageFrontend] will initially populate
@@ -60,6 +65,14 @@ class TranslationResult(
      * of software.
      */
     val components by unwrapping(TranslationResult::componentEdges)
+
+    /**
+     * The import dependencies of [Component] nodes of this translation result. The preferred way to
+     * access this is via [Strategy.COMPONENTS_LEAST_IMPORTS].
+     */
+    @Transient
+    @PopulatedByPass(ImportResolver::class)
+    var componentDependencies: ImportDependencies<Component>? = null
 
     /**
      * Scratch storage that can be used by passes to store additional information in this result.
@@ -92,6 +105,7 @@ class TranslationResult(
      * @return the list of all translation units.
      */
     @Deprecated(message = "translation units of individual components should be accessed instead")
+    @DoNotPersist
     val translationUnits: List<TranslationUnitDeclaration>
         get() {
             if (components.size == 1) {
@@ -105,8 +119,11 @@ class TranslationResult(
         }
 
     /**
-     * If no component exists, it generates a [Component] called "application" and adds [tu]. If a
-     * component already exists, adds the tu to this component.
+     * Adds the [tu] to the component with the name of [DEFAULT_APPLICATION_NAME]. If no such
+     * component exists, an error is displayed.
+     *
+     * Note: In general, it is better idea to directly add the translation unit to the specific
+     * component.
      *
      * @param tu The translation unit to add.
      */
@@ -115,32 +132,15 @@ class TranslationResult(
         selected and the translation unit should be added there."""
     )
     @Synchronized
-    fun addTranslationUnit(tu: TranslationUnitDeclaration?) {
-        var swc: Component? = null
-        if (components.size == 1) {
-            // Only one component exists, so we take this one
-            swc = components[0]
-        } else if (components.isEmpty()) {
-            // No component exists, so we create the new dummy component.
-            swc = Component()
-            swc.name = Name(APPLICATION_LOCAL_NAME, null, "")
-            components.add(swc)
+    fun addTranslationUnit(tu: TranslationUnitDeclaration) {
+        var application = components[DEFAULT_APPLICATION_NAME]
+        if (application == null) {
+            // No application component exists, but it should be since it is automatically created
+            // by the configuration, so something is wrong
+            log.error("No application component found. This should not happen.")
         } else {
-            // Multiple components exist. As we don't know where to put the tu, we check if we have
-            // the component we created and add it there or create a new one.
-            for (component in components) {
-                if (component.name.localName == APPLICATION_LOCAL_NAME) {
-                    swc = component
-                    break
-                }
-            }
-            if (swc == null) {
-                swc = Component()
-                swc.name = Name(APPLICATION_LOCAL_NAME, null, "")
-                components.add(swc)
-            }
+            application.addTranslationUnit(tu)
         }
-        tu?.let { swc.addTranslationUnit(it) }
     }
 
     /**
@@ -171,8 +171,14 @@ class TranslationResult(
     override val config: TranslationConfiguration
         get() = finalCtx.config
 
+    override var language: Language<*>
+        get() {
+            return multiLanguage()
+        }
+        set(_) {}
+
     companion object {
         const val SOURCE_LOCATIONS_TO_FRONTEND = "sourceLocationsToFrontend"
-        const val APPLICATION_LOCAL_NAME = "application"
+        const val DEFAULT_APPLICATION_NAME = "application"
     }
 }

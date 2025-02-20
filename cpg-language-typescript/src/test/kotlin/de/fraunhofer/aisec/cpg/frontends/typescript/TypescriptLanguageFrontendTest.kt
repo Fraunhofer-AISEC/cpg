@@ -225,7 +225,7 @@ class TypeScriptLanguageFrontendTest {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("component.tsx").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<TypeScriptLanguage>()
             }
@@ -262,7 +262,7 @@ class TypeScriptLanguageFrontendTest {
         assertLocalName("Users", usersComponent)
         assertEquals(1, usersComponent.constructors.size)
         assertEquals(2, usersComponent.methods.size)
-        assertEquals(/*0*/ 2 /* because of dummy nodes */, usersComponent.fields.size)
+        assertEquals(0, usersComponent.fields.size)
 
         val render = usersComponent.methods["render"]
         assertNotNull(render)
@@ -286,7 +286,7 @@ class TypeScriptLanguageFrontendTest {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("function-component.tsx").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<TypeScriptLanguage>()
             }
@@ -311,7 +311,7 @@ class TypeScriptLanguageFrontendTest {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("decorator.ts").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<TypeScriptLanguage>()
             }
@@ -372,7 +372,7 @@ class TypeScriptLanguageFrontendTest {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("component.tsx").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<TypeScriptLanguage>()
             }

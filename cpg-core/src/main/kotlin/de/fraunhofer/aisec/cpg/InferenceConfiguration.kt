@@ -50,10 +50,16 @@ private constructor(
     val inferVariables: Boolean,
 
     /**
+     * A very EXPERIMENTAL feature. If this is enabled, we will try to infer return types of
+     * functions based on the context of the call it originated out of. This is disabled by default.
+     */
+    val inferReturnTypes: Boolean,
+
+    /**
      * Uses heuristics to add DFG edges for call expressions to unresolved functions (i.e.,
      * functions not implemented in the given source code).
      */
-    val inferDfgForUnresolvedSymbols: Boolean
+    val inferDfgForUnresolvedSymbols: Boolean,
 ) {
     class Builder(
         private var enabled: Boolean = true,
@@ -61,7 +67,8 @@ private constructor(
         private var inferRecords: Boolean = true,
         private var inferFunctions: Boolean = true,
         private var inferVariables: Boolean = true,
-        private var inferDfgForUnresolvedCalls: Boolean = true
+        private var inferReturnTypes: Boolean = false,
+        private var inferDfgForUnresolvedCalls: Boolean = true,
     ) {
         fun enabled(infer: Boolean) = apply { this.enabled = infer }
 
@@ -72,6 +79,8 @@ private constructor(
         fun inferFunctions(infer: Boolean) = apply { this.inferFunctions = infer }
 
         fun inferVariables(infer: Boolean) = apply { this.inferVariables = infer }
+
+        fun inferReturnTypes(infer: Boolean) = apply { this.inferReturnTypes = infer }
 
         fun inferDfgForUnresolvedCalls(infer: Boolean) = apply {
             this.inferDfgForUnresolvedCalls = infer
@@ -84,7 +93,8 @@ private constructor(
                 inferRecords,
                 inferFunctions,
                 inferVariables,
-                inferDfgForUnresolvedCalls
+                inferReturnTypes,
+                inferDfgForUnresolvedCalls,
             )
     }
 

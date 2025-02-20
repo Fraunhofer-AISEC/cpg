@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.scopes
 
+import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
@@ -39,7 +40,7 @@ import org.slf4j.LoggerFactory
  * Is a scope where local variables can be declared and independent of specific language constructs.
  * Works for if, for, and extends to the block scope
  */
-open class ValueDeclarationScope(override var astNode: Node?) : Scope(astNode) {
+sealed class ValueDeclarationScope(astNode: Node?) : Scope(astNode) {
     val valueDeclarations: List<ValueDeclaration>
         get() {
             return symbols.flatMap { it.value }.filterIsInstance<ValueDeclaration>()
@@ -55,14 +56,18 @@ open class ValueDeclarationScope(override var astNode: Node?) : Scope(astNode) {
         typedefs[typedef.alias.name] = typedef
     }
 
-    open fun addDeclaration(declaration: Declaration, addToAST: Boolean) {
+    open fun addDeclaration(
+        declaration: Declaration,
+        addToAST: Boolean,
+        scopeManager: ScopeManager,
+    ) {
         if (declaration is ValueDeclaration) {
             addValueDeclaration(declaration, addToAST)
         } else {
             Util.errorWithFileLocation(
                 declaration,
                 log,
-                "A non ValueDeclaration can not be added to a DeclarationScope"
+                "A non ValueDeclaration can not be added to a DeclarationScope",
             )
         }
     }
@@ -83,7 +88,7 @@ open class ValueDeclarationScope(override var astNode: Node?) : Scope(astNode) {
                 Util.errorWithFileLocation(
                     valueDeclaration,
                     log,
-                    "Trying to add a value declaration to a scope which does not have a declaration holder AST node"
+                    "Trying to add a value declaration to a scope which does not have a declaration holder AST node",
                 )
             }
         }

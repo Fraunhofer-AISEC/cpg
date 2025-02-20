@@ -54,7 +54,12 @@ open class CallExpression :
      */
     @PopulatedByPass(SymbolResolver::class)
     @Relationship(value = "INVOKES", direction = Relationship.Direction.OUTGOING)
-    var invokeEdges = Invokes<FunctionDeclaration>(this)
+    var invokeEdges: Invokes<FunctionDeclaration> =
+        Invokes<FunctionDeclaration>(
+            this,
+            mirrorProperty = FunctionDeclaration::calledByEdges,
+            outgoing = true,
+        )
         protected set
 
     /**
@@ -181,7 +186,7 @@ open class CallExpression :
     @JvmOverloads
     fun addTemplateParameter(
         templateParam: Node,
-        templateInitialization: TemplateInitialization? = TemplateInitialization.EXPLICIT
+        templateInitialization: TemplateInitialization? = TemplateInitialization.EXPLICIT,
     ) {
         if (templateParam is Expression || templateParam is Type) {
             if (templateArgumentEdges == null) {
@@ -195,7 +200,7 @@ open class CallExpression :
 
     fun updateTemplateParameters(
         initializationType: Map<Node?, TemplateInitialization?>,
-        orderedInitializationSignature: List<Node>
+        orderedInitializationSignature: List<Node>,
     ) {
         if (templateArgumentEdges == null) {
             templateArgumentEdges = TemplateArguments(this)
@@ -216,7 +221,7 @@ open class CallExpression :
                 instantiation =
                     initializationType.getOrDefault(
                         orderedInitializationSignature[i],
-                        TemplateInitialization.UNKNOWN
+                        TemplateInitialization.UNKNOWN,
                     )
             }
         }
@@ -263,7 +268,7 @@ open class CallExpression :
      * is overloaded. In this case we want the [operatorBase] to point to [callee], so we can take
      * its type to lookup the necessary [OperatorDeclaration].
      */
-    override val operatorBase: HasType
+    override val operatorBase: Expression
         get() = callee
 
     override fun equals(other: Any?): Boolean {

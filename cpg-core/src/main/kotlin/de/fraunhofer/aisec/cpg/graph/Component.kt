@@ -25,10 +25,20 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
+import de.fraunhofer.aisec.cpg.PopulatedByPass
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.frontends.multiLanguage
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.passes.ImportDependencies
+import de.fraunhofer.aisec.cpg.passes.ImportResolver
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
+import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
+import java.io.File
 import org.neo4j.ogm.annotation.Relationship
+import org.neo4j.ogm.annotation.Transient
 
 /**
  * A node which presents some kind of complete piece of software, e.g., an application, a library,
@@ -43,10 +53,28 @@ open class Component : Node() {
     /** All translation units belonging to this application. */
     val translationUnits by unwrapping(Component::translationUnitEdges)
 
+    /**
+     * The import dependencies of [TranslationUnitDeclaration] nodes of this component. The
+     * preferred way to access this is via [Strategy.TRANSLATION_UNITS_LEAST_IMPORTS].
+     */
+    @Transient
+    @PopulatedByPass(ImportResolver::class)
+    var translationUnitDependencies: ImportDependencies<TranslationUnitDeclaration>? = null
+
     @Synchronized
     fun addTranslationUnit(tu: TranslationUnitDeclaration) {
         translationUnits.add(tu)
     }
+
+    /**
+     * Returns the top-level directory of this component according to
+     * [TranslationConfiguration.topLevels]
+     */
+    @DoNotPersist
+    val topLevel: File?
+        get() {
+            return ctx?.config?.topLevels?.get(this.name.localName)
+        }
 
     /**
      * All points where unknown data may enter this application, e.g., the main method, or other
@@ -57,4 +85,10 @@ open class Component : Node() {
 
     /** All outgoing interactions such as sending data to the network or some kind of IPC. */
     val outgoingInteractions: MutableList<Node> = mutableListOf()
+
+    override var language: Language<*>
+        get() {
+            return multiLanguage()
+        }
+        set(_) {}
 }

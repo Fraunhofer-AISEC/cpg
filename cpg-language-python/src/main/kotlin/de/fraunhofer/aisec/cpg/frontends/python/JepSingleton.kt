@@ -75,7 +75,7 @@ object JepSingleton {
                     "python${version}",
                     "site-packages",
                     "jep",
-                    "libjep.so"
+                    "libjep.so",
                 )
             )
             // Mac OS
@@ -86,7 +86,7 @@ object JepSingleton {
                     "python${version}",
                     "site-packages",
                     "jep",
-                    "libjep.jnilib"
+                    "libjep.jnilib",
                 )
             )
             wellKnownPaths.add(
@@ -96,7 +96,7 @@ object JepSingleton {
                     "python${version}",
                     "site-packages",
                     "jep",
-                    "libjep.dll"
+                    "libjep.dll",
                 )
             )
         }

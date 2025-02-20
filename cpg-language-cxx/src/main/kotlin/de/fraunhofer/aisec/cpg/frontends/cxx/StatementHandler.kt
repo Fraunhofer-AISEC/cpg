@@ -79,12 +79,10 @@ class StatementHandler(lang: CXXLanguageFrontend) :
             frontend,
             problemStatement,
             log,
-            problemStatement.problem.message
-        )
-
-        return newProblemExpression(
             problemStatement.problem.message,
         )
+
+        return newProblemExpression(problemStatement.problem.message)
     }
 
     private fun handleEmptyStatement(nullStatement: IASTNullStatement): EmptyStatement {
@@ -160,6 +158,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
         val statement = newLabelStatement(rawNode = ctx)
         statement.subStatement = handle(ctx.nestedStatement)
         statement.label = ctx.name.toString()
+        statement.name = newName(name = ctx.name.toString())
         return statement
     }
 
@@ -167,12 +166,15 @@ class StatementHandler(lang: CXXLanguageFrontend) :
         val statement = newGotoStatement(rawNode = ctx)
         val assigneeTargetLabel = BiConsumer { _: Any, to: Node ->
             statement.targetLabel = to as LabelStatement
+            to.label?.let {
+                statement.labelName = it
+                statement.name = newName(it)
+            }
         }
         val b: IBinding?
         try {
             b = ctx.name.resolveBinding()
             if (b is ILabel) {
-                b.labelStatement
                 // If the bound AST node is/or was transformed into a CPG node the cpg node is bound
                 // to the CPG goto statement
                 frontend.registerObjectListener(b.labelStatement, assigneeTargetLabel)
@@ -182,7 +184,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
             // names of CPG nodes using the predicate listeners
             frontend.registerPredicateListener(
                 { _, to -> (to is LabelStatement && to.label == statement.labelName) },
-                assigneeTargetLabel
+                assigneeTargetLabel,
             )
         }
         return statement

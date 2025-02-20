@@ -33,8 +33,10 @@ import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeSet
 import de.fraunhofer.aisec.cpg.graph.edges.collections.MirroredEdgeCollection
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.HasType
+import de.fraunhofer.aisec.cpg.helpers.neo4j.DataflowGranularityConverter
 import kotlin.reflect.KProperty
 import org.neo4j.ogm.annotation.*
+import org.neo4j.ogm.annotation.typeconversion.Convert
 
 /**
  * The granularity of the data-flow, e.g., whether the flow contains the whole object, or just a
@@ -61,6 +63,19 @@ class PartialDataflowGranularity(
     val partialTarget: Declaration?
 ) : Granularity
 
+/**
+ * This dataflow granularity denotes that not the "whole" object is flowing from [Dataflow.start] to
+ * [Dataflow.end] but only parts of it. Common examples include tuples or array indices.
+ */
+class IndexedDataflowGranularity(
+    /** The index that is affected by this partial dataflow. */
+    val index: Int
+) : Granularity {
+    override fun equals(other: Any?): Boolean {
+        return this.index == (other as? IndexedDataflowGranularity)?.index
+    }
+}
+
 /** Creates a new [FullDataflowGranularity]. */
 fun full(): Granularity {
     return FullDataflowGranularity
@@ -79,6 +94,14 @@ fun partial(target: Declaration?): PartialDataflowGranularity {
 }
 
 /**
+ * Creates a new [IndexedDataflowGranularity]. The [idx] is the index that is used for the partial
+ * dataflow.
+ */
+fun indexed(idx: Int): IndexedDataflowGranularity {
+    return IndexedDataflowGranularity(idx)
+}
+
+/**
  * This edge class defines a flow of data between [start] and [end]. The flow can have a certain
  * [granularity].
  */
@@ -87,9 +110,11 @@ open class Dataflow(
     start: Node,
     end: Node,
     /** The granularity of this dataflow. */
-    @Transient @JsonIgnore var granularity: Granularity = default()
+    @Convert(DataflowGranularityConverter::class)
+    @JsonIgnore
+    var granularity: Granularity = default(),
 ) : Edge<Node>(start, end) {
-    override val label: String = "DFG"
+    override var labels = setOf("DFG")
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -104,16 +129,16 @@ open class Dataflow(
     }
 }
 
-sealed interface CallingContext
-
-class CallingContextIn(
+sealed interface CallingContext {
     /** The call expression that affects this dataflow edge. */
     val call: CallExpression
-) : CallingContext
+}
+
+class CallingContextIn(override val call: CallExpression) : CallingContext
 
 class CallingContextOut(
     /** The call expression that affects this dataflow edge. */
-    val call: CallExpression
+    override val call: CallExpression
 ) : CallingContext
 
 /**
@@ -127,10 +152,10 @@ class ContextSensitiveDataflow(
     end: Node,
     /** The granularity of this dataflow. */
     granularity: Granularity = default(),
-    val callingContext: CallingContext
+    val callingContext: CallingContext,
 ) : Dataflow(start, end, granularity) {
 
-    override val label: String = "DFG"
+    override var labels = setOf("DFG")
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -161,7 +186,7 @@ class Dataflows<T : Node>(
     fun addContextSensitive(
         node: T,
         granularity: Granularity = default(),
-        callingContext: CallingContext
+        callingContext: CallingContext,
     ) {
         val edge =
             if (outgoing) {

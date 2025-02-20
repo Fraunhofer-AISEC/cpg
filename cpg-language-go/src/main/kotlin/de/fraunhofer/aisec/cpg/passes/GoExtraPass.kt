@@ -37,7 +37,6 @@ import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
-import de.fraunhofer.aisec.cpg.passes.inference.startInference
 
 /**
  * This pass takes care of several things that we need to clean up, once all translation units are
@@ -81,20 +80,6 @@ import de.fraunhofer.aisec.cpg.passes.inference.startInference
  * In the frontend we only do the assignment, therefore we need to create a new
  * [VariableDeclaration] for `b` and inject a [DeclarationStatement].
  *
- * ## Converting Call Expressions into Cast Expressions
- *
- * In Go, it is possible to convert compatible types by "calling" the type name as a function, such
- * as
- *
- * ```go
- * var i = int(2.0)
- * ```
- *
- * This is also possible with more complex types, such as interfaces or aliased types, as long as
- * they are compatible. Because types in the same package can be defined in multiple files, we
- * cannot decide during the frontend run. Therefore, we need to execute this pass before the
- * [SymbolResolver] and convert certain [CallExpression] nodes into a [CastExpression].
- *
  * ## Adjust Names of Keys in Key Value Expressions to FQN
  *
  * This pass also adjusts the names of keys in a [KeyValueExpression], which is part of an
@@ -109,8 +94,8 @@ import de.fraunhofer.aisec.cpg.passes.inference.startInference
  */
 @ExecuteBefore(SymbolResolver::class)
 @ExecuteBefore(EvaluationOrderGraphPass::class)
-@ExecuteBefore(DFGPass::class)
 @DependsOn(ImportResolver::class)
+@DependsOn(TypeResolver::class)
 class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
     private lateinit var walker: SubgraphWalker.ScopedWalker
@@ -127,7 +112,6 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
         walker = SubgraphWalker.ScopedWalker(scopeManager)
         walker.registerHandler { _, _, node ->
             when (node) {
-                is ImportDeclaration -> handleImportDeclaration(node)
                 is RecordDeclaration -> handleRecordDeclaration(node)
                 is AssignExpression -> handleAssign(node)
                 is ForEachStatement -> handleForEachStatement(node)
@@ -237,7 +221,8 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 FunctionType(
                     funcTypeName(func.signatureTypes, func.returnTypes),
                     func.signatureTypes,
-                    func.returnTypes
+                    func.returnTypes,
+                    func.language,
                 )
             )
         scopeManager.addDeclaration(func)
@@ -362,9 +347,9 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
         // Loop through the target variables (left-hand side)
         for ((idx, expr) in assign.lhs.withIndex()) {
             if (expr is Reference) {
-                // And try to resolve it
-                val ref = scopeManager.resolveReference(expr)
-                if (ref == null) {
+                // And try to resolve it as a variable
+                val ref = scopeManager.lookupSymbolByNodeNameOfType<VariableDeclaration>(expr)
+                if (ref.isEmpty()) {
                     // We need to implicitly declare it, if it's not declared before.
                     val decl = newVariableDeclaration(expr.name, expr.autoType())
                     decl.language = expr.language
@@ -385,35 +370,6 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     scopeManager.addDeclaration(decl)
                 }
             }
-        }
-    }
-
-    /**
-     * This function gets called for every [IncludeDeclaration] (which in Go imports a whole
-     * package) and checks, if we need to infer a [NamespaceDeclaration] for this particular
-     * include.
-     */
-    // TODO: Somehow, this gets called twice?!
-    private fun handleImportDeclaration(import: ImportDeclaration) {
-        // If the namespace is included as _, we can ignore it, as its only included as a runtime
-        // dependency
-        if (import.name.localName == "_") {
-            return
-        }
-
-        // Try to see if we already know about this namespace somehow
-        val namespace =
-            scopeManager.findSymbols(import.name, null).filter {
-                it is NamespaceDeclaration && it.path == import.importURL
-            }
-
-        // If not, we can infer a namespace declaration, so we can bundle all inferred function
-        // declarations in there
-        if (namespace.isEmpty()) {
-            scopeManager.globalScope
-                ?.astNode
-                ?.startInference(ctx)
-                ?.inferNamespaceDeclaration(import.name, import.importURL, import)
         }
     }
 

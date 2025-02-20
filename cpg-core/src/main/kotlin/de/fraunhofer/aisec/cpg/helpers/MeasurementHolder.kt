@@ -28,6 +28,8 @@ package de.fraunhofer.aisec.cpg.helpers
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.TranslationResult.Companion.DEFAULT_APPLICATION_NAME
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import java.io.File
 import java.nio.file.Path
 import java.time.Duration
@@ -36,6 +38,7 @@ import java.util.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
+@DoNotPersist
 class BenchmarkResults(val entries: List<List<Any>>) {
 
     val json: String
@@ -69,7 +72,12 @@ interface StatisticsHolder {
                     listOf("Number of files translated", translatedFiles.size),
                     listOf(
                         "Translated file(s)",
-                        translatedFiles.map { relativeOrAbsolute(Path.of(it), config.topLevel) }
+                        translatedFiles.map {
+                            relativeOrAbsolute(
+                                Path.of(it),
+                                config.topLevels[DEFAULT_APPLICATION_NAME],
+                            )
+                        },
                     ),
                 )
 
@@ -142,7 +150,7 @@ constructor(
     c: Class<*>,
     message: String,
     debug: Boolean = false,
-    holder: StatisticsHolder? = null
+    holder: StatisticsHolder? = null,
 ) : MeasurementHolder(c, message, debug, holder) {
 
     private val start: Instant
@@ -175,6 +183,7 @@ constructor(
     }
 }
 
+@DoNotPersist
 /** Represents some kind of measurements, e.g., on the performance or problems. */
 open class MeasurementHolder
 @JvmOverloads
@@ -186,7 +195,7 @@ constructor(
     /** Changes the level used for log output. */
     protected var debug: Boolean = false,
     /** The class which should be updated if the value measured by this benchmark changed. */
-    protected var holder: StatisticsHolder? = null
+    protected var holder: StatisticsHolder? = null,
 ) {
 
     val caller: String
@@ -215,7 +224,7 @@ constructor(
     @JvmOverloads
     open fun addMeasurement(
         measurementKey: String? = null,
-        measurementValue: String? = null
+        measurementValue: String? = null,
     ): Any? {
         if (measurementKey == null || measurementValue == null) return null
 

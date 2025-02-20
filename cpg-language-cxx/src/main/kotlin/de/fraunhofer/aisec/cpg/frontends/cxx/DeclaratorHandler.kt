@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.ResolveInFrontend
-import de.fraunhofer.aisec.cpg.frontends.HasOperatorOverloading
+import de.fraunhofer.aisec.cpg.frontends.isKnownOperatorName
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
@@ -118,7 +118,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                     unknownType(), // Type will be filled out later by
                     // handleSimpleDeclaration
                     implicitInitializerAllowed = implicitInitializerAllowed,
-                    rawNode = ctx
+                    rawNode = ctx,
                 )
 
             // Add this declaration to the current scope
@@ -144,7 +144,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                 emptyList(),
                 initializer = initializer,
                 implicitInitializerAllowed = true,
-                rawNode = ctx
+                rawNode = ctx,
             )
 
         frontend.scopeManager.addDeclaration(declaration)
@@ -171,7 +171,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                 // Check if it's an operator
                 name.isKnownOperatorName -> {
                     // retrieve the operator code
-                    var operatorCode = name.localName.drop("operator".length)
+                    val operatorCode = name.localName.drop("operator".length)
                     newOperatorDeclaration(name, operatorCode, rawNode = ctx)
                 }
                 // Check, if it's a constructor. This is the case if the local names of the function
@@ -246,7 +246,11 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             // into account
             parentScope =
                 frontend.scopeManager.lookupScope(
-                    frontend.scopeManager.currentNamespace.fqn(parent.toString()).toString()
+                    parseName(
+                        frontend.scopeManager.currentNamespace
+                            .fqn(parent.toString(), delimiter = parent.delimiter)
+                            .toString()
+                    )
                 )
 
             declaration = createAppropriateFunction(name, parentScope, ctx.parent)
@@ -311,7 +315,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                         Util.warnWithFileLocation(
                             declaration,
                             log,
-                            "Named parameter cannot have void type"
+                            "Named parameter cannot have void type",
                         )
                     } else {
                         // specifying void as first parameter is ok and means that the function has
@@ -322,7 +326,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                             Util.warnWithFileLocation(
                                 declaration,
                                 log,
-                                "void parameter must be the first and only parameter"
+                                "void parameter must be the first and only parameter",
                             )
                         }
                     }
@@ -415,7 +419,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                     name,
                     unknownType(),
                     implicitInitializerAllowed = true,
-                    rawNode = ctx
+                    rawNode = ctx,
                 )
         } else {
             // field
@@ -426,7 +430,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                     emptyList(),
                     initializer = null,
                     implicitInitializerAllowed = false,
-                    rawNode = ctx
+                    rawNode = ctx,
                 )
         }
 
@@ -444,12 +448,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                 else -> "struct"
             }
 
-        val recordDeclaration =
-            newRecordDeclaration(
-                ctx.name.toString(),
-                kind,
-                rawNode = ctx,
-            )
+        val recordDeclaration = newRecordDeclaration(ctx.name.toString(), kind, rawNode = ctx)
 
         // Handle C++ classes
         if (ctx is CPPASTCompositeTypeSpecifier) {
@@ -468,10 +467,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         if (recordDeclaration.constructors.isEmpty()) {
             // create an implicit constructor declaration with the same name as the record
             val constructorDeclaration =
-                newConstructorDeclaration(
-                        recordDeclaration.name.localName,
-                        recordDeclaration,
-                    )
+                newConstructorDeclaration(recordDeclaration.name.localName, recordDeclaration)
                     .implicit(code = recordDeclaration.name.localName)
 
             createMethodReceiver(constructorDeclaration)
@@ -509,17 +505,6 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             frontend.declarationHandler.handle(member)
         }
     }
-
-    /** Checks whether the [Name] for a function is a known operator name. */
-    val Name.isKnownOperatorName: Boolean
-        get() {
-            var language = language
-            if (language !is HasOperatorOverloading) {
-                return false
-            }
-
-            return language.overloadedOperatorNames.containsValue(this.localName)
-        }
 }
 
 /**

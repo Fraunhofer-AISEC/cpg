@@ -62,7 +62,7 @@ import java.net.URI
 @ReplacePass(
     lang = GoLanguage::class,
     old = EvaluationOrderGraphPass::class,
-    with = GoEvaluationOrderGraphPass::class
+    with = GoEvaluationOrderGraphPass::class,
 )
 @SupportsParallelParsing(false)
 class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: TranslationContext) :
@@ -129,7 +129,7 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
         if (!shouldBeBuild(file, ctx.config.symbols)) {
             log.debug(
                 "Ignoring the contents of {} because of missing build tags or different GOOS/GOARCH.",
-                file
+                file,
             )
             return newTranslationUnitDeclaration(file.name)
         }
@@ -147,7 +147,7 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
                     isDependency = true
                     dependency.toFile()
                 }
-                config.topLevel != null -> config.topLevel
+                ctx.currentComponent?.topLevel != null -> ctx.currentComponent?.topLevel
                 else -> file.parentFile
             }!!
 
@@ -200,7 +200,7 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
         } catch (ex: IllegalArgumentException) {
             log.error(
                 "Could not relativize package path to top level. Cannot set package path.",
-                ex
+                ex,
             )
         }
 
@@ -368,7 +368,7 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
                         this,
                         type,
                         log,
-                        "Not parsing type of type ${type.goType} yet"
+                        "Not parsing type of type ${type.goType} yet",
                     )
                     unknownType()
                 }
@@ -381,9 +381,7 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
      * A quick helper function to retrieve the type of a field, to check for possible variadic
      * arguments.
      */
-    internal fun fieldTypeOf(
-        paramType: GoStandardLibrary.Ast.Expr,
-    ): Pair<Type, Boolean> {
+    internal fun fieldTypeOf(paramType: GoStandardLibrary.Ast.Expr): Pair<Type, Boolean> {
         var variadic = false
         val type =
             if (paramType is GoStandardLibrary.Ast.Ellipsis) {
@@ -445,7 +443,7 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
                 "solaris",
                 "wasip1",
                 "windows",
-                "zos"
+                "zos",
             )
 
         /**
@@ -466,7 +464,7 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
                 "ppc64",
                 "ppc64le",
                 "riscv64",
-                "s390x"
+                "s390x",
             )
     }
 }

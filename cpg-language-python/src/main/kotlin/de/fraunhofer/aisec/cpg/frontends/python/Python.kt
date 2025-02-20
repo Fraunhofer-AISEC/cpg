@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.python
 
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import jep.python.PyObject
 
 /**
@@ -59,12 +61,19 @@ interface Python {
     interface AST {
 
         /**
-         * `ast.stmt` [AST.BaseStmt] and `ast.expr` [AST.BaseExpr] nodes have extra location
-         * properties as implemented here.
+         * Represents a `ast.AST` node as returned by Python's `ast` parser.
+         *
+         * @param pyObject The Python object returned by jep.
          */
-        interface WithLocation { // TODO make the fields accessible `by lazy`
-            val pyObject: PyObject
+        interface AST {
+            var pyObject: PyObject
+        }
 
+        /**
+         * Some nodes, such as `ast.stmt` [AST.BaseStmt] and `ast.expr` [AST.BaseExpr] nodes have
+         * extra location properties as implemented here.
+         */
+        interface WithLocation : AST { // TODO make the fields accessible `by lazy`
             /** Maps to the `lineno` filed from Python's ast. */
             val lineno: Int
                 get() {
@@ -91,11 +100,15 @@ interface Python {
         }
 
         /**
-         * Represents a `ast.AST` node as returned by Python's `ast` parser.
+         * Python does not really have "declarations", but it has "definitions". Instead of having
+         * their own AST class, they are also [AST.BaseStmt]s. In order to be compatible with the
+         * remaining languages we need to ensure that elements such as functions or classes, still
+         * turn out to be [Declaration]s, not [Statement]s
          *
-         * @param pyObject The Python object returned by jep.
+         * This interface should be attached to all such statements that we consider to be
+         * definitions, and thus [Declaration]s.
          */
-        abstract class AST(pyObject: PyObject) : BaseObject(pyObject)
+        sealed interface Def : AST
 
         /**
          * ```
@@ -108,7 +121,7 @@ interface Python {
          *
          * Note: We currently only support `Module`s.
          */
-        abstract class BaseMod(pyObject: PyObject) : AST(pyObject)
+        abstract class BaseMod(pyObject: PyObject) : AST, BaseObject(pyObject)
 
         /**
          * ```
@@ -116,7 +129,7 @@ interface Python {
          *  |  Module(stmt* body, type_ignore* type_ignores)
          * ```
          */
-        class Module(pyObject: PyObject) : AST(pyObject) {
+        class Module(pyObject: PyObject) : AST, BaseObject(pyObject) {
             val body: kotlin.collections.List<BaseStmt> by lazy { "body" of pyObject }
 
             val type_ignores: kotlin.collections.List<type_ignore> by lazy {
@@ -156,23 +169,23 @@ interface Python {
          *  |  | Continue
          * ```
          */
-        sealed class BaseStmt(pyObject: PyObject) : AST(pyObject), WithLocation
+        sealed class BaseStmt(pyObject: PyObject) : AST, BaseObject(pyObject), WithLocation
 
         /**
          * Several classes are duplicated in the python AST for async and non-async variants. This
          * interface is a common interface for those AST classes.
          */
-        interface AsyncOrNot : WithLocation
+        sealed interface AsyncOrNot : WithLocation
 
         /** This interface denotes that this is an "async" node. */
-        interface IsAsync : AsyncOrNot
+        sealed interface IsAsync : AsyncOrNot
 
         /**
          * ast.FunctionDef and ast.AsyncFunctionDef are not related according to the Python syntax.
          * However, they are so similar, that we make use of this interface to avoid a lot of
          * duplicate code.
          */
-        interface NormalOrAsyncFunctionDef : AsyncOrNot {
+        sealed interface NormalOrAsyncFunctionDef : AsyncOrNot, Def {
             val name: String
             val args: arguments
             val body: kotlin.collections.List<BaseStmt>
@@ -232,7 +245,7 @@ interface Python {
          *  |  ClassDef(identifier name, expr* bases, keyword* keywords, stmt* body, expr* decorator_list)
          * ```
          */
-        class ClassDef(pyObject: PyObject) : BaseStmt(pyObject) {
+        class ClassDef(pyObject: PyObject) : BaseStmt(pyObject), Def {
             val name: String by lazy { "name" of pyObject }
 
             val bases: kotlin.collections.List<BaseExpr> by lazy { "bases" of pyObject }
@@ -433,9 +446,11 @@ interface Python {
          */
         class Try(pyObject: PyObject) : BaseStmt(pyObject) {
             val body: kotlin.collections.List<BaseStmt> by lazy { "body" of pyObject }
-            val handlers: kotlin.collections.List<excepthandler> by lazy { "handlers" of pyObject }
+            val handlers: kotlin.collections.List<BaseExcepthandler> by lazy {
+                "handlers" of pyObject
+            }
             val orelse: kotlin.collections.List<BaseStmt> by lazy { "orelse" of pyObject }
-            val stmt: kotlin.collections.List<BaseStmt> by lazy { "StmtBase" of pyObject }
+            val finalbody: kotlin.collections.List<BaseStmt> by lazy { "finalbody" of pyObject }
         }
 
         /**
@@ -446,7 +461,9 @@ interface Python {
          */
         class TryStar(pyObject: PyObject) : BaseStmt(pyObject) {
             val body: kotlin.collections.List<BaseStmt> by lazy { "body" of pyObject }
-            val handlers: kotlin.collections.List<excepthandler> by lazy { "handlers" of pyObject }
+            val handlers: kotlin.collections.List<BaseExcepthandler> by lazy {
+                "handlers" of pyObject
+            }
             val orelse: kotlin.collections.List<BaseStmt> by lazy { "orelse" of pyObject }
             val finalbody: kotlin.collections.List<BaseStmt> by lazy { "finalbody" of pyObject }
         }
@@ -549,7 +566,7 @@ interface Python {
          *
          * ast.expr = class expr(AST)
          */
-        sealed class BaseExpr(pyObject: PyObject) : AST(pyObject), WithLocation
+        sealed class BaseExpr(pyObject: PyObject) : AST, BaseObject(pyObject), WithLocation
 
         /**
          * ```
@@ -868,7 +885,7 @@ interface Python {
          *  |  boolop = And | Or
          * ```
          */
-        sealed class BaseBoolOp(pyObject: PyObject) : AST(pyObject)
+        sealed class BaseBoolOp(pyObject: PyObject) : AST, BaseObject(pyObject)
 
         /**
          * ```
@@ -891,7 +908,7 @@ interface Python {
          *  |  cmpop = Eq | NotEq | Lt | LtE | Gt | GtE | Is | IsNot | In | NotIn
          * ```
          */
-        sealed class BaseCmpOp(pyObject: PyObject) : AST(pyObject)
+        sealed class BaseCmpOp(pyObject: PyObject) : AST, BaseObject(pyObject)
 
         /**
          * ```
@@ -979,7 +996,7 @@ interface Python {
          *  |  expr_context = Load | Store | Del
          * ```
          */
-        sealed class BaseExprContext(pyObject: PyObject) : AST(pyObject)
+        sealed class BaseExprContext(pyObject: PyObject) : AST, BaseObject(pyObject)
 
         /**
          * ```
@@ -1011,7 +1028,7 @@ interface Python {
          *  |  operator = Add | Sub | Mult | MatMult | Div | Mod | Pow | LShift | RShift | BitOr | BitXor | BitAnd | FloorDiv
          * ```
          */
-        sealed class BaseOperator(pyObject: PyObject) : AST(pyObject)
+        sealed class BaseOperator(pyObject: PyObject) : AST, BaseObject(pyObject)
 
         /**
          * ```
@@ -1130,7 +1147,7 @@ interface Python {
          *  |  | MatchOr(pattern* patterns)
          * ```
          */
-        abstract class BasePattern(pyObject: PyObject) : AST(pyObject)
+        abstract class BasePattern(pyObject: PyObject) : AST, BaseObject(pyObject), WithLocation
 
         /**
          * ```
@@ -1149,7 +1166,12 @@ interface Python {
          * ```
          */
         class MatchSingleton(pyObject: PyObject) : BasePattern(pyObject) {
-            val value: Any by lazy { "value" of pyObject }
+            /**
+             * [value] is not optional. We have to make it nullable though because the value will be
+             * set to `null` if the case matches on `None`. This is known behavior of jep (similar
+             * to literals/constants).
+             */
+            val value: Any? by lazy { "value" of pyObject }
         }
 
         /**
@@ -1226,7 +1248,7 @@ interface Python {
          *  |  unaryop = Invert | Not | UAdd | USub
          * ```
          */
-        sealed class BaseUnaryOp(pyObject: PyObject) : AST(pyObject)
+        sealed class BaseUnaryOp(pyObject: PyObject) : AST, BaseObject(pyObject)
 
         /**
          * ```
@@ -1266,7 +1288,7 @@ interface Python {
          *  |  alias(identifier name, identifier? asname)
          * ```
          */
-        class alias(pyObject: PyObject) : AST(pyObject) {
+        class alias(pyObject: PyObject) : AST, BaseObject(pyObject), WithLocation {
             val name: String by lazy { "name" of pyObject }
             val asname: String? by lazy { "asname" of pyObject }
         }
@@ -1277,7 +1299,7 @@ interface Python {
          *  |  arg(identifier arg, expr? annotation, string? type_comment)
          * ```
          */
-        class arg(pyObject: PyObject) : AST(pyObject), WithLocation {
+        class arg(pyObject: PyObject) : AST, BaseObject(pyObject), WithLocation {
             val arg: String by lazy { "arg" of pyObject }
             val annotation: BaseExpr? by lazy { "annotation" of pyObject }
             val type_comment: String? by lazy { "type_comment" of pyObject }
@@ -1289,7 +1311,7 @@ interface Python {
          *  |  arguments(arg* posonlyargs, arg* args, arg? vararg, arg* kwonlyargs, expr* kw_defaults, arg? kwarg, expr* defaults)
          * ```
          */
-        class arguments(pyObject: PyObject) : AST(pyObject) {
+        class arguments(pyObject: PyObject) : AST, BaseObject(pyObject) {
             val posonlyargs: kotlin.collections.List<arg> by lazy { "posonlyargs" of pyObject }
             val args: kotlin.collections.List<arg> by lazy { "args" of pyObject }
             val vararg: arg? by lazy { "vararg" of pyObject }
@@ -1305,7 +1327,7 @@ interface Python {
          *  |  comprehension(expr target, expr iter, expr* ifs, int is_async)
          * ```
          */
-        class comprehension(pyObject: PyObject) : AST(pyObject) {
+        class comprehension(pyObject: PyObject) : AST, BaseObject(pyObject) {
             val target: BaseExpr by lazy { "target" of pyObject }
             val iter: BaseExpr by lazy { "iter" of pyObject }
             val ifs: kotlin.collections.List<BaseExpr> by lazy { "ifs" of pyObject }
@@ -1317,12 +1339,17 @@ interface Python {
          * ast.excepthandler = class excepthandler(AST)
          *  |  excepthandler = ExceptHandler(expr? type, identifier? name, stmt* body)
          * ```
-         *
-         * TODO: excepthandler <-> ExceptHandler
          */
-        class excepthandler(pyObject: PyObject) : AST(pyObject) {
-            val type: BaseExpr by lazy { "type" of pyObject }
-            val name: String by lazy { "name" of pyObject }
+        sealed class BaseExcepthandler(pyObject: PyObject) :
+            AST, BaseObject(pyObject), WithLocation
+
+        /**
+         * ast.ExceptHandler = class ExceptHandler(excepthandler) | ExceptHandler(expr? type,
+         * identifier? name, stmt* body)
+         */
+        class ExceptHandler(pyObject: PyObject) : BaseExcepthandler(pyObject) {
+            val type: BaseExpr? by lazy { "type" of pyObject }
+            val name: String? by lazy { "name" of pyObject }
             val body: kotlin.collections.List<BaseStmt> by lazy { "body" of pyObject }
         }
 
@@ -1332,7 +1359,7 @@ interface Python {
          *  |  keyword(identifier? arg, expr value)
          * ```
          */
-        class keyword(pyObject: PyObject) : AST(pyObject) {
+        class keyword(pyObject: PyObject) : AST, BaseObject(pyObject), WithLocation {
             val arg: String? by lazy { "arg" of pyObject }
             val value: BaseExpr by lazy { "value" of pyObject }
         }
@@ -1343,7 +1370,7 @@ interface Python {
          *  |  match_case(pattern pattern, expr? guard, stmt* body)
          * ```
          */
-        class match_case(pyObject: PyObject) : AST(pyObject) {
+        class match_case(pyObject: PyObject) : AST, BaseObject(pyObject) {
             val pattern: BasePattern by lazy { "pattern" of pyObject }
             val guard: BaseExpr? by lazy { "guard" of pyObject }
             val body: kotlin.collections.List<BaseStmt> by lazy { "body" of pyObject }
@@ -1357,7 +1384,7 @@ interface Python {
          *
          * TODO
          */
-        class type_ignore(pyObject: PyObject) : AST(pyObject)
+        class type_ignore(pyObject: PyObject) : AST, BaseObject(pyObject)
 
         /**
          * ```
@@ -1365,7 +1392,7 @@ interface Python {
          *  |  withitem(expr context_expr, expr? optional_vars)
          * ```
          */
-        class withitem(pyObject: PyObject) : AST(pyObject) {
+        class withitem(pyObject: PyObject) : AST, BaseObject(pyObject) {
             val context_expr: BaseExpr by lazy { "context_expr" of pyObject }
             val optional_vars: BaseExpr? by lazy { "optional_vars" of pyObject }
         }

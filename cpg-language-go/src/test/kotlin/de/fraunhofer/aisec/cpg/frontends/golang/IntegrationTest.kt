@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.golang
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
-import de.fraunhofer.aisec.cpg.TranslationResult.Companion.APPLICATION_LOCAL_NAME
+import de.fraunhofer.aisec.cpg.TranslationResult.Companion.DEFAULT_APPLICATION_NAME
 import de.fraunhofer.aisec.cpg.frontends.golang.Project.Companion.buildProject
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.test.*
@@ -40,9 +40,9 @@ class IntegrationTest {
 
     @Test
     fun testProject() {
-        val project = buildProject("src/test/resources/golang/buildtags", "darwin", "arm64")
+        val project = buildProject("src/test/resources/golang/integration", "darwin", "arm64")
 
-        val app = project.components[APPLICATION_LOCAL_NAME]
+        val app = project.components[DEFAULT_APPLICATION_NAME]
         assertNotNull(app)
         assertNotNull(app.firstOrNull { it.endsWith("main.go") })
         assertNotNull(app.firstOrNull { it.endsWith("func_darwin.go") })

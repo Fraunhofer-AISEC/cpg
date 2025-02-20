@@ -87,10 +87,10 @@ class GoLanguageFrontendTest : BaseTest() {
 
         // We should be able to follow the DFG backwards from the declaration to the individual
         // key/value expressions
-        val path = data.firstAssignment?.followPrevFullDFG { it is KeyValueExpression }
+        val path = data.firstAssignment?.followPrevDFG { it is KeyValueExpression }
 
         assertNotNull(path)
-        assertEquals(2, path.size)
+        assertEquals(3, path.size)
     }
 
     @Test
@@ -100,7 +100,7 @@ class GoLanguageFrontendTest : BaseTest() {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("construct.go").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<GoLanguage>()
             }
@@ -155,7 +155,7 @@ class GoLanguageFrontendTest : BaseTest() {
         //  temporary solution. This should be fixed in the future.
         assertEquals(
             tu.objectType("map", listOf(tu.primitiveType("string"), tu.primitiveType("string"))),
-            make.type
+            make.type,
         )
 
         // make channel
@@ -179,7 +179,7 @@ class GoLanguageFrontendTest : BaseTest() {
                     topLevel.resolve("submodule/const.go").toFile(),
                 ),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<GoLanguage>()
             }
@@ -416,7 +416,7 @@ class GoLanguageFrontendTest : BaseTest() {
         assertEquals(3, funcB.parameters.size)
         assertEquals(
             listOf("uint8[]", "uint8[]", "int"),
-            funcB.parameters.map { it.type.name.toString() }
+            funcB.parameters.map { it.type.name.toString() },
         )
 
         type = funcB.type
@@ -425,7 +425,7 @@ class GoLanguageFrontendTest : BaseTest() {
         assertEquals(3, type.parameters.size)
         assertEquals(
             listOf("uint8[]", "uint8[]", "int"),
-            type.parameters.map { it.name.toString() }
+            type.parameters.map { it.name.toString() },
         )
 
         val funcC = tu.functions["funcC"]
@@ -505,13 +505,7 @@ class GoLanguageFrontendTest : BaseTest() {
     fun testPointerTypeInference() {
         val topLevel = Path.of("src", "test", "resources", "golang")
         val result =
-            analyze(
-                listOf(
-                    topLevel.resolve("inference.go").toFile(),
-                ),
-                topLevel,
-                true
-            ) {
+            analyze(listOf(topLevel.resolve("inference.go").toFile()), topLevel, true) {
                 it.registerLanguage<GoLanguage>()
             }
         assertNotNull(result)
@@ -531,12 +525,9 @@ class GoLanguageFrontendTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "golang")
         val result =
             analyze(
-                listOf(
-                    topLevel.resolve("struct.go").toFile(),
-                    stdLib.resolve("fmt").toFile(),
-                ),
+                listOf(topLevel.resolve("struct.go").toFile(), stdLib.resolve("fmt").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<GoLanguage>()
                 it.includePath(stdLib)
@@ -680,10 +671,10 @@ class GoLanguageFrontendTest : BaseTest() {
             analyze(
                 listOf(
                     topLevel.resolve("call.go").toFile(),
-                    topLevel.resolve("struct.go").toFile()
+                    topLevel.resolve("struct.go").toFile(),
                 ),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<GoLanguage>()
             }
@@ -749,13 +740,7 @@ class GoLanguageFrontendTest : BaseTest() {
     fun testFor() {
         val topLevel = Path.of("src", "test", "resources", "golang")
         val tu =
-            analyzeAndGetFirstTU(
-                listOf(
-                    topLevel.resolve("for.go").toFile(),
-                ),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("for.go").toFile()), topLevel, true) {
                 it.registerLanguage<GoLanguage>()
             }
 
@@ -791,13 +776,15 @@ class GoLanguageFrontendTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "golang-modules")
         val result =
             analyze(
+                // the order does not matter anymore now, so we intentionally keep it in the reverse
+                // order
                 listOf(
-                    topLevel.resolve("awesome.go").toFile(),
                     topLevel.resolve("cmd/awesome/main.go").toFile(),
                     topLevel.resolve("util/stuff.go").toFile(),
+                    topLevel.resolve("awesome.go").toFile(),
                 ),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<GoLanguage>()
             }
@@ -806,20 +793,20 @@ class GoLanguageFrontendTest : BaseTest() {
         assertNotNull(app)
 
         val tus = app.translationUnits
-        val tu0 = tus[0]
-        assertNotNull(tu0)
+        val tuAwesome = tus.firstOrNull { it.name.endsWith("awesome.go") }
+        assertNotNull(tuAwesome)
 
-        val newAwesome = tu0.functions["awesome.NewAwesome"]
+        val newAwesome = tuAwesome.functions["awesome.NewAwesome"]
         assertNotNull(newAwesome)
 
-        val tu1 = tus[1]
-        assertNotNull(tu1)
+        val tuMain = tus.firstOrNull { it.name.endsWith("main.go") }
+        assertNotNull(tuMain)
 
-        val import = tu1.imports["awesome"]
+        val import = tuMain.imports["awesome"]
         assertNotNull(import)
         assertEquals("example.io/awesome", import.importURL)
 
-        val main = tu1.functions["main.main"]
+        val main = tuMain.functions["main.main"]
         assertNotNull(main)
 
         val a = main.variables["a"]
@@ -978,12 +965,9 @@ class GoLanguageFrontendTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "golang")
         val tu =
             analyzeAndGetFirstTU(
-                listOf(
-                    topLevel.resolve("function.go").toFile(),
-                    stdLib.resolve("fmt").toFile(),
-                ),
+                listOf(topLevel.resolve("function.go").toFile(), stdLib.resolve("fmt").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<GoLanguage>()
                 it.includePath(stdLib)
@@ -1008,7 +992,7 @@ class GoLanguageFrontendTest : BaseTest() {
     @Test
     fun testBuildTags() {
         val stdLib = Path.of("src", "test", "resources", "golang-std")
-        val topLevel = Path.of("src", "test", "resources", "golang", "buildtags")
+        val topLevel = Path.of("src", "test", "resources", "golang", "integration")
 
         // make sure we parse main.go as the last
         val files =
@@ -1017,7 +1001,7 @@ class GoLanguageFrontendTest : BaseTest() {
                     "func_darwin_arm64.go",
                     "func_ios.go",
                     "func_linux_arm64.go",
-                    "cmd/buildtags/main.go"
+                    "cmd/buildtags/main.go",
                 )
                 .map { topLevel.resolve(it).toFile() }
                 .toMutableList()
@@ -1066,10 +1050,10 @@ class GoLanguageFrontendTest : BaseTest() {
             analyze(
                 listOf(
                     topLevel.resolve("srv.go").toFile(),
-                    topLevel.resolve("srv_option.go").toFile()
+                    topLevel.resolve("srv_option.go").toFile(),
                 ),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<GoLanguage>()
             }
@@ -1093,13 +1077,7 @@ class GoLanguageFrontendTest : BaseTest() {
     fun testChainedCall() {
         val topLevel = Path.of("src", "test", "resources", "golang", "chained")
         val tu =
-            analyze(
-                listOf(
-                    topLevel.resolve("chained.go").toFile(),
-                ),
-                topLevel,
-                true
-            ) {
+            analyze(listOf(topLevel.resolve("chained.go").toFile()), topLevel, true) {
                 it.registerLanguage<GoLanguage>()
             }
         assertNotNull(tu)
@@ -1118,13 +1096,7 @@ class GoLanguageFrontendTest : BaseTest() {
     fun testChainedCast() {
         val topLevel = Path.of("src", "test", "resources", "golang")
         val tu =
-            analyze(
-                listOf(
-                    topLevel.resolve("cast.go").toFile(),
-                ),
-                topLevel,
-                true
-            ) {
+            analyze(listOf(topLevel.resolve("cast.go").toFile()), topLevel, true) {
                 it.registerLanguage<GoLanguage>()
             }
         assertNotNull(tu)
@@ -1132,7 +1104,7 @@ class GoLanguageFrontendTest : BaseTest() {
         assertEquals(0, tu.calls.size)
         assertEquals(
             listOf("string", "error", "p.myError"),
-            tu.casts.map { it.castType.name.toString() }
+            tu.casts.map { it.castType.name.toString() },
         )
     }
 
@@ -1148,7 +1120,7 @@ class GoLanguageFrontendTest : BaseTest() {
                     topLevel.resolve("calls/calls.go").toFile(),
                 ),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<GoLanguage>()
             }
@@ -1185,14 +1157,12 @@ class GoLanguageFrontendTest : BaseTest() {
         val result =
             analyze(
                 listOf(
-                    // We need to keep them in this particular order, otherwise we will not resolve
-                    // cross-package correctly yet
                     topLevel.resolve("api/apiv1.go").toFile(),
                     topLevel.resolve("packages.go").toFile(),
                     topLevel.resolve("cmd/packages/packages.go").toFile(),
                 ),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<GoLanguage>()
             }

@@ -43,5 +43,5 @@ import kotlin.reflect.KClass
 annotation class ReplacePass(
     val old: KClass<out Pass<*>>,
     val lang: KClass<out Language<*>>,
-    val with: KClass<out Pass<*>>
+    val with: KClass<out Pass<*>>,
 )

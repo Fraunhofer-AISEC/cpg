@@ -55,7 +55,7 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
                 val method =
                     newMethodDeclaration(
                         Name(funcDecl.name.name, recordType.root.name),
-                        rawNode = funcDecl
+                        rawNode = funcDecl,
                     )
 
                 // The name of the Go receiver is optional. In fact, if the name is not
@@ -67,7 +67,7 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
                         newVariableDeclaration(
                             recvField.names[0].name,
                             recordType,
-                            rawNode = recvField
+                            rawNode = recvField,
                         )
                 }
 
@@ -76,7 +76,8 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
 
                     // TODO: this will only find methods within the current translation unit.
                     //  this is a limitation that we have for C++ as well
-                    val record = frontend.scopeManager.getRecordForName(recordName)
+                    val record =
+                        frontend.scopeManager.lookupScope(recordName)?.astNode as? RecordDeclaration
 
                     // now this gets a little bit hacky, we will add it to the record declaration
                     // this is strictly speaking not 100 % true, since the method property edge is
@@ -124,7 +125,7 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
                         newVariableDeclaration(
                             returnVar.names[0].name,
                             frontend.typeOf(returnVar.type),
-                            rawNode = returnVar
+                            rawNode = returnVar,
                         )
 
                     // Add parameter to scope

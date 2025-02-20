@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
+import de.fraunhofer.aisec.cpg.graph.edges.flows.indexed
 import de.fraunhofer.aisec.cpg.graph.edges.flows.partial
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -45,7 +46,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     override fun accept(component: Component) {
         log.info(
             "Function summaries database has {} entries",
-            config.functionSummaries.functionToDFGEntryMap.size
+            config.functionSummaries.functionToDFGEntryMap.size,
         )
 
         val inferDfgForUnresolvedCalls = config.inferenceConfiguration.inferDfgForUnresolvedSymbols
@@ -81,10 +82,10 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                         val arg = call.arguments[param.argumentIndex]
                         arg.prevDFGEdges.addContextSensitive(
                             param,
-                            callingContext = CallingContextOut(call)
+                            callingContext = CallingContextOut(call),
                         )
+                        arg.access = AccessValues.READWRITE
                         (arg as? Reference)?.let {
-                            it.access = AccessValues.READWRITE
                             it.refersTo?.let { it1 -> it.nextDFGEdges += it1 }
                         }
                     }
@@ -101,10 +102,12 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         node: Node?,
         parent: Node?,
         inferDfgForUnresolvedSymbols: Boolean,
-        functionSummaries: DFGFunctionSummaries
+        functionSummaries: DFGFunctionSummaries,
     ) {
         when (node) {
             // Expressions
+            is CollectionComprehension -> handleCollectionComprehension(node)
+            is ComprehensionExpression -> handleComprehensionExpression(node)
             is CallExpression -> handleCallExpression(node, inferDfgForUnresolvedSymbols)
             is CastExpression -> handleCastExpression(node)
             is BinaryOperator -> handleBinaryOp(node, parent)
@@ -130,12 +133,47 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             is ForStatement -> handleForStatement(node)
             is SwitchStatement -> handleSwitchStatement(node)
             is IfStatement -> handleIfStatement(node)
+            is ThrowExpression -> handleThrowExpression(node)
             // Declarations
             is FieldDeclaration -> handleFieldDeclaration(node)
             is FunctionDeclaration -> handleFunctionDeclaration(node, functionSummaries)
             is TupleDeclaration -> handleTupleDeclaration(node)
             is VariableDeclaration -> handleVariableDeclaration(node)
         }
+    }
+
+    /**
+     * Handles a collection comprehension. The data flow from
+     * `comprehension.comprehensionExpressions[i]` to `comprehension.comprehensionExpressions[i+1]`
+     * and for the last `comprehension.comprehensionExpressions[i]`, it flows to the
+     * `comprehension.statement`.
+     */
+    protected fun handleCollectionComprehension(comprehension: CollectionComprehension) {
+        if (comprehension.comprehensionExpressions.isNotEmpty()) {
+            comprehension.comprehensionExpressions
+                .subList(0, comprehension.comprehensionExpressions.size - 1)
+                .forEachIndexed { i, expr ->
+                    expr.nextDFG += comprehension.comprehensionExpressions[i + 1]
+                }
+            comprehension.comprehensionExpressions.last().nextDFG += comprehension.statement
+        }
+        comprehension.prevDFG += comprehension.statement
+    }
+
+    /**
+     * The iterable flows to the variable which flows into the whole expression together with the
+     * predicate(s).
+     */
+    protected fun handleComprehensionExpression(comprehension: ComprehensionExpression) {
+        comprehension.iterable.nextDFG += comprehension.variable
+        comprehension.prevDFG += comprehension.variable
+        comprehension.predicate?.let { comprehension.prevDFG += it }
+    }
+
+    /** Handle a [ThrowExpression]. The exception and parent exception flow into the node. */
+    protected fun handleThrowExpression(node: ThrowExpression) {
+        node.exception?.let { node.prevDFGEdges += it }
+        node.parentException?.let { node.prevDFGEdges += it }
     }
 
     protected fun handleAssignExpression(node: AssignExpression) {
@@ -207,7 +245,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      */
     protected fun handleFunctionDeclaration(
         node: FunctionDeclaration,
-        functionSummaries: DFGFunctionSummaries
+        functionSummaries: DFGFunctionSummaries,
     ) {
         if (node.isInferred) {
             val summaryExists = functionSummaries.addFlowsToFunctionDeclaration(node)
@@ -280,7 +318,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
             node,
             node.condition,
-            node.conditionDeclaration
+            node.conditionDeclaration,
         )
     }
 
@@ -293,7 +331,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
             node,
             node.condition,
-            node.conditionDeclaration
+            node.conditionDeclaration,
         )
     }
 
@@ -306,7 +344,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
             node,
             node.selector,
-            node.selectorDeclaration
+            node.selectorDeclaration,
         )
     }
 
@@ -319,7 +357,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
             node,
             node.condition,
-            node.conditionDeclaration
+            node.conditionDeclaration,
         )
     }
 
@@ -357,7 +395,19 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * this expression.
      */
     protected fun handleInitializerListExpression(node: InitializerListExpression) {
-        node.initializers.forEach { node.prevDFGEdges += it }
+        node.initializers.forEachIndexed { idx, it ->
+            val astParent = node.astParent
+            if (
+                astParent is AssignExpression && node in astParent.lhs ||
+                    astParent is ComprehensionExpression && node == astParent.variable
+            ) {
+                // If we're the target of an assignment or the variable of a comprehension
+                // expression, the DFG flows from the node to the initializers.
+                node.nextDFGEdges.add(it) { granularity = indexed(idx) }
+            } else {
+                node.prevDFGEdges.add(it) { granularity = indexed(idx) }
+            }
+        }
     }
 
     /**
@@ -434,7 +484,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     node.rhs.nextDFGEdges += node
                 }
             }
-            in node.language?.compoundAssignmentOperators ?: setOf() -> {
+            in node.language.compoundAssignmentOperators -> {
                 node.lhs.let {
                     node.prevDFGEdges += it
                     node.nextDFGEdges += it
@@ -459,7 +509,6 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     fun handleCallExpression(call: CallExpression, inferDfgForUnresolvedSymbols: Boolean) {
         // Remove existing DFG edges since they are no longer valid (e.g. after updating the
         // CallExpression with the invokes edges to the called functions)
-        call.prevDFG.forEach { it.nextDFGEdges.removeIf { edge -> edge.end == call } }
         call.prevDFGEdges.clear()
 
         if (call.invokes.isEmpty() && inferDfgForUnresolvedSymbols) {

@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node.Companion.EMPTY_NAME
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.log
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewArrayExpression
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -44,7 +45,7 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
 @JvmOverloads
 fun MetadataProvider.newTranslationUnitDeclaration(
     name: CharSequence?,
-    rawNode: Any? = null
+    rawNode: Any? = null,
 ): TranslationUnitDeclaration {
     val node = TranslationUnitDeclaration()
     node.applyMetadata(this, name, rawNode, true)
@@ -83,7 +84,7 @@ fun MetadataProvider.newMethodDeclaration(
     name: CharSequence?,
     isStatic: Boolean = false,
     recordDeclaration: RecordDeclaration? = null,
-    rawNode: Any? = null
+    rawNode: Any? = null,
 ): MethodDeclaration {
     val node = MethodDeclaration()
     node.applyMetadata(this, name, rawNode, defaultNamespace = recordDeclaration?.name)
@@ -106,8 +107,8 @@ fun MetadataProvider.newOperatorDeclaration(
     name: CharSequence,
     operatorCode: String,
     recordDeclaration: RecordDeclaration? = null,
-    rawNode: Any? = null
-): MethodDeclaration {
+    rawNode: Any? = null,
+): OperatorDeclaration {
     val node = OperatorDeclaration()
     node.applyMetadata(this, name, rawNode, defaultNamespace = recordDeclaration?.name)
 
@@ -128,7 +129,7 @@ fun MetadataProvider.newOperatorDeclaration(
 fun MetadataProvider.newConstructorDeclaration(
     name: CharSequence?,
     recordDeclaration: RecordDeclaration?,
-    rawNode: Any? = null
+    rawNode: Any? = null,
 ): ConstructorDeclaration {
     val node = ConstructorDeclaration()
 
@@ -151,10 +152,10 @@ fun MetadataProvider.newParameterDeclaration(
     name: CharSequence?,
     type: Type = unknownType(),
     variadic: Boolean = false,
-    rawNode: Any? = null
+    rawNode: Any? = null,
 ): ParameterDeclaration {
     val node = ParameterDeclaration()
-    node.applyMetadata(this, name, rawNode, localNameOnly = true)
+    node.applyMetadata(this, name, rawNode, doNotPrependNamespace = true)
 
     node.type = type
     node.isVariadic = variadic
@@ -174,7 +175,7 @@ fun MetadataProvider.newVariableDeclaration(
     name: CharSequence?,
     type: Type = unknownType(),
     implicitInitializerAllowed: Boolean = false,
-    rawNode: Any? = null
+    rawNode: Any? = null,
 ): VariableDeclaration {
     val node = VariableDeclaration()
     node.applyMetadata(this, name, rawNode, true)
@@ -196,7 +197,7 @@ fun MetadataProvider.newVariableDeclaration(
 fun LanguageProvider.newTupleDeclaration(
     elements: List<VariableDeclaration>,
     initializer: Expression?,
-    rawNode: Any? = null
+    rawNode: Any? = null,
 ): TupleDeclaration {
     val node = TupleDeclaration()
     node.applyMetadata(this, null, rawNode, true)
@@ -224,7 +225,7 @@ fun LanguageProvider.newTupleDeclaration(
 fun MetadataProvider.newTypedefDeclaration(
     targetType: Type,
     alias: Type,
-    rawNode: Any? = null
+    rawNode: Any? = null,
 ): TypedefDeclaration {
     val node = TypedefDeclaration()
     node.applyMetadata(this, alias.typeName, rawNode)
@@ -247,7 +248,7 @@ fun MetadataProvider.newTypedefDeclaration(
 @JvmOverloads
 fun MetadataProvider.newTypeParameterDeclaration(
     name: CharSequence?,
-    rawNode: Any? = null
+    rawNode: Any? = null,
 ): TypeParameterDeclaration {
     val node = TypeParameterDeclaration()
     node.applyMetadata(this, name, rawNode, true)
@@ -266,7 +267,7 @@ fun MetadataProvider.newTypeParameterDeclaration(
 fun MetadataProvider.newRecordDeclaration(
     name: CharSequence,
     kind: String,
-    rawNode: Any? = null
+    rawNode: Any? = null,
 ): RecordDeclaration {
     val node = RecordDeclaration()
     node.applyMetadata(this, name, rawNode, false)
@@ -286,7 +287,7 @@ fun MetadataProvider.newRecordDeclaration(
 @JvmOverloads
 fun MetadataProvider.newEnumDeclaration(
     name: CharSequence?,
-    rawNode: Any? = null
+    rawNode: Any? = null,
 ): EnumDeclaration {
     val node = EnumDeclaration()
     node.applyMetadata(this, name, rawNode)
@@ -304,7 +305,7 @@ fun MetadataProvider.newEnumDeclaration(
 @JvmOverloads
 fun MetadataProvider.newFunctionTemplateDeclaration(
     name: CharSequence?,
-    rawNode: Any? = null
+    rawNode: Any? = null,
 ): FunctionTemplateDeclaration {
     val node = FunctionTemplateDeclaration()
     node.applyMetadata(this, name, rawNode, true)
@@ -322,7 +323,7 @@ fun MetadataProvider.newFunctionTemplateDeclaration(
 @JvmOverloads
 fun MetadataProvider.newRecordTemplateDeclaration(
     name: CharSequence?,
-    rawNode: Any? = null
+    rawNode: Any? = null,
 ): RecordTemplateDeclaration {
     val node = RecordTemplateDeclaration()
     node.applyMetadata(this, name, rawNode, true)
@@ -340,7 +341,7 @@ fun MetadataProvider.newRecordTemplateDeclaration(
 @JvmOverloads
 fun MetadataProvider.newEnumConstantDeclaration(
     name: CharSequence?,
-    rawNode: Any? = null
+    rawNode: Any? = null,
 ): EnumConstantDeclaration {
     val node = EnumConstantDeclaration()
     node.applyMetadata(this, name, rawNode)
@@ -362,7 +363,7 @@ fun MetadataProvider.newFieldDeclaration(
     modifiers: List<String>? = listOf(),
     initializer: Expression? = null,
     implicitInitializerAllowed: Boolean = false,
-    rawNode: Any? = null
+    rawNode: Any? = null,
 ): FieldDeclaration {
     val node = FieldDeclaration()
     node.applyMetadata(this, name, rawNode)
@@ -391,7 +392,7 @@ fun MetadataProvider.newFieldDeclaration(
 fun MetadataProvider.newProblemDeclaration(
     problem: String = "",
     problemType: ProblemNode.ProblemType = ProblemNode.ProblemType.PARSING,
-    rawNode: Any? = null
+    rawNode: Any? = null,
 ): ProblemDeclaration {
     val node = ProblemDeclaration()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
@@ -412,7 +413,7 @@ fun MetadataProvider.newProblemDeclaration(
 @JvmOverloads
 fun MetadataProvider.newIncludeDeclaration(
     includeFilename: CharSequence,
-    rawNode: Any? = null
+    rawNode: Any? = null,
 ): IncludeDeclaration {
     val node = IncludeDeclaration()
     node.applyMetadata(this, includeFilename, rawNode, true)
@@ -431,7 +432,7 @@ fun MetadataProvider.newIncludeDeclaration(
 @JvmOverloads
 fun MetadataProvider.newNamespaceDeclaration(
     name: CharSequence,
-    rawNode: Any? = null
+    rawNode: Any? = null,
 ): NamespaceDeclaration {
     val node = NamespaceDeclaration()
     node.applyMetadata(this, name, rawNode)
@@ -449,15 +450,15 @@ fun MetadataProvider.newNamespaceDeclaration(
 @JvmOverloads
 fun MetadataProvider.newImportDeclaration(
     import: Name,
-    wildcardImport: Boolean = false,
+    style: ImportStyle,
     alias: Name? = null,
-    rawNode: Any? = null
+    rawNode: Any? = null,
 ): ImportDeclaration {
     val node = ImportDeclaration()
     node.applyMetadata(this, "", rawNode)
     node.import = import
     node.alias = alias
-    node.wildcardImport = wildcardImport
+    node.style = style
     if (alias != null) {
         node.name = alias
     } else {

@@ -52,7 +52,7 @@ class EvaluationOrder(
      * branch (expression evaluated to true) or the false branch (e.g. with an if/else condition).
      * Otherwise, this property is null.
      */
-    var branch: Boolean? = null
+    var branch: Boolean? = null,
 ) : Edge<Node>(start, end) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -68,6 +68,8 @@ class EvaluationOrder(
         result = 31 * result + branch.hashCode()
         return result
     }
+
+    override var labels = setOf("EOG")
 }
 
 /**
@@ -86,6 +88,92 @@ class EvaluationOrders<NodeType : Node>(
     EdgeList<Node, EvaluationOrder>(
         thisRef = thisRef,
         init = ::EvaluationOrder,
-        outgoing = outgoing
+        outgoing = outgoing,
     ),
     MirroredEdgeCollection<Node, EvaluationOrder>
+
+/**
+ * This function inserts the given [newNode] before the current node ([this]) in its existing EOG
+ * path.
+ *
+ * Before:
+ * ```
+ * <node1> -- EOG -->
+ *                    <this>
+ * <node2> -- EOG -->
+ * ```
+ *
+ * We want to insert a new [EvaluationOrder] edge between all incoming edges of [this] (node3).
+ *
+ * Afterward:
+ * ```
+ * <node1> -- EOG -->
+ *                    <new node> -- EOG --> <this>
+ * <node2> -- EOG -->
+ * ```
+ */
+fun Node.insertNodeBeforeInEOGPath(
+    newNode: Node,
+    builder: ((EvaluationOrder) -> Unit) = {},
+): Boolean {
+    // Construct a new edge from the given node to the current node
+    val edge = EvaluationOrder(newNode, this).also(builder)
+
+    // Make a copy of the incoming edges of the current node and set the start of the new edge as
+    // the end
+    val copy = this.prevEOGEdges.toList()
+    copy.forEach { it.end = newNode }
+
+    // Clear the incoming edges of the current node
+    this.prevEOGEdges.clear()
+
+    // Add the old edges as the previous edges of the new edge's start. We cannot use "addAll"
+    // because otherwise our mirroring will not be triggered.
+    copy.forEach { newNode.prevEOGEdges += it }
+
+    // Add the new edge as a previous edge of the current node
+    return this.prevEOGEdges.add(edge)
+}
+
+/**
+ * This function inserts the given [newNode] after the current node ([this]) in its existing EOG
+ * path.
+ *
+ * Before:
+ * ```
+ *         -- EOG --> <node1>
+ * <this>
+ *         -- EOG --> <node2>
+ * ```
+ *
+ * We want to insert a new [EvaluationOrder] edge between all outgoing edges of [this].
+ *
+ * Afterward:
+ * ```
+ *                              -- EOG --> <node1>
+ * <this> -- EOG --> <new node>
+ *                              -- EOG --> <node2>
+ * ```
+ */
+fun Node.insertNodeAfterwardInEOGPath(
+    newNode: Node,
+    builder: ((EvaluationOrder) -> Unit) = {},
+): Boolean {
+    // Construct a new edge from the current node to the given node
+    val edge = EvaluationOrder(this, newNode).also(builder)
+
+    // Make a copy of the outgoing edges of the current node and set the end of the new edge as
+    // the start
+    val copy = this.nextEOGEdges.toList()
+    copy.forEach { it.start = newNode }
+
+    // Clear the outgoing edges of the current node
+    this.nextEOGEdges.clear()
+
+    // Add the old edges as the next edges of the new edge's end. We cannot use "addAll" because
+    // otherwise our mirroring will not be triggered.
+    copy.forEach { newNode.nextEOGEdges += it }
+
+    // Add the new edge as a next edge of the current node
+    return this.nextEOGEdges.add(edge)
+}

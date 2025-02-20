@@ -31,21 +31,21 @@ import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdges
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.Objects
+import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
-class ForEachStatement : Statement(), BranchingNode, StatementHolder {
+/**
+ * Represent a for statement of the form `for(variable ... iterable){...}` that executes the loop
+ * body for each instance of an element in `iterable` that is temporarily stored in `variable`.
+ */
+class ForEachStatement : LoopStatement(), BranchingNode, StatementHolder {
 
     @Relationship("VARIABLE")
     var variableEdge =
         astOptionalEdgeOf<Statement>(
-            onChanged = { _, new ->
-                val end = new?.end
-                if (end is Reference) {
-                    end.access = AccessValues.WRITE
-                }
-            }
+            onChanged = { _, new -> (new?.end as? Expression)?.access = AccessValues.WRITE }
         )
 
     /**
@@ -58,19 +58,16 @@ class ForEachStatement : Statement(), BranchingNode, StatementHolder {
     /** This field contains the iteration subject of the loop. */
     var iterable by unwrapping(ForEachStatement::iterableEdge)
 
-    @Relationship("STATEMENT") var statementEdge = astOptionalEdgeOf<Statement>()
-    /** This field contains the body of the loop. */
-    var statement by unwrapping(ForEachStatement::statementEdge)
-
     override val branchedBy: Node?
         get() = iterable
 
     override var statementEdges: AstEdges<Statement, AstEdge<Statement>>
         get() {
             val statements = astEdgesOf<Statement>()
-            variable?.let { statements.add(AstEdge(this, it)) }
-            iterable?.let { statements.add(AstEdge(this, it)) }
-            statement?.let { statements.add(AstEdge(this, it)) }
+            statements += variableEdge
+            statements += iterableEdge
+            statements += statementEdge
+            statements += elseStatementEdge
             return statements
         }
         set(_) {
@@ -79,14 +76,18 @@ class ForEachStatement : Statement(), BranchingNode, StatementHolder {
 
     override var statements by unwrapping(ForEachStatement::statementEdges)
 
+    override fun toString() =
+        ToStringBuilder(this, TO_STRING_STYLE)
+            .appendSuper(super.toString())
+            .append("variable", variable)
+            .append("iterable", iterable)
+            .toString()
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is ForEachStatement) return false
-        return super.equals(other) &&
-            variable == other.variable &&
-            iterable == other.iterable &&
-            statement == other.statement
+        return super.equals(other) && variable == other.variable && iterable == other.iterable
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), variable, iterable, statement)
+    override fun hashCode() = Objects.hash(super.hashCode(), variable, iterable)
 }

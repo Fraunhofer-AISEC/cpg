@@ -31,7 +31,7 @@ import java.util.function.Supplier
 
 abstract class PythonHandler<ResultNode : Node, HandlerNode : Python.AST.AST>(
     configConstructor: Supplier<ResultNode>,
-    lang: PythonLanguageFrontend
+    lang: PythonLanguageFrontend,
 ) : Handler<ResultNode, HandlerNode, PythonLanguageFrontend>(configConstructor, lang) {
     /**
      * We intentionally override the logic of [Handler.handle] because we do not want the map-based
@@ -49,4 +49,22 @@ abstract class PythonHandler<ResultNode : Node, HandlerNode : Python.AST.AST>(
     }
 
     abstract fun handleNode(node: HandlerNode): ResultNode
+
+    companion object {
+        /**
+         * A prefix to add to random names when having to add implicit assignments. Used when
+         * handling loops with multiple variables.
+         */
+        const val LOOP_VAR_PREFIX = "loopMultiVarHelperVar"
+        /**
+         * A prefix to add to random names representing implicit context managers in `with`
+         * statements.
+         */
+        const val CONTEXT_MANAGER = "contextManager"
+        /**
+         * A prefix to add to random names representing implicit `tmpVal` nodes in `with`
+         * statements.
+         */
+        const val WITH_TMP_VAL = "withTmpVal"
+    }
 }

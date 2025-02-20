@@ -95,7 +95,7 @@ abstract class Type : Node {
         typeOrigin = type?.typeOrigin
     }
 
-    constructor(typeName: CharSequence, language: Language<*>?) {
+    constructor(typeName: CharSequence, language: Language<*>) {
         name =
             if (this is FunctionType) {
                 Name(typeName.toString(), null, language)
@@ -106,7 +106,7 @@ abstract class Type : Node {
         typeOrigin = Origin.UNRESOLVED
     }
 
-    constructor(fullTypeName: Name, language: Language<*>?) {
+    constructor(fullTypeName: Name, language: Language<*>) {
         name = fullTypeName.clone()
         typeOrigin = Origin.UNRESOLVED
         this.language = language
@@ -117,7 +117,7 @@ abstract class Type : Node {
         RESOLVED,
         DATAFLOW,
         GUESSED,
-        UNRESOLVED
+        UNRESOLVED,
     }
 
     /**
@@ -304,7 +304,12 @@ var Type.recordDeclaration: RecordDeclaration?
         }
     }
 
+/**
+ * This interfaces specifies that this node (most likely a [Declaration]) declares a type. This is
+ * used by [TypeResolver.resolveType] to find appropriate symbols and declarations.
+ */
 interface DeclaresType {
 
+    /** The [Type] that is being declared. */
     val declaredType: Type
 }

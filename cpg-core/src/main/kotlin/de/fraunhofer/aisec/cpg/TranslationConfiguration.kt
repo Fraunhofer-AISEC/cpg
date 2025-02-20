@@ -28,14 +28,17 @@ package de.fraunhofer.aisec.cpg
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
+import de.fraunhofer.aisec.cpg.TranslationResult.Companion.DEFAULT_APPLICATION_NAME
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase
 import de.fraunhofer.aisec.cpg.frontends.KClassSerializer
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.passes.configuration.*
 import de.fraunhofer.aisec.cpg.passes.inference.DFGFunctionSummaries
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import java.io.File
 import java.nio.file.Path
 import java.util.*
@@ -51,13 +54,14 @@ import org.slf4j.LoggerFactory
  * The configuration for the [TranslationManager] holds all information that is used during the
  * translation.
  */
+@DoNotPersist
 class TranslationConfiguration
 private constructor(
     /** Definition of additional symbols, mostly useful for C++. */
     val symbols: Map<String, String>,
     /** Source code files to parse. */
     val softwareComponents: Map<String, List<File>>,
-    val topLevel: File?,
+    val topLevels: MutableMap<String, File?>,
     /** Set to true to generate debug output for the parser. */
     val debugParser: Boolean,
     /**
@@ -117,6 +121,10 @@ private constructor(
     matchCommentsToNodes: Boolean,
     addIncludesToGraph: Boolean,
     passConfigurations: Map<KClass<out Pass<*>>, PassConfiguration>,
+    /** A list of exclusion patterns used to filter files and directories. */
+    val exclusionPatternsByString: List<String>,
+    /** A list of exclusion patterns using regular expressions to filter files and directories. */
+    val exclusionPatternsByRegex: List<Regex>,
 ) {
     /** This list contains all languages which we want to translate. */
     val languages: List<Language<*>>
@@ -232,7 +240,7 @@ private constructor(
     class Builder {
         private var softwareComponents: MutableMap<String, List<File>> = HashMap()
         private val languages = mutableListOf<Language<*>>()
-        private var topLevel: File? = null
+        private var topLevels = mutableMapOf<String, File?>()
         private var debugParser = false
         private var failOnError = false
         private var loadIncludes = false
@@ -257,6 +265,8 @@ private constructor(
         private var useDefaultPasses = false
         private var passConfigurations: MutableMap<KClass<out Pass<*>>, PassConfiguration> =
             mutableMapOf()
+        private val exclusionPatternsByRegex = mutableListOf<Regex>()
+        private val exclusionPatternsByString = mutableListOf<String>()
 
         fun symbols(symbols: Map<String, String>): Builder {
             this.symbols = symbols
@@ -264,14 +274,14 @@ private constructor(
         }
 
         /**
-         * Files or directories containing the source code to analyze. Generates a dummy software
-         * component called "application".
+         * Files or directories containing the source code to analyze. Generates a [Component] with
+         * the name of [DEFAULT_APPLICATION_NAME].
          *
          * @param sourceLocations The files with the source code
          * @return this
          */
         fun sourceLocations(vararg sourceLocations: File): Builder {
-            softwareComponents["application"] = sourceLocations.toMutableList()
+            softwareComponents[DEFAULT_APPLICATION_NAME] = sourceLocations.toMutableList()
             return this
         }
 
@@ -283,7 +293,7 @@ private constructor(
          * @return this
          */
         fun sourceLocations(sourceLocations: List<File>): Builder {
-            softwareComponents["application"] = sourceLocations.toMutableList()
+            softwareComponents[DEFAULT_APPLICATION_NAME] = sourceLocations.toMutableList()
             return this
         }
 
@@ -305,7 +315,13 @@ private constructor(
         }
 
         fun topLevel(topLevel: File?): Builder {
-            this.topLevel = topLevel
+            this.topLevels[DEFAULT_APPLICATION_NAME] = topLevel
+            return this
+        }
+
+        fun topLevels(topLevels: Map<String, File?>): Builder {
+            this.topLevels.clear()
+            this.topLevels += topLevels
             return this
         }
 
@@ -410,7 +426,7 @@ private constructor(
         inline fun <
             reified OldPass : Pass<*>,
             reified For : Language<*>,
-            reified With : Pass<*>
+            reified With : Pass<*>,
         > replacePass(): Builder {
             return replacePass(OldPass::class, For::class, With::class)
         }
@@ -418,7 +434,7 @@ private constructor(
         fun replacePass(
             passType: KClass<out Pass<*>>,
             forLanguage: KClass<out Language<*>>,
-            with: KClass<out Pass<*>>
+            with: KClass<out Pass<*>>,
         ): Builder {
             replacedPasses[Pair(passType, forLanguage)] = with
             return this
@@ -451,6 +467,32 @@ private constructor(
 
         inline fun <reified T : Pass<*>> configurePass(config: PassConfiguration): Builder {
             return this.configurePass(T::class, config)
+        }
+
+        /**
+         * Adds exclusion patterns using regular expressions for filtering files and directories.
+         *
+         * @param patterns Exclusion patterns. Example:
+         * ```
+         * exclusionPatterns(Regex(".*test(s)?"))
+         * ```
+         */
+        fun exclusionPatterns(vararg patterns: Regex): Builder {
+            exclusionPatternsByRegex.addAll(patterns)
+            return this
+        }
+
+        /**
+         * Adds exclusion patterns for filtering files and directories.
+         *
+         * @param patterns Exclusion patterns. Example:
+         * ```
+         * exclusionPatterns("tests")
+         * ```
+         */
+        fun exclusionPatterns(vararg patterns: String): Builder {
+            exclusionPatternsByString.addAll(patterns)
+            return this
         }
 
         /**
@@ -507,7 +549,8 @@ private constructor(
             registerPass<TypeResolver>()
             registerPass<ControlFlowSensitiveDFGPass>()
             registerPass<FilenameMapper>()
-            registerPass<ReplaceCallCastPass>()
+            registerPass<ResolveCallExpressionAmbiguityPass>()
+            registerPass<ResolveMemberExpressionAmbiguityPass>()
             useDefaultPasses = true
             return this
         }
@@ -531,7 +574,7 @@ private constructor(
                         registerPass(p.value)
                         log.info(
                             "Registered an extra (frontend dependent) default dependency: {}",
-                            p.value
+                            p.value,
                         )
                     }
                 }
@@ -546,7 +589,7 @@ private constructor(
                         replacePass(p.old, p.lang, p.with)
                         log.info(
                             "Registered an extra (frontend dependent) default dependency, which replaced an existing pass: {}",
-                            p.old
+                            p.old,
                         )
                     }
                 }
@@ -626,7 +669,7 @@ private constructor(
             return TranslationConfiguration(
                 symbols,
                 softwareComponents,
-                topLevel,
+                topLevels,
                 debugParser,
                 failOnError,
                 loadIncludes,
@@ -647,7 +690,9 @@ private constructor(
                 compilationDatabase,
                 matchCommentsToNodes,
                 addIncludesToGraph,
-                passConfigurations
+                passConfigurations,
+                exclusionPatternsByString,
+                exclusionPatternsByRegex,
             )
         }
 
@@ -657,7 +702,7 @@ private constructor(
             log.info("Passes before enforcing order: {}", passes.map { it.simpleName })
             val orderingHelper = PassOrderingHelper(passes)
             log.info(
-                "The following mermaid graph represents the pass dependencies: \n ${buildMermaid(passes)}"
+                "The following mermaid graph represents the pass dependencies: \n${buildMermaid(passes)}"
             )
 
             return orderingHelper.order()

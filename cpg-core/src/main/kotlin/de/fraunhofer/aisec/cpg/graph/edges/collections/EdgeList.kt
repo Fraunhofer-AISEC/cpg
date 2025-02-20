@@ -35,7 +35,7 @@ abstract class EdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
     override var init: (start: Node, end: NodeType) -> EdgeType,
     override var outgoing: Boolean = true,
     override var onAdd: ((EdgeType) -> Unit)? = null,
-    override var onRemove: ((EdgeType) -> Unit)? = null
+    override var onRemove: ((EdgeType) -> Unit)? = null,
 ) : ArrayList<EdgeType>(), EdgeCollection<NodeType, EdgeType> {
 
     override fun add(element: EdgeType): Boolean {
@@ -82,11 +82,32 @@ abstract class EdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
         return ok
     }
 
+    /** Replaces the first occurrence of an edge with [old] with a new edge to [new]. */
+    fun replace(old: NodeType, new: NodeType): Boolean {
+        val idx = this.indexOfFirst { it.end == old }
+        if (idx != -1) {
+            this[idx] = init(thisRef, new)
+            return true
+        }
+
+        return false
+    }
+
     override fun clear() {
         // Make a copy of our edges so we can pass a copy to our on-remove handler
         val edges = this.toList()
         super.clear()
         edges.forEach { handleOnRemove(it) }
+    }
+
+    /**
+     * This function creates a new edge (of [EdgeType]) to/from the specified node [target]
+     * (depending on [outgoing]) and adds it to the specified index in the list.
+     */
+    fun add(index: Int, target: NodeType) {
+        val edge = createEdge(target, init, this.outgoing)
+
+        return add(index, edge)
     }
 
     override fun add(index: Int, element: EdgeType) {

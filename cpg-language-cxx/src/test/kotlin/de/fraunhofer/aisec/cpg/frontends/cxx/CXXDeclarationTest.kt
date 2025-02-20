@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.OperatorCallExpression
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.test.*
 import java.io.File
@@ -60,7 +61,7 @@ class CXXDeclarationTest {
             analyze(
                 listOf(topLevel.resolve("foo.c"), topLevel.resolve("bar.c")),
                 topLevel.toPath(),
-                true
+                true,
             ) {
                 it.registerLanguage<CLanguage>()
                 it.includePath("src/test/resources/c/foobar/std")
@@ -88,7 +89,7 @@ class CXXDeclarationTest {
             analyze(
                 listOf(topLevel.resolve("foo.c"), topLevel.resolve("bar.c")),
                 topLevel.toPath(),
-                true
+                true,
             ) {
                 it.registerLanguage<CLanguage>()
             }
@@ -242,8 +243,111 @@ class CXXDeclarationTest {
             }
         assertNotNull(result)
 
-        var plusplus = result.operators["operator++"]
+        val integer = result.records["Integer"]
+        assertNotNull(integer)
+
+        val plusplus = integer.operators["operator++"]
         assertNotNull(plusplus)
         assertEquals("++", plusplus.operatorCode)
+
+        val plus = integer.operators("operator+")
+        assertEquals(2, plus.size)
+        assertEquals("+", plus.map { it.operatorCode }.distinct().singleOrNull())
+
+        val main = result.functions["main"]
+        assertNotNull(main)
+
+        val unaryOp = main.operatorCalls["++"]
+        assertNotNull(unaryOp)
+        assertInvokes(unaryOp, plusplus)
+
+        val binaryOp0 = main.operatorCalls("+").getOrNull(0)
+        assertNotNull(binaryOp0)
+        assertInvokes(binaryOp0, plus.getOrNull(0))
+
+        val binaryOp1 = main.operatorCalls("+").getOrNull(1)
+        assertNotNull(binaryOp1)
+        assertInvokes(binaryOp1, plus.getOrNull(1))
+    }
+
+    @Test
+    fun testMemberAccessOperator() {
+        val file = File("src/test/resources/cxx/operators/member_access.cpp")
+        val result =
+            analyze(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
+        assertNotNull(result)
+
+        var proxy = result.records["Proxy"]
+        assertNotNull(proxy)
+
+        var op = proxy.operators["operator->"]
+        assertNotNull(op)
+
+        var data = result.records["Data"]
+        assertNotNull(data)
+
+        var size = data.fields["size"]
+        assertNotNull(size)
+
+        val p = result.refs["p"]
+        assertNotNull(p)
+        assertEquals(proxy.toType(), p.type)
+
+        var sizeRef = result.memberExpressions["size"]
+        assertNotNull(sizeRef)
+        assertRefersTo(sizeRef, size)
+
+        // we should now have an implicit call to our operator in-between "p" and "size"
+        val opCall = sizeRef.base
+        assertNotNull(opCall)
+        assertIs<OperatorCallExpression>(opCall)
+        assertEquals(p, opCall.base)
+        assertInvokes(opCall, op)
+    }
+
+    @Test
+    fun testCallExpressionOperator() {
+        val file = File("src/test/resources/cxx/operators/call_expression.cpp")
+        val result =
+            analyze(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
+        assertNotNull(result)
+
+        var proxy = result.records["Proxy"]
+        assertNotNull(proxy)
+
+        var funcBar = proxy.functions["bar"]
+        assertNotNull(funcBar)
+
+        var op = proxy.operators["operator->"]
+        assertNotNull(op)
+
+        var data = result.records["Data"]
+        assertNotNull(data)
+
+        var funcFoo = data.functions["foo"]
+        assertNotNull(funcFoo)
+
+        val p = result.refs["p"]
+        assertNotNull(p)
+        assertEquals(proxy.toType(), p.type)
+
+        var funcFooRef = result.memberExpressions["foo"]
+        assertNotNull(funcFooRef)
+        assertRefersTo(funcFooRef, funcFoo)
+
+        var funcBarRef = result.memberExpressions["bar"]
+        assertNotNull(funcBarRef)
+        assertRefersTo(funcBarRef, funcBar)
+
+        // we should now have an implicit call to our operator in-between "p" and "foo"
+        val opCall = funcFooRef.base
+        assertNotNull(opCall)
+        assertIs<OperatorCallExpression>(opCall)
+        assertEquals(p, opCall.base)
+        assertInvokes(opCall, op)
     }
 }

@@ -55,6 +55,7 @@ internal class ScopeManagerTest : BaseTest() {
             val func1 = frontend1.newFunctionDeclaration("func1")
             s1.addDeclaration(func1)
             s1.leaveScope(namespaceA1)
+            s1.addDeclaration(namespaceA1)
 
             val s2 = ScopeManager()
             val frontend2 =
@@ -67,11 +68,10 @@ internal class ScopeManagerTest : BaseTest() {
             val func2 = frontend2.newFunctionDeclaration("func2")
             s2.addDeclaration(func2)
             s2.leaveScope(namespaceA2)
+            s2.addDeclaration(namespaceA2)
 
             // merge the two scopes. this replicates the behaviour of parseParallel
             val final = ScopeManager()
-            val frontend =
-                TestLanguageFrontend("::", TestLanguage(), TranslationContext(config, final, tm))
             final.mergeFrom(listOf(s1, s2))
 
             // in the final scope manager, there should only be one NameScope "A"
@@ -82,7 +82,7 @@ internal class ScopeManagerTest : BaseTest() {
             assertNotNull(scopeA)
 
             // should also be able to look up via the FQN
-            assertEquals(scopeA, final.lookupScope("A"))
+            assertEquals(scopeA, final.lookupScope(parseName("A")))
 
             // and it should contain both functions from the different file in the same namespace
             assertContains(scopeA.symbols["func1"] ?: listOf(), func1)
@@ -98,9 +98,14 @@ internal class ScopeManagerTest : BaseTest() {
             assertFalse(listOf(s1, s2).map { it.globalScope }.contains(final.globalScope))
 
             // resolve symbol
-            val call =
-                frontend.newCallExpression(frontend.newReference("A::func1"), "A::func1", false)
-            val func = final.findSymbols(call.callee!!.name).firstOrNull()
+            val func =
+                final
+                    .lookupSymbolByName(
+                        name = parseName("A::func1"),
+                        language = language,
+                        startScope = final.globalScope,
+                    )
+                    .firstOrNull()
 
             assertEquals(func1, func)
         }
@@ -112,28 +117,29 @@ internal class ScopeManagerTest : BaseTest() {
         val frontend =
             TestLanguageFrontend("::", TestLanguage(), TranslationContext(config, s, TypeManager()))
         s.resetToGlobal(frontend.newTranslationUnitDeclaration("file.cpp", null))
+        with(frontend) {
+            assertNull(s.currentNamespace)
 
-        assertNull(s.currentNamespace)
+            val namespaceA = frontend.newNamespaceDeclaration("A", null)
+            s.enterScope(namespaceA)
 
-        val namespaceA = frontend.newNamespaceDeclaration("A", null)
-        s.enterScope(namespaceA)
+            assertEquals("A", s.currentNamespace.toString())
 
-        assertEquals("A", s.currentNamespace.toString())
+            // nested namespace A::B
+            val namespaceB = frontend.newNamespaceDeclaration("B", null)
+            s.enterScope(namespaceB)
 
-        // nested namespace A::B
-        val namespaceB = frontend.newNamespaceDeclaration("B", null)
-        s.enterScope(namespaceB)
+            assertEquals("A::B", s.currentNamespace.toString())
 
-        assertEquals("A::B", s.currentNamespace.toString())
+            val func = frontend.newFunctionDeclaration("func")
+            s.addDeclaration(func)
 
-        val func = frontend.newFunctionDeclaration("func")
-        s.addDeclaration(func)
+            s.leaveScope(namespaceB)
+            s.addDeclaration(namespaceB)
+            s.leaveScope(namespaceA)
 
-        s.leaveScope(namespaceB)
-        s.addDeclaration(namespaceB)
-        s.leaveScope(namespaceA)
-
-        val scope = s.lookupScope("A::B")
-        assertNotNull(scope)
+            val scope = s.lookupScope(parseName("A::B"))
+            assertNotNull(scope)
+        }
     }
 }

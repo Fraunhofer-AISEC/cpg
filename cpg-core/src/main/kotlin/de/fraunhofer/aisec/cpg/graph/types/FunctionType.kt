@@ -42,7 +42,7 @@ constructor(
     typeName: String = "",
     var parameters: List<Type> = listOf(),
     var returnTypes: List<Type> = listOf(),
-    language: Language<*>? = null
+    language: Language<*>,
 ) : Type(typeName, language) {
 
     override fun reference(pointer: PointerType.PointerOrigin?): Type {
@@ -64,15 +64,13 @@ constructor(
          * This helper function computes a [FunctionType] out of an existing [FunctionDeclaration].
          */
         @JvmStatic
-        fun computeType(
-            func: FunctionDeclaration,
-        ): FunctionType {
+        fun computeType(func: FunctionDeclaration): FunctionType {
             val type =
                 FunctionType(
                     func.signature,
                     func.parameters.map { it.type },
                     func.returnTypes.toList(),
-                    func.language
+                    func.language,
                 )
 
             val c = func.ctx ?: throw TranslationException("context not available")

@@ -29,7 +29,9 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeList
+import de.fraunhofer.aisec.cpg.graph.edges.collections.MirroredEdgeCollection
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import kotlin.reflect.KProperty
 import org.neo4j.ogm.annotation.RelationshipEntity
 
 /** This edge class denotes the invocation of a [FunctionDeclaration] by a [CallExpression]. */
@@ -43,6 +45,8 @@ class Invoke(
      */
     var dynamicInvoke: Boolean = false,
 ) : Edge<FunctionDeclaration>(start, end) {
+    override var labels = setOf("INVOKES")
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is Invoke) return false
@@ -57,10 +61,19 @@ class Invoke(
 }
 
 /** A container for [Usage] edges. [NodeType] is necessary because of the Neo4J OGM. */
-class Invokes<NodeType : FunctionDeclaration>(thisRef: CallExpression) :
-    EdgeList<FunctionDeclaration, Invoke>(thisRef = thisRef, init = ::Invoke) {
+class Invokes<NodeType : FunctionDeclaration>(
+    thisRef: Node,
+    override var mirrorProperty: KProperty<MutableCollection<Invoke>>,
+    outgoing: Boolean = true,
+) :
+    EdgeList<FunctionDeclaration, Invoke>(thisRef = thisRef, init = ::Invoke, outgoing = outgoing),
+    MirroredEdgeCollection<FunctionDeclaration, Invoke> {
     override fun handleOnAdd(edge: Invoke) {
+        super<MirroredEdgeCollection>.handleOnAdd(edge)
+
         // TODO: Make thisRef generic :(
-        edge.end.registerTypeObserver(thisRef as CallExpression)
+        if (outgoing) {
+            edge.end.registerTypeObserver(thisRef as CallExpression)
+        }
     }
 }

@@ -26,28 +26,12 @@
 package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import jep.python.PyObject
 
 class ExpressionHandler(frontend: PythonLanguageFrontend) :
     PythonHandler<Expression, Python.AST.BaseExpr>(::ProblemExpression, frontend) {
-
-    /*
-    Magic numbers (https://docs.python.org/3/library/ast.html#ast.FormattedValue):
-    conversion is an integer:
-        -1: no formatting
-        115: !s string formatting
-        114: !r repr formatting
-        97: !a ascii formatting
-     */
-    private val formattedValConversionNoFormatting = -1L
-    private val formattedValConversionString = 115L
-    private val formattedValConversionRepr = 114L
-    private val formattedValConversionASCII = 97L
 
     override fun handleNode(node: Python.AST.BaseExpr): Expression {
         return when (node) {
@@ -70,60 +54,233 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
             is Python.AST.FormattedValue -> handleFormattedValue(node)
             is Python.AST.JoinedStr -> handleJoinedStr(node)
             is Python.AST.Starred -> handleStarred(node)
-            is Python.AST.NamedExpr,
-            is Python.AST.GeneratorExp,
-            is Python.AST.ListComp,
-            is Python.AST.SetComp,
-            is Python.AST.DictComp,
+            is Python.AST.NamedExpr -> handleNamedExpr(node)
+            is Python.AST.ListComp -> handleListComprehension(node)
+            is Python.AST.SetComp -> handleSetComprehension(node)
+            is Python.AST.DictComp -> handleDictComprehension(node)
+            is Python.AST.GeneratorExp -> handleGeneratorExp(node)
             is Python.AST.Await,
             is Python.AST.Yield,
             is Python.AST.YieldFrom ->
                 newProblemExpression(
                     "The expression of class ${node.javaClass} is not supported yet",
-                    rawNode = node
+                    rawNode = node,
                 )
         }
     }
 
-    private fun handleFormattedValue(node: Python.AST.FormattedValue): Expression {
-        if (node.format_spec != null) {
-            return newProblemExpression(
-                "Cannot handle formatted value with format_spec ${node.format_spec} yet",
-                rawNode = node
+    /**
+     * Translates a Python
+     * [`comprehension`](https://docs.python.org/3/library/ast.html#ast.comprehension) into a
+     * [ComprehensionExpression].
+     *
+     * Connects multiple predicates by `and`.
+     */
+    private fun handleComprehension(
+        node: Python.AST.comprehension,
+        parent: Python.AST.BaseExpr,
+    ): ComprehensionExpression {
+        return newComprehensionExpression(rawNode = parent).apply {
+            variable = handle(node.target)
+            iterable = handle(node.iter)
+            val predicates = node.ifs.map { handle(it) }
+            if (predicates.size == 1) {
+                predicate = predicates.single()
+            } else if (predicates.size > 1) {
+                predicate =
+                    joinListWithBinOp(operatorCode = "and", nodes = predicates, rawNode = parent)
+            }
+            if (node.is_async != 0L)
+                additionalProblems +=
+                    newProblemExpression(
+                        "Node marked as is_async but we don't support this yet",
+                        rawNode = node,
+                    )
+        }
+    }
+
+    /**
+     * Translates a Python
+     * [`GeneratorExp`](https://docs.python.org/3/library/ast.html#ast.GeneratorExp) into a
+     * [CollectionComprehension].
+     */
+    private fun handleGeneratorExp(node: Python.AST.GeneratorExp): CollectionComprehension {
+        return newCollectionComprehension(rawNode = node).applyWithScope {
+            statement = handle(node.elt)
+            comprehensionExpressions += node.generators.map { handleComprehension(it, node) }
+            type = objectType("Generator")
+        }
+    }
+
+    /**
+     * Translates a Python [`ListComp`](https://docs.python.org/3/library/ast.html#ast.ListComp)
+     * into a [CollectionComprehension].
+     */
+    private fun handleListComprehension(node: Python.AST.ListComp): CollectionComprehension {
+        return newCollectionComprehension(rawNode = node).applyWithScope {
+            statement = handle(node.elt)
+            comprehensionExpressions += node.generators.map { handleComprehension(it, node) }
+            type = primitiveType("list")
+        }
+    }
+
+    /**
+     * Translates a Python [`SetComp`](https://docs.python.org/3/library/ast.html#ast.SetComp) into
+     * a [CollectionComprehension].
+     */
+    private fun handleSetComprehension(node: Python.AST.SetComp): CollectionComprehension {
+        return newCollectionComprehension(rawNode = node).applyWithScope {
+            this.statement = handle(node.elt)
+            this.comprehensionExpressions += node.generators.map { handleComprehension(it, node) }
+            this.type = primitiveType("set")
+        }
+    }
+
+    /**
+     * Translates a Python [`DictComp`](https://docs.python.org/3/library/ast.html#ast.DictComp)
+     * into a [CollectionComprehension].
+     */
+    private fun handleDictComprehension(node: Python.AST.DictComp): CollectionComprehension {
+        return newCollectionComprehension(rawNode = node).applyWithScope {
+            this.statement =
+                newKeyValueExpression(
+                    key = handle(node.key),
+                    value = handle(node.value),
+                    rawNode = node,
+                )
+            this.comprehensionExpressions += node.generators.map { handleComprehension(it, node) }
+            this.type = primitiveType("dict")
+        }
+    }
+
+    /**
+     * Translates a Python [`NamedExpr`](https://docs.python.org/3/library/ast.html#ast.NamedExpr)
+     * into an [AssignExpression].
+     *
+     * As opposed to the Assign node, both target and value must be single nodes.
+     */
+    private fun handleNamedExpr(node: Python.AST.NamedExpr): AssignExpression {
+        val assignExpression =
+            newAssignExpression(
+                operatorCode = ":=",
+                lhs = listOf(handle(node.target)),
+                rhs = listOf(handle(node.value)),
+                rawNode = node,
             )
-        }
-        return when (node.conversion) {
-            formattedValConversionNoFormatting -> {
-                // No formatting, just return the value.
-                handle(node.value)
-            }
-            formattedValConversionString -> {
-                // String representation. wrap in str() call.
-                val strCall =
-                    newCallExpression(newReference("str", rawNode = node), "str", rawNode = node)
-                strCall.addArgument(handle(node.value))
-                strCall
-            }
-            formattedValConversionRepr -> {
-                newProblemExpression(
-                    "Cannot handle conversion '114: !r repr formatting', yet.",
-                    rawNode = node
-                )
-            }
-            formattedValConversionASCII -> {
-                newProblemExpression(
-                    "Cannot handle conversion '97: !a ascii formatting', yet.",
-                    rawNode = node
-                )
-            }
-            else ->
-                newProblemExpression(
-                    "Cannot handle formatted value with conversion ${node.conversion} yet",
-                    rawNode = node
-                )
-        }
+        assignExpression.usedAsExpression = true
+        return assignExpression
     }
 
+    /**
+     * Translates a Python
+     * [`FormattedValue`](https://docs.python.org/3/library/ast.html#ast.FormattedValue) into an
+     * [Expression].
+     *
+     * We are handling the format handling, following [PEP 3101](https://peps.python.org/pep-3101).
+     *
+     * The following example
+     *
+     * ```python
+     *  f"{value:.2f}"
+     * ```
+     *
+     * is modeled:
+     * 1. The value `value` is wrapped in a `format()` call.
+     * 2. The `format()` call has two arguments:
+     *     - The value to format (`value`).
+     *     - The format specification (`".2f"`).
+     *
+     * CPG Representation:
+     * - `CallExpression` node:
+     *         - `callee`: `Reference` to `format`.
+     *         - `arguments`:
+     *             1. A node representing `value`.
+     *             2. A node representing the string `".2f"`.
+     */
+    private fun handleFormattedValue(node: Python.AST.FormattedValue): Expression {
+        /*
+        Magic numbers (https://docs.python.org/3/library/ast.html#ast.FormattedValue):
+        conversion is an integer:
+        -1: no formatting
+        115: !s string formatting
+        114: !r repr formatting
+        97: !a ascii formatting
+        */
+        val formattedValConversionNoFormatting = -1L
+        val formattedValConversionString = 115L
+        val formattedValConversionRepr = 114L
+        val formattedValConversionASCII = 97L
+
+        val formatSpec = node.format_spec?.let { handle(it) }
+        val valueExpression = handle(node.value)
+        val conversion =
+            when (node.conversion) {
+                formattedValConversionNoFormatting -> {
+                    // No formatting, just return the value.
+                    valueExpression
+                }
+                formattedValConversionString -> {
+                    // String representation: wrap in `str()` call.
+                    val strCall =
+                        newCallExpression(
+                                callee = newReference(name = "str", rawNode = node),
+                                fqn = "str",
+                                rawNode = node,
+                            )
+                            .implicit()
+                    strCall.addArgument(valueExpression)
+                    strCall
+                }
+                formattedValConversionRepr -> {
+                    // Repr-String representation: wrap in `repr()` call.
+                    val reprCall =
+                        newCallExpression(
+                                callee = newReference(name = "repr", rawNode = node),
+                                fqn = "repr",
+                                rawNode = node,
+                            )
+                            .implicit()
+                    reprCall.addArgument(valueExpression)
+                    reprCall
+                }
+                formattedValConversionASCII -> {
+                    // ASCII-String representation: wrap in `ascii()` call.
+                    val asciiCall =
+                        newCallExpression(
+                                newReference("ascii", rawNode = node),
+                                "ascii",
+                                rawNode = node,
+                            )
+                            .implicit()
+                    asciiCall.addArgument(handle(node.value))
+                    asciiCall
+                }
+                else ->
+                    newProblemExpression(
+                        problem =
+                            "Cannot handle formatted value with conversion code ${node.conversion} yet",
+                        rawNode = node,
+                    )
+            }
+        if (formatSpec != null) {
+            return newCallExpression(
+                    callee = newReference(name = "format", rawNode = node),
+                    fqn = "format",
+                    rawNode = node,
+                )
+                .implicit()
+                .apply {
+                    addArgument(conversion)
+                    addArgument(formatSpec)
+                }
+        }
+        return conversion
+    }
+
+    /**
+     * Translates a Python [`JoinedStr`](https://docs.python.org/3/library/ast.html#ast.JoinedStr)
+     * into a [Expression].
+     */
     private fun handleJoinedStr(node: Python.AST.JoinedStr): Expression {
         val values = node.values.map(::handle)
         return if (values.isEmpty()) {
@@ -131,14 +288,32 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         } else if (values.size == 1) {
             values.first()
         } else {
-            val lastTwo = newBinaryOperator("+", rawNode = node)
-            lastTwo.rhs = values.last()
-            lastTwo.lhs = values[values.size - 2]
-            values.subList(0, values.size - 2).foldRight(lastTwo) { newVal, start ->
-                val nextValue = newBinaryOperator("+")
-                nextValue.rhs = start
-                nextValue.lhs = newVal
-                nextValue
+            joinListWithBinOp(operatorCode = "+", nodes = values, rawNode = node)
+        }
+    }
+
+    /**
+     * Joins the [nodes] with a [BinaryOperator] with the [operatorCode]. Nests the whole thing,
+     * where the first element in [nodes] is the lhs of the root of the tree of binary operators.
+     * The last operands are further down the tree.
+     */
+    internal fun joinListWithBinOp(
+        operatorCode: String,
+        nodes: List<Expression>,
+        rawNode: Python.AST.AST? = null,
+        isImplicit: Boolean = true,
+    ): BinaryOperator {
+        val lastTwo =
+            newBinaryOperator(operatorCode = operatorCode, rawNode = rawNode).apply {
+                rhs = nodes.last()
+                lhs = nodes[nodes.size - 2]
+                this.isImplicit = isImplicit
+            }
+        return nodes.subList(0, nodes.size - 2).foldRight(lastTwo) { newVal, start ->
+            newBinaryOperator(operatorCode = operatorCode, rawNode = rawNode).apply {
+                rhs = start
+                lhs = newVal
+                this.isImplicit = isImplicit
             }
         }
     }
@@ -164,22 +339,36 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         return subscriptExpression
     }
 
+    /**
+     * This method handles the python
+     * [`BoolOp`](https://docs.python.org/3/library/ast.html#ast.BoolOp).
+     *
+     * Generates a (potentially nested) [BinaryOperator] from a `BoolOp`. Less than two operands in
+     * [Python.AST.BoolOp.values] don't make sense and will generate a [ProblemExpression]. If only
+     * two operands exist, a simple [BinaryOperator] will be generated. More than two operands will
+     * lead to a nested [BinaryOperator]. E.g., if [Python.AST.BoolOp.values] contains the operators
+     * `[a, b, c]`, the result will be `a OP (b OP c)`.
+     */
     private fun handleBoolOp(node: Python.AST.BoolOp): Expression {
         val op =
             when (node.op) {
                 is Python.AST.And -> "and"
                 is Python.AST.Or -> "or"
             }
-        val ret = newBinaryOperator(operatorCode = op, rawNode = node)
-        if (node.values.size != 2) {
-            return newProblemExpression(
-                "Expected exactly two expressions but got " + node.values.size,
-                rawNode = node
+
+        return if (node.values.size <= 1) {
+            newProblemExpression(
+                "Expected exactly two expressions but got ${node.values.size}",
+                rawNode = node,
+            )
+        } else {
+            joinListWithBinOp(
+                operatorCode = op,
+                nodes = node.values.map(::handle),
+                rawNode = node,
+                isImplicit = true,
             )
         }
-        ret.lhs = handle(node.values[0])
-        ret.rhs = handle(node.values[1])
-        return ret
     }
 
     private fun handleList(node: Python.AST.List): Expression {
@@ -220,7 +409,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
             condition = handle(node.test),
             thenExpression = handle(node.body),
             elseExpression = handle(node.orelse),
-            rawNode = node
+            rawNode = node,
         )
     }
 
@@ -234,7 +423,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                             node.keys[i]?.let { handle(it) } ?: newProblemExpression("missing key"),
                         value = handle(node.values[i]),
                     )
-                    .codeAndLocationFromChildren(node)
+                    .codeAndLocationFromChildren(node, frontend.lineSeparator)
         }
         val ile = newInitializerListExpression(rawNode = node)
         ile.type = frontend.objectType("dict")
@@ -284,19 +473,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     private fun handleAttribute(node: Python.AST.Attribute): Expression {
         var base = handle(node.value)
 
-        // We do a quick check, if this refers to an import. This is faster than doing
-        // this in a pass and most likely valid, since we are under the assumption that
-        // our current file is (more or less) complete, but we might miss some
-        // additional dependencies
-        var ref =
-            if (isImport(base.name)) {
-                // Yes, it's an import, so we need to construct a reference with an FQN
-                newReference(base.name.fqn(node.attr), rawNode = node)
-            } else {
-                newMemberExpression(name = node.attr, base = base, rawNode = node)
-            }
-
-        return ref
+        return newMemberExpression(name = node.attr, base = base, rawNode = node)
     }
 
     private fun handleConstant(node: Python.AST.Constant): Expression {
@@ -350,20 +527,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
             if (callee is MemberExpression) {
                 newMemberCallExpression(callee, rawNode = node)
             } else {
-                // try to resolve -> [ConstructExpression]
-                val currentScope = frontend.scopeManager.currentScope
-                val record =
-                    currentScope?.let { frontend.scopeManager.getRecordForName(callee.name) }
-
-                if (record != null) {
-                    // construct expression
-                    val constructExpr =
-                        newConstructExpression((node.func as? Python.AST.Name)?.id, rawNode = node)
-                    constructExpr.type = record.toType()
-                    constructExpr
-                } else {
-                    newCallExpression(callee, rawNode = node)
-                }
+                newCallExpression(callee, rawNode = node)
             }
 
         for (arg in node.args) {
@@ -375,14 +539,6 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         }
 
         return ret
-    }
-
-    private fun isImport(name: Name): Boolean {
-        val decl =
-            frontend.scopeManager.currentScope
-                ?.lookupSymbol(name.localName, replaceImports = false)
-                ?.filterIsInstance<ImportDeclaration>()
-        return decl?.isNotEmpty() ?: false
     }
 
     private fun handleName(node: Python.AST.Name): Expression {
@@ -412,7 +568,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         val function = newFunctionDeclaration(name = "", rawNode = node)
         frontend.scopeManager.enterScope(function)
         for (arg in node.args.args) {
-            this.frontend.statementHandler.handleArgument(arg)
+            this.frontend.declarationHandler.handleArgument(arg)
         }
         function.body = handle(node.body)
         frontend.scopeManager.leaveScope(function)

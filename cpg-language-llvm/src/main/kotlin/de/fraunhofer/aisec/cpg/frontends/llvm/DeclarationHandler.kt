@@ -58,7 +58,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
                 newProblemDeclaration(
                     "Not handling declaration kind $kind yet.",
                     ProblemNode.ProblemType.TRANSLATION,
-                    rawNode = value
+                    rawNode = value,
                 )
             }
         }
@@ -183,7 +183,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
      */
     fun handleStructureType(
         typeRef: LLVMTypeRef,
-        alreadyVisited: MutableMap<LLVMTypeRef, Type?> = mutableMapOf()
+        alreadyVisited: MutableMap<LLVMTypeRef, Type?> = mutableMapOf(),
     ): RecordDeclaration {
         // if this is a literal struct, we will give it a pseudo name
         val name =
@@ -194,7 +194,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
             }
 
         // try to see, if the struct already exists as a record declaration
-        var record = frontend.scopeManager.getRecordForName(Name(name))
+        var record = frontend.scopeManager.getRecordForName(Name(name), language)
 
         // if yes, return it
         if (record != null) {
@@ -234,7 +234,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
      */
     private fun getLiteralStructName(
         typeRef: LLVMTypeRef,
-        alreadyVisited: MutableMap<LLVMTypeRef, Type?>
+        alreadyVisited: MutableMap<LLVMTypeRef, Type?>,
     ): String {
         val typeStr = LLVMPrintTypeToString(typeRef).string
         if (typeStr in frontend.typeCache) {

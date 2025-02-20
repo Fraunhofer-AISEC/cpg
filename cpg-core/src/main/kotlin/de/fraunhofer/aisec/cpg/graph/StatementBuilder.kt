@@ -28,6 +28,8 @@ package de.fraunhofer.aisec.cpg.graph
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node.Companion.EMPTY_NAME
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.log
+import de.fraunhofer.aisec.cpg.graph.scopes.Scope
+import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.graph.statements.*
 
 /**
@@ -325,6 +327,31 @@ fun MetadataProvider.newCaseStatement(rawNode: Any? = null): CaseStatement {
 fun MetadataProvider.newDefaultStatement(rawNode: Any? = null): DefaultStatement {
     val node = DefaultStatement()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
+
+    log(node)
+    return node
+}
+
+/**
+ * Creates a new [LookupScopeStatement]. The [MetadataProvider] receiver will be used to fill
+ * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
+ * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
+ */
+@JvmOverloads
+fun MetadataProvider.newLookupScopeStatement(
+    symbols: List<Symbol>,
+    targetScope: Scope?,
+    rawNode: Any? = null,
+): LookupScopeStatement {
+    val node = LookupScopeStatement()
+    node.targetScope = targetScope
+    node.applyMetadata(this, EMPTY_NAME, rawNode, true)
+
+    // Add it to our scope
+    for (symbol in symbols) {
+        node.scope?.predefinedLookupScopes[symbol] = node
+    }
 
     log(node)
     return node

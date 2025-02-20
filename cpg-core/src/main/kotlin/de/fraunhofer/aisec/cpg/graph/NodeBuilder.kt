@@ -32,7 +32,6 @@ import de.fraunhofer.aisec.cpg.graph.NodeBuilder.LOGGER
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.log
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.getCodeOfSubregion
 import de.fraunhofer.aisec.cpg.passes.inference.IsImplicitProvider
 import de.fraunhofer.aisec.cpg.passes.inference.IsInferredProvider
@@ -60,7 +59,7 @@ interface MetadataProvider
  * each [Node], but also transformation steps, such as [Handler].
  */
 interface LanguageProvider : MetadataProvider {
-    val language: Language<*>?
+    val language: Language<*>
 }
 
 /**
@@ -105,7 +104,7 @@ fun Node.applyMetadata(
     provider: MetadataProvider?,
     name: CharSequence? = EMPTY_NAME,
     rawNode: Any? = null,
-    localNameOnly: Boolean = false,
+    doNotPrependNamespace: Boolean = false,
     defaultNamespace: Name? = null,
 ) {
     // We definitely need a context provider, because otherwise we cannot set the context and the
@@ -144,7 +143,7 @@ fun Node.applyMetadata(
     } else {
         LOGGER.warn(
             "No scope provider was provided when creating the node {}. This might be an error",
-            name
+            name,
         )
     }
 
@@ -155,18 +154,18 @@ fun Node.applyMetadata(
             } else {
                 defaultNamespace
             }
-        this.name = this.newName(name, localNameOnly, namespace)
+        this.name = this.newName(name, doNotPrependNamespace, namespace)
     }
 }
 
 /**
- * Generates a [Name] object from the given [name]. If [localNameOnly] is set, only the localName is
- * used, otherwise the [namespace] is added to generate a fqn if the [name] is not a fqn anyway.
+ * Generates a [Name] object from the given [name]. If [doNotPrependNamespace] is set, only the
+ * supplied name is used, otherwise the [namespace] is prepended to the name.
  */
 fun LanguageProvider.newName(
     name: CharSequence,
-    localNameOnly: Boolean = false,
-    namespace: Name? = null
+    doNotPrependNamespace: Boolean = false,
+    namespace: Name? = null,
 ): Name {
     val language = this.language
 
@@ -175,7 +174,7 @@ fun LanguageProvider.newName(
     // CharSequence/String.
     return if (name is Name && name.isQualified()) {
         name
-    } else if (language != null && name.contains(language.namespaceDelimiter)) {
+    } else if (name.contains(language.namespaceDelimiter)) {
         // Let's check, if this is an FQN as string / char sequence by any chance. Then we need
         // to parse the name. In the future, we might drop compatibility for this
         language.parseName(name)
@@ -183,13 +182,13 @@ fun LanguageProvider.newName(
         // Otherwise, a local name is supplied. Some nodes only want a local name. In this case,
         // we create a new name with the supplied (local) name and set the parent to null.
         val parent =
-            if (localNameOnly) {
+            if (doNotPrependNamespace) {
                 null
             } else {
                 namespace
             }
 
-        Name(name.toString(), parent, language?.namespaceDelimiter ?: ".")
+        Name(name.toString(), parent, language.namespaceDelimiter)
     }
 }
 
@@ -202,7 +201,7 @@ fun LanguageProvider.newName(
 @JvmOverloads
 fun MetadataProvider.newAnnotation(name: CharSequence?, rawNode: Any? = null): Annotation {
     val node = Annotation()
-    node.applyMetadata(this, name, rawNode)
+    node.applyMetadata(this, name, rawNode, doNotPrependNamespace = true)
 
     log(node)
     return node
@@ -218,7 +217,7 @@ fun MetadataProvider.newAnnotation(name: CharSequence?, rawNode: Any? = null): A
 fun MetadataProvider.newAnnotationMember(
     name: CharSequence?,
     value: Expression?,
-    rawNode: Any? = null
+    rawNode: Any? = null,
 ): AnnotationMember {
     val node = AnnotationMember()
     node.applyMetadata(this, name, rawNode, true)
@@ -256,8 +255,12 @@ interface RawNodeTypeProvider<T> : MetadataProvider
  * This also sets [Node.isImplicit] to true.
  */
 fun <T : Node> T.implicit(code: String? = null, location: PhysicalLocation? = null): T {
-    this.code = code
-    this.location = location
+    if (code != null) {
+        this.code = code
+    }
+    if (location != null) {
+        this.location = location
+    }
     this.isImplicit = true
 
     return this
@@ -280,8 +283,8 @@ fun <T : Node> T.codeAndLocationFrom(other: Node): T {
  * expression handler.
  */
 context(CodeAndLocationProvider<AstNode>)
-fun <T : Node, AstNode> T.codeAndLocationFromOtherRawNode(rawNode: AstNode): T {
-    setCodeAndLocation(this@CodeAndLocationProvider, rawNode)
+fun <T : Node, AstNode> T.codeAndLocationFromOtherRawNode(rawNode: AstNode?): T {
+    rawNode?.let { setCodeAndLocation(this@CodeAndLocationProvider, it) }
     return this
 }
 
@@ -295,10 +298,16 @@ fun <T : Node, AstNode> T.codeAndLocationFromOtherRawNode(rawNode: AstNode): T {
  * code is extracted from the parent node to catch separators and auxiliary syntactic elements that
  * are between the child nodes.
  *
- * @param parentNode Used to extract the code for this node
+ * @param parentNode Used to extract the code for this node.
+ * @param lineBreakSequence The char(s) used to describe a new line, usually either "\n" or "\r\n".
+ *   This is needed because the location block spanning the children usually comprises more than one
+ *   line.
  */
 context(CodeAndLocationProvider<AstNode>)
-fun <T : Node, AstNode> T.codeAndLocationFromChildren(parentNode: AstNode): T {
+fun <T : Node, AstNode> T.codeAndLocationFromChildren(
+    parentNode: AstNode,
+    lineBreakSequence: CharSequence = "\n",
+): T {
     var first: Node? = null
     var last: Node? = null
 
@@ -323,8 +332,8 @@ fun <T : Node, AstNode> T.codeAndLocationFromChildren(parentNode: AstNode): T {
                     current,
                     compareBy(
                         { it?.location?.region?.startLine },
-                        { it?.location?.region?.startColumn }
-                    )
+                        { it?.location?.region?.startColumn },
+                    ),
                 )
             last =
                 maxOf(
@@ -332,8 +341,8 @@ fun <T : Node, AstNode> T.codeAndLocationFromChildren(parentNode: AstNode): T {
                     current,
                     compareBy(
                         { it?.location?.region?.endLine },
-                        { it?.location?.region?.endColumn }
-                    )
+                        { it?.location?.region?.endColumn },
+                    ),
                 )
         }
     }
@@ -354,7 +363,7 @@ fun <T : Node, AstNode> T.codeAndLocationFromChildren(parentNode: AstNode): T {
         val parentRegion = this@CodeAndLocationProvider.locationOf(parentNode)?.region
         if (parentCode != null && parentRegion != null) {
             // If the parent has code and region the new region is used to extract the code
-            this.code = getCodeOfSubregion(parentCode, parentRegion, newRegion)
+            this.code = getCodeOfSubregion(parentCode, parentRegion, newRegion, lineBreakSequence)
         }
     }
 
@@ -367,7 +376,7 @@ fun <T : Node, AstNode> T.codeAndLocationFromChildren(parentNode: AstNode): T {
  */
 private fun <AstNode> Node.setCodeAndLocation(
     provider: CodeAndLocationProvider<AstNode>,
-    rawNode: AstNode
+    rawNode: AstNode,
 ) {
     if (this.ctx?.config?.codeInNodes == true) {
         // only set code, if it's not already set or empty

@@ -35,6 +35,8 @@ import de.fraunhofer.aisec.cpg.graph.scopes.ValueDeclarationScope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.recordDeclaration
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.helpers.replace
+import de.fraunhofer.aisec.cpg.nameIsType
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 
@@ -45,7 +47,7 @@ import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
  * type information.
  */
 @ExecuteBefore(EvaluationOrderGraphPass::class)
-@ExecuteBefore(ReplaceCallCastPass::class)
+@ExecuteBefore(ResolveCallExpressionAmbiguityPass::class)
 @DependsOn(TypeResolver::class)
 class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
@@ -76,14 +78,15 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * the graph.
      */
     private fun removeBracketOperators(node: UnaryOperator, parent: Node?) {
-        if (node.operatorCode == "()" && !typeManager.typeExists(node.input.name.toString())) {
+        val input = node.input
+        if (node.operatorCode == "()" && input is Reference && input.nameIsType() == null) {
             // It was really just parenthesis around an identifier, but we can only make this
             // distinction now.
             //
             // In theory, we could just keep this meaningless unary expression, but it in order
             // to reduce nodes, we unwrap the reference and exchange it in the arguments of the
             // binary op
-            walker.replaceArgument(parent, node, node.input)
+            walker.replace(parent, node, node.input)
         }
     }
 
@@ -92,31 +95,33 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * operator where some arguments are wrapped in parentheses. This function tries to resolve
      * this.
      *
-     * Note: This is done especially for the C++ frontend. [ReplaceCallCastPass.handleCall] handles
-     * the more general case (which also applies to C++), in which a cast and a call are
-     * indistinguishable and need to be resolved once all types are known.
+     * Note: This is done especially for the C++ frontend.
+     * [ResolveCallExpressionAmbiguityPass.handleCall] handles the more general case (which also
+     * applies to C++), in which a cast and a call are indistinguishable and need to be resolved
+     * once all types are known.
      */
     private fun convertOperators(binOp: BinaryOperator, parent: Node?) {
         val fakeUnaryOp = binOp.lhs
         val language = fakeUnaryOp.language as? CLanguage
+
         // We need to check, if the expression in parentheses is really referring to a type or
         // not. A common example is code like `(long) &addr`. We could end up parsing this as a
         // binary operator with the left-hand side of `(long)`, an operator code `&` and a rhs
         // of `addr`.
-        if (
-            language != null &&
-                fakeUnaryOp is UnaryOperator &&
-                fakeUnaryOp.operatorCode == "()" &&
-                typeManager.typeExists(fakeUnaryOp.input.name.toString())
-        ) {
-            // If the name (`long` in the example) is a type, then the unary operator (`(long)`)
-            // is really a cast and our binary operator is really a unary operator `&addr`.
+        if (language == null || fakeUnaryOp !is UnaryOperator || fakeUnaryOp.operatorCode != "()") {
+            return
+        }
+
+        // If the name (`long` in the example) is a type, then the unary operator (`(long)`)
+        // is really a cast and our binary operator is really a unary operator `&addr`.
+        var type = (fakeUnaryOp.input as? Reference)?.nameIsType()
+        if (type != null) {
             // We need to perform the following steps:
             // * create a cast expression out of the ()-unary operator, with the type that is
             //   referred to in the op.
             val cast = newCastExpression().codeAndLocationFrom(fakeUnaryOp)
             cast.language = language
-            cast.castType = fakeUnaryOp.objectType(fakeUnaryOp.input.name)
+            cast.castType = type
 
             // * create a unary operator with the rhs of the binary operator (and the same
             //   operator code).
@@ -143,7 +148,7 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
             // * replace the binary operator with the cast expression in the parent argument
             //   holder
-            walker.replaceArgument(parent, binOp, cast)
+            walker.replace(parent, binOp, cast)
         }
     }
 
@@ -160,9 +165,10 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     initializer.language = node.language
                     initializer.type = node.type
                     node.initializer = initializer
-                    node.templateParameters?.let {
-                        SymbolResolver.addImplicitTemplateParametersToCall(it, initializer)
-                    }
+                    SymbolResolver.addImplicitTemplateParametersToCall(
+                        node.templateParameters,
+                        initializer,
+                    )
                 } else if (
                     currInitializer !is ConstructExpression &&
                         currInitializer is CallExpression &&

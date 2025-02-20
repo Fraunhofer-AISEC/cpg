@@ -29,6 +29,7 @@ import com.fasterxml.jackson.annotation.JsonBackReference
 import com.fasterxml.jackson.annotation.JsonIgnore
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.Node.Companion.TO_STRING_STYLE
+import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.Persistable
 import de.fraunhofer.aisec.cpg.graph.edges.flows.DependenceType
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -71,7 +72,11 @@ abstract class Edge<NodeType : Node> : Persistable, Cloneable {
         end = edge.end
     }
 
-    @Transient open val label: String = "EDGE"
+    abstract var labels: Set<String>
+
+    /** `true` if one of the two nodes connected by the [Edge] is an overlay node. */
+    val overlaying: Boolean
+        get() = end is OverlayNode || start is OverlayNode
 
     /**
      * The index of this node, if it is stored in an
@@ -150,9 +155,7 @@ abstract class Edge<NodeType : Node> : Persistable, Cloneable {
     }
 
     @Transient
-    inner class Delegate<
-        ThisType : Node,
-    >() {
+    inner class Delegate<ThisType : Node>() {
         operator fun getValue(thisRef: ThisType, property: KProperty<*>): NodeType {
             var edge = this@Edge
             // We only support outgoing edges this way

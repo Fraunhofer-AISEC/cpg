@@ -26,17 +26,20 @@
 package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.frontends.python.Python.AST.IsAsync
-import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage.Companion.MODIFIER_POSITIONAL_ONLY_ARGUMENT
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
+import de.fraunhofer.aisec.cpg.graph.scopes.FunctionScope
+import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
+import de.fraunhofer.aisec.cpg.graph.scopes.NamespaceScope
+import de.fraunhofer.aisec.cpg.graph.statements.*
+import de.fraunhofer.aisec.cpg.graph.statements.AssertStatement
+import de.fraunhofer.aisec.cpg.graph.statements.CatchClause
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
-import de.fraunhofer.aisec.cpg.graph.types.FunctionType
+import de.fraunhofer.aisec.cpg.graph.statements.TryStatement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import kotlin.collections.plusAssign
 
 class StatementHandler(frontend: PythonLanguageFrontend) :
@@ -44,9 +47,6 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
     override fun handleNode(node: Python.AST.BaseStmt): Statement {
         return when (node) {
-            is Python.AST.ClassDef -> handleClassDef(node)
-            is Python.AST.FunctionDef -> handleFunctionDef(node)
-            is Python.AST.AsyncFunctionDef -> handleFunctionDef(node)
             is Python.AST.Pass -> return newEmptyStatement(rawNode = node)
             is Python.AST.ImportFrom -> handleImportFrom(node)
             is Python.AST.Assign -> handleAssign(node)
@@ -61,21 +61,460 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             is Python.AST.Import -> handleImport(node)
             is Python.AST.Break -> newBreakStatement(rawNode = node)
             is Python.AST.Continue -> newContinueStatement(rawNode = node)
-            is Python.AST.Assert,
-            is Python.AST.Delete,
-            is Python.AST.Global,
-            is Python.AST.Match,
-            is Python.AST.Nonlocal,
-            is Python.AST.Raise,
-            is Python.AST.Try,
-            is Python.AST.TryStar,
+            is Python.AST.Assert -> handleAssert(node)
+            is Python.AST.Try -> handleTryStatement(node)
+            is Python.AST.Delete -> handleDelete(node)
             is Python.AST.With,
-            is Python.AST.AsyncWith ->
+            is Python.AST.AsyncWith -> handleWithStatement(node)
+            is Python.AST.Global -> handleGlobal(node)
+            is Python.AST.Nonlocal -> handleNonLocal(node)
+            is Python.AST.Raise -> handleRaise(node)
+            is Python.AST.Match -> handleMatch(node)
+            is Python.AST.TryStar ->
                 newProblemExpression(
-                    "The statement of class ${node.javaClass} is not supported yet",
-                    rawNode = node
+                    problem = "The statement of class ${node.javaClass} is not supported yet",
+                    rawNode = node,
+                )
+            is Python.AST.Def ->
+                wrapDeclarationToStatement(frontend.declarationHandler.handleNode(node))
+        }
+    }
+
+    /**
+     * Translates a pattern which can be used by a `match_case`. There are various options available
+     * and all of them are translated to traditional comparisons and logical expressions which could
+     * also be seen in the condition of an if-statement.
+     */
+    private fun handlePattern(node: Python.AST.BasePattern, subject: String): Expression {
+        return when (node) {
+            is Python.AST.MatchValue ->
+                newBinaryOperator(operatorCode = "==", rawNode = node).implicit().apply {
+                    this.lhs = newReference(name = subject)
+                    this.rhs = frontend.expressionHandler.handle(ctx = node.value)
+                }
+            is Python.AST.MatchSingleton ->
+                newBinaryOperator(operatorCode = "===", rawNode = node).implicit().apply {
+                    this.lhs = newReference(name = subject)
+                    this.rhs =
+                        when (val value = node.value) {
+                            is Python.AST.BaseExpr -> frontend.expressionHandler.handle(ctx = value)
+                            null -> newLiteral(value = null, rawNode = node)
+                            else ->
+                                newProblemExpression(
+                                    problem =
+                                        "Can't handle ${value::class} in value of Python.AST.MatchSingleton yet"
+                                )
+                        }
+                }
+            is Python.AST.MatchOr ->
+                frontend.expressionHandler.joinListWithBinOp(
+                    operatorCode = "or",
+                    nodes = node.patterns.map { handlePattern(node = it, subject = subject) },
+                    rawNode = node,
+                    isImplicit = false,
+                )
+            is Python.AST.MatchSequence,
+            is Python.AST.MatchMapping,
+            is Python.AST.MatchClass,
+            is Python.AST.MatchStar,
+            is Python.AST.MatchAs ->
+                newProblemExpression(
+                    problem = "Cannot handle of type ${node::class} yet",
+                    rawNode = node,
+                )
+            else ->
+                newProblemExpression(
+                    problem = "Cannot handle of type ${node::class} yet",
+                    rawNode = node,
                 )
         }
+    }
+
+    /**
+     * Translates a [`match_case`](https://docs.python.org/3/library/ast.html#ast.match_case) to a
+     * [Block] which holds the [CaseStatement] and then all other statements of the
+     * [Python.AST.match_case.body].
+     *
+     * The [CaseStatement] is generated by the [Python.AST.match_case.pattern] and, if available,
+     * [Python.AST.match_case.guard]. A `guard` is modeled with an `AND` BinaryOperator in the
+     * [CaseStatement.caseExpression]. Its `lhs` is the normal pattern and the `rhs` is the guard.
+     * This is in line with [PEP 634](https://peps.python.org/pep-0634/).
+     */
+    private fun handleMatchCase(node: Python.AST.match_case, subject: String): List<Statement> {
+        val statements = mutableListOf<Statement>()
+        // First, we add the CaseStatement. A `MatchAs` without a `pattern` implies
+        // it's a default statement.
+        // We have to handle this here since we do not want to generate the CaseStatement in this
+        // case.
+        val pattern = node.pattern
+        val guard = node.guard
+        statements +=
+            if (pattern is Python.AST.MatchAs && pattern.pattern == null) {
+                newDefaultStatement(rawNode = pattern)
+            } else if (guard != null) {
+                newCaseStatement(rawNode = node).apply {
+                    this.caseExpression =
+                        newBinaryOperator(operatorCode = "and")
+                            .implicit(
+                                code = frontend.codeOf(astNode = node),
+                                location = frontend.locationOf(astNode = node),
+                            )
+                            .apply {
+                                this.lhs = handlePattern(node = node.pattern, subject = subject)
+                                this.rhs = frontend.expressionHandler.handle(ctx = guard)
+                            }
+                }
+            } else {
+                newCaseStatement(rawNode = node).apply {
+                    this.caseExpression = handlePattern(node = node.pattern, subject = subject)
+                }
+            }
+        // Now, we add the remaining body.
+        statements += node.body.map(::handle)
+        // Currently, the EOG pass requires a break statement to work as expected. For this reason,
+        // we insert an implicit break statement at the end of the block.
+        statements +=
+            newBreakStatement()
+                .implicit(
+                    code = frontend.codeOf(astNode = node),
+                    location = frontend.locationOf(astNode = node),
+                )
+        return statements
+    }
+
+    /**
+     * Translates a Python [`Match`](https://docs.python.org/3/library/ast.html#ast.Match) into a
+     * [SwitchStatement].
+     */
+    private fun handleMatch(node: Python.AST.Match): SwitchStatement =
+        newSwitchStatement(rawNode = node).apply {
+            val subject = frontend.expressionHandler.handle(ctx = node.subject)
+            this.selector = subject
+
+            this.statement =
+                node.cases.fold(initial = newBlock().implicit()) { block, case ->
+                    block.statements +=
+                        handleMatchCase(node = case, subject = subject.name.localName)
+                    block
+                }
+        }
+
+    /**
+     * Translates a Python [`Raise`](https://docs.python.org/3/library/ast.html#ast.Raise) into a
+     * [ThrowExpression].
+     */
+    private fun handleRaise(node: Python.AST.Raise): ThrowExpression {
+        val ret = newThrowExpression(rawNode = node)
+        node.exc?.let { ret.exception = frontend.expressionHandler.handle(it) }
+        node.cause?.let { ret.parentException = frontend.expressionHandler.handle(it) }
+        return ret
+    }
+
+    /**
+     * Translates a Python [`With`](https://docs.python.org/3/library/ast.html#ast.With) into a
+     * [Block].
+     *
+     * We return a Block to handle the with statement, following
+     * [python's documentation](https://docs.python.org/3/reference/compound_stmts.html#the-with-statement).
+     * The context manager's `__enter__` and `__exit__` methods should be identified before entering
+     * the try-block. However, we simplify the code from the documentation as follows:
+     * * `__enter__()` is called before the try-block.We make the identification and the call in the
+     *   same step.
+     * * `__exit__()` is either called in the `except`-block or in the `finally`-block but not
+     *   identified separately.
+     * * In fact, the `finally` is used like an `else`-block, so we use this construction.
+     *
+     * Example: We will translate the code
+     *
+     * ```python
+     * with ContextManager() as cm:
+     *     cm.doSomething()
+     * ```
+     *
+     * to something like
+     *
+     * ```python
+     * manager = ContextManager()
+     * tmpVal = manager.__enter__()
+     * try:
+     *     cm = tmpVal # Doesn't exist if no variable is used
+     *     cm.doSomething()
+     * except:
+     *     if not manager.__exit__(*sys.exc_info()):
+     *         raise
+     * else:
+     *     manager.__exit__(None, None, None)
+     * ```
+     */
+    private fun handleWithStatement(node: Python.AST.NormalOrAsyncWith): Block {
+        /**
+         * Prepares the `manager = ContextManager()` and returns the random name for the "manager"
+         * as well as the assignment.
+         */
+        fun generateManagerAssignment(withItem: Python.AST.withitem): Pair<AssignExpression, Name> {
+            // Create a temporary reference for the context manager
+            val managerName = Name.random(prefix = CONTEXT_MANAGER)
+            val manager = newReference(name = managerName).implicit()
+
+            // Handle the 'context expression' (the part before 'as') and assign to tempRef
+            // Represents the line `manager = ContextManager()`
+            val contextExpr = frontend.expressionHandler.handle(withItem.context_expr)
+            val managerAssignment =
+                newAssignExpression(
+                        operatorCode = "=",
+                        lhs = listOf(manager),
+                        rhs = listOf(contextExpr),
+                    )
+                    .implicit()
+            return Pair(managerAssignment, managerName)
+        }
+
+        /** Prepares the `manager.__exit__(None, None, None)` call for the else-block. */
+        fun generateExitCallWithNone(managerName: Name): MemberCallExpression {
+            val exitCallWithNone =
+                newMemberCallExpression(
+                        callee =
+                            newMemberExpression(
+                                    name = "__exit__",
+                                    base = newReference(name = managerName).implicit(),
+                                )
+                                .implicit(),
+                        rawNode = node,
+                    )
+                    .implicit()
+            exitCallWithNone.addArgument(newLiteral(null).implicit())
+            exitCallWithNone.addArgument(newLiteral(null).implicit())
+            exitCallWithNone.addArgument(newLiteral(null).implicit())
+            return exitCallWithNone
+        }
+
+        /**
+         * Prepares the if-statement which is the body of the catch block. This includes the call of
+         * `manager.__exit__(*sys.exc_info())`, the negation and the throw statement.
+         */
+        fun generateExitCallWithSysExcInfo(managerName: Name): IfStatement {
+            val exitCallWithSysExec =
+                newMemberCallExpression(
+                        callee =
+                            newMemberExpression(
+                                    name = "__exit__",
+                                    base = newReference(name = managerName).implicit(),
+                                )
+                                .implicit(),
+                        rawNode = node,
+                    )
+                    .implicit()
+            val starOp = newUnaryOperator("*", false, false)
+            starOp.input =
+                newMemberExpression(name = "exec_info", base = newReference("sys").implicit())
+                    .implicit()
+            exitCallWithSysExec.addArgument(starOp)
+
+            val ifStmt = newIfStatement().implicit()
+            ifStmt.thenStatement = newThrowExpression().implicit()
+            val neg = newUnaryOperator("not", false, false).implicit()
+            neg.input = exitCallWithSysExec
+            ifStmt.condition = neg
+            return ifStmt
+        }
+
+        /**
+         * calls __enter__() and assign to another random variable. Represents the line
+         *
+         * ```python
+         * tmpVal = manager.__enter__()
+         * ```
+         */
+        fun generateEnterCallAndAssignment(managerName: Name): Pair<AssignExpression, Name> {
+            val tmpValName = Name.random(prefix = WITH_TMP_VAL)
+            val enterVar = newReference(name = tmpValName).implicit()
+            val enterCall =
+                newMemberCallExpression(
+                        callee =
+                            newMemberExpression(
+                                    name = "__enter__",
+                                    base = newReference(name = managerName).implicit(),
+                                )
+                                .implicit(),
+                        rawNode = node,
+                    )
+                    .implicit()
+
+            return Pair(
+                newAssignExpression(
+                        operatorCode = "=",
+                        lhs = listOf(enterVar),
+                        rhs = listOf(enterCall),
+                    )
+                    .implicit(),
+                tmpValName,
+            )
+        }
+        val result =
+            newBlock().codeAndLocationFromOtherRawNode(node as? Python.AST.BaseStmt).implicit()
+
+        addAsyncWarning(node, result)
+
+        // If there are multiple elements in node.items, we have to nest the try statements.
+        // We start with a generic block for the outer context manager.
+        // For i > 1, we add context_manager[i] to the try-block of item[i-1]
+        val currentBlock =
+            node.items.fold(result) { currentBlock, withItem ->
+                val (managerAssignment, managerName) = generateManagerAssignment(withItem)
+
+                currentBlock.statements.add(managerAssignment)
+
+                val (enterAssignment, tmpValName) = generateEnterCallAndAssignment(managerName)
+                currentBlock.statements.add(enterAssignment)
+
+                // Create the try statement with __exit__ calls in the finally block
+                val tryStatement =
+                    newTryStatement(rawNode = node).apply {
+                        // We set it as implicit below because there we also have a code and
+                        // location.
+                        this.tryBlock =
+                            newBlock()
+                                .apply {
+                                    withItem.optional_vars?.let {
+                                        val optionalVar = frontend.expressionHandler.handle(it)
+                                        node.type_comment?.let {
+                                            optionalVar.type = frontend.typeOf(it)
+                                        }
+
+                                        // Assign the result of __enter__() to `optionalVar`
+                                        // Represents the line "cm = tmpVal # Doesn't exist if no
+                                        // variable is used"
+                                        this.statements.add(
+                                            newAssignExpression(
+                                                    operatorCode = "=",
+                                                    lhs = listOf(optionalVar),
+                                                    rhs =
+                                                        listOf(
+                                                            newReference(name = tmpValName)
+                                                                .implicit()
+                                                        ),
+                                                )
+                                                .implicit()
+                                        )
+                                    }
+                                }
+                                .codeAndLocationFromOtherRawNode(node as? Python.AST.BaseStmt)
+                                .implicit()
+                        // Add the catch block
+                        this.catchClauses.add(
+                            newCatchClause().implicit().apply {
+                                this.body =
+                                    newBlock().implicit().apply {
+                                        this.statements.add(
+                                            generateExitCallWithSysExcInfo(managerName)
+                                        )
+                                    }
+                            }
+                        )
+                        // Add the else-block
+                        this.elseBlock =
+                            newBlock().implicit().apply {
+                                this.statements.add(generateExitCallWithNone(managerName))
+                            }
+                    }
+                currentBlock.statements.add(tryStatement)
+
+                tryStatement.tryBlock ?: throw NullPointerException("This should never happen!")
+            }
+
+        // Create the block of the with statement and add it to the inner try-block
+        val bodyBlock = makeBlock(node.body, parentNode = node) // represents `cm.doSomething()`
+        currentBlock.statements.addAll(bodyBlock.statements)
+        currentBlock.implicit(code = bodyBlock.code, location = bodyBlock.location)
+
+        // The result is the outer block
+        return result
+    }
+
+    /**
+     * Translates an [`excepthandler`] which can only be a
+     * [`ExceptHandler`](https://docs.python.org/3/library/ast.html#ast.ExceptHandler) to a
+     * [CatchClause].
+     *
+     * It adds all the statements to the body and will set a parameter if it exists. For the
+     * catch-all clause, we do not set the [CatchClause.parameter].
+     */
+    private fun handleBaseExcepthandler(node: Python.AST.BaseExcepthandler): CatchClause {
+        return when (node) {
+            is Python.AST.ExceptHandler -> {
+                val catchClause = newCatchClause(rawNode = node)
+                catchClause.body = makeBlock(node.body, node)
+                // The parameter can have a type but if the type is None/null, it's the "catch-all"
+                // clause.
+                // In this case, it also cannot have a name, so we can skip the variable
+                // declaration.
+                if (node.type != null) {
+                    // the parameter can have a name, or we use the anonymous identifier _
+                    catchClause.parameter =
+                        newVariableDeclaration(
+                            name = node.name ?: "",
+                            type = frontend.typeOf(node.type),
+                            rawNode = node,
+                        )
+                }
+                catchClause
+            }
+        }
+    }
+
+    /**
+     * Translates a Python [`Try`](https://docs.python.org/3/library/ast.html#ast.Try) into a
+     * [TryStatement].
+     */
+    private fun handleTryStatement(node: Python.AST.Try): TryStatement {
+        val tryStatement = newTryStatement(rawNode = node)
+        tryStatement.tryBlock = makeBlock(node.body, node)
+        tryStatement.catchClauses.addAll(node.handlers.map { handleBaseExcepthandler(it) })
+
+        if (node.orelse.isNotEmpty()) {
+            tryStatement.elseBlock = makeBlock(node.orelse, node)
+        }
+
+        if (node.finalbody.isNotEmpty()) {
+            tryStatement.finallyBlock = makeBlock(node.finalbody, node)
+        }
+
+        return tryStatement
+    }
+
+    /**
+     * Translates a Python [`Delete`](https://docs.python.org/3/library/ast.html#ast.Delete) into a
+     * [DeleteExpression].
+     */
+    private fun handleDelete(node: Python.AST.Delete): DeleteExpression {
+        val delete = newDeleteExpression(rawNode = node)
+        node.targets.forEach { target ->
+            delete.operands.add(frontend.expressionHandler.handle(target))
+
+            if (target !is Python.AST.Subscript) {
+                delete.additionalProblems +=
+                    newProblemExpression(
+                        problem =
+                            "handleDelete: 'Name' and 'Attribute' deletions are not fully supported, as they remove variables from the scope.",
+                        rawNode = target,
+                    )
+            }
+        }
+
+        return delete
+    }
+
+    /**
+     * Translates a Python [`Assert`](https://docs.python.org/3/library/ast.html#ast.Assert) into a
+     * [AssertStatement].
+     */
+    private fun handleAssert(node: Python.AST.Assert): AssertStatement {
+        val assertStatement = newAssertStatement(rawNode = node)
+        val testExpression = frontend.expressionHandler.handle(node.test)
+        assertStatement.condition = testExpression
+        node.msg?.let { assertStatement.message = frontend.expressionHandler.handle(it) }
+
+        return assertStatement
     }
 
     private fun handleImport(node: Python.AST.Import): Statement {
@@ -86,12 +525,16 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 if (alias != null) {
                     newImportDeclaration(
                         parseName(imp.name),
-                        false,
+                        style = ImportStyle.IMPORT_NAMESPACE,
                         parseName(alias),
-                        rawNode = imp
+                        rawNode = imp,
                     )
                 } else {
-                    newImportDeclaration(parseName(imp.name), false, rawNode = imp)
+                    newImportDeclaration(
+                        parseName(imp.name),
+                        style = ImportStyle.IMPORT_NAMESPACE,
+                        rawNode = imp,
+                    )
                 }
             frontend.scopeManager.addDeclaration(decl)
             declStmt.declarationEdges += decl
@@ -102,30 +545,66 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     private fun handleImportFrom(node: Python.AST.ImportFrom): Statement {
         val declStmt = newDeclarationStatement(rawNode = node)
         val level = node.level
-        if (level == null || level > 0) {
-            return newProblemExpression(
-                "not supporting relative paths in from (...) import syntax yet"
-            )
+        var module = parseName(node.module ?: "")
+
+        if (level != null && level > 0L) {
+            // Because the __init__ module is omitted from our current namespace, we need to check
+            // for its existence and add __init__, otherwise the relative path would be off by one
+            // level.
+            var parent =
+                if (isInitModule()) {
+                    frontend.scopeManager.currentNamespace.fqn("__init__")
+                } else {
+                    frontend.scopeManager.currentNamespace
+                }
+
+            // If the level is specified, we need to relative the module path. We basically need to
+            // move upwards in the parent namespace in the amount of dots
+            for (i in 0 until level) {
+                parent = parent?.parent
+                if (parent == null) {
+                    break
+                }
+            }
+
+            module =
+                if (module.localName != "") {
+                    parent.fqn(module.localName)
+                } else {
+                    parent ?: Name("")
+                }
         }
 
-        val module = parseName(node.module ?: "")
         for (imp in node.names) {
             // We need to differentiate between a wildcard import and an individual symbol.
             // Wildcards luckily do not have aliases
             val decl =
                 if (imp.name == "*") {
-                    // In the wildcard case, our "import" is the module name and we set "wildcard"
+                    // In the wildcard case, our "import" is the module name, and we set "wildcard"
                     // to true
-                    newImportDeclaration(module, true, rawNode = imp)
+                    newImportDeclaration(
+                        module,
+                        style = ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE,
+                        rawNode = imp,
+                    )
                 } else {
                     // If we import an individual symbol, we need to FQN the symbol with our module
                     // name and import that. We also need to take care of any alias
                     val name = module.fqn(imp.name)
                     val alias = imp.asname
                     if (alias != null) {
-                        newImportDeclaration(name, false, parseName(alias), rawNode = imp)
+                        newImportDeclaration(
+                            name,
+                            style = ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE,
+                            parseName(alias),
+                            rawNode = imp,
+                        )
                     } else {
-                        newImportDeclaration(name, false, rawNode = imp)
+                        newImportDeclaration(
+                            name,
+                            style = ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE,
+                            rawNode = imp,
+                        )
                     }
                 }
 
@@ -136,48 +615,120 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         return declStmt
     }
 
+    /** Small utility function to check, whether we are inside an __init__ module. */
+    private fun isInitModule(): Boolean =
+        (frontend.scopeManager.firstScopeIsInstanceOrNull<NameScope>()?.astNode
+                as? NamespaceDeclaration)
+            ?.path
+            ?.endsWith("__init__") == true
+
     private fun handleWhile(node: Python.AST.While): Statement {
         val ret = newWhileStatement(rawNode = node)
         ret.condition = frontend.expressionHandler.handle(node.test)
         ret.statement = makeBlock(node.body, parentNode = node)
-        node.orelse.firstOrNull()?.let { TODO("Not supported") }
+        if (node.orelse.isNotEmpty()) {
+            ret.elseStatement = makeBlock(node.orelse, parentNode = node)
+        }
         return ret
     }
 
-    private fun handleFor(node: Python.AST.NormalOrAsyncFor): Statement {
+    /**
+     * Translates a Python [`For`](https://docs.python.org/3/library/ast.html#ast.For) into an
+     * [ForEachStatement].
+     *
+     * Python supports implicit unpacking of multiple loop variables. To map this to CPG node, we
+     * translate the following implicit unpacking of code like this:
+     * ```python
+     * for a, b, c in someNestedList:
+     *     pass
+     * ```
+     *
+     * to have only one loop variable and add the unpacking statement to the top of the loop body
+     * like this:
+     * ```python
+     * for tempVar in someNestedList:
+     *     a, b, c = tempVar
+     *     pass
+     * ```
+     */
+    private fun handleFor(node: Python.AST.NormalOrAsyncFor): ForEachStatement {
         val ret = newForEachStatement(rawNode = node)
-        if (node is IsAsync) {
-            ret.addDeclaration(
-                newProblemDeclaration(
-                    problem = "The \"async\" keyword is not yet supported.",
-                    rawNode = node
-                )
-            )
-        }
+        addAsyncWarning(node, ret)
 
         ret.iterable = frontend.expressionHandler.handle(node.iter)
-        ret.variable = frontend.expressionHandler.handle(node.target)
-        ret.statement = makeBlock(node.body, parentNode = node)
-        node.orelse.firstOrNull()?.let { TODO("Not supported") }
+
+        when (val loopVar = frontend.expressionHandler.handle(node.target)) {
+            is InitializerListExpression -> { // unpacking
+                val (tempVarRef, unpackingAssignment) = getUnpackingNodes(loopVar)
+
+                ret.variable = tempVarRef
+
+                val body = makeBlock(node.body, parentNode = node)
+                body.statements.add(
+                    0,
+                    unpackingAssignment,
+                ) // add the unpacking instruction to the top of the loop body
+                ret.statement = body
+            }
+            is Reference -> { // only one var
+                ret.variable = loopVar
+                ret.statement = makeBlock(node.body, parentNode = node)
+            }
+            else -> {
+                ret.variable =
+                    newProblemExpression(
+                        problem =
+                            "handleFor: cannot handle loop variable of type ${loopVar::class.simpleName}.",
+                        rawNode = node.target,
+                    )
+                ret.statement = makeBlock(node.body, parentNode = node)
+            }
+        }
+
+        if (node.orelse.isNotEmpty()) {
+            ret.elseStatement = makeBlock(node.orelse, parentNode = node)
+        }
         return ret
+    }
+
+    /**
+     * This function creates two things:
+     * - A [Reference] to a variable with a random [Name]
+     * - An [AssignExpression] assigning the reference above to the [loopVar] input
+     *
+     * This is used in [handleFor] when loops have multiple loop variables to iterate over with
+     * automatic unpacking. We translate this implicit unpacking to multiple CPG nodes, as the CPG
+     * does not support automatic unpacking.
+     */
+    private fun getUnpackingNodes(
+        loopVar: InitializerListExpression
+    ): Pair<Reference, AssignExpression> {
+        val tempVarName = Name.random(prefix = LOOP_VAR_PREFIX)
+        val tempRef = newReference(name = tempVarName).implicit().codeAndLocationFrom(loopVar)
+        val assign =
+            newAssignExpression(
+                    operatorCode = "=",
+                    lhs = (loopVar).initializers,
+                    rhs = listOf(tempRef),
+                )
+                .implicit()
+                .codeAndLocationFrom(loopVar)
+        return Pair(tempRef, assign)
     }
 
     private fun handleExpressionStatement(node: Python.AST.Expr): Statement {
         return frontend.expressionHandler.handle(node.value)
     }
 
-    private fun handleAnnAssign(node: Python.AST.AnnAssign): Statement {
-        // TODO: annotations
+    /**
+     * Translates a Python [`AnnAssign`](https://docs.python.org/3/library/ast.html#ast.AnnAssign)
+     * into an [AssignExpression].
+     */
+    private fun handleAnnAssign(node: Python.AST.AnnAssign): AssignExpression {
         val lhs = frontend.expressionHandler.handle(node.target)
-        return if (node.value != null) {
-            newAssignExpression(
-                lhs = listOf(lhs),
-                rhs = listOf(frontend.expressionHandler.handle(node.value!!)), // TODO !!
-                rawNode = node
-            )
-        } else {
-            lhs
-        }
+        lhs.type = frontend.typeOf(node.annotation)
+        val rhs = node.value?.let { listOf(frontend.expressionHandler.handle(it)) } ?: emptyList()
+        return newAssignExpression(lhs = listOf(lhs), rhs = rhs, rawNode = node)
     }
 
     private fun handleIf(node: Python.AST.If): Statement {
@@ -204,8 +755,16 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         return ret
     }
 
-    private fun handleAssign(node: Python.AST.Assign): Statement {
+    /**
+     * Translates a Python [`Assign`](https://docs.python.org/3/library/ast.html#ast.Assign) into an
+     * [AssignExpression].
+     */
+    private fun handleAssign(node: Python.AST.Assign): AssignExpression {
         val lhs = node.targets.map { frontend.expressionHandler.handle(it) }
+        node.type_comment?.let { typeComment ->
+            val tpe = frontend.typeOf(typeComment)
+            lhs.forEach { it.type = tpe }
+        }
         val rhs = frontend.expressionHandler.handle(node.value)
         if (rhs is List<*>)
             newAssignExpression(
@@ -215,10 +774,10 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                         (it as? Expression)
                             ?: newProblemExpression(
                                 "There was an issue with an argument.",
-                                rawNode = node
+                                rawNode = node,
                             )
                     },
-                rawNode = node
+                rawNode = node,
             )
         return newAssignExpression(lhs = lhs, rhs = listOf(rhs), rawNode = node)
     }
@@ -231,305 +790,69 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             operatorCode = op,
             lhs = listOf(lhs),
             rhs = listOf(rhs),
-            rawNode = node
+            rawNode = node,
         )
     }
 
-    private fun handleClassDef(stmt: Python.AST.ClassDef): Statement {
-        val cls = newRecordDeclaration(stmt.name, "class", rawNode = stmt)
-        stmt.bases.map { cls.superClasses.add(frontend.typeOf(it)) }
-
-        frontend.scopeManager.enterScope(cls)
-
-        stmt.keywords.forEach {
-            frontend.currentTU?.addDeclaration(
-                newProblemDeclaration("could not parse keyword $it in class")
-            )
-        }
-
-        for (s in stmt.body) {
-            when (s) {
-                is Python.AST.FunctionDef -> handleFunctionDef(s, cls)
-                else -> cls.statements += handleNode(s)
-            }
-        }
-
-        frontend.scopeManager.leaveScope(cls)
-        frontend.scopeManager.addDeclaration(cls)
-
-        return wrapDeclarationToStatement(cls)
-    }
-
     /**
-     * We have to consider multiple things when matching Python's FunctionDef to the CPG:
-     * - A [Python.AST.FunctionDef] is a [Statement] from Python's point of view. The CPG sees it as
-     *   a declaration -> we have to wrap the result in a [DeclarationStatement].
-     * - A [Python.AST.FunctionDef] could be one of
-     *     - a [ConstructorDeclaration] if it appears in a record and its [name] is `__init__`
-     *     - a [MethodeDeclaration] if it appears in a record, and it isn't a
-     *       [ConstructorDeclaration]
-     *     - a [FunctionDeclaration] if neither of the above apply
-     *
-     * In case of a [ConstructorDeclaration] or[MethodDeclaration]: the first argument is the
-     * `receiver` (most often called `self`).
+     * Translates a Python [`Global`](https://docs.python.org/3/library/ast.html#ast.Global) into a
+     * [LookupScopeStatement].
      */
-    private fun handleFunctionDef(
-        s: Python.AST.NormalOrAsyncFunctionDef,
-        recordDeclaration: RecordDeclaration? = null
-    ): DeclarationStatement {
-        val result =
-            if (recordDeclaration != null) {
-                if (s.name == "__init__") {
-                    newConstructorDeclaration(
-                        name = s.name,
-                        recordDeclaration = recordDeclaration,
-                        rawNode = s
-                    )
-                } else {
-                    newMethodDeclaration(
-                        name = s.name,
-                        recordDeclaration = recordDeclaration,
-                        isStatic = false,
-                        rawNode = s
-                    )
-                }
-            } else {
-                newFunctionDeclaration(name = s.name, rawNode = s)
-            }
-        frontend.scopeManager.enterScope(result)
+    private fun handleGlobal(global: Python.AST.Global): LookupScopeStatement {
+        // Technically, our global scope is not identical to the python "global" scope. The reason
+        // behind that is that we wrap each file in a namespace (as defined in the python spec). So
+        // the "global" scope is actually our current namespace scope.
+        var pythonGlobalScope =
+            frontend.scopeManager.globalScope?.children?.firstOrNull { it is NamespaceScope }
 
-        if (s is Python.AST.AsyncFunctionDef) {
-            result.addDeclaration(
-                newProblemDeclaration(
-                    problem = "The \"async\" keyword is not yet supported.",
-                    rawNode = s
-                )
-            )
-        }
-
-        // Handle decorators (which are translated into CPG "annotations")
-        result.annotations += handleAnnotations(s)
-
-        // Handle return type and calculate function type
-        if (result is ConstructorDeclaration) {
-            // Return type of the constructor is always its record declaration type
-            result.returnTypes = listOf(recordDeclaration?.toType() ?: unknownType())
-        } else {
-            result.returnTypes = listOf(frontend.typeOf(s.returns))
-        }
-        result.type = FunctionType.computeType(result)
-
-        handleArguments(s.args, result, recordDeclaration)
-
-        if (s.body.isNotEmpty()) {
-            result.body = makeBlock(s.body, parentNode = s)
-        }
-
-        frontend.scopeManager.leaveScope(result)
-        frontend.scopeManager.addDeclaration(result)
-
-        return wrapDeclarationToStatement(result)
-    }
-
-    /** Adds the arguments to [result] which might be located in a [recordDeclaration]. */
-    private fun handleArguments(
-        args: Python.AST.arguments,
-        result: FunctionDeclaration,
-        recordDeclaration: RecordDeclaration?
-    ) {
-        // We can merge posonlyargs and args because both are positional arguments. We do not
-        // enforce that posonlyargs can ONLY be used in a positional style, whereas args can be used
-        // both in positional as well as keyword style.
-        var positionalArguments = args.posonlyargs + args.args
-        // Handle arguments
-        if (recordDeclaration != null) {
-            // first argument is the `receiver`
-            val recvPythonNode = positionalArguments.firstOrNull()
-            if (recvPythonNode == null) {
-                val problem =
-                    newProblemDeclaration(
-                        "Expected a receiver",
-                        problemType = ProblemNode.ProblemType.TRANSLATION,
-                        rawNode = args
-                    )
-                frontend.scopeManager.addDeclaration(problem)
-            } else {
-                val tpe = recordDeclaration.toType()
-                val recvNode =
-                    newVariableDeclaration(
-                        name = recvPythonNode.arg,
-                        type = tpe,
-                        implicitInitializerAllowed = false,
-                        rawNode = recvPythonNode
-                    )
-                frontend.scopeManager.addDeclaration(recvNode)
-                when (result) {
-                    is ConstructorDeclaration -> result.receiver = recvNode
-                    is MethodDeclaration -> result.receiver = recvNode
-                    else -> TODO()
-                }
-            }
-        }
-
-        if (recordDeclaration != null) {
-            // first argument is the receiver
-            for (arg in positionalArguments.subList(1, positionalArguments.size)) {
-                handleArgument(arg, arg in args.posonlyargs)
-            }
-        } else {
-            for (arg in positionalArguments) {
-                handleArgument(arg, arg in args.posonlyargs)
-            }
-        }
-
-        args.vararg?.let { handleArgument(it, isPosOnly = false, isVariadic = true) }
-
-        if (args.kwonlyargs.isNotEmpty()) {
-            val problem =
-                newProblemDeclaration(
-                    "`kwonlyargs` are not yet supported",
-                    problemType = ProblemNode.ProblemType.TRANSLATION,
-                    rawNode = args
-                )
-            frontend.scopeManager.addDeclaration(problem)
-        }
-
-        if (args.kw_defaults.isNotEmpty()) {
-            val problem =
-                newProblemDeclaration(
-                    "`kw_defaults` are not yet supported",
-                    problemType = ProblemNode.ProblemType.TRANSLATION,
-                    rawNode = args
-                )
-            frontend.scopeManager.addDeclaration(problem)
-        }
-
-        args.kwarg?.let {
-            val problem =
-                newProblemDeclaration(
-                    "`kwarg` is not yet supported",
-                    problemType = ProblemNode.ProblemType.TRANSLATION,
-                    rawNode = it
-                )
-            frontend.scopeManager.addDeclaration(problem)
-        }
-
-        if (args.defaults.isNotEmpty()) {
-            val problem =
-                newProblemDeclaration(
-                    "`defaults` are not yet supported",
-                    problemType = ProblemNode.ProblemType.TRANSLATION,
-                    rawNode = args
-                )
-            frontend.scopeManager.addDeclaration(problem)
-        }
-    }
-
-    private fun handleAnnotations(
-        node: Python.AST.NormalOrAsyncFunctionDef
-    ): Collection<Annotation> {
-        return handleDeclaratorList(node, node.decorator_list)
-    }
-
-    fun handleDeclaratorList(
-        node: Python.AST.WithLocation,
-        decoratorList: List<Python.AST.BaseExpr>
-    ): List<Annotation> {
-        val annotations = mutableListOf<Annotation>()
-        for (decorator in decoratorList) {
-            if (decorator !is Python.AST.Call) {
-                log.warn(
-                    "Decorator (${decorator::class}) is not ASTCall, cannot handle this (yet)."
-                )
-                continue
-            }
-
-            val decFuncParsed = frontend.expressionHandler.handle(decorator.func)
-            if (decFuncParsed !is MemberExpression) {
-                log.warn(
-                    "parsed function expression (${decFuncParsed::class}) is not a member expression, cannot handle this (yet)."
-                )
-                continue
-            }
-
-            val annotation =
-                newAnnotation(
-                    name =
-                        Name(
-                            localName = decFuncParsed.name.localName,
-                            parent = decFuncParsed.base.name
-                        ),
-                    rawNode = node
-                )
-            for (arg in decorator.args) {
-                val argParsed = frontend.expressionHandler.handle(arg)
-                annotation.members +=
-                    newAnnotationMember(
-                        "annotationArg" + decorator.args.indexOf(arg), // TODO
-                        argParsed,
-                        rawNode = arg
-                    )
-            }
-            for (keyword in decorator.keywords) {
-                annotation.members +=
-                    newAnnotationMember(
-                        name = keyword.arg,
-                        value = frontend.expressionHandler.handle(keyword.value),
-                        rawNode = keyword
-                    )
-            }
-
-            annotations += annotation
-        }
-
-        return annotations
+        return newLookupScopeStatement(
+            global.names.map { parseName(it).localName },
+            pythonGlobalScope,
+            rawNode = global,
+        )
     }
 
     /**
-     * This function "wraps" a list of [Python.ASTBASEstmt] nodes into a [Block]. Since the list
+     * Translates a Python [`Nonlocal`](https://docs.python.org/3/library/ast.html#ast.Nonlocal)
+     * into a [LookupScopeStatement].
+     */
+    private fun handleNonLocal(global: Python.AST.Nonlocal): LookupScopeStatement {
+        // We need to find the first outer function scope
+        var outerFunctionScope =
+            frontend.scopeManager.firstScopeOrNull {
+                it is FunctionScope && it != frontend.scopeManager.currentScope
+            }
+
+        return newLookupScopeStatement(
+            global.names.map { parseName(it).localName },
+            outerFunctionScope,
+            rawNode = global,
+        )
+    }
+
+    /**
+     * This function "wraps" a list of [Python.AST.BaseStmt] nodes into a [Block]. Since the list
      * itself does not have a code/location, we need to employ [codeAndLocationFromChildren] on the
      * [parentNode].
      */
-    private fun makeBlock(
-        stmts: List<Python.AST.BaseStmt>,
-        parentNode: Python.AST.WithLocation
+    internal fun makeBlock(
+        statements: List<Python.AST.BaseStmt>,
+        parentNode: Python.AST.WithLocation,
     ): Block {
         val result = newBlock()
-        for (stmt in stmts) {
+
+        for (stmt in statements) {
             result.statements += handle(stmt)
         }
 
-        // Try to retrieve the code and location from the parent node, if it is a base stmt
-        var baseStmt = parentNode as? Python.AST.BaseStmt
-        return if (baseStmt != null) {
-            result.codeAndLocationFromChildren(baseStmt)
-        } else {
-            // Otherwise, continue without setting the location
-            log.warn(
-                "Could not set location on wrapped block because the parent node is not a python statement"
-            )
-            result
-        }
-    }
+        // We need to scope the call to codeAndLocationFromChildren to our frontend, so that
+        // all Python.AST.AST nodes are accepted, otherwise it would be scoped to the handler
+        // and only Python.AST.BaseStmt nodes would be accepted. This would cause issues with
+        // other nodes that are not "statements", but also handled as part of this handler,
+        // e.g., the Python.AST.ExceptHandler.
+        with(frontend) { result.codeAndLocationFromChildren(parentNode, frontend.lineSeparator) }
 
-    internal fun handleArgument(
-        node: Python.AST.arg,
-        isPosOnly: Boolean = false,
-        isVariadic: Boolean = false
-    ) {
-        val type = frontend.typeOf(node.annotation)
-        val arg =
-            newParameterDeclaration(
-                name = node.arg,
-                type = type,
-                variadic = isVariadic,
-                rawNode = node
-            )
-        if (isPosOnly) {
-            arg.modifiers += MODIFIER_POSITIONAL_ONLY_ARGUMENT
-        }
-
-        frontend.scopeManager.addDeclaration(arg)
+        return result
     }
 
     /**
@@ -542,5 +865,20 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         val declStmt = newDeclarationStatement().codeAndLocationFrom(decl)
         declStmt.addDeclaration(decl)
         return declStmt
+    }
+
+    /**
+     * Checks whether [mightBeAsync] implements the [IsAsync] interface and adds a warning to the
+     * corresponding [parentNode] stored in [Node.additionalProblems].
+     */
+    internal fun addAsyncWarning(mightBeAsync: Python.AST.AsyncOrNot, parentNode: Node) {
+        if (mightBeAsync is IsAsync) {
+            parentNode.additionalProblems +=
+                newProblemDeclaration(
+                    problem = "The \"async\" keyword is not yet supported.",
+                    problemType = ProblemNode.ProblemType.TRANSLATION,
+                    rawNode = mightBeAsync,
+                )
+        }
     }
 }

@@ -156,7 +156,7 @@ class PassOrderingHelper {
 
         // take care of [ExecuteBefore] dependencies
         for (dep in newElement.findAnnotations<ExecuteBefore>()) {
-            if (!dep.soft) {
+            if (!dep.softDependency) {
                 addToWorkingList(dep.other)
             }
         }
@@ -204,7 +204,7 @@ class PassOrderingHelper {
 
         log.info(
             "Passes after enforcing order: {}",
-            result.map { list -> list.map { it.simpleName } }
+            result.map { list -> list.map { it.simpleName } },
         )
         return result
     }

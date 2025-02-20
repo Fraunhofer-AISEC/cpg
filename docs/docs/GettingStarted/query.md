@@ -17,7 +17,7 @@ can use to identify bugs or vulnerabilities in the code under analysis. You can
 use a number of operations that you know from arithmetics, logics and many
 programming languages.
 
-The Query API provides a way validate if nodes in the graph fulfil certain
+The Query API provides a way validate if nodes in the graph fulfill certain
 requirements. It is a mixture of typical logical expressions (e.g. and, or, xor,
 implies), quantors (e.g. forall, exists), comparisons (e.g. <, >, ==, !=), some
 special operations (e.g., `in` to check for collections or `is` for types) and a
@@ -60,6 +60,22 @@ all (==> false)
 
 ## Operators of the detailed mode
 
+The starting point of an analysis is typically one operation inspired by predicate
+logics (**allExtended** or **existsEtended**) which work as follows:
+
+- They allow you to specify which type of nodes serve as starting point via
+  a reified type parameter.
+- The first argument is a function/lambda which describes certain pre-filtering
+  requirements for the nodes to check. This can be used to write something like
+  "implies" in the logical sense.
+- The second argument check the condition which has to hold for all or at least
+  one of these pre-filtered nodes.
+
+Example (the first argument of a call to "foo" must be 2): 
+```
+result.allExtended<CallExpression>{it.name.localName == "foo"} {it.argument[0].intValue eq const(2) }
+```
+
 Numerous methods allow to evaluate the queries while keeping track of all the
 steps. Currently, the following operations are supported:
 
@@ -86,6 +102,10 @@ For numeric values:
 
 **Note:** The detailed mode and its operators require the user to take care of
 the correct order. I.e., the user has to put the brackets!
+
+For a full list of available methodsm check the dokka documentation pages functions
+and properties and look for the methods which somehow make use of the `QueryTree`
+[here](https://fraunhofer-aisec.github.io/cpg/dokka/main/cpg-analysis/de.fraunhofer.aisec.cpg.query/index.html).
 
 ## Operators of the less detailed mode
 

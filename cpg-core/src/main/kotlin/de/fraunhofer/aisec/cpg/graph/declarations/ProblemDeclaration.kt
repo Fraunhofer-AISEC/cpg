@@ -35,7 +35,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
  */
 class ProblemDeclaration(
     override var problem: String = "",
-    override var problemType: ProblemNode.ProblemType = ProblemNode.ProblemType.TRANSLATION
+    override var problemType: ProblemNode.ProblemType = ProblemNode.ProblemType.TRANSLATION,
 ) : ValueDeclaration(), ProblemNode {
 
     override fun toString(): String {

@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.golang
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.helpers.Util
 
@@ -63,7 +64,13 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                 }
             }
 
-        val import = newImportDeclaration(import = name, alias = alias, rawNode = importSpec)
+        val import =
+            newImportDeclaration(
+                import = name,
+                alias = alias,
+                style = ImportStyle.IMPORT_NAMESPACE,
+                rawNode = importSpec,
+            )
         import.importURL = filename
 
         return import
@@ -89,7 +96,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
 
     private fun handleStructTypeSpec(
         typeSpec: GoStandardLibrary.Ast.TypeSpec,
-        structType: GoStandardLibrary.Ast.StructType
+        structType: GoStandardLibrary.Ast.StructType,
     ): RecordDeclaration {
         val record = buildRecordDeclaration(structType, typeSpec.name.name, typeSpec)
 
@@ -136,7 +143,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
 
     private fun handleInterfaceTypeSpec(
         typeSpec: GoStandardLibrary.Ast.TypeSpec,
-        interfaceType: GoStandardLibrary.Ast.InterfaceType
+        interfaceType: GoStandardLibrary.Ast.InterfaceType,
     ): Declaration {
         val record = newRecordDeclaration(typeSpec.name.name, "interface", rawNode = typeSpec)
 
@@ -187,9 +194,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
      * Since this can potentially declare multiple variables with one "spec", this returns a
      * [DeclarationSequence].
      */
-    private fun handleValueSpec(
-        valueSpec: GoStandardLibrary.Ast.ValueSpec,
-    ): Declaration {
+    private fun handleValueSpec(valueSpec: GoStandardLibrary.Ast.ValueSpec): Declaration {
         // Increment iota value
         frontend.declCtx.iotaValue++
 
@@ -279,7 +284,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                             Util.errorWithFileLocation(
                                 decl,
                                 log,
-                                "Const declaration is missing its initializer"
+                                "Const declaration is missing its initializer",
                             )
                         } else {
                             decl.initializer = frontend.expressionHandler.handle(initializerExpr)
@@ -301,7 +306,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
 
     private fun handleFuncTypeSpec(
         spec: GoStandardLibrary.Ast.TypeSpec,
-        type: GoStandardLibrary.Ast.FuncType
+        type: GoStandardLibrary.Ast.FuncType,
     ): Declaration {
         // We model function types as typedef's, so that we can resolve it later
         val funcType = frontend.typeOf(type)
@@ -314,7 +319,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
 
     private fun handleTypeDef(
         spec: GoStandardLibrary.Ast.TypeSpec,
-        type: GoStandardLibrary.Ast.Expr
+        type: GoStandardLibrary.Ast.Expr,
     ): Declaration {
         val targetType = frontend.typeOf(type)
 
@@ -342,6 +347,11 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
 
                 // Register the type with the type system
                 frontend.typeManager.registerType(record.toType())
+
+                // Make sure to add the scope to the scope manager
+                frontend.scopeManager.enterScope(record)
+                frontend.scopeManager.leaveScope(record)
+
                 record
             }
         }

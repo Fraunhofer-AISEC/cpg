@@ -102,7 +102,7 @@ class GraphExamples {
                                     memberCall("start", ref("p4")) { ref("iv") }
                                     memberCall(
                                         "foo",
-                                        ref("p4")
+                                        ref("p4"),
                                     ) // Not in the entity and therefore ignored
                                     memberCall("finish", ref("p4")) { ref("buf") }
                                     returnStmt {}
@@ -128,7 +128,7 @@ class GraphExamples {
                                     }
                                     memberCall(
                                         "foo",
-                                        ref("p4")
+                                        ref("p4"),
                                     ) // Not in the entity and therefore ignored
                                     memberCall("finish", ref("p4")) { ref("buf") }
                                     returnStmt {}
@@ -149,7 +149,7 @@ class GraphExamples {
                                     memberCall("finish", ref("p4")) { ref("buf") }
                                     memberCall(
                                         "foo",
-                                        ref("p4")
+                                        ref("p4"),
                                     ) // Not in the entity and therefore ignored
                                     memberCall("set_key", ref("p4")) { ref("key") }
                                     returnStmt {}
@@ -514,7 +514,7 @@ class GraphExamples {
                                             memberCall("finish", ref("p6"))
                                         }
 
-                                        whileCondition {
+                                        doCondition {
                                             memberCall("nextUInt", ref("URandomKt")) gt
                                                 literal(5, t("int"))
                                         }

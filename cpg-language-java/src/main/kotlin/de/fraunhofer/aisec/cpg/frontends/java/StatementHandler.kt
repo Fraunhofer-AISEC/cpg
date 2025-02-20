@@ -61,7 +61,7 @@ import org.slf4j.LoggerFactory
 class StatementHandler(lang: JavaLanguageFrontend?) :
     Handler<de.fraunhofer.aisec.cpg.graph.statements.Statement, Statement, JavaLanguageFrontend>(
         Supplier { ProblemExpression() },
-        lang!!
+        lang!!,
     ) {
     fun handleExpressionStatement(
         stmt: Statement
@@ -79,9 +79,8 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         stmt: Statement
     ): de.fraunhofer.aisec.cpg.graph.statements.Statement {
         val throwStmt = stmt as ThrowStmt
-        val throwOperation =
-            this.newUnaryOperator("throw", postfix = false, prefix = true, rawNode = stmt)
-        throwOperation.input =
+        val throwOperation = newThrowExpression(rawNode = stmt)
+        throwOperation.exception =
             frontend.expressionHandler.handle(throwStmt.expression)
                 as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
         return throwOperation
@@ -299,7 +298,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
 
     fun handleCaseDefaultStatement(
         caseExpression: Expression?,
-        sEntry: SwitchEntry
+        sEntry: SwitchEntry,
     ): de.fraunhofer.aisec.cpg.graph.statements.Statement {
         val parentLocation = frontend.locationOf(sEntry)
         val optionalTokenRange = sEntry.tokenRange
@@ -319,7 +318,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
                 caseTokens =
                     Pair(
                         getNextTokenWith("default", optionalTokenRange.get().begin),
-                        getNextTokenWith(":", optionalTokenRange.get().begin)
+                        getNextTokenWith(":", optionalTokenRange.get().begin),
                     )
             }
             val defaultStatement = newDefaultStatement()
@@ -333,7 +332,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
             caseTokens =
                 Pair(
                     getPreviousTokenWith("case", optionalTokenRange.get().begin),
-                    getNextTokenWith(":", caseExprTokenRange.get().end)
+                    getNextTokenWith(":", caseExprTokenRange.get().end),
                 )
         }
         val caseStatement = this.newCaseStatement()
@@ -367,7 +366,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
     fun getLocationsFromTokens(
         parentLocation: PhysicalLocation?,
         startToken: JavaToken?,
-        endToken: JavaToken?
+        endToken: JavaToken?,
     ): PhysicalLocation? {
         // cannot construct location without parent location
         if (parentLocation == null) {
@@ -384,7 +383,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
                         rstart.begin.line,
                         rstart.begin.column,
                         rend.end.line,
-                        rend.end.column + 1
+                        rend.end.column + 1,
                     )
                 return PhysicalLocation(parentLocation.artifactLocation.uri, region)
             }
@@ -535,7 +534,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
             this.newVariableDeclaration(
                 catchCls.parameter.name.toString(),
                 concreteType,
-                rawNode = catchCls.parameter
+                rawNode = catchCls.parameter,
             )
         parameter.addAssignedTypes(possibleTypes)
         val body = handleBlockStatement(catchCls.body)

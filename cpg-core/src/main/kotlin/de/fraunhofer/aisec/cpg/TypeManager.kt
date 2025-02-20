@@ -25,15 +25,17 @@
  */
 package de.fraunhofer.aisec.cpg
 
-import de.fraunhofer.aisec.cpg.frontends.CastNotPossible
 import de.fraunhofer.aisec.cpg.frontends.CastResult
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.scopes.TemplateScope
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.*
+import de.fraunhofer.aisec.cpg.passes.Pass
+import de.fraunhofer.aisec.cpg.passes.Pass.Companion.log
+import de.fraunhofer.aisec.cpg.passes.ResolveCallExpressionAmbiguityPass
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import org.slf4j.Logger
@@ -55,8 +57,8 @@ class TypeManager {
         MutableMap<TemplateDeclaration, MutableList<ParameterizedType>> =
         ConcurrentHashMap()
 
-    val firstOrderTypes: MutableSet<Type> = ConcurrentHashMap.newKeySet()
-    val secondOrderTypes: MutableSet<Type> = ConcurrentHashMap.newKeySet()
+    val firstOrderTypes = mutableListOf<Type>()
+    val secondOrderTypes = mutableListOf<Type>()
 
     /**
      * @param recordDeclaration that is instantiated by a template containing parameterizedtypes
@@ -84,7 +86,7 @@ class TypeManager {
      */
     fun addTypeParameter(
         recordDeclaration: RecordDeclaration,
-        typeParameters: List<ParameterizedType>
+        typeParameters: List<ParameterizedType>,
     ) {
         recordToTypeParameters[recordDeclaration] = typeParameters
     }
@@ -99,7 +101,7 @@ class TypeManager {
      */
     private fun getTypeParameter(
         templateDeclaration: TemplateDeclaration,
-        name: String
+        name: String,
     ): ParameterizedType? {
         if (templateToTypeParameters.containsKey(templateDeclaration)) {
             for (parameterizedType in templateToTypeParameters[templateDeclaration] ?: listOf()) {
@@ -134,14 +136,13 @@ class TypeManager {
      */
     fun searchTemplateScopeForDefinedParameterizedTypes(
         scope: Scope?,
-        name: String
+        name: String,
     ): ParameterizedType? {
         if (scope is TemplateScope) {
             val node = scope.astNode
 
             // We need an additional check here, because of parsing or other errors, the AST node
-            // might
-            // not necessarily be a template declaration.
+            // might not necessarily be a template declaration.
             if (node is TemplateDeclaration) {
                 val parameterizedType = getTypeParameter(node, name)
                 if (parameterizedType != null) {
@@ -163,7 +164,7 @@ class TypeManager {
      */
     fun addTypeParameter(
         templateDeclaration: TemplateDeclaration,
-        typeParameter: ParameterizedType
+        typeParameter: ParameterizedType,
     ) {
         val parameters =
             templateToTypeParameters.computeIfAbsent(templateDeclaration) { mutableListOf() }
@@ -182,7 +183,7 @@ class TypeManager {
     fun createOrGetTypeParameter(
         templateDeclaration: TemplateDeclaration,
         typeName: String,
-        language: Language<*>?
+        language: Language<*>,
     ): ParameterizedType {
         var parameterizedType = getTypeParameter(templateDeclaration, typeName)
         if (parameterizedType == null) {
@@ -199,37 +200,17 @@ class TypeManager {
         }
 
         if (t.isFirstOrderType) {
-            // Make sure we only ever return one unique object per type
-            if (!firstOrderTypes.add(t)) {
-                return firstOrderTypes.first { it == t && it is T } as T
-            } else {
-                log.trace(
-                    "Registering unique first order type {}{}",
-                    t.name,
-                    if ((t as? ObjectType)?.generics?.isNotEmpty() == true) {
-                        " with generics ${t.generics.joinToString(",", "[", "]") { it.name.toString() }}"
-                    } else {
-                        ""
-                    }
-                )
-            }
+            synchronized(firstOrderTypes) { firstOrderTypes.add(t) }
         } else if (t is SecondOrderType) {
-            if (!secondOrderTypes.add(t)) {
-                return secondOrderTypes.first { it == t && it is T } as T
-            } else {
-                log.trace("Registering unique second order type {}", t.name)
-            }
+            synchronized(secondOrderTypes) { secondOrderTypes.add(t) }
         }
 
         return t
     }
 
-    fun typeExists(name: String): Boolean {
-        return firstOrderTypes.any { type: Type -> type.root.name.toString() == name }
-    }
-
-    fun typeExists(name: Name): Type? {
-        return firstOrderTypes.firstOrNull { type: Type -> type.root.name == name }
+    /** Checks, whether a [Type] with the given [name] exists. */
+    fun typeExists(name: CharSequence): Boolean {
+        return firstOrderTypes.any { type: Type -> type.root.name == name }
     }
 
     fun resolvePossibleTypedef(alias: Type, scopeManager: ScopeManager): Type {
@@ -243,9 +224,9 @@ class TypeManager {
      * is [Type.Origin.RESOLVED].
      */
     fun lookupResolvedType(
-        fqn: String,
+        fqn: CharSequence,
         generics: List<Type>? = null,
-        language: Language<*>? = null
+        language: Language<*>? = null,
     ): Type? {
         var primitiveType = language?.getSimpleTypeOf(fqn)
         if (primitiveType != null) {
@@ -254,7 +235,7 @@ class TypeManager {
 
         return firstOrderTypes.firstOrNull {
             (it.typeOrigin == Type.Origin.RESOLVED || it.typeOrigin == Type.Origin.GUESSED) &&
-                it.name.toString() == fqn &&
+                it.root.name == fqn &&
                 if (generics != null) {
                     (it as? ObjectType)?.generics == generics
                 } else {
@@ -273,7 +254,20 @@ internal fun Type.getAncestors(depth: Int): Set<Type.Ancestor> {
     val types = mutableSetOf<Type.Ancestor>()
 
     // Recursively call ourselves on our super types.
-    types += superTypes.flatMap { it.getAncestors(depth + 1) }
+    types +=
+        superTypes
+            .filter {
+                if (it == this) {
+                    log.warn(
+                        "Removing type {} from the list of its own supertypes. This would create a type cycle that is not allowed.",
+                        this,
+                    )
+                    false
+                } else {
+                    true
+                }
+            }
+            .flatMap { it.getAncestors(depth + 1) }
 
     // Since the chain starts with our type, we add ourselves to it
     types += Type.Ancestor(this, depth)
@@ -290,7 +284,7 @@ internal fun Type.getAncestors(depth: Int): Set<Type.Ancestor> {
  * Optionally, the nodes that hold the respective type can be supplied as [hint] and [targetHint].
  */
 fun Type.tryCast(targetType: Type, hint: HasType? = null, targetHint: HasType? = null): CastResult {
-    return this.language?.tryCast(this, targetType, hint, targetHint) ?: CastNotPossible
+    return this.language.tryCast(this, targetType, hint, targetHint)
 }
 
 /**
@@ -358,3 +352,29 @@ val Collection<Type>.commonType: Type?
         // root node is 0) and re-wrap the final common type back into the original wrap state
         return commonAncestors.minByOrNull(Type.Ancestor::depth)?.type?.let { typeOp.apply(it) }
     }
+
+/**
+ * A utility function that checks whether our [Reference] refers to a [Type]. This is used by many
+ * passes that replace certain [Reference] nodes with other nodes, e.g., the
+ * [ResolveCallExpressionAmbiguityPass].
+ *
+ * Note: This involves some symbol lookup (using [ScopeManager.lookupTypeSymbolByName]), so this can
+ * only be used in passes.
+ */
+context(Pass<*>)
+fun Reference.nameIsType(): Type? {
+    // First, check if it is a simple type
+    var type = language.getSimpleTypeOf(name)
+    if (type != null) {
+        return type
+    }
+
+    // This could also be a typedef
+    type = scopeManager.typedefFor(name, scope)
+    if (type != null) {
+        return type
+    }
+
+    // Lastly, check if the reference contains a symbol that points to type (declaration)
+    return scopeManager.lookupTypeSymbolByName(name, language, scope)?.declaredType
+}

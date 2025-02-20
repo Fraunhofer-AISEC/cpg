@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.WhileStatement
 import de.fraunhofer.aisec.cpg.helpers.*
+import de.fraunhofer.aisec.cpg.helpers.LatticeElement
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 
 /**
@@ -91,7 +92,7 @@ class UnreachableEOGPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
  */
 fun transfer(
     currentEdge: Edge<Node>,
-    currentState: State<Edge<Node>, Reachability>
+    currentState: State<Edge<Node>, Reachability>,
 ): State<Edge<Node>, Reachability> {
     when (val currentNode = currentEdge.end) {
         is IfStatement -> {
@@ -119,7 +120,7 @@ fun transfer(
 private fun handleIfStatement(
     enteringEdge: Edge<Node>,
     n: IfStatement,
-    state: State<Edge<Node>, Reachability>
+    state: State<Edge<Node>, Reachability>,
 ) {
     val evalResult = ValueEvaluator().evaluate(n.condition)
 
@@ -128,13 +129,13 @@ private fun handleIfStatement(
             // If the condition is always true, the "false" branch is always unreachable
             Pair(
                 n.nextEOGEdges.firstOrNull { e -> e.branch == false },
-                n.nextEOGEdges.filter { e -> e.branch != false }
+                n.nextEOGEdges.filter { e -> e.branch != false },
             )
         } else if (evalResult == false) {
             // If the condition is always false, the "true" branch is always unreachable
             Pair(
                 n.nextEOGEdges.firstOrNull { e -> e.branch == true },
-                n.nextEOGEdges.filter { e -> e.branch != true }
+                n.nextEOGEdges.filter { e -> e.branch != true },
             )
         } else {
             Pair(null, n.nextEOGEdges)
@@ -160,7 +161,7 @@ private fun handleIfStatement(
 private fun handleWhileStatement(
     enteringEdge: Edge<Node>,
     n: WhileStatement,
-    state: State<Edge<Node>, Reachability>
+    state: State<Edge<Node>, Reachability>,
 ) {
     /*
      * Note: It does not understand that code like
@@ -176,12 +177,12 @@ private fun handleWhileStatement(
         if (evalResult is Boolean && evalResult == true) {
             Pair(
                 n.nextEOGEdges.firstOrNull { e -> e.index == 1 },
-                n.nextEOGEdges.filter { e -> e.index != 1 }
+                n.nextEOGEdges.filter { e -> e.index != 1 },
             )
         } else if (evalResult is Boolean && evalResult == false) {
             Pair(
                 n.nextEOGEdges.firstOrNull { e -> e.index == 0 },
-                n.nextEOGEdges.filter { e -> e.index != 0 }
+                n.nextEOGEdges.filter { e -> e.index != 0 },
             )
         } else {
             Pair(null, n.nextEOGEdges)
@@ -219,7 +220,7 @@ class ReachabilityLattice(override val elements: Reachability) :
 enum class Reachability {
     BOTTOM,
     UNREACHABLE,
-    REACHABLE
+    REACHABLE,
 }
 
 /**

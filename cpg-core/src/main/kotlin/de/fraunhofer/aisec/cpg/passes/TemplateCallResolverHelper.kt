@@ -51,7 +51,7 @@ import de.fraunhofer.aisec.cpg.graph.types.apply
 fun addRecursiveDefaultTemplateArgs(
     constructExpression: ConstructExpression,
     template: RecordTemplateDeclaration,
-    scopeManager: ScopeManager
+    scopeManager: ScopeManager,
 ) {
     var templateParameters: Int
     do {
@@ -61,7 +61,7 @@ fun addRecursiveDefaultTemplateArgs(
         handleExplicitTemplateParameters(
             constructExpression,
             template,
-            templateParametersExplicitInitialization
+            templateParametersExplicitInitialization,
         )
         val templateParameterRealDefaultInitialization = mutableMapOf<Node, Node?>()
 
@@ -74,7 +74,7 @@ fun addRecursiveDefaultTemplateArgs(
             constructExpression,
             templateParametersExplicitInitialization,
             templateParameterRealDefaultInitialization,
-            scopeManager
+            scopeManager,
         )
     } while (templateParameters != constructExpression.templateArguments.size)
 }
@@ -90,7 +90,7 @@ fun addRecursiveDefaultTemplateArgs(
 fun handleExplicitTemplateParameters(
     constructExpression: ConstructExpression,
     template: RecordTemplateDeclaration,
-    templateParametersExplicitInitialization: MutableMap<Node, Node>
+    templateParametersExplicitInitialization: MutableMap<Node, Node>,
 ) {
     for (i in constructExpression.templateArguments.indices) {
         val explicit = constructExpression.templateArguments[i]
@@ -118,13 +118,13 @@ fun applyMissingParams(
     constructExpression: ConstructExpression,
     templateParametersExplicitInitialization: Map<Node, Node>,
     templateParameterRealDefaultInitialization: Map<Node, Node?>,
-    scopeManager: ScopeManager
+    scopeManager: ScopeManager,
 ) {
     with(constructExpression) {
         val missingParams: List<Node?> =
             template.parameterDefaults.subList(
                 constructExpression.templateArguments.size,
-                template.parameterDefaults.size
+                template.parameterDefaults.size,
             )
         for (m in missingParams) {
             var missingParam = m
@@ -132,7 +132,8 @@ fun applyMissingParams(
                 if (missingParam.refersTo == null) {
                     val currentScope = scopeManager.currentScope
                     scopeManager.jumpTo(missingParam.scope)
-                    missingParam.refersTo = scopeManager.resolveReference(missingParam)
+                    missingParam.refersTo =
+                        scopeManager.lookupSymbolByNodeName(missingParam).singleOrNull()
                     scopeManager.jumpTo(currentScope)
                 }
                 missingParam = missingParam.refersTo
@@ -143,7 +144,7 @@ fun applyMissingParams(
                 templateParametersExplicitInitialization[missingParam]?.let {
                     constructExpression.addTemplateParameter(
                         it,
-                        TemplateDeclaration.TemplateInitialization.DEFAULT
+                        TemplateDeclaration.TemplateInitialization.DEFAULT,
                     )
                 }
                 // If template argument is a type add it as a generic to the type as well
@@ -161,7 +162,7 @@ fun applyMissingParams(
                 templateParameterRealDefaultInitialization[missingParam]?.let {
                     constructExpression.addTemplateParameter(
                         it,
-                        TemplateDeclaration.TemplateInitialization.DEFAULT
+                        TemplateDeclaration.TemplateInitialization.DEFAULT,
                     )
                 }
                 (templateParametersExplicitInitialization[missingParam] as? TypeExpression)
@@ -185,7 +186,7 @@ fun applyMissingParams(
  */
 fun handleDefaultTemplateParameters(
     template: RecordTemplateDeclaration,
-    templateParameterRealDefaultInitialization: MutableMap<Node, Node?>
+    templateParameterRealDefaultInitialization: MutableMap<Node, Node?>,
 ) {
     val declaredTemplateTypes = mutableListOf<Type?>()
     val declaredNonTypeTemplate = mutableListOf<ParameterDeclaration>()
@@ -224,7 +225,7 @@ internal fun realizeType(
     language: Language<*>?,
     parameterizedTypeResolution: Map<ParameterizedType, TypeParameterDeclaration>,
     incomingType: Type,
-    initializationSignature: Map<Declaration?, Node?>
+    initializationSignature: Map<Declaration?, Node?>,
 ): Type {
     var type: Type = UnknownType.getUnknownType(language)
 

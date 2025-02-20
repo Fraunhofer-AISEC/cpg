@@ -25,29 +25,41 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.python
 
-import de.fraunhofer.aisec.cpg.frontends.HasOperatorOverloading
-import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
-import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.frontends.of
+import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.autoType
 import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
+import de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation
 import kotlin.reflect.KClass
 import org.neo4j.ogm.annotation.Transient
 
 /** The Python language. */
 class PythonLanguage :
-    Language<PythonLanguageFrontend>(), HasShortCircuitOperators, HasOperatorOverloading {
+    Language<PythonLanguageFrontend>(),
+    HasShortCircuitOperators,
+    HasOperatorOverloading,
+    HasFunctionStyleConstruction,
+    HasMemberExpressionAmbiguity {
     override val fileExtensions = listOf("py", "pyi")
     override val namespaceDelimiter = "."
     @Transient
     override val frontend: KClass<out PythonLanguageFrontend> = PythonLanguageFrontend::class
     override val conjunctiveOperators = listOf("and")
     override val disjunctiveOperators = listOf("or")
+
+    /**
+     * You can either use `=` or `:=` in Python. But the latter is only available in a "named
+     * expression" (`a = (x := 1)`). We still need to include both however, otherwise
+     * [Reference.access] will not be set correctly in "named expressions".
+     */
+    override val simpleAssignmentOperators: Set<String>
+        get() = setOf("=", ":=")
 
     /**
      * All operators which perform and assignment and an operation using lhs and rhs. See
@@ -115,23 +127,47 @@ class PythonLanguage :
                     "int",
                     Integer.MAX_VALUE,
                     this,
-                    NumericType.Modifier.NOT_APPLICABLE
+                    NumericType.Modifier.NOT_APPLICABLE,
                 ), // Unlimited precision
             "float" to
                 FloatingPointType(
                     "float",
                     32,
                     this,
-                    NumericType.Modifier.NOT_APPLICABLE
+                    NumericType.Modifier.NOT_APPLICABLE,
                 ), // This depends on the implementation
             "complex" to
                 NumericType(
                     "complex",
                     null,
                     this,
-                    NumericType.Modifier.NOT_APPLICABLE
+                    NumericType.Modifier.NOT_APPLICABLE,
                 ), // It's two floats
-            "str" to StringType("str", this, listOf())
+            "str" to StringType("str", this, listOf()),
+            "list" to
+                ListType(
+                    typeName = "list",
+                    elementType = ObjectType("object", listOf(), false, this),
+                    language = this,
+                ),
+            "tuple" to
+                ListType(
+                    typeName = "tuple",
+                    elementType = ObjectType("object", listOf(), false, this),
+                    language = this,
+                ),
+            "dict" to
+                MapType(
+                    typeName = "dict",
+                    elementType = ObjectType("object", listOf(), false, this),
+                    language = this,
+                ),
+            "set" to
+                SetType(
+                    typeName = "set",
+                    elementType = ObjectType("object", listOf(), false, this),
+                    language = this,
+                ),
         )
 
     override fun propagateTypeOfBinaryOperation(operation: BinaryOperator): Type {
@@ -159,6 +195,37 @@ class PythonLanguage :
 
         // The rest behaves like other languages
         return super.propagateTypeOfBinaryOperation(operation)
+    }
+
+    override fun tryCast(
+        type: Type,
+        targetType: Type,
+        hint: HasType?,
+        targetHint: HasType?,
+    ): CastResult {
+        // Parameters in python do not have a static type. Therefore, we need to match for all types
+        // when trying to cast one type to the type of a function parameter at *runtime*
+        if (targetHint is ParameterDeclaration) {
+            // However, if we find type hints, we at least want to issue a warning if the types
+            // would not match
+            if (hint != null && targetType !is UnknownType && targetType !is AutoType) {
+                val match = super.tryCast(type, targetType, hint, targetHint)
+                if (match == CastNotPossible) {
+                    warnWithFileLocation(
+                        hint as Node,
+                        log,
+                        "Argument type of call to {} ({}) does not match type annotation on the function parameter ({}), but since Python does have runtime checks, we ignore this",
+                        hint.astParent?.name,
+                        type.name,
+                        targetType.name,
+                    )
+                }
+            }
+
+            return DirectMatch
+        }
+
+        return super.tryCast(type, targetType, hint, targetHint)
     }
 
     companion object {

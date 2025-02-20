@@ -25,12 +25,18 @@
  */
 package de.fraunhofer.aisec.cpg.graph.scopes
 
+import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 
-open class StructureDeclarationScope(final override var astNode: Node?) :
-    ValueDeclarationScope(astNode) {
+/**
+ * This sealed (and abstract) class represents a [Scope] that in addition to declare variables also
+ * defines structures, such as classes, namespaces, etc.
+ *
+ * This is actually only needed because of the legacy [ScopeManager.resolve] function.
+ */
+sealed class StructureDeclarationScope(astNode: Node?) : ValueDeclarationScope(astNode) {
     val structureDeclarations: List<Declaration>
         get() {
             return symbols
@@ -54,7 +60,11 @@ open class StructureDeclarationScope(final override var astNode: Node?) :
         }
     }
 
-    override fun addDeclaration(declaration: Declaration, addToAST: Boolean) {
+    override fun addDeclaration(
+        declaration: Declaration,
+        addToAST: Boolean,
+        scopeManager: ScopeManager,
+    ) {
         if (declaration is ValueDeclaration) {
             addValueDeclaration(declaration, addToAST)
         } else {
