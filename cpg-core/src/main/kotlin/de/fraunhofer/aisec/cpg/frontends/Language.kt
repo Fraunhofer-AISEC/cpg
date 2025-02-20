@@ -398,7 +398,7 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
     }
 
     abstract fun isBuiltinsFile(file: File): Boolean
-  
+
     /**
      * There are some cases where our [Inference] system needs to place declarations, e.g., a
      * [NamespaceDeclaration] in the [GlobalScope]. The issue with that is that the [Scope.astNode]
