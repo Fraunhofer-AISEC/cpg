@@ -144,7 +144,13 @@ private constructor(
     ): Set<LanguageFrontend<*, *>> {
         val usedFrontends = mutableSetOf<LanguageFrontend<*, *>>()
 
-        ctx.config.includePaths.forEach { ctx.externalSources.addAll(extractConfiguredSources(it)) }
+        // Without extracting the sources from the include paths to the external sources the feature
+        // is turned off
+        if (ctx.config.loadIncludes) {
+            ctx.config.includePaths.forEach {
+                ctx.externalSources.addAll(extractConfiguredSources(it))
+            }
+        }
 
         var useParallelFrontends = ctx.config.useParallelFrontends
 
@@ -306,11 +312,6 @@ private constructor(
                     processedExternalSources.addAll(unprocessedFilesInIncludePath)
                 }
             }
-            log.info(
-                "Processed " +
-                    (processedExternalSources.size - oldProcessedSize) +
-                    " additional external Sources "
-            )
             // If the last run added files to the processed list, we do another run
         } while (processedExternalSources.size > oldProcessedSize)
 
