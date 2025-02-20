@@ -490,6 +490,7 @@ class Application : Callable<Int> {
             val pieces = customPasses.split(",")
             for (pass in pieces) {
                 if (pass.contains(".")) {
+                    @Suppress("UNCHECKED_CAST")
                     translationConfiguration.registerPass(
                         Class.forName(pass).kotlin as KClass<out Pass<*>>
                     )

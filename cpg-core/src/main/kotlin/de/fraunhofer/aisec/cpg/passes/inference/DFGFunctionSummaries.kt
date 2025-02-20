@@ -117,7 +117,7 @@ class DFGFunctionSummaries {
         val language = functionDecl.language
         val languageName = language.javaClass.name
         val methodName = functionDecl.name
-        val typeManager = functionDecl.ctx?.typeManager ?: return null
+        val typeManager = functionDecl.ctx.typeManager
 
         // The language and the method name have to match. If a signature is specified, it also has
         // to match to the one of the FunctionDeclaration, null indicates that we accept everything.
