@@ -158,9 +158,10 @@ class CXXDynamicLoadingPass(ctx: TranslationContext) : ConceptPass(ctx) {
                 )
             }
 
-        // Look for library entry points
+        // Look for library entry points that match the operating system architecture
         val entryPoints =
-            component?.conceptNodes?.filterIsInstance<LibraryEntryPoint>() ?: emptyList()
+            component?.conceptNodes?.filterIsInstance<LibraryEntryPoint>()?.filter { it.os == os }
+                ?: emptyList()
 
         // Create the op
         val op =
