@@ -110,7 +110,7 @@ class JavaCallResolverHelper {
             val baseName = callee.base.name.parent ?: return null
 
             val type =
-                callee.ctx?.typeManager?.lookupResolvedType(baseName.toString())
+                callee.ctx.typeManager.lookupResolvedType(baseName.toString())
                     ?: callee.unknownType()
             if (type in curClass.implementedInterfaces) {
                 // Basename is an interface -> BaseName.super refers to BaseName itself

@@ -93,10 +93,7 @@ class TranslationResult(
     val isCancelled: Boolean
         get() = translationManager.isCancelled()
 
-    override var ctx: TranslationContext? = null
-        get() {
-            return finalCtx
-        }
+    override var ctx: TranslationContext = finalCtx
 
     /**
      * Checks if only a single software component has been analyzed and returns its translation

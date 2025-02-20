@@ -340,7 +340,7 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
                     null,
                     source,
                     false,
-                    source.ctx!!,
+                    source.ctx,
                     null,
                     needsExactMatch = true,
                 )
@@ -416,7 +416,7 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
      * @param source the source that was responsible for the inference
      */
     fun <TypeToInfer : Node> translationUnitForInference(source: Node): TranslationUnitDeclaration {
-        val tu = source.ctx?.currentComponent?.translationUnits?.firstOrNull()
+        val tu = source.ctx.currentComponent?.translationUnits?.firstOrNull()
         if (tu == null) {
             throw TranslationException(
                 "No translation unit found that should be used for inference"

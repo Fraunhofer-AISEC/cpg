@@ -76,8 +76,18 @@ abstract class Node :
      * to managers such as the [TypeManager] instance which is responsible for this particular node.
      * All managers are bundled in [TranslationContext]. It is set in [Node.applyMetadata] when a
      * [ContextProvider] is provided.
+     *
+     * Note: We EXPECT that this property is set before any other property is accessed and therefore
+     * this is a lateinit variable. In the past this was a nullable variable, and we had many null
+     * checks in the code, which then threw exceptions somewhere late in the analysis. Now, the
+     * program will abort sooner if the context is not set correctly.
+     *
+     * In the future, we might re-structure our node system and make this a constructor parameter.
      */
-    @get:JsonIgnore @Transient override var ctx: TranslationContext? = null
+    @get:JsonIgnore @Transient override lateinit var ctx: TranslationContext
+
+    val isInitialized: Boolean
+        get() = this::ctx.isInitialized
 
     /** This property holds the full name using our new [Name] class. */
     @Convert(NameConverter::class) override var name: Name = Name(EMPTY_NAME)
@@ -376,8 +386,8 @@ abstract class Node :
  */
 inline fun <reified T : Node> T.applyWithScope(block: T.() -> Unit): T {
     return this.apply {
-        ctx?.scopeManager?.enterScope(this)
+        ctx.scopeManager.enterScope(this)
         block()
-        ctx?.scopeManager?.leaveScope(this)
+        ctx.scopeManager.leaveScope(this)
     }
 }

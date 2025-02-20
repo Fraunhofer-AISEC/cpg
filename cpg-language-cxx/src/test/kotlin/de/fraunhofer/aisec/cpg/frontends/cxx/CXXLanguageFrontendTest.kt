@@ -1408,7 +1408,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                 it.registerLanguage<CLanguage>()
             }
         with(tu) {
-            val typedefs = tu.ctx?.scopeManager?.typedefFor(Name("MyStruct"))
+            val typedefs = tu.ctx.scopeManager.typedefFor(Name("MyStruct"))
             assertLocalName("__myStruct", typedefs)
 
             val main = tu.functions["main"]

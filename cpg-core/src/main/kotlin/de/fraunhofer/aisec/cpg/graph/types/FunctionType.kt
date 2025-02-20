@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.unknownType
 
@@ -73,8 +72,7 @@ constructor(
                     func.language,
                 )
 
-            val c = func.ctx ?: throw TranslationException("context not available")
-            return c.typeManager.registerType(type)
+            return func.ctx.typeManager.registerType(type)
         }
     }
 }
