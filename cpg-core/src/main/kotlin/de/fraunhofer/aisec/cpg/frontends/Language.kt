@@ -30,13 +30,20 @@ import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.databind.JsonSerializer
 import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
-import de.fraunhofer.aisec.cpg.*
+import de.fraunhofer.aisec.cpg.CallResolutionResult
+import de.fraunhofer.aisec.cpg.SignatureResult
+import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.ancestors
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.ast.TemplateArguments
+import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
+import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
@@ -44,6 +51,7 @@ import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
+import de.fraunhofer.aisec.cpg.passes.inference.Inference
 import java.io.File
 import kotlin.reflect.KClass
 import kotlin.reflect.full.primaryConstructor
@@ -387,6 +395,35 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
         } else {
             ref.candidates.singleOrNull()
         }
+    }
+
+    /**
+     * There are some cases where our [Inference] system needs to place declarations, e.g., a
+     * [NamespaceDeclaration] in the [GlobalScope]. The issue with that is that the [Scope.astNode]
+     * of the global scope is always the last parsed [TranslationUnitDeclaration] and we might end
+     * up adding the declaration to some random translation unit, where it does not really belong.
+     *
+     * Therefore, we give the language a chance to return a [TranslationUnitDeclaration] where the
+     * declaration should be placed. If the language does not override this function, the default
+     * implementation will return the first [TranslationUnitDeclaration] in
+     * [TranslationContext.currentComponent].
+     *
+     * But languages might choose to take the information of [TypeToInfer] and [source] and create a
+     * specific [TranslationUnitDeclaration], e.g., for each namespace that is inferred globally or
+     * try to put all inferred declarations into one specific (inferred) new translation unit.
+     *
+     * @param TypeToInfer the type of the node that should be inferred
+     * @param source the source that was responsible for the inference
+     */
+    fun <TypeToInfer : Node> translationUnitForInference(source: Node): TranslationUnitDeclaration {
+        val tu = source.ctx?.currentComponent?.translationUnits?.firstOrNull()
+        if (tu == null) {
+            throw TranslationException(
+                "No translation unit found that should be used for inference"
+            )
+        }
+
+        return tu
     }
 }
 

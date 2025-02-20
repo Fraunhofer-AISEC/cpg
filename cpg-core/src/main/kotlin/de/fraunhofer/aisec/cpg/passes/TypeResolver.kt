@@ -49,6 +49,7 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     lateinit var walker: SubgraphWalker.ScopedWalker
 
     override fun accept(component: Component) {
+        ctx.currentComponent = component
         resolveFirstOrderTypes()
         refreshNames()
 
