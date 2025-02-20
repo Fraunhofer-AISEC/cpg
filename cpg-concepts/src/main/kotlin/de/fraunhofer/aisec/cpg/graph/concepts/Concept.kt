@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.concepts
 
+import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
 
@@ -36,6 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.OverlayNode
 abstract class Concept(underlyingNode: Node) : OverlayNode() {
     init {
         this.underlyingNode = underlyingNode
+        this::class.simpleName?.let { name = Name(it) }
     }
 
     /** All [Operation]s belonging to this concept. */
