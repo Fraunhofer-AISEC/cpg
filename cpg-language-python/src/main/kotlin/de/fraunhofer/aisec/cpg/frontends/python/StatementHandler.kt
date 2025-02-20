@@ -538,7 +538,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     )
                 }
 
-            addExternallyImportedToAnalysis(decl.name)
+            addExternallyImportedToAnalysis(decl.import)
             frontend.scopeManager.addDeclaration(decl)
             declStmt.declarationEdges += decl
         }
