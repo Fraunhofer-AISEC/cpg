@@ -69,7 +69,6 @@ class MultiValueEvaluator : ValueEvaluator() {
             is VariableDeclaration -> return handleHasInitializer(node, depth)
             // For a literal, we can just take its value, and we are finished
             is Literal<*> -> return node.value
-            is Reference -> return handlePrevDFG(node, depth)
             is UnaryOperator -> return handleUnaryOp(node, depth)
             is AssignExpression -> return handleAssignExpression(node, depth)
             is BinaryOperator -> return handleBinaryOperator(node, depth)
@@ -79,6 +78,7 @@ class MultiValueEvaluator : ValueEvaluator() {
             // While we are not handling different paths of variables with If statements, we can
             // easily be partly path-sensitive in a conditional expression
             is ConditionalExpression -> return handleConditionalExpression(node, depth)
+            else -> return handlePrevDFG(node, depth)
         }
 
         // At this point, we cannot evaluate, and we are calling our [cannotEvaluate] hook, maybe

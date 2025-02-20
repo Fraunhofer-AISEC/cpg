@@ -84,15 +84,18 @@ open class ValueEvaluator(
 
     /** Tries to evaluate this node. Anything can happen. */
     protected open fun evaluateInternal(node: Node?, depth: Int): Any? {
+        if (node == null) {
+            return null
+        }
+
         // Add the expression to the current path
-        node?.let { this.path += it }
+        node.let { this.path += it }
 
         when (node) {
             is NewArrayExpression -> return handleHasInitializer(node, depth)
             is VariableDeclaration -> return handleHasInitializer(node, depth)
             // For a literal, we can just take its value, and we are finished
             is Literal<*> -> return node.value
-            is Reference -> return handlePrevDFG(node, depth)
             is UnaryOperator -> return handleUnaryOp(node, depth)
             is BinaryOperator -> return handleBinaryOperator(node, depth)
             // Casts are just a wrapper in this case, we are interested in the inner expression
@@ -102,6 +105,7 @@ open class ValueEvaluator(
             // easily be partly path-sensitive in a conditional expression
             is ConditionalExpression -> return handleConditionalExpression(node, depth)
             is AssignExpression -> return handleAssignExpression(node, depth)
+            else -> return handlePrevDFG(node, depth)
         }
 
         // At this point, we cannot evaluate, and we are calling our [cannotEvaluate] hook, maybe

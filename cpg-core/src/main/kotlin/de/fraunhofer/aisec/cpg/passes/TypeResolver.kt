@@ -49,6 +49,7 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     lateinit var walker: SubgraphWalker.ScopedWalker
 
     override fun accept(component: Component) {
+        ctx.currentComponent = component
         resolveFirstOrderTypes()
         refreshNames()
 
@@ -112,7 +113,7 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
         // If we did not find any declaration, we can try to infer a record declaration for it
         if (declares == null) {
-            declares = tryRecordInference(type, locationHint = type)
+            declares = tryRecordInference(type, source = type)
         }
 
         // If we found the "real" declared type, we can normalize the name of our scoped type
@@ -129,7 +130,24 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             type.declaredFrom = declares
             type.recordDeclaration = declares as? RecordDeclaration
             type.typeOrigin = Type.Origin.RESOLVED
-            type.superTypes.addAll(declaredType.superTypes)
+            if (declaredType.superTypes.contains(type))
+                log.warn(
+                    "Removing type {} from the list of its own supertypes. This would create a type cycle that is not allowed.",
+                    type,
+                )
+            type.superTypes.addAll(
+                declaredType.superTypes.filter {
+                    if (it == this) {
+                        log.warn(
+                            "Removing type {} from the list of its own supertypes. This would create a type cycle that is not allowed.",
+                            this,
+                        )
+                        false
+                    } else {
+                        true
+                    }
+                }
+            )
             return true
         }
 

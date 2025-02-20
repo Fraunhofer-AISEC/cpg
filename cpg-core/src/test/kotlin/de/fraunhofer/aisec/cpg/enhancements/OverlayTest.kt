@@ -23,20 +23,38 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption
+package de.fraunhofer.aisec.cpg.enhancements
 
+import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.concepts.Concept
+import de.fraunhofer.aisec.cpg.graph.OverlayNode
+import de.fraunhofer.aisec.cpg.graph.newLiteral
+import kotlin.test.Test
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
-/** This concept represents an encrypted disk. */
-class DiskEncryption(underlyingNode: Node) :
-    Concept(underlyingNode = underlyingNode), IsDiskEncryption {
-    /** The encryption target, i.e. the disk */
-    var target: BlockStorage? = null
+class OverlayTest {
 
-    /** The cipher suite used for disk encryption */
-    var cipher: Cipher? = null
+    @Test
+    fun testCheckOverlayingDFGAndEOG() {
+        with(TestLanguageFrontend()) {
+            var overlay1: OverlayNode = object : OverlayNode() {}
+            var overlay2: OverlayNode = object : OverlayNode() {}
 
-    /** The encryption key used for disk encryption */
-    var key: Secret? = null
+            overlay1.nextDFG += overlay2
+
+            var codeNode1: Node = newLiteral(1)
+            var codeNode2: Node = newLiteral(2)
+
+            overlay2.nextDFG += codeNode1
+            codeNode1.nextDFG += codeNode2
+
+            codeNode2.nextDFG += overlay1
+
+            assertTrue(overlay1.nextDFGEdges.first().overlaying)
+            assertTrue(overlay2.nextDFGEdges.first().overlaying)
+            assertFalse(codeNode1.nextDFGEdges.first().overlaying)
+            assertTrue(codeNode2.nextDFGEdges.first().overlaying)
+        }
+    }
 }

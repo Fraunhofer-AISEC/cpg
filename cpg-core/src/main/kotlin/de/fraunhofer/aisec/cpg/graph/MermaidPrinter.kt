@@ -27,11 +27,13 @@ package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.graph.PrintDFGDirection.*
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
+import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
+import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.edges.flows.PartialDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.PointerDataflowGranularity
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
-import kotlin.reflect.KProperty1
+import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 
 /**
  * Indicates the direction when building the DFG.
@@ -46,28 +48,40 @@ enum class PrintDFGDirection {
 }
 
 /** Utility function to print the DFG using [printGraph]. */
-fun Node.printDFG(maxConnections: Int = 25, direction: PrintDFGDirection = BOTH): String {
-    return when (direction) {
-        FORWARD -> {
-            this.printGraph(Node::nextDFGEdges, null, maxConnections)
-        }
-
-        BACKWARD -> {
-            this.printGraph(null, Node::prevDFGEdges, maxConnections)
-        }
-
-        BOTH -> {
-            this.printGraph(Node::nextDFGEdges, Node::prevDFGEdges, maxConnections)
-        }
-    }
+fun Node.printDFG(
+    maxConnections: Int = 25,
+    vararg strategies: (Node) -> Iterator<Dataflow> =
+        arrayOf<(Node) -> Iterator<Dataflow>>(
+            Strategy::DFG_EDGES_FORWARD,
+            Strategy::DFG_EDGES_BACKWARD,
+        ),
+): String {
+    return this.printGraph(maxConnections = maxConnections, *strategies)
 }
 
-/*
 /** Utility function to print the EOG using [printGraph]. */
-fun Node.printEOG(maxConnections: Int = 25): String {
-    return this.printGraph(PropertyEdge::class, Node::nextEOGEdges, Node::prevEOGEdges, maxConnections)
+fun Node.printEOG(
+    maxConnections: Int = 25,
+    vararg strategies: (Node) -> Iterator<EvaluationOrder> =
+        arrayOf<(Node) -> Iterator<EvaluationOrder>>(
+            Strategy::EOG_EDGES_FORWARD,
+            Strategy::EOG_EDGES_BACKWARD,
+        ),
+): String {
+    return this.printGraph(maxConnections, *strategies)
 }
-*/
+
+/** Utility function to print the AST using [printGraph]. */
+fun Node.printAST(
+    maxConnections: Int = 25,
+    vararg strategies: (Node) -> Iterator<AstEdge<out Node>> =
+        arrayOf<(Node) -> Iterator<AstEdge<out Node>>>(
+            Strategy::AST_EDGES_FORWARD,
+            Strategy::AST_EDGES_BACKWARD,
+        ),
+): String {
+    return this.printGraph(maxConnections, *strategies)
+}
 
 /**
  * This function prints a partial graph, limited to a particular set of edges, starting with the
@@ -76,13 +90,13 @@ fun Node.printEOG(maxConnections: Int = 25): String {
  * issues, discussions or pull requests (see
  * https://github.blog/2022-02-14-include-diagrams-markdown-files-mermaid/).
  *
- * The edge type can be specified with the [nextEdgeGetter] and [prevEdgeGetter] functions, that
- * need to return a list of edges (as a [Edge]) beginning from this node.
+ * @param strategies The strategies to use when iterating the graph. See [Strategy] for
+ *   implementations.
+ * @return The Mermaid graph as a string encapsulated in triple-backticks.
  */
-fun <T : Edge<Node>> Node.printGraph(
-    nextEdgeGetter: KProperty1<Node, MutableCollection<T>>?,
-    prevEdgeGetter: KProperty1<Node, MutableCollection<T>>?,
+fun <EdgeType : Edge<out Node>> Node.printGraph(
     maxConnections: Int = 25,
+    vararg strategies: (Node) -> Iterator<EdgeType>,
 ): String {
     val builder = StringBuilder()
 
@@ -91,12 +105,14 @@ fun <T : Edge<Node>> Node.printGraph(
 
     // We use a set with a defined ordering to hold our work-list to have a somewhat consistent
     // ordering of statements in the mermaid file.
-    val worklist = LinkedHashSet<Edge<Node>>()
-    val alreadySeen = identitySetOf<Edge<Node>>()
+    val worklist = LinkedHashSet<EdgeType>()
+    val alreadySeen = identitySetOf<EdgeType>()
     var conns = 0
 
-    nextEdgeGetter?.let { worklist.addAll(it.get(this)) }
-    prevEdgeGetter?.let { worklist.addAll(it.get(this)) }
+    strategies.forEach { strategy ->
+        worklist +=
+            strategy(this).asSequence().filter { it !in alreadySeen }.sortedBy { it.end.name }
+    }
 
     while (worklist.isNotEmpty() && conns < maxConnections) {
         // Take one edge out of the work-list
@@ -117,20 +133,10 @@ fun <T : Edge<Node>> Node.printGraph(
         )
         conns++
 
-        // Add next and prev edges to the work-list (if not already seen). We sort the entries by
-        // name to have this somewhat consistent across multiple invocations of this function
-        nextEdgeGetter?.let { nextEdgeGetter ->
-            worklist +=
-                nextEdgeGetter.get(end).filter { it !in alreadySeen }.sortedBy { it.end.name }
-            worklist +=
-                nextEdgeGetter.get(start).filter { it !in alreadySeen }.sortedBy { it.end.name }
-        }
-
-        prevEdgeGetter?.let { prevEdgeGetter ->
-            worklist +=
-                prevEdgeGetter.get(end).filter { it !in alreadySeen }.sortedBy { it.start.name }
-            worklist +=
-                prevEdgeGetter.get(start).filter { it !in alreadySeen }.sortedBy { it.start.name }
+        // Add start and edges to the work-list.
+        strategies.forEach { strategy ->
+            worklist += strategy(end).asSequence().sortedBy { it.end.name }
+            worklist += strategy(start).asSequence().sortedBy { it.end.name }
         }
     }
 
@@ -139,7 +145,7 @@ fun <T : Edge<Node>> Node.printGraph(
     return builder.toString()
 }
 
-private fun Edge<Node>.label(): String {
+private fun Edge<out Node>.label(): String {
     val builder = StringBuilder()
     builder.append("\"")
     builder.append(this.labels.joinToString(","))

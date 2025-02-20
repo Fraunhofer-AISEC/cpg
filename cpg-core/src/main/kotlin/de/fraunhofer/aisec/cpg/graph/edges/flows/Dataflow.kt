@@ -153,16 +153,16 @@ open class Dataflow(
     }
 }
 
-sealed interface CallingContext
-
-class CallingContextIn(
+sealed interface CallingContext {
     /** The call expression that affects this dataflow edge. */
     val call: CallExpression
-) : CallingContext
+}
+
+class CallingContextIn(override val call: CallExpression) : CallingContext
 
 class CallingContextOut(
     /** The call expression that affects this dataflow edge. */
-    val call: CallExpression
+    override val call: CallExpression
 ) : CallingContext
 
 /**

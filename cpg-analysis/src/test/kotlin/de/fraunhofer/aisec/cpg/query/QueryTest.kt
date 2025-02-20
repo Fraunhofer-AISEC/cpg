@@ -138,8 +138,8 @@ class QueryTest {
             result.all<CallExpression>({ it.name.localName == "free" }) { outer ->
                 !executionPath(outer) {
                         (it as? CallExpression)?.name?.localName == "free" &&
-                            ((it as? CallExpression)?.arguments?.getOrNull(0) as? Reference)
-                                ?.refersTo == (outer.arguments[0] as? Reference)?.refersTo
+                            (it.arguments[0] as? Reference)?.refersTo ==
+                                (outer.arguments[0] as? Reference)?.refersTo
                     }
                     .value
             }
@@ -153,8 +153,8 @@ class QueryTest {
                     not(
                         executionPath(outer) {
                             (it as? CallExpression)?.name?.localName == "free" &&
-                                ((it as? CallExpression)?.arguments?.getOrNull(0) as? Reference)
-                                    ?.refersTo == (outer.arguments[0] as? Reference)?.refersTo
+                                (it.arguments[0] as? Reference)?.refersTo ==
+                                    (outer.arguments[0] as? Reference)?.refersTo
                         }
                     )
                 },
@@ -573,7 +573,7 @@ class QueryTest {
                     result
                         .all<FunctionDeclaration>(
                             { it.name.localName == "print" },
-                            { n2 -> dataFlow(n1, n2.parameters[0]).value },
+                            { n2 -> dataFlow(n1) { node -> node == n2.parameters[0] }.value },
                         )
                         .first
                 },
@@ -588,7 +588,7 @@ class QueryTest {
                 { n1 ->
                     result.allExtended<FunctionDeclaration>(
                         { it.name.localName == "print" },
-                        { n2 -> dataFlow(n1, n2.parameters[0]) },
+                        { n2 -> dataFlow(n1) { node -> node == n2.parameters[0] } },
                     )
                 },
             )
@@ -603,7 +603,7 @@ class QueryTest {
                     result
                         .all<FunctionDeclaration>(
                             { it.name.localName == "print" },
-                            { n2 -> dataFlow(n1, n2.parameters[0]).value },
+                            { n2 -> dataFlow(n1) { node -> node == n2.parameters[0] }.value },
                         )
                         .first
                 },
@@ -618,7 +618,7 @@ class QueryTest {
                 { n1 ->
                     result.allExtended<FunctionDeclaration>(
                         { it.name.localName == "print" },
-                        { n2 -> dataFlow(n1, n2.parameters[0]) },
+                        { n2 -> dataFlow(n1) { node -> node == n2.parameters[0] } },
                     )
                 },
             )
@@ -635,34 +635,12 @@ class QueryTest {
             result.allExtended<CallExpression>(
                 { it.name.localName == "highlyCriticalOperation" },
                 { n1 ->
-                    val loggingQueryForward =
-                        executionPath(n1) {
-                            (it as? CallExpression)?.name.toString() == "Logger.log"
-                        }
-                    val loggingQueryBackwards =
-                        executionPathBackwards(n1) {
-                            (it as? CallExpression)?.name.toString() == "Logger.log"
-                        }
-                    val allChildren = loggingQueryForward.children
-                    allChildren.addAll(loggingQueryBackwards.children)
-                    val allPaths =
-                        allChildren
-                            .map { (it.value as? List<*>) }
-                            .filter { it != null && it.last() is CallExpression }
-                    val allCalls = allPaths.map { it?.last() as CallExpression }
-                    val dataFlowPaths =
-                        allCalls.map {
-                            allNonLiteralsFromFlowTo(
-                                n1.arguments[0],
-                                it.arguments[1],
-                                allPaths as List<List<Node>>,
-                            )
-                        }
-                    val dataFlowQuery =
-                        QueryTree(dataFlowPaths.all { it.value }, dataFlowPaths.toMutableList())
-
-                    return@allExtended (loggingQueryForward or loggingQueryBackwards) and
-                        dataFlowQuery
+                    n1.arguments[0].allNonLiteralsFlowTo(
+                        predicate = { (it as? CallExpression)?.name.toString() == "Logger.log" },
+                        allowOverwritingValue = false,
+                        scope = Interprocedural(),
+                        sensitivities = ContextSensitive + FieldSensitive,
+                    )
                 },
             )
 
@@ -679,34 +657,12 @@ class QueryTest {
             result.allExtended<CallExpression>(
                 { it.name.localName == "highlyCriticalOperation" },
                 { n1 ->
-                    val loggingQueryForward =
-                        executionPath(n1) {
-                            (it as? CallExpression)?.name.toString() == "Logger.log"
-                        }
-                    val loggingQueryBackwards =
-                        executionPathBackwards(n1) {
-                            (it as? CallExpression)?.name.toString() == "Logger.log"
-                        }
-                    val allChildren = loggingQueryForward.children
-                    allChildren.addAll(loggingQueryBackwards.children)
-                    val allPaths =
-                        allChildren
-                            .map { (it.value as? List<*>) }
-                            .filter { it != null && it.last() is CallExpression }
-                    val allCalls = allPaths.map { it?.last() as CallExpression }
-                    val dataFlowPaths =
-                        allCalls.map {
-                            allNonLiteralsFromFlowTo(
-                                n1.arguments[0],
-                                it.arguments[1],
-                                allPaths as List<List<Node>>,
-                            )
-                        }
-                    val dataFlowQuery =
-                        QueryTree(dataFlowPaths.all { it.value }, dataFlowPaths.toMutableList())
-
-                    return@allExtended (loggingQueryForward or loggingQueryBackwards) and
-                        dataFlowQuery
+                    n1.arguments[0].allNonLiteralsFlowTo(
+                        predicate = { (it as? CallExpression)?.name.toString() == "Logger.log" },
+                        allowOverwritingValue = false,
+                        scope = Interprocedural(),
+                        sensitivities = ContextSensitive + FieldSensitive,
+                    )
                 },
             )
 
@@ -723,36 +679,12 @@ class QueryTest {
             result.allExtended<CallExpression>(
                 { it.name.localName == "highlyCriticalOperation" },
                 { n1 ->
-                    val loggingQueryForward =
-                        executionPath(
-                            n1,
-                            { (it as? CallExpression)?.name.toString() == "Logger.log" },
-                        )
-                    val loggingQueryBackwards =
-                        executionPathBackwards(
-                            n1,
-                            { (it as? CallExpression)?.name.toString() == "Logger.log" },
-                        )
-                    val allChildren = loggingQueryForward.children
-                    allChildren.addAll(loggingQueryBackwards.children)
-                    val allPaths =
-                        allChildren
-                            .map { (it.value as? List<*>) }
-                            .filter { it != null && it.last() is CallExpression }
-                    val allCalls = allPaths.map { it?.last() as CallExpression }
-                    val dataFlowPaths =
-                        allCalls.map {
-                            allNonLiteralsFromFlowTo(
-                                n1.arguments[0],
-                                it.arguments[1],
-                                allPaths as List<List<Node>>,
-                            )
-                        }
-                    val dataFlowQuery =
-                        QueryTree(dataFlowPaths.all { it.value }, dataFlowPaths.toMutableList())
-
-                    return@allExtended (loggingQueryForward or loggingQueryBackwards) and
-                        dataFlowQuery
+                    n1.arguments[0].allNonLiteralsFlowTo(
+                        predicate = { (it as? CallExpression)?.name.toString() == "Logger.log" },
+                        allowOverwritingValue = false,
+                        scope = Interprocedural(),
+                        sensitivities = ContextSensitive + FieldSensitive + FilterUnreachableEOG,
+                    )
                 },
             )
 

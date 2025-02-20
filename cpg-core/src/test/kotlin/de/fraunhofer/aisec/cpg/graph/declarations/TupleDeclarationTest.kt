@@ -37,6 +37,7 @@ import de.fraunhofer.aisec.cpg.test.*
 import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertContains
+import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 
@@ -73,7 +74,7 @@ class TupleDeclarationTest {
                                 newCallExpression(newReference("func")),
                             )
                         scopeManager.addDeclaration(tuple)
-                        tuple.elements.forEach { scopeManager.addDeclaration(it) }
+                        tuple.elements.forEach { scopeManager.addDeclaration(it, addToAST = false) }
 
                         function("main") { body { call("print") { ref("a") } } }
                     }
@@ -96,11 +97,13 @@ class TupleDeclarationTest {
             assertNotNull(a)
             assertLocalName("MyClass", a.type)
             assertContains(a.prevDFG, call)
+            assertEquals(tuple, a.astParent)
 
             val b = tuple.elements["b"]
             assertNotNull(b)
             assertLocalName("error", b.type)
             assertContains(b.prevDFG, call)
+            assertEquals(tuple, b.astParent)
 
             val callPrint = main.calls["print"]
             assertNotNull(callPrint)
@@ -149,7 +152,9 @@ class TupleDeclarationTest {
                                         )
                                     this.declarationEdges += tuple
                                     scopeManager.addDeclaration(tuple)
-                                    tuple.elements.forEach { scopeManager.addDeclaration(it) }
+                                    tuple.elements.forEach {
+                                        scopeManager.addDeclaration(it, addToAST = false)
+                                    }
                                 }
                                 call("print") { ref("a") }
                             }
@@ -174,11 +179,13 @@ class TupleDeclarationTest {
             assertNotNull(a)
             assertLocalName("MyClass", a.type)
             assertContains(a.prevDFG, call)
+            assertEquals(tuple, a.astParent)
 
             val b = tuple.elements["b"]
             assertNotNull(b)
             assertLocalName("error", b.type)
             assertContains(b.prevDFG, call)
+            assertEquals(tuple, b.astParent)
 
             val callPrint = main.calls["print"]
             assertNotNull(callPrint)
