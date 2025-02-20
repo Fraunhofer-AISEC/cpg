@@ -47,8 +47,8 @@
     },
     "dataFlows": [
       {
-        "from": "param1",
-        "to": "param0",
+        "from": "param1.deref",
+        "to": "param0.deref",
         "dfgType": "full"
       }
     ]
@@ -60,8 +60,8 @@
     },
     "dataFlows": [
       {
-        "from": "param1",
-        "to": "param0",
+        "from": "param1.deref",
+        "to": "param0.deref",
         "dfgType": "full"
       }
     ]

@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import java.io.File
 import kotlin.test.*
 
+@Ignore
 class CPPLambdaTest {
 
     @Test

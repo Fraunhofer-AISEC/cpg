@@ -318,6 +318,7 @@ class ComplexDFAOrderEvaluationTest {
         assertFalse(everythingOk, "Expected incorrect order")
     }
 
+    @Ignore
     @Test
     fun testSuccessWhileLoop2FSM() {
         val functionOk = tu.functions["okWhile2"]

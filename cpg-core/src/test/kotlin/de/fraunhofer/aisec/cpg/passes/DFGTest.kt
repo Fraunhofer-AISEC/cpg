@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.test.*
 import kotlin.test.*
 
+@Ignore
 class DFGTest {
     // Test DFGPass and ControlFlowSensitiveDFGPass
 

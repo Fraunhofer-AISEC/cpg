@@ -93,6 +93,13 @@ open class Reference : Expression(), HasType.TypeObserver, HasAliases {
     var isStaticAccess = false
 
     /**
+     * Is this reference used in the [AssignExpression.lhs] or [UnaryOperator.input] or
+     * [ForEachStatement.variable] which has a dedicated handling in the
+     * [ControlFlowSensitiveDFGPass]?
+     */
+    var dfgHandlerHint = false
+
+    /**
      * This is a MAJOR workaround needed to resolve function pointers, until we properly re-design
      * the call resolver. When this [Reference] contains a function pointer reference that is
      * assigned to a variable (or to another reference), we need to set
@@ -130,6 +137,18 @@ open class Reference : Expression(), HasType.TypeObserver, HasAliases {
     }
 
     override fun assignedTypeChanged(assignedTypes: Set<Type>, src: HasType) {
+        // Alias are broken. Do not trust type updates from them
+        if (this.aliases.isNotEmpty()) {
+            if (src is HasAliases && this.aliases.contains(src)) {
+                return
+            }
+
+            val decl = (src as? Reference)?.refersTo
+            if (decl is HasAliases && this.aliases.contains(decl)) {
+                return
+            }
+        }
+
         // Make sure that the update comes from our declaration, if we change our assigned types
         if (src == refersTo) {
             // Set our type

@@ -25,19 +25,17 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
-import de.fraunhofer.aisec.cpg.graph.AccessValues
-import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
-import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
-import de.fraunhofer.aisec.cpg.graph.pointer
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /** A unary operator expression, involving one expression and an operator, such as `a++`. */
-class UnaryOperator : Expression(), HasOverloadedOperation, ArgumentHolder, HasType.TypeObserver {
+class UnaryOperator :
+    Expression(), HasOverloadedOperation, ArgumentHolder, HasType.TypeObserver, HasAliases {
     @Relationship("INPUT")
     var inputEdge =
         astEdgeOf<Expression>(
@@ -74,6 +72,10 @@ class UnaryOperator : Expression(), HasOverloadedOperation, ArgumentHolder, HasT
     var isPrefix = false
 
     private fun changeExpressionAccess() {
+        if (operatorCode == "++" || operatorCode == "--") {
+            (input as? Reference)?.dfgHandlerHint = true
+        }
+
         var access =
             if (operatorCode == "++" || operatorCode == "--") {
                 AccessValues.READWRITE
@@ -142,6 +144,9 @@ class UnaryOperator : Expression(), HasOverloadedOperation, ArgumentHolder, HasT
 
         return false
     }
+
+    override var aliases =
+        mutableSetOf<HasAliases>() // TODO can this be removed? also HasAliases interface
 
     override fun hasArgument(expression: Expression): Boolean {
         return this.input == expression
