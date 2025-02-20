@@ -147,7 +147,9 @@ class TupleDeclarationTest {
                                         )
                                     this.declarationEdges += tuple
                                     scopeManager.addDeclaration(tuple)
-                                    tuple.elements.forEach { scopeManager.addDeclaration(it) }
+                                    tuple.elements.forEach {
+                                        scopeManager.addDeclaration(it, addToAST = false)
+                                    }
                                 }
                                 call("print") { ref("a") }
                             }
