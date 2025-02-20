@@ -23,34 +23,24 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.concepts.http
+package de.fraunhofer.aisec.cpg.graph.concepts.arch
 
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
-import de.fraunhofer.aisec.cpg.graph.concepts.Operation
-import de.fraunhofer.aisec.cpg.graph.concepts.flows.RemoteEntryPoint
 
-/** Represents a single [HttpEndpoint] on the server */
-class HttpEndpoint(
-    underlyingNode: Node,
-    val httpMethod: HttpMethod,
-    val path: String,
-    val arguments: List<Node>,
-    val supportedAuthentications: MutableList<String>,
-) : RemoteEntryPoint(underlyingNode = underlyingNode)
+/** Represents an architecture of an operating system. */
+abstract class OperatingSystemArchitecture(underlyingNode: Node) :
+    Concept(underlyingNode = underlyingNode)
 
-enum class HttpMethod {
-    GET,
-    POST,
-    PUT,
-    HEAD,
-    PATCH,
-    OPTIONS,
-    CONNECT,
-    TRACE,
-    DELETE,
-}
+/** Represents a Win32 architecture, commonly found on Windows systems. */
+class Win32(underlyingNode: Node) : OperatingSystemArchitecture(underlyingNode = underlyingNode)
 
-/** Base class for operations on an [HttpEndpoint]. */
-abstract class HttpEndpointOperation(underlyingNode: Node, concept: Concept) :
-    Operation(underlyingNode, concept)
+/** Represents a POSIX architecture, commonly found on Linux systems, */
+open class POSIX(underlyingNode: Node) :
+    OperatingSystemArchitecture(underlyingNode = underlyingNode)
+
+/**
+ * Represents a Darwin architecture, commonly found on macOS systems. macOS is a certified
+ * [UNIX](https://www.opengroup.org/openbrand/register/apple.htm) and is (mostly) POSIX compatible.
+ */
+class Darwin(underlyingNode: Node) : POSIX(underlyingNode = underlyingNode)

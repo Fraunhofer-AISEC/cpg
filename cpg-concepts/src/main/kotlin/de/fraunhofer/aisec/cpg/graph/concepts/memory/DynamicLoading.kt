@@ -28,6 +28,8 @@ package de.fraunhofer.aisec.cpg.graph.concepts.memory
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
+import de.fraunhofer.aisec.cpg.graph.concepts.arch.OperatingSystemArchitecture
+import de.fraunhofer.aisec.cpg.graph.concepts.flows.LibraryEntryPoint
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
@@ -45,6 +47,11 @@ abstract class DynamicLoadingOperation<T : Node>(
     concept: Concept,
     /** Represents the entity that we load during runtime. */
     var what: T?,
+    /**
+     * If this operation is targeting a specific [OperatingSystemArchitecture], it can be specified
+     * here.
+     */
+    var os: OperatingSystemArchitecture? = null,
 ) : MemoryOperation(underlyingNode = underlyingNode, concept = concept), IsMemory
 
 /**
@@ -59,11 +66,22 @@ class LoadLibrary(
     concept: Concept,
     /** Represents the source code of library that we load in our graph. */
     what: Component?,
+    /**
+     * Some programming languages support an entry point that is called when a library is
+     * dynamically loaded. Examples include `DllMain` in the Win32 API.
+     */
+    var entryPoints: List<LibraryEntryPoint> = emptyList(),
+    /**
+     * If this operation is targeting a specific [OperatingSystemArchitecture], it can be specified
+     * here.
+     */
+    os: OperatingSystemArchitecture?,
 ) :
     DynamicLoadingOperation<Component>(
         underlyingNode = underlyingNode,
         concept = concept,
         what = what,
+        os = os,
     ) {
 
     /** Looks up symbol candidates for [symbol] in the [LoadLibrary.what]. */
@@ -98,4 +116,15 @@ class LoadSymbol<T : Declaration>(
      * operation that loaded the library.
      */
     var loader: LoadLibrary?,
-) : DynamicLoadingOperation<T>(underlyingNode = underlyingNode, concept = concept, what = what)
+    /**
+     * If this operation is targeting a specific [OperatingSystemArchitecture], it can be specified
+     * here.
+     */
+    os: OperatingSystemArchitecture? = loader?.os,
+) :
+    DynamicLoadingOperation<T>(
+        underlyingNode = underlyingNode,
+        concept = concept,
+        what = what,
+        os = os,
+    )
