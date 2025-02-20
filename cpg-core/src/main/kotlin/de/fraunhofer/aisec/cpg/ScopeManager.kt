@@ -868,6 +868,27 @@ class ScopeManager : ScopeProvider {
 
         return symbols.singleOrNull()
     }
+
+    /**
+     * Returns the [TranslationUnitDeclaration] that should be used for inference, especially for
+     * global declarations.
+     *
+     * @param TypeToInfer the type of the node that should be inferred
+     * @param source the source that was responsible for the inference
+     */
+    fun <TypeToInfer : Node> translationUnitForInference(
+        source: Node
+    ): TranslationUnitDeclaration? {
+        // TODO(oxisto): This workaround is needed because it seems that not all types have a proper
+        //  context :(. In this case we need to fall back to the global scope's astNode, which can
+        // be
+        //  error-prone in a multi-language scenario.
+        return if (source.ctx == null) {
+            globalScope?.astNode as? TranslationUnitDeclaration
+        } else {
+            source.language.translationUnitForInference<TypeToInfer>(source)
+        }
+    }
 }
 
 /**
