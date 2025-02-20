@@ -1230,7 +1230,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         // If we do not have default statement, we also need to put the switch statement into the
         // currentPredecessors, otherwise we will completely ignore everything that is "beyond" the
         // switch statement
-        if (compound.statements.filter { it is DefaultStatement }.isEmpty()) {
+        if (compound.statements.none { it is DefaultStatement }) {
             currentPredecessors.add(node)
         }
 
