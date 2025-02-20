@@ -29,14 +29,14 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.arch.POSIX
 import de.fraunhofer.aisec.cpg.graph.concepts.arch.Win32
+import de.fraunhofer.aisec.cpg.graph.concepts.flows.EntryPoint
 import de.fraunhofer.aisec.cpg.graph.concepts.flows.LibraryEntryPoint
 import de.fraunhofer.aisec.cpg.graph.concepts.flows.Main
-import de.fraunhofer.aisec.cpg.graph.concepts.memory.DynamicLoading
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.passes.concepts.ConceptPass
 
-/** A pass that fills the [DynamicLoading] concept into the CPG. */
+/** A pass that fills the [EntryPoint] concept into the CPG. */
 class CXXEntryPointsPass(ctx: TranslationContext) : ConceptPass(ctx) {
 
     override fun handleNode(node: Node?, tu: TranslationUnitDeclaration) {
@@ -45,6 +45,7 @@ class CXXEntryPointsPass(ctx: TranslationContext) : ConceptPass(ctx) {
         }
     }
 
+    /** Translates a suitable [FunctionDeclaration] into an [EntryPoint] concept. */
     private fun handleFunctionDeclaration(
         func: FunctionDeclaration,
         tu: TranslationUnitDeclaration,

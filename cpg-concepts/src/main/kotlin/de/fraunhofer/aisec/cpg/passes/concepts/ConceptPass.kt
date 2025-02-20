@@ -30,12 +30,16 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.component
 import de.fraunhofer.aisec.cpg.graph.conceptNodes
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
+import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.DynamicLoading
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.TranslationUnitPass
 
-/** An abstract pass that is used to identify and handle concepts in the CPG. */
+/**
+ * An abstract pass that is used to identify and create [Concept] and [Operation] nodes in the
+ * graph.
+ */
 abstract class ConceptPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
 
     lateinit var walker: SubgraphWalker.ScopedWalker
@@ -49,8 +53,8 @@ abstract class ConceptPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
     }
 
     /**
-     * This function is called for each node in the CPG. It needs to be overridden by subclasses to
-     * handle the specific node.
+     * This function is called for each node in the graph. It needs to be overridden by subclasses
+     * to handle the specific node.
      */
     abstract fun handleNode(node: Node?, tu: TranslationUnitDeclaration)
 
