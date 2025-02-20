@@ -40,6 +40,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.TryStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.helpers.Util
 import kotlin.collections.plusAssign
 
 class StatementHandler(frontend: PythonLanguageFrontend) :
@@ -536,6 +537,8 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                         rawNode = imp,
                     )
                 }
+
+            addExternallyImportedToAnalysis(decl.import)
             frontend.scopeManager.addDeclaration(decl)
             declStmt.declarationEdges += decl
         }
@@ -553,7 +556,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             // level.
             var parent =
                 if (isInitModule()) {
-                    frontend.scopeManager.currentNamespace.fqn("__init__")
+                    frontend.scopeManager.currentNamespace.fqn(PythonLanguage.IDENTIFIER_INIT)
                 } else {
                     frontend.scopeManager.currentNamespace
                 }
@@ -582,6 +585,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 if (imp.name == "*") {
                     // In the wildcard case, our "import" is the module name, and we set "wildcard"
                     // to true
+                    addExternallyImportedToAnalysis(module)
                     newImportDeclaration(
                         module,
                         style = ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE,
@@ -592,6 +596,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     // name and import that. We also need to take care of any alias
                     val name = module.fqn(imp.name)
                     val alias = imp.asname
+                    addExternallyImportedToAnalysis(name)
                     if (alias != null) {
                         newImportDeclaration(
                             name,
@@ -615,12 +620,40 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         return declStmt
     }
 
+    private fun addExternallyImportedToAnalysis(importName: Name) {
+        ctx?.let { ctx ->
+            var currentName = importName
+            while (currentName.isNotEmpty()) {
+                var importPath = currentName.toString().replace(language.namespaceDelimiter, "/")
+
+                language.fileExtensions.forEach { fileExtension ->
+
+                    // Includes a file in the analysis, if it has the root path and
+                    ctx.externalSources
+                        .firstOrNull {
+                            val relPath =
+                                it.relativeTo(
+                                        Util.getRootPath(it, ctx.config.includePaths).toFile()
+                                    )
+                                    .path
+                            val ending = "." + fileExtension
+                            relPath == importPath + ending ||
+                                relPath ==
+                                    importPath + "/" + PythonLanguage.IDENTIFIER_INIT + ending
+                        }
+                        ?.let { ctx.importedSources += it }
+                }
+                currentName = currentName.parent ?: Name("")
+            }
+        }
+    }
+
     /** Small utility function to check, whether we are inside an __init__ module. */
     private fun isInitModule(): Boolean =
         (frontend.scopeManager.firstScopeIsInstanceOrNull<NameScope>()?.astNode
                 as? NamespaceDeclaration)
             ?.path
-            ?.endsWith("__init__") == true
+            ?.endsWith(PythonLanguage.IDENTIFIER_INIT) == true
 
     private fun handleWhile(node: Python.AST.While): Statement {
         val ret = newWhileStatement(rawNode = node)

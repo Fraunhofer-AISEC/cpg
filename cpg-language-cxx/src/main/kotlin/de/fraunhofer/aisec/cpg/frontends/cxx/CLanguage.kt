@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 import com.fasterxml.jackson.annotation.JsonIgnore
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.types.*
+import java.io.File
 import kotlin.reflect.KClass
 import org.neo4j.ogm.annotation.Transient
 
@@ -131,5 +132,9 @@ open class CLanguage :
         }
 
         return CastNotPossible
+    }
+
+    override fun isBuiltinsFile(file: File): Boolean {
+        return false
     }
 }
