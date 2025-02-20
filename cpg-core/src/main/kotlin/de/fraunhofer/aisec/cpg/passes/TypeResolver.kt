@@ -112,7 +112,7 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
         // If we did not find any declaration, we can try to infer a record declaration for it
         if (declares == null) {
-            declares = tryRecordInference(type, locationHint = type)
+            declares = tryRecordInference(type, source = type)
         }
 
         // If we found the "real" declared type, we can normalize the name of our scoped type
