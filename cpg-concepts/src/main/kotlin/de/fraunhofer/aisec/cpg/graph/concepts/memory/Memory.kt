@@ -52,13 +52,13 @@ enum class MemoryManagementMode {
  * @param mode The memory management mode of the memory concept.
  */
 class Memory(underlyingNode: Node, mode: MemoryManagementMode) :
-    Concept<MemoryOperation>(underlyingNode = underlyingNode), IsMemory
+    Concept(underlyingNode = underlyingNode), IsMemory
 
 /** A common interface for the "memory" sub-graph. */
 interface IsMemory
 
 /** A common abstract class for memory operations. */
-abstract class MemoryOperation(underlyingNode: Node, concept: Concept<out MemoryOperation>) :
+abstract class MemoryOperation(underlyingNode: Node, concept: Concept) :
     Operation(underlyingNode = underlyingNode, concept = concept), IsMemory
 
 /**
@@ -67,7 +67,7 @@ abstract class MemoryOperation(underlyingNode: Node, concept: Concept<out Memory
  */
 class Allocate(
     underlyingNode: Node,
-    concept: Concept<MemoryOperation>,
+    concept: Concept,
     /** A reference to [what] is allocated, e.g., a variable. */
     var what: Node?,
 ) : MemoryOperation(underlyingNode = underlyingNode, concept = concept)
@@ -78,7 +78,7 @@ class Allocate(
  */
 class DeAllocate(
     underlyingNode: Node,
-    concept: Concept<MemoryOperation>,
+    concept: Concept,
     /** A reference to [what] is de-allocated, e.g., a variable. */
     var what: Node?,
 ) : MemoryOperation(underlyingNode = underlyingNode, concept = concept)

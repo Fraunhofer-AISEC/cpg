@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.conceptNodes
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.DynamicLoading
-import de.fraunhofer.aisec.cpg.graph.concepts.memory.DynamicLoadingOperation
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.LoadLibrary
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.LoadSymbol
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
@@ -74,7 +73,6 @@ class CXXDynamicLoadingPass(ctx: TranslationContext) : TranslationUnitPass(ctx) 
     }
 
     /** Handles a [CallExpression] node and checks if it is a dynamic loading operation. */
-    @Suppress("UNCHECKED_CAST")
     private fun handleCallExpression(call: CallExpression, tu: TranslationUnitDeclaration) {
         val concept = getConceptOrCreate<DynamicLoading>(tu)
 
@@ -99,7 +97,6 @@ class CXXDynamicLoadingPass(ctx: TranslationContext) : TranslationUnitPass(ctx) 
      * it to the [DynamicLoading] concept. The tricky part is to find the [FunctionDeclaration] that
      * is loaded.
      */
-    @Suppress("UNCHECKED_CAST")
     private fun handleLoadFunction(
         call: CallExpression,
         concept: DynamicLoading,
@@ -125,7 +122,7 @@ class CXXDynamicLoadingPass(ctx: TranslationContext) : TranslationUnitPass(ctx) 
                     candidates = candidates?.filterIsInstance<FunctionDeclaration>()
                     LoadSymbol(
                         underlyingNode = call,
-                        concept = concept as Concept<DynamicLoadingOperation<FunctionDeclaration>>,
+                        concept = concept,
                         what = candidates?.singleOrNull(),
                         loader = loadLibrary,
                     )
@@ -133,7 +130,7 @@ class CXXDynamicLoadingPass(ctx: TranslationContext) : TranslationUnitPass(ctx) 
                     candidates = candidates?.filterIsInstance<VariableDeclaration>()
                     LoadSymbol(
                         underlyingNode = call,
-                        concept = concept as Concept<DynamicLoadingOperation<VariableDeclaration>>,
+                        concept = concept,
                         what = candidates?.singleOrNull(),
                         loader = loadLibrary,
                     )
@@ -153,7 +150,6 @@ class CXXDynamicLoadingPass(ctx: TranslationContext) : TranslationUnitPass(ctx) 
      * it to the [DynamicLoading] concept. The tricky part is to find the [Component] that
      * represents the [LoadLibrary.what].
      */
-    @Suppress("UNCHECKED_CAST")
     private fun handleLibraryLoad(
         call: CallExpression,
         concept: DynamicLoading,
@@ -171,12 +167,7 @@ class CXXDynamicLoadingPass(ctx: TranslationContext) : TranslationUnitPass(ctx) 
             }
 
         // Create the op
-        val op =
-            LoadLibrary(
-                underlyingNode = call,
-                concept = concept as Concept<DynamicLoadingOperation<Component>>,
-                what = component,
-            )
+        val op = LoadLibrary(underlyingNode = call, concept = concept, what = component)
 
         return listOf(op)
     }
@@ -189,9 +180,7 @@ class CXXDynamicLoadingPass(ctx: TranslationContext) : TranslationUnitPass(ctx) 
      * Gets the [DynamicLoading] concept for this [TranslationUnitDeclaration] or creates a new one
      * if it does not exist.
      */
-    private inline fun <reified T : Concept<*>> getConceptOrCreate(
-        tu: TranslationUnitDeclaration
-    ): T {
+    private inline fun <reified T : Concept> getConceptOrCreate(tu: TranslationUnitDeclaration): T {
         var concept = tu.conceptNodes.filterIsInstance<T>().singleOrNull()
         if (concept == null) {
             concept = T::class.constructors.first().call(tu)
