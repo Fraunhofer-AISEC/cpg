@@ -59,13 +59,15 @@ class TranslationContext(
     var currentComponent: Component? = null,
 
     /**
-     * Set of files, that are available for additional analysis. They are not the primary subjects of analysis but
-     * are for example the expanded folder structure of [TranslationConfiguration.includePaths].
+     * Set of files, that are available for additional analysis. They are not the primary subjects
+     * of analysis but are for example the expanded folder structure of
+     * [TranslationConfiguration.includePaths].
      */
     var externalSources: MutableSet<File> = mutableSetOf(),
     /**
-     * The additional sources from the [externalSources] chosen to be analyzed along with the code under
-     * analysis. The language frontends are supposed to fill this list, e.g. by analyzing their import statements.
+     * The additional sources from the [externalSources] chosen to be analyzed along with the code
+     * under analysis. The language frontends are supposed to fill this list, e.g. by analyzing
+     * their import statements.
      */
     var importedSources: MutableSet<File> = mutableSetOf(),
 )

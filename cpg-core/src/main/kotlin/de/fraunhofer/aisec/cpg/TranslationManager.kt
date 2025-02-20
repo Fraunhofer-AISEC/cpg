@@ -320,10 +320,15 @@ private constructor(
 
     private fun extractConfiguredSources(path: Path): MutableList<File> {
         val rootFile = path.toFile()
-        return if (rootFile.exists())
-            (if (rootFile.isDirectory) rootFile.walkTopDown().toMutableList()
-            else mutableListOf(rootFile))
-        else mutableListOf()
+        return if (rootFile.exists()) {
+            if (rootFile.isDirectory) {
+                rootFile.walkTopDown().toMutableList()
+            } else {
+                mutableListOf(rootFile)
+            }
+        } else {
+            mutableListOf()
+        }
     }
 
     private fun parseParallel(
