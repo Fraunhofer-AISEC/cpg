@@ -39,5 +39,6 @@ abstract class Operation(
 ) : OverlayNode() {
     init {
         this.underlyingNode = underlyingNode
+        this.concept.ops += this
     }
 }
