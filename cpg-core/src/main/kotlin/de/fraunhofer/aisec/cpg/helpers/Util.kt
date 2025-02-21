@@ -366,9 +366,11 @@ object Util {
     }
 
     /**
-     * Establish data-flow from a [CallExpression] arguments to the target [FunctionDeclaration]
-     * parameters. Additionally, if the call is a [MemberCallExpression], it establishes a data-flow
-     * from the [MemberCallExpression.base] towards the [MethodDeclaration.receiver].
+     * Establishes data-flow from the arguments of a [CallExpression] to the parameters of a
+     * [FunctionDeclaration] parameters. It handles positional arguments, named/default arguments,
+     * and variadic parameters. Additionally, if the call is a [MemberCallExpression], it
+     * establishes a data-flow from the [MemberCallExpression.base] towards the
+     * [MethodDeclaration.receiver].
      *
      * @param target The call's target [FunctionDeclaration]
      * @param call The [CallExpression]
@@ -383,33 +385,47 @@ object Util {
             }
         }
 
-        // Connect the arguments to parameters
-        val arguments = call.arguments
-        target.parameterEdges.sortWith(Comparator.comparing { it.end.argumentIndex })
+        val callArguments = call.arguments
+        val functionParameters = target.parameters
 
-        var j = 0
-        while (j < arguments.size) {
-            val parameters = target.parameters
-            if (j < parameters.size) {
-                val param = parameters[j]
-                if (param.isVariadic) {
-                    while (j < arguments.size) {
-                        // map all the following arguments to this variadic param
-                        param.prevDFGEdges.addContextSensitive(
-                            arguments[j],
-                            callingContext = CallingContextIn(call),
-                        )
-                        j++
+        var parameterIndex = 0
+
+        for (param in functionParameters) {
+            // Handle default parameters
+            if (param.default != null) {
+                val argumentEdge = call.argumentEdges.getOrNull(parameterIndex)
+                if (argumentEdge != null) {
+                    val isNamedArgument = argumentEdge.name != null
+                    if (isNamedArgument) {
+                        // If it's a named argument (part of e.g. **kwargs), we skip it since
+                        // it is already handled in variadic handling
+                        continue
                     }
-                    break
-                } else {
+                    // If the argument is provided, connect it to the parameter
                     param.prevDFGEdges.addContextSensitive(
-                        arguments[j],
+                        argumentEdge.end,
                         callingContext = CallingContextIn(call),
                     )
                 }
             }
-            j++
+            // If the parameter is variadic, map all remaining arguments to it
+            if (param.isVariadic) {
+                callArguments.drop(parameterIndex).forEach { arg ->
+                    param.prevDFGEdges.addContextSensitive(
+                        arg,
+                        callingContext = CallingContextIn(call),
+                    )
+                }
+                return
+            }
+            // Handle non-variadic, non-default parameters (regular positional arguments)
+            if (param.default == null && parameterIndex < callArguments.size) {
+                param.prevDFGEdges.addContextSensitive(
+                    callArguments[parameterIndex],
+                    callingContext = CallingContextIn(call),
+                )
+            }
+            parameterIndex++
         }
     }
 
