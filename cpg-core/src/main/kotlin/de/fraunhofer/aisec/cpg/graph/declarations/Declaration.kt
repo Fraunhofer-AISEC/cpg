@@ -26,6 +26,8 @@
 package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemoryAddress
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
@@ -53,5 +55,6 @@ abstract class Declaration : Node() {
      * Each Declaration allocates new memory, AKA a new address, so we create a new MemoryAddress
      * node
      */
-    @Relationship open var memoryAddress: MemoryAddress? = null
+    @Relationship open var memoryAddressEdge = astOptionalEdgeOf<MemoryAddress>()
+    open var memoryAddress by unwrapping(Declaration::memoryAddressEdge)
 }

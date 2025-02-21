@@ -27,6 +27,8 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 
 open class MemoryAddress(override var name: Name, open var isGlobal: Boolean = false) : Node() {
 
@@ -50,12 +52,16 @@ open class MemoryAddress(override var name: Name, open var isGlobal: Boolean = f
  * stone.
  */
 class ParameterMemoryValue(override var name: Name) : MemoryAddress(name) {
-    // The ParameterMemoryValue is usually the Value of a parameter. Let's use this little helper to
-    // get to the parameter's address
-    var memoryAddress: Node? = null
+    /**
+     * The ParameterMemoryValue is usually the Value of a parameter. Let's use this little helper to
+     * get to the parameter's address
+     */
+    var memoryAddressEdge = astOptionalEdgeOf<Node>()
+    var memoryAddress by unwrapping(ParameterMemoryValue::memoryAddressEdge)
 
-    // Same for the value, make sure we don't use it across different functions
-    var memoryValue: ParameterMemoryValue? = null
+    /** Same for the value, make sure we don't use it across different functions */
+    var memoryValueEdge = astOptionalEdgeOf<ParameterMemoryValue>()
+    var memoryValue by unwrapping(ParameterMemoryValue::memoryValueEdge)
 }
 
 /** We don't know the value. It might be set somewhere else or not. No idea. */
