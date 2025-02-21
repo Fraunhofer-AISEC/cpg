@@ -137,18 +137,6 @@ open class Reference : Expression(), HasType.TypeObserver, HasAliases {
     }
 
     override fun assignedTypeChanged(assignedTypes: Set<Type>, src: HasType) {
-        // Alias are broken. Do not trust type updates from them
-        if (this.aliases.isNotEmpty()) {
-            if (src is HasAliases && this.aliases.contains(src)) {
-                return
-            }
-
-            val decl = (src as? Reference)?.refersTo
-            if (decl is HasAliases && this.aliases.contains(decl)) {
-                return
-            }
-        }
-
         // Make sure that the update comes from our declaration, if we change our assigned types
         if (src == refersTo) {
             // Set our type
