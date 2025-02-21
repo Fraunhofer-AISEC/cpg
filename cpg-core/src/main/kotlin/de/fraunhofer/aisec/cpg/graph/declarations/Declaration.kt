@@ -26,9 +26,13 @@
 package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemoryAddress
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import org.neo4j.ogm.annotation.NodeEntity
+import org.neo4j.ogm.annotation.Relationship
 
 /**
  * Represents a single declaration or definition, i.e. of a variable ([VariableDeclaration]) or
@@ -46,4 +50,11 @@ abstract class Declaration : Node() {
         get() {
             return this.name.localName
         }
+
+    /**
+     * Each Declaration allocates new memory, AKA a new address, so we create a new MemoryAddress
+     * node
+     */
+    @Relationship open var memoryAddressEdge = astOptionalEdgeOf<MemoryAddress>()
+    open var memoryAddress by unwrapping(Declaration::memoryAddressEdge)
 }

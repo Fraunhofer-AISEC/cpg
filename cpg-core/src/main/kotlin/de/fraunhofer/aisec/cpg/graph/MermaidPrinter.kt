@@ -25,13 +25,27 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
+import de.fraunhofer.aisec.cpg.graph.PrintDFGDirection.*
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.edges.flows.PartialDataflowGranularity
+import de.fraunhofer.aisec.cpg.graph.edges.flows.PointerDataflowGranularity
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
+
+/**
+ * Indicates the direction when building the DFG.
+ * - [FORWARD] build the DFG starting from the given node.
+ * - [BACKWARD] build the DFG ending at the given node.
+ * - [BOTH] build the DFG from and to the given node.
+ */
+enum class PrintDFGDirection {
+    FORWARD,
+    BACKWARD,
+    BOTH,
+}
 
 /** Utility function to print the DFG using [printGraph]. */
 fun Node.printDFG(
@@ -140,6 +154,8 @@ private fun Edge<out Node>.label(): String {
         var granularity = this.granularity
         if (granularity is PartialDataflowGranularity) {
             builder.append(" (partial, ${granularity.partialTarget?.name})")
+        } else if (granularity is PointerDataflowGranularity) {
+            builder.append(" (pointer, ${granularity.pointerTarget.name})")
         } else {
             builder.append(" (full)")
         }

@@ -59,6 +59,7 @@ import java.util.function.Consumer
 @DependsOn(SymbolResolver::class)
 @DependsOn(DFGPass::class)
 @DependsOn(ControlFlowSensitiveDFGPass::class, softDependency = true)
+@DependsOn(PointsToPass::class, softDependency = true)
 class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     private lateinit var walker: ScopedWalker
     private var inferDfgForUnresolvedCalls = false
@@ -87,7 +88,7 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     private fun handleCallExpression(call: CallExpression) {
         val callee = call.callee
         if (
-            callee?.type is FunctionPointerType ||
+            callee.type is FunctionPointerType ||
                 ((callee as? Reference)?.refersTo is ParameterDeclaration ||
                     (callee as? Reference)?.refersTo is VariableDeclaration)
         ) {
@@ -180,7 +181,8 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             // Do not consider the base for member expressions, we have to know possible values of
             // the member (e.g. field).
             val prevDFGToPush =
-                curr.prevDFGEdges
+                ((curr as? PointerDereference)?.input ?: curr)
+                    .prevDFGEdges
                     .filter { it.granularity is FullDataflowGranularity }
                     .map { it.start }
                     .toMutableList()

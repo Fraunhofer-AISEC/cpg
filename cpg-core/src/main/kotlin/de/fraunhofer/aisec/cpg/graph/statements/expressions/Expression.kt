@@ -28,11 +28,14 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.UnknownLanguage
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.NodeEntity
+import org.neo4j.ogm.annotation.Relationship
 import org.neo4j.ogm.annotation.Transient
 
 /**
@@ -91,6 +94,10 @@ abstract class Expression : Statement(), HasType {
             field = value
             informObservers(HasType.TypeObserver.ChangeType.ASSIGNED_TYPE)
         }
+
+    /** Each Expression also has a MemoryAddress. */
+    @Relationship var memoryAddressEdges = astEdgesOf<Node>()
+    var memoryAddress by unwrapping(Expression::memoryAddressEdges)
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)

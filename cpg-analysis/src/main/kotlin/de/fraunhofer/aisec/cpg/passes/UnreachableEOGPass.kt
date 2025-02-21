@@ -46,7 +46,7 @@ import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
  * A [Pass] which uses a simple logic to determine constant values and mark unreachable code regions
  * by setting the [EvaluationOrder.unreachable] property to true.
  */
-@DependsOn(ControlFlowSensitiveDFGPass::class)
+@DependsOn(ControlFlowSensitiveDFGPass::class, softDependency = true)
 class UnreachableEOGPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
     override fun cleanup() {
         // Nothing to do
