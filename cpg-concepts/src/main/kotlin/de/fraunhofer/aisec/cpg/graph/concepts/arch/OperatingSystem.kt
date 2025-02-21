@@ -41,6 +41,9 @@ abstract class OperatingSystemArchitecture(underlyingNode: Node) :
     }
 }
 
+/** Represents an agnostic architecture, which is not tied to a specific operating system. */
+class Agnostic(underlyingNode: Node) : OperatingSystemArchitecture(underlyingNode = underlyingNode)
+
 /** Represents a Win32 architecture, commonly found on Windows systems. */
 class Win32(underlyingNode: Node) : OperatingSystemArchitecture(underlyingNode = underlyingNode)
 

@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.graph.component
 import de.fraunhofer.aisec.cpg.graph.conceptNodes
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
-import de.fraunhofer.aisec.cpg.graph.concepts.memory.DynamicLoading
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.TranslationUnitPass
@@ -59,8 +58,8 @@ abstract class ConceptPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
     abstract fun handleNode(node: Node?, tu: TranslationUnitDeclaration)
 
     /**
-     * Gets the [DynamicLoading] concept for this [TranslationUnitDeclaration] or creates a new one
-     * if it does not exist.
+     * Gets concept of type [T] for this [TranslationUnitDeclaration] or creates a new one if it
+     * does not exist.
      */
     internal inline fun <reified T : Concept> TranslationUnitDeclaration.getConceptOrCreate(): T {
         var concept = this.conceptNodes.filterIsInstance<T>().singleOrNull()

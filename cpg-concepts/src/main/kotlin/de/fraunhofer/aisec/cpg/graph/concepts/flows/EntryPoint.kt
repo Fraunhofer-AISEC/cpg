@@ -25,34 +25,36 @@
  */
 package de.fraunhofer.aisec.cpg.graph.concepts.flows
 
-import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.arch.OperatingSystemArchitecture
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 
 /**
  * Represents an entry point into the execution of the program. This can be a "local" entry point,
  * such as a main function, a library initialization function or a "remote" entry point, such as a
  * network endpoint.
  */
-abstract class EntryPoint(underlyingNode: Node) : Concept(underlyingNode = underlyingNode)
+abstract class EntryPoint(underlyingNode: FunctionDeclaration) :
+    Concept(underlyingNode = underlyingNode)
 
 /** Represents a local entry point into the execution of the program, such as a main function. */
 abstract class LocalEntryPoint(
-    underlyingNode: Node,
+    underlyingNode: FunctionDeclaration,
     /**
      * If this entry point is specifically designed to be invoked on a certain
      * [OperatingSystemArchitecture], it can be specified here.
      */
-    var os: OperatingSystemArchitecture? = null,
+    var os: OperatingSystemArchitecture,
 ) : EntryPoint(underlyingNode = underlyingNode)
 
 /** The main function of a program. */
-class Main(underlyingNode: Node, os: OperatingSystemArchitecture? = null) :
+class Main(underlyingNode: FunctionDeclaration, os: OperatingSystemArchitecture) :
     LocalEntryPoint(underlyingNode = underlyingNode, os = os)
 
 /** Represents an entry point that is triggered if the code is loaded as a (dynamic) library. */
-class LibraryEntryPoint(underlyingNode: Node, os: OperatingSystemArchitecture? = null) :
+class LibraryEntryPoint(underlyingNode: FunctionDeclaration, os: OperatingSystemArchitecture) :
     LocalEntryPoint(underlyingNode = underlyingNode, os = os)
 
 /** Represents an entry point that can be triggered remotely, such as a network endpoint. */
-abstract class RemoteEntryPoint(underlyingNode: Node) : EntryPoint(underlyingNode = underlyingNode)
+abstract class RemoteEntryPoint(underlyingNode: FunctionDeclaration) :
+    EntryPoint(underlyingNode = underlyingNode)
