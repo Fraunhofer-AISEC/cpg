@@ -42,7 +42,7 @@ class FileNode(
     val opNodes: MutableSet<FileOperationNode>,
     val fileName: String,
     val accessMode: FileAccessMode,
-) : Concept<FileOperationNode>(underlyingNode = underlyingNode), IsFile {
+) : Concept(underlyingNode = underlyingNode), IsFile {
     init { // TODO this is ugly
         ops += opNodes
     }

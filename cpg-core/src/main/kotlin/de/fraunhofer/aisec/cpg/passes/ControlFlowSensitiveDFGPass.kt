@@ -31,6 +31,8 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContext
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
+import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
+import de.fraunhofer.aisec.cpg.graph.edges.flows.Granularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.partial
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -122,18 +124,28 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                 }
             } else {
                 value.elements.forEach {
+                    // We currently support two properties here: The calling context and the
+                    // granularity of the edge. We get the information from the edgePropertiesMap or
+                    // use the defaults (no calling context => null and FullGranularity).
+                    var callingContext: CallingContext? = null
+                    var granularity: Granularity = FullDataflowGranularity
+                    edgePropertiesMap[Pair(it, key)]?.let {
+                        callingContext = it.filterIsInstance<CallingContext>().singleOrNull()
+                        granularity =
+                            it.filterIsInstance<Granularity>().singleOrNull()
+                                ?: FullDataflowGranularity
+                    }
+
                     if ((it is VariableDeclaration || it is ParameterDeclaration) && key == it) {
                         // Nothing to do
-                    } else if (
-                        Pair(it, key) in edgePropertiesMap &&
-                            edgePropertiesMap[Pair(it, key)] is CallingContext
-                    ) {
+                    } else if (callingContext != null) {
                         key.prevDFGEdges.addContextSensitive(
                             it,
-                            callingContext = (edgePropertiesMap[Pair(it, key)] as CallingContext),
+                            callingContext = callingContext,
+                            granularity = granularity,
                         )
                     } else {
-                        key.prevDFGEdges += it
+                        key.prevDFGEdges.add(it) { this.granularity = granularity }
                     }
                 }
             }
@@ -147,7 +159,11 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
     protected fun findAndSetProperties(from: Set<Node>, to: Node) {
         edgePropertiesMap
             .filter { it.key.first in from && it.key.second == null }
-            .forEach { edgePropertiesMap[Pair(it.key.first, to)] = it.value }
+            .forEach {
+                edgePropertiesMap
+                    .computeIfAbsent(Pair(it.key.first, to)) { mutableSetOf() }
+                    .addAll(it.value)
+            }
     }
 
     /**
@@ -291,12 +307,26 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
             // The rhs can be anything. The rhs flows to the respective lhs. To identify the
             // correct mapping, we use the "assignments" property which already searches for us.
             currentNode.assignments.forEach { assignment ->
-                // This was the last write to the respective declaration.
-                (assignment.target as? Declaration ?: (assignment.target as? Reference)?.refersTo)
-                    ?.let {
-                        doubleState.declarationsState[it] =
-                            PowersetLattice(identitySetOf(assignment.target as Node))
+                // Sometimes, we have a InitializerListExpression on the lhs which is not good at
+                // all...
+                if (assignment.target is InitializerListExpression) {
+                    assignment.target.initializers.forEachIndexed { idx, initializer ->
+                        (initializer as? Reference)?.let { ref ->
+                            ref.refersTo?.let {
+                                doubleState.declarationsState[it] =
+                                    PowersetLattice(identitySetOf(ref))
+                            }
+                        }
                     }
+                } else {
+                    // This was the last write to the respective declaration.
+                    (assignment.target as? Declaration
+                            ?: (assignment.target as? Reference)?.refersTo)
+                        ?.let {
+                            doubleState.declarationsState[it] =
+                                PowersetLattice(identitySetOf(assignment.target as Node))
+                        }
+                }
             }
         } else if (isIncOrDec(currentNode)) {
             // Increment or decrement => Add the prevWrite of the input to the input. After the
@@ -362,40 +392,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                 state.push(currentNode, it)
             }
         } else if (currentNode is ComprehensionExpression) {
-            val writtenTo =
-                when (val variable = currentNode.variable) {
-                    is DeclarationStatement -> {
-                        if (variable.isSingleDeclaration()) {
-                            variable.singleDeclaration
-                        } else {
-                            log.error(
-                                "Cannot handle multiple declarations in the ComprehensionExpresdsion: Node $currentNode"
-                            )
-                            null
-                        }
-                    }
-                    else -> currentNode.variable
-                }
-            // We wrote something to this variable declaration
-            writtenTo?.let {
-                writtenDeclaration =
-                    when (writtenTo) {
-                        is Declaration -> writtenTo
-                        is Reference -> writtenTo.refersTo
-                        else -> {
-                            log.error(
-                                "The variable of type ${writtenTo.javaClass} is not yet supported in the ComprehensionExpression"
-                            )
-                            null
-                        }
-                    }
-
-                state.push(writtenTo, PowersetLattice(identitySetOf(currentNode.iterable)))
-                // Add the variable declaration (or the reference) to the list of previous
-                // write nodes in this path
-                state.declarationsState[writtenDeclaration] =
-                    PowersetLattice(identitySetOf(writtenTo))
-            }
+            handleComprehensionExpression(currentNode, doubleState)
         } else if (currentNode is ForEachStatement && currentNode.variable != null) {
             // The VariableDeclaration in the ForEachStatement doesn't have an initializer, so
             // the "normal" case won't work. We handle this case separately here...
@@ -487,7 +484,9 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                             }
                         doubleState.declarationsState[arg?.refersTo] =
                             PowersetLattice(identitySetOf(param))
-                        edgePropertiesMap[Pair(param, null)] = CallingContextOut(currentNode)
+                        edgePropertiesMap.computeIfAbsent(Pair(param, null)) {
+                            mutableSetOf<Any>()
+                        } += CallingContextOut(currentNode)
                     }
                 }
             } else {
@@ -507,6 +506,52 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
     }
 
     /**
+     * Handles the propagation of data flows to the variables used in a [ComprehensionExpression].
+     * We have a write access to one or multiple [Declaration]s or [Reference]s here. Multiple
+     * values are supported through [InitializerListExpression].
+     */
+    protected fun handleComprehensionExpression(
+        currentNode: ComprehensionExpression,
+        state: DFGPassState<Set<Node>>,
+    ) {
+        val writtenTo =
+            when (val variable = currentNode.variable) {
+                is DeclarationStatement -> {
+                    variable.declarations
+                }
+                is Reference -> listOf(variable)
+                is InitializerListExpression -> variable.initializers
+                else -> {
+                    log.error(
+                        "The type ${variable.javaClass} is not yet supported as ComprehensionExpression::variable"
+                    )
+                    listOf()
+                }
+            }
+        // We wrote something to this variable declaration
+        writtenTo.forEach { writtenToIt ->
+            val writtenDeclaration =
+                when (writtenToIt) {
+                    is Declaration -> writtenToIt
+                    is Reference -> writtenToIt.refersTo
+                    is SubscriptExpression -> (writtenToIt.arrayExpression as? Reference)?.refersTo
+                    else -> {
+                        log.error(
+                            "The variable of type ${writtenToIt.javaClass} is not yet supported in the ComprehensionExpression"
+                        )
+                        null
+                    }
+                }
+
+            // Add the variable declaration (or the reference) to the list of previous
+            // write nodes in this path
+            state.declarationsState[writtenDeclaration] =
+                PowersetLattice(identitySetOf(writtenToIt))
+        }
+        state.push(currentNode.variable, PowersetLattice(identitySetOf(currentNode.iterable)))
+    }
+
+    /**
      * We use this map to store additional information on the DFG edges which we cannot keep in the
      * state. This is for example the case to identify if the resulting edge will receive a
      * context-sensitivity label (i.e., if the node used as key is somehow inside the called
@@ -514,7 +559,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
      * an entry works as follows: The 1st item in the pair is the prevDFG of the 2nd item. If the
      * 2nd item is null, it's obviously not relevant. Ultimately, it will be 2nd -prevDFG-> 1st.
      */
-    val edgePropertiesMap = mutableMapOf<Pair<Node, Node?>, Any>()
+    val edgePropertiesMap = mutableMapOf<Pair<Node, Node?>, MutableSet<Any>>()
 
     /**
      * Checks if the node performs an operation and an assignment at the same time e.g. with the

@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.scopes.TemplateScope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.passes.Pass
+import de.fraunhofer.aisec.cpg.passes.Pass.Companion.log
 import de.fraunhofer.aisec.cpg.passes.ResolveCallExpressionAmbiguityPass
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -253,7 +254,20 @@ internal fun Type.getAncestors(depth: Int): Set<Type.Ancestor> {
     val types = mutableSetOf<Type.Ancestor>()
 
     // Recursively call ourselves on our super types.
-    types += superTypes.flatMap { it.getAncestors(depth + 1) }
+    types +=
+        superTypes
+            .filter {
+                if (it == this) {
+                    log.warn(
+                        "Removing type {} from the list of its own supertypes. This would create a type cycle that is not allowed.",
+                        this,
+                    )
+                    false
+                } else {
+                    true
+                }
+            }
+            .flatMap { it.getAncestors(depth + 1) }
 
     // Since the chain starts with our type, we add ourselves to it
     types += Type.Ancestor(this, depth)
@@ -344,8 +358,8 @@ val Collection<Type>.commonType: Type?
  * passes that replace certain [Reference] nodes with other nodes, e.g., the
  * [ResolveCallExpressionAmbiguityPass].
  *
- * Note: This involves some symbol lookup (using [ScopeManager.lookupUniqueTypeSymbolByName]), so
- * this can only be used in passes.
+ * Note: This involves some symbol lookup (using [ScopeManager.lookupTypeSymbolByName]), so this can
+ * only be used in passes.
  */
 context(Pass<*>)
 fun Reference.nameIsType(): Type? {
@@ -362,5 +376,5 @@ fun Reference.nameIsType(): Type? {
     }
 
     // Lastly, check if the reference contains a symbol that points to type (declaration)
-    return scopeManager.lookupUniqueTypeSymbolByName(name, language, scope)?.declaredType
+    return scopeManager.lookupTypeSymbolByName(name, language, scope)?.declaredType
 }

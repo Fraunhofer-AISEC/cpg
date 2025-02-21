@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.golang
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.helpers.Util
 
@@ -63,7 +64,13 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                 }
             }
 
-        val import = newImportDeclaration(import = name, alias = alias, rawNode = importSpec)
+        val import =
+            newImportDeclaration(
+                import = name,
+                alias = alias,
+                style = ImportStyle.IMPORT_NAMESPACE,
+                rawNode = importSpec,
+            )
         import.importURL = filename
 
         return import
@@ -197,7 +204,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
         if (lenValues == 1 && lenValues != valueSpec.names.size) {
             // We need to construct a "tuple" declaration on the left side that holds all the
             // variables
-            val tuple = TupleDeclaration()
+            val tuple = newTupleDeclaration(listOf(), null, rawNode = valueSpec)
             tuple.type = autoType()
 
             for (ident in valueSpec.names) {
@@ -223,7 +230,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                 }
 
                 // We need to manually add the variables to the scope manager
-                frontend.scopeManager.addDeclaration(decl)
+                frontend.scopeManager.addDeclaration(decl, addToAST = false)
 
                 tuple += decl
             }
@@ -340,6 +347,11 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
 
                 // Register the type with the type system
                 frontend.typeManager.registerType(record.toType())
+
+                // Make sure to add the scope to the scope manager
+                frontend.scopeManager.enterScope(record)
+                frontend.scopeManager.leaveScope(record)
+
                 record
             }
         }

@@ -25,15 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.python
 
-import de.fraunhofer.aisec.cpg.frontends.HasOperatorOverloading
-import de.fraunhofer.aisec.cpg.frontends.isKnownOperatorName
 import de.fraunhofer.aisec.cpg.frontends.python.Python.AST.IsAsync
-import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage.Companion.MODIFIER_KEYWORD_ONLY_ARGUMENT
-import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage.Companion.MODIFIER_POSITIONAL_ONLY_ARGUMENT
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.scopes.LocalScope
+import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
+import de.fraunhofer.aisec.cpg.graph.scopes.FunctionScope
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.NamespaceScope
 import de.fraunhofer.aisec.cpg.graph.statements.*
@@ -44,8 +40,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.TryStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.graph.types.FunctionType
-import de.fraunhofer.aisec.cpg.helpers.Util
 import kotlin.collections.plusAssign
 
 class StatementHandler(frontend: PythonLanguageFrontend) :
@@ -53,9 +47,6 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
     override fun handleNode(node: Python.AST.BaseStmt): Statement {
         return when (node) {
-            is Python.AST.ClassDef -> handleClassDef(node)
-            is Python.AST.FunctionDef -> handleFunctionDef(node)
-            is Python.AST.AsyncFunctionDef -> handleFunctionDef(node)
             is Python.AST.Pass -> return newEmptyStatement(rawNode = node)
             is Python.AST.ImportFrom -> handleImportFrom(node)
             is Python.AST.Assign -> handleAssign(node)
@@ -84,6 +75,8 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     problem = "The statement of class ${node.javaClass} is not supported yet",
                     rawNode = node,
                 )
+            is Python.AST.Def ->
+                wrapDeclarationToStatement(frontend.declarationHandler.handleNode(node))
         }
     }
 
@@ -277,10 +270,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         }
 
         /** Prepares the `manager.__exit__(None, None, None)` call for the else-block. */
-        fun generateExitCallWithNone(
-            managerName: Name,
-            withItem: Python.AST.withitem,
-        ): MemberCallExpression {
+        fun generateExitCallWithNone(managerName: Name): MemberCallExpression {
             val exitCallWithNone =
                 newMemberCallExpression(
                         callee =
@@ -302,10 +292,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
          * Prepares the if-statement which is the body of the catch block. This includes the call of
          * `manager.__exit__(*sys.exc_info())`, the negation and the throw statement.
          */
-        fun generateExitCallWithSysExcInfo(
-            managerName: Name,
-            withItem: Python.AST.withitem,
-        ): IfStatement {
+        fun generateExitCallWithSysExcInfo(managerName: Name): IfStatement {
             val exitCallWithSysExec =
                 newMemberCallExpression(
                         callee =
@@ -338,10 +325,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
          * tmpVal = manager.__enter__()
          * ```
          */
-        fun generateEnterCallAndAssignment(
-            managerName: Name,
-            withItem: Python.AST.withitem,
-        ): Pair<AssignExpression, Name> {
+        fun generateEnterCallAndAssignment(managerName: Name): Pair<AssignExpression, Name> {
             val tmpValName = Name.random(prefix = WITH_TMP_VAL)
             val enterVar = newReference(name = tmpValName).implicit()
             val enterCall =
@@ -380,8 +364,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
                 currentBlock.statements.add(managerAssignment)
 
-                val (enterAssignment, tmpValName) =
-                    generateEnterCallAndAssignment(managerName, withItem)
+                val (enterAssignment, tmpValName) = generateEnterCallAndAssignment(managerName)
                 currentBlock.statements.add(enterAssignment)
 
                 // Create the try statement with __exit__ calls in the finally block
@@ -423,7 +406,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                                 this.body =
                                     newBlock().implicit().apply {
                                         this.statements.add(
-                                            generateExitCallWithSysExcInfo(managerName, withItem)
+                                            generateExitCallWithSysExcInfo(managerName)
                                         )
                                     }
                             }
@@ -431,7 +414,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                         // Add the else-block
                         this.elseBlock =
                             newBlock().implicit().apply {
-                                this.statements.add(generateExitCallWithNone(managerName, withItem))
+                                this.statements.add(generateExitCallWithNone(managerName))
                             }
                     }
                 currentBlock.statements.add(tryStatement)
@@ -506,17 +489,18 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     private fun handleDelete(node: Python.AST.Delete): DeleteExpression {
         val delete = newDeleteExpression(rawNode = node)
         node.targets.forEach { target ->
-            if (target is Python.AST.Subscript) {
-                delete.operands.add(frontend.expressionHandler.handle(target))
-            } else {
+            delete.operands.add(frontend.expressionHandler.handle(target))
+
+            if (target !is Python.AST.Subscript) {
                 delete.additionalProblems +=
                     newProblemExpression(
                         problem =
-                            "handleDelete: 'Name' and 'Attribute' deletions are not supported, as they removes them from the scope.",
+                            "handleDelete: 'Name' and 'Attribute' deletions are not fully supported, as they remove variables from the scope.",
                         rawNode = target,
                     )
             }
         }
+
         return delete
     }
 
@@ -541,12 +525,16 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 if (alias != null) {
                     newImportDeclaration(
                         parseName(imp.name),
-                        false,
+                        style = ImportStyle.IMPORT_NAMESPACE,
                         parseName(alias),
                         rawNode = imp,
                     )
                 } else {
-                    newImportDeclaration(parseName(imp.name), false, rawNode = imp)
+                    newImportDeclaration(
+                        parseName(imp.name),
+                        style = ImportStyle.IMPORT_NAMESPACE,
+                        rawNode = imp,
+                    )
                 }
             frontend.scopeManager.addDeclaration(decl)
             declStmt.declarationEdges += decl
@@ -579,7 +567,12 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 }
             }
 
-            module = parent.fqn(module.localName)
+            module =
+                if (module.localName != "") {
+                    parent.fqn(module.localName)
+                } else {
+                    parent ?: Name("")
+                }
         }
 
         for (imp in node.names) {
@@ -589,16 +582,29 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 if (imp.name == "*") {
                     // In the wildcard case, our "import" is the module name, and we set "wildcard"
                     // to true
-                    newImportDeclaration(module, true, rawNode = imp)
+                    newImportDeclaration(
+                        module,
+                        style = ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE,
+                        rawNode = imp,
+                    )
                 } else {
                     // If we import an individual symbol, we need to FQN the symbol with our module
                     // name and import that. We also need to take care of any alias
                     val name = module.fqn(imp.name)
                     val alias = imp.asname
                     if (alias != null) {
-                        newImportDeclaration(name, false, parseName(alias), rawNode = imp)
+                        newImportDeclaration(
+                            name,
+                            style = ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE,
+                            parseName(alias),
+                            rawNode = imp,
+                        )
                     } else {
-                        newImportDeclaration(name, false, rawNode = imp)
+                        newImportDeclaration(
+                            name,
+                            style = ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE,
+                            rawNode = imp,
+                        )
                     }
                 }
 
@@ -788,116 +794,6 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         )
     }
 
-    private fun handleClassDef(stmt: Python.AST.ClassDef): Statement {
-        val cls = newRecordDeclaration(stmt.name, "class", rawNode = stmt)
-        stmt.bases.map { cls.superClasses.add(frontend.typeOf(it)) }
-
-        frontend.scopeManager.enterScope(cls)
-
-        stmt.keywords.forEach {
-            cls.additionalProblems +=
-                newProblemExpression(problem = "could not parse keyword $it in class", rawNode = it)
-        }
-
-        for (s in stmt.body) {
-            when (s) {
-                is Python.AST.FunctionDef -> handleFunctionDef(s, cls)
-                else -> cls.statements += handleNode(s)
-            }
-        }
-
-        frontend.scopeManager.leaveScope(cls)
-        frontend.scopeManager.addDeclaration(cls)
-
-        return wrapDeclarationToStatement(cls)
-    }
-
-    /**
-     * We have to consider multiple things when matching Python's FunctionDef to the CPG:
-     * - A [Python.AST.FunctionDef] is a [Statement] from Python's point of view. The CPG sees it as
-     *   a declaration -> we have to wrap the result in a [DeclarationStatement].
-     * - A [Python.AST.FunctionDef] could be one of
-     *     - a [ConstructorDeclaration] if it appears in a record and its [name] is `__init__`
-     *     - a [MethodeDeclaration] if it appears in a record, and it isn't a
-     *       [ConstructorDeclaration]
-     *     - a [FunctionDeclaration] if neither of the above apply
-     *
-     * In case of a [ConstructorDeclaration] or[MethodDeclaration]: the first argument is the
-     * `receiver` (most often called `self`).
-     */
-    private fun handleFunctionDef(
-        s: Python.AST.NormalOrAsyncFunctionDef,
-        recordDeclaration: RecordDeclaration? = null,
-    ): DeclarationStatement {
-        val language = language
-        val result =
-            if (recordDeclaration != null) {
-                if (s.name == "__init__") {
-                    newConstructorDeclaration(
-                        name = s.name,
-                        recordDeclaration = recordDeclaration,
-                        rawNode = s,
-                    )
-                } else if (language is HasOperatorOverloading && s.name.isKnownOperatorName) {
-                    var decl =
-                        newOperatorDeclaration(
-                            name = s.name,
-                            recordDeclaration = recordDeclaration,
-                            operatorCode = language.operatorCodeFor(s.name) ?: "",
-                            rawNode = s,
-                        )
-                    if (decl.operatorCode == "") {
-                        Util.warnWithFileLocation(
-                            decl,
-                            log,
-                            "Could not find operator code for operator {}. This will most likely result in a failure",
-                            s.name,
-                        )
-                    }
-                    decl
-                } else {
-                    newMethodDeclaration(
-                        name = s.name,
-                        recordDeclaration = recordDeclaration,
-                        isStatic = false,
-                        rawNode = s,
-                    )
-                }
-            } else {
-                newFunctionDeclaration(name = s.name, rawNode = s)
-            }
-        frontend.scopeManager.enterScope(result)
-
-        addAsyncWarning(s, result)
-
-        // Handle decorators (which are translated into CPG "annotations")
-        result.annotations += handleAnnotations(s)
-
-        // Handle return type and calculate function type
-        if (result is ConstructorDeclaration) {
-            // Return type of the constructor is always its record declaration type
-            result.returnTypes = listOf(recordDeclaration?.toType() ?: unknownType())
-        } else {
-            result.returnTypes = listOf(frontend.typeOf(s.returns))
-        }
-        result.type = FunctionType.computeType(result)
-
-        handleArguments(s.args, result, recordDeclaration)
-
-        if (s.body.isNotEmpty()) {
-            // Make sure we open a new (block) scope for the function body. This is not a 1:1
-            // mapping to python scopes, since python only has a "function scope", but in the CPG
-            // the function scope only comprises the function arguments, and we need a block scope
-            // to hold all local variables within the function body.
-            result.body = makeBlock(s.body, parentNode = s, enterScope = true)
-        }
-
-        frontend.scopeManager.leaveScope(result)
-        frontend.scopeManager.addDeclaration(result)
-
-        return wrapDeclarationToStatement(result)
-    }
-
     /**
      * Translates a Python [`Global`](https://docs.python.org/3/library/ast.html#ast.Global) into a
      * [LookupScopeStatement].
@@ -921,11 +817,10 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      * into a [LookupScopeStatement].
      */
     private fun handleNonLocal(global: Python.AST.Nonlocal): LookupScopeStatement {
-        // We need to find the first outer function scope, or rather the block scope belonging to
-        // the function
+        // We need to find the first outer function scope
         var outerFunctionScope =
             frontend.scopeManager.firstScopeOrNull {
-                it is LocalScope && it != frontend.scopeManager.currentScope
+                it is FunctionScope && it != frontend.scopeManager.currentScope
             }
 
         return newLookupScopeStatement(
@@ -935,282 +830,29 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         )
     }
 
-    /** Adds the arguments to [result] which might be located in a [recordDeclaration]. */
-    private fun handleArguments(
-        args: Python.AST.arguments,
-        result: FunctionDeclaration,
-        recordDeclaration: RecordDeclaration?,
-    ) {
-        // We can merge posonlyargs and args because both are positional arguments. We do not
-        // enforce that posonlyargs can ONLY be used in a positional style, whereas args can be used
-        // both in positional and keyword style.
-        var positionalArguments = args.posonlyargs + args.args
-
-        // Handle receiver if it exists
-        if (recordDeclaration != null) {
-            handleReceiverArgument(positionalArguments, args, result, recordDeclaration)
-            // Skip the receiver argument for further processing
-            positionalArguments = positionalArguments.drop(1)
-        }
-
-        // Handle remaining arguments
-        handlePositionalArguments(positionalArguments, args)
-
-        args.vararg?.let { handleArgument(it, isPosOnly = false, isVariadic = true) }
-        args.kwarg?.let { handleArgument(it, isPosOnly = false, isVariadic = false) }
-
-        handleKeywordOnlyArguments(args)
-    }
-
-    /**
-     * This method retrieves the first argument of the [positionalArguments], which is typically the
-     * receiver object.
-     *
-     * A receiver can also have a default value. However, this case is not handled and is therefore
-     * passed with a problem expression.
-     */
-    private fun handleReceiverArgument(
-        positionalArguments: List<Python.AST.arg>,
-        args: Python.AST.arguments,
-        result: FunctionDeclaration,
-        recordDeclaration: RecordDeclaration,
-    ) {
-        // first argument is the receiver
-        val recvPythonNode = positionalArguments.firstOrNull()
-        if (recvPythonNode == null) {
-            result.additionalProblems += newProblemExpression("Expected a receiver", rawNode = args)
-        } else {
-            val tpe = recordDeclaration.toType()
-            val recvNode =
-                newVariableDeclaration(
-                    name = recvPythonNode.arg,
-                    type = tpe,
-                    implicitInitializerAllowed = false,
-                    rawNode = recvPythonNode,
-                )
-
-            // If the number of defaults equals the number of positional arguments, the receiver has
-            // a default value
-            if (args.defaults.size == positionalArguments.size) {
-                val defaultValue =
-                    args.defaults.getOrNull(0)?.let { frontend.expressionHandler.handle(it) }
-                defaultValue?.let {
-                    frontend.scopeManager.addDeclaration(recvNode)
-                    result.additionalProblems +=
-                        newProblemExpression("Receiver with default value", rawNode = args)
-                }
-            }
-
-            when (result) {
-                is ConstructorDeclaration,
-                is MethodDeclaration -> result.receiver = recvNode
-                else ->
-                    result.additionalProblems +=
-                        newProblemExpression(
-                            problem =
-                                "Expected a constructor or method declaration. Got something else.",
-                            rawNode = result,
-                        )
-            }
-        }
-    }
-
-    /**
-     * This method extracts the [positionalArguments] including those that may have default values.
-     *
-     * In Python only the arguments with default values are stored in `args.defaults`.
-     * https://docs.python.org/3/library/ast.html#ast.arguments
-     *
-     * For example: `def my_func(a, b=1, c=2): pass`
-     *
-     * In this case, `args.defaults` contains only the defaults for `b` and `c`, while `args.args`
-     * includes all arguments (`a`, `b` and `c`). The number of arguments without defaults is
-     * determined by subtracting the size of `args.defaults` from the total number of arguments.
-     * This matches each default to its corresponding argument.
-     *
-     * From the Python docs: "If there are fewer defaults, they correspond to the last n arguments."
-     */
-    private fun handlePositionalArguments(
-        positionalArguments: List<Python.AST.arg>,
-        args: Python.AST.arguments,
-    ) {
-        val nonDefaultArgsCount = positionalArguments.size - args.defaults.size
-
-        for (idx in positionalArguments.indices) {
-            val arg = positionalArguments[idx]
-            val defaultIndex = idx - nonDefaultArgsCount
-            val defaultValue =
-                if (defaultIndex >= 0) {
-                    args.defaults.getOrNull(defaultIndex)?.let {
-                        frontend.expressionHandler.handle(it)
-                    }
-                } else {
-                    null
-                }
-            handleArgument(arg, isPosOnly = arg in args.posonlyargs, defaultValue = defaultValue)
-        }
-    }
-
-    /**
-     * This method extracts the keyword-only arguments from [args] and maps them to the
-     * corresponding function parameters.
-     */
-    private fun handleKeywordOnlyArguments(args: Python.AST.arguments) {
-        for (idx in args.kwonlyargs.indices) {
-            val arg = args.kwonlyargs[idx]
-            val default = args.kw_defaults.getOrNull(idx)
-            handleArgument(
-                arg,
-                isPosOnly = false,
-                isKwoOnly = true,
-                defaultValue = default?.let { frontend.expressionHandler.handle(it) },
-            )
-        }
-    }
-
-    private fun handleAnnotations(
-        node: Python.AST.NormalOrAsyncFunctionDef
-    ): Collection<Annotation> {
-        return handleDeclaratorList(node, node.decorator_list)
-    }
-
-    fun handleDeclaratorList(
-        node: Python.AST.WithLocation,
-        decoratorList: List<Python.AST.BaseExpr>,
-    ): List<Annotation> {
-        val annotations = mutableListOf<Annotation>()
-        for (decorator in decoratorList) {
-            var annotation =
-                when (decorator) {
-                    is Python.AST.Name -> {
-                        val parsedDecorator = frontend.expressionHandler.handle(decorator)
-                        newAnnotation(name = parsedDecorator.name, rawNode = decorator)
-                    }
-                    is Python.AST.Attribute -> {
-                        val parsedDecorator = frontend.expressionHandler.handle(decorator)
-                        val name =
-                            if (parsedDecorator is MemberExpression) {
-                                parsedDecorator.base.name.fqn(parsedDecorator.name.localName)
-                            } else {
-                                parsedDecorator.name
-                            }
-                        newAnnotation(name = name, rawNode = decorator)
-                    }
-                    is Python.AST.Call -> {
-                        val parsedDecorator = frontend.expressionHandler.handle(decorator.func)
-                        val name =
-                            if (parsedDecorator is MemberExpression) {
-                                parsedDecorator.base.name.fqn(parsedDecorator.name.localName)
-                            } else {
-                                parsedDecorator.name
-                            }
-                        val annotation = newAnnotation(name = name, rawNode = decorator)
-                        for (arg in decorator.args) {
-                            val argParsed = frontend.expressionHandler.handle(arg)
-                            annotation.members +=
-                                newAnnotationMember(
-                                    "annotationArg" + decorator.args.indexOf(arg), // TODO
-                                    argParsed,
-                                    rawNode = arg,
-                                )
-                        }
-                        for (keyword in decorator.keywords) {
-                            annotation.members +=
-                                newAnnotationMember(
-                                    name = keyword.arg,
-                                    value = frontend.expressionHandler.handle(keyword.value),
-                                    rawNode = keyword,
-                                )
-                        }
-                        annotation
-                    }
-                    else -> {
-                        Util.warnWithFileLocation(
-                            frontend,
-                            decorator,
-                            log,
-                            "Decorator is of type ${decorator::class}, cannot handle this (yet).",
-                        )
-                        continue
-                    }
-                }
-
-            annotations += annotation
-        }
-
-        return annotations
-    }
-
     /**
      * This function "wraps" a list of [Python.AST.BaseStmt] nodes into a [Block]. Since the list
      * itself does not have a code/location, we need to employ [codeAndLocationFromChildren] on the
      * [parentNode].
-     *
-     * Optionally, a new scope will be opened when [enterScope] is specified. This should be done
-     * VERY carefully, as Python has a very limited set of scopes and is most likely only to be used
-     * by [handleFunctionDef].
      */
-    private fun makeBlock(
-        stmts: List<Python.AST.BaseStmt>,
+    internal fun makeBlock(
+        statements: List<Python.AST.BaseStmt>,
         parentNode: Python.AST.WithLocation,
-        enterScope: Boolean = false,
     ): Block {
         val result = newBlock()
-        if (enterScope) {
-            frontend.scopeManager.enterScope(result)
-        }
 
-        for (stmt in stmts) {
+        for (stmt in statements) {
             result.statements += handle(stmt)
         }
 
-        if (enterScope) {
-            frontend.scopeManager.leaveScope(result)
-        }
-
-        // Try to retrieve the code and location from the parent node, if it is a base stmt
-        val ast = parentNode as? Python.AST.AST
-        if (ast != null) {
-            // We need to scope the call to codeAndLocationFromChildren to our frontend, so that
-            // all Python.AST.AST nodes are accepted, otherwise it would be scoped to the handler
-            // and only Python.AST.BaseStmt nodes would be accepted. This would cause issues with
-            // other nodes that are not "statements", but also handled as part of this handler,
-            // e.g., the Python.AST.ExceptHandler.
-            with(frontend) { result.codeAndLocationFromChildren(ast, frontend.lineSeparator) }
-        }
+        // We need to scope the call to codeAndLocationFromChildren to our frontend, so that
+        // all Python.AST.AST nodes are accepted, otherwise it would be scoped to the handler
+        // and only Python.AST.BaseStmt nodes would be accepted. This would cause issues with
+        // other nodes that are not "statements", but also handled as part of this handler,
+        // e.g., the Python.AST.ExceptHandler.
+        with(frontend) { result.codeAndLocationFromChildren(parentNode, frontend.lineSeparator) }
 
         return result
-    }
-
-    /**
-     * This function creates a [newParameterDeclaration] for the argument, setting any modifiers
-     * (like positional-only or keyword-only) and [defaultValue] if applicable.
-     */
-    internal fun handleArgument(
-        node: Python.AST.arg,
-        isPosOnly: Boolean = false,
-        isVariadic: Boolean = false,
-        isKwoOnly: Boolean = false,
-        defaultValue: Expression? = null,
-    ) {
-        val type = frontend.typeOf(node.annotation)
-        val arg =
-            newParameterDeclaration(
-                name = node.arg,
-                type = type,
-                variadic = isVariadic,
-                rawNode = node,
-            )
-        defaultValue?.let { arg.default = it }
-        if (isPosOnly) {
-            arg.modifiers += MODIFIER_POSITIONAL_ONLY_ARGUMENT
-        }
-
-        if (isKwoOnly) {
-            arg.modifiers += MODIFIER_KEYWORD_ONLY_ARGUMENT
-        }
-
-        frontend.scopeManager.addDeclaration(arg)
     }
 
     /**
@@ -1229,7 +871,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      * Checks whether [mightBeAsync] implements the [IsAsync] interface and adds a warning to the
      * corresponding [parentNode] stored in [Node.additionalProblems].
      */
-    private fun addAsyncWarning(mightBeAsync: Python.AST.AsyncOrNot, parentNode: Node) {
+    internal fun addAsyncWarning(mightBeAsync: Python.AST.AsyncOrNot, parentNode: Node) {
         if (mightBeAsync is IsAsync) {
             parentNode.additionalProblems +=
                 newProblemDeclaration(

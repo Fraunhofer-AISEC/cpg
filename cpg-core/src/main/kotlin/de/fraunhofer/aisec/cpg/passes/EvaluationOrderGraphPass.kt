@@ -398,6 +398,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             is DefaultStatement -> handleDefault(node)
             is TypeIdExpression -> handleDefault(node)
             is Reference -> handleDefault(node)
+            is ImportDeclaration -> handleDefault(node)
             // These nodes are not added to the EOG
             is IncludeDeclaration -> doNothing()
             else -> LOGGER.info("Parsing of type ${node.javaClass} is not supported (yet)")
@@ -746,7 +747,9 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         }
         // Forwards all open and uncaught throwing nodes to the outer scope that may handle them
         val outerCatchingNode =
-            node.firstParentOrNull { parent -> parent is TryStatement || parent is LoopStatement }
+            node.firstParentOrNull<Node> { parent ->
+                parent is TryStatement || parent is LoopStatement
+            }
         if (outerCatchingNode != null) {
             // Forwarding is done by merging the currently associated throws to a type with the new
             // throws based on their type
@@ -1227,7 +1230,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         // If we do not have default statement, we also need to put the switch statement into the
         // currentPredecessors, otherwise we will completely ignore everything that is "beyond" the
         // switch statement
-        if (compound.statements.filter { it is DefaultStatement }.isEmpty()) {
+        if (compound.statements.none { it is DefaultStatement }) {
             currentPredecessors.add(node)
         }
 
@@ -1310,7 +1313,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         if (throwType != null) {
             // Here, we identify the encapsulating ast node that can handle or relay a throw
             val handlingOrRelayingParent =
-                throwExpression.firstParentOrNull { parent ->
+                throwExpression.firstParentOrNull<Node> { parent ->
                     parent is TryStatement || parent is FunctionDeclaration
                 }
             if (handlingOrRelayingParent != null) {

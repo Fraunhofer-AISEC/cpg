@@ -27,12 +27,15 @@ package de.fraunhofer.aisec.cpg.query
 
 import de.fraunhofer.aisec.cpg.analysis.MultiValueEvaluator
 import de.fraunhofer.aisec.cpg.analysis.NumberSet
+import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.testcases.Query
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
 
@@ -133,8 +136,8 @@ class QueryTest {
             result.all<CallExpression>({ it.name.localName == "free" }) { outer ->
                 !executionPath(outer) {
                         (it as? CallExpression)?.name?.localName == "free" &&
-                            ((it as? CallExpression)?.arguments?.getOrNull(0) as? Reference)
-                                ?.refersTo == (outer.arguments[0] as? Reference)?.refersTo
+                            (it.arguments[0] as? Reference)?.refersTo ==
+                                (outer.arguments[0] as? Reference)?.refersTo
                     }
                     .value
             }
@@ -148,8 +151,8 @@ class QueryTest {
                     not(
                         executionPath(outer) {
                             (it as? CallExpression)?.name?.localName == "free" &&
-                                ((it as? CallExpression)?.arguments?.getOrNull(0) as? Reference)
-                                    ?.refersTo == (outer.arguments[0] as? Reference)?.refersTo
+                                (it.arguments[0] as? Reference)?.refersTo ==
+                                    (outer.arguments[0] as? Reference)?.refersTo
                         }
                     )
                 },
@@ -568,7 +571,7 @@ class QueryTest {
                     result
                         .all<FunctionDeclaration>(
                             { it.name.localName == "print" },
-                            { n2 -> dataFlow(n1, n2.parameters[0]).value },
+                            { n2 -> dataFlow(n1) { node -> node == n2.parameters[0] }.value },
                         )
                         .first
                 },
@@ -583,7 +586,7 @@ class QueryTest {
                 { n1 ->
                     result.allExtended<FunctionDeclaration>(
                         { it.name.localName == "print" },
-                        { n2 -> dataFlow(n1, n2.parameters[0]) },
+                        { n2 -> dataFlow(n1) { node -> node == n2.parameters[0] } },
                     )
                 },
             )
@@ -598,7 +601,7 @@ class QueryTest {
                     result
                         .all<FunctionDeclaration>(
                             { it.name.localName == "print" },
-                            { n2 -> dataFlow(n1, n2.parameters[0]).value },
+                            { n2 -> dataFlow(n1) { node -> node == n2.parameters[0] }.value },
                         )
                         .first
                 },
@@ -613,7 +616,7 @@ class QueryTest {
                 { n1 ->
                     result.allExtended<FunctionDeclaration>(
                         { it.name.localName == "print" },
-                        { n2 -> dataFlow(n1, n2.parameters[0]) },
+                        { n2 -> dataFlow(n1) { node -> node == n2.parameters[0] } },
                     )
                 },
             )
@@ -630,34 +633,12 @@ class QueryTest {
             result.allExtended<CallExpression>(
                 { it.name.localName == "highlyCriticalOperation" },
                 { n1 ->
-                    val loggingQueryForward =
-                        executionPath(n1) {
-                            (it as? CallExpression)?.name.toString() == "Logger.log"
-                        }
-                    val loggingQueryBackwards =
-                        executionPathBackwards(n1) {
-                            (it as? CallExpression)?.name.toString() == "Logger.log"
-                        }
-                    val allChildren = loggingQueryForward.children
-                    allChildren.addAll(loggingQueryBackwards.children)
-                    val allPaths =
-                        allChildren
-                            .map { (it.value as? List<*>) }
-                            .filter { it != null && it.last() is CallExpression }
-                    val allCalls = allPaths.map { it?.last() as CallExpression }
-                    val dataFlowPaths =
-                        allCalls.map {
-                            allNonLiteralsFromFlowTo(
-                                n1.arguments[0],
-                                it.arguments[1],
-                                allPaths as List<List<Node>>,
-                            )
-                        }
-                    val dataFlowQuery =
-                        QueryTree(dataFlowPaths.all { it.value }, dataFlowPaths.toMutableList())
-
-                    return@allExtended (loggingQueryForward or loggingQueryBackwards) and
-                        dataFlowQuery
+                    n1.arguments[0].allNonLiteralsFlowTo(
+                        predicate = { (it as? CallExpression)?.name.toString() == "Logger.log" },
+                        allowOverwritingValue = false,
+                        scope = Interprocedural(),
+                        sensitivities = ContextSensitive + FieldSensitive,
+                    )
                 },
             )
 
@@ -674,34 +655,12 @@ class QueryTest {
             result.allExtended<CallExpression>(
                 { it.name.localName == "highlyCriticalOperation" },
                 { n1 ->
-                    val loggingQueryForward =
-                        executionPath(n1) {
-                            (it as? CallExpression)?.name.toString() == "Logger.log"
-                        }
-                    val loggingQueryBackwards =
-                        executionPathBackwards(n1) {
-                            (it as? CallExpression)?.name.toString() == "Logger.log"
-                        }
-                    val allChildren = loggingQueryForward.children
-                    allChildren.addAll(loggingQueryBackwards.children)
-                    val allPaths =
-                        allChildren
-                            .map { (it.value as? List<*>) }
-                            .filter { it != null && it.last() is CallExpression }
-                    val allCalls = allPaths.map { it?.last() as CallExpression }
-                    val dataFlowPaths =
-                        allCalls.map {
-                            allNonLiteralsFromFlowTo(
-                                n1.arguments[0],
-                                it.arguments[1],
-                                allPaths as List<List<Node>>,
-                            )
-                        }
-                    val dataFlowQuery =
-                        QueryTree(dataFlowPaths.all { it.value }, dataFlowPaths.toMutableList())
-
-                    return@allExtended (loggingQueryForward or loggingQueryBackwards) and
-                        dataFlowQuery
+                    n1.arguments[0].allNonLiteralsFlowTo(
+                        predicate = { (it as? CallExpression)?.name.toString() == "Logger.log" },
+                        allowOverwritingValue = false,
+                        scope = Interprocedural(),
+                        sensitivities = ContextSensitive + FieldSensitive,
+                    )
                 },
             )
 
@@ -718,41 +677,49 @@ class QueryTest {
             result.allExtended<CallExpression>(
                 { it.name.localName == "highlyCriticalOperation" },
                 { n1 ->
-                    val loggingQueryForward =
-                        executionPath(
-                            n1,
-                            { (it as? CallExpression)?.name.toString() == "Logger.log" },
-                        )
-                    val loggingQueryBackwards =
-                        executionPathBackwards(
-                            n1,
-                            { (it as? CallExpression)?.name.toString() == "Logger.log" },
-                        )
-                    val allChildren = loggingQueryForward.children
-                    allChildren.addAll(loggingQueryBackwards.children)
-                    val allPaths =
-                        allChildren
-                            .map { (it.value as? List<*>) }
-                            .filter { it != null && it.last() is CallExpression }
-                    val allCalls = allPaths.map { it?.last() as CallExpression }
-                    val dataFlowPaths =
-                        allCalls.map {
-                            allNonLiteralsFromFlowTo(
-                                n1.arguments[0],
-                                it.arguments[1],
-                                allPaths as List<List<Node>>,
-                            )
-                        }
-                    val dataFlowQuery =
-                        QueryTree(dataFlowPaths.all { it.value }, dataFlowPaths.toMutableList())
-
-                    return@allExtended (loggingQueryForward or loggingQueryBackwards) and
-                        dataFlowQuery
+                    n1.arguments[0].allNonLiteralsFlowTo(
+                        predicate = { (it as? CallExpression)?.name.toString() == "Logger.log" },
+                        allowOverwritingValue = false,
+                        scope = Interprocedural(),
+                        sensitivities = ContextSensitive + FieldSensitive + FilterUnreachableEOG,
+                    )
                 },
             )
 
         println(queryTreeResult.printNicely())
         assertFalse(queryTreeResult.value)
         assertEquals(1, queryTreeResult.children.size)
+    }
+
+    @Test
+    fun testNode() {
+        with(TestLanguageFrontend()) {
+            val lit1 = newLiteral(1)
+            val lit2 = newLiteral(2)
+
+            val queryTree1 = lit1.intValue
+            assertNotNull(queryTree1)
+            assertEquals(lit1, queryTree1.node)
+            val queryTree2 = lit2.intValue
+            assertNotNull(queryTree2)
+            assertEquals(lit2, queryTree2.node)
+
+            val queryTree3 = queryTree1 eq queryTree2
+            assertNotNull(queryTree3)
+            assertNull(queryTree3.node)
+
+            val tu = newTranslationUnitDeclaration("tu")
+            val func1 = newFunctionDeclaration("func1")
+            tu.declarations += func1
+            val func2 = newFunctionDeclaration("func2")
+            tu.declarations += func2
+            val func3 = newFunctionDeclaration("func3")
+            tu.declarations += func3
+
+            val queryTree4 = tu.allExtended<FunctionDeclaration>(mustSatisfy = { QueryTree(true) })
+            assertNotNull(queryTree4)
+            assertEquals(tu, queryTree4.node)
+            assertEquals(listOf(func1, func2, func3), queryTree4.children.map { it.node })
+        }
     }
 }

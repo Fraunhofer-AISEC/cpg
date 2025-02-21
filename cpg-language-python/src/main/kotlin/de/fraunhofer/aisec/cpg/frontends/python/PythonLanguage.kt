@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.autoType
 import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
@@ -34,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
+import de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation
 import kotlin.reflect.KClass
 import org.neo4j.ogm.annotation.Transient
 
@@ -193,6 +195,37 @@ class PythonLanguage :
 
         // The rest behaves like other languages
         return super.propagateTypeOfBinaryOperation(operation)
+    }
+
+    override fun tryCast(
+        type: Type,
+        targetType: Type,
+        hint: HasType?,
+        targetHint: HasType?,
+    ): CastResult {
+        // Parameters in python do not have a static type. Therefore, we need to match for all types
+        // when trying to cast one type to the type of a function parameter at *runtime*
+        if (targetHint is ParameterDeclaration) {
+            // However, if we find type hints, we at least want to issue a warning if the types
+            // would not match
+            if (hint != null && targetType !is UnknownType && targetType !is AutoType) {
+                val match = super.tryCast(type, targetType, hint, targetHint)
+                if (match == CastNotPossible) {
+                    warnWithFileLocation(
+                        hint as Node,
+                        log,
+                        "Argument type of call to {} ({}) does not match type annotation on the function parameter ({}), but since Python does have runtime checks, we ignore this",
+                        hint.astParent?.name,
+                        type.name,
+                        targetType.name,
+                    )
+                }
+            }
+
+            return DirectMatch
+        }
+
+        return super.tryCast(type, targetType, hint, targetHint)
     }
 
     companion object {

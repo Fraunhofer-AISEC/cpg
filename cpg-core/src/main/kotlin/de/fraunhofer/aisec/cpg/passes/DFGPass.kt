@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
+import de.fraunhofer.aisec.cpg.graph.edges.flows.indexed
 import de.fraunhofer.aisec.cpg.graph.edges.flows.partial
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -83,8 +84,8 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                             param,
                             callingContext = CallingContextOut(call),
                         )
+                        arg.access = AccessValues.READWRITE
                         (arg as? Reference)?.let {
-                            it.access = AccessValues.READWRITE
                             it.refersTo?.let { it1 -> it.nextDFGEdges += it1 }
                         }
                     }
@@ -394,7 +395,19 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * this expression.
      */
     protected fun handleInitializerListExpression(node: InitializerListExpression) {
-        node.initializers.forEach { node.prevDFGEdges += it }
+        node.initializers.forEachIndexed { idx, it ->
+            val astParent = node.astParent
+            if (
+                astParent is AssignExpression && node in astParent.lhs ||
+                    astParent is ComprehensionExpression && node == astParent.variable
+            ) {
+                // If we're the target of an assignment or the variable of a comprehension
+                // expression, the DFG flows from the node to the initializers.
+                node.nextDFGEdges.add(it) { granularity = indexed(idx) }
+            } else {
+                node.prevDFGEdges.add(it) { granularity = indexed(idx) }
+            }
+        }
     }
 
     /**

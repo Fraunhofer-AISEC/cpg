@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.conceptNodes
 import de.fraunhofer.aisec.cpg.graph.concepts.file.FileOperationNode
-import de.fraunhofer.aisec.cpg.graph.followNextEOGEdgesUntilHit
+import de.fraunhofer.aisec.cpg.graph.followEOGEdgesUntilHit
 import de.fraunhofer.aisec.cpg.passes.ComponentPass
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLate
@@ -63,7 +63,7 @@ class FileConceptEOGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     private fun handle(fileOp: FileOperationNode) {
         val nextEOGFulfilled =
             fileOp.underlyingNode
-                ?.followNextEOGEdgesUntilHit(collectFailedPaths = false) {
+                ?.followEOGEdgesUntilHit(collectFailedPaths = false) {
                     it in allCPGConceptNodes.keys
                 }
                 ?.fulfilled

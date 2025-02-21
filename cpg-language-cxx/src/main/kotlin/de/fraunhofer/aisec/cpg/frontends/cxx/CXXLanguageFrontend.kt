@@ -156,7 +156,7 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
 
                 // Check for relative path based on the top level and all include paths
                 val includeLocations: MutableList<Path> = ArrayList()
-                val topLevel = config.topLevel
+                val topLevel = ctx.currentComponent?.topLevel
                 if (topLevel != null) {
                     includeLocations.add(topLevel.toPath().toAbsolutePath())
                 }
@@ -205,7 +205,9 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
 
         // include paths
         val includePaths = mutableSetOf<String>()
-        config.topLevel?.let { includePaths.add(it.toPath().toAbsolutePath().toString()) }
+        ctx.currentComponent?.topLevel?.let {
+            includePaths.add(it.toPath().toAbsolutePath().toString())
+        }
 
         val symbols: HashMap<String, String> = HashMap()
         symbols.putAll(config.symbols)
@@ -687,9 +689,6 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
             } else {
                 parseName(name.toString())
             }
-
-        // We need to take name(space) aliases into account.
-        typeName = scopeManager.resolveParentAlias(typeName, scopeManager.currentScope)
 
         return objectType(typeName, rawNode = name)
     }

@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.helpers
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.TranslationResult.Companion.DEFAULT_APPLICATION_NAME
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import java.io.File
 import java.nio.file.Path
@@ -71,7 +72,12 @@ interface StatisticsHolder {
                     listOf("Number of files translated", translatedFiles.size),
                     listOf(
                         "Translated file(s)",
-                        translatedFiles.map { relativeOrAbsolute(Path.of(it), config.topLevel) },
+                        translatedFiles.map {
+                            relativeOrAbsolute(
+                                Path.of(it),
+                                config.topLevels[DEFAULT_APPLICATION_NAME],
+                            )
+                        },
                     ),
                 )
 

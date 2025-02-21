@@ -28,10 +28,14 @@ package de.fraunhofer.aisec.cpg.graph
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
+import de.fraunhofer.aisec.cpg.graph.edges.flows.*
+import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
-import kotlin.Throws
+import kotlin.collections.filter
+import kotlin.collections.firstOrNull
 import kotlin.math.absoluteValue
 
 /**
@@ -43,6 +47,26 @@ import kotlin.math.absoluteValue
 inline fun <reified T> Node?.allChildren(noinline predicate: ((T) -> Boolean)? = null): List<T> {
     val nodes = SubgraphWalker.flattenAST(this)
     val filtered = nodes.filterIsInstance<T>()
+
+    return if (predicate != null) {
+        filtered.filter(predicate)
+    } else {
+        filtered
+    }
+}
+
+/**
+ * Flattens the AST beginning with this node and returns all nodes of type [T]. For convenience, an
+ * optional predicate function [predicate] can be supplied, which will be applied via
+ * [Collection.filter]
+ */
+@JvmOverloads
+inline fun <reified T> Node?.allChildrenWithOverlays(
+    noinline predicate: ((T) -> Boolean)? = null
+): List<T> {
+    val nodes = SubgraphWalker.flattenAST(this)
+    val nodesWithOverlays = nodes + nodes.flatMap { it.overlays }
+    val filtered = nodesWithOverlays.filterIsInstance<T>()
 
     return if (predicate != null) {
         filtered.filter(predicate)
@@ -188,6 +212,10 @@ class FulfilledAndFailedPaths(val fulfilled: List<List<Node>>, val failed: List<
     operator fun component1(): List<List<Node>> = fulfilled
 
     operator fun component2(): List<List<Node>> = failed
+
+    operator fun plus(other: FulfilledAndFailedPaths): FulfilledAndFailedPaths {
+        return FulfilledAndFailedPaths(this.fulfilled + other.fulfilled, this.failed + other.failed)
+    }
 }
 
 /**
@@ -202,13 +230,17 @@ class FulfilledAndFailedPaths(val fulfilled: List<List<Node>>, val failed: List<
 fun Node.followPrevFullDFGEdgesUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
+    earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
-    return followXUntilHit(
-        x = { currentNode -> currentNode.prevFullDFG },
+    return followDFGEdgesUntilHit(
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
+        earlyTermination = earlyTermination,
         predicate = predicate,
+        direction = Backward(GraphToFollow.DFG),
+        sensitivities = OnlyFullDFG + ContextSensitive,
+        scope = Interprocedural(),
     )
 }
 
@@ -225,6 +257,159 @@ fun Node.collectAllPrevFullDFGPaths(): List<List<Node>> {
         ) {
             false
         }
+        .failed
+}
+
+/**
+ * Returns an instance of [FulfilledAndFailedPaths] where [FulfilledAndFailedPaths.fulfilled]
+ * contains all possible shortest data flow paths between the starting node [this] and the end node
+ * fulfilling [predicate]. The paths are represented as lists of nodes. Paths which do not end at
+ * such a node are included in [FulfilledAndFailedPaths.failed].
+ *
+ * Hence, if "fulfilled" is a non-empty list, a data flow from [this] to such a node is **possible
+ * but not mandatory**. If the list "failed" is empty, the data flow is mandatory.
+ */
+fun Node.followEOGEdgesUntilHit(
+    collectFailedPaths: Boolean = true,
+    findAllPossiblePaths: Boolean = true,
+    direction: AnalysisDirection = Forward(GraphToFollow.EOG),
+    vararg sensitivities: AnalysisSensitivity = FilterUnreachableEOG + ContextSensitive,
+    scope: AnalysisScope = Interprocedural(),
+    earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
+    predicate: (Node) -> Boolean,
+): FulfilledAndFailedPaths {
+    return this.followXUntilHit(
+        x = { currentNode, ctx, path ->
+            direction.pickNextStep(currentNode, scope, ctx, sensitivities = sensitivities)
+        },
+        collectFailedPaths = collectFailedPaths,
+        findAllPossiblePaths = findAllPossiblePaths,
+        earlyTermination = earlyTermination,
+        predicate = predicate,
+    )
+}
+
+/**
+ * Returns an instance of [FulfilledAndFailedPaths] where [FulfilledAndFailedPaths.fulfilled]
+ * contains all possible shortest data flow paths between the starting node [this] and the end node
+ * fulfilling [predicate]. The paths are represented as lists of nodes. Paths which do not end at
+ * such a node are included in [FulfilledAndFailedPaths.failed].
+ *
+ * Hence, if "fulfilled" is a non-empty list, a data flow from [this] to such a node is **possible
+ * but not mandatory**. If the list "failed" is empty, the data flow is mandatory.
+ */
+fun Node.followDFGEdgesUntilHit(
+    collectFailedPaths: Boolean = true,
+    findAllPossiblePaths: Boolean = true,
+    direction: AnalysisDirection = Forward(GraphToFollow.DFG),
+    vararg sensitivities: AnalysisSensitivity = FieldSensitive + ContextSensitive,
+    scope: AnalysisScope = Interprocedural(),
+    earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
+    predicate: (Node) -> Boolean,
+): FulfilledAndFailedPaths {
+    return this.followXUntilHit(
+        x = { currentNode, ctx, path ->
+            direction.pickNextStep(currentNode, scope, ctx, sensitivities = sensitivities)
+        },
+        collectFailedPaths = collectFailedPaths,
+        findAllPossiblePaths = findAllPossiblePaths,
+        earlyTermination = earlyTermination,
+        predicate = predicate,
+    )
+}
+
+/**
+ * This class holds the context for the [followXUntilHit] function. It is used to keep track of the
+ * current index stack and call stack.
+ *
+ * This class supports copying to allow for cloning the context when needed. This is needed when we
+ * need to follow more than one path at a time, otherwise the different branches would override the
+ * stacks.
+ */
+class Context(
+    val indexStack: SimpleStack<IndexedDataflowGranularity> = SimpleStack(),
+    val callStack: SimpleStack<CallExpression> = SimpleStack(),
+    var steps: Int,
+) {
+    fun clone(): Context {
+        return Context(indexStack = indexStack.clone(), callStack = callStack.clone(), steps)
+    }
+
+    operator fun inc(): Context {
+        this.steps++
+        return this
+    }
+}
+
+/** Implementation of a simple stack, based on an [ArrayDeque] */
+class SimpleStack<T> {
+    private val deque = ArrayDeque<T>()
+
+    val depth: Int
+        get() = deque.size
+
+    /** Returns true if the stack is empty. */
+    fun isEmpty(): Boolean = deque.isEmpty()
+
+    /** Pushes a new element onto the stack. */
+    fun push(newElem: T) {
+        deque.addFirst(newElem)
+    }
+
+    /** Returns the top element from the stack, without popping it. */
+    val top: T?
+        get() = deque.firstOrNull()
+
+    /**
+     * Pops the top element from the stack, if [elemToPop] is the top element.
+     *
+     * @return true if the element was popped, false otherwise
+     */
+    fun popIfOnTop(elemToPop: T): Boolean {
+        if (deque.firstOrNull() == elemToPop) {
+            deque.removeFirst()
+            return true
+        }
+        return false
+    }
+
+    /** Pops the top element from the stack. */
+    fun pop(): T = deque.removeFirst()
+
+    /** Clones the stack. */
+    fun clone(): SimpleStack<T> {
+        return SimpleStack<T>().apply { deque.addAll(this@SimpleStack.deque) }
+    }
+}
+
+/**
+ * Iterates the next full DFG edges until there are no more edges available (or until a loop is
+ * detected). Returns a list of possible paths (each path is represented by a list of nodes).
+ */
+fun Node.collectAllNextDFGPaths(
+    interproceduralAnalysis: Boolean = true,
+    contextSensitive: Boolean = true,
+): List<List<Node>> {
+    // We make everything fail to reach the end of the CDG. Then, we use the stuff collected in the
+    // failed paths (everything)
+    return followDFGEdgesUntilHit(
+            collectFailedPaths = true,
+            findAllPossiblePaths = true,
+            direction = Forward(GraphToFollow.DFG),
+            sensitivities =
+                if (contextSensitive) {
+                    FieldSensitive + ContextSensitive
+                } else {
+                    arrayOf(FieldSensitive)
+                },
+            scope =
+                if (interproceduralAnalysis) {
+                    Interprocedural()
+                } else {
+                    Intraprocedural()
+                },
+            predicate = { false },
+        )
         .failed
 }
 
@@ -248,10 +433,14 @@ fun Node.collectAllNextFullDFGPaths(): List<List<Node>> {
  * Iterates the next EOG edges until there are no more edges available (or until a loop is
  * detected). Returns a list of possible paths (each path is represented by a list of nodes).
  */
-fun Node.collectAllNextEOGPaths(): List<List<Node>> {
+fun Node.collectAllNextEOGPaths(interproceduralAnalysis: Boolean = true): List<List<Node>> {
     // We make everything fail to reach the end of the CDG. Then, we use the stuff collected in the
     // failed paths (everything)
-    return this.followNextEOGEdgesUntilHit(collectFailedPaths = true, findAllPossiblePaths = true) {
+    return this.followEOGEdgesUntilHit(
+            collectFailedPaths = true,
+            findAllPossiblePaths = true,
+            scope = if (interproceduralAnalysis) Interprocedural() else Intraprocedural(),
+        ) {
             false
         }
         .failed
@@ -264,7 +453,12 @@ fun Node.collectAllNextEOGPaths(): List<List<Node>> {
 fun Node.collectAllPrevEOGPaths(interproceduralAnalysis: Boolean): List<List<Node>> {
     // We make everything fail to reach the end of the CDG. Then, we use the stuff collected in the
     // failed paths (everything)
-    return this.followPrevEOGEdgesUntilHit(collectFailedPaths = true, findAllPossiblePaths = true) {
+    return this.followEOGEdgesUntilHit(
+            direction = Backward(GraphToFollow.EOG),
+            collectFailedPaths = true,
+            findAllPossiblePaths = true,
+            scope = if (interproceduralAnalysis) Interprocedural() else Intraprocedural(),
+        ) {
             false
         }
         .failed
@@ -336,7 +530,7 @@ fun Node.collectAllNextCDGPaths(interproceduralAnalysis: Boolean): List<List<Nod
 
 /**
  * Returns an instance of [FulfilledAndFailedPaths] where [FulfilledAndFailedPaths.fulfilled]
- * contains all possible shortest data flow paths (with [ProgramDependences]) between the starting
+ * contains all possible shortest data flow paths (with [ProgramDependencies]) between the starting
  * node [this] and the end node fulfilling [predicate]. The paths are represented as lists of nodes.
  * Paths which do not end at such a node are included in [FulfilledAndFailedPaths.failed].
  *
@@ -347,18 +541,20 @@ fun Node.followNextPDGUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
     interproceduralAnalysis: Boolean = false,
+    earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
-        x = { currentNode ->
+        x = { currentNode, ctx, _ ->
             val nextNodes = currentNode.nextPDG.toMutableList()
             if (interproceduralAnalysis) {
                 nextNodes.addAll((currentNode as? CallExpression)?.calls ?: listOf())
             }
-            nextNodes
+            nextNodes.map { it to ctx }
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
+        earlyTermination = earlyTermination,
         predicate = predicate,
     )
 }
@@ -376,25 +572,27 @@ fun Node.followNextCDGUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
     interproceduralAnalysis: Boolean = false,
+    earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
-        x = { currentNode ->
+        x = { currentNode, ctx, _ ->
             val nextNodes = currentNode.nextCDG.toMutableList()
             if (interproceduralAnalysis) {
                 nextNodes.addAll((currentNode as? CallExpression)?.calls ?: listOf())
             }
-            nextNodes
+            nextNodes.map { it to ctx }
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
+        earlyTermination = earlyTermination,
         predicate = predicate,
     )
 }
 
 /**
  * Returns an instance of [FulfilledAndFailedPaths] where [FulfilledAndFailedPaths.fulfilled]
- * contains all possible shortest data flow paths (with [ProgramDependences]) between the starting
+ * contains all possible shortest data flow paths (with [ProgramDependencies]) between the starting
  * node [this] and the end node fulfilling [predicate] (backwards analysis). The paths are
  * represented as lists of nodes. Paths which do not end at such a node are included in
  * [FulfilledAndFailedPaths.failed].
@@ -406,22 +604,30 @@ fun Node.followPrevPDGUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
     interproceduralAnalysis: Boolean = false,
+    interproceduralMaxDepth: Int? = null,
+    earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
-        x = { currentNode ->
+        x = { currentNode, ctx, _ ->
             val nextNodes = currentNode.prevPDG.toMutableList()
             if (interproceduralAnalysis) {
                 nextNodes.addAll(
                     (currentNode as? FunctionDeclaration)?.usages?.mapNotNull {
-                        it.astParent as? CallExpression
+                        val result =
+                            if (interproceduralMaxDepth?.let { ctx.callStack.depth >= it } != true)
+                                it.astParent as? CallExpression
+                            else null
+                        result?.let { ctx.callStack.push(it) }
+                        result
                     } ?: listOf()
                 )
             }
-            nextNodes
+            nextNodes.map { it to ctx }
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
+        earlyTermination = earlyTermination,
         predicate = predicate,
     )
 }
@@ -440,22 +646,30 @@ fun Node.followPrevCDGUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
     interproceduralAnalysis: Boolean = false,
+    interproceduralMaxDepth: Int? = null,
+    earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
-        x = { currentNode ->
+        x = { currentNode, ctx, _ ->
             val nextNodes = currentNode.prevCDG.toMutableList()
             if (interproceduralAnalysis) {
                 nextNodes.addAll(
                     (currentNode as? FunctionDeclaration)?.usages?.mapNotNull {
-                        it.astParent as? CallExpression
+                        val result =
+                            if (interproceduralMaxDepth?.let { ctx.callStack.depth >= it } != true)
+                                it.astParent as? CallExpression
+                            else null
+                        result?.let { ctx.callStack.push(it) }
+                        result
                     } ?: listOf()
                 )
             }
-            nextNodes
+            nextNodes.map { it to ctx }
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
+        earlyTermination = earlyTermination,
         predicate = predicate,
     )
 }
@@ -470,10 +684,12 @@ fun Node.followPrevCDGUntilHit(
  * Hence, if "fulfilled" is a non-empty list, a path from [this] to such a node is **possible but
  * not mandatory**. If the list "failed" is empty, the path is mandatory.
  */
-fun Node.followXUntilHit(
-    x: (Node) -> List<Node>,
+inline fun Node.followXUntilHit(
+    noinline x: (Node, Context, List<Node>) -> Collection<Pair<Node, Context>>,
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
+    context: Context = Context(steps = 0),
+    earlyTermination: (Node, Context) -> Boolean,
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     // Looks complicated but at least it's not recursive...
@@ -482,26 +698,27 @@ fun Node.followXUntilHit(
     // failedPaths: All the paths which do not satisfy "predicate"
     val failedPaths = mutableListOf<List<Node>>()
     // The list of paths where we're not done yet.
-    val worklist = mutableSetOf<List<Node>>()
-    worklist.add(listOf(this)) // We start only with the "from" node (=this)
+    val worklist = mutableSetOf<Pair<List<Node>, Context>>()
+    worklist.add(Pair(listOf(this), context)) // We start only with the "from" node (=this)
 
     val alreadySeenNodes = mutableSetOf<Node>()
 
     while (worklist.isNotEmpty()) {
-        val currentPath = worklist.maxBy { it.size }
+        val currentPath = worklist.maxBy { it.first.size }
         worklist.remove(currentPath)
-        val currentNode = currentPath.last()
+        val currentNode = currentPath.first.last()
+        var currentContext = currentPath.second
         alreadySeenNodes.add(currentNode)
         // The last node of the path is where we continue. We get all of its outgoing CDG edges and
         // follow them
-        var nextNodes = x(currentNode)
+        val nextNodes = x(currentNode, currentContext, currentPath.first)
 
         // No further nodes in the path and the path criteria are not satisfied.
-        if (nextNodes.isEmpty() && collectFailedPaths) failedPaths.add(currentPath)
+        if (nextNodes.isEmpty() && collectFailedPaths) failedPaths.add(currentPath.first)
 
-        for (next in nextNodes) {
+        for ((next, newContext) in nextNodes) {
             // Copy the path for each outgoing CDG edge and add the next node
-            val nextPath = currentPath.toMutableList()
+            val nextPath = currentPath.first.toMutableList()
             nextPath.add(next)
             if (predicate(next)) {
                 // We ended up in the node fulfilling "predicate", so we're done for this path. Add
@@ -509,14 +726,18 @@ fun Node.followXUntilHit(
                 fulfilledPaths.add(nextPath)
                 continue // Don't add this path anymore. The requirement is satisfied.
             }
+            if (earlyTermination(next, currentContext)) {
+                failedPaths.add(nextPath)
+                continue // Don't add this path anymore. We already failed.
+            }
             // The next node is new in the current path (i.e., there's no loop), so we add the path
             // with the next step to the worklist.
             if (
-                next !in currentPath &&
+                next !in currentPath.first &&
                     (findAllPossiblePaths ||
-                        (next !in alreadySeenNodes && worklist.none { next in it }))
+                        (next !in alreadySeenNodes && worklist.none { next in it.first }))
             ) {
-                worklist.add(nextPath)
+                worklist.add(Pair(nextPath, newContext.inc()))
             }
         }
     }
@@ -536,65 +757,41 @@ fun Node.followXUntilHit(
 fun Node.followNextFullDFGEdgesUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
+    earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
-    return followXUntilHit(
-        x = { currentNode -> currentNode.nextFullDFG },
+    return followDFGEdgesUntilHit(
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
+        earlyTermination = earlyTermination,
         predicate = predicate,
+        direction = Forward(GraphToFollow.DFG),
+        sensitivities = OnlyFullDFG + ContextSensitive,
+        scope = Interprocedural(),
     )
 }
 
 /**
- * Returns an instance of [FulfilledAndFailedPaths] where [FulfilledAndFailedPaths.fulfilled]
- * contains all possible shortest evaluation paths between the starting node [this] and the end node
- * fulfilling [predicate]. The paths are represented as lists of nodes. Paths which do not end at
- * such a node are included in [FulfilledAndFailedPaths.failed].
- *
- * Hence, if "fulfilled" is a non-empty list, the execution of a statement fulfilling the predicate
- * is possible after executing [this] **possible but not mandatory**. If the list "failed" is empty,
- * such a statement is always executed.
+ * Returns a [Collection] of last nodes in the EOG of this [FunctionDeclaration]. If there's no
+ * function body, it will return a list of this function declaration.
  */
-fun Node.followNextEOGEdgesUntilHit(
-    collectFailedPaths: Boolean = true,
-    findAllPossiblePaths: Boolean = true,
-    predicate: (Node) -> Boolean,
-): FulfilledAndFailedPaths {
-    return followXUntilHit(
-        x = { currentNode ->
-            currentNode.nextEOGEdges.filter { it.unreachable != true }.map { it.end }
-        },
-        collectFailedPaths = collectFailedPaths,
-        findAllPossiblePaths = findAllPossiblePaths,
-        predicate = predicate,
-    )
-}
+val FunctionDeclaration.lastEOGNodes: Collection<Node>
+    get() {
+        val lastEOG = collectAllNextEOGPaths(false).flatMap { it.last().prevEOGEdges }
+        return if (lastEOG.isEmpty()) {
+            // In some cases, we do not have a body, so we have to jump directly to the
+            // function declaration.
+            listOf(this)
+        } else lastEOG.filter { it.unreachable != true }.map { it.start }
+    }
 
-/**
- * Returns an instance of [FulfilledAndFailedPaths] where [FulfilledAndFailedPaths.fulfilled]
- * contains all possible shortest evaluation paths between the end node [this] and the start node
- * fulfilling [predicate]. The paths are represented as lists of nodes. Paths which do not end at
- * such a node are included in [FulfilledAndFailedPaths.failed].
- *
- * Hence, if "fulfilled" is a non-empty list, the execution of a statement fulfilling the predicate
- * is possible after executing [this] **possible but not mandatory**. If the list "failed" is empty,
- * such a statement is always executed.
- */
-fun Node.followPrevEOGEdgesUntilHit(
-    collectFailedPaths: Boolean = true,
-    findAllPossiblePaths: Boolean = true,
-    predicate: (Node) -> Boolean,
-): FulfilledAndFailedPaths {
-    return followXUntilHit(
-        x = { currentNode ->
-            currentNode.prevEOGEdges.filter { it.unreachable != true }.map { it.start }
-        },
-        collectFailedPaths = collectFailedPaths,
-        findAllPossiblePaths = findAllPossiblePaths,
-        predicate = predicate,
-    )
-}
+/** Returns only potentially reachable previous EOG edges. */
+val Node.reachablePrevEOG: Collection<Node>
+    get() = this.prevEOGEdges.filter { it.unreachable != true }.map { it.start }
+
+/** Returns only potentially reachable previous EOG edges. */
+val Node.reachableNextEOG: Collection<Node>
+    get() = this.nextEOGEdges.filter { it.unreachable != true }.map { it.end }
 
 /**
  * Returns a list of edges which are from the evaluation order between the starting node [this] and
@@ -664,24 +861,33 @@ fun Node.followPrevEOG(predicate: (Edge<*>) -> Boolean): List<Edge<*>>? {
  * It returns only a single possible path even if multiple paths are possible.
  */
 fun Node.followPrevFullDFG(predicate: (Node) -> Boolean): MutableList<Node>? {
-    val path = mutableListOf<Node>()
+    return followPrevFullDFGEdgesUntilHit(
+            collectFailedPaths = false,
+            findAllPossiblePaths = false,
+            predicate = predicate,
+        )
+        .fulfilled
+        .minByOrNull { it.size }
+        ?.toMutableList()
+}
 
-    for (prev in this.prevFullDFG) {
-        path.add(prev)
-
-        if (predicate(prev)) {
-            return path
-        }
-
-        val subPath = prev.followPrevFullDFG(predicate)
-        if (subPath != null) {
-            path.addAll(subPath)
-        }
-
-        return path
-    }
-
-    return null
+/**
+ * Returns a list of nodes which are a data flow path (with [FullDataflowGranularity]) between the
+ * starting node [this] and the end node fulfilling [predicate]. If the return value is not `null`,
+ * a data flow from [this] to such a node is **possible but not mandatory**.
+ *
+ * It returns only a single possible path even if multiple paths are possible.
+ */
+fun Node.followPrevDFG(predicate: (Node) -> Boolean): MutableList<Node>? {
+    return followDFGEdgesUntilHit(
+            collectFailedPaths = false,
+            findAllPossiblePaths = false,
+            predicate = predicate,
+            direction = Backward(GraphToFollow.DFG),
+        )
+        .fulfilled
+        .minByOrNull { it.size }
+        ?.toMutableList()
 }
 
 /** Returns all AST [Node] children in this graph, starting with this [Node]. */
@@ -813,25 +1019,52 @@ val Node?.assigns: List<AssignExpression>
     get() = this.allChildren()
 
 /**
- * This function tries to find the first parent node that satisfies the condition specified in
- * [predicate]. It starts searching in the [searchNode], moving up-wards using the [Node.astParent]
+ * This function tries to find the first parent node of type [T] that satisfies the optional
+ * condition specified in [predicate]. If [predicate] is `null`, the first AST parent node of type
+ * [T] is returned. It starts searching in [this], moving upwards using the [Node.astParent]
  * attribute.
  *
- * @param searchNode the child node that we start the search from
- * @param predicate the search predicate
+ * @param predicate the optional search predicate
  */
-fun Node.firstParentOrNull(predicate: (Node) -> Boolean): Node? {
+inline fun <reified T : Node> Node.firstParentOrNull(
+    noinline predicate: ((T) -> Boolean)? = null
+): T? {
 
     // start at searchNodes parent
-    var node: Node? = this.astParent
+    var node = this.astParent
 
     while (node != null) {
-        if (predicate(node)) {
+        if (node is T && (predicate == null || predicate(node))) {
             return node
         }
 
         // go upwards in the ast tree
         node = node.astParent
+    }
+
+    return null
+}
+
+/**
+ * This function tries to find the first parent scope of type [T] that satisfies the optional
+ * condition specified in [predicate]. If [predicate] is `null`, the first parent scope of type [T]
+ * is returned. It starts searching in [this], moving upwards using the [Scope.parent] attribute.
+ *
+ * If no parent scope matches the predicate, null is returned.
+ *
+ * @param predicate The predicate optional to match the parent scope against
+ */
+inline fun <reified T : Scope> Scope.firstScopeParentOrNull(
+    noinline predicate: ((T) -> Boolean)? = null
+): T? {
+    var scope = this.parent
+    while (scope != null) {
+        if (scope is T && (predicate == null || predicate(scope))) {
+            return scope
+        }
+
+        // go upwards in the scope tree
+        scope = scope.parent
     }
 
     return null
@@ -1005,7 +1238,19 @@ fun Expression?.unwrapReference(): Reference? {
 /** Returns the [TranslationUnitDeclaration] where this node is located in. */
 val Node.translationUnit: TranslationUnitDeclaration?
     get() {
-        return firstParentOrNull { it is TranslationUnitDeclaration } as? TranslationUnitDeclaration
+        return firstParentOrNull<TranslationUnitDeclaration>()
+    }
+
+/** Returns the [TranslationResult] where this node is located in. */
+val Node.translationResult: TranslationResult?
+    get() {
+        return firstParentOrNull<TranslationResult>()
+    }
+
+/** Returns the [Component] where this node is located in. */
+val Node.component: Component?
+    get() {
+        return firstParentOrNull<Component>()
     }
 
 /**

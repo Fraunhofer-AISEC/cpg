@@ -76,7 +76,8 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
 
                     // TODO: this will only find methods within the current translation unit.
                     //  this is a limitation that we have for C++ as well
-                    val record = frontend.scopeManager.getRecordForName(recordName, language)
+                    val record =
+                        frontend.scopeManager.lookupScope(recordName)?.astNode as? RecordDeclaration
 
                     // now this gets a little bit hacky, we will add it to the record declaration
                     // this is strictly speaking not 100 % true, since the method property edge is

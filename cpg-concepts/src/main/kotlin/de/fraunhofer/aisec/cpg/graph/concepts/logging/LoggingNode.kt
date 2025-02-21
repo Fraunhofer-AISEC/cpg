@@ -28,8 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.concepts.logging
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 
-class LoggingNode(underlyingNode: Node) :
-    Concept<LogOperationNode>(underlyingNode = underlyingNode), IsLogging {
+class LoggingNode(underlyingNode: Node) : Concept(underlyingNode = underlyingNode), IsLogging {
 
     // TODO: target: stdout / err / file / ...
 }

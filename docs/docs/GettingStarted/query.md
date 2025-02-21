@@ -17,7 +17,7 @@ can use to identify bugs or vulnerabilities in the code under analysis. You can
 use a number of operations that you know from arithmetics, logics and many
 programming languages.
 
-The Query API provides a way validate if nodes in the graph fulfil certain
+The Query API provides a way validate if nodes in the graph fulfill certain
 requirements. It is a mixture of typical logical expressions (e.g. and, or, xor,
 implies), quantors (e.g. forall, exists), comparisons (e.g. <, >, ==, !=), some
 special operations (e.g., `in` to check for collections or `is` for types) and a
