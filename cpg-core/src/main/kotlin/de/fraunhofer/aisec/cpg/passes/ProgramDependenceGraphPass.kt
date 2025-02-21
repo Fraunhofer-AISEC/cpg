@@ -43,6 +43,7 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
  */
 @DependsOn(ControlDependenceGraphPass::class)
 @DependsOn(DFGPass::class)
+@DependsOn(PointsToPass::class, softDependency = true)
 @DependsOn(ControlFlowSensitiveDFGPass::class, softDependency = true)
 @DependsOn(DynamicInvokeResolver::class)
 class ProgramDependenceGraphPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
