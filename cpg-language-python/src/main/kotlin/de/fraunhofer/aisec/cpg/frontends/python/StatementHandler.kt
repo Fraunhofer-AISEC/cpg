@@ -66,7 +66,6 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             is Python.AST.Delete -> handleDelete(node)
             is Python.AST.With,
             is Python.AST.AsyncWith -> handleWithStatement(node)
-
             is Python.AST.Global -> handleGlobal(node)
             is Python.AST.Nonlocal -> handleNonLocal(node)
             is Python.AST.Raise -> handleRaise(node)
@@ -76,7 +75,6 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     problem = "The statement of class ${node.javaClass} is not supported yet",
                     rawNode = node,
                 )
-
             is Python.AST.Def ->
                 wrapDeclarationToStatement(frontend.declarationHandler.handleNode(node))
         }
@@ -94,7 +92,6 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     this.lhs = newReference(name = subject)
                     this.rhs = frontend.expressionHandler.handle(ctx = node.value)
                 }
-
             is Python.AST.MatchSingleton ->
                 newBinaryOperator(operatorCode = "===", rawNode = node).implicit().apply {
                     this.lhs = newReference(name = subject)
@@ -109,7 +106,6 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                                 )
                         }
                 }
-
             is Python.AST.MatchOr ->
                 frontend.expressionHandler.joinListWithBinOp(
                     operatorCode = "or",
@@ -117,7 +113,6 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     rawNode = node,
                     isImplicit = false,
                 )
-
             is Python.AST.MatchSequence,
             is Python.AST.MatchMapping,
             is Python.AST.MatchClass,
@@ -127,7 +122,6 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     problem = "Cannot handle of type ${node::class} yet",
                     rawNode = node,
                 )
-
             else ->
                 newProblemExpression(
                     problem = "Cannot handle of type ${node::class} yet",
@@ -702,12 +696,10 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 ) // add the unpacking instruction to the top of the loop body
                 ret.statement = body
             }
-
             is Reference -> { // only one var
                 ret.variable = loopVar
                 ret.statement = makeBlock(node.body, parentNode = node)
             }
-
             else -> {
                 ret.variable =
                     newProblemExpression(
