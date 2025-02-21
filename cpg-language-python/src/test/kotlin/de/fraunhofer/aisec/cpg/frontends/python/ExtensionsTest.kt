@@ -114,6 +114,27 @@ class ExtensionsTest {
 
         /*
         ```python
+        import os as not_os
+        not_os.times() # This should be mapped to `import os as not_os`
+        ```
+        */
+        val notOsTimesCall = result.calls.singleOrNull { it.code == "not_os.times()" }
+        assertNotNull(notOsTimesCall)
+
+        val notOsTimesCallImportedFrom = notOsTimesCall.importedFrom
+        assertEquals(
+            1,
+            notOsTimesCallImportedFrom.size,
+            "Expected to find exactly 1 matching import: `import os as not_os`.",
+        )
+        assertEquals(
+            aliasOsImport,
+            notOsTimesCallImportedFrom.singleOrNull(),
+            "Expected the import to match `import os as not_os`.",
+        )
+
+        /*
+        ```python
         from os import times as t
         t() # This should be mapped to the `from os import times as t`
          */
