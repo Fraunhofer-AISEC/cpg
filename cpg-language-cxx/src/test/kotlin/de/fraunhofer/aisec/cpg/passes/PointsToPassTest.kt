@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.PointerAccess
 import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
@@ -2043,5 +2044,53 @@ class PointsToPassTest {
         assertEquals(1, pDerefLine394.prevDFGEdges.size)
         assertTrue(pDerefLine394.prevDFGEdges.first() !is ContextSensitiveDataflow)
         assertEquals(literal2, pDerefLine394.prevDFG.first())
+    }
+
+    @Test
+    fun testUnaryOps() {
+        val file = File("src/test/resources/pointsto.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+                it.registerPass<PointsToPass>()
+                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+            }
+        assertNotNull(tu)
+
+        // References
+        val iLine405 =
+            tu.allChildren<Reference> {
+                    it.name.localName == "i" && it.location?.region?.startLine == 405
+                }
+                .first()
+        assertNotNull(iLine405)
+
+        val iLine409 =
+            tu.allChildren<Reference> {
+                    it.name.localName == "i" && it.location?.region?.startLine == 409
+                }
+                .first()
+        assertNotNull(iLine409)
+
+        // UnaryOperators
+        val uOPLine403 =
+            tu.allChildren<UnaryOperator> { it.location?.region?.startLine == 403 }.first()
+        assertNotNull(uOPLine403)
+
+        val uOPLine407 =
+            tu.allChildren<UnaryOperator> { it.location?.region?.startLine == 407 }.first()
+        assertNotNull(uOPLine407)
+
+        // Literals
+        val literal1 = tu.allChildren<Literal<*>> { it.location?.region?.startLine == 400 }.first()
+        assertNotNull(literal1)
+
+        // printf in Line 405
+        assertEquals(2, iLine405.prevDFG.size)
+        assertEquals(mutableSetOf<Node>(literal1, uOPLine403), iLine405.prevDFG)
+
+        // printf in Line 409
+        assertEquals(1, iLine409.prevDFG.size)
+        assertEquals(mutableSetOf<Node>(uOPLine407), iLine409.prevDFG)
     }
 }

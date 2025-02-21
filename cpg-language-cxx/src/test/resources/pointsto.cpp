@@ -394,3 +394,17 @@ int testCallingContexts() {
     printf("%d %d\n", j, *p);
 
 }
+
+
+int testUnaryOp() {
+  int i = 1;
+  
+  if ( 1 == 1 ) {
+    i = -i;
+  }
+  printf("%d\n", i);
+
+  i++;
+
+  printf("%d\n", i);
+}

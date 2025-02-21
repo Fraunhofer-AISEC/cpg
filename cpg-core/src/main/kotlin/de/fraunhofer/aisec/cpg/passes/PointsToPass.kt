@@ -1099,7 +1099,6 @@ fun PointsToStateElement.getValues(node: Node): IdentitySet<Node> {
         is CastExpression -> {
             this.getValues(node.expression)
         }
-        is UnaryOperator -> this.getValues(node.input)
         is SubscriptExpression -> {
             this.getAddresses(node).flatMap { this.getValues(it) }.toIdentitySet()
         }
