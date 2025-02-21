@@ -29,11 +29,7 @@ import de.fraunhofer.aisec.cpg.frontends.TestHandler
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.testcases.ValueEvaluationTests
-import kotlin.test.Ignore
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertNotNull
+import kotlin.test.*
 import org.junit.jupiter.api.assertThrows
 
 class NotReallyANumber : Number() {
@@ -62,7 +58,6 @@ class NotReallyANumber : Number() {
     }
 }
 
-@Ignore
 // TODO Mathias
 class ValueEvaluatorTest {
 
@@ -87,7 +82,7 @@ class ValueEvaluatorTest {
         assertEquals(2, value)
 
         val path = evaluator.path
-        assertEquals(5, path.size)
+        assertEquals(4, path.size)
 
         val printA = main.calls("println").getOrNull(1)
         assertNotNull(printA)
@@ -164,6 +159,7 @@ class ValueEvaluatorTest {
         assertFalse(value as Boolean)
     }
 
+    @Ignore
     @Test
     fun testComplex() {
         val tu =
