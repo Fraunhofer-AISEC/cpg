@@ -36,7 +36,6 @@ import kotlin.io.path.createTempFile
 import kotlin.reflect.jvm.javaField
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
-import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.neo4j.ogm.annotation.Relationship
 import picocli.CommandLine
@@ -59,7 +58,6 @@ fun createTranslationResult(file: String = "client.cpp"): Pair<Application, Tran
  * A class for integration tests. They depend on the C++ frontend, so we classify them as an
  * integration test. This might be replaced with a language-neutral test at some point.
  */
-@Tag("integration")
 class IntegrationTest {
 
     @Test
