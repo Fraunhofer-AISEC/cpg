@@ -40,7 +40,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.TryStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.helpers.Util
+import java.io.File
 import kotlin.collections.plusAssign
 
 class StatementHandler(frontend: PythonLanguageFrontend) :
@@ -624,22 +624,25 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         ctx?.let { ctx ->
             var currentName = importName
             while (currentName.isNotEmpty()) {
-                var importPath = currentName.toString().replace(language.namespaceDelimiter, "/")
+                var importPath =
+                    currentName.toString().replace(language.namespaceDelimiter, File.separator)
 
                 language.fileExtensions.forEach { fileExtension ->
 
                     // Includes a file in the analysis, if it has the root path and
                     ctx.externalSources
-                        .firstOrNull {
+                        .firstOrNull { eSource ->
                             val relPath =
-                                it.relativeTo(
-                                        Util.getRootPath(it, ctx.config.includePaths).toFile()
-                                    )
-                                    .path
+                                ctx.config.includePaths.firstNotNullOf {
+                                    eSource.relativeToOrNull(it.toFile())?.path
+                                }
                             val ending = "." + fileExtension
                             relPath == importPath + ending ||
                                 relPath ==
-                                    importPath + "/" + PythonLanguage.IDENTIFIER_INIT + ending
+                                    importPath +
+                                        File.separator +
+                                        PythonLanguage.IDENTIFIER_INIT +
+                                        ending
                         }
                         ?.let { ctx.importedSources += it }
                 }

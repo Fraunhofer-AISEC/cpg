@@ -144,8 +144,9 @@ private constructor(
     ): Set<LanguageFrontend<*, *>> {
         val usedFrontends = mutableSetOf<LanguageFrontend<*, *>>()
 
-        // Without extracting the sources from the include paths to the external sources the feature
-        // is turned off
+        // If loadIncludes is active, the files stored in the include paths are made available for
+        // conditional
+        // analysis by providing them to the frontends over the externalSources list.
         if (ctx.config.loadIncludes) {
             ctx.config.includePaths.forEach {
                 ctx.externalSources.addAll(extractConfiguredSources(it))
@@ -160,7 +161,6 @@ private constructor(
             component.name = Name(sc)
             result.addComponent(component)
 
-            // Every Component needs to reprocess the sources
             var sourceLocations: List<File> = ctx.config.softwareComponents[sc] ?: listOf()
 
             val list =
@@ -282,8 +282,7 @@ private constructor(
         do {
             val oldProcessedSize = processedExternalSources.size
             // Distribute all files by there root path prefix, parse them in individual component
-            // named
-            // like their rootPath local name
+            // named like their rootPath local name
             ctx.config.includePaths.forEach { includePath ->
                 val unprocessedFilesInIncludePath =
                     ctx.importedSources
