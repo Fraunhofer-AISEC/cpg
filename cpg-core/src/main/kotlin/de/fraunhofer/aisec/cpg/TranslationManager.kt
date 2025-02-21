@@ -281,7 +281,7 @@ private constructor(
 
         do {
             val oldProcessedSize = processedExternalSources.size
-            // Distribute all files by there root path prefix, parse them in individual component
+            // Distribute all files by their root path prefix, parse them in individual component
             // named
             // like their rootPath local name
             ctx.config.includePaths.forEach { includePath ->
