@@ -58,16 +58,10 @@ class ExtensionsTest {
         val fooBarCall = result.calls.singleOrNull { it.code == "foo.bar()" }
         assertNotNull(fooBarCall)
 
-        val fooBarCallImportedFrom = fooBarCall.importedFrom
-        assertEquals(
-            1,
-            fooBarCallImportedFrom.size,
-            "Expected to find exactly 1 matching import: `import foo`.",
-        )
         assertEquals(
             normalFooImport,
-            fooBarCallImportedFrom.singleOrNull(),
-            "Expected the import to match `import foo`.",
+            fooBarCall.importedFrom.singleOrNull(),
+            "Expected the import to exactly match `import foo`.",
         )
 
         /*
@@ -81,17 +75,10 @@ class ExtensionsTest {
         val fooAliasBarCall = result.calls.singleOrNull { it.code == "foo_alias.bar()" }
         assertNotNull(fooAliasBarCall)
 
-        val fooAliasBarCallImportedFrom = fooAliasBarCall.importedFrom
-        assertEquals(
-            1,
-            fooAliasBarCallImportedFrom.size,
-            "Expected to find exactly 1 matching import: `import foo as foo_alias`.",
-        )
-
         assertEquals(
             aliasFooImport,
-            fooAliasBarCallImportedFrom.singleOrNull(),
-            "Expected the import to match `import foo as foo_alias`.",
+            fooAliasBarCall.importedFrom.singleOrNull(),
+            "Expected the import to exactly match `import foo as foo_alias`.",
         )
 
         /*
@@ -105,10 +92,9 @@ class ExtensionsTest {
         val osTimesCall = result.calls.singleOrNull { it.code == "os.times()" }
         assertNotNull(osTimesCall)
 
-        val osTimesCallImportedFrom = osTimesCall.importedFrom
         assertEquals(
             0,
-            osTimesCallImportedFrom.size,
+            osTimesCall.importedFrom.size,
             "Expected to find exactly 0 matching imports. `import os as not_os` must not match as the alias is wrong.",
         )
 
@@ -121,16 +107,10 @@ class ExtensionsTest {
         val notOsTimesCall = result.calls.singleOrNull { it.code == "not_os.times()" }
         assertNotNull(notOsTimesCall)
 
-        val notOsTimesCallImportedFrom = notOsTimesCall.importedFrom
-        assertEquals(
-            1,
-            notOsTimesCallImportedFrom.size,
-            "Expected to find exactly 1 matching import: `import os as not_os`.",
-        )
         assertEquals(
             aliasOsImport,
-            notOsTimesCallImportedFrom.singleOrNull(),
-            "Expected the import to match `import os as not_os`.",
+            notOsTimesCall.importedFrom.singleOrNull(),
+            "Expected the import to exactly match `import os as not_os`.",
         )
 
         /*
@@ -144,16 +124,10 @@ class ExtensionsTest {
         val tCall = result.calls.singleOrNull { it.code == "t()" }
         assertNotNull(tCall)
 
-        val tCallImportedFrom = tCall.importedFrom
-        assertEquals(
-            1,
-            tCallImportedFrom.size,
-            "Expected to find exactly 1 matching import: `from os import times as t`.",
-        )
         assertEquals(
             fromImportAs,
-            tCallImportedFrom.singleOrNull(),
-            "Expected the import to match `from os import times as t`.",
+            tCall.importedFrom.singleOrNull(),
+            "Expected the import to exactly match `from os import times as t`.",
         )
     }
 }
