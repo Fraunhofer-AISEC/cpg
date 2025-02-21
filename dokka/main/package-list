@@ -16,10 +16,14 @@ de.fraunhofer.aisec.cpg.query
 module:cpg-concepts
 de.fraunhofer.aisec.cpg.graph
 de.fraunhofer.aisec.cpg.graph.concepts
+de.fraunhofer.aisec.cpg.graph.concepts.arch
 de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption
+de.fraunhofer.aisec.cpg.graph.concepts.flows
 de.fraunhofer.aisec.cpg.graph.concepts.http
 de.fraunhofer.aisec.cpg.graph.concepts.memory
-de.fraunhofer.aisec.cpg.passes.concepts.memory
+de.fraunhofer.aisec.cpg.passes.concepts
+de.fraunhofer.aisec.cpg.passes.concepts.flows.cxx
+de.fraunhofer.aisec.cpg.passes.concepts.memory.cxx
 module:cpg-console
 de.fraunhofer.aisec.cpg.analysis
 de.fraunhofer.aisec.cpg.console
