@@ -34,8 +34,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /** A unary operator expression, involving one expression and an operator, such as `a++`. */
-class UnaryOperator :
-    Expression(), HasOverloadedOperation, ArgumentHolder, HasType.TypeObserver, HasAliases {
+class UnaryOperator : Expression(), HasOverloadedOperation, ArgumentHolder, HasType.TypeObserver {
     @Relationship("INPUT")
     var inputEdge =
         astEdgeOf<Expression>(
@@ -144,9 +143,6 @@ class UnaryOperator :
 
         return false
     }
-
-    override var aliases =
-        mutableSetOf<HasAliases>() // TODO can this be removed? also HasAliases interface
 
     override fun hasArgument(expression: Expression): Boolean {
         return this.input == expression

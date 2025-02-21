@@ -123,15 +123,6 @@ interface HasInitializer : HasScope, HasType, ArgumentHolder, AssignmentHolder {
 }
 
 /**
- * Some nodes have aliases, i.e., it potentially references another variable. This means that
- * writing to this node, also writes to its [aliases] and vice versa.
- */
-interface HasAliases : HasScope {
-    /** The aliases which this node has. */
-    var aliases: MutableSet<HasAliases>
-}
-
-/**
  * Specifies that this node (e.g. a [BinaryOperator]) contains an operation that can be overloaded
  * by an [OperatorDeclaration].
  */
