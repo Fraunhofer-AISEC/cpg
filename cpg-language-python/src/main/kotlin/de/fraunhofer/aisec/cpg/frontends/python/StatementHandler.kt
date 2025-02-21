@@ -66,6 +66,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             is Python.AST.Delete -> handleDelete(node)
             is Python.AST.With,
             is Python.AST.AsyncWith -> handleWithStatement(node)
+
             is Python.AST.Global -> handleGlobal(node)
             is Python.AST.Nonlocal -> handleNonLocal(node)
             is Python.AST.Raise -> handleRaise(node)
@@ -75,6 +76,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     problem = "The statement of class ${node.javaClass} is not supported yet",
                     rawNode = node,
                 )
+
             is Python.AST.Def ->
                 wrapDeclarationToStatement(frontend.declarationHandler.handleNode(node))
         }
@@ -92,6 +94,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     this.lhs = newReference(name = subject)
                     this.rhs = frontend.expressionHandler.handle(ctx = node.value)
                 }
+
             is Python.AST.MatchSingleton ->
                 newBinaryOperator(operatorCode = "===", rawNode = node).implicit().apply {
                     this.lhs = newReference(name = subject)
@@ -106,6 +109,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                                 )
                         }
                 }
+
             is Python.AST.MatchOr ->
                 frontend.expressionHandler.joinListWithBinOp(
                     operatorCode = "or",
@@ -113,6 +117,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     rawNode = node,
                     isImplicit = false,
                 )
+
             is Python.AST.MatchSequence,
             is Python.AST.MatchMapping,
             is Python.AST.MatchClass,
@@ -122,6 +127,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     problem = "Cannot handle of type ${node::class} yet",
                     rawNode = node,
                 )
+
             else ->
                 newProblemExpression(
                     problem = "Cannot handle of type ${node::class} yet",
@@ -350,6 +356,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 tmpValName,
             )
         }
+
         val result =
             newBlock().codeAndLocationFromOtherRawNode(node as? Python.AST.BaseStmt).implicit()
 
@@ -517,27 +524,52 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         return assertStatement
     }
 
+    /**
+     * Translates a Python [`Import`](https://docs.python.org/3/library/ast.html#ast.Import) into a
+     * [Statement].
+     *
+     * For each import, it handles two cases:
+     * - If an alias is present (e.g., `import foo.bar.baz as fbb`), only the final module is bound
+     *   using the alias.
+     * - Without an alias, it iteratively creates declarations for each parent package (e.g., `foo`,
+     *   `foo.bar`, and `foo.bar.baz`).
+     *
+     *   See also the
+     *   [`Python specification`](https://docs.python.org/3/reference/simple_stmts.html#the-import-statement)
+     *   for details:
+     */
     private fun handleImport(node: Python.AST.Import): Statement {
         val declStmt = newDeclarationStatement(rawNode = node)
         for (imp in node.names) {
             val alias = imp.asname
-            val decl =
-                if (alias != null) {
+            if (alias != null) {
+                // If we have an alias, we import the package with the alias and do NOT import the
+                // parent packages
+                val decl =
                     newImportDeclaration(
                         parseName(imp.name),
                         style = ImportStyle.IMPORT_NAMESPACE,
                         parseName(alias),
                         rawNode = imp,
                     )
-                } else {
-                    newImportDeclaration(
-                        parseName(imp.name),
-                        style = ImportStyle.IMPORT_NAMESPACE,
-                        rawNode = imp,
-                    )
+                frontend.scopeManager.addDeclaration(decl)
+                declStmt.declarationEdges += decl
+            } else {
+                // If we do not have an alias, we import all the packages along the path - unless we
+                // already have an import for the package in the scope
+                var importName: Name? = parseName(imp.name)
+                while (importName != null) {
+                    val decl =
+                        newImportDeclaration(
+                            importName,
+                            style = ImportStyle.IMPORT_NAMESPACE,
+                            rawNode = imp,
+                        )
+                    frontend.scopeManager.addDeclaration(decl)
+                    declStmt.declarationEdges += decl
+                    importName = importName.parent
                 }
-            frontend.scopeManager.addDeclaration(decl)
-            declStmt.declarationEdges += decl
+            }
         }
         return declStmt
     }
@@ -670,10 +702,12 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 ) // add the unpacking instruction to the top of the loop body
                 ret.statement = body
             }
+
             is Reference -> { // only one var
                 ret.variable = loopVar
                 ret.statement = makeBlock(node.body, parentNode = node)
             }
+
             else -> {
                 ret.variable =
                     newProblemExpression(
