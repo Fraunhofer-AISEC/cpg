@@ -51,5 +51,8 @@ dependencies {
     findProject(":cpg-language-cxx")?.also {
         integrationTestImplementation(it)
     }
+    findProject(":cpg-language-ini")?.also {
+        integrationTestImplementation(it)
+    }
     integrationTestImplementation(projects.cpgAnalysis)
 }
