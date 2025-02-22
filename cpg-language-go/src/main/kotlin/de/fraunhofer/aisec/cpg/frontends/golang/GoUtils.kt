@@ -149,7 +149,7 @@ internal fun gatherGoFiles(root: File, includeSubDir: Boolean = true): List<File
  * for other languages. It shares some fields with a [CompilationDatabase] and both could
  * potentially be merged.
  */
-internal class Project {
+class Project {
     var symbols: Map<String, String> = mutableMapOf()
 
     var components: MutableMap<String, List<File>> = mutableMapOf()
@@ -168,7 +168,7 @@ internal class Project {
          *
          * Note: This currently is limited to packages of the standard library
          */
-        internal fun buildProject(
+        fun buildProject(
             modulePath: String,
             goos: String? = null,
             goarch: String? = null,

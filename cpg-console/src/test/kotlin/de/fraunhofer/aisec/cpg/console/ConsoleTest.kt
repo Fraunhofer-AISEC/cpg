@@ -34,9 +34,7 @@ import kotlin.script.experimental.jvm.KJvmEvaluatedSnippet
 import kotlin.script.experimental.util.LinkedSnippet
 import kotlin.test.Test
 import kotlin.test.assertIs
-import org.junit.jupiter.api.Tag
 
-@Tag("integration")
 class ConsoleTest {
 
     @Test
