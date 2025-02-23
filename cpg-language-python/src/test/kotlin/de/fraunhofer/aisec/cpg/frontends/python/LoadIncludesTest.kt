@@ -35,13 +35,13 @@ class LoadIncludesTest {
 
     @Test
     fun testLoadIncludes() {
-        val topLevel = Path.of("src", "test", "resources", "python", "loadIncludes", "example")
+        val topLevel = Path.of("src", "test", "resources", "python", "load_includes", "example")
         val result =
             analyze(listOf(topLevel.resolve("program.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
                 it.loadIncludes(true)
                 it.includePath(
-                    Path.of("src", "test", "resources", "python", "loadIncludes", "stdlib")
+                    Path.of("src", "test", "resources", "python", "load_includes", "stdlib")
                 )
             }
 
