@@ -281,12 +281,14 @@ object Util {
                     openParentheses++
                     currPart.append(c)
                 }
+
                 c == ')' -> {
                     if (openParentheses > 0) {
                         openParentheses--
                     }
                     currPart.append(c)
                 }
+
                 delimiters.contains("" + c) -> {
                     if (openParentheses == 0) {
                         val toAdd = currPart.toString().trim()
@@ -385,47 +387,68 @@ object Util {
             }
         }
 
-        val callArguments = call.arguments
         val functionParameters = target.parameters
-
-        var parameterIndex = 0
+        val argumentEdges = call.argumentEdges
+        var argumentIndex = 0
 
         for (param in functionParameters) {
-            // Handle default parameters
-            if (param.default != null) {
-                val argumentEdge = call.argumentEdges.getOrNull(parameterIndex)
-                if (argumentEdge != null) {
-                    val isNamedArgument = argumentEdge.name != null
-                    if (isNamedArgument) {
-                        // If it's a named argument (part of e.g. **kwargs), we skip it since
-                        // it is already handled in variadic handling
-                        continue
-                    }
-                    // If the argument is provided, connect it to the parameter
-                    param.prevDFGEdges.addContextSensitive(
-                        argumentEdge.end,
-                        callingContext = CallingContextIn(call),
-                    )
-                }
-            }
-            // If the parameter is variadic, map all remaining arguments to it
-            if (param.isVariadic) {
-                callArguments.drop(parameterIndex).forEach { arg ->
-                    param.prevDFGEdges.addContextSensitive(
-                        arg,
-                        callingContext = CallingContextIn(call),
-                    )
-                }
-                return
-            }
-            // Handle non-variadic, non-default parameters (regular positional arguments)
-            if (param.default == null && parameterIndex < callArguments.size) {
+            val argumentEdge = argumentEdges.getOrNull(argumentIndex)
+            // Try to find a named argument matching this parameter
+            val namedEdge = argumentEdges.firstOrNull { it.name == param.name.localName }
+            if (namedEdge != null) {
                 param.prevDFGEdges.addContextSensitive(
-                    callArguments[parameterIndex],
+                    namedEdge.end,
+                    callingContext = CallingContextIn(call),
+                )
+                argumentIndex++
+                continue // Move to next parameter
+            }
+
+            // Handle variadic parameters (e.g., **kwargs)
+            if (param.isVariadic) {
+                // If it is the last variadic, it's **kwargs; otherwise it is *args
+                val remainingEdges = argumentEdges.drop(argumentIndex)
+                // Last variadic is **kwargs, earlier is *args
+                val isKeywordVariadic = functionParameters.lastOrNull { it.isVariadic } == param
+                remainingEdges.forEach { edge ->
+                    if (isKeywordVariadic) {
+                        // **kwargs: Named args
+                        param.prevDFGEdges.addContextSensitive(
+                            edge.end,
+                            callingContext = CallingContextIn(call),
+                        )
+                        argumentIndex++
+                    } else {
+                        // *args: Positional args
+                        if (edge.name == null) {
+                            param.prevDFGEdges.addContextSensitive(
+                                edge.end,
+                                callingContext = CallingContextIn(call),
+                            )
+                        }
+                        argumentIndex++
+                    }
+                }
+                continue // Move to next parameter
+            }
+
+            // Handle positional
+            if (argumentEdge != null && argumentEdge.name == null) {
+                param.prevDFGEdges.addContextSensitive(
+                    argumentEdge.end,
+                    callingContext = CallingContextIn(call),
+                )
+                argumentIndex++
+                continue // Move to next parameter
+            }
+            // Handle default arguments
+            val default = param.default
+            if (default != null) {
+                param.prevDFGEdges.addContextSensitive(
+                    default,
                     callingContext = CallingContextIn(call),
                 )
             }
-            parameterIndex++
         }
     }
 
