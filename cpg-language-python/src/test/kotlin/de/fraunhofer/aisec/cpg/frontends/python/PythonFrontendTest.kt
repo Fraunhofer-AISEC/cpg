@@ -578,7 +578,7 @@ class PythonFrontendTest : BaseTest() {
         val foobar = recordFoo.methods[0]
         assertNotNull(foobar)
 
-        assertLocalName("__init__", fooCtor)
+        assertLocalName(PythonLanguage.IDENTIFIER_INIT, fooCtor)
         assertLocalName("foobar", foobar)
 
         val bar = p.functions["bar"]

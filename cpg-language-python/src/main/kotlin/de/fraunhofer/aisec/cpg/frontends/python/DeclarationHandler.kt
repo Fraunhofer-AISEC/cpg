@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.frontends.HasOperatorOverloading
 import de.fraunhofer.aisec.cpg.frontends.isKnownOperatorName
+import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage.Companion.IDENTIFIER_INIT
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage.Companion.MODIFIER_KEYWORD_ONLY_ARGUMENT
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage.Companion.MODIFIER_POSITIONAL_ONLY_ARGUMENT
 import de.fraunhofer.aisec.cpg.graph.*
@@ -104,7 +105,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
         val language = language
         val result =
             if (recordDeclaration != null) {
-                if (s.name == "__init__") {
+                if (s.name == IDENTIFIER_INIT) {
                     newConstructorDeclaration(
                         name = s.name,
                         recordDeclaration = recordDeclaration,
