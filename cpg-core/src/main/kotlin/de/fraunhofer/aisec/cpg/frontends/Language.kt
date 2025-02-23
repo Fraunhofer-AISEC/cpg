@@ -397,8 +397,6 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
         }
     }
 
-    abstract fun isBuiltinsFile(file: File): Boolean
-
     /**
      * There are some cases where our [Inference] system needs to place declarations, e.g., a
      * [NamespaceDeclaration] in the [GlobalScope]. The issue with that is that the [Scope.astNode]
@@ -451,12 +449,6 @@ object UnknownLanguage : Language<Nothing>() {
     override val frontend: KClass<out Nothing> = Nothing::class
     override val builtInTypes: Map<String, Type> = mapOf()
     override val compoundAssignmentOperators: Set<String> = setOf()
-
-    override fun isBuiltinsFile(file: File): Boolean {
-        // Here we don't know if the file contains builtins, but it is irrelevant as we cant analyze
-        // it
-        return false
-    }
 }
 
 /**
@@ -468,10 +460,6 @@ object NoLanguage : Language<Nothing>() {
     override val frontend: KClass<out Nothing> = Nothing::class
     override val builtInTypes: Map<String, Type> = mapOf()
     override val compoundAssignmentOperators: Set<String> = setOf()
-
-    override fun isBuiltinsFile(file: File): Boolean {
-        return false
-    }
 }
 
 /**
@@ -484,10 +472,6 @@ class MultipleLanguages(val languages: Set<Language<*>>) : Language<Nothing>() {
     override val frontend: KClass<out Nothing> = Nothing::class
     override val builtInTypes: Map<String, Type> = mapOf()
     override val compoundAssignmentOperators: Set<String> = setOf()
-
-    override fun isBuiltinsFile(file: File): Boolean {
-        return languages.any { it.isBuiltinsFile(file) }
-    }
 }
 
 /**

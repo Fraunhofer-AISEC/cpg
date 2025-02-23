@@ -49,7 +49,4 @@ class IniFileLanguage : Language<IniFileFrontend>() {
     override val compoundAssignmentOperators: Set<String> = emptySet() // no such thing
 
 
-    override fun isBuiltinsFile(file: File): Boolean {
-        return false
-    }
 }

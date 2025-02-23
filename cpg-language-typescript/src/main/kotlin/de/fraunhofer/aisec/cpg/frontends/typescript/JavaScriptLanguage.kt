@@ -76,9 +76,4 @@ open class JavaScriptLanguage : Language<TypeScriptLanguageFrontend>(), HasShort
             "bigint" to IntegerType("bigint", null, this, NumericType.Modifier.SIGNED),
             "string" to StringType("string", this),
         )
-
-
-    override fun isBuiltinsFile(file: File): Boolean {
-        return false
-    }
 }

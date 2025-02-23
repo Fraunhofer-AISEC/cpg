@@ -46,7 +46,8 @@ class PythonLanguage :
     HasShortCircuitOperators,
     HasOperatorOverloading,
     HasFunctionStyleConstruction,
-    HasMemberExpressionAmbiguity {
+    HasMemberExpressionAmbiguity,
+    HasBuiltins {
     override val fileExtensions = listOf("py", "pyi")
     override val namespaceDelimiter = "."
     @Transient
@@ -230,9 +231,7 @@ class PythonLanguage :
     }
 
     override fun isBuiltinsFile(file: File): Boolean {
-        return fileExtensions.any {
-            file.path == IDENTIFIER_INIT + language.namespaceDelimiter + it
-        }
+        return fileExtensions.any { file.path == "builtins.$it" }
     }
 
     companion object {

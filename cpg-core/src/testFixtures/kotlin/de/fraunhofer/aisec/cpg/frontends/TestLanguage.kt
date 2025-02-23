@@ -62,10 +62,6 @@ open class TestLanguage(final override var namespaceDelimiter: String = "::") :
         )
     override val receiverName: String
         get() = "this"
-
-    override fun isBuiltinsFile(file: File): Boolean {
-        return false
-    }
 }
 
 class StructTestLanguage(namespaceDelimiter: String = "::") :

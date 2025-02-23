@@ -37,6 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.passes.*
+import java.io.File
 import kotlin.reflect.KClass
 
 /**
@@ -286,6 +287,21 @@ interface HasOperatorOverloading : LanguageTrait {
             .distinct()
             .singleOrNull()
     }
+}
+
+/**
+ * A language trait, that specifies that this language has variables and functions that are built
+ * in. For resolution this means that a file may be included into the include paths that contains
+ * the declaration or entire definition of the builtin functions and variables. The file should be
+ * imported unconditionally from the use in import statements, as the contained declarations are
+ * available without explicit importing.
+ */
+interface HasBuiltins : LanguageTrait {
+    /**
+     * Determines whether a path relative to its own rootPackage, is a builtin file. This is not
+     * determined by a raw path as multiple extensions are viable as builtin paths.
+     */
+    fun isBuiltinsFile(file: File): Boolean
 }
 
 /**

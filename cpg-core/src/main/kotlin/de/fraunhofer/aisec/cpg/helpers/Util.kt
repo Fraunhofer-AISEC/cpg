@@ -33,8 +33,6 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextIn
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
-import java.io.File
-import java.nio.file.Path
 import java.util.*
 import org.slf4j.Logger
 
@@ -470,23 +468,6 @@ object Util {
             conditionNodes = getAdjacentDFGNodes(branchingDeclaration, true)
         }
         conditionNodes.forEach { n.prevDFGEdges += it }
-    }
-
-    /**
-     * Returns the RootPath that belongs to the absolute file path in `file` amongst the
-     * `rootPaths`.
-     *
-     * @param file absolute file to find the rootPath for
-     * @param rootPaths candidates of root paths for the file
-     * @return the first identified root path candidate
-     */
-    fun getRootPath(file: File, rootPaths: List<Path>): Path {
-        rootPaths.forEach {
-            if (file.path.removePrefix(it.toString()) != file.path.toString()) {
-                return it
-            }
-        }
-        return file.toPath().parent
     }
 
     enum class Connect {

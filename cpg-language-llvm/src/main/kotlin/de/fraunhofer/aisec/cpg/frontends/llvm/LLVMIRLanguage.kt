@@ -29,7 +29,6 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.types.FloatingPointType
 import de.fraunhofer.aisec.cpg.graph.types.IntegerType
 import de.fraunhofer.aisec.cpg.graph.types.NumericType
-import java.io.File
 import kotlin.reflect.KClass
 import org.neo4j.ogm.annotation.Transient
 
@@ -66,8 +65,4 @@ class LLVMIRLanguage : Language<LLVMIRLanguageFrontend>() {
             "ui64" to IntegerType("ui64", 64, this, NumericType.Modifier.UNSIGNED),
             "ui128" to IntegerType("ui128", 128, this, NumericType.Modifier.UNSIGNED),
         )
-
-    override fun isBuiltinsFile(file: File): Boolean {
-        return false
-    }
 }

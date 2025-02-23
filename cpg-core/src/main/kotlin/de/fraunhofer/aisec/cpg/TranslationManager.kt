@@ -25,16 +25,12 @@
  */
 package de.fraunhofer.aisec.cpg
 
-import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
-import de.fraunhofer.aisec.cpg.frontends.SupportsParallelParsing
-import de.fraunhofer.aisec.cpg.frontends.TranslationException
+import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
-import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.*
 import java.io.File
 import java.io.PrintWriter
@@ -143,6 +139,7 @@ private constructor(
         result: TranslationResult,
     ): Set<LanguageFrontend<*, *>> {
         val usedFrontends = mutableSetOf<LanguageFrontend<*, *>>()
+        val usedLanguages = mutableSetOf<Language<*>>()
 
         // If loadIncludes is active, the files stored in the include paths are made available for
         // conditional
@@ -264,12 +261,16 @@ private constructor(
                     parseSequentially(component, result, ctx, sourceLocations)
                 }
             )
+            usedLanguages.addAll(sourceLocations.mapNotNull { it.language }.toSet())
         }
+
+        usedLanguages.addAll(ctx.externalSources.mapNotNull { it.language }.toSet())
+
         ctx.externalSources
-            .firstOrNull {
-                it.language?.isBuiltinsFile(
-                    it.relativeTo(Util.getRootPath(it, ctx.config.includePaths).toFile())
-                ) ?: false
+            .firstOrNull { eSource ->
+                val relFile =
+                    ctx.config.includePaths.firstNotNullOf { eSource.relativeToOrNull(it.toFile()) }
+                usedLanguages.filterIsInstance<HasBuiltins>().any { it.isBuiltinsFile(relFile) }
             }
             ?.let { ctx.importedSources.add(it) }
 

@@ -32,7 +32,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.unknownType
-import java.io.File
 import org.neo4j.ogm.annotation.Transient
 
 /** The Go language. */
@@ -252,9 +251,5 @@ class GoLanguage :
             }
             else -> super.propagateTypeOfBinaryOperation(operation)
         }
-    }
-
-    override fun isBuiltinsFile(file: File): Boolean {
-        return false
     }
 }

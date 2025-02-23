@@ -37,7 +37,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.*
-import java.io.File
 import kotlin.reflect.KClass
 import org.neo4j.ogm.annotation.Transient
 
@@ -143,8 +142,4 @@ open class JavaLanguage :
     override val endCharacter = '>'
     override val receiverName: String
         get() = "this"
-
-    override fun isBuiltinsFile(file: File): Boolean {
-        return false
-    }
 }
