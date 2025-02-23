@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,23 +23,22 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.concepts
+package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.graph.Name
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.OverlayNode
+import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.frontends.python.PythonValueEvaluator
+import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
+import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 
 /**
- * Represents a new concept added to the CPG. This is intended for modelling "concepts" like
- * logging, files, databases. The relevant operations on this concept are modeled as [Operation]s
- * and stored in [ops].
+ * This is a specialized version of the [UnreachableEOGPass] for Python that
+ * - uses the [PythonValueEvaluator]
+ * - is executed before the [SymbolResolver] so that we can leverage the information about
+ *   unreachable code regions
  */
-abstract class Concept(underlyingNode: Node) : OverlayNode() {
-    init {
-        this.underlyingNode = underlyingNode
-        this::class.simpleName?.let { name = Name(it) }
-    }
+@ExecuteBefore(SymbolResolver::class)
+@DependsOn(EvaluationOrderGraphPass::class)
+class PythonUnreachableEOGPass(ctx: TranslationContext) : UnreachableEOGPass(ctx) {
 
-    /** All [Operation]s belonging to this concept. */
-    val ops: MutableSet<Operation> = mutableSetOf()
+    override val evaluator = PythonValueEvaluator()
 }

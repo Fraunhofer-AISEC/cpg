@@ -56,7 +56,7 @@ kaml = { module = "com.charleskorn.kaml:kaml", version.ref = "kaml" }
 sarif4k = { module = "io.github.detekt.sarif4k:sarif4k", version.ref = "sarif4k" }
 
 # test
-junit-params = { module = "org.junit.jupiter:junit-jupiter-params", version = "5.11.0"}
+junit-params = { module = "org.junit.jupiter:junit-jupiter-params", version = "5.12.0"}
 mockito = { module = "org.mockito:mockito-core", version = "5.15.2"}
 
 # plugins needed for build.gradle.kts in buildSrc
