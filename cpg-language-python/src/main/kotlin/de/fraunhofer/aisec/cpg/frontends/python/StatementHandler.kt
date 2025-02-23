@@ -622,8 +622,8 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
     private fun addExternallyImportedToAnalysis(importName: Name) {
         ctx?.let { ctx ->
-            var currentName = importName
-            while (currentName.isNotEmpty()) {
+            var currentName: Name? = importName
+            while (!currentName.isNullOrEmpty()) {
                 var importPath =
                     currentName.toString().replace(language.namespaceDelimiter, File.separator)
 
@@ -646,7 +646,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                         }
                         ?.let { ctx.importedSources += it }
                 }
-                currentName = currentName.parent ?: Name("")
+                currentName = currentName.parent
             }
         }
     }
