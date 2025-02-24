@@ -47,6 +47,4 @@ class IniFileLanguage : Language<IniFileFrontend>() {
         mapOf("string" to StringType("string", language = this)) // everything is a string
 
     override val compoundAssignmentOperators: Set<String> = emptySet() // no such thing
-
-
 }
