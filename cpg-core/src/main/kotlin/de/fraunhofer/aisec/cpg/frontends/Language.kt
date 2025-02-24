@@ -425,6 +425,19 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
 
         return tu
     }
+
+    /**
+     * Returns the files that can represent the given name considering all viable file extensions.
+     */
+    open fun nameToLanguageFiles(name: Name): Set<File> {
+        return fileExtensions
+            .map {
+                File(
+                    name.toString().replace(language.namespaceDelimiter, File.separator) + "." + it
+                )
+            }
+            .toSet()
+    }
 }
 
 /**

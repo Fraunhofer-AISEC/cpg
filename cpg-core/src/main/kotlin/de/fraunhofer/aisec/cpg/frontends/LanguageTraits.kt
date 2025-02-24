@@ -37,7 +37,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.passes.*
-import java.io.File
 import kotlin.reflect.KClass
 
 /**
@@ -297,11 +296,8 @@ interface HasOperatorOverloading : LanguageTrait {
  * available without explicit importing.
  */
 interface HasBuiltins : LanguageTrait {
-    /**
-     * Determines whether a path relative to its own rootPackage, is a builtin file. This is not
-     * determined by a raw path as multiple extensions are viable as builtin paths.
-     */
-    fun isBuiltinsFile(file: File): Boolean
+    /** Returns the namespace under which builtins exist. */
+    fun builtinsNamespace(): Name
 }
 
 /**

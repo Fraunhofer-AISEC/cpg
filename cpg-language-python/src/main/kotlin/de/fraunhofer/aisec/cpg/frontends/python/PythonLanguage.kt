@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
+import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.autoType
 import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
@@ -230,8 +231,19 @@ class PythonLanguage :
         return super.tryCast(type, targetType, hint, targetHint)
     }
 
-    override fun isBuiltinsFile(file: File): Boolean {
-        return fileExtensions.any { file.path == "builtins.$it" }
+    override fun builtinsNamespace(): Name {
+        return Name("builtins")
+    }
+
+    /**
+     * Returns the files that can represent the given name. This includes all possible file
+     * extensions and the name plus the `__init__` identifier, as this is the name for declaration
+     * files if the namespace has sub-namespaces.
+     */
+    override fun nameToLanguageFiles(name: Name): Set<File> {
+        val filesForNamespace = super.nameToLanguageFiles(name).toMutableSet()
+        filesForNamespace.addAll(super.nameToLanguageFiles(Name(IDENTIFIER_INIT, name)))
+        return filesForNamespace
     }
 
     companion object {
