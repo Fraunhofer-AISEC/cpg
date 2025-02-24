@@ -25,8 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.helpers.neo4j
 
+import de.fraunhofer.aisec.cpg.graph.edges.flows.FieldDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Granularity
-import de.fraunhofer.aisec.cpg.graph.edges.flows.PartialDataflowGranularity
 
 /** This converter converts a [Granularity] into a string-based representation in Neo4J. */
 class DataflowGranularityConverter : CpgCompositeConverter<Granularity> {
@@ -45,8 +45,8 @@ class DataflowGranularityConverter : CpgCompositeConverter<Granularity> {
         }
 
         // Only for partial
-        if (value is PartialDataflowGranularity) {
-            map[FIELD_PARTIAL_TARGET] = value.partialTarget?.name.toString()
+        if (value is FieldDataflowGranularity) {
+            map[FIELD_PARTIAL_TARGET] = value.partialTarget.name.toString()
         }
 
         return map

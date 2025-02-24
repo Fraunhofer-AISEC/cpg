@@ -42,8 +42,8 @@ import org.neo4j.ogm.annotation.typeconversion.Convert
  * The granularity of the data-flow, e.g., whether the flow contains the whole object, or just a
  * part of it, for example a record (class/struct) member.
  *
- * The helper functions [full] and [partial] can be used to construct either full or partial
- * dataflow granularity.
+ * The helper functions [full] and [field] can be used to construct either full or partial dataflow
+ * granularity.
  */
 sealed interface Granularity
 
@@ -58,10 +58,17 @@ data object FullDataflowGranularity : Granularity
  * [Dataflow.end] but only parts of it. Common examples include [MemberExpression] nodes, where we
  * model a dataflow to the base, but only partially scoped to a particular field.
  */
-class PartialDataflowGranularity(
+sealed class PartialDataflowGranularity<T>(
     /** The target that is affected by this partial dataflow. */
-    val partialTarget: Declaration?
-) : Granularity
+    val partialTarget: T
+) : Granularity {
+    override fun equals(other: Any?): Boolean {
+        return this.partialTarget == (other as? PartialDataflowGranularity<T>)?.partialTarget
+    }
+}
+
+class FieldDataflowGranularity(partialTarget: FieldDeclaration) :
+    PartialDataflowGranularity<FieldDeclaration>(partialTarget)
 
 /**
  * This dataflow granularity denotes that not the "whole" object is flowing from [Dataflow.start] to
@@ -69,12 +76,8 @@ class PartialDataflowGranularity(
  */
 class IndexedDataflowGranularity(
     /** The index that is affected by this partial dataflow. */
-    val index: Int
-) : Granularity {
-    override fun equals(other: Any?): Boolean {
-        return this.index == (other as? IndexedDataflowGranularity)?.index
-    }
-}
+    partialTarget: Int
+) : PartialDataflowGranularity<Int>(partialTarget)
 
 /** Creates a new [FullDataflowGranularity]. */
 fun full(): Granularity {
@@ -85,12 +88,12 @@ fun full(): Granularity {
 fun default() = full()
 
 /**
- * Creates a new [PartialDataflowGranularity]. The [target] is the [Declaration] that is affected by
+ * Creates a new [FieldDataflowGranularity]. The [target] is the [Declaration] that is affected by
  * the partial dataflow. Examples include a [FieldDeclaration] for a [MemberExpression] or a
  * [VariableDeclaration] for a [TupleDeclaration].
  */
-fun partial(target: Declaration?): PartialDataflowGranularity {
-    return PartialDataflowGranularity(target)
+fun field(target: FieldDeclaration): FieldDataflowGranularity {
+    return FieldDataflowGranularity(target)
 }
 
 /**
