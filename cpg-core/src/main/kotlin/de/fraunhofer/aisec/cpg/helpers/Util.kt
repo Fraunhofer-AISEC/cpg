@@ -348,15 +348,19 @@ object Util {
                 '(' -> {
                     openParentheses++
                 }
+
                 ')' -> {
                     openParentheses--
                 }
+
                 '<' -> {
                     openTemplate++
                 }
+
                 '>' -> {
                     openTemplate--
                 }
+
                 marker -> {
                     if (openParentheses == 0 && openTemplate == 0) {
                         return true
@@ -404,22 +408,23 @@ object Util {
                 continue // Move to next parameter
             }
 
-            // Handle variadic parameters (e.g., **kwargs)
+            // Handle variadic parameters
             if (param.isVariadic) {
                 val remainingEdges = argumentEdges.drop(argumentIndex)
                 if (remainingEdges.isNotEmpty()) {
-                    // If it is the last variadic, it is **kwargs; otherwise it is *args
+                    // If it is the last parameter, it is a keyword required parameter (e.g.
+                    // **kwargs in python);
                     val isKeywordVariadic = functionParameters.lastOrNull { it.isVariadic } == param
                     remainingEdges.forEach { edge ->
                         if (isKeywordVariadic) {
-                            // **kwargs: Named args
                             param.prevDFGEdges.addContextSensitive(
                                 edge.end,
                                 callingContext = CallingContextIn(call),
                             )
                             argumentIndex++
                         } else {
-                            // *args: Positional args
+                            // otherwise it is a positional variadic parameter (e.g. *args in
+                            // python) without keyword
                             if (edge.name == null) {
                                 param.prevDFGEdges.addContextSensitive(
                                     edge.end,
@@ -433,7 +438,7 @@ object Util {
                 continue // Move to next parameter
             }
 
-            // Handle positional
+            // Handle only positional parameters, ignoring named arguments
             if (argumentEdge != null && argumentEdge.name == null) {
                 param.prevDFGEdges.addContextSensitive(
                     argumentEdge.end,
