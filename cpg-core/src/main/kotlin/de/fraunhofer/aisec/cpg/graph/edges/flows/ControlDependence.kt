@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.graph.edges.flows
 
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeList
 import de.fraunhofer.aisec.cpg.graph.edges.collections.MirroredEdgeCollection
 import de.fraunhofer.aisec.cpg.passes.ControlDependenceGraphPass
@@ -43,13 +42,9 @@ class ControlDependence(
     end: Node,
     /** A set of [EvaluationOrder.branch] values. */
     var branches: Set<Boolean> = setOf(),
-) : Edge<Node>(start, end) {
-    /** All control dependence edges exercise control dependence. */
-    init {
-        dependence = DependenceType.CONTROL
-    }
+) : ProgramDependence(start, end, DependenceType.CONTROL) {
 
-    override var labels = setOf("CDG")
+    override var labels = super.labels.plus("CDG")
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
