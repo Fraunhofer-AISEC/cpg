@@ -199,11 +199,13 @@ class ArgumentsHandlerTest {
     @Test
     fun testSignatureMatch() {
         val func = result.functions["kw_args_and_default"]
+        assertNotNull(func)
         val funcDefault = func.parameters[1]
         val funcKwargs = func.parameters[2]
 
         val call = result.methods["call"]?.calls?.firstOrNull()
         assertNotNull(call)
+        assertContains(func.nextDFG, call)
 
         val call2 = result.methods["call2"]?.calls?.firstOrNull()
         assertNotNull(call2)

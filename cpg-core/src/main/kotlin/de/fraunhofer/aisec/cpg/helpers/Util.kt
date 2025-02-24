@@ -406,7 +406,7 @@ object Util {
 
             // Handle variadic parameters (e.g., **kwargs)
             if (param.isVariadic) {
-                // If it is the last variadic, it's **kwargs; otherwise it is *args
+                // If it is the last variadic, it is **kwargs; otherwise it is *args
                 val remainingEdges = argumentEdges.drop(argumentIndex)
                 // Last variadic is **kwargs, earlier is *args
                 val isKeywordVariadic = functionParameters.lastOrNull { it.isVariadic } == param
@@ -425,8 +425,8 @@ object Util {
                                 edge.end,
                                 callingContext = CallingContextIn(call),
                             )
+                            argumentIndex++
                         }
-                        argumentIndex++
                     }
                 }
                 continue // Move to next parameter

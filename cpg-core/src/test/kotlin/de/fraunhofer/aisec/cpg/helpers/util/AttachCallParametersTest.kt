@@ -46,11 +46,13 @@ class AttachCallParametersTest {
     @Test
     fun testPositionalNamedAndKwargs() {
         with(frontend) {
-            // Function: default_and_variadic(a, b=False, **kwargs)
+            /** Function: default_and_variadic(a, b=False, **kwargs) * */
             val func = getFuncWithDefaultAndVariadicParameters()
 
-            // Call: default_and_variadic("test", b=True, foo='1', bar='2')
-            // Case: Positional 'a', named 'b', and variadic keyword arguments
+            /**
+             * Call: default_and_variadic("test", b=True, foo='1', bar='2') Case: Positional 'a',
+             * named 'b', and variadic keyword arguments*
+             */
             val call =
                 newCallExpression().apply {
                     argumentEdges.add(newLiteral("test", primitiveType("string"))) {
@@ -102,11 +104,13 @@ class AttachCallParametersTest {
     @Test
     fun testPositionalDefaultAndKwargs() {
         with(frontend) {
-            // Function: default_and_variadic(a, b=False, **kwargs)
+            /** Function: default_and_variadic(a, b=False, **kwargs) * */
             val func = getFuncWithDefaultAndVariadicParameters()
 
-            // Call 2: default_and_variadic("test", foo='1', bar='2')
-            // Case: Positional 'a', default 'b', and variadic keyword arguments
+            /**
+             * Call 2: default_and_variadic("test", foo='1', bar='2') Case: Positional 'a', default
+             * 'b', and variadic keyword arguments*
+             */
             val call =
                 newCallExpression().apply {
                     argumentEdges.add(newLiteral("test", primitiveType("string"))) {
@@ -155,11 +159,13 @@ class AttachCallParametersTest {
     @Test
     fun testNamedParametersOnly() {
         with(frontend) {
-            // Function: default_and_variadic(a, b=False, **kwargs)
+            /** Function: default_and_variadic(a, b=False, **kwargs) * */
             val func = getFuncWithDefaultAndVariadicParameters()
 
-            // Call: default_and_variadic(b=False, a="test")
-            // Case: Named 'b' and 'a', no variadic keyword arguments
+            /**
+             * Call: default_and_variadic(b=False, a="test") Case: Named 'b' and 'a', no variadic
+             * keyword arguments*
+             */
             val call =
                 newCallExpression().apply {
                     argumentEdges.add(newLiteral(false, primitiveType("boolean"))) {
@@ -198,11 +204,13 @@ class AttachCallParametersTest {
     @Test
     fun testVariadicParamsArgsOnly() {
         with(frontend) {
-            // Function: variadic_params(a, *args, **kwargs)
+            /** Function: variadic_params(a, *args, **kwargs) * */
             val func = getFuncWithArgsAndKwargs()
 
-            // Call: variadic_params("test", "arg1", "arg2")
-            // Case: Positional 'a' and *args, no **kwargs
+            /**
+             * Call: variadic_params("test", "arg1", "arg2") Case: Positional 'a' and *args, no
+             * **kwargs*
+             */
             val call =
                 newCallExpression().apply {
                     argumentEdges.add(newLiteral("test", primitiveType("string"))) {
@@ -240,6 +248,121 @@ class AttachCallParametersTest {
             assertEquals(1, aParam.prevDFG.size)
             assertEquals(2, argsParam.prevDFG.size)
             assertEquals(0, kwargsParam.prevDFG.size)
+        }
+    }
+
+    @Test
+    fun testVariadicParamsKwargsOnly() {
+        with(frontend) {
+            /** Function: variadic_params(a, *args, **kwargs) * */
+            val func = getFuncWithArgsAndKwargs()
+
+            /**
+             * Call: variadic_params("test", foo='1', bar='2') Case: Positional 'a', no *args only
+             * **kwargs*
+             */
+            val call =
+                newCallExpression().apply {
+                    argumentEdges.add(newLiteral("test", primitiveType("string"))) {
+                        this.index = 0
+                    }
+                    argumentEdges.add(newLiteral("1", primitiveType("string"))) {
+                        this.name = "foo"
+                        this.index = 1
+                    }
+                    argumentEdges.add(newLiteral("2", primitiveType("string"))) {
+                        this.name = "bar"
+                        this.index = 2
+                    }
+                }
+            attachCallParameters(func, call)
+            val aParam = func.parameters[0]
+            val argsParam = func.parameters[1]
+            val kwargsParam = func.parameters[2]
+            assertContains(
+                aParam.prevDFG,
+                call.argumentEdges[0].end,
+                "Parameter 'a' should map to 'test'",
+            )
+            assertEquals(0, argsParam.prevDFG.size, "Parameter '*args' should be empty")
+            assertContains(
+                kwargsParam.prevDFG,
+                call.argumentEdges[1].end,
+                "Parameter '**kwargs' should include 'foo=1'",
+            )
+            assertContains(
+                kwargsParam.prevDFG,
+                call.argumentEdges[2].end,
+                "Parameter '**kwargs' should include 'bar=2'",
+            )
+            assertEquals(1, aParam.prevDFG.size)
+            assertEquals(0, argsParam.prevDFG.size)
+            assertEquals(2, kwargsParam.prevDFG.size)
+        }
+    }
+
+    @Test
+    fun testVariadicParamsArgsAndKwargs() {
+        with(frontend) {
+            /** Function: variadic_params(a, *args, **kwargs) * */
+            val func = getFuncWithArgsAndKwargs()
+
+            /**
+             * Call: variadic_params("test", "arg1", "arg2", foo='1', bar='2') Case: Positional 'a',
+             * *args, and **kwargs *
+             */
+            val call =
+                newCallExpression().apply {
+                    argumentEdges.add(newLiteral("test", primitiveType("string"))) {
+                        this.index = 0
+                    }
+                    argumentEdges.add(newLiteral("arg1", primitiveType("string"))) {
+                        this.index = 1
+                    }
+                    argumentEdges.add(newLiteral("arg2", primitiveType("string"))) {
+                        this.index = 2
+                    }
+                    argumentEdges.add(newLiteral("1", primitiveType("string"))) {
+                        this.name = "foo"
+                        this.index = 3
+                    }
+                    argumentEdges.add(newLiteral("2", primitiveType("string"))) {
+                        this.name = "bar"
+                        this.index = 4
+                    }
+                }
+            attachCallParameters(func, call)
+            val aParam = func.parameters[0]
+            val argsParam = func.parameters[1]
+            val kwargsParam = func.parameters[2]
+            assertContains(
+                aParam.prevDFG,
+                call.argumentEdges[0].end,
+                "Parameter 'a' should map to 'test'",
+            )
+            assertContains(
+                argsParam.prevDFG,
+                call.argumentEdges[1].end,
+                "Parameter '*args' should include 'arg1'",
+            )
+            assertContains(
+                argsParam.prevDFG,
+                call.argumentEdges[2].end,
+                "Parameter '*args' should include 'arg2'",
+            )
+            assertContains(
+                kwargsParam.prevDFG,
+                call.argumentEdges[3].end,
+                "Parameter '**kwargs' should include 'foo=1'",
+            )
+            assertContains(
+                kwargsParam.prevDFG,
+                call.argumentEdges[4].end,
+                "Parameter '**kwargs' should include 'bar=2'",
+            )
+            assertEquals(1, aParam.prevDFG.size)
+            assertEquals(2, argsParam.prevDFG.size)
+            assertEquals(2, kwargsParam.prevDFG.size)
         }
     }
 
