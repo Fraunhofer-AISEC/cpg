@@ -177,7 +177,7 @@ class PointsToPassTest {
             aPointerDerefLine14.memoryAddress.first() as MemoryAddress?,
         )
         assertEquals(1, aPointerDerefLine14.prevFullDFG.size)
-        assertEquals(iUO, aPointerDerefLine14.prevFullDFG.first())
+        assertEquals(iUO.input, aPointerDerefLine14.prevFullDFG.first())
 
         // Line 15
         assertTrue(jPointerRef.memoryAddress.isEmpty())
@@ -213,7 +213,7 @@ class PointsToPassTest {
             bPointerDerefLine18.memoryAddress.first() as MemoryAddress?,
         )
         assertEquals(1, bPointerDerefLine18.prevFullDFG.size)
-        assertEquals(iUO, bPointerDerefLine18.prevFullDFG.first())
+        assertEquals(iUO.input, bPointerDerefLine18.prevFullDFG.first())
     }
 
     @Test
@@ -290,7 +290,7 @@ class PointsToPassTest {
         assertEquals(3, aPointerDerefLine37.prevFullDFG.size)
         assertTrue(aPointerDerefLine37.prevFullDFG.contains(iDecl.prevFullDFG.first()))
         assertTrue(aPointerDerefLine37.prevFullDFG.contains(jDecl.prevFullDFG.first()))
-        assertTrue(aPointerDerefLine37.prevFullDFG.contains(iUO))
+        assertTrue(aPointerDerefLine37.prevFullDFG.contains(iUO.input))
     }
 
     @Test
@@ -2091,6 +2091,6 @@ class PointsToPassTest {
 
         // printf in Line 409
         assertEquals(1, iLine409.prevDFG.size)
-        assertEquals(mutableSetOf<Node>(uOPLine407), iLine409.prevDFG)
+        assertEquals(mutableSetOf<Node>(uOPLine407.input), iLine409.prevDFG)
     }
 }
