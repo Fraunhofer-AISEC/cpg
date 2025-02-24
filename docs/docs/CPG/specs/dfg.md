@@ -245,6 +245,13 @@ Scheme:
     node -.- iterable;
 ```
 
+!!! info inline end "Implicit Dataflows"
+
+    The DFG does not model implicit dataflows, i.e., the information if the
+    execution or some conditions may have an impact on certain variables, the
+    program's behavior. This information can easily be found in the [program
+    dependence graph (PDG)](./pdg).
+
 ## ConditionalExpression
 
 Interesting fields:
@@ -266,6 +273,13 @@ Scheme:
     elseExpression -.- node;
     elseExpression -- DFG --> node;
   ```
+
+!!! info inline end "Implicit Dataflows"
+
+    The DFG does not model implicit dataflows, i.e., the information if the
+    execution or some conditions may have an impact on certain variables, the
+    program's behavior. This information can easily be found in the [program
+    dependence graph (PDG)](./pdg).
 
 ## Reference
 
@@ -534,6 +548,13 @@ Specific statements lead to a branch in the control flow of a program. A value
 that influences the branching decision can lead to an implicit data flow via the
 branching, and we therefore draw a dfg edge from the condition, to the branching
 node.
+
+!!! info inline end "Implicit Dataflows"
+
+    The DFG does not model implicit dataflows, i.e., the information if the
+    execution or some conditions may have an impact on certain variables, the
+    program's behavior. This information can easily be found in the [program
+    dependence graph (PDG)](./pdg).
 
 ### ForEachStatement
 
