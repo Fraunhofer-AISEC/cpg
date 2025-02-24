@@ -142,4 +142,60 @@ internal class ScopeManagerTest : BaseTest() {
             assertNotNull(scope)
         }
     }
+
+    @Test
+    fun testMatchesSignature() {
+        val s = ScopeManager()
+        val frontend =
+            TestLanguageFrontend("::", TestLanguage(), TranslationContext(config, s, TypeManager()))
+        with(frontend) {
+            val method =
+                newMethodDeclaration("testMethod").apply {
+                    parameters =
+                        mutableListOf(
+                            newParameterDeclaration("x", primitiveType("string")),
+                            newParameterDeclaration("y", primitiveType("boolean")).apply {
+                                default = newLiteral(true, primitiveType("boolean"))
+                            },
+                            newParameterDeclaration("kwargs", primitiveType("string")).apply {
+                                isVariadic = true
+                            },
+                        )
+                }
+
+            // First test: Matching with a single argument and default param
+            val arguments =
+                listOf(
+                    newLiteral("test", primitiveType("string")),
+                    newLiteral(false, primitiveType("boolean")),
+                )
+
+            val matchingSignature = listOf(primitiveType("string"), primitiveType("boolean"))
+            val result =
+                method.matchesSignature(matchingSignature, arguments, useDefaultArguments = true)
+            assertIs<SignatureMatches>(result, "Function should match with default and kwargs")
+
+            // Second test: Matching with multiple kwargs
+            val arguments2 =
+                listOf(
+                    newLiteral("test", primitiveType("string")),
+                    newLiteral(false, primitiveType("boolean")),
+                    newLiteral("kwargs[0]", primitiveType("string")),
+                    newLiteral("kwargs[1]", primitiveType("string")),
+                )
+
+            val matchingSignature2 =
+                listOf(
+                    primitiveType("string"),
+                    primitiveType("boolean"),
+                    primitiveType("string"),
+                    primitiveType("string"),
+                )
+
+            val result2 =
+                method.matchesSignature(matchingSignature2, arguments2, useDefaultArguments = true)
+
+            assertIs<SignatureMatches>(result2, "Function should match with multiple kwargs")
+        }
+    }
 }

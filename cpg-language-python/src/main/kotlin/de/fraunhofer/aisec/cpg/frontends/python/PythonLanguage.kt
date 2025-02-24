@@ -48,9 +48,11 @@ class PythonLanguage :
     HasOperatorOverloading,
     HasFunctionStyleConstruction,
     HasMemberExpressionAmbiguity,
-    HasBuiltins {
+    HasBuiltins,
+    HasDefaultArguments {
     override val fileExtensions = listOf("py", "pyi")
     override val namespaceDelimiter = "."
+
     @Transient
     override val frontend: KClass<out PythonLanguageFrontend> = PythonLanguageFrontend::class
     override val conjunctiveOperators = listOf("and")
