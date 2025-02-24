@@ -44,7 +44,7 @@ Starting from node `n`...
 
 ## Filtering the results
 
-The lists you get here can be quite long and it's a good idea to filter them. To
+The lists you get here can be quite long, and it's a good idea to filter them. To
 do so, we provide different operators:
 
 * To retrieve a single element, you can use the `[]` (get) operator and specify
@@ -155,7 +155,7 @@ stable than the information from above!
   requirement), to identify all possible paths reaching a predicate and
   partially follow calls as well. They return all failed and all fulfilled
   paths. This allows reasoning more precisely about the program's behavior.
-* If you're interested in all nodes reachable via one of the subgraphs from
+* If you're interested in all nodes reachable via one of the sub-graphs from
   a certain node, the methods
   `Node.collectAllPrevFullDFGPaths()`,
   `Node.collectAllNextFullDFGPaths()`,
