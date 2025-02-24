@@ -261,16 +261,22 @@ private constructor(
                     parseSequentially(component, result, ctx, sourceLocations)
                 }
             )
+            // Collects all used languages used in the main analysis code
             usedLanguages.addAll(sourceLocations.mapNotNull { it.language }.toSet())
         }
 
+        // Adds all languages provided as external sources that may be relevant in the main code
         usedLanguages.addAll(ctx.externalSources.mapNotNull { it.language }.toSet())
 
         ctx.externalSources
             .firstOrNull { eSource ->
                 val relFile =
                     ctx.config.includePaths.firstNotNullOf { eSource.relativeToOrNull(it.toFile()) }
-                usedLanguages.filterIsInstance<HasBuiltins>().any { it.isBuiltinsFile(relFile) }
+                usedLanguages.filterIsInstance<HasBuiltins>().any {
+                    (it as Language<*>)
+                        .nameToLanguageFiles(it.builtinsNamespace())
+                        .contains(relFile)
+                }
             }
             ?.let { ctx.importedSources.add(it) }
 

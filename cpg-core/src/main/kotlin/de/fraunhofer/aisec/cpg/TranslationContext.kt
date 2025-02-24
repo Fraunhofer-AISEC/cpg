@@ -60,14 +60,18 @@ class TranslationContext(
 
     /**
      * Set of files, that are available for additional analysis. They are not the primary subjects
-     * of analysis but are for example the expanded folder structure of
-     * [TranslationConfiguration.includePaths].
+     * of analysis but are available to the language frontend. The files are obtained by
+     * expanding the paths in [TranslationConfiguration.includePaths].
+     *
+     * The frontend can decide to add some of the contained files to [importedSources] which will
+     * get them translated into the final graph by the [TranslationManager].
      */
     var externalSources: MutableSet<File> = mutableSetOf(),
     /**
      * The additional sources from the [externalSources] chosen to be analyzed along with the code
      * under analysis. The language frontends are supposed to fill this list, e.g. by analyzing
-     * their import statements.
+     * the import statements of the analyzed code and deciding which external sources contain
+     * relevant symbols.
      */
     var importedSources: MutableSet<File> = mutableSetOf(),
 )

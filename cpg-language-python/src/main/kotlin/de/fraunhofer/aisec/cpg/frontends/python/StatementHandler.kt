@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.python
 
+import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.frontends.python.Python.AST.IsAsync
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
@@ -40,7 +42,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.TryStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import java.io.File
 import kotlin.collections.plusAssign
 
 class StatementHandler(frontend: PythonLanguageFrontend) :
@@ -646,34 +647,33 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         return declStmt
     }
 
+    /**
+     * Uses the given name to identify whether one of the files in
+     * [TranslationContext.externalSources] is the target of the import statement. If it is, it is
+     * added to [TranslationContext.importedSources] for further analysis by the translation
+     * manager.
+     */
     private fun addExternallyImportedToAnalysis(importName: Name) {
-        ctx?.let { ctx ->
-            var currentName: Name? = importName
-            while (!currentName.isNullOrEmpty()) {
-                var importPath =
-                    currentName.toString().replace(language.namespaceDelimiter, File.separator)
+        val ctx = ctx
+        if (ctx == null) {
+            throw TranslationException(
+                "A translation context is needed for the import dependent addition of external sources."
+            )
+        }
+        var currentName: Name? = importName
+        while (!currentName.isNullOrEmpty()) {
 
-                language.fileExtensions.forEach { fileExtension ->
-
-                    // Includes a file in the analysis, if it has the root path and
-                    ctx.externalSources
-                        .firstOrNull { eSource ->
-                            val relPath =
-                                ctx.config.includePaths.firstNotNullOf {
-                                    eSource.relativeToOrNull(it.toFile())?.path
-                                }
-                            val ending = "." + fileExtension
-                            relPath == importPath + ending ||
-                                relPath ==
-                                    importPath +
-                                        File.separator +
-                                        PythonLanguage.IDENTIFIER_INIT +
-                                        ending
+            // Includes a file in the analysis, if it has the root path and
+            ctx.externalSources
+                .firstOrNull { eSource ->
+                    val relFile =
+                        ctx.config.includePaths.firstNotNullOf {
+                            eSource.relativeToOrNull(it.toFile())
                         }
-                        ?.let { ctx.importedSources += it }
+                    language.nameToLanguageFiles(currentName).contains(relFile)
                 }
-                currentName = currentName.parent
-            }
+                ?.let { ctx.importedSources += it }
+            currentName = currentName.parent
         }
     }
 
