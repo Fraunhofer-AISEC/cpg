@@ -50,8 +50,9 @@ class AttachCallParametersTest {
             val func = getFuncWithDefaultAndVariadicParameters()
 
             /**
-             * Call: default_and_variadic("test", b=True, foo='1', bar='2') Case: Positional 'a',
-             * named 'b', and variadic keyword arguments*
+             * Call: default_and_variadic("test", b=True, foo='1', bar='2')
+             *
+             * Case: Positional 'a', named 'b', and variadic keyword arguments*
              */
             val call =
                 newCallExpression().apply {
@@ -108,8 +109,9 @@ class AttachCallParametersTest {
             val func = getFuncWithDefaultAndVariadicParameters()
 
             /**
-             * Call 2: default_and_variadic("test", foo='1', bar='2') Case: Positional 'a', default
-             * 'b', and variadic keyword arguments*
+             * Call 2: default_and_variadic("test", foo='1', bar='2')
+             *
+             * Case: Positional 'a', default 'b', and variadic keyword arguments
              */
             val call =
                 newCallExpression().apply {
@@ -163,8 +165,9 @@ class AttachCallParametersTest {
             val func = getFuncWithDefaultAndVariadicParameters()
 
             /**
-             * Call: default_and_variadic(b=False, a="test") Case: Named 'b' and 'a', no variadic
-             * keyword arguments*
+             * Call: default_and_variadic(b=False, a="test")
+             *
+             * Case: Named 'b' and 'a', no variadic keyword arguments
              */
             val call =
                 newCallExpression().apply {
@@ -208,8 +211,9 @@ class AttachCallParametersTest {
             val func = getFuncWithArgsAndKwargs()
 
             /**
-             * Call: variadic_params("test", "arg1", "arg2") Case: Positional 'a' and *args, no
-             * **kwargs*
+             * Call: variadic_params("test", "arg1", "arg2")
+             *
+             * Case: Positional 'a' and *args, no **kwargs
              */
             val call =
                 newCallExpression().apply {
@@ -258,8 +262,9 @@ class AttachCallParametersTest {
             val func = getFuncWithArgsAndKwargs()
 
             /**
-             * Call: variadic_params("test", foo='1', bar='2') Case: Positional 'a', no *args only
-             * **kwargs*
+             * Call: variadic_params("test", foo='1', bar='2')
+             *
+             * Case: Positional 'a', no *args only **kwargs
              */
             val call =
                 newCallExpression().apply {
@@ -308,8 +313,9 @@ class AttachCallParametersTest {
             val func = getFuncWithArgsAndKwargs()
 
             /**
-             * Call: variadic_params("test", "arg1", "arg2", foo='1', bar='2') Case: Positional 'a',
-             * *args, and **kwargs *
+             * Call: variadic_params("test", "arg1", "arg2", foo='1', bar='2').
+             *
+             * Case: Positional 'a', *args, and **kwargs
              */
             val call =
                 newCallExpression().apply {
