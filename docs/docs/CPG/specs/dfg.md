@@ -245,7 +245,7 @@ Scheme:
     node -.- iterable;
 ```
 
-!!! info inline end "Implicit Dataflows"
+!!! info "Implicit Dataflows"
 
     The DFG does not model implicit dataflows, i.e., the information if the
     execution or some conditions may have an impact on certain variables, the
@@ -274,7 +274,7 @@ Scheme:
     elseExpression -- DFG --> node;
   ```
 
-!!! info inline end "Implicit Dataflows"
+!!! info "Implicit Dataflows"
 
     The DFG does not model implicit dataflows, i.e., the information if the
     execution or some conditions may have an impact on certain variables, the
@@ -549,7 +549,7 @@ that influences the branching decision can lead to an implicit data flow via the
 branching, and we therefore draw a dfg edge from the condition, to the branching
 node.
 
-!!! info inline end "Implicit Dataflows"
+!!! info "Implicit Dataflows"
 
     The DFG does not model implicit dataflows, i.e., the information if the
     execution or some conditions may have an impact on certain variables, the
