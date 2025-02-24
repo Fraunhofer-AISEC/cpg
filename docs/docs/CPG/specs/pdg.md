@@ -75,3 +75,10 @@ val pdg =
     }
 println(pdg.fulfilled)
 ```
+
+!!! warning "Configuration"
+
+    Retrieving the PDG requires to register the two passes
+    `ControlDependenceGraphPass` and `ProgramDependenceGraphPass`
+    which are currently not in the list of default passes in the
+    `TranslationConfiguration`.
