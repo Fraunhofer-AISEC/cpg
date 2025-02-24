@@ -82,9 +82,8 @@ open class ProgramDependence(
     start: Node,
     end: Node,
     /**
-     * The type of dependence (e.g. control or data or none). This field is intentionally nullable,
-     * because not all [Edge] edges are selected in the PDG. This selection is performed in the
-     * [ProgramDependenceGraphPass].
+     * The type of dependence (e.g. control or data or none). This selection is defined by the class
+     * extending this class or in the [ProgramDependenceGraphPass].
      */
     var dependence: DependenceType,
 ) : Edge<Node>(start, end) {
