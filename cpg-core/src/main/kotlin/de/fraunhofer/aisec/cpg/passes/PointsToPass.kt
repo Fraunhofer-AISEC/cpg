@@ -82,6 +82,16 @@ fun nodeNameToString(node: Node): Name {
     }
 }
 
+/** Returns the depth of a Node based on its name */
+fun StringToDepth(name: String): Int {
+    return when (name) {
+        "value" -> 1
+        "derefvalue" -> 2
+        "derefderefvalue" -> 3
+        else -> 0
+    }
+}
+
 /**
  * Resolve a MemberExpression as long as it's base no longer is a MemberExpression itself. Returns
  * the base a Name that identifies the access
@@ -204,9 +214,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
         var finalState = lattice.iterateEOG(node.nextEOGEdges, startState, ::transfer)
 
-        /* Store function summary for this FunctionDeclaration. */
-        finalState = storeFunctionSummary(lattice, node, finalState)
-
         for ((key, value) in finalState.generalState) {
             // All nodes in the state get new memoryValues, Expressions and Declarations
             // additionally get new MemoryAddresses
@@ -215,18 +222,19 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             newPrevDFGs.forEach { prev ->
                 val entry = edgePropertiesMap[Pair(key, prev)]
                 var context: CallingContext? = null
-                val granularity =
-                    when (entry) {
-                        is Granularity -> entry
-                        is CallingContext -> {
-                            context = entry
-                            default()
-                        }
-                        else -> {
-                            default()
-                        }
-                    }
-                if (context == null) key.prevDFGEdges += Dataflow(prev, key, granularity)
+                var granularity = default()
+                var functionSummary = false
+
+                // the entry in the edgePropertiesMap can be a lot of things. A granularity, a
+                // callingcontext, or a boolean indicating if this is a functionSummary edge or not
+                when (entry) {
+                    is Granularity -> granularity = entry
+                    is CallingContext -> context = entry
+                    is Boolean -> functionSummary = entry
+                }
+                if (context == null)
+                    key.prevDFGEdges += Dataflow(prev, key, granularity, functionSummary)
+                // TODO: add functionSummary flag for contextSensitive DFs
                 else key.prevDFGEdges.addContextSensitive(prev, granularity, context)
             }
             if (newMemoryAddresses.isNotEmpty()) {
@@ -245,14 +253,12 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 }
             }
         }
+
+        /* Store function summary for this FunctionDeclaration. */
+        storeFunctionSummary(node, finalState)
     }
 
-    private fun storeFunctionSummary(
-        lattice: PointsToState,
-        node: FunctionDeclaration,
-        doubleState: PointsToStateElement,
-    ): PointsToStateElement {
-        var doubleState = doubleState
+    private fun storeFunctionSummary(node: FunctionDeclaration, doubleState: PointsToStateElement) {
         node.parameters.forEach { param ->
             // Collect all addresses of the parameter that we can use as index to look up possible
             // new values
@@ -288,13 +294,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     // If so, store the last write for the parameter in the FunctionSummary
                     .forEach { (value, subAccessName) ->
                         // Extract the value depth from the value's localName
-                        val srcValueDepth =
-                            when (value.name.localName) {
-                                "value" -> 1
-                                "derefvalue" -> 2
-                                "derefderefvalue" -> 3
-                                else -> 0
-                            }
+                        val srcValueDepth = StringToDepth(value.name.localName)
+                        // Store the information in the functionSummary
                         node.functionSummary
                             .computeIfAbsent(param) { mutableSetOf() }
                             .add(
@@ -305,29 +306,56 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                     subAccessName,
                                 )
                             )
-                        var pmv = param.memoryValue
+                        // Draw a DFG-Edge from the ParameterMemoryValue to the value
+                        // TODO: I don't think we actually  need to do that
+                        /*                        var pmv = param.memoryValue
                         for (i in 0..<dstValueDepth - 1) {
                             pmv = pmv?.memoryValue
                         }
                         if (pmv != null) {
-                            doubleState =
-                                lattice.push(
-                                    doubleState,
-                                    pmv,
-                                    StateEntryElement(
-                                        PowersetLattice.Element(),
-                                        PowersetLattice.Element(value),
-                                    ),
-                                )
-                            // If we only wrote to a field, we add an entry to the edgePropertiesMap
-                            // to mark it as partial Dataflow
-                            if (subAccessName.isNotEmpty()) {
-                                edgePropertiesMap[Pair(pmv, value)] =
+                            val granularity =
+                                if (subAccessName.isNotEmpty()) {
                                     PartialDataflowGranularity(
                                         FieldDeclaration().apply { name = Name(subAccessName) }
                                     )
+                                } else default()
+                                                        pmv.prevDFGEdges += Dataflow(value, pmv,
+                             granularity)
+                        }*/
+
+                        // Check if the value is influenced by a Parameter and if so, add this
+                        // information to the functionSummary
+                        stateEntries
+                            .first()
+                            .first
+                            .followDFGEdgesUntilHit(
+                                collectFailedPaths = false,
+                                direction = Backward(GraphToFollow.DFG),
+                                sensitivities = OnlyFullDFG + FieldSensitive + ContextSensitive,
+                                scope = Intraprocedural(),
+                                predicate = { it is ParameterMemoryValue },
+                            )
+                            .fulfilled
+                            .map { it.last() }
+                            .toIdentitySet()
+                            .forEach { sourceParamValue ->
+                                val matchingDeclarations =
+                                    node.parameters.filter {
+                                        it.name == sourceParamValue.name.parent
+                                    }
+                                if (matchingDeclarations.size != 1) TODO()
+                                node.functionSummary
+                                    .computeIfAbsent(param) { mutableSetOf() }
+                                    .add(
+                                        FunctionDeclaration.FSEntry(
+                                            dstValueDepth,
+                                            matchingDeclarations.first(),
+                                            StringToDepth(sourceParamValue.name.localName),
+                                            subAccessName,
+                                            true,
+                                        )
+                                    )
                             }
-                        }
                     }
             }
         }
@@ -335,8 +363,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         if (node.functionSummary.isEmpty()) {
             node.functionSummary.computeIfAbsent(ReturnStatement()) { mutableSetOf() }
         }
-
-        return doubleState
     }
 
     protected fun transfer(
@@ -492,7 +518,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         doubleState: PointsToStateElement,
     ): PointsToStateElement {
         var doubleState = doubleState
-        val mapDstToSrc = mutableMapOf<Node, IdentitySet<Node>>()
+        val mapDstToSrc = mutableMapOf<Node, IdentitySet<Pair<Node, Boolean>>>()
 
         // First, check if there are missing FunctionSummaries
         /*currentNode.language?.let { language ->
@@ -566,17 +592,16 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 if (argument != null) {
                     fsEntries
                         .sortedBy { it.destValueDepth }
-                        .forEach { (dstValueDepth, srcNode, srcValueDepth, subAccessName) ->
+                        .forEach { (dstValueDepth, srcNode, srcValueDepth, subAccessName, shortFS)
+                            ->
                             val destAddrDepth = dstValueDepth - 1
                             // Is the destAddrDepth > 2? In this case, the DeclarationState
                             // might be outdated. So check in the mapDstToSrc for updates
                             val updatedAddresses =
                                 mapDstToSrc.entries
-                                    .filter {
-                                        it.key in /*doubleState.getAddresses(argument)*/
-                                            doubleState.getValues(argument)
-                                    }
+                                    .filter { it.key in doubleState.getValues(argument) }
                                     .flatMap { it.value }
+                                    .map { it.first }
                                     .toIdentitySet()
                             val destination =
                                 if (dstValueDepth > 2 && updatedAddresses.isNotEmpty()) {
@@ -607,28 +632,58 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                     }
                                 }
                             when (srcNode) {
-                                is ParameterDeclaration ->
-                                    // Add the (dereferenced) value of the respective argument in
+                                is ParameterDeclaration -> {
+                                    // Add the (dereferenced) value of the respective argument
+                                    // in
                                     // the CallExpression
                                     if (srcNode.argumentIndex < currentNode.arguments.size) {
-                                        doubleState
-                                            .getNestedValues(
-                                                currentNode.arguments[srcNode.argumentIndex],
-                                                srcValueDepth,
-                                                fetchFields = true,
-                                            )
-                                            .forEach { value ->
-                                                destination.forEach { d ->
-                                                    mapDstToSrc.computeIfAbsent(d) {
-                                                        identitySetOf<Node>()
-                                                    } += value
-                                                }
+                                        // If this is a short FunctionSummary, we don't
+                                        // update the state, we additionally update the
+                                        // generalState to draw the additional DFG Edges
+                                        if (shortFS) {
+                                            doubleState =
+                                                lattice.push(
+                                                    doubleState,
+                                                    argument,
+                                                    StateEntryElement(
+                                                        PowersetLattice.Element(),
+                                                        PowersetLattice.Element(
+                                                            currentNode.arguments[
+                                                                    srcNode.argumentIndex]
+                                                        ),
+                                                    ),
+                                                )
+                                            edgePropertiesMap[
+                                                Pair(
+                                                    argument,
+                                                    currentNode.arguments[srcNode.argumentIndex],
+                                                )] = true
+                                        }
+                                        val values =
+                                            if (!shortFS)
+                                                doubleState.getNestedValues(
+                                                    currentNode.arguments[srcNode.argumentIndex],
+                                                    srcValueDepth,
+                                                    fetchFields = true,
+                                                )
+                                            else
+                                                identitySetOf(
+                                                    currentNode.arguments[param.argumentIndex]
+                                                )
+                                        values.forEach { value ->
+                                            destination.forEach { d ->
+                                                mapDstToSrc.computeIfAbsent(d) {
+                                                    identitySetOf()
+                                                } += Pair(value, shortFS)
                                             }
+                                        }
                                     }
+                                }
+
                                 is ParameterMemoryValue -> {
                                     // In case the FunctionSummary says that we have to use the
-                                    // dereferenced value here, we look up the argument, dereference
-                                    // it, and then add it to the sources
+                                    // dereferenced value here, we look up the argument,
+                                    // dereference it, and then add it to the sources
                                     currentNode.invokes
                                         .flatMap { it.parameters }
                                         .filter { it.name == srcNode.name.parent }
@@ -640,36 +695,43 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                                     mapDstToSrc.computeIfAbsent(d) {
                                                         identitySetOf()
                                                     } +=
-                                                        doubleState.getNestedValues(
-                                                            arg,
-                                                            srcValueDepth,
-                                                        )
+                                                        doubleState
+                                                            .getNestedValues(arg, srcValueDepth)
+                                                            .map { Pair(it, false) }
                                                 }
                                             }
                                         }
                                     //                                    }
                                 }
+
                                 is MemoryAddress -> {
                                     destination.forEach { d ->
                                         mapDstToSrc.computeIfAbsent(d) { identitySetOf() } +=
-                                            srcNode
+                                            Pair(srcNode, false)
                                     }
                                 }
+
                                 else -> {
                                     destination.forEach { d ->
-                                        mapDstToSrc.computeIfAbsent(d) { identitySetOf<Node>() } +=
-                                            if (srcValueDepth == 0) identitySetOf(srcNode)
-                                            else doubleState.getNestedValues(srcNode, srcValueDepth)
+                                        mapDstToSrc.computeIfAbsent(d) { identitySetOf() } +=
+                                            if (srcValueDepth == 0)
+                                                identitySetOf(Pair(srcNode, false))
+                                            else
+                                                doubleState
+                                                    .getNestedValues(srcNode, srcValueDepth)
+                                                    .map { Pair(it, false) }
                                     }
                                 }
                             }
+                            // }
                         }
                 }
             }
             i++
         }
 
-        mapDstToSrc.forEach { (dst, src) ->
+        mapDstToSrc.forEach { (dst, values) ->
+            val src = values.map { it.first }.toIdentitySet()
             // If the values of the destination are the same as the destination (e.g. if dst is a
             // CallExpression), we also add destinations to update the generalState, otherwise, the
             // destinationAddresses for the DeclarationState are enough
@@ -679,10 +741,16 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     doubleState.updateValues(lattice, src, dstValues, identitySetOf(dst))
                 else doubleState.updateValues(lattice, src, identitySetOf(), identitySetOf(dst))
 
-            // If we draw a DFG-Edge from this CallExpression, it should be a CallingContextOut
-            //            if (dst == currentNode) {
-            src.map { s -> edgePropertiesMap[Pair(dst, s)] = CallingContextOut(currentNode) }
-            //            }
+            // If we draw a DFG-Edge from this CallExpression, it should be either a
+            // CallingContextOut or a shortFunctionSummary
+            values.forEach { v ->
+                if (v.second)
+                // a shortFunctionSummary
+                edgePropertiesMap[Pair(dst, v.first)] = true
+                else
+                // the callingContextOut
+                edgePropertiesMap[Pair(dst, v.first)] = CallingContextOut(currentNode)
+            }
         }
 
         return doubleState
@@ -786,13 +854,13 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     ),
                 )
 
-            // When we stored previoulsy that the address was written to by a function, we use this
-            // information now and attach the callingContext to the actual read
+            // When we stored previously that the address was written to by a function, we use this
+            // information now and attach the edge property to the actual read
             addresses.forEach { addr ->
                 values.forEach { value ->
-                    val cc = edgePropertiesMap[Pair(addr, value)]
-                    if (cc is CallingContext) {
-                        edgePropertiesMap[Pair(currentNode, value)] = cc
+                    val property = edgePropertiesMap[Pair(addr, value)]
+                    if (property != null) {
+                        edgePropertiesMap[Pair(currentNode, value)] = property
                     }
                 }
             }

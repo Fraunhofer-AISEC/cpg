@@ -408,3 +408,26 @@ int testUnaryOp() {
 
   printf("%d\n", i);
 }
+
+int add(int* a, int b) {
+  *a = *a + b;
+}
+
+int testShortFS() {
+  int i=1;
+  int j=2;
+  int* pi = &i;
+  int* pj = &j;
+
+  add(pi, 0);
+
+  printf("%d %d\n", i, j);
+
+  add(pi, j);
+
+  printf("%d %d\n", i, j);
+
+  add(pi, *pj);
+
+  printf("%d %d\n", i, j);
+}

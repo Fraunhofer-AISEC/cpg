@@ -197,12 +197,20 @@ abstract class Node :
      * [de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity].
      */
     @DoNotPersist
-    @PopulatedByPass(DFGPass::class, PointsToPass::class, ControlFlowSensitiveDFGPass::class)
+    @PopulatedByPass(DFGPass::class, PointsToPass::class)
     val prevFullDFG: List<Node>
         get() {
             return prevDFGEdges
-                .filter { it.granularity is FullDataflowGranularity }
+                .filter { it.granularity is FullDataflowGranularity && !it.functionSummary }
                 .map { it.start }
+        }
+
+    /** Virtual property for accessing [nextDFGEdges] that are [functionSummary]-edges. */
+    @DoNotPersist
+    @PopulatedByPass(DFGPass::class, PointsToPass::class)
+    val prevFunctionSummaryDFG: List<Node>
+        get() {
+            return prevDFGEdges.filter { it.functionSummary }.map { it.start }
         }
 
     /** Outgoing data flow edges */

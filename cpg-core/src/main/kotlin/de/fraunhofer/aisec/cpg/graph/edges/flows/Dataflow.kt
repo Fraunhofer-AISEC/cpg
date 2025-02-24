@@ -137,6 +137,7 @@ open class Dataflow(
     @Convert(DataflowGranularityConverter::class)
     @JsonIgnore
     var granularity: Granularity = default(),
+    val functionSummary: Boolean = false,
 ) : Edge<Node>(start, end) {
     override var labels = setOf("DFG")
 

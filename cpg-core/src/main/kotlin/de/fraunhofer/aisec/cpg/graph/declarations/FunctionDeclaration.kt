@@ -108,6 +108,9 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder, EOGStart
         val srcNode: Node,
         val srcValueDepth: Int = 1, // 0: Address, 1: Value, 2: DerefValue, 3:
         val subAccessName: String,
+        // We use shortFunctionSummaries to draw "short" DFG-Edges that allow us to follow DFG Paths
+        // without going into functions. Not as detailed, but faster
+        val shortFunctionSummary: Boolean = false,
     )
 
     var functionSummary = mutableMapOf<Node, MutableSet<FSEntry>>()
