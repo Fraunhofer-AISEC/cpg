@@ -297,7 +297,7 @@ interface HasOperatorOverloading : LanguageTrait {
  */
 interface HasBuiltins : LanguageTrait {
     /** Returns the namespace under which builtins exist. */
-    fun builtinsNamespace(): Name
+    val builtinsNamespace: Name
 }
 
 /**
