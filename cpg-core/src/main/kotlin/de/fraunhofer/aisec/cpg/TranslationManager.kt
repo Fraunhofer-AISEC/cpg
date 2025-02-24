@@ -274,7 +274,7 @@ private constructor(
                     ctx.config.includePaths.firstNotNullOf { eSource.relativeToOrNull(it.toFile()) }
                 usedLanguages.filterIsInstance<HasBuiltins>().any {
                     (it as Language<*>)
-                        .nameToLanguageFiles(it.builtinsNamespace())
+                        .nameToLanguageFiles(it.builtinsNamespace)
                         .contains(relFile)
                 }
             }

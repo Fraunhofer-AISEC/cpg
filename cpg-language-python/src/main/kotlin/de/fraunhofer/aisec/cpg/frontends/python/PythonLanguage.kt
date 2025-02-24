@@ -52,6 +52,7 @@ class PythonLanguage :
     HasDefaultArguments {
     override val fileExtensions = listOf("py", "pyi")
     override val namespaceDelimiter = "."
+    override val builtinsNamespace: Name = Name("builtins")
 
     @Transient
     override val frontend: KClass<out PythonLanguageFrontend> = PythonLanguageFrontend::class
@@ -233,9 +234,6 @@ class PythonLanguage :
         return super.tryCast(type, targetType, hint, targetHint)
     }
 
-    override fun builtinsNamespace(): Name {
-        return Name("builtins")
-    }
 
     /**
      * Returns the files that can represent the given name. This includes all possible file
