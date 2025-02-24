@@ -406,26 +406,27 @@ object Util {
 
             // Handle variadic parameters (e.g., **kwargs)
             if (param.isVariadic) {
-                // If it is the last variadic, it is **kwargs; otherwise it is *args
                 val remainingEdges = argumentEdges.drop(argumentIndex)
-                // Last variadic is **kwargs, earlier is *args
-                val isKeywordVariadic = functionParameters.lastOrNull { it.isVariadic } == param
-                remainingEdges.forEach { edge ->
-                    if (isKeywordVariadic) {
-                        // **kwargs: Named args
-                        param.prevDFGEdges.addContextSensitive(
-                            edge.end,
-                            callingContext = CallingContextIn(call),
-                        )
-                        argumentIndex++
-                    } else {
-                        // *args: Positional args
-                        if (edge.name == null) {
+                if (remainingEdges.isNotEmpty()) {
+                    // If it is the last variadic, it is **kwargs; otherwise it is *args
+                    val isKeywordVariadic = functionParameters.lastOrNull { it.isVariadic } == param
+                    remainingEdges.forEach { edge ->
+                        if (isKeywordVariadic) {
+                            // **kwargs: Named args
                             param.prevDFGEdges.addContextSensitive(
                                 edge.end,
                                 callingContext = CallingContextIn(call),
                             )
                             argumentIndex++
+                        } else {
+                            // *args: Positional args
+                            if (edge.name == null) {
+                                param.prevDFGEdges.addContextSensitive(
+                                    edge.end,
+                                    callingContext = CallingContextIn(call),
+                                )
+                                argumentIndex++
+                            }
                         }
                     }
                 }
@@ -441,7 +442,8 @@ object Util {
                 argumentIndex++
                 continue // Move to next parameter
             }
-            // Handle default arguments
+
+            // Handle default parameters when not explicitly provided
             val default = param.default
             if (default != null) {
                 param.prevDFGEdges.addContextSensitive(
