@@ -697,9 +697,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         /* For UnaryOperators, we have to update the value if it's a ++ or -- operator
          */
         // TODO: Check out cases where the input is no Reference
-        if (currentNode.operatorCode in (listOf("++", "--")) && currentNode.input is Reference) {
+        if (currentNode.operatorCode in listOf("++", "--") && currentNode.input is Reference) {
             val addresses = doubleState.getAddresses(currentNode)
-            val newDeclState = doubleState.declarationsState.toMutableMap()
+            val newDeclState = doubleState.declarationsState
             /* Update the declarationState for the refersTo */
             doubleState.getAddresses(currentNode.input).forEach { addr ->
                 newDeclState.replace(
