@@ -55,6 +55,7 @@ internal class ScopeManagerTest : BaseTest() {
             val func1 = frontend1.newFunctionDeclaration("func1")
             s1.addDeclaration(func1)
             s1.leaveScope(namespaceA1)
+            s1.addDeclaration(namespaceA1)
 
             val s2 = ScopeManager()
             val frontend2 =
@@ -67,11 +68,10 @@ internal class ScopeManagerTest : BaseTest() {
             val func2 = frontend2.newFunctionDeclaration("func2")
             s2.addDeclaration(func2)
             s2.leaveScope(namespaceA2)
+            s2.addDeclaration(namespaceA2)
 
             // merge the two scopes. this replicates the behaviour of parseParallel
             val final = ScopeManager()
-            val frontend =
-                TestLanguageFrontend("::", TestLanguage(), TranslationContext(config, final, tm))
             final.mergeFrom(listOf(s1, s2))
 
             // in the final scope manager, there should only be one NameScope "A"
@@ -98,9 +98,14 @@ internal class ScopeManagerTest : BaseTest() {
             assertFalse(listOf(s1, s2).map { it.globalScope }.contains(final.globalScope))
 
             // resolve symbol
-            val call =
-                frontend.newCallExpression(frontend.newReference("A::func1"), "A::func1", false)
-            val func = final.lookupSymbolByNodeName(call.callee).firstOrNull()
+            val func =
+                final
+                    .lookupSymbolByName(
+                        name = parseName("A::func1"),
+                        language = language,
+                        startScope = final.globalScope,
+                    )
+                    .firstOrNull()
 
             assertEquals(func1, func)
         }

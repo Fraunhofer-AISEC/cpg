@@ -34,9 +34,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
-import org.junit.jupiter.api.Tag
 
-@Tag("integration")
 class Neo4JTest {
     @Test
     fun testPush() {
@@ -71,17 +69,15 @@ class Neo4JTest {
         val connectCall = result.calls["connect"]
         assertNotNull(connectCall)
 
-        abstract class NetworkingOperation(underlyingNode: Node, concept: Concept<out Operation>) :
+        abstract class NetworkingOperation(underlyingNode: Node, concept: Concept) :
             Operation(underlyingNode = underlyingNode, concept = concept)
-        class Connect(underlyingNode: Node, concept: Concept<out Operation>) :
+        class Connect(underlyingNode: Node, concept: Concept) :
             NetworkingOperation(underlyingNode = underlyingNode, concept = concept)
-        class Networking(underlyingNode: Node) :
-            Concept<NetworkingOperation>(underlyingNode = underlyingNode)
+        class Networking(underlyingNode: Node) : Concept(underlyingNode = underlyingNode)
 
-        abstract class FileOperation(underlyingNode: Node, concept: Concept<out Operation>) :
+        abstract class FileOperation(underlyingNode: Node, concept: Concept) :
             Operation(underlyingNode = underlyingNode, concept = concept)
-        class FileHandling(underlyingNode: Node) :
-            Concept<FileOperation>(underlyingNode = underlyingNode)
+        class FileHandling(underlyingNode: Node) : Concept(underlyingNode = underlyingNode)
 
         val nw = Networking(underlyingNode = tu)
         nw.name = Name("Networking")

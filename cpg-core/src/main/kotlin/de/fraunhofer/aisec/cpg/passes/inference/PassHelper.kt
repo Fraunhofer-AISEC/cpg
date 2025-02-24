@@ -64,9 +64,10 @@ import kotlin.collections.forEach
  * Tries to infer a [NamespaceDeclaration] from a [Name]. This will return `null`, if inference was
  * not possible, or if it was turned off in the [InferenceConfiguration].
  */
-fun Pass<*>.tryNamespaceInference(name: Name, locationHint: Node?): NamespaceDeclaration? {
+fun Pass<*>.tryNamespaceInference(name: Name, source: Node): NamespaceDeclaration? {
     // Determine the scope where we want to start our inference
-    val extractedScope = scopeManager.extractScope(name, location = locationHint?.location)
+    val extractedScope =
+        scopeManager.extractScope(name, language = source.language, location = source.location)
     var scope = extractedScope?.scope
 
     if (scope !is NameScope) {
@@ -79,22 +80,19 @@ fun Pass<*>.tryNamespaceInference(name: Name, locationHint: Node?): NamespaceDec
     // parent record)
     var parentName = name.parent
     if (scope == null && parentName != null) {
-        holder = tryScopeInference(parentName, locationHint)
+        holder = tryScopeInference(parentName, source)
     }
 
-    return (holder ?: scopeManager.globalScope?.astNode)
+    return (holder ?: scopeManager.translationUnitForInference<NamespaceDeclaration>(source))
         ?.startInference(ctx)
-        ?.inferNamespaceDeclaration(name, null, locationHint)
+        ?.inferNamespaceDeclaration(name, null, source)
 }
 
 /**
  * Tries to infer a [RecordDeclaration] from an unresolved [Type]. This will return `null`, if
  * inference was not possible, or if it was turned off in the [InferenceConfiguration].
  */
-internal fun Pass<*>.tryRecordInference(
-    type: Type,
-    locationHint: Node? = null,
-): RecordDeclaration? {
+internal fun Pass<*>.tryRecordInference(type: Type, source: Node): RecordDeclaration? {
     val kind =
         if (type.language is HasStructs) {
             "struct"
@@ -103,7 +101,12 @@ internal fun Pass<*>.tryRecordInference(
         }
     // Determine the scope where we want to start our inference
     val extractedScope =
-        scopeManager.extractScope(type.name, location = locationHint?.location, scope = type.scope)
+        scopeManager.extractScope(
+            type.name,
+            language = source.language,
+            location = source.location,
+            scope = type.scope,
+        )
     var scope = extractedScope?.scope
 
     if (scope !is NameScope) {
@@ -126,13 +129,13 @@ internal fun Pass<*>.tryRecordInference(
     // parent record)
     var parentName = type.name.parent
     if (scope == null && parentName != null) {
-        holder = tryScopeInference(parentName, locationHint)
+        holder = tryScopeInference(parentName, source)
     }
 
     val record =
-        (holder ?: scopeManager.globalScope?.astNode)
+        (holder ?: scopeManager.translationUnitForInference<RecordDeclaration>(source))
             ?.startInference(ctx)
-            ?.inferRecordDeclaration(type, kind, locationHint)
+            ?.inferRecordDeclaration(type, kind, source)
 
     // Update the type's record. Because types are only unique per scope, we potentially need to
     // update multiple type nodes, i.e., all type nodes whose FQN match the inferred record. We only
@@ -176,7 +179,7 @@ internal fun Pass<*>.tryVariableInference(ref: Reference): VariableDeclaration? 
     } else if (ref.name.isQualified()) {
         // For now, we only infer globals at the top-most global level, i.e., no globals in
         // namespaces
-        val extractedScope = scopeManager.extractScope(ref, null)
+        val extractedScope = scopeManager.extractScope(ref, ref.language, null)
         when (val scope = extractedScope?.scope) {
             is NameScope -> {
                 log.warn(
@@ -194,7 +197,10 @@ internal fun Pass<*>.tryVariableInference(ref: Reference): VariableDeclaration? 
     } else if (ref.language is HasGlobalVariables) {
         // We can try to infer a possible global variable (at top-level), if the language
         // supports this
-        scopeManager.globalScope?.astNode?.startInference(this.ctx)?.inferVariableDeclaration(ref)
+        scopeManager
+            .translationUnitForInference<VariableDeclaration>(ref)
+            ?.startInference(this.ctx)
+            ?.inferVariableDeclaration(ref)
     } else {
         // Nothing to infer
         null
@@ -231,7 +237,7 @@ internal fun Pass<*>.tryFieldInference(
     // We access an unknown field of an unknown record. so we need to handle that along the
     // way as well.
     if (record == null) {
-        record = tryRecordInference(targetType, locationHint = ref)
+        record = tryRecordInference(targetType, source = ref)
     }
 
     if (record == null) {
@@ -410,9 +416,7 @@ internal fun Pass<*>.tryMethodInference(
     // other type declarations are already inferred by the type resolver at this stage.
     if (records.isEmpty()) {
         records =
-            listOfNotNull(
-                tryRecordInference(bestGuess?.root ?: call.unknownType(), locationHint = call)
-            )
+            listOfNotNull(tryRecordInference(bestGuess?.root ?: call.unknownType(), source = call))
     }
     records = records.distinct()
 
@@ -428,15 +432,15 @@ internal fun Pass<*>.tryMethodInference(
  * check will be repeated for `java.lang`, until we are finally ready to infer the
  * [RecordDeclaration] `java.lang.System`.
  */
-internal fun Pass<*>.tryScopeInference(scopeName: Name, locationHint: Node?): Declaration? {
+internal fun Pass<*>.tryScopeInference(scopeName: Name, source: Node): Declaration? {
     // At this point, we need to check whether we have any type reference to our scope
     // name. If we have (e.g. it is used in a function parameter, variable, etc.), then we
     // have a high chance that this is actually a parent record and not a namespace
     var parentType = typeManager.lookupResolvedType(scopeName)
     return if (parentType != null) {
-        tryRecordInference(parentType, locationHint = locationHint)
+        tryRecordInference(parentType, source = source)
     } else {
-        tryNamespaceInference(scopeName, locationHint = locationHint)
+        tryNamespaceInference(scopeName, source = source)
     }
 }
 

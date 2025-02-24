@@ -123,18 +123,24 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
             currentTU = fileDeclaration
             scopeManager.resetToGlobal(fileDeclaration)
             val packDecl = context?.packageDeclaration?.orElse(null)
-            var namespaceDeclaration: NamespaceDeclaration? = null
-            if (packDecl != null) {
-                namespaceDeclaration =
-                    newNamespaceDeclaration(packDecl.name.asString(), rawNode = packDecl)
-                scopeManager.addDeclaration(namespaceDeclaration)
-                scopeManager.enterScope(namespaceDeclaration)
-            }
+
+            // We need to create nested namespace so that we have correct symbols on the global
+            // scope
+            val lastNamespace =
+                packDecl?.name?.toString()?.split(language.namespaceDelimiter)?.fold(null) {
+                    previous: NamespaceDeclaration?,
+                    path ->
+                    var fqn = previous?.name.fqn(path)
+
+                    val nsd = newNamespaceDeclaration(fqn, rawNode = packDecl)
+                    scopeManager.addDeclaration(nsd)
+                    scopeManager.enterScope(nsd)
+                    nsd
+                }
 
             for (type in context?.types ?: listOf()) {
                 // handle each type. all declaration in this type will be added by the scope manager
-                // along
-                // the way
+                // along the way
                 val declaration = declarationHandler.handle(type)
                 scopeManager.addDeclaration(declaration)
             }
@@ -153,8 +159,10 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
                     .implicit("import java.lang.*")
             scopeManager.addDeclaration(decl)
 
-            if (namespaceDeclaration != null) {
-                scopeManager.leaveScope(namespaceDeclaration)
+            if (lastNamespace != null) {
+                fileDeclaration.allChildren<NamespaceDeclaration>().reversed().forEach {
+                    scopeManager.leaveScope(it)
+                }
             }
             bench.addMeasurement()
             fileDeclaration

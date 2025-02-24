@@ -229,6 +229,7 @@ class DeclarationTest {
         val ef = main.allChildren<TupleDeclaration> { it.name.toString() == "(e,f)" }.firstOrNull()
         assertNotNull(ef)
         assertIs<CallExpression>(ef.initializer)
+        assertEquals(ef, e.astParent)
 
         // The next two variables are using a short assignment, therefore they do not have an
         // initializer, but we can use the firstAssignment function

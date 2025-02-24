@@ -47,7 +47,7 @@ import org.slf4j.LoggerFactory
  *
  * Language frontends MUST call [enterScope] and [leaveScope] when they encounter nodes that modify
  * the scope and [resetToGlobal] when they first handle a new [TranslationUnitDeclaration].
- * Afterwards the currently valid "stack" of scopes within the tree can be accessed.
+ * Afterward the currently valid "stack" of scopes within the tree can be accessed.
  *
  * If a language frontend encounters a [Declaration] node, it MUST call [addDeclaration], rather
  * than adding the declaration to the node itself. This ensures that all declarations are properly
@@ -72,9 +72,6 @@ class ScopeManager : ScopeProvider {
     /** The currently active scope. */
     var currentScope: Scope? = null
         private set
-
-    /** Represents an alias with the name [to] for the particular name [from]. */
-    data class Alias(var from: Name, var to: Name)
 
     /** True, if the scope manager is currently in a [FunctionScope]. */
     val isInFunction: Boolean
@@ -153,9 +150,8 @@ class ScopeManager : ScopeProvider {
                     existing.astNode = entry.value.astNode
 
                     // now it gets more tricky. we also need to "redirect" the AST nodes in the sub
-                    // scope manager to our
-                    // existing NameScope (currently, they point to their own, invalid copy of the
-                    // NameScope).
+                    // scope manager to our existing NameScope (currently, they point to their own,
+                    // invalid copy of the NameScope).
                     //
                     // The only way to do this, is to filter for the particular
                     // scope (the value of the map) and return the keys (the nodes)
@@ -171,6 +167,8 @@ class ScopeManager : ScopeProvider {
                     nameScopeMap[entry.key] = entry.value
                 }
             }
+
+            // Update global scope for all
 
             // We need to make sure that we do not put the "null" key (aka the global scope) of the
             // individual scope manager into our map, otherwise we would overwrite our merged global
@@ -442,7 +440,12 @@ class ScopeManager : ScopeProvider {
         } else scopeMap[node]
     }
 
-    /** This function looks up scope by its FQN. This only works for [NameScope]s */
+    /**
+     * This function looks up scope by its FQN. This only works for [NameScope]s.
+     *
+     * Note: Beware that this only does a very simple lookup in the scope table and DOES NOT take
+     * into account any eventual aliases that might be active in the current scope.
+     */
     fun lookupScope(fqn: Name): NameScope? {
         return this.nameScopeMap[fqn]
     }
@@ -513,8 +516,12 @@ class ScopeManager : ScopeProvider {
      * @param scope the current scope relevant for the name resolution, e.g. parent of node
      * @return a [ScopeExtraction] object with the scope of node.name and the alias-adjusted name
      */
-    fun extractScope(node: HasNameAndLocation, scope: Scope? = currentScope): ScopeExtraction? {
-        return extractScope(node.name, node.location, scope)
+    fun extractScope(
+        node: HasNameAndLocation,
+        language: Language<*> = node.language,
+        scope: Scope? = currentScope,
+    ): ScopeExtraction? {
+        return extractScope(node.name, language, node.location, scope)
     }
 
     /**
@@ -536,24 +543,20 @@ class ScopeManager : ScopeProvider {
      */
     fun extractScope(
         name: Name,
+        language: Language<*>,
         location: PhysicalLocation? = null,
         scope: Scope? = currentScope,
     ): ScopeExtraction? {
         var n = name
         var s: Scope? = null
+        val scopeName = n.parent
 
         // First, we need to check, whether we have some kind of scoping.
-        if (n.isQualified()) {
+        if (scopeName != null) {
             // We need to check, whether we have an alias for the name's parent in this file
-            n = resolveParentAlias(n, scope)
+            val scope = lookupScopeByName(scopeName, language, scope)
 
-            // extract the scope name, it is usually a name space, but could probably be something
-            // else as well in other languages
-            val scopeName = n.parent
-
-            // this is a scoped call. we need to explicitly jump to that particular scope
-            val nameScope = nameScopeMap[scopeName]
-            if (nameScope == null) {
+            if (scope == null) {
                 Util.warnWithFileLocation(
                     location,
                     LOGGER,
@@ -561,55 +564,73 @@ class ScopeManager : ScopeProvider {
                 )
                 return null
             }
-            s = nameScope
+            s = scope
+            n = adjustNameIfNecessary(scope.name, n.parent, n)
         }
 
         return ScopeExtraction(s, n)
     }
 
     /**
-     * This function resolves a name alias (contained in an import alias) for the [Name.parent] of
-     * the given [Name]. It also does this recursively.
+     * This function looks up a [Scope] by its [name] relative to [startScope]. The reason why this
+     * is necessary is that the [name] could potentially include aliases set by an
+     * [ImportDeclaration] and therefore can not directly be found in the [nameScopeMap].
+     *
+     * It works by splitting the name into its parts and then iteratively looking up the scope for
+     * each part, starting at the "beginning". For example if we have a name `A::B::C`, we first
+     * look up the scope for `A`, then the scope for `B` in the scope of `A`, and finally the scope
+     * for `C`.
+     *
+     * If no scope is found at any point in the chain, `null` is returned.
+     *
+     * @param name the name to look up
+     * @param startScope the scope to start the lookup in
      */
-    fun resolveParentAlias(name: Name, scope: Scope?): Name {
-        if (name.parent == null) {
-            return name
+    fun lookupScopeByName(name: Name, language: Language<*>?, startScope: Scope?): Scope? {
+        val parts = name.splitTo(mutableListOf())
+        var part: Name? = name
+        var scope = startScope
+
+        while (parts.isNotEmpty() && scope != null) {
+            // Take the "last" entry in the list as this is the less specific one. The order of the
+            // split list of the name "A::B::C" is ["A::B::C", "A::B", "A"]. We want to process them
+            // in reverse order ("A", "A::B", "A::B::C").
+            part = parts.removeLast()
+
+            // We need to look for everything that declares some sort of type or introduces a type
+            // alias. We need to map the declaration to a scope and then hope that its unique. We
+            // need to do it in this order because there can be multiple declarations of the same
+            // namespace (in different files), but they all (should) point to the same scope.
+            scope =
+                scope
+                    .lookupSymbol(part.localName, languageOnly = language) {
+                        it is NamespaceDeclaration ||
+                            it is RecordDeclaration ||
+                            it is TypedefDeclaration
+                    }
+                    .map {
+                        // If it is a typedef, we need to use the type's name instead of the
+                        // declaration's name. Otherwise, we just take the name of the declaration
+                        // to look up the corresponding scope.
+                        nameScopeMap[
+                            if (it is TypedefDeclaration) {
+                                it.type.name
+                            } else {
+                                it.name
+                            }]
+                    }
+                    .toSet()
+                    .singleOrNull()
         }
 
-        val parentName = resolveParentAlias(name.parent, scope)
-
-        val newName = adjustNameIfNecessary(parentName, name.parent, name)
-
-        // Look for an alias in the current scope. This is also resolves partial FQNs to their full
-        // FQN
-        var newScope =
-            scope
-                ?.lookupSymbol(parentName.localName) {
-                    it is NamespaceDeclaration || it is RecordDeclaration
-                }
-                ?.map { nameScopeMap[it.name] }
-                ?.toSet()
-                ?.singleOrNull()
-        if (newScope != null) {
-            // This is probably an already resolved alias so, we take this one
-            return adjustNameIfNecessary(newScope.name, parentName, newName)
-        }
-
-        // Some special handling of typedefs; this should somehow be merged with the above but not
-        // exactly sure how. The issue is that we cannot take the "name" of the typedef declaration,
-        // but we rather want its original type name.
-        // TODO: This really needs to be handled better somehow, maybe a common interface for
-        //  typedefs, namespaces and records that return the correct name?
-        val decl =
-            scope?.lookupSymbol(parentName.localName)?.singleOrNull { it is TypedefDeclaration }
-        if ((decl as? TypedefDeclaration) != null) {
-            return adjustNameIfNecessary(decl.type.name, parentName, newName)
-        }
-
-        return newName
+        return scope
     }
 
-    private fun adjustNameIfNecessary(newParentName: Name, oldParentName: Name, name: Name): Name =
+    private fun adjustNameIfNecessary(
+        newParentName: Name?,
+        oldParentName: Name?,
+        name: Name,
+    ): Name =
         if (newParentName != oldParentName) {
             Name(name.localName, newParentName, delimiter = name.delimiter)
         } else {
@@ -651,7 +672,7 @@ class ScopeManager : ScopeProvider {
      *
      * @return the declaration, or null if it does not exist
      */
-    fun getRecordForName(name: Name, language: Language<*>?): RecordDeclaration? {
+    fun getRecordForName(name: Name, language: Language<*>): RecordDeclaration? {
         return lookupSymbolByName(name, language)
             .filterIsInstance<RecordDeclaration>()
             .singleOrNull()
@@ -761,12 +782,12 @@ class ScopeManager : ScopeProvider {
      */
     fun lookupSymbolByName(
         name: Name,
-        language: Language<*>?,
+        language: Language<*>,
         location: PhysicalLocation? = null,
         startScope: Scope? = currentScope,
         predicate: ((Declaration) -> Boolean)? = null,
     ): List<Declaration> {
-        val extractedScope = extractScope(name, location, startScope)
+        val extractedScope = extractScope(name, language, location, startScope)
         val scope: Scope?
         val n: Name
         if (extractedScope == null) {
@@ -825,7 +846,7 @@ class ScopeManager : ScopeProvider {
      */
     fun lookupTypeSymbolByName(
         name: Name,
-        language: Language<*>?,
+        language: Language<*>,
         startScope: Scope?,
     ): DeclaresType? {
         var symbols =
@@ -846,6 +867,27 @@ class ScopeManager : ScopeProvider {
         }
 
         return symbols.singleOrNull()
+    }
+
+    /**
+     * Returns the [TranslationUnitDeclaration] that should be used for inference, especially for
+     * global declarations.
+     *
+     * @param TypeToInfer the type of the node that should be inferred
+     * @param source the source that was responsible for the inference
+     */
+    fun <TypeToInfer : Node> translationUnitForInference(
+        source: Node
+    ): TranslationUnitDeclaration? {
+        // TODO(oxisto): This workaround is needed because it seems that not all types have a proper
+        //  context :(. In this case we need to fall back to the global scope's astNode, which can
+        // be
+        //  error-prone in a multi-language scenario.
+        return if (source.ctx == null) {
+            globalScope?.astNode as? TranslationUnitDeclaration
+        } else {
+            source.language.translationUnitForInference<TypeToInfer>(source)
+        }
     }
 }
 

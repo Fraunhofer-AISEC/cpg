@@ -43,9 +43,10 @@ dependencies {
     // jep for python support
     implementation(libs.jep)
 
-    // the cpg-analysis project helps supporting a dynamically invoked language
+    // the cpg-analysis project helps to support a dynamically invoked language
     implementation(projects.cpgAnalysis)
 
     // to evaluate some test cases
     testImplementation(projects.cpgAnalysis)
+    integrationTestImplementation(projects.cpgAnalysis)
 }

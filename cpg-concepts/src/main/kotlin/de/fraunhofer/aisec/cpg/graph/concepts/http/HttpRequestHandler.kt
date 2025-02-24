@@ -34,17 +34,12 @@ class HttpRequestHandler(
     underlyingNode: Node,
     val basePath: String,
     val endpoints: MutableList<HttpEndpoint>,
-) : Concept<HttpRequestHandlerOperation>(underlyingNode = underlyingNode)
+) : Concept(underlyingNode = underlyingNode)
 
 /** Base class for Http operations. */
-abstract class HttpRequestHandlerOperation(
-    underlyingNode: Node,
-    concept: Concept<HttpRequestHandlerOperation>,
-) : Operation(underlyingNode, concept) {}
+abstract class HttpRequestHandlerOperation(underlyingNode: Node, concept: Concept) :
+    Operation(underlyingNode, concept) {}
 
 /** Registers an [HttpEndpoint]. */
-class RegisterHttpEndpoint(
-    underlyingNode: Node,
-    concept: Concept<HttpRequestHandlerOperation>,
-    val httpEndpoint: HttpEndpoint,
-) : HttpRequestHandlerOperation(underlyingNode, concept)
+class RegisterHttpEndpoint(underlyingNode: Node, concept: Concept, val httpEndpoint: HttpEndpoint) :
+    HttpRequestHandlerOperation(underlyingNode, concept)
