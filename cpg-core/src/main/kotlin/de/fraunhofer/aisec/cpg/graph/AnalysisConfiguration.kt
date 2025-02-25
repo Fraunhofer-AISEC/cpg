@@ -245,7 +245,7 @@ class Forward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) {
                             scope = scope,
                             sensitivities = sensitivities,
                             nextStep = { it.nextEOGEdges },
-                            nodeStart = { it.start },
+                            nodeStart = { it.end },
                         )
                     } else if (currentNode is CallExpression && currentNode.invokes.isNotEmpty()) {
                         // Enter the functions/methods which are/can be invoked here
