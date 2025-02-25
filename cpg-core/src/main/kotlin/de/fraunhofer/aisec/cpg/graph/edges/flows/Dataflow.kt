@@ -90,6 +90,16 @@ class IndexedDataflowGranularity(
     partialTarget: Int
 ) : PartialDataflowGranularity<Int>(partialTarget)
 
+/**
+ * This dataflow granularity denotes that not the "whole" object is flowing from [Dataflow.start] to
+ * [Dataflow.end] but only parts of it, where the part is identified by a (constant) String. Common
+ * examples include access to map entries or similar.
+ */
+class StringIndexedDataflowGranularity(
+    /** The index that is affected by this partial dataflow. */
+    partialTarget: String
+) : PartialDataflowGranularity<String>(partialTarget)
+
 /** Creates a new [FullDataflowGranularity]. */
 fun full(): Granularity {
     return FullDataflowGranularity
@@ -121,6 +131,14 @@ fun <T> partial(identifier: T): PartialDataflowGranularity<T> {
  */
 fun indexed(idx: Int): IndexedDataflowGranularity {
     return IndexedDataflowGranularity(idx)
+}
+
+/**
+ * Creates a new [IndexedDataflowGranularity]. The [idx] is the index that is used for the partial
+ * dataflow. An example is the access to a map entry.
+ */
+fun indexed(idx: String): StringIndexedDataflowGranularity {
+    return StringIndexedDataflowGranularity(idx)
 }
 
 /**
