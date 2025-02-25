@@ -141,7 +141,8 @@ private constructor(
         val usedFrontends = mutableSetOf<LanguageFrontend<*, *>>()
         val usedLanguages = mutableSetOf<Language<*>>()
 
-        // If loadIncludes is active, the files stored in the include paths are made available for conditional analysis
+        // If loadIncludes is active, the files stored in the include paths are made available for
+        // conditional analysis
         // by providing them to the frontends over the [TranslationContext.additionalSources] list.
         if (ctx.config.loadIncludes) {
             ctx.config.includePaths.forEach {
@@ -267,18 +268,10 @@ private constructor(
         // Adds all languages provided as additional sources that may be relevant in the main code
         usedLanguages.addAll(ctx.additionalSources.mapNotNull { it.language }.toSet())
 
-        ctx.additionalSources
-            .firstOrNull { eSource ->
-                val relFile =
-                    ctx.config.includePaths.firstNotNullOf { eSource.relativeToOrNull(it.toFile()) }
-                usedLanguages.filterIsInstance<HasBuiltins>().any {
-                    (it as Language<*>).nameToLanguageFiles(it.builtinsNamespace).contains(relFile)
-                }
-            }
-            ?.let { ctx.importedSources.add(it) }
-
-        // A set of processed files from [TranslationContext.additionalSources] that is used as negative to the
-        // worklist in ctx.importedSources it is used to filter out files that were already processed and to
+        // A set of processed files from [TranslationContext.additionalSources] that is used as
+        // negative to the
+        // worklist in ctx.importedSources it is used to filter out files that were already
+        // processed and to
         // detect if new files were analyzed.
         val processedAdditionalSources: MutableList<File> = mutableListOf()
 
