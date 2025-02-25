@@ -45,7 +45,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.passes.ResolveCallExpressionAmbiguityPass
 import de.fraunhofer.aisec.cpg.passes.ResolveMemberExpressionAmbiguityPass
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
-import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import kotlin.reflect.KClass
 
 /**
@@ -306,7 +305,7 @@ interface HasOperatorOverloading : LanguageTrait {
  */
 interface HasBuiltins : LanguageTrait {
     /** Returns the namespace under which builtins exist. */
-    @DoNotPersist val builtinsNamespace: Name
+    val builtinsNamespace: Name
 }
 
 /**
