@@ -39,7 +39,7 @@ import de.fraunhofer.aisec.cpg.passes.concepts.ConceptPass
 /** A pass that fills the [EntryPoint] concept into the CPG. */
 class CXXEntryPointsPass(ctx: TranslationContext) : ConceptPass(ctx) {
 
-    override fun handleNode(node: Node?, tu: TranslationUnitDeclaration) {
+    override fun handleNode(node: Node, tu: TranslationUnitDeclaration) {
         when (node) {
             is FunctionDeclaration -> handleFunctionDeclaration(node, tu)
         }
