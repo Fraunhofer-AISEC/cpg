@@ -239,9 +239,19 @@ class PythonLanguage :
      * extensions and the name plus the `__init__` identifier, as this is the name for declaration
      * files if the namespace has sub-namespaces.
      */
-    override fun nameToLanguageFiles(name: Name): Set<File> {
-        val filesForNamespace = super.nameToLanguageFiles(name).toMutableSet()
-        filesForNamespace.addAll(super.nameToLanguageFiles(Name(IDENTIFIER_INIT, name)))
+    fun nameToLanguageFiles(name: Name): Set<File> {
+        val filesForNamespace =
+            fileExtensions
+                .flatMap { extension ->
+                    setOf(name, Name(IDENTIFIER_INIT, name)).map {
+                        File(
+                            it.toString().replace(language.namespaceDelimiter, File.separator) +
+                                "." +
+                                extension
+                        )
+                    }
+                }
+                .toMutableSet()
         return filesForNamespace
     }
 

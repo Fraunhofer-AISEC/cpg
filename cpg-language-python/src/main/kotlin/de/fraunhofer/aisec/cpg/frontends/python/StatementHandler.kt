@@ -670,7 +670,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                         ctx.config.includePaths.firstNotNullOf {
                             eSource.relativeToOrNull(it.toFile())
                         }
-                    language.nameToLanguageFiles(currentName).contains(relFile)
+                    (language as PythonLanguage).nameToLanguageFiles(currentName).contains(relFile)
                 }
                 ?.let { ctx.importedSources += it }
             currentName = currentName.parent
