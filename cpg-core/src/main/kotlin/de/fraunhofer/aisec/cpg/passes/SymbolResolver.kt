@@ -190,9 +190,10 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
      *   once the EOG reaches the appropriate [CallExpression] (which should actually be just be the
      *   next EOG node).
      */
-    protected open fun handleReference(currentClass: RecordDeclaration?, ref: Reference) {
+    protected open fun handleReference(ref: Reference) {
         val language = ref.language
         val helperType = ref.resolutionHelper?.type
+        val record = scopeManager.currentRecord
 
         // Ignore references to anonymous identifiers, if the language supports it (e.g., the _
         // identifier in Go)
@@ -241,10 +242,9 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             language is HasImplicitReceiver &&
                 candidates.isEmpty() &&
                 !ref.name.isQualified() &&
-                currentClass != null
+                record != null
         ) {
-            candidates =
-                resolveMemberByName(ref.name.localName, setOf(currentClass.toType())).toSet()
+            candidates = resolveMemberByName(ref.name.localName, setOf(record.toType())).toSet()
         }
 
         // Store the candidates in the reference
@@ -297,31 +297,30 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * This function handles resolving of a [MemberExpression] in the [curClass]. This works similar
-     * to [handleReference]. First, we set the [MemberExpression.candidates] based on
-     * [resolveMemberByName], which internally calls [ScopeManager.lookupSymbolByName] based on the
-     * current class and its parent classes. Then, if we resolve a [MemberCallExpression], we abort
-     * (and later pick up resolving in [handleCallExpression]). In case of a field access, we set
-     * the [MemberExpression.refersTo] based on [Language.bestViableReferenceCandidate].
+     * This function handles resolving of a [MemberExpression] in the [ScopeManager.currentRecord].
+     * This works similar to [handleReference]. First, we set the [MemberExpression.candidates]
+     * based on [resolveMemberByName], which internally calls [ScopeManager.lookupSymbolByName]
+     * based on the current class and its parent classes. Then, if we resolve a
+     * [MemberCallExpression], we abort (and later pick up resolving in [handleCallExpression]). In
+     * case of a field access, we set the [MemberExpression.refersTo] based on
+     * [Language.bestViableReferenceCandidate].
      */
-    protected open fun handleMemberExpression(
-        curClass: RecordDeclaration?,
-        current: MemberExpression,
-    ) {
+    protected open fun handleMemberExpression(current: MemberExpression) {
         // Some locals for easier smart casting
         val base = current.base
         val language = current.language
+        val record = scopeManager.currentRecord
 
         // We need to adjust certain types of the base in case of a "super" expression, and we
         // delegate this to the language. If that is successful, we can continue with regular
         // resolving.
         if (
             language is HasSuperClasses &&
-                curClass != null &&
+                record != null &&
                 base is Reference &&
                 base.name.localName == language.superClassKeyword
         ) {
-            language.handleSuperExpression(current, curClass, scopeManager)
+            language.handleSuperExpression(current, record, scopeManager)
         }
 
         // Handle a possible overloaded operator->. If we find an overloaded operator, this inserts
@@ -392,10 +391,10 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
      * The central entry-point for all symbol-resolving. It dispatches the handling of the node to
      * the appropriate function based on the node type.
      */
-    protected open fun handle(node: Node?, currClass: RecordDeclaration?) {
+    protected open fun handle(node: Node?) {
         when (node) {
-            is MemberExpression -> handleMemberExpression(currClass, node)
-            is Reference -> handleReference(currClass, node)
+            is MemberExpression -> handleMemberExpression(node)
+            is Reference -> handleReference(node)
             is ConstructExpression -> handleConstructExpression(node)
             is CallExpression -> handleCallExpression(node)
             is HasOverloadedOperation -> handleOverloadedOperator(node)

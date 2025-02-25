@@ -63,7 +63,7 @@ class ResolveMemberExpressionAmbiguityPass(ctx: TranslationContext) : Translatio
 
     override fun accept(tu: TranslationUnitDeclaration) {
         walker = SubgraphWalker.ScopedWalker(ctx.scopeManager)
-        walker.registerHandler { _, _, node ->
+        walker.registerHandler { node ->
             when (node) {
                 is MemberExpression -> resolveAmbiguity(node)
             }

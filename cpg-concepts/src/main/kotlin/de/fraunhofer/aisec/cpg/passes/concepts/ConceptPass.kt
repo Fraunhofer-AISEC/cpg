@@ -46,7 +46,7 @@ abstract class ConceptPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
     override fun accept(tu: TranslationUnitDeclaration) {
         ctx.currentComponent = tu.component
         walker = SubgraphWalker.ScopedWalker(ctx.scopeManager)
-        walker.registerHandler { _, _, node -> handleNode(node, tu) }
+        walker.registerHandler { node -> handleNode(node, tu) }
 
         walker.iterate(tu)
     }
@@ -55,7 +55,7 @@ abstract class ConceptPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
      * This function is called for each node in the graph. It needs to be overridden by subclasses
      * to handle the specific node.
      */
-    abstract fun handleNode(node: Node?, tu: TranslationUnitDeclaration)
+    abstract fun handleNode(node: Node, tu: TranslationUnitDeclaration)
 
     /**
      * Gets concept of type [T] for this [TranslationUnitDeclaration] or creates a new one if it
