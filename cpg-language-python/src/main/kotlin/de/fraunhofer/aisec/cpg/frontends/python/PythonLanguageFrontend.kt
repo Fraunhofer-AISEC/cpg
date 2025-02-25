@@ -45,9 +45,7 @@ import java.io.File
 import java.net.URI
 import java.nio.file.Path
 import jep.python.PyObject
-import kotlin.io.path.nameWithoutExtension
-import kotlin.io.path.pathString
-import kotlin.io.path.relativeToOrNull
+import kotlin.io.path.*
 import kotlin.math.min
 
 /**
@@ -333,7 +331,7 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
                 // However, in reality, the symbols are actually available in foo.bar as well as in
                 // foo.bar.__init__, although the latter is practically not used, and therefore we
                 // do not support it because major workarounds would be needed.
-                if (path == "__init__") {
+                if (path == PythonLanguage.IDENTIFIER_INIT) {
                     previous
                 } else {
                     val nsd = newNamespaceDeclaration(fqn, rawNode = pythonASTModule)
@@ -344,7 +342,11 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
                 }
             }
 
-        if (lastNamespace != null) {
+        // THe parsed body is added to the identified namespace it belongs to, or in case such a
+        // namespace does not exist,
+        // e.g. __init__ at root level, the results of the translation are added to the translation
+        // unit.
+        (lastNamespace ?: tud).let {
             for (stmt in pythonASTModule.body) {
                 when (stmt) {
                     // In order to be as compatible as possible with existing languages, we try to
@@ -352,7 +354,7 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
                     is Python.AST.Def -> declarationHandler.handle(stmt)
                     // All other statements are added to the (static) statements block of the
                     // namespace.
-                    else -> lastNamespace.statements += statementHandler.handle(stmt)
+                    else -> it.statements += statementHandler.handle(stmt)
                 }
             }
         }

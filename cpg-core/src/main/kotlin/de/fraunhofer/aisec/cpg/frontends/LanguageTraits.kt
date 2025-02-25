@@ -289,6 +289,18 @@ interface HasOperatorOverloading : LanguageTrait {
 }
 
 /**
+ * A language trait, that specifies that this language has variables and functions that are built
+ * in. For resolution this means that a file may be included into the include paths that contains
+ * the declaration or entire definition of the builtin functions and variables. The file should be
+ * imported unconditionally from the use in import statements, as the contained declarations are
+ * available without explicit importing.
+ */
+interface HasBuiltins : LanguageTrait {
+    /** Returns the namespace under which builtins exist. */
+    val builtinsNamespace: Name
+}
+
+/**
  * Creates a [Pair] of class and operator code used in
  * [HasOperatorOverloading.overloadedOperatorNames].
  */
