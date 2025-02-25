@@ -39,24 +39,16 @@ fun MetadataProvider.newLoggingNode(underlyingNode: Node): LoggingNode {
 
 fun MetadataProvider.newLogOperationNode(
     underlyingNode: Node,
-    level: String,
+    level: LogLevel,
     logger: LoggingNode,
     logArguments: List<Node>,
-): LogOperationNode {
+): LogWriteOperation {
     val node =
-        LogOperationNode(
+        LogWriteOperation(
             underlyingNode = underlyingNode,
             concept = logger,
             logArguments = logArguments,
-            logLevel =
-                when (level) {
-                    "critical" -> LogLevel.CRITICAL
-                    "error" -> LogLevel.ERROR
-                    "warning" -> LogLevel.WARN
-                    "info" -> LogLevel.INFO
-                    "debug" -> LogLevel.DEBUG
-                    else -> LogLevel.UNKNOWN
-                },
+            logLevel = level,
         )
     node.codeAndLocationFrom(underlyingNode)
 
@@ -70,6 +62,8 @@ fun MetadataProvider.newLogOperationNode(
         // cpgArgNode.nextEOG += node
         // node.nextEOG += cpgArgNode
     }
+
+    node.nextDFG += logger
 
     NodeBuilder.log(node)
     return node

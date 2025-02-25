@@ -28,11 +28,10 @@ package de.fraunhofer.aisec.cpg.concepts.logging
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.logging.LogLevel
-import de.fraunhofer.aisec.cpg.graph.concepts.logging.LogOperationNode
+import de.fraunhofer.aisec.cpg.graph.concepts.logging.LogWriteOperation
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.passes.concepts.FileConceptPass
-import de.fraunhofer.aisec.cpg.passes.concepts.LoggingConceptPass
+import de.fraunhofer.aisec.cpg.passes.concepts.PythonLoggingConceptPass
 import de.fraunhofer.aisec.cpg.test.BaseTest
 import de.fraunhofer.aisec.cpg.test.analyze
 import de.fraunhofer.aisec.cpg.test.assertLiteralValue
@@ -58,43 +57,39 @@ class LoggingConceptTest : BaseTest() {
                 usePasses = true,
             ) {
                 it.registerLanguage<PythonLanguage>()
-                it.registerPass<LoggingConceptPass>()
+                it.registerPass<PythonLoggingConceptPass>()
             }
+
         assertNotNull(result)
 
         val loggingNodes = result.conceptNodes
         assertTrue(loggingNodes.isNotEmpty())
 
-        /*
-        MATCH (n) WHERE n:LogOperationNode OR n:LoggingNode
-        RETURN n
-
-        MATCH (l:Literal)-[d:DFG*]->(o)
-        WHERE l.code = "'WARN'"
-        RETURN l,d,o
-        */
         val warnLiteral = result.literals.singleOrNull { it.value.toString() == "WARN" }
-        assertIs<Literal<*>>(
-            warnLiteral
-        ) // TODO why do we need this? should already be covered by the next line
         assertLiteralValue("WARN", warnLiteral)
 
         val logDFG =
             warnLiteral.followNextFullDFGEdgesUntilHit(collectFailedPaths = false) {
-                it is LogOperationNode
+                it is LogWriteOperation
             }
-        assertTrue(logDFG.fulfilled.isNotEmpty())
+        assertTrue(
+            logDFG.fulfilled.isNotEmpty(),
+            "Expected to find a dataflow from the literal \"WARN\" to a logging node.",
+        )
 
         val logOp = logDFG.fulfilled.lastOrNull()?.lastOrNull()
-        assertIs<LogOperationNode>(logOp)
+        assertIs<LogWriteOperation>(logOp)
         assertEquals(LogLevel.WARN, logOp.logLevel)
 
         val getSecretCall = result.calls("get_secret").singleOrNull()
         assertIs<CallExpression>(getSecretCall)
         val nextDFG = getSecretCall.nextDFG
         assertTrue(nextDFG.isNotEmpty())
-        val secretDFG = getSecretCall.followNextFullDFGEdgesUntilHit { it is LogOperationNode }
-        assertTrue(secretDFG.fulfilled.isNotEmpty())
+        val secretDFG = getSecretCall.followNextFullDFGEdgesUntilHit { it is LogWriteOperation }
+        assertTrue(
+            secretDFG.fulfilled.isNotEmpty(),
+            "Expected to find a dataflow from the CallExpression[get_secret] to a logging node.",
+        )
     }
 
     @Test
@@ -110,7 +105,7 @@ class LoggingConceptTest : BaseTest() {
             ) {
                 it.registerLanguage<PythonLanguage>()
 
-                it.registerPass<LoggingConceptPass>()
+                it.registerPass<PythonLoggingConceptPass>()
                 it.registerPass<FileConceptPass>()
             }
         assertNotNull(result)

@@ -25,4 +25,5 @@
  */
 package de.fraunhofer.aisec.cpg.graph.concepts.file
 
+/** Indicates that the node is associated with a "file" concept / operation. */
 interface IsFile

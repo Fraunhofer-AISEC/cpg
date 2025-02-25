@@ -47,7 +47,7 @@ class FileConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
     override fun accept(comp: Component) {
         val walker = SubgraphWalker.ScopedWalker(ctx.scopeManager)
-        walker.registerHandler { _, _, currNode -> handle(currNode) }
+        // TODO walker.registerHandler { _, _, currNode -> handle(currNode) }
 
         for (tu in comp.translationUnits) {
             walker.iterate(tu)
