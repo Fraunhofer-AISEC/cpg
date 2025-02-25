@@ -51,14 +51,14 @@ import kotlin.test.*
 
 class MemoryTest {
     @Test
-    fun testMemoryDelete() {
+    fun testMemoryDeleteFunction() {
         val topLevel = File("src/integrationTest/resources/python")
         val result =
             analyze(listOf(topLevel.resolve("encrypt_with_key.py")), topLevel.toPath(), true) {
                 it.registerLanguage<PythonLanguage>()
             }
         assertNotNull(result)
-        mapNodesToConcepts(result)
+        mapNodesToConcepts(result, true)
 
         val key = result.allChildrenWithOverlays<Secret>().singleOrNull()
         assertNotNull(key)
@@ -106,14 +106,14 @@ class MemoryTest {
     }
 
     @Test
-    fun testMemoryDeleteFail() {
+    fun testMemoryDeleteFailFunction() {
         val topLevel = File("src/integrationTest/resources/python")
         val result =
             analyze(listOf(topLevel.resolve("encrypt_with_key_fail.py")), topLevel.toPath(), true) {
                 it.registerLanguage<PythonLanguage>()
             }
         assertNotNull(result)
-        mapNodesToConcepts(result)
+        mapNodesToConcepts(result, true)
 
         val queryTreeResult =
             result.allExtended<GetSecret>(
@@ -131,10 +131,96 @@ class MemoryTest {
         assertFalse(queryTreeResult.value)
     }
 
-    fun mapNodesToConcepts(result: TranslationResult) {
+    @Test
+    fun testMemoryDeleteCall() {
+        val topLevel = File("src/integrationTest/resources/python")
+        val result =
+            analyze(listOf(topLevel.resolve("encrypt_with_key.py")), topLevel.toPath(), true) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(result)
+        mapNodesToConcepts(result, false)
+
+        val key = result.allChildrenWithOverlays<Secret>().singleOrNull()
+        assertNotNull(key)
+
+        // Key is used in encryption
+        var tree =
+            key.underlyingNode?.let {
+                dataFlow(it) { node -> node.overlayEdges.any { edge -> edge.end is Encrypt } }
+            }
+        assertNotNull(tree)
+        assertEquals(true, tree.value)
+
+        // Tree is deleted in all paths
+        tree =
+            key.underlyingNode?.let {
+                executionPath(
+                    startNode = it,
+                    predicate = { node ->
+                        node.overlayEdges.any { edge -> edge.end is DeAllocate }
+                    },
+                    direction = Forward(GraphToFollow.EOG),
+                    type = Must,
+                    scope = Interprocedural(),
+                    verbose = true,
+                )
+            }
+        assertNotNull(tree)
+        assertEquals(true, tree.value)
+        assertEquals(2, tree.children.size)
+
+        val queryTreeResult =
+            result.allExtended<GetSecret>(
+                null,
+                { secret ->
+                    secret.alwaysFlowsTo(
+                        scope = Interprocedural(),
+                        sensitivities = FilterUnreachableEOG + FieldSensitive + ContextSensitive,
+                        predicate = { it is DeAllocate },
+                    )
+                },
+            )
+
+        println(queryTreeResult.printNicely())
+        assertTrue(queryTreeResult.value)
+    }
+
+    @Test
+    fun testMemoryDeleteFailCall() {
+        val topLevel = File("src/integrationTest/resources/python")
+        val result =
+            analyze(listOf(topLevel.resolve("encrypt_with_key_fail.py")), topLevel.toPath(), true) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(result)
+        mapNodesToConcepts(result, false)
+
+        val queryTreeResult =
+            result.allExtended<GetSecret>(
+                null,
+                { secret ->
+                    secret.alwaysFlowsTo(
+                        scope = Interprocedural(),
+                        sensitivities = FilterUnreachableEOG + FieldSensitive + ContextSensitive,
+                        predicate = { it is DeAllocate },
+                    )
+                },
+            )
+
+        println(queryTreeResult.printNicely())
+        assertFalse(queryTreeResult.value)
+    }
+
+    fun mapNodesToConcepts(result: TranslationResult, mapToFunctionDeclaration: Boolean) {
         // Secrets (key) concepts
         val key = Secret(underlyingNode = assertNotNull(result.variables["key"]))
-        val getSecretFromServer = result.functions["get_secret_from_server"]
+        val getSecretFromServer =
+            if (mapToFunctionDeclaration) {
+                result.functions["get_secret_from_server"]
+            } else {
+                result.calls["get_secret_from_server"]
+            }
         val getSecret =
             GetSecret(underlyingNode = assertNotNull(getSecretFromServer), concept = key)
         key.ops += getSecret
