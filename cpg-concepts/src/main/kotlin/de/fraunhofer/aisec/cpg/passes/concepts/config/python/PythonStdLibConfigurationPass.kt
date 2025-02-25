@@ -50,7 +50,7 @@ import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 @DependsOn(IniFileConfigurationPass::class, softDependency = true)
 @DependsOn(SymbolResolver::class)
 class PythonStdLibConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) {
-    override fun handleNode(node: Node?, tu: TranslationUnitDeclaration) {
+    override fun handleNode(node: Node, tu: TranslationUnitDeclaration) {
         when (node) {
             is MemberCallExpression -> handleMemberCallExpression(node, tu)
             is SubscriptExpression -> handleSubscriptExpression(node, tu)

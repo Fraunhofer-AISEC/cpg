@@ -38,10 +38,16 @@ import de.fraunhofer.aisec.cpg.passes.ImportResolver
 import de.fraunhofer.aisec.cpg.passes.concepts.ConceptPass
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 
+/**
+ * This pass is responsible for creating [ConfigurationGroup] and [ConfigurationOption] nodes based
+ * on the INI file format and our INI frontend.
+ */
 @DependsOn(ImportResolver::class)
 class IniFileConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) {
-    override fun handleNode(node: Node?, tu: TranslationUnitDeclaration) {
-        if (node == null || node.language::class.simpleName != "IniFileLanguage") {
+    override fun handleNode(node: Node, tu: TranslationUnitDeclaration) {
+        // Since we cannot directly depend on the ini frontend, we have to check the language here
+        // based on the node's language.
+        if (node.language.name.localName != "IniFileLanguage") {
             return
         }
 
@@ -51,29 +57,10 @@ class IniFileConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) {
         }
     }
 
-    private fun handleFieldDeclaration(
-        field: FieldDeclaration,
-        tu: TranslationUnitDeclaration,
-    ): ConfigurationOption? {
-        val group =
-            (field.astParent as? RecordDeclaration)
-                ?.conceptNodes
-                ?.filterIsInstance<ConfigurationGroup>()
-                ?.singleOrNull()
-
-        if (group == null) {
-            return null
-        }
-
-        val option =
-            ConfigurationOption(underlyingNode = field, group = group).also { it.name = field.name }
-
-        // Add an incoming DFG edge to the option
-        option.prevDFGEdges.add(field)
-
-        return option
-    }
-
+    /**
+     * Translates a [RecordDeclaration], which represents a section in an INI file, into a
+     * [ConfigurationGroup] node.
+     */
     private fun handleRecordDeclaration(
         record: RecordDeclaration,
         tu: TranslationUnitDeclaration,
@@ -89,5 +76,33 @@ class IniFileConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) {
         group.prevDFGEdges.add(record)
 
         return group
+    }
+
+    /**
+     * Translates a [FieldDeclaration], which represents an option in an INI file, into a
+     * [ConfigurationOption] node.
+     */
+    private fun handleFieldDeclaration(
+        field: FieldDeclaration,
+        tu: TranslationUnitDeclaration,
+    ): ConfigurationOption? {
+        val group =
+            (field.astParent as? RecordDeclaration)
+                ?.conceptNodes
+                ?.filterIsInstance<ConfigurationGroup>()
+                ?.singleOrNull()
+
+        if (group == null) {
+            log.warn("Could not find configuration group for field declaration: {}", field.name)
+            return null
+        }
+
+        val option =
+            ConfigurationOption(underlyingNode = field, group = group).also { it.name = field.name }
+
+        // Add an incoming DFG edge to the option
+        option.prevDFGEdges.add(field)
+
+        return option
     }
 }

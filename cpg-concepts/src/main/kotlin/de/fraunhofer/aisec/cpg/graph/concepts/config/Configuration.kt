@@ -74,25 +74,37 @@ class ConfigurationOption(underlyingNode: Node, var group: ConfigurationGroup) :
 abstract class ConfigurationOperation(underlyingNode: Node, concept: Concept) :
     Operation(underlyingNode = underlyingNode, concept = concept) {}
 
+/** Represents an operation to load a configuration file. */
 class LoadConfigurationFile(underlyingNode: Node, conf: Configuration) :
     ConfigurationOperation(underlyingNode = underlyingNode, concept = conf)
 
-class ReadConfigurationOption(
-    underlyingNode: Node,
-    conf: Configuration,
-    var option: ConfigurationOption,
-) : ConfigurationOperation(underlyingNode = underlyingNode, concept = conf) {
-    init {
-        name = option.name
-    }
-}
-
+/**
+ * Represents an operation to read a specific configuration group. Often this is done with a member
+ * access or a subscript operation on the configuration object, such as `conf.GROUP` or
+ * `conf["GROUP"]`.
+ */
 class ReadConfigurationGroup(
     underlyingNode: Node,
     conf: Configuration,
+    /** The config group that is being read with this operation. */
     var group: ConfigurationGroup,
 ) : ConfigurationOperation(underlyingNode = underlyingNode, concept = conf) {
     init {
         name = group.name
+    }
+}
+
+/**
+ * Represents an operation to read a specific configuration option. Often this is done with a member
+ * access such as `group.option` or a subscript operation such as `group["option"]`.
+ */
+class ReadConfigurationOption(
+    underlyingNode: Node,
+    conf: Configuration,
+    /** The config option that is being read with this operation. */
+    var option: ConfigurationOption,
+) : ConfigurationOperation(underlyingNode = underlyingNode, concept = conf) {
+    init {
+        name = option.name
     }
 }
