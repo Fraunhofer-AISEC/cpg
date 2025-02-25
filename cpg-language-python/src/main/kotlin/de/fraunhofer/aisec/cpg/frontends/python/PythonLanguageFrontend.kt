@@ -342,6 +342,10 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
                 }
             }
 
+        // THe parsed body is added to the identified namespace it belongs to, or in case such a
+        // namespace does not exist,
+        // e.g. __init__ at root level, the results of the translation are added to the translation
+        // unit.
         (lastNamespace ?: tud).let {
             for (stmt in pythonASTModule.body) {
                 when (stmt) {
