@@ -25,10 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg
 
-import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
-import de.fraunhofer.aisec.cpg.frontends.SupportsParallelParsing
-import de.fraunhofer.aisec.cpg.frontends.TranslationException
+import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
@@ -39,11 +36,13 @@ import java.io.File
 import java.io.PrintWriter
 import java.lang.reflect.InvocationTargetException
 import java.nio.file.Files
+import java.nio.file.Path
 import java.util.*
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionException
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.io.path.name
 import kotlin.reflect.full.findAnnotation
 import org.slf4j.LoggerFactory
 
@@ -140,6 +139,20 @@ private constructor(
         result: TranslationResult,
     ): Set<LanguageFrontend<*, *>> {
         val usedFrontends = mutableSetOf<LanguageFrontend<*, *>>()
+        val usedLanguages = mutableSetOf<Language<*>>()
+
+        // If loadIncludes is active, the files stored in the include paths are made available for
+        // conditional
+        // analysis by providing them to the frontends over the
+        // [TranslationContext.additionalSources] list.
+        if (ctx.config.loadIncludes) {
+            ctx.config.includePaths.forEach {
+                ctx.additionalSources.addAll(extractConfiguredSources(it))
+            }
+        }
+
+        var useParallelFrontends = ctx.config.useParallelFrontends
+
         for (sc in ctx.config.softwareComponents.keys) {
             val component = Component()
             component.ctx = ctx
@@ -147,8 +160,6 @@ private constructor(
             result.addComponent(component)
 
             var sourceLocations: List<File> = ctx.config.softwareComponents[sc] ?: listOf()
-
-            var useParallelFrontends = ctx.config.useParallelFrontends
 
             val list =
                 sourceLocations.flatMap { file ->
@@ -172,6 +183,7 @@ private constructor(
                         files
                     } else {
                         val frontendClass = file.language?.frontend
+
                         val supportsParallelParsing =
                             file.language
                                 ?.frontend
@@ -250,9 +262,70 @@ private constructor(
                     parseSequentially(component, result, ctx, sourceLocations)
                 }
             )
+            // Collects all used languages used in the main analysis code
+            usedLanguages.addAll(sourceLocations.mapNotNull { it.language }.toSet())
         }
 
+        // Adds all languages provided as additional sources that may be relevant in the main code
+        usedLanguages.addAll(ctx.additionalSources.mapNotNull { it.language }.toSet())
+
+        // A set of processed files from [TranslationContext.additionalSources] that is used as
+        // negative to the
+        // worklist in ctx.importedSources it is used to filter out files that were already
+        // processed and to
+        // detect if new files were analyzed.
+        val processedAdditionalSources: MutableList<File> = mutableListOf()
+
+        do {
+            val oldProcessedSize = processedAdditionalSources.size
+
+            // Distribute all files by their root path prefix, parse them in individual component
+            // named like their rootPath local name
+            ctx.config.includePaths.forEach { includePath ->
+                val unprocessedFilesInIncludePath =
+                    ctx.importedSources
+                        .filter { !processedAdditionalSources.contains(it) }
+                        .filter {
+                            it.path.removePrefix(includePath.toString()) != it.path.toString()
+                        }
+                if (unprocessedFilesInIncludePath.isNotEmpty()) {
+                    val compName = Name(includePath.name)
+                    var component = result.components.firstOrNull { it.name == compName }
+                    if (component == null) {
+                        component = Component()
+                        component.ctx = ctx
+                        component.name = compName
+                        result.addComponent(component)
+                        ctx.config.topLevels.put(includePath.name, includePath.toFile())
+                    }
+
+                    usedFrontends.addAll(
+                        if (useParallelFrontends) {
+                            parseParallel(component, result, ctx, unprocessedFilesInIncludePath)
+                        } else {
+                            parseSequentially(component, result, ctx, unprocessedFilesInIncludePath)
+                        }
+                    )
+                    processedAdditionalSources.addAll(unprocessedFilesInIncludePath)
+                }
+            }
+            // If the last run added files to the processed list, we do another run
+        } while (processedAdditionalSources.size > oldProcessedSize)
+
         return usedFrontends
+    }
+
+    private fun extractConfiguredSources(path: Path): MutableList<File> {
+        val rootFile = path.toFile()
+        return if (rootFile.exists()) {
+            if (rootFile.isDirectory) {
+                rootFile.walkTopDown().toMutableList()
+            } else {
+                mutableListOf(rootFile)
+            }
+        } else {
+            mutableListOf()
+        }
     }
 
     private fun parseParallel(
