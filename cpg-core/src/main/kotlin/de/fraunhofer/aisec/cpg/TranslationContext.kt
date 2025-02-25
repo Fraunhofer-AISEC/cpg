@@ -67,6 +67,7 @@ class TranslationContext(
      * get them translated into the final graph by the [TranslationManager].
      */
     var externalSources: MutableSet<File> = mutableSetOf(),
+    
     /**
      * The additional sources from the [externalSources] chosen to be analyzed along with the code
      * under analysis. The language frontends are supposed to fill this list, e.g. by analyzing the
