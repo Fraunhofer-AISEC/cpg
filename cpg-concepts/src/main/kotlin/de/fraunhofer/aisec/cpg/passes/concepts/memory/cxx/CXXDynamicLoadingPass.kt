@@ -58,7 +58,7 @@ import kotlin.io.path.nameWithoutExtension
 @ExecuteBefore(DynamicInvokeResolver::class)
 class CXXDynamicLoadingPass(ctx: TranslationContext) : ConceptPass(ctx) {
 
-    override fun handleNode(node: Node?, tu: TranslationUnitDeclaration) {
+    override fun handleNode(node: Node, tu: TranslationUnitDeclaration) {
         when (node) {
             is CallExpression -> handleCallExpression(node, tu)
         }

@@ -29,7 +29,6 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.ProblemNode
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.helpers.MeasurementHolder
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
 
@@ -44,9 +43,9 @@ class StatisticsCollectionPass(ctx: TranslationContext) : TranslationResultPass(
         var problemNodes = 0
         var nodes = 0
         val walker = ScopedWalker(ctx.scopeManager)
-        walker.registerHandler { _: RecordDeclaration?, _: Node?, currNode: Node? ->
+        walker.registerHandler { node: Node ->
             nodes++
-            if (currNode is ProblemNode) {
+            if (node is ProblemNode) {
                 problemNodes++
             }
         }
