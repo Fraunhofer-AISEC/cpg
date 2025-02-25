@@ -82,7 +82,7 @@ internal class TypedefTest : BaseTest() {
             assertEquals(NumericType.Modifier.UNSIGNED, returnType.modifier)
             assertEquals(uintfp1.type, uintfp2?.type)
 
-            val type = tu.ctx?.scopeManager?.typedefFor(Name("test"))
+            val type = tu.ctx.scopeManager.typedefFor(Name("test"))
             assertIs<IntegerType>(type)
             assertLocalName("uint8_t", type)
         }
@@ -161,7 +161,7 @@ internal class TypedefTest : BaseTest() {
             val fPtr2 = tu.variables["intFptr2"]
             assertEquals(fPtr1?.type, fPtr2?.type)
 
-            val type = tu.ctx?.scopeManager?.typedefFor(Name("type_B"))
+            val type = tu.ctx.scopeManager.typedefFor(Name("type_B"))
             assertLocalName("template_class_A", type)
             assertIs<ObjectType>(type)
             assertEquals(listOf(primitiveType("int"), primitiveType("int")), type.generics)

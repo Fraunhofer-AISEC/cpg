@@ -88,32 +88,25 @@ class DFGFunctionSummariesTest {
                                 // We need three types with a type hierarchy.
                                 val objectType = t("test.Object")
                                 val listType = t("test.List")
-                                ctx?.let {
-                                    val recordDecl =
-                                        startInference(it)?.inferRecordDeclaration(listType)
-                                    listType.recordDeclaration = recordDecl
-                                    recordDecl?.addSuperClass(objectType)
-                                    listType.superTypes.add(objectType)
-                                }
+                                var recordDecl =
+                                    startInference(ctx)?.inferRecordDeclaration(listType)
+                                listType.recordDeclaration = recordDecl
+                                recordDecl?.addSuperClass(objectType)
+                                listType.superTypes.add(objectType)
 
                                 val specialListType = t("test.SpecialList")
-                                ctx?.let {
-                                    val recordDecl =
-                                        startInference(it)?.inferRecordDeclaration(specialListType)
-                                    specialListType.recordDeclaration = recordDecl
-                                    recordDecl?.addSuperClass(listType)
-                                    specialListType.superTypes.add(listType)
-                                }
+                                recordDecl =
+                                    startInference(ctx)?.inferRecordDeclaration(specialListType)
+                                specialListType.recordDeclaration = recordDecl
+                                recordDecl?.addSuperClass(listType)
+                                specialListType.superTypes.add(listType)
 
                                 val verySpecialListType = t("test.VerySpecialList")
-                                ctx?.let {
-                                    val recordDecl =
-                                        startInference(it)
-                                            ?.inferRecordDeclaration(verySpecialListType)
-                                    verySpecialListType.recordDeclaration = recordDecl
-                                    recordDecl?.addSuperClass(specialListType)
-                                    verySpecialListType.superTypes.add(listType)
-                                }
+                                recordDecl =
+                                    startInference(ctx)?.inferRecordDeclaration(verySpecialListType)
+                                verySpecialListType.recordDeclaration = recordDecl
+                                recordDecl?.addSuperClass(specialListType)
+                                verySpecialListType.superTypes.add(listType)
                             }
 
                             function("main", t("int")) {
