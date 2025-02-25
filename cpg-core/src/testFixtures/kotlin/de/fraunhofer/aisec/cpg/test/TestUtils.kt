@@ -325,11 +325,7 @@ fun assertLocalName(localName: String, node: Node?, message: String? = null) {
  * types).
  */
 @OptIn(ExperimentalContracts::class)
-inline fun <reified T : Any?> assertLiteralValue(
-    expected: T,
-    expr: Expression?,
-    message: String? = null,
-) {
+fun <T : Any?> assertLiteralValue(expected: T, expr: Expression?, message: String? = null) {
     contract { returns() implies (expr != null) }
     assertEquals(expected, assertIs<Literal<T>>(expr).value, message)
 }
