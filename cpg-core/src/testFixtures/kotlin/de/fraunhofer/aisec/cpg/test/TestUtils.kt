@@ -320,9 +320,9 @@ fun assertLocalName(localName: String, node: Node?, message: String? = null) {
  * - the expression in [expr] is a [Literal] and
  * - that it's value is equal to [expected].
  *
- * Guarantees that [expr] is not null if
- * - [expected] is not null and
- * - the assertion on the value succeeds.
+ * Guarantees that [expr] is not null if the assertion on the value succeeds. Note: this is an ugly
+ * hack that works, because `null` cannot be used as [expected] value (not allowed for reified
+ * types).
  */
 @OptIn(ExperimentalContracts::class)
 inline fun <reified T : Any?> assertLiteralValue(
@@ -330,7 +330,7 @@ inline fun <reified T : Any?> assertLiteralValue(
     expr: Expression?,
     message: String? = null,
 ) {
-    contract { returns() implies (expected != null && expr != null) }
+    contract { returns() implies (expr != null) }
     assertEquals(expected, assertIs<Literal<T>>(expr).value, message)
 }
 
