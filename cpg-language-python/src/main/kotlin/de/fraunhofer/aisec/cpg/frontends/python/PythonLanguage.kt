@@ -234,7 +234,6 @@ class PythonLanguage :
         return super.tryCast(type, targetType, hint, targetHint)
     }
 
-
     /**
      * Returns the files that can represent the given name. This includes all possible file
      * extensions and the name plus the `__init__` identifier, as this is the name for declaration
