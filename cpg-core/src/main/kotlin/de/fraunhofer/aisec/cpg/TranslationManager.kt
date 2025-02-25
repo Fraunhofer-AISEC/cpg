@@ -141,12 +141,11 @@ private constructor(
         val usedFrontends = mutableSetOf<LanguageFrontend<*, *>>()
         val usedLanguages = mutableSetOf<Language<*>>()
 
-        // If loadIncludes is active, the files stored in the include paths are made available for
-        // conditional
-        // analysis by providing them to the frontends over the externalSources list.
+        // If loadIncludes is active, the files stored in the include paths are made available for conditional analysis
+        // by providing them to the frontends over the [TranslationContext.additionalSources] list.
         if (ctx.config.loadIncludes) {
             ctx.config.includePaths.forEach {
-                ctx.externalSources.addAll(extractConfiguredSources(it))
+                ctx.additionalSources.addAll(extractConfiguredSources(it))
             }
         }
 
@@ -265,36 +264,33 @@ private constructor(
             usedLanguages.addAll(sourceLocations.mapNotNull { it.language }.toSet())
         }
 
-        // Adds all languages provided as external sources that may be relevant in the main code
-        usedLanguages.addAll(ctx.externalSources.mapNotNull { it.language }.toSet())
+        // Adds all languages provided as additional sources that may be relevant in the main code
+        usedLanguages.addAll(ctx.additionalSources.mapNotNull { it.language }.toSet())
 
-        ctx.externalSources
+        ctx.additionalSources
             .firstOrNull { eSource ->
                 val relFile =
                     ctx.config.includePaths.firstNotNullOf { eSource.relativeToOrNull(it.toFile()) }
                 usedLanguages.filterIsInstance<HasBuiltins>().any {
-                    (it as Language<*>)
-                        .nameToLanguageFiles(it.builtinsNamespace)
-                        .contains(relFile)
+                    (it as Language<*>).nameToLanguageFiles(it.builtinsNamespace).contains(relFile)
                 }
             }
             ?.let { ctx.importedSources.add(it) }
 
-        // A set of processed files from external sources that is used as negative to the worklist
-        // in ctx.importedSources
-        // it is used to filter out files that were already processed and to detect if new files
-        // were analyzed.
-        val processedExternalSources: MutableList<File> = mutableListOf()
+        // A set of processed files from [TranslationContext.additionalSources] that is used as negative to the
+        // worklist in ctx.importedSources it is used to filter out files that were already processed and to
+        // detect if new files were analyzed.
+        val processedAdditionalSources: MutableList<File> = mutableListOf()
 
         do {
-            val oldProcessedSize = processedExternalSources.size
+            val oldProcessedSize = processedAdditionalSources.size
 
             // Distribute all files by their root path prefix, parse them in individual component
             // named like their rootPath local name
             ctx.config.includePaths.forEach { includePath ->
                 val unprocessedFilesInIncludePath =
                     ctx.importedSources
-                        .filter { !processedExternalSources.contains(it) }
+                        .filter { !processedAdditionalSources.contains(it) }
                         .filter {
                             it.path.removePrefix(includePath.toString()) != it.path.toString()
                         }
@@ -316,11 +312,11 @@ private constructor(
                             parseSequentially(component, result, ctx, unprocessedFilesInIncludePath)
                         }
                     )
-                    processedExternalSources.addAll(unprocessedFilesInIncludePath)
+                    processedAdditionalSources.addAll(unprocessedFilesInIncludePath)
                 }
             }
             // If the last run added files to the processed list, we do another run
-        } while (processedExternalSources.size > oldProcessedSize)
+        } while (processedAdditionalSources.size > oldProcessedSize)
 
         return usedFrontends
     }

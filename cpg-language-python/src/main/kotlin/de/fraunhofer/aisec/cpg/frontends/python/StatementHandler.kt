@@ -548,7 +548,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                         parseName(alias),
                         rawNode = imp,
                     )
-                addExternallyImportedToAnalysis(decl.import)
+                conditionallyAddAdditionalSourcesToAnalysis(decl.import)
                 frontend.scopeManager.addDeclaration(decl)
                 declStmt.declarationEdges += decl
             } else {
@@ -562,7 +562,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                             style = ImportStyle.IMPORT_NAMESPACE,
                             rawNode = imp,
                         )
-                    addExternallyImportedToAnalysis(decl.import)
+                    conditionallyAddAdditionalSourcesToAnalysis(decl.import)
                     frontend.scopeManager.addDeclaration(decl)
                     declStmt.declarationEdges += decl
                     importName = importName.parent
@@ -612,7 +612,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 if (imp.name == "*") {
                     // In the wildcard case, our "import" is the module name, and we set "wildcard"
                     // to true
-                    addExternallyImportedToAnalysis(module)
+                    conditionallyAddAdditionalSourcesToAnalysis(module)
                     newImportDeclaration(
                         module,
                         style = ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE,
@@ -623,7 +623,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     // name and import that. We also need to take care of any alias
                     val name = module.fqn(imp.name)
                     val alias = imp.asname
-                    addExternallyImportedToAnalysis(name)
+                    conditionallyAddAdditionalSourcesToAnalysis(name)
                     if (alias != null) {
                         newImportDeclaration(
                             name,
@@ -649,22 +649,22 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
     /**
      * Uses the given name to identify whether one of the files in
-     * [TranslationContext.externalSources] is the target of the import statement. If it is, it is
+     * [TranslationContext.additionalSources] is the target of the import statement. If it is, it is
      * added to [TranslationContext.importedSources] for further analysis by the translation
      * manager.
      */
-    private fun addExternallyImportedToAnalysis(importName: Name) {
+    private fun conditionallyAddAdditionalSourcesToAnalysis(importName: Name) {
         val ctx = ctx
         if (ctx == null) {
             throw TranslationException(
-                "A translation context is needed for the import dependent addition of external sources."
+                "A translation context is needed for the import dependent addition of additional sources."
             )
         }
         var currentName: Name? = importName
         while (!currentName.isNullOrEmpty()) {
 
             // Includes a file in the analysis, if it has the root path and
-            ctx.externalSources
+            ctx.additionalSources
                 .firstOrNull { eSource ->
                     val relFile =
                         ctx.config.includePaths.firstNotNullOf {
