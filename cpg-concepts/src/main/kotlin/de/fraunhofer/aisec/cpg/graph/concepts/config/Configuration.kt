@@ -28,18 +28,26 @@ package de.fraunhofer.aisec.cpg.graph.concepts.config
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
+import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.passes.concepts.config.ini.IniFileConfigurationPass
 
+/**
+ * Represents a configuration file. Common examples include .properties, .json, .ini, etc. Depending
+ * on how the language frontend is implemented, the [underlyingNode] can be different things. For
+ * example, the INI frontend models the configuration file as a [RecordDeclaration], which
+ * individual entries being [FieldDeclaration] nodes. For more information, see
+ * [IniFileConfigurationPass].
+ */
 class Configuration(underlyingNode: Node) : Concept(underlyingNode = underlyingNode) {
     var groups: MutableList<ConfigurationGroup> = mutableListOf()
 }
 
-class ConfigurationOption(underlyingNode: Node, var group: ConfigurationGroup) :
-    Concept(underlyingNode = underlyingNode) {
-    init {
-        group.options.add(this)
-    }
-}
-
+/**
+ * Represents a configuration group within one [conf]. Depending on the type of configuration, there
+ * might only be one group (e.g., a "default" one), or there might be several groups. For example,
+ * in an INI file, each section would be a group, and each key-value pair would be an option.
+ */
 class ConfigurationGroup(underlyingNode: Node, var conf: Configuration) :
     Concept(underlyingNode = underlyingNode) {
     var options: MutableList<ConfigurationOption> = mutableListOf()
@@ -49,6 +57,20 @@ class ConfigurationGroup(underlyingNode: Node, var conf: Configuration) :
     }
 }
 
+/**
+ * Represents a configuration option within one [group]. Usually there is one option for each entry
+ * in a configuration file.
+ */
+class ConfigurationOption(underlyingNode: Node, var group: ConfigurationGroup) :
+    Concept(underlyingNode = underlyingNode) {
+    init {
+        group.options.add(this)
+    }
+}
+
+/**
+ * A common abstract class for configuration operations, such as reading options or a whole file.
+ */
 abstract class ConfigurationOperation(underlyingNode: Node, concept: Concept) :
     Operation(underlyingNode = underlyingNode, concept = concept) {}
 
@@ -59,10 +81,18 @@ class ReadConfigurationOption(
     underlyingNode: Node,
     conf: Configuration,
     var option: ConfigurationOption,
-) : ConfigurationOperation(underlyingNode = underlyingNode, concept = conf)
+) : ConfigurationOperation(underlyingNode = underlyingNode, concept = conf) {
+    init {
+        name = option.name
+    }
+}
 
 class ReadConfigurationGroup(
     underlyingNode: Node,
     conf: Configuration,
     var group: ConfigurationGroup,
-) : ConfigurationOperation(underlyingNode = underlyingNode, concept = conf)
+) : ConfigurationOperation(underlyingNode = underlyingNode, concept = conf) {
+    init {
+        name = group.name
+    }
+}

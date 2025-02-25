@@ -29,7 +29,11 @@ import de.fraunhofer.aisec.cpg.analysis.MultiValueEvaluator
 import de.fraunhofer.aisec.cpg.frontends.ini.IniFileLanguage
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.concepts.config.ConfigurationGroup
+import de.fraunhofer.aisec.cpg.graph.concepts.config.ConfigurationOption
 import de.fraunhofer.aisec.cpg.graph.concepts.config.LoadConfigurationFile
+import de.fraunhofer.aisec.cpg.graph.concepts.config.ReadConfigurationGroup
+import de.fraunhofer.aisec.cpg.graph.concepts.config.ReadConfigurationOption
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.SubscriptExpression
 import de.fraunhofer.aisec.cpg.passes.concepts.config.ini.IniFileConfigurationPass
 import de.fraunhofer.aisec.cpg.passes.concepts.config.python.PythonStdLibConfigurationPass
@@ -66,12 +70,42 @@ class ConfigurationPassTest {
             }
         assertNotNull(result)
 
+        val groups = result.conceptNodes.filterIsInstance<ConfigurationGroup>()
+        assertEquals(2, groups.size)
+
+        val defaultGroup = groups["config.DEFAULT"]
+        assertNotNull(defaultGroup)
+
+        val sslGroup = groups["config.ssl"]
+        assertNotNull(sslGroup)
+
+        val options = result.conceptNodes.filterIsInstance<ConfigurationOption>()
+        assertEquals(2, options.size)
+
+        val portOption = options["config.DEFAULT.port"]
+        assertNotNull(portOption)
+
+        val sslEnabledOption = options["config.ssl.enabled"]
+        assertNotNull(sslEnabledOption)
+
         val subs = result.allChildren<SubscriptExpression>()
         assertEquals(4, subs.size)
 
         val loadConfig =
             result.operationNodes.filterIsInstance<LoadConfigurationFile>().singleOrNull()
         assertNotNull(loadConfig)
+
+        val optionOps = result.operationNodes.filterIsInstance<ReadConfigurationOption>()
+        assertEquals(
+            mapOf("config.DEFAULT.port" to portOption, "config.ssl.enabled" to sslEnabledOption),
+            optionOps.associate { Pair(it.name.toString(), it.option) },
+        )
+
+        val groupOps = result.operationNodes.filterIsInstance<ReadConfigurationGroup>()
+        assertEquals(
+            mapOf("config.DEFAULT" to defaultGroup, "config.ssl" to sslGroup),
+            groupOps.associate { Pair(it.name.toString(), it.group) },
+        )
 
         val port = result.refs["port"]
         assertNotNull(port)
