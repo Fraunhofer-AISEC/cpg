@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
+import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.autoType
 import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
@@ -36,6 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation
+import java.io.File
 import kotlin.reflect.KClass
 import org.neo4j.ogm.annotation.Transient
 
@@ -46,9 +48,11 @@ class PythonLanguage :
     HasOperatorOverloading,
     HasFunctionStyleConstruction,
     HasMemberExpressionAmbiguity,
+    HasBuiltins,
     HasDefaultArguments {
     override val fileExtensions = listOf("py", "pyi")
     override val namespaceDelimiter = "."
+    override val builtinsNamespace: Name = Name("builtins")
 
     @Transient
     override val frontend: KClass<out PythonLanguageFrontend> = PythonLanguageFrontend::class
@@ -230,6 +234,27 @@ class PythonLanguage :
         return super.tryCast(type, targetType, hint, targetHint)
     }
 
+    /**
+     * Returns the files that can represent the given name. This includes all possible file
+     * extensions and the name plus the `__init__` identifier, as this is the name for declaration
+     * files if the namespace has sub-namespaces.
+     */
+    fun nameToLanguageFiles(name: Name): Set<File> {
+        val filesForNamespace =
+            fileExtensions
+                .flatMap { extension ->
+                    setOf(name, Name(IDENTIFIER_INIT, name)).map {
+                        File(
+                            it.toString().replace(language.namespaceDelimiter, File.separator) +
+                                "." +
+                                extension
+                        )
+                    }
+                }
+                .toMutableSet()
+        return filesForNamespace
+    }
+
     companion object {
         /**
          * This is a "modifier" to differentiate parameters in functions that are "positional" only.
@@ -244,5 +269,11 @@ class PythonLanguage :
          * later in call resolving.
          */
         const val MODIFIER_KEYWORD_ONLY_ARGUMENT = "kwonlyarg"
+
+        /**
+         * The initialization identifier of python, used for constructors and as name for module
+         * initialization.
+         */
+        const val IDENTIFIER_INIT = "__init__"
     }
 }
