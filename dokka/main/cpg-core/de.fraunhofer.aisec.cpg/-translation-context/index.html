@@ -44,11 +44,11 @@
         <div class="navigation-controls--break ui-kit_mobile-only"></div>
         <div class="library-version" id="library-version">
 <dokka-template-command data="{&quot;@class&quot;:&quot;org.jetbrains.dokka.base.templating.ReplaceVersionsCommand&quot;,&quot;location&quot;:&quot;de.fraunhofer.aisec.cpg/-translation-context/index.html&quot;}"><div class="dropdown versions-dropdown" data-role="dropdown">
-  <div class="button button_dropdown versions-dropdown-button" role="combobox" data-role="dropdown-toggle" aria-controls="versions-listbox" aria-haspopup="listbox" aria-expanded="false" aria-label="Select version" tabindex="0">9.1.7</div>
+  <div class="button button_dropdown versions-dropdown-button" role="combobox" data-role="dropdown-toggle" aria-controls="versions-listbox" aria-haspopup="listbox" aria-expanded="false" aria-label="Select version" tabindex="0">main-SNAPSHOT</div>
   <div class="dropdown--list dropdown--list_positioned_left versions-dropdown-data" role="listbox" data-role="dropdown-listbox" aria-label="Versions" id="versions-listbox">
     <div class="dropdown--header" data-remove-style="true" style="display: none"><span>Select version</span><button class="button" data-role="dropdown-toggle" aria-label="Close versions selection"><i class="ui-kit-icon ui-kit-icon_cross"></i></button></div>
-    <div><a href="index.html" class="dropdown--option dropdown--option-link" style="display: block; padding: 5px; color: #fff" data-remove-style="true" role="option">9.1.7</a></div>
-    <div><a href="../../../older/main-SNAPSHOT/cpg-core/de.fraunhofer.aisec.cpg/-translation-context/index.html" class="dropdown--option dropdown--option-link" style="display: block; padding: 5px; color: #fff" data-remove-style="true" role="option">main-SNAPSHOT</a></div>
+    <div><a href="../../../older/9.1.7/cpg-core/de.fraunhofer.aisec.cpg/-translation-context/index.html" class="dropdown--option dropdown--option-link" style="display: block; padding: 5px; color: #fff" data-remove-style="true" role="option">9.1.7</a></div>
+    <div><a href="index.html" class="dropdown--option dropdown--option-link" style="display: block; padding: 5px; color: #fff" data-remove-style="true" role="option">main-SNAPSHOT</a></div>
   </div>
   <div class="dropdown--overlay"></div>
 </div>
@@ -104,24 +104,24 @@
   <div class="breadcrumbs"><a href="../../index.html">cpg-core</a><span class="delimiter">/</span><a href="../index.html">de.fraunhofer.aisec.cpg</a><span class="delimiter">/</span><span class="current">TranslationContext</span></div>
   <div class="cover ">
     <h1 class="cover"><span>Translation</span><wbr><span><span>Context</span></span></h1>
-    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="index.html">TranslationContext</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">val </span>config<span class="token operator">: </span><a href="../-translation-configuration/index.html">TranslationConfiguration</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>scopeManager<span class="token operator">: </span><a href="../-scope-manager/index.html">ScopeManager</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>typeManager<span class="token operator">: </span><a href="../-type-manager/index.html">TypeManager</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">var </span>currentComponent<span class="token operator">: </span><a href="../../de.fraunhofer.aisec.cpg.graph/-component/index.html">Component</a><span class="token operator">?</span><span class="token operator"> = </span>null</span></span><span class="token punctuation">)</span></div><p class="paragraph">The translation context holds all necessary managers and configurations needed during the translation process.</p></div></div>
+    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="index.html">TranslationContext</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">val </span>config<span class="token operator">: </span><a href="../-translation-configuration/index.html">TranslationConfiguration</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>scopeManager<span class="token operator">: </span><a href="../-scope-manager/index.html">ScopeManager</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>typeManager<span class="token operator">: </span><a href="../-type-manager/index.html">TypeManager</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">var </span>currentComponent<span class="token operator">: </span><a href="../../de.fraunhofer.aisec.cpg.graph/-component/index.html">Component</a><span class="token operator">?</span><span class="token operator"> = </span>null<span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">var </span>additionalSources<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-mutable-set/index.html">MutableSet</a><span class="token operator">&lt;</span><a href="https://docs.oracle.com/javase/8/docs/api/java/io/File.html">File</a><span class="token operator">&gt;</span><span class="token operator"> = </span>mutableSetOf()<span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">var </span>importedSources<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-mutable-set/index.html">MutableSet</a><span class="token operator">&lt;</span><a href="https://docs.oracle.com/javase/8/docs/api/java/io/File.html">File</a><span class="token operator">&gt;</span><span class="token operator"> = </span>mutableSetOf()</span></span><span class="token punctuation">)</span></div><p class="paragraph">The translation context holds all necessary managers and configurations needed during the translation process.</p></div></div>
   </div>
   <div class="tabbedcontent">
     <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="CONSTRUCTOR,TYPE,PROPERTY,FUNCTION">Members</button></div>
     <div class="tabs-section-body">
       <div data-togglable="CONSTRUCTOR">
         <h2 class="">Constructors</h2>
-        <div class="table"><a data-name="338034869%2FConstructors%2F1556141526" anchor-label="TranslationContext" id="338034869%2FConstructors%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+        <div class="table"><a data-name="1076358243%2FConstructors%2F1556141526" anchor-label="TranslationContext" id="1076358243%2FConstructors%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
           <div class="table-row" data-togglable="CONSTRUCTOR" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
             <div class="main-subrow keyValue ">
               <div class=""><span class="inline-flex">
                   <div><a href="-translation-context.html"><span>Translation</span><wbr><span><span>Context</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="338034869%2FConstructors%2F1556141526"></span>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1076358243%2FConstructors%2F1556141526"></span>
                     <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">constructor</span><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">config<span class="token operator">: </span><a href="../-translation-configuration/index.html">TranslationConfiguration</a><span class="token punctuation">, </span></span><span class="parameter ">scopeManager<span class="token operator">: </span><a href="../-scope-manager/index.html">ScopeManager</a><span class="token punctuation">, </span></span><span class="parameter ">typeManager<span class="token operator">: </span><a href="../-type-manager/index.html">TypeManager</a><span class="token punctuation">, </span></span><span class="parameter ">currentComponent<span class="token operator">: </span><a href="../../de.fraunhofer.aisec.cpg.graph/-component/index.html">Component</a><span class="token operator">?</span><span class="token operator"> = </span>null</span></span><span class="token punctuation">)</span></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">constructor</span><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">config<span class="token operator">: </span><a href="../-translation-configuration/index.html">TranslationConfiguration</a><span class="token punctuation">, </span></span><span class="parameter ">scopeManager<span class="token operator">: </span><a href="../-scope-manager/index.html">ScopeManager</a><span class="token punctuation">, </span></span><span class="parameter ">typeManager<span class="token operator">: </span><a href="../-type-manager/index.html">TypeManager</a><span class="token punctuation">, </span></span><span class="parameter ">currentComponent<span class="token operator">: </span><a href="../../de.fraunhofer.aisec.cpg.graph/-component/index.html">Component</a><span class="token operator">?</span><span class="token operator"> = </span>null<span class="token punctuation">, </span></span><span class="parameter ">additionalSources<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-mutable-set/index.html">MutableSet</a><span class="token operator">&lt;</span><a href="https://docs.oracle.com/javase/8/docs/api/java/io/File.html">File</a><span class="token operator">&gt;</span><span class="token operator"> = </span>mutableSetOf()<span class="token punctuation">, </span></span><span class="parameter ">importedSources<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-mutable-set/index.html">MutableSet</a><span class="token operator">&lt;</span><a href="https://docs.oracle.com/javase/8/docs/api/java/io/File.html">File</a><span class="token operator">&gt;</span><span class="token operator"> = </span>mutableSetOf()</span></span><span class="token punctuation">)</span></div></div></div>
                 </div>
               </div>
             </div>
@@ -130,7 +130,22 @@
       </div>
       <div data-togglable="PROPERTY">
         <h2 class="">Properties</h2>
-        <div class="table"><a data-name="1127054727%2FProperties%2F1556141526" anchor-label="config" id="1127054727%2FProperties%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+        <div class="table"><a data-name="-119521024%2FProperties%2F1556141526" anchor-label="additionalSources" id="-119521024%2FProperties%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="additional-sources.html"><span>additional</span><wbr><span><span>Sources</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-119521024%2FProperties%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">var </span><a href="additional-sources.html">additionalSources</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-mutable-set/index.html">MutableSet</a><span class="token operator">&lt;</span><a href="https://docs.oracle.com/javase/8/docs/api/java/io/File.html">File</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Set of files, that are available for additional analysis. They are not the primary subjects of analysis but are available to the language frontend. The files are obtained by expanding the paths in <a href="../-translation-configuration/include-paths.html">TranslationConfiguration.includePaths</a>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1127054727%2FProperties%2F1556141526" anchor-label="config" id="1127054727%2FProperties%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
           <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
             <div class="main-subrow keyValue ">
               <div class=""><span class="inline-flex">
@@ -156,6 +171,21 @@
               <div>
                 <div class="title">
                   <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">var </span><a href="current-component.html">currentComponent</a><span class="token operator">: </span><a href="../../de.fraunhofer.aisec.cpg.graph/-component/index.html">Component</a><span class="token operator">?</span></div><div class="brief "><p class="paragraph">Some frontends need access to the current <a href="../../de.fraunhofer.aisec.cpg.graph/-component/index.html">Component</a> we are currently processing. Note: for the <a href="../-translation-result/final-ctx.html">TranslationResult.finalCtx</a> this may either be null or the last component analyzed.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="868392157%2FProperties%2F1556141526" anchor-label="importedSources" id="868392157%2FProperties%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="imported-sources.html"><span>imported</span><wbr><span><span>Sources</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="868392157%2FProperties%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">var </span><a href="imported-sources.html">importedSources</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-mutable-set/index.html">MutableSet</a><span class="token operator">&lt;</span><a href="https://docs.oracle.com/javase/8/docs/api/java/io/File.html">File</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">The additional sources from the <a href="additional-sources.html">additionalSources</a> chosen to be analyzed along with the code under analysis. The language frontends are supposed to fill this list, e.g. by analyzing the import statements of the analyzed code and deciding which sources contain relevant symbols.</p></div></div></div>
                 </div>
               </div>
             </div>
