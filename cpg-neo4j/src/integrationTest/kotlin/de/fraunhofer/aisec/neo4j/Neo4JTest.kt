@@ -34,9 +34,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
-import org.junit.jupiter.api.Tag
 
-@Tag("integration")
 class Neo4JTest {
     @Test
     fun testPush() {

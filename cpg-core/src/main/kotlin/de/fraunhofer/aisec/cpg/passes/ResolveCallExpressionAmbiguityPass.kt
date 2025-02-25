@@ -62,16 +62,18 @@ class ResolveCallExpressionAmbiguityPass(ctx: TranslationContext) : TranslationU
 
     override fun accept(tu: TranslationUnitDeclaration) {
         walker = SubgraphWalker.ScopedWalker(ctx.scopeManager)
-        walker.registerHandler { _, parent, node ->
+        walker.registerHandler { node ->
             when (node) {
-                is CallExpression -> handleCall(node, parent)
+                is CallExpression -> handleCall(node)
             }
         }
 
         walker.iterate(tu)
     }
 
-    private fun handleCall(call: CallExpression, parent: Node?) {
+    private fun handleCall(call: CallExpression) {
+        val parent = call.astParent
+
         // Make sure, we are not accidentally handling construct expressions (since they also derive
         // from call expressions)
         if (call is ConstructExpression) {

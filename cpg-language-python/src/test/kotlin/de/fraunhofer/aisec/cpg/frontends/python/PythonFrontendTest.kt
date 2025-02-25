@@ -1650,6 +1650,12 @@ class PythonFrontendTest : BaseTest() {
             setOf("a", "b", "pkg.module.foo", "pkg.another_module.foo"),
             refs.map { it.name.toString() }.toSet(),
         )
+
+        val imports = tu.imports
+        assertEquals(
+            setOf("pkg", "pkg.module", "pkg.another_module"),
+            imports.map { it.name.toString() }.toSet(),
+        )
     }
 
     @Test

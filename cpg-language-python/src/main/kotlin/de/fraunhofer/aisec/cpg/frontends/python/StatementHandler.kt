@@ -350,6 +350,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 tmpValName,
             )
         }
+
         val result =
             newBlock().codeAndLocationFromOtherRawNode(node as? Python.AST.BaseStmt).implicit()
 
@@ -517,27 +518,52 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         return assertStatement
     }
 
+    /**
+     * Translates a Python [`Import`](https://docs.python.org/3/library/ast.html#ast.Import) into a
+     * [Statement].
+     *
+     * For each import, it handles two cases:
+     * - If an alias is present (e.g., `import foo.bar.baz as fbb`), only the final module is bound
+     *   using the alias.
+     * - Without an alias, it iteratively creates declarations for each parent package (e.g., `foo`,
+     *   `foo.bar`, and `foo.bar.baz`).
+     *
+     *   See also the
+     *   [`Python specification`](https://docs.python.org/3/reference/simple_stmts.html#the-import-statement)
+     *   for details:
+     */
     private fun handleImport(node: Python.AST.Import): Statement {
         val declStmt = newDeclarationStatement(rawNode = node)
         for (imp in node.names) {
             val alias = imp.asname
-            val decl =
-                if (alias != null) {
+            if (alias != null) {
+                // If we have an alias, we import the package with the alias and do NOT import the
+                // parent packages
+                val decl =
                     newImportDeclaration(
                         parseName(imp.name),
                         style = ImportStyle.IMPORT_NAMESPACE,
                         parseName(alias),
                         rawNode = imp,
                     )
-                } else {
-                    newImportDeclaration(
-                        parseName(imp.name),
-                        style = ImportStyle.IMPORT_NAMESPACE,
-                        rawNode = imp,
-                    )
+                frontend.scopeManager.addDeclaration(decl)
+                declStmt.declarationEdges += decl
+            } else {
+                // If we do not have an alias, we import all the packages along the path - unless we
+                // already have an import for the package in the scope
+                var importName: Name? = parseName(imp.name)
+                while (importName != null) {
+                    val decl =
+                        newImportDeclaration(
+                            importName,
+                            style = ImportStyle.IMPORT_NAMESPACE,
+                            rawNode = imp,
+                        )
+                    frontend.scopeManager.addDeclaration(decl)
+                    declStmt.declarationEdges += decl
+                    importName = importName.parent
                 }
-            frontend.scopeManager.addDeclaration(decl)
-            declStmt.declarationEdges += decl
+            }
         }
         return declStmt
     }

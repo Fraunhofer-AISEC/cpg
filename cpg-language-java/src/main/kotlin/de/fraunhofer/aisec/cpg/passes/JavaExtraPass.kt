@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.codeAndLocationFrom
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.fqn
@@ -54,16 +53,18 @@ class JavaExtraPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
     override fun accept(tu: TranslationUnitDeclaration) {
         // Loop through all member expressions
         walker = SubgraphWalker.ScopedWalker(ctx.scopeManager)
-        walker.registerHandler { _, parent, node ->
+        walker.registerHandler { node ->
             when (node) {
-                is MemberExpression -> handleMemberExpression(node, parent)
+                is MemberExpression -> handleMemberExpression(node)
             }
         }
 
         walker.iterate(tu)
     }
 
-    fun handleMemberExpression(me: MemberExpression, parent: Node?) {
+    fun handleMemberExpression(me: MemberExpression) {
+        val parent = me.astParent
+
         // For now, we are only interested in fields and not in calls, since this will open another
         // can of worms
         if (parent is CallExpression && parent.callee == me) return

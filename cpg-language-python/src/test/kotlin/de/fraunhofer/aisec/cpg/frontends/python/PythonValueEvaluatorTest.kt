@@ -27,6 +27,8 @@ package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.passes.PythonUnreachableEOGPass
+import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.passes.UnreachableEOGPass
 import de.fraunhofer.aisec.cpg.test.analyze
 import java.io.File
@@ -42,7 +44,13 @@ class PythonValueEvaluatorTest {
         val result =
             analyze(listOf(topLevel.resolve("platform.py")), topLevel.toPath(), true) {
                 it.registerLanguage<PythonLanguage>()
-                it.registerPass<UnreachableEOGPass>()
+                it.registerPass<PythonUnreachableEOGPass>()
+                it.configurePass<SymbolResolver>(
+                    SymbolResolver.Configuration(
+                        skipUnreachableEOG = true,
+                        ignoreUnreachableDeclarations = true,
+                    )
+                )
                 it.symbols(
                     mapOf(
                         "PYTHON_PLATFORM" to "win32",
@@ -66,6 +74,10 @@ class PythonValueEvaluatorTest {
             val value = it.value.evaluate(PythonValueEvaluator())
             assertEquals("{==}", value)
         }
+
+        val theFuncCall = result.calls["the_func"]
+        assertNotNull(theFuncCall)
+        assertEquals(1, theFuncCall.invokes.size)
     }
 
     @Test
@@ -74,7 +86,13 @@ class PythonValueEvaluatorTest {
         val result =
             analyze(listOf(topLevel.resolve("version_info.py")), topLevel.toPath(), true) {
                 it.registerLanguage<PythonLanguage>()
-                it.registerPass<UnreachableEOGPass>()
+                it.registerPass<PythonUnreachableEOGPass>()
+                it.configurePass<SymbolResolver>(
+                    SymbolResolver.Configuration(
+                        skipUnreachableEOG = true,
+                        ignoreUnreachableDeclarations = true,
+                    )
+                )
                 it.symbols(
                     mapOf(
                         "PYTHON_VERSION_MAJOR" to "3",

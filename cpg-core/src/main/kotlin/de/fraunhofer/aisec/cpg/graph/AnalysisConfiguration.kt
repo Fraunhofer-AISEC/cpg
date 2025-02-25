@@ -179,7 +179,9 @@ class Forward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) {
             GraphToFollow.DFG -> {
                 filterEdges(
                         currentNode = currentNode,
-                        edges = currentNode.nextDFGEdges,
+                        edges =
+                            if (Implicit in sensitivities) currentNode.nextPDGEdges
+                            else currentNode.nextDFGEdges,
                         ctx = ctx,
                         scope = scope,
                         sensitivities = sensitivities,
@@ -297,7 +299,9 @@ class Backward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) 
             GraphToFollow.DFG -> {
                 filterEdges(
                         currentNode = currentNode,
-                        edges = currentNode.prevDFGEdges,
+                        edges =
+                            if (Implicit in sensitivities) currentNode.prevPDGEdges
+                            else currentNode.prevDFGEdges,
                         ctx = ctx,
                         scope = scope,
                         sensitivities = sensitivities,
@@ -549,6 +553,6 @@ object Implicit : AnalysisSensitivity() {
         ctx: Context,
         analysisDirection: AnalysisDirection,
     ): Boolean {
-        TODO("Not yet implemented. Actually requires following PDG instead of DFG edges...")
+        return true
     }
 }

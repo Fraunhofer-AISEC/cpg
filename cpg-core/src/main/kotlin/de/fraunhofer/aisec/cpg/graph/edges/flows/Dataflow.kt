@@ -28,7 +28,6 @@ package de.fraunhofer.aisec.cpg.graph.edges.flows
 import com.fasterxml.jackson.annotation.JsonIgnore
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeSet
 import de.fraunhofer.aisec.cpg.graph.edges.collections.MirroredEdgeCollection
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -74,6 +73,10 @@ class IndexedDataflowGranularity(
     override fun equals(other: Any?): Boolean {
         return this.index == (other as? IndexedDataflowGranularity)?.index
     }
+
+    override fun hashCode(): Int {
+        return index
+    }
 }
 
 /** Creates a new [FullDataflowGranularity]. */
@@ -113,8 +116,8 @@ open class Dataflow(
     @Convert(DataflowGranularityConverter::class)
     @JsonIgnore
     var granularity: Granularity = default(),
-) : Edge<Node>(start, end) {
-    override var labels = setOf("DFG")
+) : ProgramDependence(start, end, DependenceType.DATA) {
+    override var labels = super.labels.plus("DFG")
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -154,8 +157,6 @@ class ContextSensitiveDataflow(
     granularity: Granularity = default(),
     val callingContext: CallingContext,
 ) : Dataflow(start, end, granularity) {
-
-    override var labels = setOf("DFG")
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -200,7 +201,7 @@ class Dataflows<T : Node>(
 
     /**
      * This connects our dataflow to our "mirror" property. Meaning that if we add a node to
-     * nextDFG, we add our thisRef to the "prev" of "next" and vice-versa.
+     * nextDFG, we add our thisRef to the "prev" of "next" and vice versa.
      */
     override fun handleOnAdd(edge: Dataflow) {
         super<MirroredEdgeCollection>.handleOnAdd(edge)

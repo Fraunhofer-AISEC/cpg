@@ -49,6 +49,8 @@ import de.fraunhofer.aisec.cpg.graph.builder.translationResult
 import de.fraunhofer.aisec.cpg.graph.builder.translationUnit
 import de.fraunhofer.aisec.cpg.graph.builder.variable
 import de.fraunhofer.aisec.cpg.graph.builder.void
+import de.fraunhofer.aisec.cpg.passes.ControlDependenceGraphPass
+import de.fraunhofer.aisec.cpg.passes.ProgramDependenceGraphPass
 
 class FlowQueriesTest {
 
@@ -57,6 +59,8 @@ class FlowQueriesTest {
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
+                    .registerPass<ControlDependenceGraphPass>()
+                    .registerPass<ProgramDependenceGraphPass>()
                     .registerLanguage(TestLanguage("."))
                     .build()
         ) =

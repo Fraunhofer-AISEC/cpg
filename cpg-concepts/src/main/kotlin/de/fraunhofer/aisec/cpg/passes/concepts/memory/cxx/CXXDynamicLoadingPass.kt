@@ -23,13 +23,15 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.passes.concepts.memory
+package de.fraunhofer.aisec.cpg.passes.concepts.memory.cxx
 
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.TranslationResult
-import de.fraunhofer.aisec.cpg.graph.Component
-import de.fraunhofer.aisec.cpg.graph.conceptNodes
-import de.fraunhofer.aisec.cpg.graph.concepts.Concept
+import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.concepts.arch.OperatingSystemArchitecture
+import de.fraunhofer.aisec.cpg.graph.concepts.arch.POSIX
+import de.fraunhofer.aisec.cpg.graph.concepts.arch.Win32
+import de.fraunhofer.aisec.cpg.graph.concepts.flows.LibraryEntryPoint
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.DynamicLoading
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.LoadLibrary
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.LoadSymbol
@@ -38,17 +40,13 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
-import de.fraunhofer.aisec.cpg.graph.evaluate
-import de.fraunhofer.aisec.cpg.graph.followPrevDFG
-import de.fraunhofer.aisec.cpg.graph.operationNodes
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.translationResult
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
-import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass
 import de.fraunhofer.aisec.cpg.passes.DynamicInvokeResolver
-import de.fraunhofer.aisec.cpg.passes.TranslationUnitPass
+import de.fraunhofer.aisec.cpg.passes.concepts.ConceptPass
+import de.fraunhofer.aisec.cpg.passes.concepts.flows.cxx.CXXEntryPointsPass
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 import kotlin.io.path.Path
@@ -56,37 +54,30 @@ import kotlin.io.path.nameWithoutExtension
 
 /** A pass that fills the [DynamicLoading] concept into the CPG. */
 @DependsOn(ControlFlowSensitiveDFGPass::class)
+@DependsOn(CXXEntryPointsPass::class)
 @ExecuteBefore(DynamicInvokeResolver::class)
-class CXXDynamicLoadingPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
+class CXXDynamicLoadingPass(ctx: TranslationContext) : ConceptPass(ctx) {
 
-    lateinit var walker: SubgraphWalker.ScopedWalker
-
-    override fun accept(tu: TranslationUnitDeclaration) {
-        walker = SubgraphWalker.ScopedWalker(ctx.scopeManager)
-        walker.registerHandler { _, _, node ->
-            when (node) {
-                is CallExpression -> handleCallExpression(node, tu)
-            }
+    override fun handleNode(node: Node, tu: TranslationUnitDeclaration) {
+        when (node) {
+            is CallExpression -> handleCallExpression(node, tu)
         }
-
-        walker.iterate(tu)
     }
 
     /** Handles a [CallExpression] node and checks if it is a dynamic loading operation. */
     private fun handleCallExpression(call: CallExpression, tu: TranslationUnitDeclaration) {
-        val concept = getConceptOrCreate<DynamicLoading>(tu)
+        val concept = tu.getConceptOrCreate<DynamicLoading>()
 
         val ops =
             when (call.name.toString()) {
-                "dlopen" -> {
-                    handleLibraryLoad(call, concept)
-                }
-                "dlsym" -> {
-                    handleLoadFunction(call, concept)
-                }
-                else -> {
-                    return
-                }
+                "dlopen" -> handleLibraryLoad(call, concept, os = tu.getConceptOrCreate<POSIX>())
+                "LoadLibraryA",
+                "LoadLibraryW",
+                "LoadLibraryExA",
+                "LoadLibraryExW" ->
+                    handleLibraryLoad(call, concept, os = tu.getConceptOrCreate<Win32>())
+                "dlsym" -> handleLoadFunction(call, concept)
+                else -> return
             }
 
         concept.ops += ops
@@ -153,6 +144,7 @@ class CXXDynamicLoadingPass(ctx: TranslationContext) : TranslationUnitPass(ctx) 
     private fun handleLibraryLoad(
         call: CallExpression,
         concept: DynamicLoading,
+        os: OperatingSystemArchitecture,
     ): List<LoadLibrary> {
         // The first argument of dlopen is the path to the library. We can try to evaluate the
         // argument to check if it's a constant string.
@@ -166,27 +158,26 @@ class CXXDynamicLoadingPass(ctx: TranslationContext) : TranslationUnitPass(ctx) 
                 )
             }
 
+        // Look for library entry points that match the operating system architecture
+        val entryPoints =
+            component?.conceptNodes?.filterIsInstance<LibraryEntryPoint>()?.filter { it.os == os }
+                ?: emptyList()
+
         // Create the op
-        val op = LoadLibrary(underlyingNode = call, concept = concept, what = component)
+        val op =
+            LoadLibrary(
+                underlyingNode = call,
+                concept = concept,
+                what = component,
+                entryPoints = entryPoints,
+                os = os,
+            )
 
         return listOf(op)
     }
 
     fun TranslationResult.findComponentForLibrary(libraryName: String): Component? {
         return this.components.find { it.name.localName == libraryName }
-    }
-
-    /**
-     * Gets the [DynamicLoading] concept for this [TranslationUnitDeclaration] or creates a new one
-     * if it does not exist.
-     */
-    private inline fun <reified T : Concept> getConceptOrCreate(tu: TranslationUnitDeclaration): T {
-        var concept = tu.conceptNodes.filterIsInstance<T>().singleOrNull()
-        if (concept == null) {
-            concept = T::class.constructors.first().call(tu)
-        }
-
-        return concept
     }
 
     override fun cleanup() {

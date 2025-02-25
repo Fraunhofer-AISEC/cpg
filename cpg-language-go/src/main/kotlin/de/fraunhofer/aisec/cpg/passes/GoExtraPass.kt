@@ -110,7 +110,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
         }
 
         walker = SubgraphWalker.ScopedWalker(scopeManager)
-        walker.registerHandler { _, _, node ->
+        walker.registerHandler { node ->
             when (node) {
                 is RecordDeclaration -> handleRecordDeclaration(node)
                 is AssignExpression -> handleAssign(node)
