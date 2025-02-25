@@ -98,7 +98,13 @@ class IniFileConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) {
         }
 
         val option =
-            ConfigurationOption(underlyingNode = field, group = group).also { it.name = field.name }
+            ConfigurationOption(
+                    underlyingNode = field,
+                    group = group,
+                    key = field,
+                    value = field.initializer,
+                )
+                .also { it.name = field.name }
 
         // Add an incoming DFG edge to the option
         option.prevDFGEdges.add(field)

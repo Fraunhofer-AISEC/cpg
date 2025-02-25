@@ -61,8 +61,22 @@ class ConfigurationGroup(underlyingNode: Node, var conf: Configuration) :
  * Represents a configuration option within one [group]. Usually there is one option for each entry
  * in a configuration file.
  */
-class ConfigurationOption(underlyingNode: Node, var group: ConfigurationGroup) :
-    Concept(underlyingNode = underlyingNode) {
+class ConfigurationOption(
+    underlyingNode: Node,
+    var group: ConfigurationGroup,
+    /**
+     * The node that represents the "key" of this option. For example, in an INI file, this would be
+     * the [FieldDeclaration] node that represents the key.
+     */
+    var key: Node,
+    /**
+     * The node that represents the "value" of this option. For example, in an INI file, this would
+     * be the [FieldDeclaration.initializer] node that represents the value.
+     *
+     * Since initializers could potentially be empty, we make this nullable.
+     */
+    var value: Node? = null,
+) : Concept(underlyingNode = underlyingNode) {
     init {
         group.options.add(this)
     }
@@ -72,7 +86,7 @@ class ConfigurationOption(underlyingNode: Node, var group: ConfigurationGroup) :
  * A common abstract class for configuration operations, such as reading options or a whole file.
  */
 abstract class ConfigurationOperation(underlyingNode: Node, concept: Concept) :
-    Operation(underlyingNode = underlyingNode, concept = concept) {}
+    Operation(underlyingNode = underlyingNode, concept = concept)
 
 /** Represents an operation to load a configuration file. */
 class LoadConfigurationFile(underlyingNode: Node, conf: Configuration) :
