@@ -138,13 +138,32 @@ set of analyses and functions to use them. These are:
   E.g., the default value evaluator could return different numbers (transferring
   them e.g. with `toLong()` or `toFloat()` could make sense), a string, or an error.
 - **sizeof(n: Node)**: The length of an array or string
-- **dataFlow(from: Node, to: Node)**: Checks if a data flow is possible between
-  the nodes `from` as a source and `to` as sink.
-- **executionPath(from: Node, to: Node)**: Checks if a path of execution flow is
-  possible between the nodes `from` and `to`.
-- **executionPath(from: Node, predicate: (Node) -> Boolean)**: Checks if a path
-  of execution flow is possible starting at node `from` and fulfilling the
-  requirement specified in `predicate`.
+- **dataFlow(startNode: Node, direction: AnalysisDirection, type: AnalysisType, vararg sensitivities: AnalysisSensitivity, scope: AnalysisScope = Interprocedural(), verbose: Boolean, earlyTermination: ((Node) -> Boolean)?, predicate: (Node) -> Boolean)**:
+  Checks if a data flow is possible between the nodes `from` as a source and a
+  node matching the `predicate` as sink and has various configuration options:
+  * It can be configured as `Must` or `May` analysis via the argument `type`.
+  * There are several options for `sensitivities` which can be used to specify
+    which requirements you have for the analysis, e.g. `FieldSensitive`,
+    `ContextSensitive`, `OnlyFullDFG` or `Implicit`.
+  * The `scope` can be used to configure an `Intraprocedural` or `Interprocedural`
+    analysis or to look up only a certain number of steps or depth in the call
+    stack.
+  * `earlyTermination` lets the query fail early if there was no node matching
+    `predicate` on the path so far.
+- **executionPath(startNode: Node, direction: AnalysisDirection, type: AnalysisType, vararg sensitivities: AnalysisSensitivity, scope: AnalysisScope = Interprocedural(), verbose: Boolean, earlyTermination: ((Node) -> Boolean)?, predicate: (Node) -> Boolean)**:
+  Checks if an execution path is possible between the nodes `from` as a source
+  and a node matching the `predicate` as sink and has various configuration
+  options which are the same as the ones for `dataFlow`. However, other options
+  for `sensitivities` make more sense in this context.
+- **dataFlowWithValidator(source: Node, validatorPredicate: (Node) -> Boolean, sinkPredicate: (Node) -> Boolean, scope: AnalysisScope, vararg sensitivities: AnalysisSensitivity)**:
+  Checks if each execution path between the `source` and a sink matching
+  `sinkPredicate` has a node matching `validatorPredicate`, where the data
+  in `source` also flow into `validatorPredicate`. This is interesting to
+ "sanitize" data on the given path.
+- **Node.alwaysFlowsTo(allowOverwritingValue: Boolean, earlyTermination: ((Node) -> Boolean)?, scope: AnalysisScope, vararg sensitivities: AnalysisSensitivity, predicate: (Node) -> Boolean)**:
+  Checks if on each execution path starting at `source`, the data kept in
+  `source` reach a sink matching `predicate` without passing another node
+  matching `earlyTermination`.
 
 ## Running a query
 

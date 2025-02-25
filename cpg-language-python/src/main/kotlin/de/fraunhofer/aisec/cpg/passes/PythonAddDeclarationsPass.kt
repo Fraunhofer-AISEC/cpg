@@ -61,7 +61,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
 
     override fun accept(p0: Component) {
         walker = SubgraphWalker.ScopedWalker(ctx.scopeManager)
-        walker.registerHandler { _, _, currNode -> handle(currNode) }
+        walker.registerHandler { node -> handle(node) }
 
         for (tu in p0.translationUnits) {
             walker.iterate(tu)

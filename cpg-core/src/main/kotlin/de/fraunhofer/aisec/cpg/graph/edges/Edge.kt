@@ -31,9 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.Node.Companion.TO_STRING_STYLE
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.Persistable
-import de.fraunhofer.aisec.cpg.graph.edges.flows.DependenceType
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.passes.ProgramDependenceGraphPass
 import java.util.*
 import kotlin.reflect.KProperty
 import org.apache.commons.lang3.builder.ToStringBuilder
@@ -87,13 +85,6 @@ abstract class Edge<NodeType : Node> : Persistable, Cloneable {
     /** An optional name. */
     var name: String? = null
 
-    /**
-     * The type of dependence (e.g. control or data or none). This field is intentionally nullable,
-     * because not all [Edge] edges are selected in the PDG. This selection is performed in the
-     * [ProgramDependenceGraphPass].
-     */
-    var dependence: DependenceType? = null
-
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is Edge<*>) return false
@@ -101,8 +92,7 @@ abstract class Edge<NodeType : Node> : Persistable, Cloneable {
         return start == other.start &&
             end == other.end &&
             index == other.index &&
-            name == other.name &&
-            dependence == other.dependence
+            name == other.name
     }
 
     fun propertyEquals(obj: Any?): Boolean {
@@ -112,7 +102,7 @@ abstract class Edge<NodeType : Node> : Persistable, Cloneable {
     }
 
     override fun hashCode(): Int {
-        return Objects.hash(start, end, index, name, dependence)
+        return Objects.hash(start, end, index, name)
     }
 
     override fun toString(): String {
@@ -123,7 +113,7 @@ abstract class Edge<NodeType : Node> : Persistable, Cloneable {
     }
 
     public override fun clone(): Edge<NodeType> {
-        // needs to be implemented by sub-classes
+        // needs to be implemented by subclasses
         return super.clone() as Edge<NodeType>
     }
 
