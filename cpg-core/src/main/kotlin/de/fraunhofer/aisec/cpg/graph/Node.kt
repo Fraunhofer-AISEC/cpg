@@ -205,7 +205,7 @@ abstract class Node :
                 .map { it.start }
         }
 
-    /** Virtual property for accessing [nextDFGEdges] that are [functionSummary]-edges. */
+    /** Virtual property for accessing [prevDFGEdges] that are [functionSummary]-edges. */
     @DoNotPersist
     @PopulatedByPass(DFGPass::class, PointsToPass::class)
     val prevFunctionSummaryDFG: List<Node>
@@ -229,10 +229,20 @@ abstract class Node :
      * [de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity].
      */
     @DoNotPersist
-    @PopulatedByPass(DFGPass::class, PointsToPass::class, ControlFlowSensitiveDFGPass::class)
+    @PopulatedByPass(DFGPass::class, PointsToPass::class)
     val nextFullDFG: List<Node>
         get() {
-            return nextDFGEdges.filter { it.granularity is FullDataflowGranularity }.map { it.end }
+            return nextDFGEdges
+                .filter { it.granularity is FullDataflowGranularity && !it.functionSummary }
+                .map { it.end }
+        }
+
+    /** Virtual property for accessing [nextDFGEdges] that are [functionSummary]-edges. */
+    @DoNotPersist
+    @PopulatedByPass(DFGPass::class, PointsToPass::class)
+    val nextFunctionSummaryDFG: List<Node>
+        get() {
+            return nextDFGEdges.filter { it.functionSummary }.map { it.end }
         }
 
     /** Outgoing Program Dependence Edges. */

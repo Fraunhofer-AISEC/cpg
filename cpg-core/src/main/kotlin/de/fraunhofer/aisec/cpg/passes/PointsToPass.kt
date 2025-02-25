@@ -637,8 +637,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                     // in
                                     // the CallExpression
                                     if (srcNode.argumentIndex < currentNode.arguments.size) {
-                                        // If this is a short FunctionSummary, we don't
-                                        // update the state, we additionally update the
+                                        // If this is a short FunctionSummary, we additionally
+                                        // update the
                                         // generalState to draw the additional DFG Edges
                                         if (shortFS) {
                                             doubleState =
@@ -672,9 +672,20 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                                 )
                                         values.forEach { value ->
                                             destination.forEach { d ->
+                                                // The extracted value might come from a state we
+                                                // created for a shortfunctionSummary. If so, we
+                                                // have to store that info in the map
+                                                val shortFSEntry =
+                                                    (edgePropertiesMap[
+                                                        Pair(
+                                                            currentNode.arguments[
+                                                                    srcNode.argumentIndex],
+                                                            value,
+                                                        )]
+                                                        as? Boolean == true) || shortFS
                                                 mapDstToSrc.computeIfAbsent(d) {
                                                     identitySetOf()
-                                                } += Pair(value, shortFS)
+                                                } += Pair(value, shortFSEntry)
                                             }
                                         }
                                     }
@@ -1243,7 +1254,7 @@ fun PointsToStateElement.getAddresses(node: Node): IdentitySet<Node> {
 
 /**
  * nestingDepth 0 gets the `node`'s address. 1 fetches the current value, 2 the dereference, 3 the
- * derefdereference, etc...
+ * derefdereference, etc... -1 returns the node
  */
 fun PointsToStateElement.getNestedValues(
     node: Node,
@@ -1251,6 +1262,7 @@ fun PointsToStateElement.getNestedValues(
     fetchFields: Boolean = false,
     onlyFetchExistingEntries: Boolean = false,
 ): IdentitySet<Node> {
+    if (nestingDepth == -1) return identitySetOf(node)
     if (nestingDepth == 0) return this.getAddresses(node)
     var ret = getValues(node)
     for (i in 1..<nestingDepth) {

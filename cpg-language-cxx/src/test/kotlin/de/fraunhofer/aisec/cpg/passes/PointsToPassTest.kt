@@ -1493,6 +1493,8 @@ class PointsToPassTest {
         assertEquals(2, ceLine242.prevFullDFG.size)
         assertTrue(ceLine242.prevFullDFG.contains(iDecl.memoryAddress!!))
         assertTrue(ceLine242.prevFullDFG.contains(binOpLine212))
+        assertEquals(1, ceLine242.prevFunctionSummaryDFG.size)
+        assertEquals(ceLine239.arguments.first(), ceLine242.prevFunctionSummaryDFG.first())
     }
 
     @Test
@@ -2024,7 +2026,7 @@ class PointsToPassTest {
         )
 
         // CallExpression in Line 386
-        assertEquals(1, pArgLine386.nextDFGEdges.size)
+        assertEquals(1, pArgLine386.nextDFGEdges.filter { !it.functionSummary }.size)
         assertEquals(
             ceLine386,
             ((pArgLine386.nextDFGEdges.first() as ContextSensitiveDataflow).callingContext
