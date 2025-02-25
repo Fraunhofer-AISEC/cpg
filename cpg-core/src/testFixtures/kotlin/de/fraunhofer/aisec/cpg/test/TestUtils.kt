@@ -46,6 +46,8 @@ import java.nio.file.Path
 import java.util.function.Consumer
 import java.util.function.Predicate
 import java.util.stream.Collectors
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.contract
 import kotlin.test.*
 
 object TestUtils {
@@ -314,10 +316,21 @@ fun assertLocalName(localName: String, node: Node?, message: String? = null) {
 }
 
 /**
- * Asserts that a) the expression in [expr] is a [Literal] and b) that it's value is equal to
- * [expected].
+ * Asserts that
+ * - the expression in [expr] is a [Literal] and
+ * - that it's value is equal to [expected].
+ *
+ * Guarantees that [expr] is not null if
+ * - [expected] is not null and
+ * - the assertion on the value succeeds.
  */
-fun <T : Any?> assertLiteralValue(expected: T, expr: Expression?, message: String? = null) {
+@OptIn(ExperimentalContracts::class)
+inline fun <reified T : Any?> assertLiteralValue(
+    expected: T,
+    expr: Expression?,
+    message: String? = null,
+) {
+    contract { returns() implies (expected != null && expr != null) }
     assertEquals(expected, assertIs<Literal<T>>(expr).value, message)
 }
 
