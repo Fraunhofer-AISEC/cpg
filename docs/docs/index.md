@@ -130,12 +130,13 @@ collaborate and push the boundaries of static code analysis.
 <div class="papers">
 
 <div class="admonition paper">
-    <p class="admonition-title">Analyzing the Impact of Copying-and-Pasting Vulnerable Solidity Code Snippets from Question-and-Answer Websites</p>
-    <div class="left">
+  <p class="admonition-title">Analyzing the Impact of Copying-and-Pasting Vulnerable Solidity Code Snippets from Question-and-Answer Websites</p>
+  <div class="left">
     <p class="authors">Konrad Weiss, Christof Ferreira Torres, Florian Wendland</p>
     <p class="conference">In: ACM Internet Measurement Conference (IMC). Madrid, Spain.</p>
-    <details><summary>bibtex</summary>
-    <pre><code>@inproceedings{weiss2024solidity,
+    <details>
+      <summary>bibtex</summary>
+      <pre><code>@inproceedings{weiss2024solidity,
   author={Weiss, Konrad and Ferreira Torres, Christof and Wendland, Florian},
   title={Analyzing the Impact of Copying-and-Pasting Vulnerable Solidity Code Snippets from Question-and-Answer Websites},
   year={2024},
@@ -145,10 +146,11 @@ collaborate and push the boundaries of static code analysis.
   location = {Madrid, Spain},
   publisher={ACM}
 }</code></pre>
-</details>
-    <div class="right">
+    </details>
+  </div>
+  <div class="right">
     <a class="green-button" href="https://doi.org/10.1145/3646547.3688437">paper</a>
-    </div>
+  </div>
 </div>
 
 </div>
@@ -158,12 +160,13 @@ collaborate and push the boundaries of static code analysis.
 <div class="papers">
 
 <div class="admonition paper">
-    <p class="admonition-title">A Uniform Representation of Classical and Quantum Source Code for Static Code Analysis</p>
-    <div class="left">
+  <p class="admonition-title">A Uniform Representation of Classical and Quantum Source Code for Static Code Analysis</p>
+  <div class="left">
     <p class="authors">Maximilian Kaul, Alexander Küchler, Christian Banse</p>
     <p class="conference">In: IEEE International Conference on Quantum Computing and Engineering (QCE). Bellevue, WA, USA.</p>
-    <details><summary>bibtex</summary>
-    <pre><code>@inproceedings{kaul2023qcpg,
+    <details>
+      <summary>bibtex</summary>
+      <pre><code>@inproceedings{kaul2023qcpg,
   author={Maximilian Kaul and Alexander K\"uchler and Christian Banse},
   title={A Uniform Representation of Classical and Quantum Source Code for Static Code Analysis},
   year={2023},
@@ -174,20 +177,21 @@ collaborate and push the boundaries of static code analysis.
   publisher={IEEE}
 }</code></pre>
     </details>
-    </div>
-    <div class="right">
+  </div>
+  <div class="right">
     <a class="green-button" href="https://arxiv.org/pdf/2308.06113.pdf">preprint</a><br />
     <a class="green-button" href="https://doi.org/10.1109/QCE57702.2023.00115">paper</a>
-    </div>
+  </div>
 </div>
 
 <div class="admonition paper">
-    <p class="admonition-title">AbsIntIO: Towards Showing the Absence of Integer Overflows in Binaries using Abstract Interpretation</p>
-    <div class="left">
+  <p class="admonition-title">AbsIntIO: Towards Showing the Absence of Integer Overflows in Binaries using Abstract Interpretation</p>
+  <div class="left">
     <p class="authors">Alexander Küchler, Leon Wenning, Florian Wendland</p>
     <p class="conference">In: ACM ASIA Conference on Computer and Communications Security (Asia CCS). Melbourne, VIC, Australia.</p>
-    <details><summary>bibtex</summary>
-    <pre><code>@inproceedings{kuechler2023absintio,
+    <details>
+      <summary>bibtex</summary>
+      <pre><code>@inproceedings{kuechler2023absintio,
   author={Alexander K\"uchler and Leon Wenning and Florian Wendland},
   title={AbsIntIO: Towards Showing the Absence of Integer Overflows in Binaries using Abstract Interpretation},
   year={2023},
@@ -198,10 +202,10 @@ collaborate and push the boundaries of static code analysis.
   publisher={ACM}
 }</code></pre>
     </details>
-    </div>
-    <div class="right">
+  </div>
+  <div class="right">
     <a class="green-button" href="https://doi.org/10.1145/3579856.3582814">paper</a>
-    </div>
+  </div>
 </div>
 
 </div>
@@ -211,13 +215,13 @@ collaborate and push the boundaries of static code analysis.
 <div class="papers">
 
 <div class="admonition paper">
-    <p class="admonition-title">Representing LLVM-IR in a Code Property Graph</p>
-
-    <div class="left">
+  <p class="admonition-title">Representing LLVM-IR in a Code Property Graph</p>
+  <div class="left">
     <p class="authors">Alexander Küchler, Christian Banse</p>
     <p class="conference">In: 25th Information Security Conference (ISC). Bali, Indonesia.</p>
-    <details><summary>bibtex</summary>
-    <pre><code>@inproceedings{kuechler2022representing,
+    <details>
+      <summary>bibtex</summary>
+      <pre><code>@inproceedings{kuechler2022representing,
   author={Alexander K\"uchler and Christian Banse},
   title={Representing LLVM-IR in a Code Property Graph},
   year={2022},
@@ -228,20 +232,20 @@ collaborate and push the boundaries of static code analysis.
   publisher={Springer}
 }</code></pre>
     </details>
-    </div>
-    <div class="right">
+  </div>
+  <div class="right">
     <a class="green-button" href="https://arxiv.org/pdf/2211.05627.pdf">preprint</a><br />
     <a class="green-button" href="https://link.springer.com/chapter/10.1007/978-3-031-22390-7_21">paper</a>
-    </div>
+  </div>
 </div>
 
 <div class="admonition paper">
-    <p class="admonition-title">A Language-Independent Analysis Platform for Source Code</p>
-
-    <div class="left">
+  <p class="admonition-title">A Language-Independent Analysis Platform for Source Code</p>
+  <div class="left">
     <p class="authors">Konrad Weiss, Christian Banse</p>
-    <details><summary>bibtex</summary>
-    <pre><code>@misc{weiss2022a,
+    <details>
+      <summary>bibtex</summary>
+      <pre><code>@misc{weiss2022a,
   doi = {10.48550/ARXIV.2203.08424},
   url = {https://arxiv.org/abs/2203.08424},
   author = {Weiss, Konrad and Banse, Christian},
@@ -250,11 +254,10 @@ collaborate and push the boundaries of static code analysis.
   year = {2022},
 }</code></pre>
     </details>
-    </div>
-    <div class="right">
+  </div>
+  <div class="right">
     <a class="green-button" href="https://arxiv.org/pdf/2203.08424.pdf">paper</a>
-    </div>
-
+  </div>
 </div>
 
 </div>
@@ -264,13 +267,13 @@ collaborate and push the boundaries of static code analysis.
 <div class="papers" style=" border-bottom: 1px solid #c7cacc;">
 
 <div class="admonition paper">
-    <p class="admonition-title">Cloud Property Graph: Connecting Cloud Security Assessments with Static Code Analysis</p>
-
-    <div class="left">
+  <p class="admonition-title">Cloud Property Graph: Connecting Cloud Security Assessments with Static Code Analysis</p>
+  <div class="left">
     <p class="authors">Christian Banse, Immanuel Kunz, Angelika Schneider, Konrad Weiss</p>
     <p class="conference">In: 2021 IEEE 14th International Conference on Cloud Computing (CLOUD). Los Alamitos, CA, USA</p>
-    <details><summary>bibtex</summary>
-    <pre><code>@inproceedings{banse2021cloudpg,
+    <details>
+      <summary>bibtex</summary>
+      <pre><code>@inproceedings{banse2021cloudpg,
   author = {Christian Banse and Immanuel Kunz and Angelika Schneider and Konrad Weiss},
   booktitle = {2021 IEEE 14th International Conference on Cloud Computing (CLOUD)},
   title = {Cloud Property Graph: Connecting Cloud Security Assessments with Static Code Analysis},
@@ -283,11 +286,12 @@ collaborate and push the boundaries of static code analysis.
   month = {sep}
 }</code></pre>
     </details>
-    </div>
-    <div class="right">
+  </div>
+  <div class="right">
     <a class="green-button" href="https://arxiv.org/pdf/2206.06938.pdf">preprint</a><br />
     <a class="green-button" href="https://www.computer.org/csdl/proceedings-article/cloud/2021/006000a013/1ymJ7POIlxe">paper</a>
-    </div>
+  </div>
 </div>
+
 </div>
 

@@ -373,7 +373,7 @@ open class ValueEvaluator(
         ile?.let {
             return evaluateInternal(
                 it.initializers
-                    .filterIsInstance(KeyValueExpression::class.java)
+                    .filterIsInstance<KeyValueExpression>()
                     .firstOrNull { kve ->
                         (kve.key as? Literal<*>)?.value ==
                             (expr.subscriptExpression as? Literal<*>)?.value
@@ -386,11 +386,7 @@ open class ValueEvaluator(
             return (array.initializer as Literal<*>).value
         }
 
-        if (expr.arrayExpression is SubscriptExpression) {
-            return evaluateInternal(expr.arrayExpression, depth + 1)
-        }
-
-        return cannotEvaluate(expr, this)
+        return handlePrevDFG(expr, depth + 1)
     }
 
     protected open fun handleConditionalExpression(expr: ConditionalExpression, depth: Int): Any? {
