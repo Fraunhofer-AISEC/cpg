@@ -663,7 +663,9 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         var currentName: Name? = importName
         while (!currentName.isNullOrEmpty()) {
 
-            // Includes a file in the analysis, if it has the root path and
+            // Includes a file in the analysis, if relative to its rootpath it matches the import
+            // statement.
+            // Both possible file endings are considered.
             ctx.additionalSources
                 .firstOrNull { eSource ->
                     val relFile =

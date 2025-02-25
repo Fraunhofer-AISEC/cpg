@@ -142,8 +142,9 @@ private constructor(
         val usedLanguages = mutableSetOf<Language<*>>()
 
         // If loadIncludes is active, the files stored in the include paths are made available for
-        // conditional analysis
-        // by providing them to the frontends over the [TranslationContext.additionalSources] list.
+        // conditional
+        // analysis by providing them to the frontends over the
+        // [TranslationContext.additionalSources] list.
         if (ctx.config.loadIncludes) {
             ctx.config.includePaths.forEach {
                 ctx.additionalSources.addAll(extractConfiguredSources(it))
