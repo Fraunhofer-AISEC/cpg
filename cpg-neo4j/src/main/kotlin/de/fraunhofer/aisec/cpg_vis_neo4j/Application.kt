@@ -32,7 +32,7 @@ import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.passes.concepts.FileConceptEOGPass
 import de.fraunhofer.aisec.cpg.passes.concepts.FileConceptPass
-import de.fraunhofer.aisec.cpg.passes.concepts.LoggingConceptPass
+import de.fraunhofer.aisec.cpg.passes.concepts.PythonLoggingConceptPass
 import de.fraunhofer.aisec.cpg.persistence.persist
 import java.io.File
 import java.net.ConnectException
@@ -505,7 +505,7 @@ class Application : Callable<Int> {
             }
         }
         translationConfiguration.registerPass(PrepareSerialization::class)
-        translationConfiguration.registerPass(LoggingConceptPass::class)
+        translationConfiguration.registerPass(PythonLoggingConceptPass::class)
         translationConfiguration.registerPass(FileConceptPass::class)
         translationConfiguration.registerPass(FileConceptEOGPass::class)
 
