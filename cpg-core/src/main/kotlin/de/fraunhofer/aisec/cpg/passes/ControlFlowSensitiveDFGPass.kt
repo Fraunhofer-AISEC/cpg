@@ -33,7 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContext
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
 import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Granularity
-import de.fraunhofer.aisec.cpg.graph.edges.flows.partial
+import de.fraunhofer.aisec.cpg.graph.edges.flows.indexed
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.*
@@ -108,45 +108,28 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
         )
 
         for ((key, value) in finalState.generalState) {
-            if (key is TupleDeclaration) {
-                // We need a little hack for tuple statements to set the index. We have the
-                // outer part (i.e., the tuple) here, but we generate the DFG edges to the
-                // elements. We have the indices here, so it's amazingly easy to find the partial
-                // target.
-                key.elements.forEach { element ->
-                    element.prevDFGEdges.addAll(
-                        value.elements.filterNot {
-                            (it is VariableDeclaration || it is ParameterDeclaration) && key == it
-                        }
-                    ) {
-                        granularity = partial(element)
-                    }
+            value.elements.forEach {
+                // We currently support two properties here: The calling context and the
+                // granularity of the edge. We get the information from the edgePropertiesMap or
+                // use the defaults (no calling context => null and FullGranularity).
+                var callingContext: CallingContext? = null
+                var granularity: Granularity = FullDataflowGranularity
+                edgePropertiesMap[Pair(it, key)]?.let {
+                    callingContext = it.filterIsInstance<CallingContext>().singleOrNull()
+                    granularity =
+                        it.filterIsInstance<Granularity>().singleOrNull() ?: FullDataflowGranularity
                 }
-            } else {
-                value.elements.forEach {
-                    // We currently support two properties here: The calling context and the
-                    // granularity of the edge. We get the information from the edgePropertiesMap or
-                    // use the defaults (no calling context => null and FullGranularity).
-                    var callingContext: CallingContext? = null
-                    var granularity: Granularity = FullDataflowGranularity
-                    edgePropertiesMap[Pair(it, key)]?.let {
-                        callingContext = it.filterIsInstance<CallingContext>().singleOrNull()
-                        granularity =
-                            it.filterIsInstance<Granularity>().singleOrNull()
-                                ?: FullDataflowGranularity
-                    }
 
-                    if ((it is VariableDeclaration || it is ParameterDeclaration) && key == it) {
-                        // Nothing to do
-                    } else if (callingContext != null) {
-                        key.prevDFGEdges.addContextSensitive(
-                            it,
-                            callingContext = callingContext,
-                            granularity = granularity,
-                        )
-                    } else {
-                        key.prevDFGEdges.add(it) { this.granularity = granularity }
-                    }
+                if ((it is VariableDeclaration || it is ParameterDeclaration) && key == it) {
+                    // Nothing to do
+                } else if (callingContext != null) {
+                    key.prevDFGEdges.addContextSensitive(
+                        it,
+                        callingContext = callingContext,
+                        granularity = granularity,
+                    )
+                } else {
+                    key.prevDFGEdges.add(it) { this.granularity = granularity }
                 }
             }
         }
@@ -212,14 +195,24 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
             if (initializer != null) {
                 // A variable declaration with an initializer => The initializer flows to the
                 // declaration. This also affects tuples. We split it up later.
-                state.push(currentNode, PowersetLattice(identitySetOf(initializer)))
+                doubleState.push(currentNode, PowersetLattice(identitySetOf(initializer)))
             }
 
             if (currentNode is TupleDeclaration) {
                 // For a tuple declaration, we write the elements in this statement. We do not
                 // really care about the tuple when using the elements subsequently.
-                currentNode.elements.forEach {
-                    doubleState.pushToDeclarationsState(it, PowersetLattice(identitySetOf(it)))
+                currentNode.elements.forEachIndexed { idx, variable ->
+                    // This is the last write to the variable
+                    doubleState.pushToDeclarationsState(
+                        variable,
+                        PowersetLattice(identitySetOf(variable)),
+                    )
+                    // We wrote the tuple declaration to each element and we keep the index
+                    doubleState.push(variable, PowersetLattice(identitySetOf(currentNode)))
+
+                    edgePropertiesMap
+                        .computeIfAbsent(Pair(currentNode, variable)) { mutableSetOf() }
+                        .add(indexed(idx))
                 }
             } else {
                 // We also wrote something to this variable declaration here.

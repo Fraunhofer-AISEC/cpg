@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.collections.MirroredEdgeCollection
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.helpers.neo4j.DataflowGranularityConverter
+import java.util.Objects
 import kotlin.reflect.KProperty
 import org.neo4j.ogm.annotation.*
 import org.neo4j.ogm.annotation.typeconversion.Convert
@@ -41,8 +42,8 @@ import org.neo4j.ogm.annotation.typeconversion.Convert
  * The granularity of the data-flow, e.g., whether the flow contains the whole object, or just a
  * part of it, for example a record (class/struct) member.
  *
- * The helper functions [full] and [partial] can be used to construct either full or partial
- * dataflow granularity.
+ * The helper functions [full] and [field] can be used to construct either full or partial dataflow
+ * granularity.
  */
 sealed interface Granularity
 
@@ -54,30 +55,50 @@ data object FullDataflowGranularity : Granularity
 
 /**
  * This dataflow granularity denotes that not the "whole" object is flowing from [Dataflow.start] to
- * [Dataflow.end] but only parts of it. Common examples include [MemberExpression] nodes, where we
- * model a dataflow to the base, but only partially scoped to a particular field.
+ * [Dataflow.end] but only parts of it. Common examples include [MemberExpression]s, array or tuple
+ * accesses. This class should allow
  */
-class PartialDataflowGranularity(
+open class PartialDataflowGranularity<T>(
     /** The target that is affected by this partial dataflow. */
-    val partialTarget: Declaration?
-) : Granularity
-
-/**
- * This dataflow granularity denotes that not the "whole" object is flowing from [Dataflow.start] to
- * [Dataflow.end] but only parts of it. Common examples include tuples or array indices.
- */
-class IndexedDataflowGranularity(
-    /** The index that is affected by this partial dataflow. */
-    val index: Int
+    val partialTarget: T
 ) : Granularity {
     override fun equals(other: Any?): Boolean {
-        return this.index == (other as? IndexedDataflowGranularity)?.index
+        return this.partialTarget == (other as? PartialDataflowGranularity<T>)?.partialTarget
     }
 
     override fun hashCode(): Int {
-        return index
+        return Objects.hash(partialTarget)
     }
 }
+
+/**
+ * This dataflow granularity denotes that not the "whole" object is flowing from [Dataflow.start] to
+ * [Dataflow.end] but only parts of it, where the part is identified by a (known)
+ * [FieldDeclaration]. Common examples include [MemberExpression] nodes, where we model a dataflow
+ * to the base, but only partially scoped to a particular field.
+ */
+class FieldDataflowGranularity(partialTarget: FieldDeclaration) :
+    PartialDataflowGranularity<FieldDeclaration>(partialTarget)
+
+/**
+ * This dataflow granularity denotes that not the "whole" object is flowing from [Dataflow.start] to
+ * [Dataflow.end] but only parts of it, where the part is identified by a (constant) integer. Common
+ * examples include tuples or array indices.
+ */
+class IndexedDataflowGranularity(
+    /** The index that is affected by this partial dataflow. */
+    partialTarget: Int
+) : PartialDataflowGranularity<Int>(partialTarget)
+
+/**
+ * This dataflow granularity denotes that not the "whole" object is flowing from [Dataflow.start] to
+ * [Dataflow.end] but only parts of it, where the part is identified by a (constant) String. Common
+ * examples include access to map entries or similar.
+ */
+class StringIndexedDataflowGranularity(
+    /** The index that is affected by this partial dataflow. */
+    partialTarget: String
+) : PartialDataflowGranularity<String>(partialTarget)
 
 /** Creates a new [FullDataflowGranularity]. */
 fun full(): Granularity {
@@ -88,20 +109,36 @@ fun full(): Granularity {
 fun default() = full()
 
 /**
- * Creates a new [PartialDataflowGranularity]. The [target] is the [Declaration] that is affected by
- * the partial dataflow. Examples include a [FieldDeclaration] for a [MemberExpression] or a
- * [VariableDeclaration] for a [TupleDeclaration].
+ * Creates a new [FieldDataflowGranularity]. The [target] is the [Declaration] that is affected by
+ * the partial dataflow. Examples include a [FieldDeclaration] for a [MemberExpression].
  */
-fun partial(target: Declaration?): PartialDataflowGranularity {
-    return PartialDataflowGranularity(target)
+fun field(target: FieldDeclaration): FieldDataflowGranularity {
+    return FieldDataflowGranularity(target)
+}
+
+/**
+ * Creates a new [PartialDataflowGranularity]. The [identifier] is used to access the specific part
+ * of the whole object.
+ */
+fun <T> partial(identifier: T): PartialDataflowGranularity<T> {
+    return PartialDataflowGranularity<T>(identifier)
 }
 
 /**
  * Creates a new [IndexedDataflowGranularity]. The [idx] is the index that is used for the partial
- * dataflow.
+ * dataflow. An example is the access to an array or tuple element, or a [VariableDeclaration] for a
+ * [TupleDeclaration].
  */
 fun indexed(idx: Int): IndexedDataflowGranularity {
     return IndexedDataflowGranularity(idx)
+}
+
+/**
+ * Creates a new [IndexedDataflowGranularity]. The [idx] is the index that is used for the partial
+ * dataflow. An example is the access to a map entry.
+ */
+fun indexed(idx: String): StringIndexedDataflowGranularity {
+    return StringIndexedDataflowGranularity(idx)
 }
 
 /**
