@@ -225,7 +225,7 @@ class Forward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) {
 
                 if (currentNode is OverlayNode) {
                     // For overlay nodes, we skip one step to avoid ending up in a circle
-                    // between the underlaying node and the overlay node.
+                    // between the underlying node and the overlay node.
                     filterAndJump(
                         currentNode = currentNode,
                         edges =
@@ -237,7 +237,7 @@ class Forward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) {
                         nextStep = {
                             if (Implicit in sensitivities) it.nextPDGEdges else it.nextDFGEdges
                         },
-                        nodeStart = { it.end },
+                        nodeStart = ::unwrapNextStepFromEdge,
                     )
                 } else {
                     filterEdges(
@@ -256,7 +256,7 @@ class Forward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) {
                 val interprocedural =
                     if (currentNode is OverlayNode) {
                         // For overlay nodes, we skip one step to avoid ending up in a circle
-                        // between the underlaying node and the overlay node.
+                        // between the underlying node and the overlay node.
                         filterAndJump(
                             currentNode = currentNode,
                             edges = currentNode.nextEOGEdges,
@@ -264,7 +264,7 @@ class Forward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) {
                             scope = scope,
                             sensitivities = sensitivities,
                             nextStep = { it.nextEOGEdges },
-                            nodeStart = { it.end },
+                            nodeStart = ::unwrapNextStepFromEdge,
                         )
                     } else if (currentNode is CallExpression && currentNode.invokes.isNotEmpty()) {
                         // Enter the functions/methods which are/can be invoked here
@@ -361,20 +361,17 @@ class Backward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) 
             GraphToFollow.DFG -> {
                 if (currentNode is OverlayNode) {
                     // For overlay nodes, we skip one step to avoid ending up in a circle
-                    // between the underlaying node and the overlay node.
+                    // between the underlying node and the overlay node.
                     filterAndJump(
                         currentNode = currentNode,
                         edges =
-                            if (de.fraunhofer.aisec.cpg.graph.Implicit in sensitivities)
-                                currentNode.prevPDGEdges
+                            if (Implicit in sensitivities) currentNode.prevPDGEdges
                             else currentNode.prevDFGEdges,
                         ctx = ctx,
                         scope = scope,
                         sensitivities = sensitivities,
                         nextStep = {
-                            if (de.fraunhofer.aisec.cpg.graph.Implicit in sensitivities)
-                                it.prevPDGEdges
-                            else it.prevDFGEdges
+                            if (Implicit in sensitivities) it.prevPDGEdges else it.prevDFGEdges
                         },
                         nodeStart = { it.start },
                     )
@@ -396,7 +393,7 @@ class Backward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) 
                 val interprocedural =
                     if (currentNode is OverlayNode) {
                         // For overlay nodes, we skip one step to avoid ending up in a circle
-                        // between the underlaying node and the overlay node.
+                        // between the underlying node and the overlay node.
                         filterAndJump(
                             currentNode = currentNode,
                             edges = currentNode.prevEOGEdges,
