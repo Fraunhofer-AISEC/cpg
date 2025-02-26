@@ -407,7 +407,11 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
      *
      * Therefore, we give the language a chance to return a [TranslationUnitDeclaration] where the
      * declaration should be placed. If the language does not override this function, the default
+<<<<<<< HEAD
      * implementation will return the first [TranslationUnitDeclaration] in the [Component] of
+=======
+     * implementation will return the first [TranslationUnitDeclaration] in the component of
+>>>>>>> 599d8dac87 (Fixed bug in `translationUnitForInference`)
      * [source].
      *
      * But languages might choose to take the information of [TypeToInfer] and [source] and create a
@@ -418,6 +422,7 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
      * @param source the source that was responsible for the inference
      */
     fun <TypeToInfer : Node> translationUnitForInference(source: Node): TranslationUnitDeclaration {
+<<<<<<< HEAD
         // The easiest way to identify the current component would be traversing the AST, but that
         // does
         // not work for types. But types have a scope and the scope (should) have the connection to
