@@ -29,9 +29,12 @@ import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.logging.LogLevel
 import de.fraunhofer.aisec.cpg.graph.concepts.logging.LogWriteOperation
+import de.fraunhofer.aisec.cpg.graph.concepts.logging.LoggingNode
+import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.passes.concepts.FileConceptPass
 import de.fraunhofer.aisec.cpg.passes.concepts.PythonLoggingConceptPass
+import de.fraunhofer.aisec.cpg.query.dataFlow
 import de.fraunhofer.aisec.cpg.test.BaseTest
 import de.fraunhofer.aisec.cpg.test.analyze
 import de.fraunhofer.aisec.cpg.test.assertLiteralValue
@@ -112,5 +115,69 @@ class LoggingConceptTest : BaseTest() {
 
         val loggingNodes = result.conceptNodes
         assertTrue(loggingNodes.isNotEmpty())
+
+        assertEquals(
+            2,
+            result.conceptNodes { it is LoggingNode }.size,
+            "Expected to find 2 logging nodes. One from the `import logging` declaration (not used directly for logging) and one from the `logging.getLogger()` call (used with `logger.error(...)`).",
+        )
+
+        val literalERROR = result.literals.singleOrNull { it.value.toString() == "ERROR" }
+        assertNotNull(literalERROR)
+
+        assertTrue(
+            dataFlow(startNode = literalERROR) { it is LoggingNode }.value,
+            "Expected to find a dataflow from the literal \"ERROR\" to a logging node.",
+        )
+    }
+
+    @Test
+    fun test03() {
+        val topLevel =
+            Path.of("src", "integrationTest", "resources", "concepts", "logging", "python")
+
+        val result =
+            analyze(
+                files = listOf(topLevel.resolve("simple_log3.py").toFile()),
+                topLevel = topLevel,
+                usePasses = true,
+            ) {
+                it.registerLanguage<PythonLanguage>()
+
+                it.registerPass<PythonLoggingConceptPass>()
+                it.registerPass<FileConceptPass>()
+            }
+        assertNotNull(result)
+
+        val loggingNodes = result.conceptNodes
+        assertTrue(loggingNodes.isNotEmpty())
+
+        assertEquals(
+            2,
+            result.conceptNodes { it is LoggingNode }.size,
+            "Expected to find 2 logging nodes. One from the `import logging as log` declaration (used with `log.info()`) and one from the `log.getLogger()` call (used with `logger.error(...)`).",
+        )
+
+        val literalINFO = result.literals.singleOrNull { it.value.toString() == "INFO" }
+        assertNotNull(literalINFO)
+
+        assertTrue(
+            dataFlow(startNode = literalINFO) {
+                    it is LoggingNode && it.underlyingNode is ImportDeclaration
+                }
+                .value,
+            "Expected to find a dataflow from the literal \"INFO\" to the logging node based on the import declaration.",
+        )
+
+        val literalERROR = result.literals.singleOrNull { it.value.toString() == "ERROR" }
+        assertNotNull(literalERROR)
+
+        assertTrue(
+            dataFlow(startNode = literalERROR) {
+                    it is LoggingNode && it.underlyingNode is CallExpression
+                }
+                .value,
+            "Expected to find a dataflow from the literal \"ERROR\" to the logging node based on the `getLogger` call.",
+        )
     }
 }
