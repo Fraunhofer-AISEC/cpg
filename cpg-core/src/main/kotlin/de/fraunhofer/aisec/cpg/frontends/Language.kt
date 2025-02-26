@@ -420,12 +420,8 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
         // The easiest way for the current component would be the traversing the AST, but that does
         // not work for types. But types have a scope and the scope (should) have the connection to
         // the AST
-        val component =
-            if (source is Type) {
-                source.scope?.astNode?.component
-            } else {
-                source.component
-            }
+        val component = source.scope?.astNode?.component
+
         // We should also make sure that the language matches
         val tu = component?.translationUnits?.firstOrNull { it.language == this }
 
