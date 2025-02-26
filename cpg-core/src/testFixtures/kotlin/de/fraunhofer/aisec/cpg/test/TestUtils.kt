@@ -320,12 +320,13 @@ fun assertLocalName(localName: String, node: Node?, message: String? = null) {
  * - the expression in [expr] is a [Literal] and
  * - that it's value is equal to [expected].
  *
- * Guarantees that [expr] is not null if the assertion on the value succeeds. Note: this is an ugly
- * hack that works, because the internal `assertIs<...>(expr)` ensures that [expr] cannot be null.
+ * Guarantees that [expr] is not null if the assertion on the value succeeds.
  */
 @OptIn(ExperimentalContracts::class)
 fun <T : Any?> assertLiteralValue(expected: T, expr: Expression?, message: String? = null) {
-    contract { returns() implies (expr != null) }
+    contract {
+        returns() implies (expr != null)
+    } // the not-null contract holds as the call to `assertIs` is not accepting `null`
     assertEquals(expected, assertIs<Literal<T>>(expr).value, message)
 }
 
