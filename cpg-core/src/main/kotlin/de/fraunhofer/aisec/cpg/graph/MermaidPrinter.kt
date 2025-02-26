@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
-import de.fraunhofer.aisec.cpg.graph.edges.flows.PartialDataflowGranularity
+import de.fraunhofer.aisec.cpg.graph.edges.flows.FieldDataflowGranularity
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 
@@ -138,8 +138,8 @@ private fun Edge<out Node>.label(): String {
 
     if (this is Dataflow) {
         var granularity = this.granularity
-        if (granularity is PartialDataflowGranularity) {
-            builder.append(" (partial, ${granularity.partialTarget?.name})")
+        if (granularity is FieldDataflowGranularity) {
+            builder.append(" (partial, ${granularity.partialTarget.name})")
         } else {
             builder.append(" (full)")
         }
