@@ -38,7 +38,6 @@ import de.fraunhofer.aisec.cpg.graph.followDFGEdgesUntilHit
 import de.fraunhofer.aisec.cpg.graph.followPrevDFG
 import de.fraunhofer.aisec.cpg.graph.fqn
 import de.fraunhofer.aisec.cpg.graph.implicit
-import de.fraunhofer.aisec.cpg.graph.operationNodes
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.SubscriptExpression
@@ -52,14 +51,13 @@ import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
  * [`configparser`](https://docs.python.org/3/library/configparser.html) module of the Python
  * standard library.
  */
-// @DependsOn(IniFileConfigurationPass::class, softDependency = true)
 @DependsOn(SymbolResolver::class)
 class PythonStdLibConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) {
     override fun handleNode(node: Node, tu: TranslationUnitDeclaration) {
         when (node) {
             is ConstructExpression -> handleConstructExpression(node)
             is MemberCallExpression -> handleMemberCallExpression(node)
-            is SubscriptExpression -> handleSubscriptExpression(node, tu)
+            is SubscriptExpression -> handleSubscriptExpression(node)
         }
     }
 
@@ -92,7 +90,7 @@ class PythonStdLibConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) 
                 val conf = it.last() as Configuration
                 val op = LoadConfiguration(call, conf, fileExpression = firstArgument)
                 op
-            } ?: listOf()
+            }
         }
 
         return null
@@ -106,16 +104,13 @@ class PythonStdLibConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) 
      * or groups, we need to implicitly create them here as well.,
      */
     private fun handleSubscriptExpression(
-        sub: SubscriptExpression,
-        tu: TranslationUnitDeclaration,
-    ): List<ConfigurationOperation> {
-        val ops = mutableListOf<ConfigurationOperation>()
-
+        sub: SubscriptExpression
+    ): MutableList<ConfigurationOperation>? {
         // We need to check, whether we access a group or an option
         val path =
             sub.arrayExpression.followPrevDFG { it is Configuration || it is ConfigurationGroup }
         val last = path?.lastOrNull()
-        when (last) {
+        return when (last) {
             // If we can follow it directly to the configuration node, then we access a group
             is Configuration -> {
                 handleGroupAccess(last, sub)
@@ -123,9 +118,8 @@ class PythonStdLibConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) 
             is ConfigurationGroup -> {
                 handleOptionAccess(last, sub)
             }
+            else -> null
         }
-
-        return emptyList()
     }
 
     /** Translates a group access (`config["group"]`) into a [ReadConfigurationGroup] operation. */
@@ -198,20 +192,6 @@ class PythonStdLibConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) 
         sub.prevDFGEdges.add(option)
 
         return ops
-    }
-
-    /** Registers a configuration group or option if it does not exist yet. */
-    private inline fun <reified RegisterType : ConfigurationOperation> registerIfItNotExists(
-        tu: TranslationUnitDeclaration,
-        filter: ((RegisterType) -> Boolean),
-        construct: () -> (RegisterType),
-    ): RegisterType {
-        var register = tu.operationNodes.filterIsInstance<RegisterType>().singleOrNull(filter)
-        if (register == null) {
-            register = construct()
-        }
-
-        return register
     }
 }
 
