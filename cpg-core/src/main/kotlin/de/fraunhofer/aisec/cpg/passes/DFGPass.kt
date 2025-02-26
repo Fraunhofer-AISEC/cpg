@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
 import de.fraunhofer.aisec.cpg.graph.edges.flows.field
 import de.fraunhofer.aisec.cpg.graph.edges.flows.indexed
+import de.fraunhofer.aisec.cpg.graph.edges.flows.partial
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.IterativeGraphWalker
@@ -394,7 +395,8 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * Check with python and JS implementation
      */
     protected fun handleKeyValueExpression(node: KeyValueExpression) {
-        node.value?.let { node.prevDFGEdges += it }
+        // TODO: Doesn't the node also contain the key?? Should the value be "partial" or "full"?
+        node.prevDFGEdges += node.value
     }
 
     /**
@@ -466,7 +468,21 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * `x[i]`.
      */
     protected fun handleSubscriptExpression(node: SubscriptExpression) {
-        node.prevDFGEdges += node.arrayExpression
+        if (node.access == AccessValues.WRITE) {
+                node.nextDFGEdges
+            } else {
+                node.prevDFGEdges
+            }
+            .add(node.arrayExpression) {
+                granularity =
+                    if ((node.subscriptExpression as? Literal<*>)?.value is Int) {
+                        indexed((node.subscriptExpression as Literal<*>).value as Int)
+                    } else if ((node.subscriptExpression as? Literal<*>)?.value is String) {
+                        indexed((node.subscriptExpression as Literal<*>).value as String)
+                    } else {
+                        partial(node.subscriptExpression)
+                    }
+            }
     }
 
     /** Adds the DFG edge to an [NewArrayExpression]. The initializer flows to the expression. */
