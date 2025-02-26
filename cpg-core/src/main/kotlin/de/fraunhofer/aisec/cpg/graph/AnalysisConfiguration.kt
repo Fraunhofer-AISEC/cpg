@@ -222,7 +222,11 @@ class Forward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) {
     ): Collection<Pair<Node, Context>> {
         return when (graphToFollow) {
             GraphToFollow.DFG -> {
-                filterEdges(
+
+                if (currentNode is OverlayNode) {
+                    // For overlay nodes, we skip one step to avoid ending up in a circle
+                    // between the underlaying node and the overlay node.
+                    filterAndJump(
                         currentNode = currentNode,
                         edges =
                             if (Implicit in sensitivities) currentNode.nextPDGEdges
@@ -230,8 +234,23 @@ class Forward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) {
                         ctx = ctx,
                         scope = scope,
                         sensitivities = sensitivities,
+                        nextStep = {
+                            if (Implicit in sensitivities) it.nextPDGEdges else it.nextDFGEdges
+                        },
+                        nodeStart = { it.end },
                     )
-                    .map { (edge, newCtx) -> this.unwrapNextStepFromEdge(edge) to newCtx }
+                } else {
+                    filterEdges(
+                            currentNode = currentNode,
+                            edges =
+                                if (Implicit in sensitivities) currentNode.nextPDGEdges
+                                else currentNode.nextDFGEdges,
+                            ctx = ctx,
+                            scope = scope,
+                            sensitivities = sensitivities,
+                        )
+                        .map { (edge, newCtx) -> this.unwrapNextStepFromEdge(edge) to newCtx }
+                }
             }
             GraphToFollow.EOG -> {
                 val interprocedural =
@@ -340,16 +359,37 @@ class Backward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) 
     ): Collection<Pair<Node, Context>> {
         return when (graphToFollow) {
             GraphToFollow.DFG -> {
-                filterEdges(
+                if (currentNode is OverlayNode) {
+                    // For overlay nodes, we skip one step to avoid ending up in a circle
+                    // between the underlaying node and the overlay node.
+                    filterAndJump(
                         currentNode = currentNode,
                         edges =
-                            if (Implicit in sensitivities) currentNode.prevPDGEdges
+                            if (de.fraunhofer.aisec.cpg.graph.Implicit in sensitivities)
+                                currentNode.prevPDGEdges
                             else currentNode.prevDFGEdges,
                         ctx = ctx,
                         scope = scope,
                         sensitivities = sensitivities,
+                        nextStep = {
+                            if (de.fraunhofer.aisec.cpg.graph.Implicit in sensitivities)
+                                it.prevPDGEdges
+                            else it.prevDFGEdges
+                        },
+                        nodeStart = { it.start },
                     )
-                    .map { (edge, newCtx) -> this.unwrapNextStepFromEdge(edge) to newCtx }
+                } else {
+                    filterEdges(
+                            currentNode = currentNode,
+                            edges =
+                                if (Implicit in sensitivities) currentNode.prevPDGEdges
+                                else currentNode.prevDFGEdges,
+                            ctx = ctx,
+                            scope = scope,
+                            sensitivities = sensitivities,
+                        )
+                        .map { (edge, newCtx) -> this.unwrapNextStepFromEdge(edge) to newCtx }
+                }
             }
 
             GraphToFollow.EOG -> {
