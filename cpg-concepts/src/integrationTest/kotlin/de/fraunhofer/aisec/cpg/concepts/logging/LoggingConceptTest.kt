@@ -49,8 +49,7 @@ import org.junit.jupiter.api.Tag
 class LoggingConceptTest : BaseTest() {
     @Test
     fun test01() {
-        val topLevel =
-            Path.of("src", "integrationTest", "resources", "concepts", "logging", "python")
+        val topLevel = Path.of("src", "integrationTest", "resources", "python", "logging")
 
         val result =
             analyze(
@@ -96,8 +95,7 @@ class LoggingConceptTest : BaseTest() {
 
     @Test
     fun test02() {
-        val topLevel =
-            Path.of("src", "integrationTest", "resources", "concepts", "logging", "python")
+        val topLevel = Path.of("src", "integrationTest", "resources", "python", "logging")
 
         val result =
             analyze(
@@ -106,7 +104,6 @@ class LoggingConceptTest : BaseTest() {
                 usePasses = true,
             ) {
                 it.registerLanguage<PythonLanguage>()
-
                 it.registerPass<PythonLoggingConceptPass>()
             }
         assertNotNull(result)
@@ -131,8 +128,7 @@ class LoggingConceptTest : BaseTest() {
 
     @Test
     fun test03() {
-        val topLevel =
-            Path.of("src", "integrationTest", "resources", "concepts", "logging", "python")
+        val topLevel = Path.of("src", "integrationTest", "resources", "python", "logging")
 
         val result =
             analyze(
@@ -141,7 +137,6 @@ class LoggingConceptTest : BaseTest() {
                 usePasses = true,
             ) {
                 it.registerLanguage<PythonLanguage>()
-
                 it.registerPass<PythonLoggingConceptPass>()
             }
         assertNotNull(result)
