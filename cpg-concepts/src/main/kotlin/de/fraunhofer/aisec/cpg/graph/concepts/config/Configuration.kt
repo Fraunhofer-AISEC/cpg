@@ -30,23 +30,30 @@ import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.passes.concepts.config.ini.IniFileConfigurationPass
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 
 /**
- * Represents a configuration file. Common examples include .properties, .json, .ini, etc. Depending
- * on how the language frontend is implemented, the [underlyingNode] can be different things. For
- * example, the INI frontend models the configuration file as a [RecordDeclaration], which
- * individual entries being [FieldDeclaration] nodes. For more information, see
- * [IniFileConfigurationPass].
+ * Represents the abstract concept of a "configuration". This is a common pattern in many
+ * programming languages, where a data structure in code represents an aggregation of configuration
+ * values. For example, in Python, the
+ * [`configparser`](https://docs.python.org/3/library/configparser.html) module is used to read INI
+ * files, and the config values are represented as a dictionary-like object.
+ *
+ * Often, the configuration is loaded from multiple sources, such as INI files, environment
+ * variables, and command-line arguments.
  */
 class Configuration(underlyingNode: Node) : Concept(underlyingNode = underlyingNode) {
     var groups: MutableList<ConfigurationGroup> = mutableListOf()
 }
 
 /**
- * Represents a configuration group within one [conf]. Depending on the type of configuration, there
- * might only be one group (e.g., a "default" one), or there might be several groups. For example,
- * in an INI file, each section would be a group, and each key-value pair would be an option.
+ * Represents a group of configuration values within one [conf]. Depending on the type of
+ * configuration data structure, there might only be one group (e.g., a "default" one), or there
+ * might be several groups.
+ *
+ * For example, when loading a config from an INI file, each section would be mapped to a
+ * [ConfigurationGroup], and each key-value pair would be mapped to an [ConfigurationOption] within
+ * this group.
  */
 class ConfigurationGroup(underlyingNode: Node, var conf: Configuration) :
     Concept(underlyingNode = underlyingNode) {
@@ -59,7 +66,7 @@ class ConfigurationGroup(underlyingNode: Node, var conf: Configuration) :
 
 /**
  * Represents a configuration option within one [group]. Usually there is one option for each entry
- * in a configuration file.
+ * in a configuration data structure.
  */
 class ConfigurationOption(
     underlyingNode: Node,
@@ -88,9 +95,13 @@ class ConfigurationOption(
 abstract class ConfigurationOperation(underlyingNode: Node, concept: Concept) :
     Operation(underlyingNode = underlyingNode, concept = concept)
 
-/** Represents an operation to load a configuration file. */
-class LoadConfigurationFile(underlyingNode: Node, conf: Configuration) :
-    ConfigurationOperation(underlyingNode = underlyingNode, concept = conf)
+/** Represents an operation to load a configuration from a source, such as a file. */
+class LoadConfiguration(
+    underlyingNode: Node,
+    var conf: Configuration,
+    /** The expression that holds the file that is loaded. */
+    val fileExpression: Expression,
+) : ConfigurationOperation(underlyingNode = underlyingNode, concept = conf)
 
 /**
  * Represents an operation to read a specific configuration group. Often this is done with a member
@@ -118,6 +129,93 @@ class ReadConfigurationOption(
     /** The config option that is being read with this operation. */
     var option: ConfigurationOption,
 ) : ConfigurationOperation(underlyingNode = underlyingNode, concept = conf) {
+    init {
+        name = option.name
+    }
+}
+
+/**
+ * Represents an operation to register a new [ConfigurationGroup]. This is often done with a call,
+ * such as `conf.registerGroup("group")`. This might not be necessary for all configuration
+ * frameworks, some might allow to directly read the group (via [ReadConfigurationGroup]) without
+ * registering it first, or it is done implicitly.
+ *
+ * When code and configuration is interacting, we expect that the configuration file (such as an INI
+ * file) contains the [ConfigurationGroup] node and the code contains the
+ * [RegisterConfigurationGroup] and [ReadConfigurationGroup] nodes.
+ */
+class RegisterConfigurationGroup(
+    underlyingNode: Node,
+    conf: Configuration,
+    /** The config group that is being registered with this operation. */
+    var group: ConfigurationGroup,
+) : ConfigurationOperation(underlyingNode = underlyingNode, concept = conf) {
+    init {
+        name = group.name
+    }
+}
+
+/**
+ * Represents an operation to register a new [ConfigurationOption]. This is often done with a call,
+ * such as `conf.registerOption("option", "defaultValue")`. This might not be necessary for all
+ * configuration frameworks, some might allow to directly read the group (via
+ * [RegisterConfigurationOption]) without registering it first, or it is done implicitly.
+ *
+ * When code and configuration is interacting, we expect that the configuration file (such as an INI
+ * file) contains the [ConfigurationOption] node and the code contains the
+ * [RegisterConfigurationOption] and [ReadConfigurationOption] nodes.
+ */
+class RegisterConfigurationOption(
+    underlyingNode: Node,
+    conf: Configuration,
+    /** The config option that is being registered with this operation. */
+    var option: ConfigurationOption,
+    /** An optional default value of the option. */
+    var defaultValue: Node? = null,
+) : ConfigurationOperation(underlyingNode = underlyingNode, concept = conf) {
+    init {
+        name = option.name
+    }
+}
+
+/**
+ * Represents an operation to provide a [Configuration], e.g., in the form of a configuration file.
+ *
+ * When the configuration file is loaded, a [LoadConfiguration] operation would be found in the code
+ * component (matching the configuration file's name in [LoadConfiguration.fileExpression]) and the
+ * [ProvideConfiguration] operation would be found in the configuration component.
+ *
+ * But also other sources of configuration could be represented by a [ProvideConfiguration]
+ * operation, such as environment variables or command-line arguments.
+ */
+class ProvideConfiguration(underlyingNode: Node, var conf: Configuration) :
+    ConfigurationOperation(underlyingNode = underlyingNode, concept = conf)
+
+/**
+ * Represents an operation to provide a [ConfigurationGroup]. For example, when loading an INI file
+ * with our INI file frontend, each section is presented as a [RecordDeclaration]. This record
+ * declaration would "provide" the configuration group.
+ */
+class ProvideConfigurationGroup(
+    underlyingNode: Node,
+    conf: Configuration,
+    var group: ConfigurationGroup,
+) : ConfigurationOperation(underlyingNode = underlyingNode, concept = conf) {
+    init {
+        name = group.name
+    }
+}
+
+/**
+ * Represents an operation to provide a [ConfigurationOption]. For example, when loading an INI file
+ * with our INI file frontend, each key-value pair is presented as a [FieldDeclaration]. This field
+ * declaration would "provide" the configuration option.
+ */
+class ProvideConfigurationOption(
+    underlyingNode: Node,
+    var option: ConfigurationOption,
+    var value: Node?,
+) : ConfigurationOperation(underlyingNode = underlyingNode, concept = option.group.conf) {
     init {
         name = option.name
     }
