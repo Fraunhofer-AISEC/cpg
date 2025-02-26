@@ -275,6 +275,21 @@
               </div>
             </div>
           </div>
+<a data-name="429674007%2FClasslikes%2F1556141526" anchor-label="FieldDataflowGranularity" id="429674007%2FClasslikes%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-field-dataflow-granularity/index.html"><span>Field</span><wbr><span>Dataflow</span><wbr><span><span>Granularity</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="429674007%2FClasslikes%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-field-dataflow-granularity/index.html">FieldDataflowGranularity</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">partialTarget<span class="token operator">: </span><a href="../de.fraunhofer.aisec.cpg.graph.declarations/-field-declaration/index.html">FieldDeclaration</a></span></span><span class="token punctuation">)</span> : <a href="-partial-dataflow-granularity/index.html">PartialDataflowGranularity</a><span class="token operator">&lt;</span><a href="../de.fraunhofer.aisec.cpg.graph.declarations/-field-declaration/index.html">FieldDeclaration</a><span class="token operator">&gt; </span></div><div class="brief "><p class="paragraph">This dataflow granularity denotes that not the "whole" object is flowing from <a href="../../cpg-core/de.fraunhofer.aisec.cpg.graph.edges.flows/-dataflow/start.html">Dataflow.start</a> to <a href="../../cpg-core/de.fraunhofer.aisec.cpg.graph.edges.flows/-dataflow/end.html">Dataflow.end</a> but only parts of it, where the part is identified by a (known) <a href="../de.fraunhofer.aisec.cpg.graph.declarations/-field-declaration/index.html">FieldDeclaration</a>. Common examples include <a href="../de.fraunhofer.aisec.cpg.graph.statements.expressions/-member-expression/index.html">MemberExpression</a> nodes, where we model a dataflow to the base, but only partially scoped to a particular field.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
 <a data-name="1292624168%2FClasslikes%2F1556141526" anchor-label="FullDataflowGranularity" id="1292624168%2FClasslikes%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
           <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
             <div class="main-subrow keyValue ">
@@ -315,7 +330,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-indexed-dataflow-granularity/index.html">IndexedDataflowGranularity</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">val </span>index<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-int/index.html">Int</a></span></span><span class="token punctuation">)</span> : <a href="-granularity/index.html">Granularity</a></div><div class="brief "><p class="paragraph">This dataflow granularity denotes that not the "whole" object is flowing from <a href="../../cpg-core/de.fraunhofer.aisec.cpg.graph.edges.flows/-dataflow/start.html">Dataflow.start</a> to <a href="../../cpg-core/de.fraunhofer.aisec.cpg.graph.edges.flows/-dataflow/end.html">Dataflow.end</a> but only parts of it. Common examples include tuples or array indices.</p></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-indexed-dataflow-granularity/index.html">IndexedDataflowGranularity</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">partialTarget<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-int/index.html">Int</a></span></span><span class="token punctuation">)</span> : <a href="-partial-dataflow-granularity/index.html">PartialDataflowGranularity</a><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-int/index.html">Int</a><span class="token operator">&gt; </span></div><div class="brief "><p class="paragraph">This dataflow granularity denotes that not the "whole" object is flowing from <a href="../../cpg-core/de.fraunhofer.aisec.cpg.graph.edges.flows/-dataflow/start.html">Dataflow.start</a> to <a href="../../cpg-core/de.fraunhofer.aisec.cpg.graph.edges.flows/-dataflow/end.html">Dataflow.end</a> but only parts of it, where the part is identified by a (constant) integer. Common examples include tuples or array indices.</p></div></div></div>
                 </div>
               </div>
             </div>
@@ -360,7 +375,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-partial-dataflow-granularity/index.html">PartialDataflowGranularity</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">val </span>partialTarget<span class="token operator">: </span><a href="../de.fraunhofer.aisec.cpg.graph.declarations/-declaration/index.html">Declaration</a><span class="token operator">?</span></span></span><span class="token punctuation">)</span> : <a href="-granularity/index.html">Granularity</a></div><div class="brief "><p class="paragraph">This dataflow granularity denotes that not the "whole" object is flowing from <a href="../../cpg-core/de.fraunhofer.aisec.cpg.graph.edges.flows/-dataflow/start.html">Dataflow.start</a> to <a href="../../cpg-core/de.fraunhofer.aisec.cpg.graph.edges.flows/-dataflow/end.html">Dataflow.end</a> but only parts of it. Common examples include <a href="../de.fraunhofer.aisec.cpg.graph.statements.expressions/-member-expression/index.html">MemberExpression</a> nodes, where we model a dataflow to the base, but only partially scoped to a particular field.</p></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-partial-dataflow-granularity/index.html">PartialDataflowGranularity</a><span class="token operator">&lt;</span><a href="-partial-dataflow-granularity/index.html">T</a><span class="token operator">&gt;</span><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">val </span>partialTarget<span class="token operator">: </span><a href="-partial-dataflow-granularity/index.html">T</a></span></span><span class="token punctuation">)</span> : <a href="-granularity/index.html">Granularity</a></div><div class="brief "><p class="paragraph">This dataflow granularity denotes that not the "whole" object is flowing from <a href="../../cpg-core/de.fraunhofer.aisec.cpg.graph.edges.flows/-dataflow/start.html">Dataflow.start</a> to <a href="../../cpg-core/de.fraunhofer.aisec.cpg.graph.edges.flows/-dataflow/end.html">Dataflow.end</a> but only parts of it. Common examples include <a href="../de.fraunhofer.aisec.cpg.graph.statements.expressions/-member-expression/index.html">MemberExpression</a>s, array or tuple accesses. This class should allow</p></div></div></div>
                 </div>
               </div>
             </div>
@@ -391,6 +406,21 @@
               <div>
                 <div class="title">
                   <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-program-dependences/index.html">ProgramDependences</a><span class="token operator">&lt;</span><a href="-program-dependences/index.html">NodeType</a><span class="token operator"> : </span><a href="../de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">&gt;</span> : <a href="../de.fraunhofer.aisec.cpg.graph.edges.collections/-edge-set/index.html">EdgeSet</a><span class="token operator">&lt;</span><a href="-program-dependences/index.html">NodeType</a><span class="token punctuation">, </span><a href="../de.fraunhofer.aisec.cpg.graph.edges/-edge/index.html">Edge</a><span class="token operator">&lt;</span><a href="-program-dependences/index.html">NodeType</a><span class="token operator">&gt;</span><span class="token operator">&gt; </span>, <a href="../de.fraunhofer.aisec.cpg.graph.edges.collections/-mirrored-edge-collection/index.html">MirroredEdgeCollection</a><span class="token operator">&lt;</span><a href="-program-dependences/index.html">NodeType</a><span class="token punctuation">, </span><a href="../de.fraunhofer.aisec.cpg.graph.edges/-edge/index.html">Edge</a><span class="token operator">&lt;</span><a href="-program-dependences/index.html">NodeType</a><span class="token operator">&gt;</span><span class="token operator">&gt; </span></div><div class="brief "><p class="paragraph">A container of <a href="../de.fraunhofer.aisec.cpg.graph.edges/-edge/index.html">Edge</a> edges that act as a program dependence graph (PDG). The canonical version of this lives in <a href="../de.fraunhofer.aisec.cpg.graph/-node/prev-p-d-g-edges.html">Node.prevPDGEdges</a> / <a href="../de.fraunhofer.aisec.cpg.graph/-node/next-p-d-g-edges.html">Node.nextPDGEdges</a> and is populated by the <a href="../de.fraunhofer.aisec.cpg.passes/-program-dependence-graph-pass/index.html">ProgramDependenceGraphPass</a>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="490194365%2FClasslikes%2F1556141526" anchor-label="StringIndexedDataflowGranularity" id="490194365%2FClasslikes%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-string-indexed-dataflow-granularity/index.html"><span>String</span><wbr><span>Indexed</span><wbr><span>Dataflow</span><wbr><span><span>Granularity</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="490194365%2FClasslikes%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-string-indexed-dataflow-granularity/index.html">StringIndexedDataflowGranularity</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">partialTarget<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></span></span><span class="token punctuation">)</span> : <a href="-partial-dataflow-granularity/index.html">PartialDataflowGranularity</a><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt; </span></div><div class="brief "><p class="paragraph">This dataflow granularity denotes that not the "whole" object is flowing from <a href="../../cpg-core/de.fraunhofer.aisec.cpg.graph.edges.flows/-dataflow/start.html">Dataflow.start</a> to <a href="../../cpg-core/de.fraunhofer.aisec.cpg.graph.edges.flows/-dataflow/end.html">Dataflow.end</a> but only parts of it, where the part is identified by a (constant) String. Common examples include access to map entries or similar.</p></div></div></div>
                 </div>
               </div>
             </div>
@@ -444,6 +474,21 @@
               </div>
             </div>
           </div>
+<a data-name="-401368779%2FFunctions%2F1556141526" anchor-label="field" id="-401368779%2FFunctions%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="field.html"><span><span>field</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-401368779%2FFunctions%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="field.html"><span class="token function">field</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">target<span class="token operator">: </span><a href="../de.fraunhofer.aisec.cpg.graph.declarations/-field-declaration/index.html">FieldDeclaration</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="-field-dataflow-granularity/index.html">FieldDataflowGranularity</a></div><div class="brief "><p class="paragraph">Creates a new <a href="-field-dataflow-granularity/index.html">FieldDataflowGranularity</a>. The <a href="field.html">target</a> is the <a href="../de.fraunhofer.aisec.cpg.graph.declarations/-declaration/index.html">Declaration</a> that is affected by the partial dataflow. Examples include a <a href="../de.fraunhofer.aisec.cpg.graph.declarations/-field-declaration/index.html">FieldDeclaration</a> for a <a href="../de.fraunhofer.aisec.cpg.graph.statements.expressions/-member-expression/index.html">MemberExpression</a>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
 <a data-name="-1656646147%2FFunctions%2F1556141526" anchor-label="full" id="-1656646147%2FFunctions%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
           <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
             <div class="main-subrow keyValue ">
@@ -459,17 +504,17 @@
               </div>
             </div>
           </div>
-<a data-name="-794716933%2FFunctions%2F1556141526" anchor-label="indexed" id="-794716933%2FFunctions%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+<a data-name="-1998336202%2FFunctions%2F1556141526" anchor-label="indexed" id="-1998336202%2FFunctions%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
           <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
             <div class="main-subrow keyValue ">
               <div class=""><span class="inline-flex">
                   <div><a href="indexed.html"><span><span>indexed</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-794716933%2FFunctions%2F1556141526"></span>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1998336202%2FFunctions%2F1556141526"></span>
                     <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="indexed.html"><span class="token function">indexed</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">idx<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-int/index.html">Int</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="-indexed-dataflow-granularity/index.html">IndexedDataflowGranularity</a></div><div class="brief "><p class="paragraph">Creates a new <a href="-indexed-dataflow-granularity/index.html">IndexedDataflowGranularity</a>. The <a href="indexed.html">idx</a> is the index that is used for the partial dataflow.</p></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="indexed.html"><span class="token function">indexed</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">idx<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-int/index.html">Int</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="-indexed-dataflow-granularity/index.html">IndexedDataflowGranularity</a></div><div class="brief "><p class="paragraph">Creates a new <a href="-indexed-dataflow-granularity/index.html">IndexedDataflowGranularity</a>. The <a href="indexed.html">idx</a> is the index that is used for the partial dataflow. An example is the access to an array or tuple element, or a <a href="../de.fraunhofer.aisec.cpg.graph.declarations/-variable-declaration/index.html">VariableDeclaration</a> for a <a href="../de.fraunhofer.aisec.cpg.graph.declarations/-tuple-declaration/index.html">TupleDeclaration</a>.</p></div><div class="symbol monospace"><span class="token keyword">fun </span><a href="indexed.html"><span class="token function">indexed</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">idx<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="-string-indexed-dataflow-granularity/index.html">StringIndexedDataflowGranularity</a></div><div class="brief "><p class="paragraph">Creates a new <a href="-indexed-dataflow-granularity/index.html">IndexedDataflowGranularity</a>. The <a href="indexed.html">idx</a> is the index that is used for the partial dataflow. An example is the access to a map entry.</p></div></div></div>
                 </div>
               </div>
             </div>
@@ -504,17 +549,17 @@
               </div>
             </div>
           </div>
-<a data-name="1395445367%2FFunctions%2F1556141526" anchor-label="partial" id="1395445367%2FFunctions%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+<a data-name="-1003045039%2FFunctions%2F1556141526" anchor-label="partial" id="-1003045039%2FFunctions%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
           <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
             <div class="main-subrow keyValue ">
               <div class=""><span class="inline-flex">
                   <div><a href="partial.html"><span><span>partial</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1395445367%2FFunctions%2F1556141526"></span>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1003045039%2FFunctions%2F1556141526"></span>
                     <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="partial.html"><span class="token function">partial</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">target<span class="token operator">: </span><a href="../de.fraunhofer.aisec.cpg.graph.declarations/-declaration/index.html">Declaration</a><span class="token operator">?</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="-partial-dataflow-granularity/index.html">PartialDataflowGranularity</a></div><div class="brief "><p class="paragraph">Creates a new <a href="-partial-dataflow-granularity/index.html">PartialDataflowGranularity</a>. The <a href="partial.html">target</a> is the <a href="../de.fraunhofer.aisec.cpg.graph.declarations/-declaration/index.html">Declaration</a> that is affected by the partial dataflow. Examples include a <a href="../de.fraunhofer.aisec.cpg.graph.declarations/-field-declaration/index.html">FieldDeclaration</a> for a <a href="../de.fraunhofer.aisec.cpg.graph.statements.expressions/-member-expression/index.html">MemberExpression</a> or a <a href="../de.fraunhofer.aisec.cpg.graph.declarations/-variable-declaration/index.html">VariableDeclaration</a> for a <a href="../de.fraunhofer.aisec.cpg.graph.declarations/-tuple-declaration/index.html">TupleDeclaration</a>.</p></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">fun </span><span class="token operator">&lt;</span><a href="partial.html">T</a><span class="token operator">&gt; </span><a href="partial.html"><span class="token function">partial</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">identifier<span class="token operator">: </span><a href="partial.html">T</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="-partial-dataflow-granularity/index.html">PartialDataflowGranularity</a><span class="token operator">&lt;</span><a href="partial.html">T</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Creates a new <a href="-partial-dataflow-granularity/index.html">PartialDataflowGranularity</a>. The <a href="partial.html">identifier</a> is used to access the specific part of the whole object.</p></div></div></div>
                 </div>
               </div>
             </div>
