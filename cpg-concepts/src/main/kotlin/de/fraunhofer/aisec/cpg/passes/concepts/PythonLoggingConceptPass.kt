@@ -52,6 +52,7 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * the matching [LoggingNode].
      */
     private val loggers = mutableMapOf<Node, LoggingNode>()
+    private var loggingLogger: ImportDeclaration? = null
 
     override fun cleanup() {
         // nothing to do
@@ -62,6 +63,7 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * relevant parts of the Python code for logging.
      */
     override fun accept(comp: Component) {
+        loggingLogger = comp.imports.singleOrNull { it.import.toString() == "logging" }
         comp.imports.forEach { import -> handleImport(import) }
         comp.calls.forEach { call -> handleCall(call) }
     }
@@ -84,18 +86,15 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     private fun handleCall(callExpression: CallExpression) {
-        val importedFrom = callExpression.importedFrom.singleOrNull()
         val callee = callExpression.callee
 
-        if (importedFrom != null) {
-            when (callee.name.toString()) {
-                "logging.getLogger" -> {
-                    val newNode = newLoggingNode(underlyingNode = callExpression)
-                    loggers += callExpression to newNode
-                }
-                else -> {
-                    loggers[importedFrom]?.let { logOpHelper(callExpression, it) }
-                }
+        if (callee.name.toString() == "logging.getLogger") {
+
+            val newNode = newLoggingNode(underlyingNode = callExpression)
+            loggers += callExpression to newNode
+        } else if (callee.name.toString().startsWith("logging.")) {
+            loggingLogger?.let { logger ->
+                loggers[logger]?.let { logOpHelper(callExpression, it) }
             }
         } else {
             // might be a call like `logger.error`
