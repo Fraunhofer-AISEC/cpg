@@ -492,6 +492,15 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
         // We also set the callee's refersTo
         callee.refersTo = call.invokes.firstOrNull()
+        val refersToName = callee.refersTo?.name
+        if (
+            refersToName != null &&
+                refersToName != callee.name &&
+                language is HasMemberExpressionAmbiguity
+        ) {
+            // Can harmonize the name if this is a call to a namespaced function
+            callee.name = refersToName
+        }
     }
 
     /**
