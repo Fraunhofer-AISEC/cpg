@@ -87,8 +87,8 @@ class FieldDataflowGranularity(partialTarget: FieldDeclaration) :
  */
 class IndexedDataflowGranularity(
     /** The index that is affected by this partial dataflow. */
-    partialTarget: Int
-) : PartialDataflowGranularity<Int>(partialTarget)
+    partialTarget: Number
+) : PartialDataflowGranularity<Number>(partialTarget)
 
 /**
  * This dataflow granularity denotes that not the "whole" object is flowing from [Dataflow.start] to
@@ -129,7 +129,7 @@ fun <T> partial(identifier: T): PartialDataflowGranularity<T> {
  * dataflow. An example is the access to an array or tuple element, or a [VariableDeclaration] for a
  * [TupleDeclaration].
  */
-fun indexed(idx: Int): IndexedDataflowGranularity {
+fun indexed(idx: Number): IndexedDataflowGranularity {
     return IndexedDataflowGranularity(idx)
 }
 

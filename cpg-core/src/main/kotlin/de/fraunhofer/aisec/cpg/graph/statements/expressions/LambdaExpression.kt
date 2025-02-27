@@ -51,7 +51,10 @@ class LambdaExpression : Expression(), HasType.TypeObserver {
     var areVariablesMutable: Boolean = true
 
     @Relationship("FUNCTION")
-    var functionEdge = astOptionalEdgeOf<FunctionDeclaration>(onChanged = ::exchangeTypeObserver)
+    var functionEdge =
+        astOptionalEdgeOf<FunctionDeclaration>(
+            onChanged = ::exchangeTypeObserverWithAccessPropagation
+        )
     var function by unwrapping(LambdaExpression::functionEdge)
 
     override fun typeChanged(newType: Type, src: HasType) {
