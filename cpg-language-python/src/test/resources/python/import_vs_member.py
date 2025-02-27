@@ -23,5 +23,7 @@ d = alias.function()
 # and infer a namespace "pkg.third_module". This should then be a static reference to a variable in that module
 e = third_module.variable
 
+f = function()
+
 def foo(bar = pkg.some_variable):
     pass
