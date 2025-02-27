@@ -763,10 +763,9 @@ class ScopeManager : ScopeProvider {
         node: Node,
         scope: Scope? = node.scope,
         replaceImports: Boolean = true,
-        noinline predicate: ((T) -> Boolean)? = null,
     ): List<T> {
         return lookupSymbolByName(node.name, node.language, node.location, scope, replaceImports) {
-                it is T && (predicate?.invoke(it) != false)
+                it is T
             }
             .filterIsInstance<T>()
     }

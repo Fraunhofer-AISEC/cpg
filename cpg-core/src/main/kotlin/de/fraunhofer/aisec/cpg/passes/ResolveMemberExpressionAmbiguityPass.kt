@@ -78,12 +78,9 @@ class ResolveMemberExpressionAmbiguityPass(ctx: TranslationContext) : Translatio
 
     private fun resolveReference(ref: Reference) {
         val candidates =
-            scopeManager.lookupSymbolByNodeNameOfType<ImportDeclaration>(
-                ref,
-                replaceImports = false,
-            ) {
-                it.style == ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE
-            }
+            scopeManager
+                .lookupSymbolByNodeNameOfType<ImportDeclaration>(ref, replaceImports = false)
+                .filter { it.style == ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE }
 
         // We want to resolve the ambiguity of the reference, if it is a symbol directly imported
         // from a namespace
