@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.codeAndLocationFrom
 import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.fqn
 import de.fraunhofer.aisec.cpg.graph.newReference
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
@@ -76,13 +77,17 @@ class ResolveMemberExpressionAmbiguityPass(ctx: TranslationContext) : Translatio
     }
 
     private fun resolveReference(ref: Reference) {
+        val candidates =
+            scopeManager.lookupSymbolByNodeNameOfType<ImportDeclaration>(
+                ref,
+                replaceImports = false,
+            ) {
+                it.style == ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE
+            }
+
         // We want to resolve the ambiguity of the reference, if it is a symbol directly imported
         // from a namespace
-        val candidate =
-            scopeManager
-                .lookupSymbolByNodeNameOfType<ImportDeclaration>(ref, replaceImports = false)
-                .map { it.import }
-                .singleOrNull()
+        val candidate = candidates.map { it.import }.singleOrNull()
         if (candidate != null && candidate != ref.name) {
             ref.name = candidate
         }
