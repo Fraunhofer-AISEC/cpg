@@ -221,79 +221,10 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                     PowersetLattice(identitySetOf(currentNode)),
                 )
             }
-        } else if (currentNode is MemberExpression && currentNode.access == AccessValues.WRITE) {
-            // already set in DFG pass, because otherwise we cannot set the field property
-            // state.push(currentNode.base, PowersetLattice(identitySetOf(currentNode)))
-
-            writtenDeclaration = (currentNode.base as? Reference)?.refersTo
-
-            if (writtenDeclaration != null) {
-                // we also want to set the last write to our base here.
-                doubleState.declarationsState[writtenDeclaration] =
-                    PowersetLattice(identitySetOf(currentNode.base))
-
-                // Update the state identifier of this node, so that the data flows to later member
-                // expressions accessing the same object/field combination.
-                doubleState.declarationsState[currentNode.objectIdentifier()] =
-                    PowersetLattice(identitySetOf(currentNode))
-            }
-        } else if (currentNode is MemberExpression && currentNode.access == AccessValues.READ) {
-            writtenDeclaration = (currentNode.base as? Reference)?.refersTo
-            val fieldDeclaration = currentNode.refersTo
-
-            if (writtenDeclaration != null && fieldDeclaration != null) {
-                // We do an ugly hack here: We store a (unique) hash out of field declaration and
-                // the variable declaration in the declaration state so that we can retrieve it
-                // later for READ accesses.
-                val declState = doubleState.declarationsState[currentNode.objectIdentifier()]
-                if (declState != null) {
-                    // We check if we have something relevant for this node (because there was an
-                    // entry for the incoming edge) in the edgePropertiesMap and, if so, we generate
-                    // a dedicated entry for the edge between declState and currentNode.
-                    findAndSetProperties(declState.elements, currentNode)
-                    state.push(currentNode, declState)
-                } else {
-                    // If we do not have a stored state of our object+field, we can use the field
-                    // declaration. This will help us follow a data flow from field initializers (if
-                    // they exist in the language)
-                    state.push(currentNode, PowersetLattice(identitySetOf(fieldDeclaration)))
-                }
-            }
-        } else if (
-            currentNode is MemberExpression && currentNode.access == AccessValues.READWRITE
-        ) {
-            writtenDeclaration = (currentNode.base as? Reference)?.refersTo
-            val fieldDeclaration = currentNode.refersTo
-
-            if (writtenDeclaration != null && fieldDeclaration != null) {
-                // We do an ugly hack here: We store a (unique) hash out of field declaration and
-                // the variable declaration in the declaration state so that we can retrieve it
-                // later for READ accesses.
-                val declState = doubleState.declarationsState[currentNode.objectIdentifier()]
-                if (declState != null) {
-                    // We check if we have something relevant for this node (because there was an
-                    // entry for the incoming edge) in the edgePropertiesMap and, if so, we generate
-                    // a dedicated entry for the edge between declState and currentNode.
-                    findAndSetProperties(declState.elements, currentNode)
-                    state.push(currentNode, declState)
-                } else {
-                    // If we do not have a stored state of our object+field, we can use the field
-                    // declaration. This will help us follow a data flow from field initializers (if
-                    // they exist in the language)
-                    state.push(currentNode, PowersetLattice(identitySetOf(fieldDeclaration)))
-                }
-            }
-
-            if (writtenDeclaration != null) {
-                // we also want to set the last write to our base here.
-                doubleState.declarationsState[writtenDeclaration] =
-                    PowersetLattice(identitySetOf(currentNode.base))
-
-                // Update the state identifier of this node, so that the data flows to later member
-                // expressions accessing the same object/field combination.
-                doubleState.declarationsState[currentNode.objectIdentifier()] =
-                    PowersetLattice(identitySetOf(currentNode))
-            }
+        } else if (currentNode is MemberExpression) {
+            handleMemberExpression(currentNode, doubleState)
+        } else if (currentNode is SubscriptExpression) {
+            handleSubscriptExpression(currentNode, doubleState)
         } else if (isSimpleAssignment(currentNode)) {
             // It's an assignment which can have one or multiple things on the lhs and on the
             // rhs. The lhs could be a declaration or a reference (or multiple of these things).
@@ -496,6 +427,160 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
             )
         }
         return state
+    }
+
+    protected fun handleSubscriptExpression(
+        currentNode: SubscriptExpression,
+        doubleState: DFGPassState<Set<Node>>,
+    ) {
+        if (currentNode.access == AccessValues.WRITE) {
+            // already set in DFG pass, because otherwise we cannot set the field property
+            // state.push(currentNode.base, PowersetLattice(identitySetOf(currentNode)))
+            val writtenDeclaration = (currentNode.base as? Reference)?.refersTo
+
+            if (writtenDeclaration != null) {
+                // we also want to set the last write to our base here.
+                doubleState.declarationsState[writtenDeclaration] =
+                    PowersetLattice(identitySetOf(currentNode.base))
+
+                // Update the state identifier of this node, so that the data flows to later member
+                // expressions accessing the same object/field combination.
+                doubleState.declarationsState[currentNode.objectIdentifier()] =
+                    PowersetLattice(identitySetOf(currentNode))
+            }
+        } else if (currentNode.access == AccessValues.READ) {
+            val writtenDeclaration = (currentNode.base as? Reference)?.refersTo
+            val fieldDeclaration = currentNode.subscriptExpression
+
+            if (writtenDeclaration != null && fieldDeclaration != null) {
+                // We do an ugly hack here: We store a (unique) hash out of field declaration and
+                // the variable declaration in the declaration state so that we can retrieve it
+                // later for READ accesses.
+                val declState = doubleState.declarationsState[currentNode.objectIdentifier()]
+                if (declState != null) {
+                    // We check if we have something relevant for this node (because there was an
+                    // entry for the incoming edge) in the edgePropertiesMap and, if so, we generate
+                    // a dedicated entry for the edge between declState and currentNode.
+                    findAndSetProperties(declState.elements, currentNode)
+                    doubleState.push(currentNode, declState)
+                } else {
+                    // If we do not have a stored state of our object+field, we can use the field
+                    // declaration. This will help us follow a data flow from field initializers (if
+                    // they exist in the language)
+                    doubleState.push(currentNode, PowersetLattice(identitySetOf(fieldDeclaration)))
+                }
+            }
+        } else if (currentNode.access == AccessValues.READWRITE) {
+            val writtenDeclaration = (currentNode.base as? Reference)?.refersTo
+            val fieldDeclaration = currentNode.subscriptExpression
+
+            if (writtenDeclaration != null && fieldDeclaration != null) {
+                // We do an ugly hack here: We store a (unique) hash out of field declaration and
+                // the variable declaration in the declaration state so that we can retrieve it
+                // later for READ accesses.
+                val declState = doubleState.declarationsState[currentNode.objectIdentifier()]
+                if (declState != null) {
+                    // We check if we have something relevant for this node (because there was an
+                    // entry for the incoming edge) in the edgePropertiesMap and, if so, we generate
+                    // a dedicated entry for the edge between declState and currentNode.
+                    findAndSetProperties(declState.elements, currentNode)
+                    doubleState.push(currentNode, declState)
+                } else {
+                    // If we do not have a stored state of our object+field, we can use the field
+                    // declaration. This will help us follow a data flow from field initializers (if
+                    // they exist in the language)
+                    doubleState.push(currentNode, PowersetLattice(identitySetOf(fieldDeclaration)))
+                }
+            }
+
+            if (writtenDeclaration != null) {
+                // we also want to set the last write to our base here.
+                doubleState.declarationsState[writtenDeclaration] =
+                    PowersetLattice(identitySetOf(currentNode.base))
+
+                // Update the state identifier of this node, so that the data flows to later member
+                // expressions accessing the same object/field combination.
+                doubleState.declarationsState[currentNode.objectIdentifier()] =
+                    PowersetLattice(identitySetOf(currentNode))
+            }
+        }
+    }
+
+    protected fun handleMemberExpression(
+        currentNode: MemberExpression,
+        doubleState: DFGPassState<Set<Node>>,
+    ) {
+        if (currentNode.access == AccessValues.WRITE) {
+            // already set in DFG pass, because otherwise we cannot set the field property
+            // state.push(currentNode.base, PowersetLattice(identitySetOf(currentNode)))
+            val writtenDeclaration = (currentNode.base as? Reference)?.refersTo
+
+            if (writtenDeclaration != null) {
+                // we also want to set the last write to our base here.
+                doubleState.declarationsState[writtenDeclaration] =
+                    PowersetLattice(identitySetOf(currentNode.base))
+
+                // Update the state identifier of this node, so that the data flows to later member
+                // expressions accessing the same object/field combination.
+                doubleState.declarationsState[currentNode.objectIdentifier()] =
+                    PowersetLattice(identitySetOf(currentNode))
+            }
+        } else if (currentNode.access == AccessValues.READ) {
+            val writtenDeclaration = (currentNode.base as? Reference)?.refersTo
+            val fieldDeclaration = currentNode.refersTo
+
+            if (writtenDeclaration != null && fieldDeclaration != null) {
+                // We do an ugly hack here: We store a (unique) hash out of field declaration and
+                // the variable declaration in the declaration state so that we can retrieve it
+                // later for READ accesses.
+                val declState = doubleState.declarationsState[currentNode.objectIdentifier()]
+                if (declState != null) {
+                    // We check if we have something relevant for this node (because there was an
+                    // entry for the incoming edge) in the edgePropertiesMap and, if so, we generate
+                    // a dedicated entry for the edge between declState and currentNode.
+                    findAndSetProperties(declState.elements, currentNode)
+                    doubleState.push(currentNode, declState)
+                } else {
+                    // If we do not have a stored state of our object+field, we can use the field
+                    // declaration. This will help us follow a data flow from field initializers (if
+                    // they exist in the language)
+                    doubleState.push(currentNode, PowersetLattice(identitySetOf(fieldDeclaration)))
+                }
+            }
+        } else if (currentNode.access == AccessValues.READWRITE) {
+            val writtenDeclaration = (currentNode.base as? Reference)?.refersTo
+            val fieldDeclaration = currentNode.refersTo
+
+            if (writtenDeclaration != null && fieldDeclaration != null) {
+                // We do an ugly hack here: We store a (unique) hash out of field declaration and
+                // the variable declaration in the declaration state so that we can retrieve it
+                // later for READ accesses.
+                val declState = doubleState.declarationsState[currentNode.objectIdentifier()]
+                if (declState != null) {
+                    // We check if we have something relevant for this node (because there was an
+                    // entry for the incoming edge) in the edgePropertiesMap and, if so, we generate
+                    // a dedicated entry for the edge between declState and currentNode.
+                    findAndSetProperties(declState.elements, currentNode)
+                    doubleState.push(currentNode, declState)
+                } else {
+                    // If we do not have a stored state of our object+field, we can use the field
+                    // declaration. This will help us follow a data flow from field initializers (if
+                    // they exist in the language)
+                    doubleState.push(currentNode, PowersetLattice(identitySetOf(fieldDeclaration)))
+                }
+            }
+
+            if (writtenDeclaration != null) {
+                // we also want to set the last write to our base here.
+                doubleState.declarationsState[writtenDeclaration] =
+                    PowersetLattice(identitySetOf(currentNode.base))
+
+                // Update the state identifier of this node, so that the data flows to later member
+                // expressions accessing the same object/field combination.
+                doubleState.declarationsState[currentNode.objectIdentifier()] =
+                    PowersetLattice(identitySetOf(currentNode))
+            }
+        }
     }
 
     /**
