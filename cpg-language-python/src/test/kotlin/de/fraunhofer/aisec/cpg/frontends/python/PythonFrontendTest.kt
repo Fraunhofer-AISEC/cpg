@@ -1478,13 +1478,18 @@ class PythonFrontendTest : BaseTest() {
             }
         assertNotNull(tu)
 
-        val barCall = tu.calls["bar"]
-        assertIs<CallExpression>(barCall)
-        assertTrue(barCall.isImported)
+        val barCalls = tu.calls("bar")
+        assertEquals(2, barCalls.size)
+        barCalls.forEach { barCall ->
+            assertIs<CallExpression>(barCall)
+            assertTrue(barCall.isImported)
+        }
 
         val bazCall = tu.calls["baz"]
-        assertIs<CallExpression>(bazCall)
-        assertTrue(bazCall.isImported)
+        assertNull(
+            bazCall,
+            "We should not have a baz() call anymore, since it should be harmonized",
+        )
 
         val fooCall = tu.calls["foo"]
         assertIs<CallExpression>(fooCall)

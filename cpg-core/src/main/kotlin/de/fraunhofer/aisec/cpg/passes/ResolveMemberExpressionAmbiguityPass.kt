@@ -31,12 +31,14 @@ import de.fraunhofer.aisec.cpg.frontends.HasMemberExpressionAmbiguity
 import de.fraunhofer.aisec.cpg.graph.HasBase
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.codeAndLocationFrom
+import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.fqn
 import de.fraunhofer.aisec.cpg.graph.newReference
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.replace
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
@@ -66,10 +68,24 @@ class ResolveMemberExpressionAmbiguityPass(ctx: TranslationContext) : Translatio
         walker.registerHandler { node ->
             when (node) {
                 is MemberExpression -> resolveAmbiguity(node)
+                is Reference -> resolveReference(node)
             }
         }
 
         walker.iterate(tu)
+    }
+
+    private fun resolveReference(ref: Reference) {
+        // We want to resolve the ambiguity of the reference, if it is a symbol directly imported
+        // from a namespace
+        val candidate =
+            scopeManager
+                .lookupSymbolByNodeNameOfType<ImportDeclaration>(ref, replaceImports = false)
+                .map { it.import }
+                .singleOrNull()
+        if (candidate != null && candidate != ref.name) {
+            ref.name = candidate
+        }
     }
 
     /**
