@@ -120,9 +120,22 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
         if (callee.name.toString() == "logging.getLogger") {
             val loggerName = callExpression.arguments.firstOrNull()?.evaluate().toString()
-            if (loggers[loggerName] == null) { // only add it once
-                val newNode = newLoggingNode(underlyingNode = callExpression, name = loggerName)
-                loggers += loggerName to newNode
+            val normalizedLoggerName =
+                when (loggerName) {
+                    "",
+                    "null" -> DEFAULT_LOGGER_NAME
+                    else -> loggerName
+                }
+            val logger = loggers[normalizedLoggerName]
+            if (logger == null) { // only add it once
+                val newNode =
+                    newLoggingNode(underlyingNode = callExpression, name = normalizedLoggerName)
+                loggers += normalizedLoggerName to newNode
+            } else {
+                // TODO: this does not work (and the reverse edge is only used for another CPG node)
+                // -> either have a getLog operation or allow Concept nodes to have multiple
+                // underlying nodes
+                callExpression.overlays += logger
             }
         } else if (callee.name.toString().startsWith("logging.")) {
             loggers[DEFAULT_LOGGER_NAME]?.let { logOpHelper(callExpression, it) }
