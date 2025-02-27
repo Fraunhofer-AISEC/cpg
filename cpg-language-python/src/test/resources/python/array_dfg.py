@@ -5,7 +5,7 @@ def function():
         "f"
     ]
 
-    # Test DFGs for dict accesses
+    # Test DFGs for array accesses
     d[1] = 10
     print(d[1])
     print(d[0])
