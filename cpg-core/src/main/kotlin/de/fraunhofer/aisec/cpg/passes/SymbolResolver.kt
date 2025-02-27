@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
-import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
@@ -492,20 +491,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         }
 
         // We also set the callee's refersTo
-        val firstInvoke = call.invokes.firstOrNull()
-        callee.refersTo = firstInvoke
-        val refersToName = callee.refersTo?.name
-        // We harmonize the name if this is a call to a namespaced function (e.g. "foo()", when foo
-        // was imported from "bar"). But we do not want to do that for functions in our current
-        // namespace.
-        if (
-            refersToName != null &&
-                refersToName != callee.name &&
-                firstInvoke?.scope != scopeManager.firstScopeIsInstanceOrNull<NameScope>() &&
-                language is HasMemberExpressionAmbiguity
-        ) {
-            callee.name = refersToName
-        }
+        callee.refersTo = call.invokes.firstOrNull()
     }
 
     /**
