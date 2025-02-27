@@ -383,9 +383,11 @@ fun SubgraphWalker.ScopedWalker.replace(parent: Node?, old: Expression, new: Exp
                     // the whole call expression instead.
                     if (parent is MemberCallExpression && new is Reference) {
                         val newCall = parent.toCallExpression(new)
+                        newCall.arguments.forEach { it.astParent = newCall }
                         return replace(parent.astParent, parent, newCall)
                     } else if (new is MemberExpression) {
                         val newCall = parent.toMemberCallExpression(new)
+                        newCall.arguments.forEach { it.astParent = newCall }
                         return replace(parent.astParent, parent, newCall)
                     } else {
                         parent.callee = new
