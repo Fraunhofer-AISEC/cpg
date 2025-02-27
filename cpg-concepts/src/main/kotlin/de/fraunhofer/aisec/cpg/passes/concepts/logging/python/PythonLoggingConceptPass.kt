@@ -96,15 +96,14 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
         if (importDeclaration.import.toString() == "logging") {
             val logger = loggers[DEFAULT_LOGGER_NAME]
             if (logger == null) { // only add it once
-                val newNode =
-                    newLoggingNode(underlyingNode = importDeclaration, name = DEFAULT_LOGGER_NAME)
+                val newNode = newLog(underlyingNode = importDeclaration, name = DEFAULT_LOGGER_NAME)
                 loggers += DEFAULT_LOGGER_NAME to newNode
 
                 // also add a [LogGet] node
-                newGetLogOperation(underlyingNode = importDeclaration, logger = newNode)
+                newLogGet(underlyingNode = importDeclaration, logger = newNode)
             } else {
                 // the logger is already present -> only add a [LogGet] node
-                newGetLogOperation(underlyingNode = importDeclaration, logger = logger)
+                newLogGet(underlyingNode = importDeclaration, logger = logger)
             }
         }
     }
@@ -113,7 +112,7 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * Translates a call like `logging.error(...)` to the corresponding concept nodes.
      * - `logging.getLogger` creates a new [Log]
      * - `logging.critical(...)` (and similar for `error` / `warn` / ...) is translated to a
-     *   [de.fraunhofer.aisec.cpg.graph.concepts.logging.LogWriteOperation]
+     *   [de.fraunhofer.aisec.cpg.graph.concepts.logging.LogWrite]
      *
      * @param callExpression The
      *   [de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression] to handle
@@ -127,18 +126,18 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
             val normalizedLoggerName =
                 when (loggerName) {
                     "",
-                    "null" -> DEFAULT_LOGGER_NAME
+                    "null" // Pythons `None` is translated to a Kotlin `null`
+                    -> DEFAULT_LOGGER_NAME
                     else -> loggerName
                 }
             val logger = loggers[normalizedLoggerName]
             if (logger == null) { // only add it once
-                val newNode =
-                    newLoggingNode(underlyingNode = callExpression, name = normalizedLoggerName)
+                val newNode = newLog(underlyingNode = callExpression, name = normalizedLoggerName)
                 loggers += normalizedLoggerName to newNode
-                newGetLogOperation(underlyingNode = callExpression, logger = newNode)
+                newLogGet(underlyingNode = callExpression, logger = newNode)
             } else {
                 // the logger is already present -> only add a [LogGet] node
-                newGetLogOperation(underlyingNode = callExpression, logger = logger)
+                newLogGet(underlyingNode = callExpression, logger = logger)
             }
         } else if (callee.name.toString().startsWith("logging.")) {
             loggers[DEFAULT_LOGGER_NAME]?.let { logOpHelper(callExpression, it) }
@@ -178,10 +177,12 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     } // we're interested in the last node of the path, i.e. the node connected to
                     // the [LogGet] node
                     .flatMap { it.overlays } // move to the "overlays" world
-                    .filterIsInstance<Log>()
-                    .toSet()
+                    .filterIsInstance<LogGet>() // discard not-relevant overlays
+                    .map {
+                        it.concept
+                    } // move from [LogGet] to the corresponding [Log] concept node
             if (loggers.size > 1) {
-                log.warn("Found multiple loggers. Selecting one at random.")
+                log.error("Found multiple loggers. Selecting one at random.")
             }
             return loggers.firstOrNull()
         }
@@ -190,7 +191,7 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
     /**
      * Handles a call to a log. This currently maps the "log write" calls (e.g.
-     * `log.critical("...")`) to a [LogWriteOperation] node.
+     * `log.critical("...")`) to a [LogWrite] node.
      *
      * A warning is logged if the call cannot be handled (i.e. not implemented).
      *
@@ -201,6 +202,7 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
     private fun logOpHelper(callExpression: CallExpression, logger: Log) {
         val callee = callExpression.callee
         when (callee.name.localName.toString()) {
+            "fatal",
             "critical",
             "error",
             "warn",
@@ -209,7 +211,7 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
             "debug" -> {
                 val name = callExpression.name.localName.toString()
                 val lvl = logLevelStringToEnum(name)
-                newLogOperationNode(
+                newLogWrite(
                     underlyingNode = callExpression,
                     logger = logger,
                     logArguments = callExpression.arguments,
@@ -233,6 +235,7 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
      */
     private fun logLevelStringToEnum(loglevel: String): LogLevel {
         return when (loglevel) {
+            "fatal" -> LogLevel.FATAL
             "critical" -> LogLevel.CRITICAL
             "error" -> LogLevel.ERROR
             "warn",

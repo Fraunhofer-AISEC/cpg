@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 
 /** Indicates a logging level. */
 enum class LogLevel {
+    FATAL,
     CRITICAL,
     ERROR,
     WARN,
@@ -48,7 +49,7 @@ enum class LogLevel {
  * @param logArguments The underlying CPG nodes of the logging arguments, i.e. what is written to
  *   the log.
  */
-class LogWriteOperation(
+class LogWrite(
     underlyingNode: Node,
     override val concept: Log,
     val logLevel: LogLevel,

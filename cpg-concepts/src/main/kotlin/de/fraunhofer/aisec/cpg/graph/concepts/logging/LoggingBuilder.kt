@@ -34,7 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.*
  * @param name The name of the logger.
  * @return The new [Log].
  */
-fun MetadataProvider.newLoggingNode(underlyingNode: Node, name: String): Log {
+fun MetadataProvider.newLog(underlyingNode: Node, name: String): Log {
     val node = Log(underlyingNode = underlyingNode)
     node.codeAndLocationFrom(underlyingNode)
 
@@ -45,7 +45,7 @@ fun MetadataProvider.newLoggingNode(underlyingNode: Node, name: String): Log {
 }
 
 /**
- * Creates a [LogWriteOperation] node with the same metadata as the [underlyingNode].
+ * Creates a [LogWrite] node with the same metadata as the [underlyingNode].
  *
  * DFG additions: the [underlyingNode] has a next DFG edge to the node created here and the node
  * created here has a next DFG edge to the log. This enables queries "what data is flowing to a
@@ -58,14 +58,14 @@ fun MetadataProvider.newLoggingNode(underlyingNode: Node, name: String): Log {
  *   the log.
  * @return The new [Log].
  */
-fun MetadataProvider.newLogOperationNode(
+fun MetadataProvider.newLogWrite(
     underlyingNode: Node,
     level: LogLevel,
     logger: Log,
     logArguments: List<Node>,
-): LogWriteOperation {
+): LogWrite {
     val node =
-        LogWriteOperation(
+        LogWrite(
             underlyingNode = underlyingNode,
             concept = logger,
             logArguments = logArguments,
@@ -85,8 +85,14 @@ fun MetadataProvider.newLogOperationNode(
     return node
 }
 
-/** TODO */
-fun MetadataProvider.newGetLogOperation(underlyingNode: Node, logger: Log): LogGet {
+/**
+ * Creates a [LogGet] node with the same metadata as the [underlyingNode].
+ *
+ * @param underlyingNode The underlying CPG node (e.g. a call expression writing to a log).
+ * @param logger The corresponding [Log], i.e. the log where the underlying nodes is writing to.
+ * @return The new [LogGet].
+ */
+fun MetadataProvider.newLogGet(underlyingNode: Node, logger: Log): LogGet {
     val node = LogGet(underlyingNode = underlyingNode, concept = logger)
     node.codeAndLocationFrom(underlyingNode)
 

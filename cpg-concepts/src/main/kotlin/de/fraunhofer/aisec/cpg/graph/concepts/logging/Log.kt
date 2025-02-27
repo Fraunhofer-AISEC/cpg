@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 
 /**
- * A logging node, i.e. a node corresponding to a log where [LogWriteOperation] can write to.
+ * A logging node, i.e. a node corresponding to a log where [LogWrite] can write to.
  *
  * @param underlyingNode The underlying CPG node.
  */
