@@ -1923,4 +1923,22 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(myClass)
         assertNotNull(myClass.ancestors)
     }
+
+    @Test
+    fun testNestedReplace() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val result =
+            analyze(listOf(topLevel.resolve("nested_replace.py").toFile()), topLevel, true) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(result)
+
+        val functionCall = result.calls["function"]
+        assertNotNull(functionCall)
+
+        val anotherFunctionCall = result.mcalls["another_function"]
+        assertNotNull(anotherFunctionCall)
+        assertNotNull(anotherFunctionCall.astParent)
+        assertSame(functionCall, anotherFunctionCall.astParent)
+    }
 }
