@@ -464,8 +464,8 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * Adds the DFG edge to an [SubscriptExpression]. The whole array `x` flows to the result
-     * `x[i]`.
+     * Adds the DFG edge to an [SubscriptExpression]. The whole array `x` flows to the result `x[i]`
+     * or vice versa depending on the access value.
      */
     protected fun handleSubscriptExpression(node: SubscriptExpression) {
         if (node.access == AccessValues.WRITE) {
@@ -474,13 +474,12 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 node.prevDFGEdges
             }
             .add(node.arrayExpression) {
+                val literalValue = (node.subscriptExpression as? Literal<*>)?.value
                 granularity =
-                    if ((node.subscriptExpression as? Literal<*>)?.value is Number) {
-                        indexed((node.subscriptExpression as Literal<*>).value as Number)
-                    } else if ((node.subscriptExpression as? Literal<*>)?.value is String) {
-                        indexed((node.subscriptExpression as Literal<*>).value as String)
-                    } else {
-                        partial(node.subscriptExpression)
+                    when (literalValue) {
+                        is Number -> indexed(literalValue)
+                        is String -> indexed(literalValue)
+                        else -> partial(node.subscriptExpression)
                     }
             }
     }
