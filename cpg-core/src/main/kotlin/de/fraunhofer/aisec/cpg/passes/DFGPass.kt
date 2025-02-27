@@ -29,8 +29,8 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
+import de.fraunhofer.aisec.cpg.graph.edges.flows.field
 import de.fraunhofer.aisec.cpg.graph.edges.flows.indexed
-import de.fraunhofer.aisec.cpg.graph.edges.flows.partial
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.IterativeGraphWalker
@@ -206,15 +206,21 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     protected fun handleMemberExpression(node: MemberExpression) {
         when (node.access) {
             AccessValues.WRITE -> {
-                node.nextDFGEdges.add(node.base) { granularity = partial(node.refersTo) }
+                node.nextDFGEdges.add(node.base) {
+                    (node.refersTo as? FieldDeclaration)?.let { granularity = field(it) }
+                }
             }
             AccessValues.READWRITE -> {
-                node.nextDFGEdges.add(node.base) { granularity = partial(node.refersTo) }
+                node.nextDFGEdges.add(node.base) {
+                    (node.refersTo as? FieldDeclaration)?.let { granularity = field(it) }
+                }
                 // We do not make an edge in the other direction on purpose as a workaround for
                 // nested field accesses on the lhs of an assignment.
             }
             else -> {
-                node.prevDFGEdges.add(node.base) { granularity = partial(node.refersTo) }
+                node.prevDFGEdges.add(node.base) {
+                    (node.refersTo as? FieldDeclaration)?.let { granularity = field(it) }
+                }
             }
         }
     }
@@ -225,8 +231,9 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      */
     protected fun handleTupleDeclaration(node: TupleDeclaration) {
         node.initializer?.let { initializer ->
-            node.elements.withIndex().forEach {
-                it.value.prevDFGEdges.add(initializer) { granularity = partial(it.value) }
+            node.prevDFG += initializer
+            node.elements.forEachIndexed { idx, variable ->
+                variable.prevDFGEdges.add(node) { granularity = indexed(idx) }
             }
         }
     }

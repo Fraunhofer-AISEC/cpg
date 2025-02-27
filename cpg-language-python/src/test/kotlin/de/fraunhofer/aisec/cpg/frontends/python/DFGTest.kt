@@ -63,14 +63,14 @@ class DFGTest {
         assertIs<InitializerListExpression>(cRefPrevDFG)
         val cRefPrevDFGGranularity = cRef.prevDFGEdges.single().granularity
         assertIs<IndexedDataflowGranularity>(cRefPrevDFGGranularity)
-        assertEquals(0, cRefPrevDFGGranularity.index)
+        assertEquals(0, cRefPrevDFGGranularity.partialTarget)
 
         assertLocalName("d", dRef)
         val dRefPrevDFG = dRef.prevDFG.singleOrNull()
         assertSame(cRefPrevDFG, dRefPrevDFG)
         val dRefPrevDFGGranularity = dRef.prevDFGEdges.single().granularity
         assertIs<IndexedDataflowGranularity>(dRefPrevDFGGranularity)
-        assertEquals(1, dRefPrevDFGGranularity.index)
+        assertEquals(1, dRefPrevDFGGranularity.partialTarget)
 
         val tuplePrevDFG = cRefPrevDFG.prevDFG.singleOrNull()
         assertIs<CallExpression>(tuplePrevDFG)
@@ -97,10 +97,10 @@ class DFGTest {
         assertIs<Reference>(b)
         val aNextDFGGranularity = a.nextDFGEdges.singleOrNull()?.granularity
         assertIs<IndexedDataflowGranularity>(aNextDFGGranularity)
-        assertEquals(0, aNextDFGGranularity.index)
+        assertEquals(0, aNextDFGGranularity.partialTarget)
         val bNextDFGGranularity = b.nextDFGEdges.singleOrNull()?.granularity
         assertIs<IndexedDataflowGranularity>(bNextDFGGranularity)
-        assertEquals(1, bNextDFGGranularity.index)
+        assertEquals(1, bNextDFGGranularity.partialTarget)
     }
 
     @Test
