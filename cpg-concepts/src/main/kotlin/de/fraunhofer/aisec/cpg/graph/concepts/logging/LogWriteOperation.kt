@@ -39,6 +39,16 @@ enum class LogLevel {
     UNKNOWN,
 }
 
+/**
+ * A log write operation e.g. `log.warn("...")`.
+ *
+ * @param underlyingNode The underlying CPG node.
+ * @param concept The corresponding [LoggingNode] concept note, i.e. the log this node is writing
+ *   to.
+ * @param logLevel The corresponding [LogLevel] used in this write operation.
+ * @param logArguments The underlying CPG nodes of the logging arguments, i.e. what is written to
+ *   the log.
+ */
 class LogWriteOperation(
     underlyingNode: Node,
     override val concept: LoggingNode,

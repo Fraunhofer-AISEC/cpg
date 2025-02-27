@@ -25,4 +25,5 @@
  */
 package de.fraunhofer.aisec.cpg.graph.concepts.logging
 
+/** This interface indicates that the corresponding node is connected to a logging concept. */
 interface IsLogging

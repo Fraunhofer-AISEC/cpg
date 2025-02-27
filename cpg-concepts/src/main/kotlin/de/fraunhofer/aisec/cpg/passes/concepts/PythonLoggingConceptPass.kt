@@ -52,6 +52,8 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * the matching [LoggingNode].
      */
     private val loggers = mutableMapOf<Node, LoggingNode>()
+
+    /** The global `import logging` node. */
     private var loggingLogger: ImportDeclaration? = null
 
     override fun cleanup() {
@@ -63,7 +65,8 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * relevant parts of the Python code for logging.
      */
     override fun accept(comp: Component) {
-        loggingLogger = comp.imports.singleOrNull { it.import.toString() == "logging" }
+        loggingLogger =
+            comp.imports.singleOrNull { import -> import.import.toString() == "logging" }
         comp.imports.forEach { import -> handleImport(import) }
         comp.calls.forEach { call -> handleCall(call) }
     }
@@ -85,11 +88,19 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
         }
     }
 
+    /**
+     * Translates a call like `logging.error(...)` to the corresponding concept nodes.
+     * - `logging.getLogger` creates a new [LoggingNode]
+     * - `logging.critical(...)` (and similar for `error` / `warn` / ...) is translated to a
+     *   [de.fraunhofer.aisec.cpg.graph.concepts.logging.LogWriteOperation]
+     *
+     * @param callExpression The [CallExpression] to handle
+     * @return n/a (The new node is created and added to the graph)
+     */
     private fun handleCall(callExpression: CallExpression) {
         val callee = callExpression.callee
 
         if (callee.name.toString() == "logging.getLogger") {
-
             val newNode = newLoggingNode(underlyingNode = callExpression)
             loggers += callExpression to newNode
         } else if (callee.name.toString().startsWith("logging.")) {
@@ -103,6 +114,15 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
         }
     }
 
+    /**
+     * Finds the corresponding logger for the given [callExpression].
+     *
+     * This function works by walking the DFG backwards on the [callExpression]s base to find a
+     * [LoggingNode].
+     *
+     * @param callExpression The call to handle.
+     * @return The [LoggingNode] if found.
+     */
     private fun findLogger(callExpression: CallExpression): LoggingNode? {
         val callee = callExpression.callee
         if (callee is MemberExpression) {
@@ -111,13 +131,18 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
             val fulfilledPaths: List<List<Node>> =
                 base
                     .followPrevFullDFGEdgesUntilHit(collectFailedPaths = false) {
-                        it.overlays.any { overlay -> overlay is LoggingNode }
+                        it.overlays.any { overlay ->
+                            overlay is LoggingNode
+                        } // we are logging for a node which has a [LoggingNode] attached to it
                     }
                     .fulfilled
             val loggers =
                 fulfilledPaths
-                    .map { path -> path.last() }
-                    .flatMap { it.overlays }
+                    .map { path ->
+                        path.last()
+                    } // we're interested in the last node of the path, i.e. the node connected to
+                    // the [LoggingNode]
+                    .flatMap { it.overlays } // move to the "overlays" world
                     .filterIsInstance<LoggingNode>()
                     .toSet()
             if (loggers.size > 1) {
@@ -128,6 +153,16 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
         return null
     }
 
+    /**
+     * Handles a call to a log. This currently maps the "log write" calls (e.g.
+     * `log.critical("...")`) to a [LogWriteOperation] node.
+     *
+     * A warning is logged if the call cannot be handled (i.e. not implemented).
+     *
+     * @param callExpression The underlying [CallExpression] to handle.
+     * @param logger The [LoggingNode] this call expression operates on.
+     * @return n/a (The new node is created and added to the graph)
+     */
     private fun logOpHelper(callExpression: CallExpression, logger: LoggingNode) {
         val callee = callExpression.callee
         when (callee.name.localName.toString()) {
@@ -152,6 +187,13 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
         }
     }
 
+    /**
+     * Maps a string "critical" / ... to the corresponding [LogLevel]. [LogLevel.UNKNOWN] is used
+     * when the translation fails and a warning is logged.
+     *
+     * @param loglevel The string to parse.
+     * @return The corresponding log level.
+     */
     private fun logLevelStringToEnum(loglevel: String): LogLevel {
         return when (loglevel) {
             "critical" -> LogLevel.CRITICAL
