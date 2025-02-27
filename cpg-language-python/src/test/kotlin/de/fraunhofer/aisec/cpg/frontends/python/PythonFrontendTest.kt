@@ -1442,21 +1442,16 @@ class PythonFrontendTest : BaseTest() {
         val cCompletelyDifferentFunc = result.functions["c.completely_different_func"]
         assertNotNull(cCompletelyDifferentFunc)
 
-        var call = result.calls["a.func"]
+        var calls = result.calls("a.func")
+        assertEquals(2, calls.size)
+
+        var call = calls.firstOrNull()
         assertNotNull(call)
         assertInvokes(call, aFunc)
 
         assertTrue(call.isImported)
 
-        call = result.calls["a_func"]
-        assertNotNull(call)
-        assertInvokes(call, aFunc)
-
-        call =
-            result.calls[
-                    { // we need to do select it this way otherwise we will also match "a.func"
-                        it.name.toString() == "func"
-                    }]
+        call = result.calls["b.func"]
         assertNotNull(call)
         assertInvokes(call, bFunc)
 
@@ -1483,13 +1478,18 @@ class PythonFrontendTest : BaseTest() {
             }
         assertNotNull(tu)
 
-        val barCall = tu.calls["bar"]
-        assertIs<CallExpression>(barCall)
-        assertTrue(barCall.isImported)
+        val barCalls = tu.calls("bar")
+        assertEquals(2, barCalls.size)
+        barCalls.forEach { barCall ->
+            assertIs<CallExpression>(barCall)
+            assertTrue(barCall.isImported)
+        }
 
         val bazCall = tu.calls["baz"]
-        assertIs<CallExpression>(bazCall)
-        assertTrue(bazCall.isImported)
+        assertNull(
+            bazCall,
+            "We should not have a baz() call anymore, since it should be harmonized",
+        )
 
         val fooCall = tu.calls["foo"]
         assertIs<CallExpression>(fooCall)
@@ -1689,6 +1689,11 @@ class PythonFrontendTest : BaseTest() {
         refs.filter { it.name.localName != "field" }.forEach { assertIsNot<MemberExpression>(it) }
 
         assertEquals(
+            listOf("pkg.function", "another_pkg.function", "another_pkg.function", "pkg.function"),
+            result.calls.map { it.name.toString() },
+        )
+
+        assertEquals(
             listOf(
                 // this is the default parameter of foo
                 "pkg.some_variable",
@@ -1714,6 +1719,10 @@ class PythonFrontendTest : BaseTest() {
                 "e",
                 // rhs
                 "pkg.third_module.variable",
+                // lhs
+                "f",
+                // rhs
+                "pkg.function",
             ),
             refs.map { it.name.toString() },
         )
