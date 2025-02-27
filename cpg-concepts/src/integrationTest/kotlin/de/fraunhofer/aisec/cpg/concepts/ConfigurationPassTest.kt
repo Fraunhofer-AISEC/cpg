@@ -49,7 +49,7 @@ import kotlin.test.assertSame
 
 class ConfigurationPassTest {
     @Test
-    fun testPythonLoadIniSingle() {
+    fun testPythonLoadIni() {
         val topLevel = File("src/integrationTest/resources/python")
         val result =
             analyze(listOf(), topLevel.toPath(), true) {

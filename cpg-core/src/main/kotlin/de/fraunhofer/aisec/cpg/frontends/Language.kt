@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.CallResolutionResult
 import de.fraunhofer.aisec.cpg.SignatureResult
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.ancestors
+import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
@@ -406,7 +407,7 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
      *
      * Therefore, we give the language a chance to return a [TranslationUnitDeclaration] where the
      * declaration should be placed. If the language does not override this function, the default
-     * implementation will return the first [TranslationUnitDeclaration] in the component of
+     * implementation will return the first [TranslationUnitDeclaration] in the [Component] of
      * [source].
      *
      * But languages might choose to take the information of [TypeToInfer] and [source] and create a
