@@ -134,7 +134,7 @@ interface HasType : ContextProvider, LanguageProvider {
          * A helper function that can be used for [EdgeSingletonList.onChanged]. It unregisters this
          * [TypeObserver] with the [old] node and registers it with the [new] one.
          */
-        fun <NodeType : Node> exchangeTypeObserver(
+        fun <NodeType : Node> exchangeTypeObserverWithAccessPropagation(
             old: AstEdge<NodeType>?,
             new: AstEdge<NodeType>?,
         ) {
@@ -143,6 +143,18 @@ interface HasType : ContextProvider, LanguageProvider {
             if (this is Expression) {
                 (new?.end as? Expression)?.access = this.access
             }
+        }
+
+        /**
+         * A helper function that can be used for [EdgeSingletonList.onChanged]. It unregisters this
+         * [TypeObserver] with the [old] node and registers it with the [new] one.
+         */
+        fun <NodeType : Node> exchangeTypeObserverWithoutAccessPropagation(
+            old: AstEdge<NodeType>?,
+            new: AstEdge<NodeType>?,
+        ) {
+            (old?.end as? HasType)?.unregisterTypeObserver(this)
+            (new?.end as? HasType)?.registerTypeObserver(this)
         }
     }
 

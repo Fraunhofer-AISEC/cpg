@@ -475,8 +475,8 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             }
             .add(node.arrayExpression) {
                 granularity =
-                    if ((node.subscriptExpression as? Literal<*>)?.value is Int) {
-                        indexed((node.subscriptExpression as Literal<*>).value as Int)
+                    if ((node.subscriptExpression as? Literal<*>)?.value is Number) {
+                        indexed((node.subscriptExpression as Literal<*>).value as Number)
                     } else if ((node.subscriptExpression as? Literal<*>)?.value is String) {
                         indexed((node.subscriptExpression as Literal<*>).value as String)
                     } else {
