@@ -28,14 +28,14 @@ package de.fraunhofer.aisec.cpg.graph.concepts.logging
 import de.fraunhofer.aisec.cpg.graph.*
 
 /**
- * Creates a [LoggingNode] with the same metadata as the [underlyingNode].
+ * Creates a [Log] with the same metadata as the [underlyingNode].
  *
  * @param underlyingNode The underlying CPG node (e.g. a call expression creating a log).
  * @param name The name of the logger.
- * @return The new [LoggingNode].
+ * @return The new [Log].
  */
-fun MetadataProvider.newLoggingNode(underlyingNode: Node, name: String): LoggingNode {
-    val node = LoggingNode(underlyingNode = underlyingNode)
+fun MetadataProvider.newLoggingNode(underlyingNode: Node, name: String): Log {
+    val node = Log(underlyingNode = underlyingNode)
     node.codeAndLocationFrom(underlyingNode)
 
     node.name = Name("Log[$name]") // to have a nice name in Neo4j
@@ -53,16 +53,15 @@ fun MetadataProvider.newLoggingNode(underlyingNode: Node, name: String): Logging
  *
  * @param underlyingNode The underlying CPG node (e.g. a call expression writing to a log).
  * @param level The [LogLevel] used for this write operation.
- * @param logger The corresponding [LoggingNode], i.e. the log where the underlying nodes is writing
- *   to.
+ * @param logger The corresponding [Log], i.e. the log where the underlying nodes is writing to.
  * @param logArguments The underlying CPG nodes of the logging arguments, i.e. what is written to
  *   the log.
- * @return The new [LoggingNode].
+ * @return The new [Log].
  */
 fun MetadataProvider.newLogOperationNode(
     underlyingNode: Node,
     level: LogLevel,
-    logger: LoggingNode,
+    logger: Log,
     logArguments: List<Node>,
 ): LogWriteOperation {
     val node =

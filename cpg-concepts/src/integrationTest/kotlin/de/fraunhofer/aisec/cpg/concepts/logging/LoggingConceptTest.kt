@@ -27,28 +27,26 @@ package de.fraunhofer.aisec.cpg.concepts.logging
 
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.concepts.logging.Log
 import de.fraunhofer.aisec.cpg.graph.concepts.logging.LogLevel
 import de.fraunhofer.aisec.cpg.graph.concepts.logging.LogWriteOperation
-import de.fraunhofer.aisec.cpg.graph.concepts.logging.LoggingNode
 import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.passes.concepts.PythonLoggingConceptPass
+import de.fraunhofer.aisec.cpg.passes.concepts.logging.python.PythonLoggingConceptPass
 import de.fraunhofer.aisec.cpg.query.dataFlow
 import de.fraunhofer.aisec.cpg.test.BaseTest
 import de.fraunhofer.aisec.cpg.test.analyze
 import de.fraunhofer.aisec.cpg.test.assertLiteralValue
 import java.nio.file.Path
 import kotlin.test.*
-import org.junit.jupiter.api.Tag
 
 /**
  * A class for integration tests. They depend on the Python frontend, so we classify them as an
  * integration test. This might be replaced with a language-neutral test at some point.
  */
-@Tag("integration")
 class LoggingConceptTest : BaseTest() {
     @Test
-    fun test01() {
+    fun testSimpleLog() {
         val topLevel = Path.of("src", "integrationTest", "resources", "python", "logging")
 
         val result =
@@ -94,12 +92,12 @@ class LoggingConceptTest : BaseTest() {
     }
 
     @Test
-    fun test02() {
+    fun testSimpleLogWithGetLogger() {
         val topLevel = Path.of("src", "integrationTest", "resources", "python", "logging")
 
         val result =
             analyze(
-                files = listOf(topLevel.resolve("simple_log2.py").toFile()),
+                files = listOf(topLevel.resolve("simple_log_get_logger.py").toFile()),
                 topLevel = topLevel,
                 usePasses = true,
             ) {
@@ -113,7 +111,7 @@ class LoggingConceptTest : BaseTest() {
 
         assertEquals(
             2,
-            result.conceptNodes { it is LoggingNode }.size,
+            result.conceptNodes { it is Log }.size,
             "Expected to find 2 logging nodes. One from the `import logging` declaration (not used directly for logging) and one from the `logging.getLogger()` call (used with `logger.error(...)`).",
         )
 
@@ -121,18 +119,18 @@ class LoggingConceptTest : BaseTest() {
         assertNotNull(literalERROR)
 
         assertTrue(
-            dataFlow(startNode = literalERROR) { it is LoggingNode }.value,
+            dataFlow(startNode = literalERROR) { it is Log }.value,
             "Expected to find a dataflow from the literal \"ERROR\" to a logging node.",
         )
     }
 
     @Test
-    fun test03() {
+    fun testLoggingWithAliasImport() {
         val topLevel = Path.of("src", "integrationTest", "resources", "python", "logging")
 
         val result =
             analyze(
-                files = listOf(topLevel.resolve("simple_log3.py").toFile()),
+                files = listOf(topLevel.resolve("simple_log_alias.py").toFile()),
                 topLevel = topLevel,
                 usePasses = true,
             ) {
@@ -146,7 +144,7 @@ class LoggingConceptTest : BaseTest() {
 
         assertEquals(
             2,
-            result.conceptNodes { it is LoggingNode }.size,
+            result.conceptNodes { it is Log }.size,
             "Expected to find 2 logging nodes. One from the `import logging as log` declaration (used with `log.info()`) and one from the `log.getLogger()` call (used with `logger.error(...)`).",
         )
 
@@ -155,7 +153,7 @@ class LoggingConceptTest : BaseTest() {
 
         assertTrue(
             dataFlow(startNode = literalINFO) {
-                    it is LoggingNode && it.underlyingNode is ImportDeclaration
+                    it is Log && it.underlyingNode is ImportDeclaration
                 }
                 .value,
             "Expected to find a dataflow from the literal \"INFO\" to the logging node based on the import declaration.",
@@ -165,9 +163,7 @@ class LoggingConceptTest : BaseTest() {
         assertNotNull(literalERROR)
 
         assertTrue(
-            dataFlow(startNode = literalERROR) {
-                    it is LoggingNode && it.underlyingNode is CallExpression
-                }
+            dataFlow(startNode = literalERROR) { it is Log && it.underlyingNode is CallExpression }
                 .value,
             "Expected to find a dataflow from the literal \"ERROR\" to the logging node based on the `getLogger` call.",
         )
