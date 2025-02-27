@@ -132,29 +132,46 @@ interface HasType : ContextProvider, LanguageProvider {
 
         /**
          * A helper function that can be used for [EdgeSingletonList.onChanged]. It unregisters this
-         * [TypeObserver] with the [old] node and registers it with the [new] one.
+         * [TypeObserver] with the [old] node and registers it with the [new] one. It updates the
+         * [de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression.access] property of
+         * [new.end].
          */
         fun <NodeType : Node> exchangeTypeObserverWithAccessPropagation(
             old: AstEdge<NodeType>?,
             new: AstEdge<NodeType>?,
         ) {
+            exchangeTypeObserver(old, new, true)
+        }
+
+        /**
+         * A helper function that can be used for [EdgeSingletonList.onChanged]. It unregisters this
+         * [TypeObserver] with the [old] node and registers it with the [new] one. It also updates
+         * the [de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression.access] property of
+         * [new.end] if [propagateAccess] is set to `true`.
+         */
+        fun <NodeType : Node> exchangeTypeObserver(
+            old: AstEdge<NodeType>?,
+            new: AstEdge<NodeType>?,
+            propagateAccess: Boolean,
+        ) {
             (old?.end as? HasType)?.unregisterTypeObserver(this)
             (new?.end as? HasType)?.registerTypeObserver(this)
-            if (this is Expression) {
+            if (propagateAccess && this is Expression) {
                 (new?.end as? Expression)?.access = this.access
             }
         }
 
         /**
          * A helper function that can be used for [EdgeSingletonList.onChanged]. It unregisters this
-         * [TypeObserver] with the [old] node and registers it with the [new] one.
+         * [TypeObserver] with the [old] node and registers it with the [new] one. It does not
+         * update the [de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression.access]
+         * property of [new.end].
          */
         fun <NodeType : Node> exchangeTypeObserverWithoutAccessPropagation(
             old: AstEdge<NodeType>?,
             new: AstEdge<NodeType>?,
         ) {
-            (old?.end as? HasType)?.unregisterTypeObserver(this)
-            (new?.end as? HasType)?.registerTypeObserver(this)
+            exchangeTypeObserver(old, new, false)
         }
     }
 
