@@ -101,7 +101,8 @@ class PythonStdLibConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) 
      * [ReadConfigurationGroup] or [ReadConfigurationOption].
      *
      * Since the `configparser` module does not provide a way to explicitly define/register options
-     * or groups, we need to implicitly create them here as well.,
+     * or groups (except in the deprecated legacy API), we need to implicitly create them here as
+     * well.
      */
     private fun handleSubscriptExpression(
         sub: SubscriptExpression
@@ -157,6 +158,10 @@ class PythonStdLibConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) 
         return ops
     }
 
+    /**
+     * Translates an option access (`config["group"]["option"]`) into a [ReadConfigurationOption]
+     * opertion.
+     */
     private fun handleOptionAccess(
         group: ConfigurationGroup,
         sub: SubscriptExpression,

@@ -34,7 +34,6 @@ import de.fraunhofer.aisec.cpg.CallResolutionResult
 import de.fraunhofer.aisec.cpg.SignatureResult
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.ancestors
-import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
@@ -407,11 +406,8 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
      *
      * Therefore, we give the language a chance to return a [TranslationUnitDeclaration] where the
      * declaration should be placed. If the language does not override this function, the default
-     * <<<<<<< HEAD implementation will return the first [TranslationUnitDeclaration] in the
-     * [Component] of
-     * =======
-     * implementation will return the first [TranslationUnitDeclaration] in the component of >>>>>>>
-     * 599d8dac87 (Fixed bug in `translationUnitForInference`) [source].
+     * implementation will return the first [TranslationUnitDeclaration] in the component of
+     * [source].
      *
      * But languages might choose to take the information of [TypeToInfer] and [source] and create a
      * specific [TranslationUnitDeclaration], e.g., for each namespace that is inferred globally or
