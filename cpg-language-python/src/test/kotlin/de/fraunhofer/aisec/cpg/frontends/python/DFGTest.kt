@@ -409,7 +409,7 @@ class DFGTest {
         val dToSubscriptDBGranularity = dToSubscriptDB.granularity
         assertIs<StringIndexedDataflowGranularity>(
             dToSubscriptDBGranularity,
-            "We expect two incoming DFG edgess The partial edge from the reference \"d\" with partial granularity and index \"b\" and the full edge from the assignment in line 9.",
+            "We expect two incoming DFG edges The partial edge from the reference \"d\" with partial granularity and index \"b\" and the full edge from the assignment in line 9.",
         )
         assertEquals(
             "b",
@@ -649,7 +649,7 @@ class DFGTest {
         val dToSubscriptDBGranularity = dToSubscriptDB.granularity
         assertIs<IndexedDataflowGranularity>(
             dToSubscriptDBGranularity,
-            "We expect two incoming DFG edgess The partial edge from the reference \"d\" with partial granularity and index 1 and the full edge from the assignment in line 9.",
+            "We expect two incoming DFG edges The partial edge from the reference \"d\" with partial granularity and index 1 and the full edge from the assignment in line 9.",
         )
         assertEquals(
             1L,
