@@ -453,9 +453,6 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
             val fieldDeclaration = currentNode.subscriptExpression
 
             if (writtenDeclaration != null && fieldDeclaration != null) {
-                // We do an ugly hack here: We store a (unique) hash out of field declaration and
-                // the variable declaration in the declaration state so that we can retrieve it
-                // later for READ accesses.
                 val declState = doubleState.declarationsState[currentNode.objectIdentifier()]
                 if (declState != null) {
                     // We check if we have something relevant for this node (because there was an
@@ -463,11 +460,6 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                     // a dedicated entry for the edge between declState and currentNode.
                     findAndSetProperties(declState.elements, currentNode)
                     doubleState.push(currentNode, declState)
-                } else {
-                    // If we do not have a stored state of our object+field, we can use the field
-                    // declaration. This will help us follow a data flow from field initializers (if
-                    // they exist in the language)
-                    doubleState.push(currentNode, PowersetLattice(identitySetOf(fieldDeclaration)))
                 }
             }
         } else if (currentNode.access == AccessValues.READWRITE) {
@@ -787,10 +779,23 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
  */
 fun Node.objectIdentifier(): Int? {
     return when (this) {
+        is SubscriptExpression -> this.objectIdentifier()
         is MemberExpression -> this.objectIdentifier()
         is Reference -> this.objectIdentifier()
         is Declaration -> this.hashCode()
+        is Literal<*> -> this.value.hashCode()
         else -> null
+    }
+}
+
+/** Implements [Node.objectIdentifier] for a [SubscriptExpression]. */
+fun SubscriptExpression.objectIdentifier(): Int? {
+    val ref = this.subscriptExpression.objectIdentifier()
+    val baseIdentifier = base.objectIdentifier()
+    return if (baseIdentifier != null && ref != null) {
+        baseIdentifier + ref
+    } else {
+        null
     }
 }
 
