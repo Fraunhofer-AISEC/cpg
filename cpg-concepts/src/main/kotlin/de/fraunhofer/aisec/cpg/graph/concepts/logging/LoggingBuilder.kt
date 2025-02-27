@@ -84,3 +84,14 @@ fun MetadataProvider.newLogOperationNode(
     NodeBuilder.log(node)
     return node
 }
+
+/** TODO */
+fun MetadataProvider.newGetLogOperation(underlyingNode: Node, logger: Log): LogGet {
+    val node = LogGet(underlyingNode = underlyingNode, concept = logger)
+    node.codeAndLocationFrom(underlyingNode)
+
+    node.name = Name("GetLog[${logger.name}]") // to have a nice name in Neo4j
+
+    NodeBuilder.log(node)
+    return node
+}

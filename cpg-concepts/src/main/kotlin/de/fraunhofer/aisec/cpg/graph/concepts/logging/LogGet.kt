@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,29 +28,11 @@ package de.fraunhofer.aisec.cpg.graph.concepts.logging
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 
-/** Indicates a logging level. */
-enum class LogLevel {
-    CRITICAL,
-    ERROR,
-    WARN,
-    INFO,
-    DEBUG,
-    TRACE,
-    UNKNOWN,
-}
-
 /**
- * A log write operation e.g. `loggint.warn("...")`.
+ * A log get operation e.g. `logging.getLogger("...")`.
  *
  * @param underlyingNode The underlying CPG node.
- * @param concept The corresponding [Log] concept note, i.e. the log this node is writing to.
- * @param logLevel The corresponding [LogLevel] used in this write operation.
- * @param logArguments The underlying CPG nodes of the logging arguments, i.e. what is written to
- *   the log.
+ * @param concept The corresponding [Log] concept note, i.e. the log that is returned.
  */
-class LogWriteOperation(
-    underlyingNode: Node,
-    override val concept: Log,
-    val logLevel: LogLevel,
-    val logArguments: List<Node>,
-) : Operation(underlyingNode = underlyingNode, concept = concept), IsLogging
+class LogGet(underlyingNode: Node, override val concept: Log) :
+    Operation(underlyingNode = underlyingNode, concept = concept), IsLogging

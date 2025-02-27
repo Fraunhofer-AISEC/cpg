@@ -27,10 +27,7 @@ package de.fraunhofer.aisec.cpg.passes.concepts.logging.python
 
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.concepts.logging.Log
-import de.fraunhofer.aisec.cpg.graph.concepts.logging.LogLevel
-import de.fraunhofer.aisec.cpg.graph.concepts.logging.newLogOperationNode
-import de.fraunhofer.aisec.cpg.graph.concepts.logging.newLoggingNode
+import de.fraunhofer.aisec.cpg.graph.concepts.logging.*
 import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
@@ -41,7 +38,7 @@ import org.slf4j.LoggerFactory
 
 /**
  * This pass collects Python's `import logging` logs and maps them to the corresponding CPG
- * [Concept] nodes.
+ * [IsLogging] concept nodes.
  */
 @ExecuteLate
 class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
@@ -97,10 +94,17 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
      */
     private fun handleImport(importDeclaration: ImportDeclaration) {
         if (importDeclaration.import.toString() == "logging") {
-            if (loggers[DEFAULT_LOGGER_NAME] == null) { // only add it once
+            val logger = loggers[DEFAULT_LOGGER_NAME]
+            if (logger == null) { // only add it once
                 val newNode =
                     newLoggingNode(underlyingNode = importDeclaration, name = DEFAULT_LOGGER_NAME)
                 loggers += DEFAULT_LOGGER_NAME to newNode
+
+                // also add a [LogGet] node
+                newGetLogOperation(underlyingNode = importDeclaration, logger = newNode)
+            } else {
+                // the logger is already present -> only add a [LogGet] node
+                newGetLogOperation(underlyingNode = importDeclaration, logger = logger)
             }
         }
     }
@@ -131,11 +135,10 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 val newNode =
                     newLoggingNode(underlyingNode = callExpression, name = normalizedLoggerName)
                 loggers += normalizedLoggerName to newNode
+                newGetLogOperation(underlyingNode = callExpression, logger = newNode)
             } else {
-                // TODO: this does not work (and the reverse edge is only used for another CPG node)
-                // -> either have a getLog operation or allow Concept nodes to have multiple
-                // underlying nodes
-                callExpression.overlays += logger
+                // the logger is already present -> only add a [LogGet] node
+                newGetLogOperation(underlyingNode = callExpression, logger = logger)
             }
         } else if (callee.name.toString().startsWith("logging.")) {
             loggers[DEFAULT_LOGGER_NAME]?.let { logOpHelper(callExpression, it) }
@@ -164,8 +167,8 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 base
                     .followPrevFullDFGEdgesUntilHit(collectFailedPaths = false) {
                         it.overlays.any { overlay ->
-                            overlay is Log
-                        } // we are logging for a node which has a [LoggingNode] attached to it
+                            overlay is LogGet
+                        } // we are logging for a node which has a [LogGet] attached to it
                     }
                     .fulfilled
             val loggers =
@@ -173,7 +176,7 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     .map { path ->
                         path.last()
                     } // we're interested in the last node of the path, i.e. the node connected to
-                    // the [LoggingNode]
+                    // the [LogGet] node
                     .flatMap { it.overlays } // move to the "overlays" world
                     .filterIsInstance<Log>()
                     .toSet()
