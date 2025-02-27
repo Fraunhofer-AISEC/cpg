@@ -95,9 +95,11 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
      */
     private fun handleImport(importDeclaration: ImportDeclaration) {
         if (importDeclaration.import.toString() == "logging") {
-            val newNode =
-                newLoggingNode(underlyingNode = importDeclaration, name = DEFAULT_LOGGER_NAME)
-            loggers += DEFAULT_LOGGER_NAME to newNode
+            if (loggers[DEFAULT_LOGGER_NAME] == null) { // only add it once
+                val newNode =
+                    newLoggingNode(underlyingNode = importDeclaration, name = DEFAULT_LOGGER_NAME)
+                loggers += DEFAULT_LOGGER_NAME to newNode
+            }
         }
     }
 
@@ -115,8 +117,10 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
         if (callee.name.toString() == "logging.getLogger") {
             val loggerName = callExpression.arguments.firstOrNull()?.evaluate().toString()
-            val newNode = newLoggingNode(underlyingNode = callExpression, name = loggerName)
-            loggers += loggerName to newNode
+            if (loggers[loggerName] == null) { // only add it once
+                val newNode = newLoggingNode(underlyingNode = callExpression, name = loggerName)
+                loggers += loggerName to newNode
+            }
         } else if (callee.name.toString().startsWith("logging.")) {
             loggers[DEFAULT_LOGGER_NAME]?.let { logOpHelper(callExpression, it) }
         } else {
