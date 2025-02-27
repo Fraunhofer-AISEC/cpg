@@ -31,13 +31,14 @@ import de.fraunhofer.aisec.cpg.graph.*
  * Creates a [LoggingNode] with the same metadata as the [underlyingNode].
  *
  * @param underlyingNode The underlying CPG node (e.g. a call expression creating a log).
+ * @param name The name of the logger.
  * @return The new [LoggingNode].
  */
-fun MetadataProvider.newLoggingNode(underlyingNode: Node): LoggingNode {
+fun MetadataProvider.newLoggingNode(underlyingNode: Node, name: String): LoggingNode {
     val node = LoggingNode(underlyingNode = underlyingNode)
     node.codeAndLocationFrom(underlyingNode)
 
-    node.name = Name("Log") // to have a nice name in Neo4j
+    node.name = Name("Log[$name]") // to have a nice name in Neo4j
 
     NodeBuilder.log(node)
     return node

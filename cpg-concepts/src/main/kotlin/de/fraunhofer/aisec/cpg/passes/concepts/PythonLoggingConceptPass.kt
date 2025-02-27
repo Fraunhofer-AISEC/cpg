@@ -50,8 +50,20 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
     /**
      * A storage connecting CPG nodes with [LoggingNode]s. This is used to connect logging calls to
      * the matching [LoggingNode].
+     *
+     * The key corresponds to the loggers name. The following all map to an empty string (matching
+     * Pythons behavior):
+     * - `import logging`
+     * - `logging.getLogger()`
+     * - `logging.getLogger(None)`
+     * - `logging.getLogger("")`
+     *
+     * Individual loggers can be obtained by providing an identifier:
+     * - `logging.getLogger("foo")` -
      */
-    private val loggers = mutableMapOf<Node, LoggingNode>()
+    private val loggers = mutableMapOf<String, LoggingNode>()
+
+    private val DEFAULT_LOGGER_NAME = ""
 
     /** The global `import logging` node. */
     private var loggingLogger: ImportDeclaration? = null
@@ -83,8 +95,9 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
      */
     private fun handleImport(importDeclaration: ImportDeclaration) {
         if (importDeclaration.import.toString() == "logging") {
-            val newNode = newLoggingNode(underlyingNode = importDeclaration)
-            loggers += importDeclaration to newNode
+            val newNode =
+                newLoggingNode(underlyingNode = importDeclaration, name = DEFAULT_LOGGER_NAME)
+            loggers += DEFAULT_LOGGER_NAME to newNode
         }
     }
 
@@ -101,12 +114,11 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
         val callee = callExpression.callee
 
         if (callee.name.toString() == "logging.getLogger") {
-            val newNode = newLoggingNode(underlyingNode = callExpression)
-            loggers += callExpression to newNode
+            val loggerName = callExpression.arguments.firstOrNull()?.evaluate().toString()
+            val newNode = newLoggingNode(underlyingNode = callExpression, name = loggerName)
+            loggers += loggerName to newNode
         } else if (callee.name.toString().startsWith("logging.")) {
-            loggingLogger?.let { logger ->
-                loggers[logger]?.let { logOpHelper(callExpression, it) }
-            }
+            loggers[DEFAULT_LOGGER_NAME]?.let { logOpHelper(callExpression, it) }
         } else {
             // might be a call like `logger.error`
             val logger = findLogger(callExpression)
