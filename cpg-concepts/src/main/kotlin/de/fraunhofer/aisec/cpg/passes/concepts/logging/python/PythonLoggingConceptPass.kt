@@ -32,6 +32,10 @@ import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.passes.ComponentPass
+import de.fraunhofer.aisec.cpg.passes.DFGPass
+import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
+import de.fraunhofer.aisec.cpg.passes.SymbolResolver
+import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLate
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -41,6 +45,9 @@ import org.slf4j.LoggerFactory
  * [IsLogging] concept nodes.
  */
 @ExecuteLate
+@DependsOn(SymbolResolver::class)
+@DependsOn(EvaluationOrderGraphPass::class)
+@DependsOn(DFGPass::class)
 class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
     private var log: Logger = LoggerFactory.getLogger(this.javaClass)
 
