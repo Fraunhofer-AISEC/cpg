@@ -98,7 +98,7 @@ class PythonStdLibConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) 
 
     /**
      * Translates `config["group"]` and `config["group"]["option"]` into operations, such as
-     * [ReadConfigurationOption] or [ReadConfigurationGroup].
+     * [ReadConfigurationGroup] or [ReadConfigurationOption].
      *
      * Since the `configparser` module does not provide a way to explicitly define/register options
      * or groups, we need to implicitly create them here as well.,
