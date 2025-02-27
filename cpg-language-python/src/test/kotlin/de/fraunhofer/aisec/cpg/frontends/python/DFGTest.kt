@@ -27,12 +27,17 @@ package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.IndexedDataflowGranularity
+import de.fraunhofer.aisec.cpg.graph.edges.flows.PartialDataflowGranularity
+import de.fraunhofer.aisec.cpg.graph.edges.flows.StringIndexedDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.SubscriptExpression
 import de.fraunhofer.aisec.cpg.test.analyze
 import de.fraunhofer.aisec.cpg.test.assertLocalName
 import java.nio.file.Path
@@ -252,5 +257,254 @@ class DFGTest {
         assertEquals(1, paths.fulfilled.size)
         val path = paths.fulfilled.first()
         assertEquals(22, path.size)
+    }
+
+    @Test
+    fun testDictAccess() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val result =
+            analyze(listOf(topLevel.resolve("dict_dfg.py").toFile()), topLevel, true) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(result)
+
+        val dInitialization =
+            result.refs[{ it.name.localName == "d" && it.location?.region?.startLine == 1 }]
+        assertIs<Reference>(
+            dInitialization,
+            "We expect that there is a reference called \"d\" in line 1 of the file.",
+        )
+
+        // Test the DFG edges for the reference d and the access d['b'] in line 8 of the file.
+        val dLine8 =
+            result.refs[{ it.name.localName == "d" && it.location?.region?.startLine == 8 }]
+        assertIs<Reference>(
+            dLine8,
+            "We expect that there is a reference called \"d\" in line 8 of the file.",
+        )
+        val dBLine8 =
+            result
+                .allChildren<SubscriptExpression> { it.location?.region?.startLine == 8 }
+                .singleOrNull()
+        assertIs<SubscriptExpression>(
+            dBLine8,
+            "We expect that there is a subscript expression representing \"d['b']\" in line 8 of the file.",
+        )
+        val literal1 = result.literals.singleOrNull { it.value == 1L }
+        assertIs<Literal<*>>(
+            literal1,
+            "We expect that there is a Literal<Int> representing \"1\" in line 8 of the file.",
+        )
+        val dBToB = dLine8.prevDFGEdges.singleOrNull()
+        assertNotNull(
+            dBToB,
+            "We expect that there is a partial DFG edge between the access \"d['b']\" in line 8 of the file and its reference \"d\" with granularity StringIndexedGranularity and index \"b\".",
+        )
+        val dBToBGranularity = dBToB.granularity
+        assertIs<StringIndexedDataflowGranularity>(
+            dBToBGranularity,
+            "We expect that there is a partial DFG edge between the access \"d['b']\" in line 8 of the file and its reference \"d\" with granularity StringIndexedGranularity and index \"b\".",
+        )
+        assertEquals(
+            "b",
+            dBToBGranularity.partialTarget,
+            "We expect that there is a partial DFG edge between the access \"d['b']\" in line 8 of the file and its reference \"d\" with granularity StringIndexedGranularity and index \"b\".",
+        )
+        val literal1ToDB = dBLine8.prevDFGEdges.singleOrNull()
+        assertNotNull(
+            literal1ToDB,
+            "We expect that there is a full DFG edge between the literal 1 and the access \"d['b']\" in line 8 of the file.",
+        )
+        assertIs<FullDataflowGranularity>(
+            literal1ToDB.granularity,
+            "We expect that there is a full DFG edge between the literal 1 and the access \"d['b']\" in line 8 of the file.",
+        )
+
+        // Test the DFG edges for the reference d and the access d['b'] printed in line 9 of the
+        // file.
+        val printDLine9 =
+            result.refs[{ it.name.localName == "d" && it.location?.region?.startLine == 9 }]
+        assertIs<Reference>(
+            printDLine9,
+            "We expect that there is a reference called \"d\" in line 9 of the file.",
+        )
+        assertEquals(
+            2,
+            printDLine9.prevDFGEdges.size,
+            "We expect two incoming DFG edges: The full edge from the initialization and the partial edge from line 8.",
+        )
+        val dfgToInitializationLine9 =
+            printDLine9.prevDFGEdges.singleOrNull { it.granularity is FullDataflowGranularity }
+        assertNotNull(
+            dfgToInitializationLine9,
+            "We expect two incoming DFG edges: The full edge from the initialization and the partial edge from line 8.",
+        )
+        assertEquals(
+            dInitialization,
+            dfgToInitializationLine9.start,
+            "We expect two incoming DFG edges: The full edge from the initialization and the partial edge from line 8.",
+        )
+        val dfgToPartialWriteLine9 =
+            printDLine9.prevDFGEdges.singleOrNull {
+                it.granularity is PartialDataflowGranularity<*>
+            }
+        assertNotNull(
+            dfgToPartialWriteLine9,
+            "We expect two incoming DFG edges: The full edge from the initialization and the partial edge from line 8.",
+        )
+        assertEquals(
+            dLine8,
+            dfgToPartialWriteLine9.start,
+            "We expect two incoming DFG edges: The full edge from the initialization and the partial edge from line 8.",
+        )
+        val subscriptLine9 =
+            result
+                .allChildren<SubscriptExpression> { it.location?.region?.startLine == 9 }
+                .singleOrNull()
+        assertIs<SubscriptExpression>(
+            subscriptLine9,
+            "We expect that there is a subscript expression simulating \"d['b']\" in line 9 of the file.",
+        )
+        assertEquals(
+            2,
+            subscriptLine9.prevDFGEdges.size,
+            "We expect two incoming DFG edges: The partial edge from the reference \"d\" with partial granularity and index \"b\" and the full edge from the assignment in line 8.",
+        )
+        val dBWriteToSubscriptDB =
+            subscriptLine9.prevDFGEdges.singleOrNull { it.granularity is FullDataflowGranularity }
+        assertNotNull(
+            dBWriteToSubscriptDB,
+            "We expect two incoming DFG edges: The partial edge from the reference \"d\" with partial granularity and index \"b\" and the full edge from the assignment in line 8.",
+        )
+        assertEquals(
+            dBLine8,
+            dBWriteToSubscriptDB.start,
+            "We expect two incoming DFG edges: The partial edge from the reference \"d\" with partial granularity and index \"b\" and the full edge from the assignment in line 8.",
+        )
+        val dToSubscriptDB =
+            subscriptLine9.prevDFGEdges.singleOrNull {
+                it.granularity is PartialDataflowGranularity<*>
+            }
+        assertNotNull(
+            dToSubscriptDB,
+            "We expect two incoming DFG edges: The partial edge from the reference \"d\" with partial granularity and index \"b\" and the full edge from the assignment in line 8.",
+        )
+        assertEquals(
+            printDLine9,
+            dToSubscriptDB.start,
+            "We expect two incoming DFG edges: The partial edge from the reference \"d\" with partial granularity and index \"b\" and the full edge from the assignment in line 8.",
+        )
+        val dToSubscriptDBGranularity = dToSubscriptDB.granularity
+        assertIs<StringIndexedDataflowGranularity>(
+            dToSubscriptDBGranularity,
+            "We expect two incoming DFG edgess The partial edge from the reference \"d\" with partial granularity and index \"b\" and the full edge from the assignment in line 8.",
+        )
+        assertEquals(
+            "b",
+            dToSubscriptDBGranularity.partialTarget,
+            "We expect two incoming DFG edges: The partial edge from the reference \"d\" with partial granularity and index \"b\" and the full edge from the assignment in line 8.",
+        )
+
+        // Test the DFG edges for the reference d and the access d['a'] printed in line 10 of the
+        // file.
+        val printDLine10 =
+            result.refs[{ it.name.localName == "d" && it.location?.region?.startLine == 10 }]
+        assertIs<Reference>(
+            printDLine10,
+            "We expect that there is a reference called \"d\" in line 10 of the file.",
+        )
+        assertEquals(
+            2,
+            printDLine10.prevDFGEdges.size,
+            "We expect two incoming DFG edges: The full edge from the initialization and the partial edge from line 8.",
+        )
+        val dfgToInitializationLine10 =
+            printDLine10.prevDFGEdges.singleOrNull { it.granularity is FullDataflowGranularity }
+        assertNotNull(
+            dfgToInitializationLine10,
+            "We expect two incoming DFG edges: The full edge from the initialization and the partial edge from line 8.",
+        )
+        assertEquals(
+            dInitialization,
+            dfgToInitializationLine10.start,
+            "We expect two incoming DFG edges: The full edge from the initialization and the partial edge from line 8.",
+        )
+        val dfgToPartialWriteLine10 =
+            printDLine10.prevDFGEdges.singleOrNull {
+                it.granularity is PartialDataflowGranularity<*>
+            }
+        assertNotNull(
+            dfgToPartialWriteLine10,
+            "We expect two incoming DFG edges: The full edge from the initialization and the partial edge from line 8.",
+        )
+        assertEquals(
+            dLine8,
+            dfgToPartialWriteLine10.start,
+            "We expect two incoming DFG edges: The full edge from the initialization and the partial edge from line 8.",
+        )
+
+        val subscriptLine10 =
+            result
+                .allChildren<SubscriptExpression> { it.location?.region?.startLine == 9 }
+                .singleOrNull()
+        assertIs<SubscriptExpression>(
+            subscriptLine10,
+            "We expect that there is a subscript expression simulating \"d['a']\" in line 10 of the file.",
+        )
+        val dToSubscriptDA = subscriptLine10.prevDFGEdges.singleOrNull()
+        assertNotNull(
+            dToSubscriptDA,
+            "We expect a single incoming DFG edges: The partial edge from the reference \"d\" with partial granularity and index \"a\".",
+        )
+        assertEquals(
+            printDLine10,
+            dToSubscriptDA.start,
+            "We expect a single incoming DFG edges: The partial edge from the reference \"d\" with partial granularity and index \"a\".",
+        )
+        val dToSubscriptDAGranularity = dToSubscriptDA.granularity
+        assertIs<StringIndexedDataflowGranularity>(
+            dToSubscriptDAGranularity,
+            "We expect a single incoming DFG edges: The partial edge from the reference \"d\" with partial granularity and index \"a\".",
+        )
+        assertEquals(
+            "a",
+            dToSubscriptDAGranularity.partialTarget,
+            "We expect a single incoming DFG edges: The partial edge from the reference \"d\" with partial granularity and index \"a\".",
+        )
+
+        // Test the DFG edges for the reference d printed in line 11 of the file.
+        val printD =
+            result.refs[{ it.name.localName == "d" && it.location?.region?.startLine == 11 }]
+        assertIs<Reference>(
+            printD,
+            "We expect that there is a reference called \"d\" in line 11 of the file.",
+        )
+        assertEquals(
+            2,
+            printD.prevDFGEdges.size,
+            "We expect two incoming DFG edges: The full edge from the initialization and the partial edge from line 8.",
+        )
+        val dfgToInitialization =
+            printD.prevDFGEdges.singleOrNull { it.granularity is FullDataflowGranularity }
+        assertNotNull(
+            dfgToInitialization,
+            "We expect two incoming DFG edges: The full edge from the initialization and the partial edge from line 8.",
+        )
+        assertEquals(
+            dInitialization,
+            dfgToInitialization.start,
+            "We expect two incoming DFG edges: The full edge from the initialization and the partial edge from line 8.",
+        )
+        val dfgToPartialWrite =
+            printD.prevDFGEdges.singleOrNull { it.granularity is PartialDataflowGranularity<*> }
+        assertNotNull(
+            dfgToPartialWrite,
+            "We expect two incoming DFG edges: The full edge from the initialization and the partial edge from line 8.",
+        )
+        assertEquals(
+            dLine8,
+            dfgToPartialWrite.start,
+            "We expect two incoming DFG edges: The full edge from the initialization and the partial edge from line 8.",
+        )
     }
 }
