@@ -381,6 +381,14 @@ class SimpleStack<T> {
     fun clone(): SimpleStack<T> {
         return SimpleStack<T>().apply { deque.addAll(this@SimpleStack.deque) }
     }
+
+    override fun equals(other: Any?): Boolean {
+        return other is SimpleStack<T> && this.depth == other.depth && this.deque == other.deque
+    }
+
+    override fun hashCode(): Int {
+        return deque.hashCode()
+    }
 }
 
 /**
@@ -698,52 +706,70 @@ inline fun Node.followXUntilHit(
     val fulfilledPaths = mutableListOf<List<Node>>()
     // failedPaths: All the paths which do not satisfy "predicate"
     val failedPaths = mutableListOf<List<Node>>()
+    val loopingPaths = mutableListOf<List<Node>>()
     // The list of paths where we're not done yet.
-    val worklist = mutableSetOf<Pair<List<Node>, Context>>()
-    worklist.add(Pair(listOf(this), context)) // We start only with the "from" node (=this)
+    val worklist = mutableSetOf<List<Pair<Node, Context>>>()
+    worklist.add(listOf(this to context)) // We start only with the "from" node (=this)
 
-    val alreadySeenNodes = mutableSetOf<Node>()
+    val alreadySeenNodes = mutableSetOf<Pair<Node, Context>>()
 
     while (worklist.isNotEmpty()) {
-        val currentPath = worklist.maxBy { it.first.size }
+        val currentPath = worklist.maxBy { it.size }
         worklist.remove(currentPath)
-        val currentNode = currentPath.first.last()
-        var currentContext = currentPath.second
-        alreadySeenNodes.add(currentNode)
+        val currentNode = currentPath.last().first
+        var currentContext = currentPath.last().second
+        alreadySeenNodes.add(currentNode to currentContext)
+        val currentPathNodes = currentPath.map { it.first }
         // The last node of the path is where we continue. We get all of its outgoing CDG edges and
         // follow them
-        val nextNodes = x(currentNode, currentContext, currentPath.first)
+        val nextNodes = x(currentNode, currentContext, currentPathNodes)
 
         // No further nodes in the path and the path criteria are not satisfied.
-        if (nextNodes.isEmpty() && collectFailedPaths) failedPaths.add(currentPath.first)
+        if (nextNodes.isEmpty() && collectFailedPaths) failedPaths.add(currentPathNodes)
 
         for ((next, newContext) in nextNodes) {
             // Copy the path for each outgoing CDG edge and add the next node
-            val nextPath = currentPath.first.toMutableList()
-            nextPath.add(next)
             if (predicate(next)) {
                 // We ended up in the node fulfilling "predicate", so we're done for this path. Add
                 // the path to the results.
-                fulfilledPaths.add(nextPath)
+                fulfilledPaths.add(currentPathNodes + next)
                 continue // Don't add this path anymore. The requirement is satisfied.
             }
             if (earlyTermination(next, currentContext)) {
-                failedPaths.add(nextPath)
+                failedPaths.add(currentPathNodes + next)
                 continue // Don't add this path anymore. We already failed.
             }
             // The next node is new in the current path (i.e., there's no loop), so we add the path
             // with the next step to the worklist.
             if (
-                next !in currentPath.first &&
+                !isNodeWithCallStackInPath(next, newContext, currentPath) &&
                     (findAllPossiblePaths ||
-                        (next !in alreadySeenNodes && worklist.none { next in it.first }))
+                        (!isNodeWithCallStackInPath(next, newContext, alreadySeenNodes) &&
+                            worklist.none { isNodeWithCallStackInPath(next, newContext, it) }))
             ) {
-                worklist.add(Pair(nextPath, newContext.inc()))
+                worklist.add(currentPath.toMutableList() + (next to newContext.inc()))
+            } else {
+                // There's a loop.
+                loopingPaths.add(currentPathNodes + next)
             }
         }
     }
 
-    return FulfilledAndFailedPaths(fulfilledPaths, failedPaths)
+    if (failedPaths.isEmpty() && fulfilledPaths.isEmpty()) {
+        return FulfilledAndFailedPaths(
+            fulfilledPaths.toSet().toList(),
+            loopingPaths.toSet().toList(),
+        )
+    }
+    return FulfilledAndFailedPaths(fulfilledPaths.toSet().toList(), failedPaths.toSet().toList())
+}
+
+fun isNodeWithCallStackInPath(
+    node: Node,
+    context: Context,
+    path: Collection<Pair<Node, Context>>,
+): Boolean {
+    return path.any { it.first == node && it.second.callStack == context.callStack }
 }
 
 /**

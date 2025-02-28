@@ -359,10 +359,7 @@ class Backward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) 
     ): Collection<Pair<Node, Context>> {
         return when (graphToFollow) {
             GraphToFollow.DFG -> {
-                if (currentNode is OverlayNode) {
-                    // For overlay nodes, we skip one step to avoid ending up in a circle
-                    // between the underlying node and the overlay node.
-                    filterAndJump(
+                filterEdges(
                         currentNode = currentNode,
                         edges =
                             if (Implicit in sensitivities) currentNode.prevPDGEdges
@@ -370,40 +367,13 @@ class Backward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) 
                         ctx = ctx,
                         scope = scope,
                         sensitivities = sensitivities,
-                        nextStep = {
-                            if (Implicit in sensitivities) it.prevPDGEdges else it.prevDFGEdges
-                        },
-                        nodeStart = { it.start },
                     )
-                } else {
-                    filterEdges(
-                            currentNode = currentNode,
-                            edges =
-                                if (Implicit in sensitivities) currentNode.prevPDGEdges
-                                else currentNode.prevDFGEdges,
-                            ctx = ctx,
-                            scope = scope,
-                            sensitivities = sensitivities,
-                        )
-                        .map { (edge, newCtx) -> this.unwrapNextStepFromEdge(edge) to newCtx }
-                }
+                    .map { (edge, newCtx) -> this.unwrapNextStepFromEdge(edge) to newCtx }
             }
 
             GraphToFollow.EOG -> {
                 val interprocedural =
-                    if (currentNode is OverlayNode) {
-                        // For overlay nodes, we skip one step to avoid ending up in a circle
-                        // between the underlying node and the overlay node.
-                        filterAndJump(
-                            currentNode = currentNode,
-                            edges = currentNode.prevEOGEdges,
-                            ctx = ctx,
-                            scope = scope,
-                            sensitivities = sensitivities,
-                            nextStep = { it.prevEOGEdges },
-                            nodeStart = { it.start },
-                        )
-                    } else if (currentNode is CallExpression && currentNode.invokes.isNotEmpty()) {
+                    if (currentNode is CallExpression && currentNode.invokes.isNotEmpty()) {
                         val returnedFrom = currentNode.invokeEdges as Collection<Edge<Node>>
 
                         filterEdges(
