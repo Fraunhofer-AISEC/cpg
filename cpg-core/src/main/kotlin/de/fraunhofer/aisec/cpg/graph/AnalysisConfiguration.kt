@@ -223,10 +223,7 @@ class Forward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) {
         return when (graphToFollow) {
             GraphToFollow.DFG -> {
 
-                if (currentNode is OverlayNode) {
-                    // For overlay nodes, we skip one step to avoid ending up in a circle
-                    // between the underlying node and the overlay node.
-                    filterAndJump(
+                filterEdges(
                         currentNode = currentNode,
                         edges =
                             if (Implicit in sensitivities) currentNode.nextPDGEdges
@@ -234,39 +231,12 @@ class Forward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) {
                         ctx = ctx,
                         scope = scope,
                         sensitivities = sensitivities,
-                        nextStep = {
-                            if (Implicit in sensitivities) it.nextPDGEdges else it.nextDFGEdges
-                        },
-                        nodeStart = ::unwrapNextStepFromEdge,
                     )
-                } else {
-                    filterEdges(
-                            currentNode = currentNode,
-                            edges =
-                                if (Implicit in sensitivities) currentNode.nextPDGEdges
-                                else currentNode.nextDFGEdges,
-                            ctx = ctx,
-                            scope = scope,
-                            sensitivities = sensitivities,
-                        )
-                        .map { (edge, newCtx) -> this.unwrapNextStepFromEdge(edge) to newCtx }
-                }
+                    .map { (edge, newCtx) -> this.unwrapNextStepFromEdge(edge) to newCtx }
             }
             GraphToFollow.EOG -> {
                 val interprocedural =
-                    if (currentNode is OverlayNode) {
-                        // For overlay nodes, we skip one step to avoid ending up in a circle
-                        // between the underlying node and the overlay node.
-                        filterAndJump(
-                            currentNode = currentNode,
-                            edges = currentNode.nextEOGEdges,
-                            ctx = ctx,
-                            scope = scope,
-                            sensitivities = sensitivities,
-                            nextStep = { it.nextEOGEdges },
-                            nodeStart = ::unwrapNextStepFromEdge,
-                        )
-                    } else if (currentNode is CallExpression && currentNode.invokes.isNotEmpty()) {
+                    if (currentNode is CallExpression && currentNode.invokes.isNotEmpty()) {
                         // Enter the functions/methods which are/can be invoked here
                         val called = currentNode.invokeEdges as Collection<Edge<Node>>
 
