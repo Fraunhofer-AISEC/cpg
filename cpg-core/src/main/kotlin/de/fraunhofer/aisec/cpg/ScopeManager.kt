@@ -893,8 +893,7 @@ class ScopeManager : ScopeProvider {
     ): TranslationUnitDeclaration? {
         // TODO(oxisto): This workaround is needed because it seems that not all types have a proper
         //  context :(. In this case we need to fall back to the global scope's astNode, which can
-        // be
-        //  error-prone in a multi-language scenario.
+        //  be error-prone in a multi-language scenario.
         return if (source.ctx == null) {
             globalScope?.astNode as? TranslationUnitDeclaration
         } else {
