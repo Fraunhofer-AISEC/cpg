@@ -424,7 +424,7 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
         // connection to the AST. We add several fallbacks here to make sure that we have a
         // component.
         val component =
-            source.scope?.astNode?.component ?: source.component ?: ctx?.currentComponent
+            source.scope?.astNode?.component ?: source.component ?: source.ctx?.currentComponent
         if (component == null) {
             val msg =
                 "No suitable component found that should be used for inference. " +
