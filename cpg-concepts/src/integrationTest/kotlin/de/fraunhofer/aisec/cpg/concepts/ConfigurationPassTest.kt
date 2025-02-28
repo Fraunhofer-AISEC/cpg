@@ -76,6 +76,7 @@ class ConfigurationPassTest {
 
         val conf = result.conceptNodes.filterIsInstance<Configuration>().singleOrNull()
         assertNotNull(conf, "There should be a single configuration node")
+        assertEquals(21, conf.allOps.size, "There should be 21 overall ops in the configuration")
 
         val loadConfig = result.operationNodes.filterIsInstance<LoadConfiguration>().singleOrNull()
         assertNotNull(loadConfig)
@@ -89,6 +90,7 @@ class ConfigurationPassTest {
 
         val sslGroup = groups["ssl"]
         assertNotNull(sslGroup)
+        assertEquals(4, sslGroup.ops.size, "There should be 4 ops in the ssl group")
 
         val readGroupOps = result.operationNodes.filterIsInstance<ReadConfigurationGroup>()
         assertEquals(
