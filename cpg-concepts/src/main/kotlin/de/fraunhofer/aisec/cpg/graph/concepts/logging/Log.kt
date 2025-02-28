@@ -34,5 +34,5 @@ import de.fraunhofer.aisec.cpg.graph.concepts.Concept
  * @param underlyingNode The underlying CPG node.
  */
 class Log(underlyingNode: Node) : Concept(underlyingNode = underlyingNode), IsLogging {
-    // TODO: target: stdout / err / file / ...
+    // TODO: target (stdout / err / file / ...), logger level, ...
 }
