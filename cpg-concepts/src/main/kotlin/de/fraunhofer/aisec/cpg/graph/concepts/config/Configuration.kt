@@ -44,6 +44,17 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
  */
 class Configuration(underlyingNode: Node) : Concept(underlyingNode = underlyingNode) {
     var groups: MutableList<ConfigurationGroup> = mutableListOf()
+
+    /**
+     * The individual operations that target parts of the configuration are assigned to
+     * [Concept.ops] of their respective concept. For example a [ReadConfigurationGroup] is part of
+     * the [ConfigurationGroup]'s ops. This property returns all operations of all groups and
+     * options as well as the ones targeting the complete configuration.
+     */
+    val allOps: Set<Operation>
+        get() {
+            return ops + groups.flatMap { it.ops + it.options.flatMap { option -> option.ops } }
+        }
 }
 
 /**
@@ -110,10 +121,9 @@ class LoadConfiguration(
  */
 class ReadConfigurationGroup(
     underlyingNode: Node,
-    conf: Configuration,
     /** The config group that is being read with this operation. */
     var group: ConfigurationGroup,
-) : ConfigurationOperation(underlyingNode = underlyingNode, concept = conf) {
+) : ConfigurationOperation(underlyingNode = underlyingNode, concept = group) {
     init {
         name = group.name
     }
@@ -125,10 +135,9 @@ class ReadConfigurationGroup(
  */
 class ReadConfigurationOption(
     underlyingNode: Node,
-    conf: Configuration,
     /** The config option that is being read with this operation. */
     var option: ConfigurationOption,
-) : ConfigurationOperation(underlyingNode = underlyingNode, concept = conf) {
+) : ConfigurationOperation(underlyingNode = underlyingNode, concept = option) {
     init {
         name = option.name
     }
@@ -146,10 +155,9 @@ class ReadConfigurationOption(
  */
 class RegisterConfigurationGroup(
     underlyingNode: Node,
-    conf: Configuration,
     /** The config group that is being registered with this operation. */
     var group: ConfigurationGroup,
-) : ConfigurationOperation(underlyingNode = underlyingNode, concept = conf) {
+) : ConfigurationOperation(underlyingNode = underlyingNode, concept = group) {
     init {
         name = group.name
     }
@@ -167,12 +175,11 @@ class RegisterConfigurationGroup(
  */
 class RegisterConfigurationOption(
     underlyingNode: Node,
-    conf: Configuration,
     /** The config option that is being registered with this operation. */
     var option: ConfigurationOption,
     /** An optional default value of the option. */
     var defaultValue: Node? = null,
-) : ConfigurationOperation(underlyingNode = underlyingNode, concept = conf) {
+) : ConfigurationOperation(underlyingNode = underlyingNode, concept = option) {
     init {
         name = option.name
     }
@@ -196,11 +203,8 @@ class ProvideConfiguration(underlyingNode: Node, var conf: Configuration) :
  * with our INI file frontend, each section is presented as a [RecordDeclaration]. This record
  * declaration would "provide" the configuration group.
  */
-class ProvideConfigurationGroup(
-    underlyingNode: Node,
-    conf: Configuration,
-    var group: ConfigurationGroup,
-) : ConfigurationOperation(underlyingNode = underlyingNode, concept = conf) {
+class ProvideConfigurationGroup(underlyingNode: Node, var group: ConfigurationGroup) :
+    ConfigurationOperation(underlyingNode = underlyingNode, concept = group) {
     init {
         name = group.name
     }
@@ -215,7 +219,7 @@ class ProvideConfigurationOption(
     underlyingNode: Node,
     var option: ConfigurationOption,
     var value: Node?,
-) : ConfigurationOperation(underlyingNode = underlyingNode, concept = option.group.conf) {
+) : ConfigurationOperation(underlyingNode = underlyingNode, concept = option) {
     init {
         name = option.name
     }
