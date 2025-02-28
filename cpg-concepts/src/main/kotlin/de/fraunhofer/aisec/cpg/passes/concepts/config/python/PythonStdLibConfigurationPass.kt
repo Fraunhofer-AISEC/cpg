@@ -145,11 +145,11 @@ class PythonStdLibConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) 
         if (group == null) {
             // If it does not exist, we create it and implicitly add a registration operation
             group = ConfigurationGroup(sub, conf = conf).also { it.name = Name(name) }.implicit()
-            val op = RegisterConfigurationGroup(sub, conf = conf, group = group).implicit()
+            val op = RegisterConfigurationGroup(sub, group = group).implicit()
             ops += op
         }
 
-        val op = ReadConfigurationGroup(sub, conf = conf, group = group)
+        val op = ReadConfigurationGroup(sub, group = group)
         ops += op
 
         // Add an incoming DFG from the option group
@@ -186,11 +186,11 @@ class PythonStdLibConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) 
                 ConfigurationOption(sub, group = group, key = sub)
                     .also { it.name = group.name.fqn(name) }
                     .implicit()
-            val op = RegisterConfigurationOption(sub, conf = group.conf, option = option).implicit()
+            val op = RegisterConfigurationOption(sub, option = option).implicit()
             ops += op
         }
 
-        val op = ReadConfigurationOption(sub, conf = group.conf, option = option)
+        val op = ReadConfigurationOption(sub, option = option)
         ops += op
 
         // Add an incoming DFG from the option

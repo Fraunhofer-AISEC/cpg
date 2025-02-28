@@ -98,8 +98,7 @@ class IniFileConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) {
                 return@mapNotNull null
             }
 
-            val op =
-                ProvideConfigurationGroup(underlyingNode = record, conf = it.conf, group = group)
+            val op = ProvideConfigurationGroup(underlyingNode = record, group = group)
 
             // Add an incoming DFG edge to the group
             group.prevDFGEdges.add(record)
