@@ -2220,4 +2220,19 @@ class PointsToPassTest {
         assertEquals(1, iLine432.prevFunctionSummaryDFG.size)
         assertTrue(iLine432.prevFunctionSummaryDFG.contains(addCE3.arguments[0]))
     }
+
+    @Test
+    fun testFoo() {
+        val file =
+            File(
+                "/home/moe/projects/cpg-attestation/sgx-examples/write_secret_to_outside/Enclave/Enclave.cpp"
+            )
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+                it.registerPass<PointsToPass>()
+                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+            }
+        assertNotNull(tu)
+    }
 }

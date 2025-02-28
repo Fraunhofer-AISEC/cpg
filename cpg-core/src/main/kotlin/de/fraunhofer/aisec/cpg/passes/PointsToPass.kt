@@ -130,7 +130,7 @@ private fun isGlobal(node: Node): Boolean {
 val edgePropertiesMap = mutableMapOf<Pair<Node, Node>, Any>()
 
 // We also need a place to store the derefs of global variables.
-var globalDerefs = mutableMapOf<Node, Node>()
+var globalDerefs = mutableMapOf<Node, IdentitySet<Node>>()
 
 @DependsOn(SymbolResolver::class)
 @DependsOn(EvaluationOrderGraphPass::class)
@@ -1062,14 +1062,14 @@ fun PointsToStateElement.fetchElementFromDeclarationState(
     // For global nodes, we check the globalDerefs map
     if (isGlobal(addr)) {
         val element = globalDerefs[addr]
-        if (element != null) ret.add(Pair(element, ""))
+        if (element != null) element.map { ret.add(Pair(it, "")) }
         else {
             val newName = nodeNameToString(addr)
             val newEntry =
                 nodesCreatingUnknownValues.computeIfAbsent(Pair(addr, newName)) {
                     UnknownMemoryValue(newName, true)
                 }
-            globalDerefs[addr] = newEntry
+            globalDerefs[addr] = identitySetOf(newEntry)
             ret.add(Pair(newEntry, ""))
         }
     } else {
@@ -1095,6 +1095,7 @@ fun PointsToStateElement.fetchElementFromDeclarationState(
         } else elements.map { ret.add(Pair(it, "")) }
 
         // if fetchFields is true, we also fetch the values for fields
+        // TODO: handle globals
         if (fetchFields) {
             val fields = this.declarationsState[addr]?.first?.filter { it != addr }
             fields?.forEach { field ->
@@ -1165,10 +1166,10 @@ fun PointsToStateElement.getValues(node: Node): IdentitySet<Node> {
              */
             val retVals = identitySetOf<Node>()
             this.getAddresses(node).forEach { addr ->
-                // For globals we draw
-                // a DFG edge to the global Declaration's memory Address
-                /*if (isGlobal(node)) node.refersTo?.memoryAddress?.let { retVals.add(it) }
-                else*/ retVals.addAll(this.getValues(addr))
+                // For globals fetch the values from the globalDeref map
+                if (isGlobal(node))
+                    retVals.addAll(fetchElementFromDeclarationState(addr).map { it.first })
+                else retVals.addAll(this.getValues(addr))
             }
             return retVals
         }
@@ -1341,7 +1342,7 @@ fun PointsToStateElement.updateValues(
                     PowersetLattice.Element(sources),
                 )
         } else {
-            // TODO: We basically do this below, but currently we don't get the destinations
+            // TODO: We basically do the same as above, but currently we don't get the destinations
             // value from the call
             getValues(destAddr).forEach { addr ->
                 newGenState[addr] =
@@ -1349,6 +1350,20 @@ fun PointsToStateElement.updateValues(
                         PowersetLattice.Element(destinationAddresses),
                         PowersetLattice.Element(sources),
                     )
+            }
+
+            // Add the node to the globalDerefs. Don't delete the old one (except unknown values for
+            // the node itself), b/c we never know with
+            // global variables when they are used
+            if (globalDerefs[destAddr] == null) globalDerefs[destAddr] = sources
+            else {
+                if (
+                    globalDerefs[destAddr]!!.size == 1 &&
+                        globalDerefs[destAddr]!!.first() is UnknownMemoryValue &&
+                        globalDerefs[destAddr]!!.first().name.localName == destAddr.name.localName
+                )
+                    globalDerefs[destAddr]!!.remove(globalDerefs[destAddr]!!.first())
+                globalDerefs[destAddr]!!.addAll(sources)
             }
         }
     }
