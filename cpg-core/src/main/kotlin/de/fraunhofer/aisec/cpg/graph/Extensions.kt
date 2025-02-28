@@ -389,6 +389,19 @@ class SimpleStack<T> {
     override fun hashCode(): Int {
         return deque.hashCode()
     }
+
+    fun startsWith(other: SimpleStack<T>): Boolean {
+        for ((idx, elem) in other.deque.withIndex()) {
+            if (elem != this.deque.getOrNull(idx)) {
+                return false
+            }
+        }
+        return true
+    }
+
+    operator fun contains(elem: T): Boolean {
+        return deque.contains(elem)
+    }
 }
 
 /**
@@ -732,11 +745,11 @@ inline fun Node.followXUntilHit(
             if (predicate(next)) {
                 // We ended up in the node fulfilling "predicate", so we're done for this path. Add
                 // the path to the results.
-                fulfilledPaths.add(currentPathNodes + next)
+                fulfilledPaths.add(currentPathNodes.toMutableList() + next)
                 continue // Don't add this path anymore. The requirement is satisfied.
             }
             if (earlyTermination(next, currentContext)) {
-                failedPaths.add(currentPathNodes + next)
+                failedPaths.add(currentPathNodes.toMutableList() + next)
                 continue // Don't add this path anymore. We already failed.
             }
             // The next node is new in the current path (i.e., there's no loop), so we add the path
@@ -750,7 +763,7 @@ inline fun Node.followXUntilHit(
                 worklist.add(currentPath.toMutableList() + (next to newContext.inc()))
             } else {
                 // There's a loop.
-                loopingPaths.add(currentPathNodes + next)
+                loopingPaths.add(currentPathNodes.toMutableList() + next)
             }
         }
     }
@@ -769,7 +782,10 @@ fun isNodeWithCallStackInPath(
     context: Context,
     path: Collection<Pair<Node, Context>>,
 ): Boolean {
-    return path.any { it.first == node && it.second.callStack == context.callStack }
+    return path.any {
+        it.first == node &&
+            context.callStack.top?.let { top -> top in it.second.callStack } != false
+    }
 }
 
 /**
