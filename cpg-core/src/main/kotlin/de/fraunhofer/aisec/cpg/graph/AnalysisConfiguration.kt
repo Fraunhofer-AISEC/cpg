@@ -155,14 +155,59 @@ sealed class AnalysisDirection(val graphToFollow: GraphToFollow) {
         scope: AnalysisScope,
         vararg sensitivities: AnalysisSensitivity,
     ): Collection<Pair<Edge<Node>, Context>> {
-        return edges.mapNotNull { edge ->
-            val newCtx = ctx.clone()
-            if (
-                scope.followEdge(currentNode, edge, newCtx, this) &&
-                    sensitivities.all { it.followEdge(currentNode, edge, newCtx, this) }
-            ) {
-                Pair(edge, newCtx)
-            } else null
+        val overlayingEdges = edges.filter { it.overlaying }
+        return if (overlayingEdges.isNotEmpty()) {
+                overlayingEdges
+            } else {
+                edges
+            }
+            .mapNotNull { edge ->
+                val newCtx = ctx.clone()
+                if (
+                    scope.followEdge(currentNode, edge, newCtx, this) &&
+                        sensitivities.all { it.followEdge(currentNode, edge, newCtx, this) }
+                ) {
+                    Pair(edge, newCtx)
+                } else null
+            }
+    }
+
+    /**
+     * In some cases, we have to skip one step to actually continue in the graph. Typical examples
+     * are [CallExpression]s where we have a loop through the function's code and return to the same
+     * expression in the EOG. We then have to skip the call to proceed with the next step in the
+     * EOG.
+     */
+    internal fun filterAndJump(
+        currentNode: Node,
+        edges: Collection<Edge<Node>>,
+        ctx: Context,
+        scope: AnalysisScope,
+        vararg sensitivities: AnalysisSensitivity,
+        nextStep: (Node) -> Collection<Edge<Node>>,
+        nodeStart: (Edge<Node>) -> Node,
+    ): List<Pair<Node, Context>> {
+        val filteredToJump =
+            filterEdges(
+                currentNode = currentNode,
+                edges = edges,
+                ctx = ctx,
+                scope = scope,
+                sensitivities = sensitivities,
+            )
+        // This is a bit more tricky because we need to go to the next step when we
+        // return to the CallExpression. Therefore, we make one more step.
+
+        return filteredToJump.flatMap { (nextEdge, newCtx) ->
+            // nextEdge.start is the call expression
+            filterEdges(
+                    currentNode = nodeStart(nextEdge),
+                    edges = nextStep(nodeStart(nextEdge)),
+                    ctx = newCtx,
+                    scope = scope,
+                    sensitivities = sensitivities,
+                )
+                .map { (edge, moreNewCtx) -> this.unwrapNextStepFromEdge(edge) to moreNewCtx }
         }
     }
 }
@@ -177,6 +222,7 @@ class Forward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) {
     ): Collection<Pair<Node, Context>> {
         return when (graphToFollow) {
             GraphToFollow.DFG -> {
+
                 filterEdges(
                         currentNode = currentNode,
                         edges =
@@ -209,29 +255,15 @@ class Forward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) {
                                     ?: currentNode.firstParentOrNull<FunctionDeclaration>())
                                 ?.calledByEdges as Collection<Edge<Node>>? ?: setOf()
 
-                        val filteredReturnedTo =
-                            filterEdges(
-                                currentNode = currentNode,
-                                edges = returnedTo,
-                                ctx = ctx,
-                                scope = scope,
-                                sensitivities = sensitivities,
-                            )
-                        // This is a bit more tricky because we need to go to nextEOGEdges when we
-                        // return to the CallExpression. Therefore, we make one more step.
-                        filteredReturnedTo.flatMap { (nextEdge, newCtx) ->
-                            // nextEdge.start is the call expression.
-                            filterEdges(
-                                    currentNode = nextEdge.start,
-                                    edges = nextEdge.start.nextEOGEdges,
-                                    ctx = newCtx,
-                                    scope = scope,
-                                    sensitivities = sensitivities,
-                                )
-                                .map { (edge, moreNewCtx) ->
-                                    this.unwrapNextStepFromEdge(edge) to moreNewCtx
-                                }
-                        }
+                        filterAndJump(
+                            currentNode = currentNode,
+                            edges = returnedTo,
+                            ctx = ctx,
+                            scope = scope,
+                            sensitivities = sensitivities,
+                            nextStep = { it.nextEOGEdges },
+                            nodeStart = { it.start },
+                        )
                     } else {
                         filterEdges(
                                 currentNode = currentNode,
@@ -325,29 +357,15 @@ class Backward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) 
                     } else if (currentNode is FunctionDeclaration) {
                         val calledBy = currentNode.calledByEdges as Collection<Edge<Node>>
 
-                        val filteredCalledBy =
-                            filterEdges(
-                                currentNode = currentNode,
-                                edges = calledBy,
-                                ctx = ctx,
-                                scope = scope,
-                                sensitivities = sensitivities,
-                            )
-                        // This is a bit more tricky because we need to go to prevEOGEdges when we
-                        // return to the CallExpression. Therefore, we make one more step.
-                        filteredCalledBy.flatMap { (nextEdge, newCtx) ->
-                            // nextEdge.start is the call expression
-                            filterEdges(
-                                    currentNode = nextEdge.start,
-                                    edges = nextEdge.start.prevEOGEdges,
-                                    ctx = newCtx,
-                                    scope = scope,
-                                    sensitivities = sensitivities,
-                                )
-                                .map { (edge, moreNewCtx) ->
-                                    this.unwrapNextStepFromEdge(edge) to moreNewCtx
-                                }
-                        }
+                        filterAndJump(
+                            currentNode = currentNode,
+                            edges = calledBy,
+                            ctx = ctx,
+                            scope = scope,
+                            sensitivities = sensitivities,
+                            nextStep = { it.prevEOGEdges },
+                            nodeStart = { it.start },
+                        )
                     } else {
                         filterEdges(
                                 currentNode = currentNode,
