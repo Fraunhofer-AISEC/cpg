@@ -25,7 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.graph.concepts.logging
 
-import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.MetadataProvider
+import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder
+import de.fraunhofer.aisec.cpg.graph.codeAndLocationFrom
 
 /**
  * Creates a [Log] with the same metadata as the [underlyingNode].
@@ -37,8 +40,6 @@ import de.fraunhofer.aisec.cpg.graph.*
 fun MetadataProvider.newLog(underlyingNode: Node, name: String): Log {
     val node = Log(underlyingNode = underlyingNode)
     node.codeAndLocationFrom(underlyingNode)
-
-    node.name = Name("Log[$name]") // to have a nice name in Neo4j
 
     NodeBuilder.log(node)
     return node
@@ -73,8 +74,6 @@ fun MetadataProvider.newLogWrite(
         )
     node.codeAndLocationFrom(underlyingNode)
 
-    node.name = Name("log." + node.logLevel) // to have a nice name in Neo4j
-
     logger.ops += node
 
     // connect DFG
@@ -95,8 +94,6 @@ fun MetadataProvider.newLogWrite(
 fun MetadataProvider.newLogGet(underlyingNode: Node, logger: Log): LogGet {
     val node = LogGet(underlyingNode = underlyingNode, concept = logger)
     node.codeAndLocationFrom(underlyingNode)
-
-    node.name = Name("GetLog[${logger.name}]") // to have a nice name in Neo4j
 
     NodeBuilder.log(node)
     return node

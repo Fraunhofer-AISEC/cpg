@@ -165,10 +165,7 @@ class LoggingConceptTest : BaseTest() {
 
         assertTrue(
             dataFlow(startNode = literalERROR) {
-                    it is Log &&
-                        it.name.contains(
-                            "__name__"
-                        ) // TODO: checking for the correct logger like this is not pretty
+                    it is Log && it.underlyingNode?.code == "log.getLogger(__name__)"
                 }
                 .value,
             "Expected to find a dataflow from the literal \"ERROR\" to the logging node based on the `getLogger(__name__)` call.",
@@ -200,16 +197,15 @@ class LoggingConceptTest : BaseTest() {
             "Expected to find 3 logging nodes. One from the `import logging as log` declaration and one `foo` and one `bar` logger from the `log.getLogger()` calls. The other `getLogger()` calls are duplicates and must not create new loggers.",
         )
 
-        val defaultLogger =
-            allLoggers.singleOrNull { it.name.toString() == "Log[]" } // TODO: nicer logger check
+        val defaultLogger = allLoggers.singleOrNull { it.underlyingNode is ImportDeclaration }
         assertNotNull(defaultLogger)
 
         val fooLogger =
-            allLoggers.singleOrNull { it.name.toString() == "Log[foo]" } // TODO: nicer logger check
+            allLoggers.singleOrNull { it.underlyingNode?.code == "logging.getLogger('foo')" }
         assertNotNull(fooLogger)
 
         val barLogger =
-            allLoggers.singleOrNull { it.name.toString() == "Log[bar]" } // TODO: nicer logger check
+            allLoggers.singleOrNull { it.underlyingNode?.code == "logging.getLogger('bar')" }
         assertNotNull(barLogger)
 
         // Testing setup. A map of a logger name (and thus the literal written to the logger) and
