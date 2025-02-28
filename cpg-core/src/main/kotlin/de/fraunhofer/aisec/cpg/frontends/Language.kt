@@ -420,8 +420,10 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
     fun <TypeToInfer : Node> translationUnitForInference(source: Node): TranslationUnitDeclaration {
         // The easiest way to identify the current component would be traversing the AST, but that
         // does not work for types. But types have a scope and the scope (should) have the
-        // connection to the AST
-        val component = source.scope?.astNode?.component
+        // connection to the AST. We add several fallbacks here to make sure that we have a
+        // component.
+        val component =
+            source.scope?.astNode?.component ?: source.component ?: ctx?.currentComponent
 
         // We should also make sure that the language matches
         val tu = component?.translationUnits?.firstOrNull { it.language == this }
