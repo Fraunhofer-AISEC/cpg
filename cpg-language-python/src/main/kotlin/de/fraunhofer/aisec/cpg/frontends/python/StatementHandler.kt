@@ -660,21 +660,25 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 "A translation context is needed for the import dependent addition of additional sources."
             )
         }
+
         var currentName: Name? = importName
         while (!currentName.isNullOrEmpty()) {
+            // Build a set of candidates how files look like for the current name. They are a set of
+            // relative file names, e.g. foo/bar/baz.py and foo/bar/baz/__init__.py
+            val candidates = (language as PythonLanguage).nameToLanguageFiles(currentName)
 
             // Includes a file in the analysis, if relative to its rootpath it matches the import
-            // statement.
-            // Both possible file endings are considered.
-            ctx.additionalSources
-                .firstOrNull { eSource ->
-                    val relFile =
-                        ctx.config.includePaths.firstNotNullOf {
-                            eSource.relativeToOrNull(it.toFile())
-                        }
-                    (language as PythonLanguage).nameToLanguageFiles(currentName).contains(relFile)
+            // statement. Both possible file endings (.py, pyi) are considered.
+            val match =
+                ctx.additionalSources.firstOrNull {
+                    // Check if the relative file is in our candidates
+                    candidates.contains(it.relative)
                 }
-                ?.let { ctx.importedSources += it }
+            if (match != null) {
+                // Add the match to the imported sources
+                ctx.importedSources += match
+            }
+
             currentName = currentName.parent
         }
     }
