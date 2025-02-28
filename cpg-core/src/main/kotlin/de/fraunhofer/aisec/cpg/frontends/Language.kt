@@ -52,6 +52,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.helpers.Util
+import de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.passes.inference.Inference
 import java.io.File
@@ -420,16 +421,24 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
     fun <TypeToInfer : Node> translationUnitForInference(source: Node): TranslationUnitDeclaration {
         // The easiest way to identify the current component would be traversing the AST, but that
         // does not work for types. But types have a scope and the scope (should) have the
-        // connection to the AST
-        val component = source.scope?.astNode?.component
+        // connection to the AST. We add several fallbacks here to make sure that we have a
+        // component.
+        val component =
+            source.scope?.astNode?.component ?: source.component ?: ctx?.currentComponent
+        if (component == null) {
+            val msg =
+                "No suitable component found that should be used for inference. " +
+                    "That should not happen and it seems that there is a serious problem with handling this node"
+            errorWithFileLocation(source, log, msg)
+            throw TranslationException(msg)
+        }
 
         // We should also make sure that the language matches
-        val tu = component?.translationUnits?.firstOrNull { it.language == this }
-
+        val tu = component.translationUnits.firstOrNull { it.language == this }
         if (tu == null) {
-            throw TranslationException(
-                "No suitable translation unit found that should be used for inference"
-            )
+            val msg = "No suitable translation unit found that should be used for inference"
+            errorWithFileLocation(source, log, msg)
+            throw TranslationException(msg)
         }
 
         return tu
