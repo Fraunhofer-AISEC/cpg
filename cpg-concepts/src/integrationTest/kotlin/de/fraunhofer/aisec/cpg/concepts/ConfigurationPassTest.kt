@@ -32,13 +32,15 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.config.Configuration
 import de.fraunhofer.aisec.cpg.graph.concepts.config.ConfigurationGroup
 import de.fraunhofer.aisec.cpg.graph.concepts.config.ConfigurationOption
+import de.fraunhofer.aisec.cpg.graph.concepts.config.ConfigurationSource
 import de.fraunhofer.aisec.cpg.graph.concepts.config.LoadConfiguration
 import de.fraunhofer.aisec.cpg.graph.concepts.config.ReadConfigurationGroup
 import de.fraunhofer.aisec.cpg.graph.concepts.config.ReadConfigurationOption
 import de.fraunhofer.aisec.cpg.graph.concepts.config.RegisterConfigurationGroup
 import de.fraunhofer.aisec.cpg.graph.concepts.config.RegisterConfigurationOption
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.SubscriptExpression
-import de.fraunhofer.aisec.cpg.passes.concepts.config.ini.IniFileConfigurationPass
+import de.fraunhofer.aisec.cpg.passes.concepts.config.ProvideConfigPass
+import de.fraunhofer.aisec.cpg.passes.concepts.config.ini.IniFileConfigurationSourcePass
 import de.fraunhofer.aisec.cpg.passes.concepts.config.python.PythonStdLibConfigurationPass
 import de.fraunhofer.aisec.cpg.test.analyze
 import java.io.File
@@ -55,8 +57,9 @@ class ConfigurationPassTest {
             analyze(listOf(), topLevel.toPath(), true) {
                 it.registerLanguage<PythonLanguage>()
                 it.registerLanguage<IniFileLanguage>()
-                it.registerPass<IniFileConfigurationPass>()
+                it.registerPass<IniFileConfigurationSourcePass>()
                 it.registerPass<PythonStdLibConfigurationPass>()
+                it.registerPass<ProvideConfigPass>()
                 it.softwareComponents(
                     mutableMapOf(
                         "conf" to listOf(topLevel.resolve("conf")),
@@ -76,7 +79,21 @@ class ConfigurationPassTest {
 
         val conf = result.conceptNodes.filterIsInstance<Configuration>().singleOrNull()
         assertNotNull(conf, "There should be a single configuration node")
-        assertEquals(21, conf.allOps.size, "There should be 21 overall ops in the configuration")
+        assertEquals(11, conf.allOps.size, "There should be 21 overall ops in the configuration")
+
+        val confSources = result.conceptNodes.filterIsInstance<ConfigurationSource>()
+        assertNotNull(confSources, "There should be three configuration source nodes")
+        assertEquals(3, confSources.size, "There should be 2 configuration source nodes")
+
+        confSources
+            .filter { it.name.toString() != "unused.ini" }
+            .forEach {
+                assertEquals(
+                    5,
+                    it.allOps.size,
+                    "There should be 5 overall ops in each configuration source (except for the unused one)",
+                )
+            }
 
         val loadConfig = result.operationNodes.filterIsInstance<LoadConfiguration>().singleOrNull()
         assertNotNull(loadConfig)
@@ -90,7 +107,11 @@ class ConfigurationPassTest {
 
         val sslGroup = groups["ssl"]
         assertNotNull(sslGroup)
-        assertEquals(4, sslGroup.ops.size, "There should be 4 ops in the ssl group")
+        assertEquals(
+            2,
+            sslGroup.ops.size,
+            "There should be two ops in the ssl group (register and read)",
+        )
 
         val readGroupOps = result.operationNodes.filterIsInstance<ReadConfigurationGroup>()
         assertEquals(
@@ -136,5 +157,13 @@ class ConfigurationPassTest {
         val sslEnabled = result.refs["ssl_enabled"]
         assertNotNull(sslEnabled)
         assertEquals(setOf("true", "false"), sslEnabled.evaluate(MultiValueEvaluator()))
+
+        val unused = confSources["unused.ini"]
+        assertNotNull(unused)
+        assertEquals(0, unused.allOps.size, "There should be no ops in the unused configuration")
+
+        val verifySSL = unused.groups["DEFAULT"]?.options["verify_ssl"]
+        assertNotNull(verifySSL)
+        assertEquals(setOf("true"), verifySSL.evaluate(MultiValueEvaluator()))
     }
 }
