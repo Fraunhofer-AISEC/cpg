@@ -44,7 +44,9 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.SubscriptExpression
 import de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.passes.concepts.ConceptPass
+import de.fraunhofer.aisec.cpg.passes.concepts.config.ProvideConfigPass
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
+import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 
 /**
  * This pass is responsible for creating [ConfigurationOperation] nodes based on the
@@ -52,6 +54,7 @@ import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
  * standard library.
  */
 @DependsOn(SymbolResolver::class)
+@ExecuteBefore(ProvideConfigPass::class)
 class PythonStdLibConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) {
     override fun handleNode(node: Node, tu: TranslationUnitDeclaration) {
         when (node) {
