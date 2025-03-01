@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 
 /**
@@ -186,7 +187,8 @@ class RegisterConfigurationOption(
 }
 
 /**
- * Represents an operation to provide a [Configuration], e.g., in the form of a configuration file.
+ * Represents an operation to provide a [Configuration], e.g., in the form of a configuration file
+ * (through a [ConfigurationSource]).
  *
  * When the configuration file is loaded, a [LoadConfiguration] operation would be found in the code
  * component (matching the configuration file's name in [LoadConfiguration.fileExpression]) and the
@@ -194,33 +196,87 @@ class RegisterConfigurationOption(
  *
  * But also other sources of configuration could be represented by a [ProvideConfiguration]
  * operation, such as environment variables or command-line arguments.
+ *
+ * Note: The [ProvideConfiguration] operation is part of the [ConfigurationSource.ops] and not of
+ * the [Configuration.ops] as its an operation of the source, not the target.
  */
-class ProvideConfiguration(underlyingNode: Node, var conf: Configuration) :
-    ConfigurationOperation(underlyingNode = underlyingNode, concept = conf)
+class ProvideConfiguration(
+    underlyingNode: Node,
+    var source: ConfigurationSource,
+    var conf: Configuration,
+) : ConfigurationOperation(underlyingNode = underlyingNode, concept = source)
 
 /**
- * Represents an operation to provide a [ConfigurationGroup]. For example, when loading an INI file
- * with our INI file frontend, each section is presented as a [RecordDeclaration]. This record
- * declaration would "provide" the configuration group.
+ * Represents an operation to provide a [ConfigurationGroup]. It connects a
+ * [ConfigurationGroupSource] with a [ConfigurationGroup].
  */
-class ProvideConfigurationGroup(underlyingNode: Node, var group: ConfigurationGroup) :
-    ConfigurationOperation(underlyingNode = underlyingNode, concept = group) {
+class ProvideConfigurationGroup(
+    underlyingNode: Node,
+    var source: ConfigurationGroupSource,
+    var group: ConfigurationGroup,
+) : ConfigurationOperation(underlyingNode = underlyingNode, concept = source) {
     init {
         name = group.name
     }
 }
 
 /**
- * Represents an operation to provide a [ConfigurationOption]. For example, when loading an INI file
- * with our INI file frontend, each key-value pair is presented as a [FieldDeclaration]. This field
- * declaration would "provide" the configuration option.
+ * Represents an operation to provide a [ConfigurationOption]. It connects a
+ * [ConfigurationOptionSource] with a [ConfigurationOption].
  */
 class ProvideConfigurationOption(
     underlyingNode: Node,
+    var source: ConfigurationOptionSource,
     var option: ConfigurationOption,
     var value: Node?,
-) : ConfigurationOperation(underlyingNode = underlyingNode, concept = option) {
+) : ConfigurationOperation(underlyingNode = underlyingNode, concept = source) {
     init {
         name = option.name
+    }
+}
+
+/**
+ * Represents a possible source for a configuration. For example, when loading an INI file with our
+ * INI file frontend, the whole file would be represented as a [TranslationUnitDeclaration]. This
+ * translation unit declaration would be the source of the configuration.
+ */
+class ConfigurationSource(underlyingNode: Node) : Concept(underlyingNode = underlyingNode) {
+    val groups: MutableList<ConfigurationGroupSource> = mutableListOf()
+
+    /**
+     * The individual operations that target parts of the configuration are assigned to
+     * [Concept.ops] of their respective concept. For example a [ReadConfigurationGroup] is part of
+     * the [ConfigurationGroup]'s ops. This property returns all operations of all groups and
+     * options as well as the ones targeting the complete configuration.
+     */
+    val allOps: Set<Operation>
+        get() {
+            return ops + groups.flatMap { it.ops + it.options.flatMap { option -> option.ops } }
+        }
+}
+
+/**
+ * Represents a possible group source for a configuration group. For example, when loading an INI
+ * file with our INI file frontend, each section is presented as a [RecordDeclaration]. This record
+ * declaration would be the source of the configuration group.
+ */
+class ConfigurationGroupSource(underlyingNode: Node, conf: ConfigurationSource) :
+    Concept(underlyingNode = underlyingNode) {
+    val options: MutableList<ConfigurationOptionSource> = mutableListOf()
+
+    init {
+        conf.groups += this
+    }
+}
+
+/**
+ * Represents a possible option source for a configuration option. For example, when loading an INI
+ * file with our INI file frontend, each key-value pair is presented as a [FieldDeclaration]. This
+ * field declaration would be the source to the configuration option.
+ */
+class ConfigurationOptionSource(underlyingNode: Node, var group: ConfigurationGroupSource) :
+    Concept(underlyingNode = underlyingNode) {
+    init {
+        group.options += this
     }
 }
