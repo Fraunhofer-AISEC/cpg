@@ -43,24 +43,24 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
-import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass
-import de.fraunhofer.aisec.cpg.passes.DynamicInvokeResolver
+import de.fraunhofer.aisec.cpg.passes.ImportResolver
+import de.fraunhofer.aisec.cpg.passes.ImportResolverTask
 import de.fraunhofer.aisec.cpg.passes.concepts.ConceptPass
-import de.fraunhofer.aisec.cpg.passes.concepts.flows.cxx.CXXEntryPointsPass
+import de.fraunhofer.aisec.cpg.passes.concepts.ConceptTask
+import de.fraunhofer.aisec.cpg.passes.concepts.flows.cxx.CXXEntryPointTask
+import de.fraunhofer.aisec.cpg.passes.concepts.getConceptOrCreate
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
-import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 import kotlin.io.path.Path
 import kotlin.io.path.nameWithoutExtension
 
 /** A pass that fills the [DynamicLoading] concept into the CPG. */
-@DependsOn(ControlFlowSensitiveDFGPass::class)
-@DependsOn(CXXEntryPointsPass::class)
-@ExecuteBefore(DynamicInvokeResolver::class)
-class CXXDynamicLoadingPass(ctx: TranslationContext) : ConceptPass(ctx) {
+@DependsOn(CXXEntryPointTask::class)
+class CXXDynamicLoadingTask(target: Component, pass: ConceptPass, ctx: TranslationContext) :
+    ConceptTask(target, pass, ctx) {
 
-    override fun handleNode(node: Node, tu: TranslationUnitDeclaration) {
+    override fun handleNode(node: Node) {
         when (node) {
-            is CallExpression -> handleCallExpression(node, tu)
+            is CallExpression -> handleCallExpression(node, node.translationUnit!!)
         }
     }
 
@@ -146,17 +146,7 @@ class CXXDynamicLoadingPass(ctx: TranslationContext) : ConceptPass(ctx) {
         concept: DynamicLoading,
         os: OperatingSystemArchitecture,
     ): List<LoadLibrary> {
-        // The first argument of dlopen is the path to the library. We can try to evaluate the
-        // argument to check if it's a constant string.
-        val path = call.arguments.getOrNull(0)?.evaluate() as? String
-
-        // We can check, whether we have a matching component based on the base filename
-        val component =
-            path?.let {
-                call.translationResult?.findComponentForLibrary(
-                    Path(it).fileName.nameWithoutExtension.toString()
-                )
-            }
+        val component = call.extractComponentFromLoadLibrary()
 
         // Look for library entry points that match the operating system architecture
         val entryPoints =
@@ -175,12 +165,64 @@ class CXXDynamicLoadingPass(ctx: TranslationContext) : ConceptPass(ctx) {
 
         return listOf(op)
     }
+}
 
-    fun TranslationResult.findComponentForLibrary(libraryName: String): Component? {
-        return this.components.find { it.name.localName == libraryName }
+private fun CallExpression.extractComponentFromLoadLibrary(): Component? {
+    // The first argument of dlopen is the path to the library. We can try to evaluate the
+    // argument to check if it's a constant string.
+    val path = this.arguments.getOrNull(0)?.evaluate() as? String
+
+    // We can check, whether we have a matching component based on the base filename
+    val component =
+        path?.let {
+            this.translationResult?.findComponentForLibrary(
+                Path(it).fileName.nameWithoutExtension.toString()
+            )
+        }
+    return component
+}
+
+fun TranslationResult.findComponentForLibrary(libraryName: String): Component? {
+    return this.components.find { it.name.localName == libraryName }
+}
+
+/**
+ * Since we do not have any classical "imports" in C/C++, especially if we use dynamic loading, we
+ * need to give the [ImportResolver] an additional hint if we detect a dynamic loaded library
+ * amongst our components.
+ */
+class CXXDynamicLoadingImportTask(
+    target: TranslationResult,
+    pass: ImportResolver,
+    ctx: TranslationContext,
+) : ImportResolverTask(target, pass, ctx) {
+
+    override fun handleNode(node: Node) {
+        when (node) {
+            is CallExpression -> handleCallExpression(node)
+        }
     }
 
-    override fun cleanup() {
-        // Nothing to do
+    private fun handleCallExpression(call: CallExpression) {
+        when (call.name.toString()) {
+            "dlopen",
+            "LoadLibraryA",
+            "LoadLibraryW",
+            "LoadLibraryExA",
+            "LoadLibraryExW" -> importLibrary(call)
+            else -> return
+        }
+    }
+
+    private fun importLibrary(call: CallExpression) {
+        val libraryComponent = call.extractComponentFromLoadLibrary()
+        if (libraryComponent != null) {
+            ctx.currentComponent?.let {
+                val added = target.componentDependencies?.add(it, libraryComponent) == true
+                if (added) {
+                    log.debug("Added {} as an dependency of {}", libraryComponent.name, it.name)
+                }
+            }
+        }
     }
 }

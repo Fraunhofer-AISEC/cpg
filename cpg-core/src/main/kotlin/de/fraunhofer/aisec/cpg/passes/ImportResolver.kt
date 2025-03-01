@@ -191,6 +191,8 @@ class ImportDependencies<T : Node>(modules: MutableList<T>) : IdentityHashMap<T,
     }
 }
 
+typealias ImportResolverTask = Task<TranslationResult, ImportResolver>
+
 /**
  * This pass looks for [ImportDeclaration] nodes and imports symbols into their respective [Scope].
  * It does so by first building a dependency map between [TranslationUnitDeclaration] nodes, based
@@ -213,12 +215,16 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
         walker = SubgraphWalker.ScopedWalker(scopeManager)
         walker.registerHandler { node ->
             if (node is Component) {
+                ctx.currentComponent = node
                 // Create a new import dependency object for the component, to make sure that all
                 // TUs are included.
                 node.translationUnitDependencies = ImportDependencies(node.translationUnits)
             } else if (node is ImportDeclaration) {
                 collectImportDependencies(node)
             }
+
+            // Invoke any additional tasks that we have
+            tasks.forEach { it.handleNode(node) }
         }
         walker.iterate(tr)
 

@@ -39,9 +39,11 @@ import de.fraunhofer.aisec.cpg.graph.concepts.config.ReadConfigurationOption
 import de.fraunhofer.aisec.cpg.graph.concepts.config.RegisterConfigurationGroup
 import de.fraunhofer.aisec.cpg.graph.concepts.config.RegisterConfigurationOption
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.SubscriptExpression
-import de.fraunhofer.aisec.cpg.passes.concepts.config.ProvideConfigPass
-import de.fraunhofer.aisec.cpg.passes.concepts.config.ini.IniFileConfigurationSourcePass
-import de.fraunhofer.aisec.cpg.passes.concepts.config.python.PythonStdLibConfigurationPass
+import de.fraunhofer.aisec.cpg.passes.PassConfiguration
+import de.fraunhofer.aisec.cpg.passes.concepts.ConceptPass
+import de.fraunhofer.aisec.cpg.passes.concepts.config.ProvideConfigTask
+import de.fraunhofer.aisec.cpg.passes.concepts.config.ini.IniFileConfigurationSourceTask
+import de.fraunhofer.aisec.cpg.passes.concepts.config.python.PythonStdLibConfigurationTask
 import de.fraunhofer.aisec.cpg.test.analyze
 import java.io.File
 import kotlin.test.Test
@@ -57,9 +59,13 @@ class ConfigurationPassTest {
             analyze(listOf(), topLevel.toPath(), true) {
                 it.registerLanguage<PythonLanguage>()
                 it.registerLanguage<IniFileLanguage>()
-                it.registerPass<IniFileConfigurationSourcePass>()
-                it.registerPass<PythonStdLibConfigurationPass>()
-                it.registerPass<ProvideConfigPass>()
+                it.registerPass<ConceptPass>()
+                it.configurePass<ConceptPass>(
+                    PassConfiguration()
+                        .registerTask<IniFileConfigurationSourceTask>()
+                        .registerTask<PythonStdLibConfigurationTask>()
+                        .registerTask<ProvideConfigTask>()
+                )
                 it.softwareComponents(
                     mutableMapOf(
                         "conf" to listOf(topLevel.resolve("conf")),

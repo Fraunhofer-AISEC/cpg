@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes.concepts.flows.cxx
 
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.arch.POSIX
 import de.fraunhofer.aisec.cpg.graph.concepts.arch.Win32
@@ -34,14 +35,18 @@ import de.fraunhofer.aisec.cpg.graph.concepts.flows.LibraryEntryPoint
 import de.fraunhofer.aisec.cpg.graph.concepts.flows.Main
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.translationUnit
 import de.fraunhofer.aisec.cpg.passes.concepts.ConceptPass
+import de.fraunhofer.aisec.cpg.passes.concepts.ConceptTask
+import de.fraunhofer.aisec.cpg.passes.concepts.getConceptOrCreate
 
-/** A pass that fills the [EntryPoint] concept into the CPG. */
-class CXXEntryPointsPass(ctx: TranslationContext) : ConceptPass(ctx) {
+/** A task that fills the [EntryPoint] concept into the CPG. */
+class CXXEntryPointTask(target: Component, pass: ConceptPass, ctx: TranslationContext) :
+    ConceptTask(target, pass, ctx) {
 
-    override fun handleNode(node: Node, tu: TranslationUnitDeclaration) {
+    override fun handleNode(node: Node) {
         when (node) {
-            is FunctionDeclaration -> handleFunctionDeclaration(node, tu)
+            is FunctionDeclaration -> handleFunctionDeclaration(node, node.translationUnit!!)
         }
     }
 
@@ -58,6 +63,8 @@ class CXXEntryPointsPass(ctx: TranslationContext) : ConceptPass(ctx) {
                     LibraryEntryPoint(underlyingNode = func, os = tu.getConceptOrCreate<Win32>())
                 else -> return
             }
+
+        log.info("Adding entrypoint {} as entry {}", func.name, entry)
 
         ctx.currentComponent?.incomingInteractions += entry
     }

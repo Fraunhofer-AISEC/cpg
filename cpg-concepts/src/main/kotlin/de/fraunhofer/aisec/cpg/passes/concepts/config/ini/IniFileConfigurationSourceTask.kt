@@ -26,27 +26,32 @@
 package de.fraunhofer.aisec.cpg.passes.concepts.config.ini
 
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.conceptNodes
-import de.fraunhofer.aisec.cpg.graph.concepts.config.*
+import de.fraunhofer.aisec.cpg.graph.concepts.config.ConfigurationGroupSource
+import de.fraunhofer.aisec.cpg.graph.concepts.config.ConfigurationOptionSource
+import de.fraunhofer.aisec.cpg.graph.concepts.config.ConfigurationSource
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.translationUnit
 import de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation
-import de.fraunhofer.aisec.cpg.passes.ImportResolver
 import de.fraunhofer.aisec.cpg.passes.concepts.ConceptPass
-import de.fraunhofer.aisec.cpg.passes.concepts.config.ProvideConfigPass
-import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
+import de.fraunhofer.aisec.cpg.passes.concepts.ConceptTask
+import de.fraunhofer.aisec.cpg.passes.concepts.config.ProvideConfigTask
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
-import kotlin.collections.singleOrNull
 
 /**
  * This pass is responsible for creating [ConfigurationSource] nodes based on the INI file frontend.
  */
-@DependsOn(ImportResolver::class)
-@ExecuteBefore(ProvideConfigPass::class)
-class IniFileConfigurationSourcePass(ctx: TranslationContext) : ConceptPass(ctx) {
-    override fun handleNode(node: Node, tu: TranslationUnitDeclaration) {
+@ExecuteBefore(ProvideConfigTask::class)
+class IniFileConfigurationSourceTask(
+    target: Component,
+    pass: ConceptPass,
+    ctx: TranslationContext,
+) : ConceptTask(target, pass, ctx) {
+    override fun handleNode(node: Node) {
         // Since we cannot directly depend on the ini frontend, we have to check the language here
         // based on the node's language.
         if (node.language.name.localName != "IniFileLanguage") {
@@ -55,7 +60,7 @@ class IniFileConfigurationSourcePass(ctx: TranslationContext) : ConceptPass(ctx)
 
         when (node) {
             is TranslationUnitDeclaration -> handleTranslationUnit(node)
-            is RecordDeclaration -> handleRecordDeclaration(node, tu)
+            is RecordDeclaration -> handleRecordDeclaration(node, node.translationUnit!!)
             is FieldDeclaration -> handleFieldDeclaration(node)
         }
     }

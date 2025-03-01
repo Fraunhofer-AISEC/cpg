@@ -700,7 +700,8 @@ private constructor(
         @Throws(ConfigurationException::class)
         private fun orderPasses(): List<List<KClass<out Pass<*>>>> {
             log.info("Passes before enforcing order: {}", passes.map { it.simpleName })
-            val orderingHelper = PassOrderingHelper(passes)
+            @Suppress("UNCHECKED_CAST")
+            val orderingHelper = PassOrderingHelper<Pass<*>>(passes as List<KClass<Pass<*>>>)
             log.info(
                 "The following mermaid graph represents the pass dependencies: \n${buildMermaid(passes)}"
             )

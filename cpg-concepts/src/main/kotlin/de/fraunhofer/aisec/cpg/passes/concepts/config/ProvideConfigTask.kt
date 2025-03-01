@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes.concepts.config
 
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.conceptNodes
 import de.fraunhofer.aisec.cpg.graph.concepts.config.Configuration
@@ -43,6 +44,7 @@ import de.fraunhofer.aisec.cpg.graph.operationNodes
 import de.fraunhofer.aisec.cpg.graph.translationResult
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.concepts.ConceptPass
+import de.fraunhofer.aisec.cpg.passes.concepts.ConceptTask
 import de.fraunhofer.aisec.cpg.passes.concepts.config.python.stringValues
 
 /**
@@ -50,8 +52,9 @@ import de.fraunhofer.aisec.cpg.passes.concepts.config.python.stringValues
  * configuration sources found in the graph. It connects a [ConfigurationSource] with a matching
  * [Configuration].
  */
-class ProvideConfigPass(ctx: TranslationContext) : ConceptPass(ctx) {
-    override fun handleNode(node: Node, tu: TranslationUnitDeclaration) {
+class ProvideConfigTask(target: Component, pass: ConceptPass, ctx: TranslationContext) :
+    ConceptTask(target, pass, ctx) {
+    override fun handleNode(node: Node) {
         when (node) {
             is TranslationUnitDeclaration -> handleTranslationUnit(node)
         }
@@ -59,21 +62,26 @@ class ProvideConfigPass(ctx: TranslationContext) : ConceptPass(ctx) {
 
     private fun handleTranslationUnit(
         tu: TranslationUnitDeclaration
-    ): List<ConfigurationOperation> {
-        // Loop through all configuration sources
-        return tu.conceptNodes.filterIsInstance<ConfigurationSource>().flatMap { source ->
-            // Find all LoadConfigurationFile operations that match the INI file name
-            val loadConfigOps =
-                tu.translationResult
-                    ?.operationNodes
-                    ?.filterIsInstance<LoadConfiguration>()
-                    ?.filter {
-                        it.fileExpression.stringValues?.contains(source.name.toString()) == true
-                    }
+    ): List<ConfigurationOperation>? {
+        return tu.translationResult
+            ?.operationNodes
+            ?.filterIsInstance<LoadConfiguration>()
+            ?.flatMap { loadConfig ->
+                // Loop through all configuration sources
+                val sources =
+                    tu.translationResult
+                        ?.conceptNodes
+                        ?.filterIsInstance<ConfigurationSource>()
+                        ?.filter { source ->
+                            loadConfig.fileExpression.stringValues?.contains(
+                                source.name.toString()
+                            ) == true
+                        }
 
-            // And create a ProvideConfiguration node for each of them
-            loadConfigOps?.flatMap { handleConfiguration(source, it.conf, tu, it) } ?: listOf()
-        }
+                // And create a ProvideConfiguration node for each source
+                sources?.flatMap { handleConfiguration(it, loadConfig.conf, tu, loadConfig) }
+                    ?: listOf()
+            }
     }
 
     private fun handleConfiguration(

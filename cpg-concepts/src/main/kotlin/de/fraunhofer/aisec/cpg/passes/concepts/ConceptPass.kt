@@ -26,63 +26,86 @@
 package de.fraunhofer.aisec.cpg.passes.concepts
 
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.allEOGStarters
-import de.fraunhofer.aisec.cpg.graph.component
 import de.fraunhofer.aisec.cpg.graph.conceptNodes
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
-import de.fraunhofer.aisec.cpg.passes.TranslationUnitPass
+import de.fraunhofer.aisec.cpg.passes.ComponentPass
+import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass
+import de.fraunhofer.aisec.cpg.passes.DynamicInvokeResolver
+import de.fraunhofer.aisec.cpg.passes.SymbolResolver
+import de.fraunhofer.aisec.cpg.passes.Task
+import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
+import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 
+typealias ConceptTask = Task<Component, ConceptPass>
+
 /**
- * An abstract pass that is used to identify and create [Concept] and [Operation] nodes in the
- * graph.
+ * A pass that is used to identify and create [Concept] and [Operation] nodes in the graph. The idea
+ * is that developers that add concepts do not need to implement a full pass, but can just implement
+ * a small [Task] that handles the nodes relevant for the concept.
  */
-abstract class ConceptPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
+@DependsOn(SymbolResolver::class)
+@DependsOn(ControlFlowSensitiveDFGPass::class)
+@ExecuteBefore(DynamicInvokeResolver::class)
+class ConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
     lateinit var walker: SubgraphWalker.ScopedWalker
 
-    override fun accept(tu: TranslationUnitDeclaration) {
-        ctx.currentComponent = tu.component
+    override fun accept(c: Component) {
+        ctx.currentComponent = c
         walker = SubgraphWalker.ScopedWalker(ctx.scopeManager)
         walker.strategy = Strategy::EOG_FORWARD
-        walker.registerHandler { node -> handleNode(node, tu) }
+        walker.registerHandler { node -> handleNode(node) }
 
-        // Gather all resolution EOG starters; and make sure they really do not have a
-        // predecessor, otherwise we might analyze a node multiple times
-        val nodes = tu.allEOGStarters.filter { it.prevEOGEdges.isEmpty() }
+        // Process nodes in our translation units in the order depending on their import
+        // dependencies
+        for (tu in (Strategy::TRANSLATION_UNITS_LEAST_IMPORTS)(c)) {
+            log.debug("Processing concepts of translation unit {}", tu.name)
 
-        for (node in nodes) {
-            walker.iterate(node)
+            // Gather all resolution EOG starters; and make sure they really do not have a
+            // predecessor, otherwise we might analyze a node multiple times
+            val nodes = tu.allEOGStarters.filter { it.prevEOGEdges.isEmpty() }
+
+            for (node in nodes) {
+                walker.iterate(node)
+            }
         }
     }
 
     /**
-     * This function is called for each node in the graph. It needs to be overridden by subclasses
-     * to handle the specific node.
+     * This function is called for each node in the graph. It will invoke all plugins that are
+     * registered in the pass configuration.
      */
-    abstract fun handleNode(node: Node, tu: TranslationUnitDeclaration)
-
-    /**
-     * Gets concept of type [T] for this [TranslationUnitDeclaration] or creates a new one if it
-     * does not exist.
-     */
-    internal inline fun <reified T : Concept> TranslationUnitDeclaration.getConceptOrCreate(
-        noinline init: ((T) -> Unit)? = null
-    ): T {
-        var concept = this.conceptNodes.filterIsInstance<T>().singleOrNull()
-        if (concept == null) {
-            concept = T::class.constructors.first().call(this)
-            init?.invoke(concept)
+    fun handleNode(node: Node) {
+        // Execute tasks
+        for (task in tasks) {
+            task.handleNode(node)
         }
-
-        return concept
     }
 
     override fun cleanup() {
         // Nothing to do
     }
+}
+
+/**
+ * Gets concept of type [T] for this [TranslationUnitDeclaration] or creates a new one if it does
+ * not exist.
+ */
+inline fun <reified T : Concept> TranslationUnitDeclaration.getConceptOrCreate(
+    noinline init: ((T) -> Unit)? = null
+): T {
+    var concept = this.conceptNodes.filterIsInstance<T>().singleOrNull()
+    if (concept == null) {
+        concept = T::class.constructors.first().call(this)
+        init?.invoke(concept)
+    }
+
+    return concept
 }

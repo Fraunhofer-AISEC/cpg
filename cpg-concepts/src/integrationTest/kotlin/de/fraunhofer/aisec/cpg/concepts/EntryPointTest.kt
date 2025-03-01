@@ -31,7 +31,9 @@ import de.fraunhofer.aisec.cpg.graph.concepts.arch.POSIX
 import de.fraunhofer.aisec.cpg.graph.concepts.arch.Win32
 import de.fraunhofer.aisec.cpg.graph.concepts.flows.Main
 import de.fraunhofer.aisec.cpg.graph.get
-import de.fraunhofer.aisec.cpg.passes.concepts.flows.cxx.CXXEntryPointsPass
+import de.fraunhofer.aisec.cpg.passes.PassConfiguration
+import de.fraunhofer.aisec.cpg.passes.concepts.ConceptPass
+import de.fraunhofer.aisec.cpg.passes.concepts.flows.cxx.CXXEntryPointTask
 import de.fraunhofer.aisec.cpg.test.analyze
 import java.io.File
 import kotlin.test.assertIs
@@ -45,7 +47,8 @@ class EntryPointTest {
         val result =
             analyze(listOf(), topLevel.toPath(), true) {
                 it.registerLanguage<CLanguage>()
-                it.registerPass<CXXEntryPointsPass>()
+                it.registerPass<ConceptPass>()
+                it.configurePass<ConceptPass>(PassConfiguration().registerTask<CXXEntryPointTask>())
                 it.softwareComponents(
                     mutableMapOf(
                         "main" to listOf(topLevel.resolve("main")),
