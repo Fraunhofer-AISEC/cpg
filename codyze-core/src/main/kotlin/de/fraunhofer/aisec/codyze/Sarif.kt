@@ -43,50 +43,54 @@ import io.github.detekt.sarif4k.*
  * [Boolean] and that the [QueryTree.children] represent the individual findings.
  */
 fun QueryTree<Boolean>.toSarif(ruleID: String): List<Result> {
-    return this.children.map {
-        Result(
-            ruleID = ruleID,
-            message =
-                if (this.value) {
-                    Message(text = "Query was successful")
-                } else {
-                    Message(text = "Query failed")
-                },
-            level =
-                if (this.value) {
-                    Level.None
-                } else {
-                    Level.Error
-                },
-            kind =
-                if (this.value) {
-                    ResultKind.Pass
-                } else {
-                    ResultKind.Fail
-                },
-            locations = listOfNotNull(it.node?.toSarifLocation()),
-            stacks = it.node?.toSarifCallStack(),
-            codeFlows =
-                it.children.mapNotNull { child ->
-                    if (child.value is List<*>) {
-                        CodeFlow(
-                            threadFlows =
-                                listOf(
-                                    ThreadFlow(
-                                        message = Message(text = "Thread flow"),
-                                        locations =
-                                            (child.value as List<*>)
-                                                .filterIsInstance<Node>()
-                                                .toSarifThreadFlowLocation(),
-                                    )
-                                )
-                        )
+    // Our children contain all the results (good and bad), but we only are interested in the one
+    // matching our overall result
+    return this.children
+        .filter { it.value == true }
+        .map {
+            Result(
+                ruleID = ruleID,
+                message =
+                    if (this.value) {
+                        Message(text = "Query was successful")
                     } else {
-                        null
-                    }
-                },
-        )
-    }
+                        Message(text = "Query failed")
+                    },
+                level =
+                    if (this.value) {
+                        Level.None
+                    } else {
+                        Level.Error
+                    },
+                kind =
+                    if (this.value) {
+                        ResultKind.Pass
+                    } else {
+                        ResultKind.Fail
+                    },
+                locations = listOfNotNull(it.node?.toSarifLocation()),
+                stacks = it.node?.toSarifCallStack(),
+                codeFlows =
+                    it.children.mapNotNull { child ->
+                        if (child.value is List<*>) {
+                            CodeFlow(
+                                threadFlows =
+                                    listOf(
+                                        ThreadFlow(
+                                            message = Message(text = "Thread flow"),
+                                            locations =
+                                                (child.value as List<*>)
+                                                    .filterIsInstance<Node>()
+                                                    .toSarifThreadFlowLocation(),
+                                        )
+                                    )
+                            )
+                        } else {
+                            null
+                        }
+                    },
+            )
+        }
 }
 
 /**
