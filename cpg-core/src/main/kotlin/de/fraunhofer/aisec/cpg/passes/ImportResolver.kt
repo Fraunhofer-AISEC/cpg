@@ -76,6 +76,10 @@ class ImportDependencies<T : Node>(modules: MutableList<T>) : IdentityHashMap<T,
 
     /** Adds a dependency from [importer] to [imported]. */
     fun add(importer: T, imported: T): Boolean {
+        if (importer === imported) {
+            return false
+        }
+
         var list = this.computeIfAbsent(importer) { identitySetOf<T>() }
         var added = list.add(imported)
 
@@ -90,7 +94,22 @@ class ImportDependencies<T : Node>(modules: MutableList<T>) : IdentityHashMap<T,
 
         init {
             // Populate the work-list with a copy of the import dependency map
-            this += start.map { Pair(it.key, it.value.toIdentitySet()) }
+            this +=
+                start.map { entry ->
+                    Pair(
+                        entry.key,
+                        // We ignore entries that point to different parents. For example, if we
+                        // analyze translation units, we are only interested in resolving
+                        // relationships within the current component (which is the AST parent of a
+                        // translation unit). The reason for that is that we are already processing
+                        // the components in the order they are necessary and then process the TUs
+                        // in the desired order within the component. We might change that in the
+                        // future, if we see a benefit to NOT group processing per component but
+                        // rather just process all TUs in the order they are necessary regardless of
+                        // their parent component.
+                        entry.value.filter { entry.key.astParent == it.astParent }.toIdentitySet(),
+                    )
+                }
         }
 
         /**
