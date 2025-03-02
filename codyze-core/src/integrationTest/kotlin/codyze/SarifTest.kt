@@ -25,10 +25,14 @@
  */
 package codyze
 
+import de.fraunhofer.aisec.codyze.toSarif
 import de.fraunhofer.aisec.codyze.toSarifLocation
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.query.dataFlow
 import de.fraunhofer.aisec.cpg.test.analyze
+import io.github.detekt.sarif4k.ResultKind
 import kotlin.io.path.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -44,7 +48,7 @@ class SarifTest {
             }
         val fullLoc = result.functions["foo"].toSarifLocation()
         assertNotNull(fullLoc)
-        assertEquals(3, fullLoc.physicalLocation?.region?.endLine)
+        assertEquals(7, fullLoc.physicalLocation?.region?.endLine)
         assertEquals(15, fullLoc.physicalLocation?.region?.endColumn)
 
         val logical = fullLoc.logicalLocations?.firstOrNull()
@@ -57,5 +61,37 @@ class SarifTest {
         assertNotNull(onlyHeader)
         assertEquals(2, onlyHeader.physicalLocation?.region?.endLine)
         assertEquals(5, onlyHeader.physicalLocation?.region?.endColumn)
+    }
+
+    @Test
+    fun testQueryTreeSarif() {
+        val topLevel = Path("src/integrationTest/resources")
+        val result =
+            analyze(listOf(topLevel.resolve("simple.py").toFile()), topLevel, true) {
+                it.registerLanguage<PythonLanguage>()
+            }
+
+        val lit = result.literals.firstOrNull()
+        assertNotNull(lit)
+
+        val paths = dataFlow(lit) { it is FunctionDeclaration }
+        assertNotNull(paths)
+        assertEquals(2, paths.children.size, "Expected two paths")
+
+        val goodPath = paths.children.firstOrNull { it.value == true }
+        assertNotNull(goodPath)
+
+        val sarif = paths.toSarif("my-rule")
+        assertNotNull(sarif)
+        assertEquals(1, sarif.size, "Expected one result")
+
+        val sarifResult = sarif.firstOrNull()
+        assertNotNull(sarifResult)
+        assertEquals(ResultKind.Pass, sarifResult.kind)
+        assertEquals(
+            5,
+            sarifResult.codeFlows?.firstOrNull()?.threadFlows?.firstOrNull()?.locations?.size,
+            "Expected 5 locations",
+        )
     }
 }
