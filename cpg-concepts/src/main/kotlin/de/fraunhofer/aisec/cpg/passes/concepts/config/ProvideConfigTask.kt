@@ -55,6 +55,7 @@ import de.fraunhofer.aisec.cpg.passes.concepts.config.python.stringValues
 class ProvideConfigTask(target: Component, pass: ConceptPass, ctx: TranslationContext) :
     ConceptTask(target, pass, ctx) {
     override fun handleNode(node: Node) {
+        val loadsConfigs = node.overlays.filterIsInstance<LoadConfiguration>()
         when (node) {
             is TranslationUnitDeclaration -> handleTranslationUnit(node)
         }
@@ -63,25 +64,21 @@ class ProvideConfigTask(target: Component, pass: ConceptPass, ctx: TranslationCo
     private fun handleTranslationUnit(
         tu: TranslationUnitDeclaration
     ): List<ConfigurationOperation>? {
-        return tu.translationResult
-            ?.operationNodes
-            ?.filterIsInstance<LoadConfiguration>()
-            ?.flatMap { loadConfig ->
-                // Loop through all configuration sources
-                val sources =
-                    tu.translationResult
-                        ?.conceptNodes
-                        ?.filterIsInstance<ConfigurationSource>()
-                        ?.filter { source ->
-                            loadConfig.fileExpression.stringValues?.contains(
-                                source.name.toString()
-                            ) == true
-                        }
+        return tu?.operationNodes?.filterIsInstance<LoadConfiguration>()?.flatMap { loadConfig ->
+            // Loop through all configuration sources
+            val sources =
+                tu.translationResult
+                    ?.conceptNodes
+                    ?.filterIsInstance<ConfigurationSource>()
+                    ?.filter { source ->
+                        loadConfig.fileExpression.stringValues?.contains(source.name.toString()) ==
+                            true
+                    }
 
-                // And create a ProvideConfiguration node for each source
-                sources?.flatMap { handleConfiguration(it, loadConfig.conf, tu, loadConfig) }
-                    ?: listOf()
-            }
+            // And create a ProvideConfiguration node for each source
+            sources?.flatMap { handleConfiguration(it, loadConfig.conf, tu, loadConfig) }
+                ?: listOf()
+        }
     }
 
     private fun handleConfiguration(

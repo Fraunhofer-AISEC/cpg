@@ -39,10 +39,12 @@ import de.fraunhofer.aisec.cpg.graph.concepts.config.ReadConfigurationOption
 import de.fraunhofer.aisec.cpg.graph.concepts.config.RegisterConfigurationGroup
 import de.fraunhofer.aisec.cpg.graph.concepts.config.RegisterConfigurationOption
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.SubscriptExpression
+import de.fraunhofer.aisec.cpg.passes.ImportResolver
 import de.fraunhofer.aisec.cpg.passes.PassConfiguration
 import de.fraunhofer.aisec.cpg.passes.concepts.ConceptPass
 import de.fraunhofer.aisec.cpg.passes.concepts.config.ProvideConfigTask
 import de.fraunhofer.aisec.cpg.passes.concepts.config.ini.IniFileConfigurationSourceTask
+import de.fraunhofer.aisec.cpg.passes.concepts.config.ini.IniFileImportTask
 import de.fraunhofer.aisec.cpg.passes.concepts.config.python.PythonStdLibConfigurationTask
 import de.fraunhofer.aisec.cpg.test.analyze
 import java.io.File
@@ -65,6 +67,9 @@ class ConfigurationPassTest {
                         .registerTask<IniFileConfigurationSourceTask>()
                         .registerTask<PythonStdLibConfigurationTask>()
                         .registerTask<ProvideConfigTask>()
+                )
+                it.configurePass<ImportResolver>(
+                    PassConfiguration().registerTask<IniFileImportTask>()
                 )
                 it.softwareComponents(
                     mutableMapOf(

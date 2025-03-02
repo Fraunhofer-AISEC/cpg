@@ -218,10 +218,7 @@ class CXXDynamicLoadingImportTask(
         val libraryComponent = call.extractComponentFromLoadLibrary()
         if (libraryComponent != null) {
             ctx.currentComponent?.let {
-                val added = target.componentDependencies?.add(it, libraryComponent) == true
-                if (added) {
-                    log.debug("Added {} as an dependency of {}", libraryComponent.name, it.name)
-                }
+                target.componentDependencies?.add(it, libraryComponent) == true
             }
         }
     }

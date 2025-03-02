@@ -83,6 +83,10 @@ class ImportDependencies<T : Node>(modules: MutableList<T>) : IdentityHashMap<T,
         var list = this.computeIfAbsent(importer) { identitySetOf<T>() }
         var added = list.add(imported)
 
+        if (added) {
+            log.debug("Added {} as an dependency of {}", imported.name, importer.name)
+        }
+
         return added
     }
 
@@ -324,21 +328,10 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
 
                 // Lastly, store the namespace module as an import dependency of the module where
                 // the import was
-                var added =
-                    currentComponent.translationUnitDependencies?.add(importTu, namespaceTu) == true
-                if (added) {
-                    log.debug("Added {} as an dependency of {}", namespaceTu.name, importTu.name)
-                }
+                currentComponent.translationUnitDependencies?.add(importTu, namespaceTu) == true
 
                 // Add it on translation result level as well
-                added = tr.componentDependencies?.add(currentComponent, namespaceComponent) == true
-                if (added) {
-                    log.debug(
-                        "Added {} as an dependency of {}",
-                        namespaceComponent.name,
-                        currentComponent.name,
-                    )
-                }
+                tr.componentDependencies?.add(currentComponent, namespaceComponent) == true
             }
 
             // If we had any imported namespaces, we break here

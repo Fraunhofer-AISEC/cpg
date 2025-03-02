@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes.concepts.config.ini
 
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.conceptNodes
@@ -37,6 +38,8 @@ import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.translationUnit
 import de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation
+import de.fraunhofer.aisec.cpg.passes.ImportResolver
+import de.fraunhofer.aisec.cpg.passes.ImportResolverTask
 import de.fraunhofer.aisec.cpg.passes.concepts.ConceptPass
 import de.fraunhofer.aisec.cpg.passes.concepts.ConceptTask
 import de.fraunhofer.aisec.cpg.passes.concepts.config.ProvideConfigTask
@@ -129,5 +132,25 @@ class IniFileConfigurationSourceTask(
         option.prevDFGEdges.add(field)
 
         return option
+    }
+}
+
+class IniFileImportTask(target: TranslationResult, pass: ImportResolver, ctx: TranslationContext) :
+    ImportResolverTask(target, pass, ctx) {
+    override fun handleNode(node: Node) {
+        // Check, if we have components with INI files
+        val iniComponents =
+            target.components.filter { it.language.name.localName == "IniFileLanguage" }
+
+        // Add them to as a dependency to all other components. At this point, we cannot know yet
+        // which component does import which INI file, but we need to make sure that the
+        // configuration is processed first
+        iniComponents.forEach { iniComponent ->
+            target.components.forEach { component ->
+                if (component != iniComponent) {
+                    target.componentDependencies?.add(component, iniComponent)
+                }
+            }
+        }
     }
 }
