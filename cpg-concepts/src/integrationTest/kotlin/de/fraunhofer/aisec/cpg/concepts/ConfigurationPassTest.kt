@@ -48,6 +48,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertSame
+import kotlin.test.assertTrue
 
 class ConfigurationPassTest {
     @Test
@@ -79,11 +80,10 @@ class ConfigurationPassTest {
 
         val conf = result.conceptNodes.filterIsInstance<Configuration>().singleOrNull()
         assertNotNull(conf, "There should be a single configuration node")
-        assertEquals(11, conf.allOps.size, "There should be 21 overall ops in the configuration")
+        assertEquals(11, conf.allOps.size, "There should be 11 overall ops in the configuration")
 
         val confSources = result.conceptNodes.filterIsInstance<ConfigurationSource>()
-        assertNotNull(confSources, "There should be three configuration source nodes")
-        assertEquals(3, confSources.size, "There should be 2 configuration source nodes")
+        assertEquals(3, confSources.size, "There should be three configuration source nodes")
 
         confSources
             .filter { it.name.toString() != "unused.ini" }
@@ -139,6 +139,17 @@ class ConfigurationPassTest {
             mapOf("DEFAULT.port" to portOption, "ssl.enabled" to sslEnabledOption),
             readOptionOps.associate { Pair(it.name.toString(), it.option) },
         )
+
+        readOptionOps
+            .map { it.underlyingNode }
+            .forEach {
+                // Prev DFG should include the option
+                assertNotNull(it)
+                assertTrue(
+                    it.prevDFG.any { dfg -> dfg is ConfigurationOption },
+                    "Prev DFG of $it should include the option",
+                )
+            }
 
         val registerOptionOps =
             result.operationNodes.filterIsInstance<RegisterConfigurationOption>()
