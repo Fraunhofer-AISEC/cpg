@@ -79,7 +79,7 @@ class SarifTest {
         assertEquals(
             1,
             paths.children.size,
-            "Expected one path (since it is a May analyis and verbose is false)",
+            "Expected one path (since it is a May analysis and verbose is false)",
         )
 
         val goodPath = paths.children.singleOrNull()
