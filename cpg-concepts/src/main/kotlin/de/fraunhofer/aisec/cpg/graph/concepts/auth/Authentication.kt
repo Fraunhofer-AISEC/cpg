@@ -32,12 +32,21 @@ import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 /** Represents a high-level concept for authentication. */
 abstract class Authentication(underlyingNode: Node) : Concept(underlyingNode)
 
-class TokenBasedAuth(underlyingNode: Node, val token: Node) : Authentication(underlyingNode)
+/**
+ * Represents a token-based authentication.
+ *
+ * @param token The authentication token, which may be an opaque token.
+ */
+open class TokenBasedAuth(underlyingNode: Node, val token: Node) : Authentication(underlyingNode)
 
-class CertificateBasedAuth(underlyingNode: Node, val certificate: Node) :
-    Authentication(underlyingNode)
-
-class JwtAuth(underlyingNode: Node, val jwt: Node) : Authentication(underlyingNode)
+/**
+ * Represents a JWT-based authentication, which extends the [TokenBasedAuth].
+ *
+ * @param jwt The JWT containing encoded authentication information.
+ * @param payload The payload.
+ */
+class JwtAuth(underlyingNode: Node, val jwt: Node, val payload: Node) :
+    TokenBasedAuth(underlyingNode, jwt)
 
 /** Abstract base class for authentication operations. */
 abstract class AuthenticationOperation(underlyingNode: Node, concept: Authentication) :
