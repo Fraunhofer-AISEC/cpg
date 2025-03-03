@@ -106,7 +106,7 @@ class AnalysisProject(
      * org.mylibrary. or additionalSources/mylibrary/mylibrary/somesubfolder/... if the namespace
      * starts with mylibrary.
      */
-    var additionalSources: Path? = projectDir?.resolve("additionalSources"),
+    var additionalSources: Path? = projectDir?.resolve("libraries"),
     /** The translation configuration for the project. */
     var config: TranslationConfiguration,
 ) {
@@ -200,6 +200,7 @@ class AnalysisProject(
             val addSourcesFolder = additionalSources?.toFile()
 
             if (additionalSources?.isDirectory() == true) {
+                builder.loadIncludes(true)
                 addSourcesFolder?.listFiles()?.forEach {
                     builder = builder.includePath(it.toPath())
                 }
