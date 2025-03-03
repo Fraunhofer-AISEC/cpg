@@ -27,31 +27,28 @@ package de.fraunhofer.aisec.cpg.concepts.logging
 
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.concepts.logging.IsLogging
+import de.fraunhofer.aisec.cpg.graph.concepts.logging.Log
 import de.fraunhofer.aisec.cpg.graph.concepts.logging.LogLevel
-import de.fraunhofer.aisec.cpg.graph.concepts.logging.LogWriteOperation
-import de.fraunhofer.aisec.cpg.graph.concepts.logging.LoggingNode
+import de.fraunhofer.aisec.cpg.graph.concepts.logging.LogWrite
 import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.passes.concepts.FileConceptPass
-import de.fraunhofer.aisec.cpg.passes.concepts.PythonLoggingConceptPass
+import de.fraunhofer.aisec.cpg.passes.concepts.logging.python.PythonLoggingConceptPass
 import de.fraunhofer.aisec.cpg.query.dataFlow
 import de.fraunhofer.aisec.cpg.test.BaseTest
 import de.fraunhofer.aisec.cpg.test.analyze
 import de.fraunhofer.aisec.cpg.test.assertLiteralValue
 import java.nio.file.Path
 import kotlin.test.*
-import org.junit.jupiter.api.Tag
 
 /**
  * A class for integration tests. They depend on the Python frontend, so we classify them as an
  * integration test. This might be replaced with a language-neutral test at some point.
  */
-@Tag("integration")
 class LoggingConceptTest : BaseTest() {
     @Test
-    fun test01() {
-        val topLevel =
-            Path.of("src", "integrationTest", "resources", "concepts", "logging", "python")
+    fun testSimpleLog() {
+        val topLevel = Path.of("src", "integrationTest", "resources", "python", "logging")
 
         val result =
             analyze(
@@ -73,7 +70,7 @@ class LoggingConceptTest : BaseTest() {
 
         val logDFG =
             warnLiteral.followNextFullDFGEdgesUntilHit(collectFailedPaths = false) {
-                it is LogWriteOperation
+                it is LogWrite
             }
         assertTrue(
             logDFG.fulfilled.isNotEmpty(),
@@ -81,14 +78,14 @@ class LoggingConceptTest : BaseTest() {
         )
 
         val logOp = logDFG.fulfilled.lastOrNull()?.lastOrNull()
-        assertIs<LogWriteOperation>(logOp)
+        assertIs<LogWrite>(logOp)
         assertEquals(LogLevel.WARN, logOp.logLevel)
 
         val getSecretCall = result.calls("get_secret").singleOrNull()
         assertIs<CallExpression>(getSecretCall)
         val nextDFG = getSecretCall.nextDFG
         assertTrue(nextDFG.isNotEmpty())
-        val secretDFG = getSecretCall.followNextFullDFGEdgesUntilHit { it is LogWriteOperation }
+        val secretDFG = getSecretCall.followNextFullDFGEdgesUntilHit { it is LogWrite }
         assertTrue(
             secretDFG.fulfilled.isNotEmpty(),
             "Expected to find a dataflow from the CallExpression[get_secret] to a logging node.",
@@ -96,20 +93,17 @@ class LoggingConceptTest : BaseTest() {
     }
 
     @Test
-    fun test02() {
-        val topLevel =
-            Path.of("src", "integrationTest", "resources", "concepts", "logging", "python")
+    fun testSimpleLogWithGetLogger() {
+        val topLevel = Path.of("src", "integrationTest", "resources", "python", "logging")
 
         val result =
             analyze(
-                files = listOf(topLevel.resolve("simple_log2.py").toFile()),
+                files = listOf(topLevel.resolve("simple_log_get_logger.py").toFile()),
                 topLevel = topLevel,
                 usePasses = true,
             ) {
                 it.registerLanguage<PythonLanguage>()
-
                 it.registerPass<PythonLoggingConceptPass>()
-                it.registerPass<FileConceptPass>()
             }
         assertNotNull(result)
 
@@ -118,7 +112,7 @@ class LoggingConceptTest : BaseTest() {
 
         assertEquals(
             2,
-            result.conceptNodes { it is LoggingNode }.size,
+            result.conceptNodes { it is Log }.size,
             "Expected to find 2 logging nodes. One from the `import logging` declaration (not used directly for logging) and one from the `logging.getLogger()` call (used with `logger.error(...)`).",
         )
 
@@ -126,26 +120,23 @@ class LoggingConceptTest : BaseTest() {
         assertNotNull(literalERROR)
 
         assertTrue(
-            dataFlow(startNode = literalERROR) { it is LoggingNode }.value,
+            dataFlow(startNode = literalERROR) { it is Log }.value,
             "Expected to find a dataflow from the literal \"ERROR\" to a logging node.",
         )
     }
 
     @Test
-    fun test03() {
-        val topLevel =
-            Path.of("src", "integrationTest", "resources", "concepts", "logging", "python")
+    fun testLoggingWithAliasImport() {
+        val topLevel = Path.of("src", "integrationTest", "resources", "python", "logging")
 
         val result =
             analyze(
-                files = listOf(topLevel.resolve("simple_log3.py").toFile()),
+                files = listOf(topLevel.resolve("simple_log_alias.py").toFile()),
                 topLevel = topLevel,
                 usePasses = true,
             ) {
                 it.registerLanguage<PythonLanguage>()
-
                 it.registerPass<PythonLoggingConceptPass>()
-                it.registerPass<FileConceptPass>()
             }
         assertNotNull(result)
 
@@ -154,7 +145,7 @@ class LoggingConceptTest : BaseTest() {
 
         assertEquals(
             2,
-            result.conceptNodes { it is LoggingNode }.size,
+            result.conceptNodes { it is Log }.size,
             "Expected to find 2 logging nodes. One from the `import logging as log` declaration (used with `log.info()`) and one from the `log.getLogger()` call (used with `logger.error(...)`).",
         )
 
@@ -163,7 +154,7 @@ class LoggingConceptTest : BaseTest() {
 
         assertTrue(
             dataFlow(startNode = literalINFO) {
-                    it is LoggingNode && it.underlyingNode is ImportDeclaration
+                    it is Log && it.underlyingNode is ImportDeclaration
                 }
                 .value,
             "Expected to find a dataflow from the literal \"INFO\" to the logging node based on the import declaration.",
@@ -174,10 +165,78 @@ class LoggingConceptTest : BaseTest() {
 
         assertTrue(
             dataFlow(startNode = literalERROR) {
-                    it is LoggingNode && it.underlyingNode is CallExpression
+                    it is Log && it.underlyingNode?.code == "log.getLogger(__name__)"
                 }
                 .value,
-            "Expected to find a dataflow from the literal \"ERROR\" to the logging node based on the `getLogger` call.",
+            "Expected to find a dataflow from the literal \"ERROR\" to the logging node based on the `getLogger(__name__)` call.",
         )
+    }
+
+    @Test
+    fun testLoggingMultipleLoggers() {
+        val topLevel = Path.of("src", "integrationTest", "resources", "python", "logging")
+
+        val result =
+            analyze(
+                files = listOf(topLevel.resolve("simple_log_get_logger_multiple.py").toFile()),
+                topLevel = topLevel,
+                usePasses = true,
+            ) {
+                it.registerLanguage<PythonLanguage>()
+                it.registerPass<PythonLoggingConceptPass>()
+            }
+        assertNotNull(result)
+
+        val loggingNodes = result.conceptNodes { it is IsLogging }
+        assertTrue(loggingNodes.isNotEmpty())
+
+        val allLoggers = result.conceptNodes { it is Log }
+        assertEquals(
+            3,
+            allLoggers.size,
+            "Expected to find 3 logging nodes. One from the `import logging as log` declaration and one `foo` and one `bar` logger from the `log.getLogger()` calls. The other `getLogger()` calls are duplicates and must not create new loggers.",
+        )
+
+        val defaultLogger = allLoggers.singleOrNull { it.underlyingNode is ImportDeclaration }
+        assertNotNull(defaultLogger)
+
+        val fooLogger =
+            allLoggers.singleOrNull { it.underlyingNode?.code == "logging.getLogger('foo')" }
+        assertNotNull(fooLogger)
+
+        val barLogger =
+            allLoggers.singleOrNull { it.underlyingNode?.code == "logging.getLogger('bar')" }
+        assertNotNull(barLogger)
+
+        // Testing setup. A map of a logger name (and thus the literal written to the logger) and
+        // the corresponding logger.
+        val testing =
+            mapOf(
+                "default logger" to defaultLogger,
+                "foo logger" to fooLogger,
+                "bar logger" to barLogger,
+            )
+        testing.entries.forEach {
+            val literalString = it.key
+            val goodLogger = it.value
+            val badLoggers = allLoggers.filter { it !== goodLogger }
+
+            val literals = result.literals.filter { it.value == literalString }
+            literals.forEach { currentLit ->
+                assertTrue(
+                    dataFlow(startNode = currentLit) { end -> end == goodLogger }.value,
+                    "Expected to find a dataflow from the literal \"$literalString\" to the corresponding logger.",
+                )
+            }
+
+            badLoggers.forEach { badLogger ->
+                assertTrue(
+                    literals.none { currentLit ->
+                        dataFlow(startNode = currentLit) { end -> end == badLogger }.value
+                    },
+                    "Found a dataflow from the literal \"$literalString\" to a wrong logger.",
+                )
+            }
+        }
     }
 }

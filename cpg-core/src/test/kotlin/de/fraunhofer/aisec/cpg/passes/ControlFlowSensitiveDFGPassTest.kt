@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
+import de.fraunhofer.aisec.cpg.graph.edges.flows.FieldDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.PartialDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
@@ -106,7 +107,7 @@ class ControlFlowSensitiveDFGPassTest {
             with(baseOfMemberRead11) {
                 val nextEdges = this.nextDFGEdges.toList()
                 val partialFlow = assertNotNull(nextEdges.singleOrNull())
-                val granularity = assertIs<PartialDataflowGranularity>(partialFlow.granularity)
+                val granularity = assertIs<FieldDataflowGranularity>(partialFlow.granularity)
                 assertSame(field1, granularity.partialTarget)
 
                 // The target of this partial flow should be our member expression in line 11
@@ -231,12 +232,12 @@ class ControlFlowSensitiveDFGPassTest {
     private fun assertPartialEdgeBetween(from: Node, to: Node, partialTarget: Declaration?) {
         val edge =
             from.nextDFGEdges
-                .filter { it.granularity is PartialDataflowGranularity }
+                .filter { it.granularity is PartialDataflowGranularity<*> }
                 .firstOrNull { it.end == to }
         assertNotNull(edge)
         assertEquals(
             partialTarget,
-            (edge.granularity as? PartialDataflowGranularity)?.partialTarget,
+            (edge.granularity as? PartialDataflowGranularity<*>)?.partialTarget,
         )
     }
 
@@ -255,11 +256,11 @@ class ControlFlowSensitiveDFGPassTest {
     ): T {
         val partialEdge =
             assertNotNull(
-                from.nextDFGEdges.singleOrNull { it.granularity is PartialDataflowGranularity }
+                from.nextDFGEdges.singleOrNull { it.granularity is PartialDataflowGranularity<*> }
             )
         assertEquals(
             partialTarget,
-            (partialEdge.granularity as? PartialDataflowGranularity)?.partialTarget,
+            (partialEdge.granularity as? PartialDataflowGranularity<*>)?.partialTarget,
         )
         return assertIs<T>(partialEdge.end)
     }
@@ -270,11 +271,11 @@ class ControlFlowSensitiveDFGPassTest {
     ): T {
         val partialEdge =
             assertNotNull(
-                to.prevDFGEdges.singleOrNull { it.granularity is PartialDataflowGranularity }
+                to.prevDFGEdges.singleOrNull { it.granularity is PartialDataflowGranularity<*> }
             )
         assertEquals(
             partialTarget,
-            (partialEdge.granularity as? PartialDataflowGranularity)?.partialTarget,
+            (partialEdge.granularity as? PartialDataflowGranularity<*>)?.partialTarget,
         )
         return assertIs<T>(partialEdge.start)
     }

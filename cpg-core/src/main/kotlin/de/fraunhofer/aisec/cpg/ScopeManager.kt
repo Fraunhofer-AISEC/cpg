@@ -742,6 +742,7 @@ class ScopeManager : ScopeProvider {
     fun lookupSymbolByNodeName(
         node: Node,
         scope: Scope? = node.scope,
+        replaceImports: Boolean = true,
         predicate: ((Declaration) -> Boolean)? = null,
     ): List<Declaration> {
         return lookupSymbolByName(
@@ -749,6 +750,7 @@ class ScopeManager : ScopeProvider {
             node.language,
             node.location,
             scope,
+            replaceImports = replaceImports,
             predicate = predicate,
         )
     }
@@ -760,8 +762,11 @@ class ScopeManager : ScopeProvider {
     inline fun <reified T : Declaration> lookupSymbolByNodeNameOfType(
         node: Node,
         scope: Scope? = node.scope,
+        replaceImports: Boolean = true,
     ): List<T> {
-        return lookupSymbolByName(node.name, node.language, node.location, scope) { it is T }
+        return lookupSymbolByName(node.name, node.language, node.location, scope, replaceImports) {
+                it is T
+            }
             .filterIsInstance<T>()
     }
 
@@ -785,6 +790,7 @@ class ScopeManager : ScopeProvider {
         language: Language<*>,
         location: PhysicalLocation? = null,
         startScope: Scope? = currentScope,
+        replaceImports: Boolean = true,
         predicate: ((Declaration) -> Boolean)? = null,
     ): List<Declaration> {
         val extractedScope = extractScope(name, language, location, startScope)
@@ -808,6 +814,7 @@ class ScopeManager : ScopeProvider {
                             n.localName,
                             languageOnly = language,
                             thisScopeOnly = true,
+                            replaceImports = replaceImports,
                             predicate = predicate,
                         )
                         .toMutableList()
@@ -816,7 +823,12 @@ class ScopeManager : ScopeProvider {
                     // Otherwise, we can look up the symbol alone (without any FQN) starting from
                     // the startScope
                     startScope
-                        ?.lookupSymbol(n.localName, languageOnly = language, predicate = predicate)
+                        ?.lookupSymbol(
+                            n.localName,
+                            languageOnly = language,
+                            replaceImports = replaceImports,
+                            predicate = predicate,
+                        )
                         ?.toMutableList() ?: mutableListOf()
                 }
             }
@@ -881,8 +893,7 @@ class ScopeManager : ScopeProvider {
     ): TranslationUnitDeclaration? {
         // TODO(oxisto): This workaround is needed because it seems that not all types have a proper
         //  context :(. In this case we need to fall back to the global scope's astNode, which can
-        // be
-        //  error-prone in a multi-language scenario.
+        //  be error-prone in a multi-language scenario.
         return if (source.ctx == null) {
             globalScope?.astNode as? TranslationUnitDeclaration
         } else {

@@ -71,7 +71,7 @@ open class VariableDeclaration : ValueDeclaration(), HasInitializer, HasType.Typ
         astOptionalEdgeOf<Expression>(
             onChanged = { old, new ->
                 val value = new?.end
-                exchangeTypeObserver(old, new)
+                exchangeTypeObserverWithAccessPropagation(old, new)
                 if (value is Reference) {
                     value.resolutionHelper = this
                 }

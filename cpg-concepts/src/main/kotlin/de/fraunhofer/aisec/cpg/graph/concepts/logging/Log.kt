@@ -25,5 +25,12 @@
  */
 package de.fraunhofer.aisec.cpg.graph.concepts.logging
 
-/** This interface indicates that the corresponding node is connected to a logging concept. */
-interface IsLogging
+import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.concepts.Concept
+
+/**
+ * A logging node, i.e. a node corresponding to a log where [LogWrite] can write to.
+ *
+ * @param underlyingNode The underlying CPG node.
+ */
+class Log(underlyingNode: Node) : Concept(underlyingNode = underlyingNode), IsLogging

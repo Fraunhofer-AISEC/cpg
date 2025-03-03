@@ -34,9 +34,11 @@ import de.fraunhofer.aisec.cpg.CallResolutionResult
 import de.fraunhofer.aisec.cpg.SignatureResult
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.ancestors
+import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
+import de.fraunhofer.aisec.cpg.graph.component
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
@@ -50,6 +52,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.helpers.Util
+import de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.passes.inference.Inference
 import java.io.File
@@ -405,8 +408,8 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
      *
      * Therefore, we give the language a chance to return a [TranslationUnitDeclaration] where the
      * declaration should be placed. If the language does not override this function, the default
-     * implementation will return the first [TranslationUnitDeclaration] in
-     * [TranslationContext.currentComponent].
+     * implementation will return the first [TranslationUnitDeclaration] in the [Component] of
+     * [source].
      *
      * But languages might choose to take the information of [TypeToInfer] and [source] and create a
      * specific [TranslationUnitDeclaration], e.g., for each namespace that is inferred globally or
@@ -416,11 +419,26 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
      * @param source the source that was responsible for the inference
      */
     fun <TypeToInfer : Node> translationUnitForInference(source: Node): TranslationUnitDeclaration {
-        val tu = source.ctx?.currentComponent?.translationUnits?.firstOrNull()
+        // The easiest way to identify the current component would be traversing the AST, but that
+        // does not work for types. But types have a scope and the scope (should) have the
+        // connection to the AST. We add several fallbacks here to make sure that we have a
+        // component.
+        val component =
+            source.scope?.astNode?.component ?: source.component ?: source.ctx?.currentComponent
+        if (component == null) {
+            val msg =
+                "No suitable component found that should be used for inference. " +
+                    "That should not happen and it seems that there is a serious problem with handling this node"
+            errorWithFileLocation(source, log, msg)
+            throw TranslationException(msg)
+        }
+
+        // We should also make sure that the language matches
+        val tu = component.translationUnits.firstOrNull { it.language == this }
         if (tu == null) {
-            throw TranslationException(
-                "No translation unit found that should be used for inference"
-            )
+            val msg = "No suitable translation unit found that should be used for inference"
+            errorWithFileLocation(source, log, msg)
+            throw TranslationException(msg)
         }
 
         return tu
