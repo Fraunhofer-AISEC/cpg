@@ -203,7 +203,7 @@ object Util {
         vararg arguments: Any?,
     ) {
         log.warn(
-            String.format("%s: %s", PhysicalLocation.locationLink(node.location), format),
+            String.format("%s: %s", PhysicalLocation.locationLink(node?.location), format),
             *arguments,
         )
     }

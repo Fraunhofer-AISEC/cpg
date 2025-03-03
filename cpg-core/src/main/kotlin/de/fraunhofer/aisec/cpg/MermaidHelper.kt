@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg
 
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.passes.Pass
+import de.fraunhofer.aisec.cpg.passes.Scheduled
 import de.fraunhofer.aisec.cpg.passes.hardDependencies
 import de.fraunhofer.aisec.cpg.passes.hardExecuteBefore
 import de.fraunhofer.aisec.cpg.passes.isFirstPass
@@ -43,7 +44,7 @@ private const val FIRST_PASS_IDENTIFIER = "FirstPass"
 private const val LAST_PASS_IDENTIFIER = "LastPass"
 
 /** Helper function to replace the first and last passes names by their identifier. */
-private fun mermaidPassName(pass: KClass<out Pass<*>>): String {
+private fun mermaidPassName(pass: KClass<out Scheduled>): String {
     return when {
         pass.isFirstPass -> FIRST_PASS_IDENTIFIER
         pass.isLastPass -> LAST_PASS_IDENTIFIER

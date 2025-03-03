@@ -27,33 +27,23 @@ package de.fraunhofer.aisec.cpg.passes.concepts.config.python
 
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.analysis.MultiValueEvaluator
-import de.fraunhofer.aisec.cpg.graph.Backward
-import de.fraunhofer.aisec.cpg.graph.GraphToFollow
-import de.fraunhofer.aisec.cpg.graph.Name
-import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.config.*
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.evaluate
-import de.fraunhofer.aisec.cpg.graph.followDFGEdgesUntilHit
-import de.fraunhofer.aisec.cpg.graph.followPrevDFG
-import de.fraunhofer.aisec.cpg.graph.fqn
-import de.fraunhofer.aisec.cpg.graph.implicit
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.SubscriptExpression
 import de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation
-import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.passes.concepts.ConceptPass
-import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
+import de.fraunhofer.aisec.cpg.passes.concepts.ConceptTask
 
 /**
  * This pass is responsible for creating [ConfigurationOperation] nodes based on the
  * [`configparser`](https://docs.python.org/3/library/configparser.html) module of the Python
  * standard library.
  */
-@DependsOn(SymbolResolver::class)
-class PythonStdLibConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) {
-    override fun handleNode(node: Node, tu: TranslationUnitDeclaration) {
+class PythonStdLibConfigurationTask(target: Component, pass: ConceptPass, ctx: TranslationContext) :
+    ConceptTask(target, pass, ctx) {
+    override fun handleNode(node: Node) {
         when (node) {
             is ConstructExpression -> handleConstructExpression(node)
             is MemberCallExpression -> handleMemberCallExpression(node)
@@ -145,11 +135,11 @@ class PythonStdLibConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) 
         if (group == null) {
             // If it does not exist, we create it and implicitly add a registration operation
             group = ConfigurationGroup(sub, conf = conf).also { it.name = Name(name) }.implicit()
-            val op = RegisterConfigurationGroup(sub, conf = conf, group = group).implicit()
+            val op = RegisterConfigurationGroup(sub, group = group).implicit()
             ops += op
         }
 
-        val op = ReadConfigurationGroup(sub, conf = conf, group = group)
+        val op = ReadConfigurationGroup(sub, group = group)
         ops += op
 
         // Add an incoming DFG from the option group
@@ -186,11 +176,11 @@ class PythonStdLibConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) 
                 ConfigurationOption(sub, group = group, key = sub)
                     .also { it.name = group.name.fqn(name) }
                     .implicit()
-            val op = RegisterConfigurationOption(sub, conf = group.conf, option = option).implicit()
+            val op = RegisterConfigurationOption(sub, option = option).implicit()
             ops += op
         }
 
-        val op = ReadConfigurationOption(sub, conf = group.conf, option = option)
+        val op = ReadConfigurationOption(sub, option = option)
         ops += op
 
         // Add an incoming DFG from the option

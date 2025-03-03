@@ -25,7 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.passes.configuration
 
-import de.fraunhofer.aisec.cpg.passes.Pass
+import de.fraunhofer.aisec.cpg.passes.Scheduled
 import kotlin.reflect.KClass
 
 /**
@@ -36,4 +36,7 @@ import kotlin.reflect.KClass
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.CLASS)
 @Repeatable
-annotation class ExecuteBefore(val other: KClass<out Pass<*>>, val softDependency: Boolean = true)
+annotation class ExecuteBefore(
+    val other: KClass<out Scheduled>,
+    val softDependency: Boolean = true,
+)

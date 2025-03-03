@@ -35,23 +35,12 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
-import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
-import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
-import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteFirst
-import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLast
-import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLate
-import de.fraunhofer.aisec.cpg.passes.configuration.RequiredFrontend
-import de.fraunhofer.aisec.cpg.passes.configuration.RequiresLanguageTrait
+import de.fraunhofer.aisec.cpg.passes.configuration.*
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
-import de.fraunhofer.aisec.cpg.processing.strategy.Strategy.TRANSLATION_UNITS_LEAST_IMPORTS
 import java.util.concurrent.CompletableFuture
 import java.util.function.Consumer
 import kotlin.reflect.KClass
-import kotlin.reflect.full.findAnnotation
-import kotlin.reflect.full.findAnnotations
-import kotlin.reflect.full.hasAnnotation
-import kotlin.reflect.full.isSubclassOf
-import kotlin.reflect.full.primaryConstructor
+import kotlin.reflect.full.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -82,7 +71,28 @@ abstract class TranslationUnitPass(ctx: TranslationContext) : Pass<TranslationUn
  */
 abstract class EOGStarterPass(ctx: TranslationContext) : Pass<Node>(ctx)
 
-open class PassConfiguration {}
+open class PassConfiguration {
+    private val taskClasses = mutableListOf<KClass<out Task<*, *>>>()
+
+    inline fun <reified T : Task<*, *>> registerTask(): PassConfiguration {
+        registerTask(T::class)
+        return this
+    }
+
+    fun registerTask(task: KClass<out Task<*, *>>): Boolean {
+        return taskClasses.add(task)
+    }
+
+    /**
+     * Returns the list of tasks that are registered in this [PassConfiguration] ordering according
+     * to their scheduling requirements.
+     */
+    @Suppress("UNCHECKED_CAST")
+    internal val orderedTasks: List<KClass<Task<*, *>>> by lazy {
+        val helper = PassOrderingHelper<Task<*, *>>(taskClasses)
+        helper.order().flatten()
+    }
+}
 
 /**
  * Represents an abstract class that enhances the graph before it is persisted. Passes can exist at
@@ -96,7 +106,7 @@ open class PassConfiguration {}
  * [ComponentPass] or [TranslationUnitPass] must be used.
  */
 sealed class Pass<T : Node>(final override val ctx: TranslationContext) :
-    Consumer<T>, ContextProvider, RawNodeTypeProvider<Nothing>, ScopeProvider {
+    Consumer<T>, ContextProvider, RawNodeTypeProvider<Nothing>, ScopeProvider, Scheduled {
     var name: String
         protected set
 
@@ -115,6 +125,8 @@ sealed class Pass<T : Node>(final override val ctx: TranslationContext) :
      */
     override val scope: Scope?
         get() = scopeManager.currentScope
+
+    var tasks: List<Task<T, out Pass<T>>> = emptyList()
 
     abstract fun cleanup()
 
@@ -163,6 +175,17 @@ sealed class Pass<T : Node>(final override val ctx: TranslationContext) :
         return this.config.passConfigurations[this::class] as? T
     }
 
+    /**
+     * Creates a list of [Task] nodes (based on [taskClasses]) and stores them in [tasks]. Each
+     * [Task] is initialized with the current [target] of the [Pass], the [Pass] itself and the
+     * [ctx].
+     */
+    internal fun initializeTasks(taskClasses: List<KClass<out Task<T, out Pass<T>>>>?, target: T) {
+        this.tasks =
+            taskClasses?.mapNotNull { it.primaryConstructor?.call(target, this, ctx) }
+                ?: emptyList()
+    }
+
     override fun toString(): String {
         val builder =
             ToStringBuilder(this, Node.TO_STRING_STYLE).append("pass", this::class.simpleName)
@@ -204,6 +227,37 @@ sealed class Pass<T : Node>(final override val ctx: TranslationContext) :
         return builder.toString()
     }
 }
+
+/**
+ * A task is a smaller piece of work that is executed by a [Pass] (of type [PassType]). It is used
+ * to break down the functionality of a pass into smaller, more manageable parts. A task is executed
+ * on a single node. Each [Pass] that wants to make use of tasks is responsible for calling the
+ * tasks, since it is most likely very different when exactly a task should be scheduled.
+ */
+abstract class Task<PassTargetType : Node, PassType : Pass<PassTargetType>>(
+    /**
+     * A reference to the node that this pass was "targeting" as part of [Pass.accept]. For example,
+     * a [ComponentPass] is targeting a [Component].
+     */
+    var target: PassTargetType,
+    /** A reference to the [Pass] that is executing this task. */
+    var pass: PassType,
+    /** The [TranslationContext] of the [Pass] that is executing this task. */
+    var ctx: TranslationContext,
+) : Scheduled {
+
+    abstract fun handleNode(node: Node)
+
+    companion object {
+        val log: Logger = LoggerFactory.getLogger(Task::class.java)
+    }
+}
+
+/**
+ * A common base class for [Task] and [Pass] in order to share annotations that determine the order
+ * such as [ExecuteBefore] or [DependsOn].
+ */
+sealed interface Scheduled
 
 fun executePassesInParallel(
     classes: List<KClass<out Pass<*>>>,
@@ -333,12 +387,12 @@ private inline fun <reified T : Node> consumeTargets(
  * different instances of the same [Pass] class are executed at the same time (on different [target]
  * nodes) using this function.
  */
-private inline fun <reified T : Node> consumeTarget(
-    cls: KClass<out Pass<T>>,
+private inline fun <reified PassTargetType : Node, PassType : Pass<PassTargetType>> consumeTarget(
+    cls: KClass<PassType>,
     ctx: TranslationContext,
-    target: T,
+    target: PassTargetType,
     executedFrontends: Collection<LanguageFrontend<*, *>>,
-): Pass<T>? {
+): Pass<PassTargetType>? {
     val language = target.language
 
     val realClass = checkForReplacement(cls, language, ctx.config)
@@ -348,6 +402,12 @@ private inline fun <reified T : Node> consumeTarget(
         pass?.runsWithCurrentFrontend(executedFrontends) == true &&
             pass.runsWithLanguageTrait(language)
     ) {
+        val taskClasses = pass.passConfig<PassConfiguration>()?.orderedTasks
+        @Suppress("UNCHECKED_CAST")
+        pass.initializeTasks(
+            taskClasses as List<KClass<out Task<PassTargetType, out Pass<PassTargetType>>>>?,
+            target,
+        )
         pass.accept(target)
         pass.cleanup()
         return pass
@@ -374,38 +434,40 @@ fun <T : Node> checkForReplacement(
     return config.replacedPasses[Pair(cls, language::class)] as? KClass<out Pass<T>> ?: cls
 }
 
-val KClass<out Pass<*>>.isFirstPass: Boolean
+val KClass<out Scheduled>.isFirstPass: Boolean
     get() {
         return this.hasAnnotation<ExecuteFirst>()
     }
 
-val KClass<out Pass<*>>.isLastPass: Boolean
+val KClass<out Scheduled>.isLastPass: Boolean
     get() {
         return this.hasAnnotation<ExecuteLast>()
     }
 
-val KClass<out Pass<*>>.isLatePass: Boolean
+val KClass<out Scheduled>.isLatePass: Boolean
     get() {
         return this.hasAnnotation<ExecuteLate>()
     }
 
-val KClass<out Pass<*>>.softDependencies: Set<KClass<out Pass<*>>>
+@Suppress("UNCHECKED_CAST")
+val <ScheduledType : Scheduled> KClass<ScheduledType>.softDependencies: Set<KClass<ScheduledType>>
     get() {
         return this.findAnnotations<DependsOn>()
             .filter { it.softDependency == true }
-            .map { it.value }
+            .map { it.value as KClass<ScheduledType> }
             .toSet()
     }
 
-val KClass<out Pass<*>>.hardDependencies: Set<KClass<out Pass<*>>>
+@Suppress("UNCHECKED_CAST")
+val <ScheduledType : Scheduled> KClass<ScheduledType>.hardDependencies: Set<KClass<ScheduledType>>
     get() {
         return this.findAnnotations<DependsOn>()
             .filter { it.softDependency == false }
-            .map { it.value }
+            .map { it.value as KClass<ScheduledType> }
             .toSet()
     }
 
-val KClass<out Pass<*>>.softExecuteBefore: Set<KClass<out Pass<*>>>
+val KClass<out Scheduled>.softExecuteBefore: Set<KClass<out Scheduled>>
     get() {
         return this.findAnnotations<ExecuteBefore>()
             .filter { it.softDependency == true }
@@ -413,7 +475,7 @@ val KClass<out Pass<*>>.softExecuteBefore: Set<KClass<out Pass<*>>>
             .toSet()
     }
 
-val KClass<out Pass<*>>.hardExecuteBefore: Set<KClass<out Pass<*>>>
+val KClass<out Scheduled>.hardExecuteBefore: Set<KClass<out Scheduled>>
     get() {
         return this.findAnnotations<ExecuteBefore>()
             .filter { it.softDependency == false }

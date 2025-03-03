@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.passes.configuration
 
 import de.fraunhofer.aisec.cpg.ConfigurationException
 import de.fraunhofer.aisec.cpg.passes.*
-import de.fraunhofer.aisec.cpg.passes.Pass
 import java.util.*
 import kotlin.reflect.KClass
 import kotlin.reflect.full.findAnnotations
@@ -73,15 +72,15 @@ import org.slf4j.LoggerFactory
  * - it is removed from the [workingList] (and [firstPassesList] / [lastPassesList])
  * - the other pass's [PassWithDependencies.dependenciesRemaining] are updated.
  */
-class PassOrderingHelper {
+class PassOrderingHelper<ScheduledType : Scheduled> {
     /** This list stores all non-{first,last} passes which have not yet been ordered. */
-    private val workingList: MutableList<PassWithDependencies> = ArrayList()
+    private val workingList: MutableList<PassWithDependencies<ScheduledType>> = ArrayList()
 
     /** This list stores all first passes. Stored separately to keep the sorting logic simpler. */
-    private val firstPassesList: MutableList<PassWithDependencies> = ArrayList()
+    private val firstPassesList: MutableList<PassWithDependencies<ScheduledType>> = ArrayList()
 
     /** This list stores all last passes. Stored separately to keep the sorting logic simpler. */
-    private val lastPassesList: MutableList<PassWithDependencies> = ArrayList()
+    private val lastPassesList: MutableList<PassWithDependencies<ScheduledType>> = ArrayList()
 
     companion object {
         private val log = LoggerFactory.getLogger(PassOrderingHelper::class.java)
@@ -92,9 +91,9 @@ class PassOrderingHelper {
      * consisting of pairs of passes and their dependencies. Also, this function adds all
      * `hardDependencies`
      */
-    constructor(passes: List<KClass<out Pass<*>>>) {
+    constructor(passes: List<KClass<out ScheduledType>>) {
         for (pass in passes) {
-            addToWorkingList(pass)
+            addToWorkingList(pass as KClass<ScheduledType>)
         }
 
         // translate "A `executeBefore` B" to "B `dependsOn` A"
@@ -124,12 +123,8 @@ class PassOrderingHelper {
      * * hard dependencies
      * * [ExecuteBefore] dependencies
      */
-    private fun addToWorkingList(newElement: KClass<out Pass<*>>) {
-        if (
-            (workingList + firstPassesList + lastPassesList)
-                .filter { it.passClass == newElement }
-                .isNotEmpty()
-        ) {
+    private fun addToWorkingList(newElement: KClass<ScheduledType>) {
+        if ((workingList + firstPassesList + lastPassesList).any { it.passClass == newElement }) {
             // we already know about this pass
             return
         }
@@ -150,14 +145,14 @@ class PassOrderingHelper {
         // take care of hard dependencies
         for (dep in newElement.findAnnotations<DependsOn>()) {
             if (!dep.softDependency) { // only hard dependencies
-                addToWorkingList(dep.value)
+                @Suppress("UNCHECKED_CAST") addToWorkingList(dep.value as KClass<ScheduledType>)
             }
         }
 
         // take care of [ExecuteBefore] dependencies
         for (dep in newElement.findAnnotations<ExecuteBefore>()) {
             if (!dep.softDependency) {
-                addToWorkingList(dep.other)
+                @Suppress("UNCHECKED_CAST") addToWorkingList(dep.other as KClass<ScheduledType>)
             }
         }
     }
@@ -174,8 +169,8 @@ class PassOrderingHelper {
      *   list.
      * @throws [ConfigurationException] if the passes cannot be ordered.
      */
-    fun order(): List<List<KClass<out Pass<*>>>> {
-        val result = mutableListOf<List<KClass<out Pass<*>>>>()
+    fun order(): List<List<KClass<ScheduledType>>> {
+        val result = mutableListOf<List<KClass<ScheduledType>>>()
 
         // [ExecuteFirst]
         getAndRemoveFirstPasses()?.let {
@@ -234,7 +229,7 @@ class PassOrderingHelper {
      * Iterate through all elements and remove the provided dependency [cls] from all passes in the
      * working lists.
      */
-    private fun removeDependencyByClass(cls: KClass<out Pass<*>>) {
+    private fun removeDependencyByClass(cls: KClass<out ScheduledType>) {
         for (pass in workingList) {
             pass.dependenciesRemaining.remove(cls)
         }
@@ -253,7 +248,7 @@ class PassOrderingHelper {
      * @return The first passes which have no active dependencies on success. An empty list
      *   otherwise.
      */
-    private fun getAndRemoveNextPasses(allowLatePasses: Boolean): List<KClass<out Pass<*>>> {
+    private fun getAndRemoveNextPasses(allowLatePasses: Boolean): List<KClass<ScheduledType>> {
         return workingList
             .filter {
                 it.dependenciesRemaining.isEmpty() && it.passClass.isLatePass == allowLatePasses
@@ -268,7 +263,7 @@ class PassOrderingHelper {
      *
      * @return The first pass if present. Otherwise, null.
      */
-    private fun getAndRemoveFirstPasses(): KClass<out Pass<*>>? {
+    private fun getAndRemoveFirstPasses(): KClass<ScheduledType>? {
         return when (firstPassesList.isEmpty()) {
             true -> null
             false -> selectPass(firstPassesList.first())
@@ -280,7 +275,7 @@ class PassOrderingHelper {
      *
      * @return the (unpacked) pass
      */
-    private fun selectPass(pass: PassWithDependencies): KClass<out Pass<*>> {
+    private fun selectPass(pass: PassWithDependencies<ScheduledType>): KClass<ScheduledType> {
         // remove it from the other passes dependencies
         removeDependencyByClass(pass.passClass)
 

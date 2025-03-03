@@ -33,7 +33,11 @@ import de.fraunhofer.aisec.cpg.graph.concepts.memory.LoadLibrary
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.LoadSymbol
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.passes.concepts.memory.cxx.CXXDynamicLoadingPass
+import de.fraunhofer.aisec.cpg.passes.ImportResolver
+import de.fraunhofer.aisec.cpg.passes.PassConfiguration
+import de.fraunhofer.aisec.cpg.passes.concepts.ConceptPass
+import de.fraunhofer.aisec.cpg.passes.concepts.memory.cxx.CXXDynamicLoadingImportTask
+import de.fraunhofer.aisec.cpg.passes.concepts.memory.cxx.CXXDynamicLoadingTask
 import de.fraunhofer.aisec.cpg.test.analyze
 import de.fraunhofer.aisec.cpg.test.assertInvokes
 import java.io.File
@@ -50,7 +54,13 @@ class DynamicLoadingTest {
         val result =
             analyze(listOf(), topLevel.toPath(), true) {
                 it.registerLanguage<CLanguage>()
-                it.registerPass<CXXDynamicLoadingPass>()
+                it.registerPass<ConceptPass>()
+                it.configurePass<ConceptPass>(
+                    PassConfiguration().registerTask<CXXDynamicLoadingTask>()
+                )
+                it.configurePass<ImportResolver>(
+                    PassConfiguration().registerTask<CXXDynamicLoadingImportTask>()
+                )
                 it.softwareComponents(
                     mutableMapOf(
                         "main" to listOf(topLevel.resolve("main")),
@@ -120,7 +130,13 @@ class DynamicLoadingTest {
         val result =
             analyze(listOf(), topLevel.toPath(), true) {
                 it.registerLanguage<CLanguage>()
-                it.registerPass<CXXDynamicLoadingPass>()
+                it.registerPass<ConceptPass>()
+                it.configurePass<ConceptPass>(
+                    PassConfiguration().registerTask<CXXDynamicLoadingTask>()
+                )
+                it.configurePass<ImportResolver>(
+                    PassConfiguration().registerTask<CXXDynamicLoadingImportTask>()
+                )
                 it.softwareComponents(
                     mutableMapOf(
                         "winmain" to listOf(topLevel.resolve("winmain")),
@@ -146,6 +162,7 @@ class DynamicLoadingTest {
             loadLibrary.what,
             "\"what\" of the LoadLibrary should be the winexample component",
         )
+        assertEquals(1, loadLibrary.entryPoints.size)
         assertEquals(
             dllMain,
             loadLibrary.entryPoints.singleOrNull()?.underlyingNode,

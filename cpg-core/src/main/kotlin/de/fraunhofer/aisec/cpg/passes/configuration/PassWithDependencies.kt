@@ -25,7 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.passes.configuration
 
-import de.fraunhofer.aisec.cpg.passes.Pass
+import de.fraunhofer.aisec.cpg.passes.Scheduled
 import kotlin.reflect.KClass
 
 /**
@@ -33,9 +33,9 @@ import kotlin.reflect.KClass
  * currently remaining / unsatisfied dependencies. These values are updated during the ordering
  * procedure.
  */
-data class PassWithDependencies(
+data class PassWithDependencies<ScheduledType : Scheduled>(
     /** the pass itself */
-    val passClass: KClass<out Pass<*>>,
+    val passClass: KClass<ScheduledType>,
     /** currently unsatisfied dependencies (soft / hard / [ExecuteBefore] from other passes) */
-    val dependenciesRemaining: MutableSet<KClass<out Pass<*>>>,
+    val dependenciesRemaining: MutableSet<KClass<ScheduledType>>,
 )

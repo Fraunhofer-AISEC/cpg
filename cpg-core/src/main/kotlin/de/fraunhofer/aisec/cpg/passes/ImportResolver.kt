@@ -83,6 +83,10 @@ class ImportDependencies<T : Node>(modules: MutableList<T>) : IdentityHashMap<T,
         var list = this.computeIfAbsent(importer) { identitySetOf<T>() }
         var added = list.add(imported)
 
+        if (added) {
+            log.debug("Added {} as an dependency of {}", imported.name, importer.name)
+        }
+
         return added
     }
 
@@ -191,6 +195,8 @@ class ImportDependencies<T : Node>(modules: MutableList<T>) : IdentityHashMap<T,
     }
 }
 
+typealias ImportResolverTask = Task<TranslationResult, ImportResolver>
+
 /**
  * This pass looks for [ImportDeclaration] nodes and imports symbols into their respective [Scope].
  * It does so by first building a dependency map between [TranslationUnitDeclaration] nodes, based
@@ -213,12 +219,16 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
         walker = SubgraphWalker.ScopedWalker(scopeManager)
         walker.registerHandler { node ->
             if (node is Component) {
+                ctx.currentComponent = node
                 // Create a new import dependency object for the component, to make sure that all
                 // TUs are included.
                 node.translationUnitDependencies = ImportDependencies(node.translationUnits)
             } else if (node is ImportDeclaration) {
                 collectImportDependencies(node)
             }
+
+            // Invoke any additional tasks that we have
+            tasks.forEach { it.handleNode(node) }
         }
         walker.iterate(tr)
 
@@ -318,21 +328,10 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
 
                 // Lastly, store the namespace module as an import dependency of the module where
                 // the import was
-                var added =
-                    currentComponent.translationUnitDependencies?.add(importTu, namespaceTu) == true
-                if (added) {
-                    log.debug("Added {} as an dependency of {}", namespaceTu.name, importTu.name)
-                }
+                currentComponent.translationUnitDependencies?.add(importTu, namespaceTu) == true
 
                 // Add it on translation result level as well
-                added = tr.componentDependencies?.add(currentComponent, namespaceComponent) == true
-                if (added) {
-                    log.debug(
-                        "Added {} as an dependency of {}",
-                        namespaceComponent.name,
-                        currentComponent.name,
-                    )
-                }
+                tr.componentDependencies?.add(currentComponent, namespaceComponent) == true
             }
 
             // If we had any imported namespaces, we break here
