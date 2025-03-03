@@ -140,7 +140,7 @@ class AnalysisProject(
             sources: List<Path>? = null,
             components: List<String>? = null,
             exclusionPatterns: List<String>? = null,
-            additionalSources: Path? = projectDir.resolve("typings"),
+            additionalSources: Path? = projectDir.resolve("libraries"),
             configBuilder:
                 ((TranslationConfiguration.Builder) -> TranslationConfiguration.Builder)? =
                 null,
@@ -198,7 +198,7 @@ class AnalysisProject(
             }
 
             val addSourcesFolder = additionalSources?.toFile()
-            
+
             if (additionalSources?.isDirectory() == true) {
                 addSourcesFolder?.listFiles()?.forEach {
                     builder = builder.includePath(it.toPath())
