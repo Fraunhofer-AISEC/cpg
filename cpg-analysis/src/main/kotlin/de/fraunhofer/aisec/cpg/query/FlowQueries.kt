@@ -131,12 +131,11 @@ fun dataFlow(
     type: AnalysisType = May,
     vararg sensitivities: AnalysisSensitivity = FieldSensitive + ContextSensitive,
     scope: AnalysisScope = Interprocedural(),
-    verbose: Boolean = true,
     earlyTermination: ((Node) -> Boolean)? = null,
     predicate: (Node) -> Boolean,
 ): QueryTree<Boolean> {
-    val collectFailedPaths = type == Must || verbose
-    val findAllPossiblePaths = type == Must || verbose
+    val collectFailedPaths = type == Must
+    val findAllPossiblePaths = type == Must
     val earlyTermination = { n: Node, ctx: Context -> earlyTermination?.let { it(n) } == true }
 
     val evalRes =
@@ -178,12 +177,11 @@ fun executionPath(
     direction: AnalysisDirection = Forward(GraphToFollow.EOG),
     type: AnalysisType = May,
     scope: AnalysisScope = Interprocedural(),
-    verbose: Boolean = true,
     earlyTermination: ((Node) -> Boolean)? = null,
     predicate: (Node) -> Boolean,
 ): QueryTree<Boolean> {
-    val collectFailedPaths = type == Must || verbose
-    val findAllPossiblePaths = type == Must || verbose
+    val collectFailedPaths = type == Must
+    val findAllPossiblePaths = type == Must
     val earlyTermination = { n: Node, ctx: Context -> earlyTermination?.let { it(n) } == true }
 
     val evalRes =
