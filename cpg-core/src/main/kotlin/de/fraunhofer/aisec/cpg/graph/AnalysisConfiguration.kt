@@ -176,7 +176,15 @@ sealed class AnalysisDirection(val graphToFollow: GraphToFollow) {
      * In some cases, we have to skip one step to actually continue in the graph. Typical examples
      * are [CallExpression]s where we have a loop through the function's code and return to the same
      * expression in the EOG. We then have to skip the call to proceed with the next step in the
-     * EOG.
+     * EOG. This method applies the filtering (based on [scope] and [sensitivities]) as usual to
+     * determine valid next steps but instead of doing it once, it does the same logic twice, first
+     * starting at [currentNode] with the outgoing [edges] and the current [Context] [ctx]. Then, it
+     * computes the next starting node based on [nodeStart] and the remaining [edges] and, from this
+     * new starting node, it calculates the possible next edges by applying [nextStep].
+     *
+     * Note that the [nodeStart] may not be the same node as [unwrapNextStepFromEdge] would return,
+     * e.g. because a [CallExpression] is the start-node of an [Invoke] edge and may be required
+     * even when following the graph with [Forward].
      */
     internal fun filterAndJump(
         currentNode: Node,
