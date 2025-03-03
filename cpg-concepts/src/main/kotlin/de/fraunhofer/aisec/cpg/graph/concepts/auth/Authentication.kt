@@ -30,34 +30,18 @@ import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 
 /** Represents a high-level concept for authentication. */
-class AuthenticationConcept(underlyingNode: Node, val authStrategy: AuthenticationStrategy) :
-    Concept(underlyingNode)
+abstract class Authentication(underlyingNode: Node) : Concept(underlyingNode)
 
-/** General authentication strategies. */
-enum class AuthenticationStrategy {
-    TOKEN_BASED,
-    CERTIFICATE_BASED,
-    JWT_BASED,
-    OTP_BASED,
-    PASSWORD_BASED,
-    NO_AUTH,
-}
+class TokenBasedAuth(underlyingNode: Node, val token: Node) : Authentication(underlyingNode)
+
+class CertificateBasedAuth(underlyingNode: Node, val certificate: Node) :
+    Authentication(underlyingNode)
+
+class JwtAuth(underlyingNode: Node, val jwt: Node) : Authentication(underlyingNode)
 
 /** Abstract base class for authentication operations. */
-abstract class AuthenticationOperation(underlyingNode: Node, concept: AuthenticationConcept) :
+abstract class AuthenticationOperation(underlyingNode: Node, concept: Authentication) :
     Operation(underlyingNode, concept)
-
-/// **
-// * Represents an operation that sets up the authentication context.
-// * This node captures which fields (headers, environment variables) are used to build the context.
-// *
-// * @param fields A list of fields used to set up the authentication context.
-// */
-// class AuthenticationSetupContext(
-//    underlyingNode: Node,
-//    concept: AuthenticationConcept,
-//    val fields: List<String>
-// ) : AuthenticationOperation(underlyingNode, concept)
 
 /**
  * Represents an authentication operation.
@@ -65,16 +49,5 @@ abstract class AuthenticationOperation(underlyingNode: Node, concept: Authentica
  * @param credential The credential can be a call (e.g., a function call that reads a header) or a
  *   variable that holds the value, e.g. the token
  */
-class Authentication(
-    underlyingNode: Node,
-    concept: AuthenticationConcept,
-    //    val context: AuthenticationSetupContext,
-    val credential: Node,
-) : AuthenticationOperation(underlyingNode, concept)
-
-/**
- * Represents an operation where authentication is bypassed. This is used for cases where no
- * authentication is required, e.g., for development, testing or public endpoints.
- */
-class NoAuthentication(underlyingNode: Node, concept: AuthenticationConcept) :
+class Authenticate(underlyingNode: Node, concept: Authentication, val credential: Node) :
     AuthenticationOperation(underlyingNode, concept)
