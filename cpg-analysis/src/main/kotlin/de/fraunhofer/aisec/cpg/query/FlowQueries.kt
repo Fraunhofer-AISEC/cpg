@@ -131,7 +131,7 @@ fun dataFlow(
     type: AnalysisType = May,
     vararg sensitivities: AnalysisSensitivity = FieldSensitive + ContextSensitive,
     scope: AnalysisScope = Interprocedural(),
-    verbose: Boolean = true,
+    verbose: Boolean = false,
     earlyTermination: ((Node) -> Boolean)? = null,
     predicate: (Node) -> Boolean,
 ): QueryTree<Boolean> {
@@ -178,7 +178,7 @@ fun executionPath(
     direction: AnalysisDirection = Forward(GraphToFollow.EOG),
     type: AnalysisType = May,
     scope: AnalysisScope = Interprocedural(),
-    verbose: Boolean = true,
+    verbose: Boolean = false,
     earlyTermination: ((Node) -> Boolean)? = null,
     predicate: (Node) -> Boolean,
 ): QueryTree<Boolean> {

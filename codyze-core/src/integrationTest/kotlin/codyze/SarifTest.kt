@@ -76,9 +76,13 @@ class SarifTest {
 
         val paths = dataFlow(lit) { it is FunctionDeclaration }
         assertNotNull(paths)
-        assertEquals(2, paths.children.size, "Expected two paths")
+        assertEquals(
+            1,
+            paths.children.size,
+            "Expected one path (since it is a May analyis and verbose is false)",
+        )
 
-        val goodPath = paths.children.firstOrNull { it.value == true }
+        val goodPath = paths.children.singleOrNull()
         assertNotNull(goodPath)
 
         val sarif = paths.toSarif("my-rule")
