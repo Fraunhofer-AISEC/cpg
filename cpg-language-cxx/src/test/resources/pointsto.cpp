@@ -430,4 +430,12 @@ int testShortFS() {
   add(pi, *pj);
 
   printf("%d %d\n", i, j);
+
+  set(pi);
+
+  printf("%d %d\n", i, j);
+}
+
+int set(int* p) {
+  *p = 3;
 }

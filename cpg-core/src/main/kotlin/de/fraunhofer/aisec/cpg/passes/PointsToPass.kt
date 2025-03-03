@@ -119,6 +119,11 @@ private fun isGlobal(node: Node): Boolean {
     }
 }
 
+private fun addEntryToEdgePropertiesMap(index: Pair<Node, Node>, entries: IdentitySet<Any>) {
+    if (edgePropertiesMap[index] == null) edgePropertiesMap[index] = entries
+    else edgePropertiesMap[index]!!.addAll(entries)
+}
+
 /**
  * We use this map to store additional information on the DFG edges which we cannot keep in the
  * state. This is for example the case to identify if the resulting edge will receive a
@@ -127,7 +132,7 @@ private fun isGlobal(node: Node): Boolean {
  * works as follows: The 2nd item in the Pair is the prevDFG of the 1st item. Ultimately, it will be
  * 1st -prevDFG-> 1st.
  */
-val edgePropertiesMap = mutableMapOf<Pair<Node, Node>, Any>()
+val edgePropertiesMap = mutableMapOf<Pair<Node, Node>, IdentitySet<Any>>()
 
 // We also need a place to store the derefs of global variables.
 var globalDerefs = mutableMapOf<Node, IdentitySet<Node>>()
@@ -220,22 +225,30 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             val newPrevDFGs = value.second
             val newMemoryAddresses = value.first
             newPrevDFGs.forEach { prev ->
-                val entry = edgePropertiesMap[Pair(key, prev)]
+                val properties = edgePropertiesMap[Pair(key, prev)]
                 var context: CallingContext? = null
                 var granularity = default()
                 var functionSummary = false
 
-                // the entry in the edgePropertiesMap can be a lot of things. A granularity, a
+                // the entry in the edgePropertiesMap can contain a lot of things. A granularity, a
                 // callingcontext, or a boolean indicating if this is a functionSummary edge or not
-                when (entry) {
-                    is Granularity -> granularity = entry
-                    is CallingContext -> context = entry
-                    is Boolean -> functionSummary = entry
+                properties?.forEach { property ->
+                    when (property) {
+                        is Granularity -> granularity = property
+                        is CallingContext -> context = property
+                        is Boolean -> functionSummary = property
+                    }
                 }
                 if (context == null)
                     key.prevDFGEdges += Dataflow(prev, key, granularity, functionSummary)
                 // TODO: add functionSummary flag for contextSensitive DFs
-                else key.prevDFGEdges.addContextSensitive(prev, granularity, context)
+                else
+                    key.prevDFGEdges.addContextSensitive(
+                        prev,
+                        granularity,
+                        context!!,
+                        functionSummary,
+                    )
             }
             if (newMemoryAddresses.isNotEmpty()) {
                 when (key) {
@@ -306,6 +319,23 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                     subAccessName,
                                 )
                             )
+                        // Additionally, we store this as a shortFunctionSummary were the Function
+                        // writes to the parameter
+                        node.functionSummary
+                            .computeIfAbsent(param) { mutableSetOf() }
+                            .add(
+                                FunctionDeclaration.FSEntry(
+                                    dstValueDepth,
+                                    node,
+                                    0,
+                                    subAccessName,
+                                    true,
+                                )
+                            )
+                        val propertySet = identitySetOf<Any>(true)
+                        if (subAccessName != "")
+                            propertySet.add(FieldDeclaration().apply { name = Name(subAccessName) })
+                        edgePropertiesMap[Pair(param, node)] = propertySet
                         // Draw a DFG-Edge from the ParameterMemoryValue to the value
                         // TODO: I don't think we actually  need to do that
                         /*                        var pmv = param.memoryValue
@@ -325,9 +355,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
                         // Check if the value is influenced by a Parameter and if so, add this
                         // information to the functionSummary
-                        stateEntries
-                            .first()
-                            .first
+                        value
                             .followDFGEdgesUntilHit(
                                 collectFailedPaths = false,
                                 direction = Backward(GraphToFollow.DFG),
@@ -442,7 +470,10 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 if (p.memoryValue == null)
                     initializeParameters(lattice, mutableListOf(p), doubleState, 1)
                 p.memoryValue?.let { memVal ->
-                    edgePropertiesMap[Pair(memVal, arg)] = CallingContextIn(callExpression)
+                    addEntryToEdgePropertiesMap(
+                        Pair(memVal, arg),
+                        identitySetOf(CallingContextIn(callExpression)),
+                    )
                     doubleState =
                         lattice.push(
                             doubleState,
@@ -464,8 +495,10 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 onlyFetchExistingEntries = true,
                             )
                             .forEach { derefValue ->
-                                edgePropertiesMap[Pair(derefPMV, derefValue)] =
-                                    CallingContextIn(callExpression)
+                                addEntryToEdgePropertiesMap(
+                                    Pair(derefPMV, derefValue),
+                                    identitySetOf(CallingContextIn(callExpression)),
+                                )
                                 doubleState =
                                     lattice.push(
                                         doubleState,
@@ -486,9 +519,10 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                             onlyFetchExistingEntries = true,
                                         )
                                         .forEach { derefderefValue ->
-                                            edgePropertiesMap[
-                                                Pair(derefderefPMV, derefderefValue)] =
-                                                CallingContextIn(callExpression)
+                                            addEntryToEdgePropertiesMap(
+                                                Pair(derefderefPMV, derefderefValue),
+                                                identitySetOf(CallingContextIn(callExpression)),
+                                            )
                                             doubleState =
                                                 lattice.push(
                                                     doubleState,
@@ -631,6 +665,17 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                         doubleState.getNestedValues(argument, destAddrDepth)
                                     }
                                 }
+                            // If this is a short FunctionSummary, store this info in the
+                            // edgePropertiesMap
+                            if (shortFS) {
+                                val prev =
+                                    (srcNode as? FunctionDeclaration)
+                                        ?: currentNode.arguments[srcNode.argumentIndex]
+                                addEntryToEdgePropertiesMap(
+                                    Pair(argument, prev),
+                                    identitySetOf(true),
+                                )
+                            }
                             when (srcNode) {
                                 is ParameterDeclaration -> {
                                     // Add the (dereferenced) value of the respective argument
@@ -653,11 +698,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                                         ),
                                                     ),
                                                 )
-                                            edgePropertiesMap[
-                                                Pair(
-                                                    argument,
-                                                    currentNode.arguments[srcNode.argumentIndex],
-                                                )] = true
                                         }
                                         val values =
                                             if (!shortFS)
@@ -676,13 +716,14 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                                 // created for a shortfunctionSummary. If so, we
                                                 // have to store that info in the map
                                                 val shortFSEntry =
-                                                    (edgePropertiesMap[
-                                                        Pair(
-                                                            currentNode.arguments[
-                                                                    srcNode.argumentIndex],
-                                                            value,
-                                                        )]
-                                                        as? Boolean == true) || shortFS
+                                                    edgePropertiesMap[
+                                                            Pair(
+                                                                currentNode.arguments[
+                                                                        srcNode.argumentIndex],
+                                                                value,
+                                                            )]
+                                                        ?.filterIsInstance<Boolean>()
+                                                        ?.any { it } == true || shortFS
                                                 mapDstToSrc.computeIfAbsent(d) {
                                                     identitySetOf()
                                                 } += Pair(value, shortFSEntry)
@@ -708,7 +749,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                                     } +=
                                                         doubleState
                                                             .getNestedValues(arg, srcValueDepth)
-                                                            .map { Pair(it, false) }
+                                                            .map { Pair(it, shortFS) }
                                                 }
                                             }
                                         }
@@ -718,7 +759,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 is MemoryAddress -> {
                                     destination.forEach { d ->
                                         mapDstToSrc.computeIfAbsent(d) { identitySetOf() } +=
-                                            Pair(srcNode, false)
+                                            Pair(srcNode, shortFS)
                                     }
                                 }
 
@@ -726,11 +767,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                     destination.forEach { d ->
                                         mapDstToSrc.computeIfAbsent(d) { identitySetOf() } +=
                                             if (srcValueDepth == 0)
-                                                identitySetOf(Pair(srcNode, false))
+                                                identitySetOf(Pair(srcNode, shortFS))
                                             else
                                                 doubleState
                                                     .getNestedValues(srcNode, srcValueDepth)
-                                                    .map { Pair(it, false) }
+                                                    .map { Pair(it, shortFS) }
                                     }
                                 }
                             }
@@ -752,15 +793,21 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     doubleState.updateValues(lattice, src, dstValues, identitySetOf(dst))
                 else doubleState.updateValues(lattice, src, identitySetOf(), identitySetOf(dst))
 
-            // If we draw a DFG-Edge from this CallExpression, it should be either a
-            // CallingContextOut or a shortFunctionSummary
+            // Add the callingContextOut to the edgePropertiesMap and check if we also need the
+            // shortFS flag
             values.forEach { v ->
                 if (v.second)
-                // a shortFunctionSummary
-                edgePropertiesMap[Pair(dst, v.first)] = true
+                // a shortFunctionSummary + the callingContextOut
+                addEntryToEdgePropertiesMap(
+                        Pair(dst, v.first),
+                        identitySetOf(true, CallingContextOut(currentNode)),
+                    )
+                // the callingContextOut only
                 else
-                // the callingContextOut
-                edgePropertiesMap[Pair(dst, v.first)] = CallingContextOut(currentNode)
+                    addEntryToEdgePropertiesMap(
+                        Pair(dst, v.first),
+                        identitySetOf(CallingContextOut(currentNode)),
+                    )
             }
         }
 
@@ -840,8 +887,10 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 .forEach { derefValue ->
                     values.add(derefValue)
                     // Store the information over the type of the edge in the edgePropertiesMap
-                    edgePropertiesMap[Pair(currentNode, derefValue)] =
-                        PointerDataflowGranularity(PointerAccess.currentDerefValue)
+                    addEntryToEdgePropertiesMap(
+                        Pair(currentNode, derefValue),
+                        identitySetOf(PointerDataflowGranularity(PointerAccess.currentDerefValue)),
+                    )
                     // Let's see if we can deref once more
                     if (doubleState.hasDeclarationStateEntry(derefValue)) {
                         doubleState
@@ -849,8 +898,14 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             .map { it.first }
                             .forEach { derefDerefValue ->
                                 values.add(derefDerefValue)
-                                edgePropertiesMap[Pair(currentNode, derefDerefValue)] =
-                                    PointerDataflowGranularity(PointerAccess.currentDerefDerefValue)
+                                addEntryToEdgePropertiesMap(
+                                    Pair(currentNode, derefDerefValue),
+                                    identitySetOf(
+                                        PointerDataflowGranularity(
+                                            PointerAccess.currentDerefDerefValue
+                                        )
+                                    ),
+                                )
                             }
                     }
                 }
@@ -869,9 +924,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             // information now and attach the edge property to the actual read
             addresses.forEach { addr ->
                 values.forEach { value ->
-                    val property = edgePropertiesMap[Pair(addr, value)]
-                    if (property != null) {
-                        edgePropertiesMap[Pair(currentNode, value)] = property
+                    edgePropertiesMap[Pair(addr, value)]?.let {
+                        addEntryToEdgePropertiesMap(Pair(currentNode, value), it)
                     }
                 }
             }

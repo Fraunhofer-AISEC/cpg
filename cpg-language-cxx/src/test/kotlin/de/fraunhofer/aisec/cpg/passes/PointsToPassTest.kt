@@ -1458,12 +1458,14 @@ class PointsToPassTest {
         assertEquals(iDecl.memoryAddress, pDerefLine234.memoryAddress.firstOrNull())
         assertEquals(1, iRefLine234.prevFullDFG.size)
         assertTrue(iRefLine234.prevFullDFG.contains(binOpLine212))
-        assertEquals(1, iRefLine234.prevFunctionSummaryDFG.size)
+        assertEquals(2, iRefLine234.prevFunctionSummaryDFG.size)
         assertTrue(iRefLine234.prevFunctionSummaryDFG.contains(ceLine233.arguments[0]))
+        assertTrue(iRefLine234.prevFunctionSummaryDFG.contains(ceLine233.invokes.first()))
         assertEquals(1, pDerefLine234.prevFullDFG.size)
         assertTrue(pDerefLine234.prevFullDFG.contains(binOpLine212))
-        assertEquals(1, pDerefLine234.prevFunctionSummaryDFG.size)
+        assertEquals(2, pDerefLine234.prevFunctionSummaryDFG.size)
         assertTrue(pDerefLine234.prevFunctionSummaryDFG.contains(ceLine233.arguments[0]))
+        assertTrue(pDerefLine234.prevFunctionSummaryDFG.contains(ceLine233.invokes.first()))
         assertEquals(1, pDerefLine234.memoryAddress.size)
         assertEquals(iDecl.memoryAddress, pDerefLine234.memoryAddress.first() as MemoryAddress?)
 
@@ -1472,20 +1474,23 @@ class PointsToPassTest {
         assertEquals(iDecl.memoryAddress, pDerefLine237.memoryAddress.firstOrNull())
         assertEquals(1, pDerefLine237.prevFullDFG.size)
         assertTrue(pDerefLine237.prevFullDFG.contains(jDecl.prevFullDFG.firstOrNull()))
-        assertEquals(1, pDerefLine237.prevFunctionSummaryDFG.size)
+        assertEquals(2, pDerefLine237.prevFunctionSummaryDFG.size)
         assertTrue(pDerefLine237.prevFunctionSummaryDFG.contains(ceLine236.arguments[0]))
+        assertTrue(pDerefLine237.prevFunctionSummaryDFG.contains(ceLine236.invokes.first()))
 
         // Line 240
         assertEquals(1, pDerefLine240.memoryAddress.size)
         assertEquals(iDecl.memoryAddress, pDerefLine240.memoryAddress.firstOrNull())
         assertEquals(1, pDerefLine240.prevFullDFG.size)
         assertTrue(pDerefLine240.prevFullDFG.contains(binOpLine212))
-        assertEquals(1, pDerefLine240.prevFunctionSummaryDFG.size)
+        assertEquals(2, pDerefLine240.prevFunctionSummaryDFG.size)
         assertTrue(pDerefLine240.prevFunctionSummaryDFG.contains(ceLine239.arguments[0]))
+        assertTrue(pDerefLine240.prevFunctionSummaryDFG.contains(ceLine239.invokes.first()))
         assertEquals(1, iRefLine240.prevFullDFG.size)
         assertTrue(iRefLine240.prevFullDFG.contains(binOpLine212))
-        assertEquals(1, iRefLine240.prevFunctionSummaryDFG.size)
+        assertEquals(2, iRefLine240.prevFunctionSummaryDFG.size)
         assertTrue(iRefLine240.prevFunctionSummaryDFG.contains(ceLine239.arguments[0]))
+        assertTrue(iRefLine240.prevFunctionSummaryDFG.contains(ceLine239.invokes.first()))
 
         // Line 242
         assertEquals(1, iRefLine242Left.prevFullDFG.size)
@@ -1493,8 +1498,9 @@ class PointsToPassTest {
         assertEquals(2, ceLine242.prevFullDFG.size)
         assertTrue(ceLine242.prevFullDFG.contains(iDecl.memoryAddress!!))
         assertTrue(ceLine242.prevFullDFG.contains(binOpLine212))
-        assertEquals(1, ceLine242.prevFunctionSummaryDFG.size)
-        assertEquals(ceLine239.arguments.first(), ceLine242.prevFunctionSummaryDFG.first())
+        assertEquals(2, ceLine242.prevFunctionSummaryDFG.size)
+        assertTrue(ceLine242.prevFunctionSummaryDFG.contains(ceLine239.invokes.first()))
+        assertTrue(ceLine242.prevFunctionSummaryDFG.contains(ceLine239.arguments.first()))
     }
 
     @Test
@@ -1567,8 +1573,6 @@ class PointsToPassTest {
 
         // Function Summary for mbedtls_ssl_read
         assertEquals(1, FSread.size)
-        // TODO assertEquals(4, FSread.entries.firstOrNull()?.value?.size)
-        // TODO: should be 4, the unknownmemoryvalue for the session shouldn't be there
         assertEquals(5, FSread.entries.firstOrNull()?.value?.size)
         assertTrue(
             FSread.entries.firstOrNull()?.value?.any {
@@ -1590,19 +1594,35 @@ class PointsToPassTest {
                 it.srcNode == literal4 && it.subAccessName == "session.l"
             } == true
         )
+        assertTrue(
+            FSread.entries.firstOrNull()?.value?.any {
+                it.srcNode is UnknownMemoryValue && it.subAccessName == "session"
+            } == true
+        )
 
         // Function Summary for inner_renegotiate
         assertEquals(1, FSinnerrenegotiate.size)
-        assertEquals(2, FSinnerrenegotiate.entries.firstOrNull()?.value?.size)
-        assertTrue(
-            FSinnerrenegotiate.entries.firstOrNull()?.value?.any {
-                it.srcNode == literal6 && it.subAccessName == "j"
-            } == true
+        assertEquals(
+            2,
+            FSinnerrenegotiate.entries
+                .firstOrNull()
+                ?.value
+                ?.filter { !it.shortFunctionSummary }
+                ?.size,
         )
         assertTrue(
-            FSinnerrenegotiate.entries.firstOrNull()?.value?.any {
-                it.srcNode == literal7 && it.subAccessName == "session.l"
-            } == true
+            FSinnerrenegotiate.entries
+                .firstOrNull()
+                ?.value
+                ?.filter { !it.shortFunctionSummary }
+                ?.any { it.srcNode == literal6 && it.subAccessName == "j" } == true
+        )
+        assertTrue(
+            FSinnerrenegotiate.entries
+                .firstOrNull()
+                ?.value
+                ?.filter { !it.shortFunctionSummary }
+                ?.any { it.srcNode == literal7 && it.subAccessName == "session.l" } == true
         )
 
         // Function Summary for renegotiate
@@ -2134,6 +2154,9 @@ class PointsToPassTest {
         val literal0 = func.literals.first { it.value as? Int == 0 }
         assertNotNull(literal0)
 
+        val literal3 = tu.functions["set"].literals.first { it.value as? Int == 3 }
+        assertNotNull(literal3)
+
         // Declarations
         val iDecl = func.variables["i"]
         assertNotNull(iDecl)
@@ -2167,6 +2190,13 @@ class PointsToPassTest {
                 .first()
         assertNotNull(iLine432)
 
+        val iLine436 =
+            tu.allChildren<Reference> {
+                    it.location?.region?.startLine == 436 && it.name.localName == "i"
+                }
+                .first()
+        assertNotNull(iLine436)
+
         // UnaryOperator
         val binOP = tu.allChildren<BinaryOperator> { it.location?.region?.startLine == 413 }.first()
         assertNotNull(binOP)
@@ -2181,6 +2211,9 @@ class PointsToPassTest {
         val addCE3 = func.calls("add")[2]
         assertNotNull(addCE3)
 
+        val setCE = func.calls("set")[0]
+        assertNotNull(setCE)
+
         // Line 422
         assertEquals(1, addCE1.arguments[0].prevFullDFG.size)
         assertTrue(addCE1.arguments[0].prevFullDFG.contains(iDecl.memoryAddress as Node))
@@ -2191,34 +2224,54 @@ class PointsToPassTest {
         // Line 424
         assertEquals(1, iLine424.prevFullDFG.size)
         assertTrue(iLine424.prevFullDFG.contains(binOP))
-        assertEquals(1, iLine424.prevFunctionSummaryDFG.size)
+        assertEquals(2, iLine424.prevFunctionSummaryDFG.size)
         assertTrue(iLine424.prevFunctionSummaryDFG.contains(addCE1.arguments[0]))
+        assertEquals(1, addCE1.invokes.size)
+        assertTrue(iLine424.prevFunctionSummaryDFG.contains(addCE1.invokes.first()))
 
         // Line 426
         assertEquals(1, addCE2.arguments[0].prevFullDFG.size)
         assertTrue(addCE2.arguments[0].prevFullDFG.contains(iDecl.memoryAddress as Node))
-        assertEquals(2, addCE2.arguments[0].prevFunctionSummaryDFG.size)
+        assertEquals(3, addCE2.arguments[0].prevFunctionSummaryDFG.size)
         assertTrue(addCE2.arguments[0].prevFunctionSummaryDFG.contains(addCE2.arguments[0]))
         assertTrue(addCE2.arguments[0].prevFunctionSummaryDFG.contains(addCE2.arguments[1]))
+        assertEquals(1, addCE2.invokes.size)
+        assertTrue(addCE2.arguments[0].prevFunctionSummaryDFG.contains(addCE2.invokes.first()))
 
         // Line 428
         assertEquals(1, iLine428.prevFullDFG.size)
         assertTrue(iLine428.prevFullDFG.contains(binOP))
-        assertEquals(1, iLine428.prevFunctionSummaryDFG.size)
+        assertEquals(2, iLine428.prevFunctionSummaryDFG.size)
         assertTrue(iLine428.prevFunctionSummaryDFG.contains(addCE2.arguments[0]))
+        assertTrue(iLine428.prevFunctionSummaryDFG.contains(addCE2.invokes.first()))
 
         // Line 430
         assertEquals(1, addCE3.arguments[0].prevFullDFG.size)
         assertTrue(addCE3.arguments[0].prevFullDFG.contains(iDecl.memoryAddress as Node))
-        assertEquals(2, addCE3.arguments[0].prevFunctionSummaryDFG.size)
+        assertEquals(3, addCE3.arguments[0].prevFunctionSummaryDFG.size)
         assertTrue(addCE3.arguments[0].prevFunctionSummaryDFG.contains(addCE3.arguments[0]))
         assertTrue(addCE3.arguments[0].prevFunctionSummaryDFG.contains(addCE3.arguments[1]))
+        assertEquals(1, addCE3.invokes.size)
+        assertTrue(addCE3.arguments[0].prevFunctionSummaryDFG.contains(addCE3.invokes.first()))
 
         // Line 432
         assertEquals(1, iLine432.prevFullDFG.size)
         assertTrue(iLine432.prevFullDFG.contains(binOP))
-        assertEquals(1, iLine432.prevFunctionSummaryDFG.size)
+        assertEquals(2, iLine432.prevFunctionSummaryDFG.size)
         assertTrue(iLine432.prevFunctionSummaryDFG.contains(addCE3.arguments[0]))
+        assertTrue(iLine432.prevFunctionSummaryDFG.contains(addCE3.invokes.first()))
+
+        // Line 434
+        assertEquals(1, setCE.arguments[0].prevFullDFG.size)
+        assertTrue(setCE.arguments[0].prevFullDFG.contains(iDecl.memoryAddress as Node))
+        assertEquals(0, setCE.arguments[0].prevFunctionSummaryDFG.size)
+
+        // Line 436
+        assertEquals(1, iLine436.prevFullDFG.size)
+        assertTrue(iLine436.prevFullDFG.contains(literal3))
+        assertEquals(1, iLine436.prevFunctionSummaryDFG.size)
+        assertEquals(1, setCE.invokes.size)
+        assertTrue(iLine436.prevFunctionSummaryDFG.contains(setCE.invokes.first()))
     }
 
     @Test
