@@ -23,25 +23,10 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.concepts.logging
+package de.fraunhofer.aisec.cpg.graph.concepts.file
 
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 
-/** Indicates a logging level. */
-enum class LogLevel {
-    CRITICAL,
-    ERROR,
-    WARN,
-    INFO,
-    DEBUG,
-    TRACE,
-    UNKNOWN,
-}
-
-class LogWriteOperation(
-    underlyingNode: Node,
-    override val concept: LoggingNode,
-    val logLevel: LogLevel,
-    val logArguments: List<Node>,
-) : Operation(underlyingNode = underlyingNode, concept = concept), IsLogging
+class FileDelete(underlyingNode: Node, override val concept: FileNode) :
+    Operation(underlyingNode = underlyingNode, concept = concept)

@@ -60,9 +60,9 @@ fun MetadataProvider.newFileNode(
     return node
 }
 
-fun MetadataProvider.newFileReadNode(underlyingNode: Node, fileNode: FileNode): FileReadNode {
+fun MetadataProvider.newFileReadNode(underlyingNode: Node, fileNode: FileNode): FileRead {
     val node =
-        FileReadNode(
+        FileRead(
             underlyingNode = underlyingNode,
             concept = fileNode,
             target = underlyingNode.nextDFG,
@@ -80,9 +80,9 @@ fun MetadataProvider.newFileReadNode(underlyingNode: Node, fileNode: FileNode): 
     return node
 }
 
-fun MetadataProvider.newFileWriteNode(underlyingNode: Node, fileNode: FileNode): FileWriteNode {
+fun MetadataProvider.newFileWriteNode(underlyingNode: Node, fileNode: FileNode): FileWrite {
     val node =
-        FileWriteNode(
+        FileWrite(
             underlyingNode = underlyingNode,
             concept = fileNode,
             what = (underlyingNode as? CallExpression)?.arguments ?: listOf(),
@@ -100,9 +100,9 @@ fun MetadataProvider.newFileWriteNode(underlyingNode: Node, fileNode: FileNode):
     return node
 }
 
-fun MetadataProvider.newFileAppendNode(underlyingNode: Node, fileNode: FileNode): FileAppendNode {
+fun MetadataProvider.newFileAppendNode(underlyingNode: Node, fileNode: FileNode): FileAppend {
     val node =
-        FileAppendNode(
+        FileAppend(
             underlyingNode = underlyingNode,
             concept = fileNode,
             what = (underlyingNode as? CallExpression)?.arguments ?: listOf(),

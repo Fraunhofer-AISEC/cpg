@@ -30,16 +30,16 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.conceptNodes
-import de.fraunhofer.aisec.cpg.graph.concepts.file.FileOperationNode
+import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.followEOGEdgesUntilHit
 import de.fraunhofer.aisec.cpg.passes.ComponentPass
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLate
 
 @ExecuteLate
-@DependsOn(FileConceptPass::class)
+@DependsOn(PythonFileConceptPass::class)
 class FileConceptEOGPass(ctx: TranslationContext) : ComponentPass(ctx) {
-    private val allCPGConceptNodes: MutableMap<Node, FileOperationNode> = HashMap()
+    private val allCPGConceptNodes: MutableMap<Node, Operation> = HashMap()
 
     override fun cleanup() {
         // nothing to do
@@ -48,7 +48,7 @@ class FileConceptEOGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     override fun accept(comp: Component) {
         val parent = comp.astParent
         if (parent is TranslationResult) {
-            val conceptNodes = parent.conceptNodes.filterIsInstance<FileOperationNode>()
+            val conceptNodes = parent.conceptNodes.filterIsInstance<Operation>()
             conceptNodes.forEach { concept ->
                 concept.underlyingNode?.let { underlyingNode ->
                     allCPGConceptNodes += underlyingNode to concept
@@ -60,7 +60,7 @@ class FileConceptEOGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         }
     }
 
-    private fun handle(fileOp: FileOperationNode) {
+    private fun handle(fileOp: Operation) {
         val nextEOGFulfilled =
             fileOp.underlyingNode
                 ?.followEOGEdgesUntilHit(collectFailedPaths = false) {

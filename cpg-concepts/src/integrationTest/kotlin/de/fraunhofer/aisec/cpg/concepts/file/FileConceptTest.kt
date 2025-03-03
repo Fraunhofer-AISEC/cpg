@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.concepts.file
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.graph.conceptNodes
 import de.fraunhofer.aisec.cpg.passes.concepts.FileConceptEOGPass
-import de.fraunhofer.aisec.cpg.passes.concepts.FileConceptPass
+import de.fraunhofer.aisec.cpg.passes.concepts.PythonFileConceptPass
 import de.fraunhofer.aisec.cpg.test.BaseTest
 import de.fraunhofer.aisec.cpg.test.analyze
 import java.nio.file.Path
@@ -45,7 +45,7 @@ import org.junit.jupiter.api.Tag
 class FileConceptTest : BaseTest() {
     @Test
     fun testRead() {
-        val topLevel = Path.of("src", "integrationTest", "resources", "concepts", "file", "python")
+        val topLevel = Path.of("src", "integrationTest", "resources", "python", "file")
 
         val result =
             analyze(
@@ -54,7 +54,7 @@ class FileConceptTest : BaseTest() {
                 usePasses = false,
             ) {
                 it.registerLanguage<PythonLanguage>()
-                it.registerPass<FileConceptPass>()
+                it.registerPass<PythonFileConceptPass>()
                 it.registerPass<FileConceptEOGPass>()
             }
         assertNotNull(result)
@@ -65,7 +65,7 @@ class FileConceptTest : BaseTest() {
 
     @Test
     fun testWrite() {
-        val topLevel = Path.of("src", "integrationTest", "resources", "concepts", "file", "python")
+        val topLevel = Path.of("src", "integrationTest", "resources", "python", "file")
 
         val result =
             analyze(
@@ -74,7 +74,7 @@ class FileConceptTest : BaseTest() {
                 usePasses = true,
             ) {
                 it.registerLanguage<PythonLanguage>()
-                it.registerPass<FileConceptPass>()
+                it.registerPass<PythonFileConceptPass>()
                 it.registerPass<FileConceptEOGPass>()
             }
         assertNotNull(result)
@@ -85,7 +85,7 @@ class FileConceptTest : BaseTest() {
 
     @Test
     fun testEOG() {
-        val topLevel = Path.of("src", "integrationTest", "resources", "concepts", "file", "python")
+        val topLevel = Path.of("src", "integrationTest", "resources", "python", "file")
 
         val result =
             analyze(
@@ -94,7 +94,7 @@ class FileConceptTest : BaseTest() {
                 usePasses = true,
             ) {
                 it.registerLanguage<PythonLanguage>()
-                it.registerPass<FileConceptPass>()
+                it.registerPass<PythonFileConceptPass>()
                 it.registerPass<FileConceptEOGPass>()
             }
         assertNotNull(result)

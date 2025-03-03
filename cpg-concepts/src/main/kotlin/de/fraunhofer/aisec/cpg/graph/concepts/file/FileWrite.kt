@@ -23,12 +23,10 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.concepts.logging
+package de.fraunhofer.aisec.cpg.graph.concepts.file
 
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.concepts.Concept
+import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 
-class LoggingNode(underlyingNode: Node) : Concept(underlyingNode = underlyingNode), IsLogging {
-
-    // TODO: target: stdout / err / file / ...
-}
+class FileWrite(underlyingNode: Node, override val concept: FileNode, val what: List<Node>) :
+    Operation(underlyingNode = underlyingNode, concept = concept)

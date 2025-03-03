@@ -26,6 +26,40 @@
 package de.fraunhofer.aisec.cpg.graph.concepts.file
 
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.concepts.Concept
+import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 
-class FileWriteNode(underlyingNode: Node, override val concept: FileNode, val what: List<Node>) :
-    FileOperationNode(underlyingNode = underlyingNode, concept = concept)
+enum class FileAccessMode {
+    READ,
+    WRITE,
+    APPEND,
+    UNKNOWN,
+
+    // what do we want to have here? binary? text? r+ vs w+? create mode? ...?
+}
+
+class FileNode(
+    underlyingNode: Node,
+    val opNodes: MutableSet<Operation>,
+    val fileName: String,
+    val accessMode: FileAccessMode,
+) : Concept(underlyingNode = underlyingNode), IsFile {
+    init { // TODO this is ugly
+        ops += opNodes
+    }
+
+    /*
+    override fun hashCode(): Int {
+        return Objects.hash(
+            super.hashCode(),
+            underlyingNode,
+            fileName,
+            accessMode,
+        ) // TODO: exclude ops because this would result in a circular reference. how to do this in
+        // a nice way?
+    }
+
+     */
+}
+
+// TODO: encoding? newline?

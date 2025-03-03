@@ -38,7 +38,7 @@ import de.fraunhofer.aisec.cpg.passes.ComponentPass
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLate
 
 @ExecuteLate
-class FileConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
+class PythonFileConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
     private val fileNodes = mutableMapOf<Node, FileNode>()
 
     override fun cleanup() {
