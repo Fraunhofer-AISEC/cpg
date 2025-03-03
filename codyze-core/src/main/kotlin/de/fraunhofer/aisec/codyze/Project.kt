@@ -98,15 +98,15 @@ class AnalysisProject(
     /** The folder where the components are located. */
     var componentsFolder: Path? = projectDir?.resolve("components"),
     /**
-     * The folder where the additional Sources are located. The subfolders are used to create
-     * components and the format should be additionalSources/<componentName>/<namespacefolders>. In
-     * the case of a stdlib, this would look like additionalSources/stdlib/[os,sys, ...]. In the
-     * case of an external library it would look like
-     * additionalSources/mylibrary/org/mylibrary/somesubfolder/... if the namespace starts with
-     * org.mylibrary. or additionalSources/mylibrary/mylibrary/somesubfolder/... if the namespace
-     * starts with mylibrary.
+     * The folder where additional libraries can be placed for analysis, these can be stubs
+     * containing only type information or entire source code files. The subfolders are used to
+     * create components and the format should be libraries/<componentName>/<namespacefolders>. In
+     * the case of a stdlib, this would look like libraries/stdlib/[os,sys, ...]. In the case of an
+     * external library it would look like libraries/mylibrary/org/mylibrary/somesubfolder/... if
+     * the namespace starts with org.mylibrary. or libraries/mylibrary/mylibrary/somesubfolder/...
+     * if the namespace starts with mylibrary.
      */
-    var additionalSources: Path? = projectDir?.resolve("libraries"),
+    var librariesPath: Path? = projectDir?.resolve("libraries"),
     /** The translation configuration for the project. */
     var config: TranslationConfiguration,
 ) {
@@ -140,7 +140,7 @@ class AnalysisProject(
             sources: List<Path>? = null,
             components: List<String>? = null,
             exclusionPatterns: List<String>? = null,
-            additionalSources: Path? = projectDir.resolve("libraries"),
+            librariesPath: Path? = projectDir.resolve("libraries"),
             configBuilder:
                 ((TranslationConfiguration.Builder) -> TranslationConfiguration.Builder)? =
                 null,
@@ -197,9 +197,9 @@ class AnalysisProject(
                         .topLevels(it.associate { Pair(it, componentDir.resolve(it).toFile()) })
             }
 
-            val addSourcesFolder = additionalSources?.toFile()
+            val addSourcesFolder = librariesPath?.toFile()
 
-            if (additionalSources?.isDirectory() == true) {
+            if (librariesPath?.isDirectory() == true) {
                 builder.loadIncludes(true)
                 addSourcesFolder?.listFiles()?.forEach {
                     builder = builder.includePath(it.toPath())
@@ -212,7 +212,7 @@ class AnalysisProject(
             return AnalysisProject(
                 config = builder.build(),
                 name = projectDir.fileName.toString(),
-                additionalSources = additionalSources,
+                librariesPath = librariesPath,
                 projectDir = projectDir,
             )
         }
