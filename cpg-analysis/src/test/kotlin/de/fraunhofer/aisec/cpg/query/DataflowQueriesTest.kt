@@ -783,7 +783,6 @@ class DataflowQueriesTest {
                 type = May,
                 sensitivities = FieldSensitive + ContextSensitive,
                 scope = Interprocedural(),
-                verbose = true,
                 earlyTermination = null,
                 predicate = { (it as? Literal<*>)?.value == "bla" },
             )
@@ -799,7 +798,6 @@ class DataflowQueriesTest {
                 type = May,
                 sensitivities = FieldSensitive + ContextSensitive + Implicit,
                 scope = Interprocedural(),
-                verbose = true,
                 earlyTermination = null,
                 predicate = { (it as? Literal<*>)?.value == "bla" },
             )
