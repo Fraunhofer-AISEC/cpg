@@ -24,6 +24,7 @@ de.fraunhofer.aisec.cpg.graph.concepts.http
 de.fraunhofer.aisec.cpg.graph.concepts.logging
 de.fraunhofer.aisec.cpg.graph.concepts.memory
 de.fraunhofer.aisec.cpg.passes.concepts
+de.fraunhofer.aisec.cpg.passes.concepts.config
 de.fraunhofer.aisec.cpg.passes.concepts.config.ini
 de.fraunhofer.aisec.cpg.passes.concepts.config.python
 de.fraunhofer.aisec.cpg.passes.concepts.flows.cxx
