@@ -97,12 +97,14 @@ class AnalysisProject(
     var securityGoalsFolder: Path? = projectDir?.resolve("security-goals"),
     /** The folder where the components are located. */
     var componentsFolder: Path? = projectDir?.resolve("components"),
-    /** The folder where the additional Sources are located. The subfolders are used to create components
-     * and the format should be additionalSources/<componentName>/<namespacefolders>. In the case of a
-     * stdlib, this would look like additionalSources/stdlib/[os,sys, ...]. In the case of an external library
-     * it would look like additionalSources/mylibrary/org/mylibrary/somesubfolder/... if the namespace starts with
-     * org.mylibrary. or additionalSources/mylibrary/mylibrary/somesubfolder/... if the namespace starts with mylibrary.
-     *
+    /**
+     * The folder where the additional Sources are located. The subfolders are used to create
+     * components and the format should be additionalSources/<componentName>/<namespacefolders>. In
+     * the case of a stdlib, this would look like additionalSources/stdlib/[os,sys, ...]. In the
+     * case of an external library it would look like
+     * additionalSources/mylibrary/org/mylibrary/somesubfolder/... if the namespace starts with
+     * org.mylibrary. or additionalSources/mylibrary/mylibrary/somesubfolder/... if the namespace
+     * starts with mylibrary.
      */
     var additionalSources: Path? = projectDir?.resolve("additionalSources"),
     /** The translation configuration for the project. */
@@ -196,12 +198,11 @@ class AnalysisProject(
             }
 
             val addSourcesFolder = additionalSources?.toFile()
-            if(additionalSources?.isDirectory() == true) {
+            if (additionalSources?.isDirectory() == true) {
                 addSourcesFolder?.listFiles()?.forEach {
                     builder = builder.includePath(it.toPath())
                 }
             }
-
 
             exclusionPatterns?.forEach { builder = builder.exclusionPatterns(it) }
             configBuilder?.invoke(builder)
