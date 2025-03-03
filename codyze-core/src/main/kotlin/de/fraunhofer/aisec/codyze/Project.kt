@@ -198,6 +198,7 @@ class AnalysisProject(
             }
 
             val addSourcesFolder = additionalSources?.toFile()
+            
             if (additionalSources?.isDirectory() == true) {
                 addSourcesFolder?.listFiles()?.forEach {
                     builder = builder.includePath(it.toPath())
