@@ -82,7 +82,6 @@ class MemoryTest {
                     direction = Forward(GraphToFollow.EOG),
                     type = Must,
                     scope = Interprocedural(),
-                    verbose = true,
                 )
             }
         assertNotNull(tree)
@@ -163,7 +162,6 @@ class MemoryTest {
                     direction = Forward(GraphToFollow.EOG),
                     type = Must,
                     scope = Interprocedural(),
-                    verbose = true,
                 )
             }
         assertNotNull(tree)
@@ -265,5 +263,30 @@ class MemoryTest {
                 }
             }
         memory.ops += ops
+
+        // Key is used in encryption
+        var tree =
+            key.underlyingNode?.let {
+                dataFlow(it) { node -> node.overlayEdges.any { edge -> edge.end is Encrypt } }
+            }
+        assertNotNull(tree)
+        assertEquals(true, tree.value)
+
+        // Tree is deleted in all paths
+        tree =
+            key.underlyingNode?.let {
+                executionPath(
+                    startNode = it,
+                    predicate = { node ->
+                        node.overlayEdges.any { edge -> edge.end is DeAllocate }
+                    },
+                    direction = Forward(GraphToFollow.EOG),
+                    type = Must,
+                    scope = Interprocedural(),
+                )
+            }
+        assertNotNull(tree)
+        assertEquals(true, tree.value)
+        assertEquals(2, tree.children.size)
     }
 }
