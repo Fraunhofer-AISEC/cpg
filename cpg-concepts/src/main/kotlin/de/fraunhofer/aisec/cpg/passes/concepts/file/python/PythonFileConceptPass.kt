@@ -23,12 +23,12 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.passes.concepts
+package de.fraunhofer.aisec.cpg.passes.concepts.file.python
 
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.concepts.file.FileNode
+import de.fraunhofer.aisec.cpg.graph.concepts.file.File
 import de.fraunhofer.aisec.cpg.graph.concepts.file.newFileNode
 import de.fraunhofer.aisec.cpg.graph.concepts.file.newFileReadNode
 import de.fraunhofer.aisec.cpg.graph.concepts.file.newFileWriteNode
@@ -39,7 +39,7 @@ import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLate
 
 @ExecuteLate
 class PythonFileConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
-    private val fileNodes = mutableMapOf<Node, FileNode>()
+    private val fileNodes = mutableMapOf<Node, File>()
 
     override fun cleanup() {
         // nothing to do
@@ -99,10 +99,10 @@ class PythonFileConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 val localName = name.localName.toString()
                 when (localName) {
                     "read" -> {
-                        newFileReadNode(underlyingNode = callExpression, fileNode = fileNode)
+                        newFileReadNode(underlyingNode = callExpression, file = fileNode)
                     }
                     "write" -> {
-                        newFileWriteNode(underlyingNode = callExpression, fileNode = fileNode)
+                        newFileWriteNode(underlyingNode = callExpression, file = fileNode)
                     }
                     else -> {}
                 }

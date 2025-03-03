@@ -27,8 +27,8 @@ package de.fraunhofer.aisec.cpg.concepts.file
 
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.graph.conceptNodes
-import de.fraunhofer.aisec.cpg.passes.concepts.FileConceptEOGPass
-import de.fraunhofer.aisec.cpg.passes.concepts.PythonFileConceptPass
+import de.fraunhofer.aisec.cpg.passes.concepts.file.python.FileConceptEOGPass
+import de.fraunhofer.aisec.cpg.passes.concepts.file.python.PythonFileConceptPass
 import de.fraunhofer.aisec.cpg.test.BaseTest
 import de.fraunhofer.aisec.cpg.test.analyze
 import java.nio.file.Path

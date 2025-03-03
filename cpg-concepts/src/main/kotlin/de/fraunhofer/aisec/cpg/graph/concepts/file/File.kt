@@ -29,6 +29,9 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 
+/** This interface indicates that the corresponding node is connected to a file concept. */
+interface IsFile
+
 enum class FileAccessMode {
     READ,
     WRITE,
@@ -38,7 +41,7 @@ enum class FileAccessMode {
     // what do we want to have here? binary? text? r+ vs w+? create mode? ...?
 }
 
-class FileNode(
+class File(
     underlyingNode: Node,
     val opNodes: MutableSet<Operation>,
     val fileName: String,
@@ -58,8 +61,31 @@ class FileNode(
         ) // TODO: exclude ops because this would result in a circular reference. how to do this in
         // a nice way?
     }
-
      */
+
+    // TODO: encoding? newline?
 }
 
-// TODO: encoding? newline?
+class FileAppend(underlyingNode: Node, override val concept: File, val what: List<Node>) :
+    Operation(underlyingNode = underlyingNode, concept = concept)
+
+class FileChangePermissions(
+    underlyingNode: Node,
+    override val concept: File,
+    val newPermissions: String,
+) : Operation(underlyingNode = underlyingNode, concept = concept)
+
+class FileClose(underlyingNode: Node, override val concept: File) :
+    Operation(underlyingNode = underlyingNode, concept = concept)
+
+class FileDelete(underlyingNode: Node, override val concept: File) :
+    Operation(underlyingNode = underlyingNode, concept = concept)
+
+class FileOpen(underlyingNode: Node, override val concept: File) :
+    Operation(underlyingNode = underlyingNode, concept = concept)
+
+class FileRead(underlyingNode: Node, override val concept: File, val target: Set<Node>) :
+    Operation(underlyingNode = underlyingNode, concept = concept)
+
+class FileWrite(underlyingNode: Node, override val concept: File, val what: List<Node>) :
+    Operation(underlyingNode = underlyingNode, concept = concept)
