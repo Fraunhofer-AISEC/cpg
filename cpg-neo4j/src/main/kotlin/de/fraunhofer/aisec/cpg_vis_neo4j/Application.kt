@@ -30,7 +30,6 @@ import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase.Companion.fromFile
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.passes.*
-import de.fraunhofer.aisec.cpg.passes.concepts.file.python.FileConceptEOGPass
 import de.fraunhofer.aisec.cpg.passes.concepts.file.python.PythonFileConceptPass
 import de.fraunhofer.aisec.cpg.passes.concepts.logging.python.PythonLoggingConceptPass
 import de.fraunhofer.aisec.cpg.persistence.persist
@@ -507,7 +506,6 @@ class Application : Callable<Int> {
         translationConfiguration.registerPass(PrepareSerialization::class)
         translationConfiguration.registerPass(PythonLoggingConceptPass::class)
         translationConfiguration.registerPass(PythonFileConceptPass::class)
-        translationConfiguration.registerPass(FileConceptEOGPass::class)
 
         mutuallyExclusiveParameters.jsonCompilationDatabase?.let {
             val db = fromFile(it)

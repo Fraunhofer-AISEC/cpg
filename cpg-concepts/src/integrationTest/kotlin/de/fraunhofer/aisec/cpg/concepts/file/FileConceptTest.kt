@@ -26,22 +26,22 @@
 package de.fraunhofer.aisec.cpg.concepts.file
 
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
-import de.fraunhofer.aisec.cpg.graph.conceptNodes
-import de.fraunhofer.aisec.cpg.passes.concepts.file.python.FileConceptEOGPass
+import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.concepts.file.*
 import de.fraunhofer.aisec.cpg.passes.concepts.file.python.PythonFileConceptPass
+import de.fraunhofer.aisec.cpg.query.dataFlow
 import de.fraunhofer.aisec.cpg.test.BaseTest
 import de.fraunhofer.aisec.cpg.test.analyze
 import java.nio.file.Path
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
-import org.junit.jupiter.api.Tag
 
 /**
  * A class for integration tests. They depend on the Python frontend, so we classify them as an
  * integration test. This might be replaced with a language-neutral test at some point.
  */
-@Tag("integration")
 class FileConceptTest : BaseTest() {
     @Test
     fun testRead() {
@@ -51,16 +51,55 @@ class FileConceptTest : BaseTest() {
             analyze(
                 files = listOf(topLevel.resolve("file_read.py").toFile()),
                 topLevel = topLevel,
-                usePasses = false,
+                usePasses = true,
             ) {
                 it.registerLanguage<PythonLanguage>()
                 it.registerPass<PythonFileConceptPass>()
-                it.registerPass<FileConceptEOGPass>()
             }
         assertNotNull(result)
 
-        val conceptNodes = result.conceptNodes
-        assertTrue(conceptNodes.isNotEmpty())
+        val fileNodes =
+            result.conceptNodes.filterIsInstance<IsFile>() +
+                result.operationNodes.filterIsInstance<
+                    IsFile
+                >() // TODO why can't I use `overlays`? It's empty.
+        assertTrue(fileNodes.isNotEmpty())
+
+        val file = fileNodes.filterIsInstance<File>().singleOrNull()
+        assertNotNull(file, "Expected to find exactly one \"File\" node.")
+        assertEquals("example.txt", file.fileName, "Expected to find the filename \"example.txt\".")
+        assertEquals(
+            5,
+            file.ops.size,
+            "Expected to find 5 operations (open, read, flags, 2 x close (one for normally exiting `with` and one for the `catch` exit)).",
+        )
+
+        val fileSetFlags = fileNodes.filterIsInstance<FileSetFlags>().singleOrNull()
+        assertNotNull(fileSetFlags)
+        assertEquals(
+            setOf(FileFlags.RDONLY),
+            fileSetFlags.flags,
+            "Expected to find access mode \"RDONLY\".",
+        )
+
+        val contentRef = result.refs("content").singleOrNull()
+        assertNotNull(contentRef)
+
+        assertTrue(
+            dataFlow(startNode = file) { it == contentRef }.value,
+            "Expected to find dataflow from the \"File\" to the \"content\" variable.",
+        )
+
+        val fileRead = fileNodes.filterIsInstance<FileRead>().singleOrNull()
+        assertNotNull(fileRead)
+        assertEquals(
+            fileRead,
+            file.nextDFG.singleOrNull(),
+            "Expected to have exactly one dataflow from \"File\" (it must be to \"FileRead\").",
+        ) // TODO this is not nice. Do we have dfg path queries?
+
+        // TODO test open -> read -> close
+        // TODO test always closed
     }
 
     @Test
@@ -75,12 +114,81 @@ class FileConceptTest : BaseTest() {
             ) {
                 it.registerLanguage<PythonLanguage>()
                 it.registerPass<PythonFileConceptPass>()
-                it.registerPass<FileConceptEOGPass>()
             }
         assertNotNull(result)
 
-        val conceptNodes = result.conceptNodes
-        assertTrue(conceptNodes.isNotEmpty())
+        val fileNodes =
+            result.conceptNodes.filterIsInstance<IsFile>() +
+                result.operationNodes.filterIsInstance<
+                    IsFile
+                >() // TODO why can't I use `overlays`? It's empty.
+        assertTrue(fileNodes.isNotEmpty())
+
+        val file = fileNodes.filterIsInstance<File>().singleOrNull()
+        assertNotNull(file, "Expected to find exactly one \"File\" node.")
+        assertEquals("example.txt", file.fileName, "Expected to find the filename \"example.txt\".")
+        assertEquals(
+            5,
+            file.ops.size,
+            "Expected to find 5 operations (open, read, flags, 2 x close (one for normally exiting `with` and one for the `catch` exit)).",
+        )
+
+        val fileSetFlags = fileNodes.filterIsInstance<FileSetFlags>().singleOrNull()
+        assertNotNull(fileSetFlags)
+        assertEquals(
+            setOf(FileFlags.WRONLY),
+            fileSetFlags.flags,
+            "Expected to find access mode \"WRONLY\".",
+        )
+
+        val helloWorld = result.literals.singleOrNull { it.value == "Hello world!" }
+        assertNotNull(helloWorld)
+
+        assertTrue(
+            dataFlow(startNode = helloWorld) { it == file }.value,
+            "Expected to find dataflow from the \"Hello world!\" literal to the \"File\" node.",
+        )
+
+        val fileWrite = fileNodes.filterIsInstance<FileWrite>().singleOrNull()
+        assertNotNull(fileWrite)
+        assertEquals(
+            fileWrite,
+            file.prevDFG.singleOrNull(),
+            "Expected to have exactly one dataflow to \"File\" (it must be to \"FileWrite\").",
+        ) // TODO this is not nice. Do we have dfg path queries?
+
+        // TODO test open -> write -> close
+        // TODO test always closed
+    }
+
+    @Test
+    fun testMaskWrite() {
+        val topLevel = Path.of("src", "integrationTest", "resources", "python", "file")
+
+        val result =
+            analyze(
+                files = listOf(topLevel.resolve("file_os_open.py").toFile()),
+                topLevel = topLevel,
+                usePasses = true,
+            ) {
+                it.registerLanguage<PythonLanguage>()
+                it.registerPass<PythonFileConceptPass>()
+            }
+        assertNotNull(result)
+
+        val fileNodes =
+            result.conceptNodes.filterIsInstance<IsFile>() +
+                result.operationNodes.filterIsInstance<
+                    IsFile
+                >() // TODO why can't I use `overlays`? It's empty.
+        assertTrue(fileNodes.isNotEmpty())
+
+        val maskNode = fileNodes.filterIsInstance<FileSetMask>().singleOrNull()
+        assertNotNull(maskNode)
+
+        assertEquals(0x180, maskNode.mask, "Expected the mask to have value 0o600.")
+
+        // TODO test setMask before write
     }
 
     @Test
@@ -95,11 +203,12 @@ class FileConceptTest : BaseTest() {
             ) {
                 it.registerLanguage<PythonLanguage>()
                 it.registerPass<PythonFileConceptPass>()
-                it.registerPass<FileConceptEOGPass>()
             }
         assertNotNull(result)
 
         val conceptNodes = result.conceptNodes
         assertTrue(conceptNodes.isNotEmpty())
+
+        // TODO
     }
 }

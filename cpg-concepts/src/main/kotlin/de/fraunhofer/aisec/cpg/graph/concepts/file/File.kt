@@ -32,60 +32,46 @@ import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 /** This interface indicates that the corresponding node is connected to a file concept. */
 interface IsFile
 
-enum class FileAccessMode {
-    READ,
-    WRITE,
+enum class FileFlags {
+    RDONLY,
+    WRONLY,
+    RDWR,
     APPEND,
+    BINARY,
+    CREAT,
+    EXCL,
+    NOCTTY,
+    NONBLOCK,
+    TRUNC,
     UNKNOWN,
-
-    // what do we want to have here? binary? text? r+ vs w+? create mode? ...?
 }
 
-class File(
-    underlyingNode: Node,
-    val opNodes: MutableSet<Operation>,
-    val fileName: String,
-    val accessMode: FileAccessMode,
-) : Concept(underlyingNode = underlyingNode), IsFile {
-    init { // TODO this is ugly
-        ops += opNodes
-    }
-
-    /*
-    override fun hashCode(): Int {
-        return Objects.hash(
-            super.hashCode(),
-            underlyingNode,
-            fileName,
-            accessMode,
-        ) // TODO: exclude ops because this would result in a circular reference. how to do this in
-        // a nice way?
-    }
-     */
+class File(underlyingNode: Node, val fileName: String) :
+    Concept(underlyingNode = underlyingNode), IsFile {
 
     // TODO: encoding? newline?
 }
 
 class FileAppend(underlyingNode: Node, override val concept: File, val what: List<Node>) :
-    Operation(underlyingNode = underlyingNode, concept = concept)
+    Operation(underlyingNode = underlyingNode, concept = concept), IsFile
 
-class FileChangePermissions(
-    underlyingNode: Node,
-    override val concept: File,
-    val newPermissions: String,
-) : Operation(underlyingNode = underlyingNode, concept = concept)
+class FileSetFlags(underlyingNode: Node, override val concept: File, val flags: Set<FileFlags>) :
+    Operation(underlyingNode = underlyingNode, concept = concept), IsFile
+
+class FileSetMask(underlyingNode: Node, override val concept: File, val mask: Long) :
+    Operation(underlyingNode = underlyingNode, concept = concept), IsFile
 
 class FileClose(underlyingNode: Node, override val concept: File) :
-    Operation(underlyingNode = underlyingNode, concept = concept)
+    Operation(underlyingNode = underlyingNode, concept = concept), IsFile
 
 class FileDelete(underlyingNode: Node, override val concept: File) :
-    Operation(underlyingNode = underlyingNode, concept = concept)
+    Operation(underlyingNode = underlyingNode, concept = concept), IsFile
 
 class FileOpen(underlyingNode: Node, override val concept: File) :
-    Operation(underlyingNode = underlyingNode, concept = concept)
+    Operation(underlyingNode = underlyingNode, concept = concept), IsFile
 
 class FileRead(underlyingNode: Node, override val concept: File, val target: Set<Node>) :
-    Operation(underlyingNode = underlyingNode, concept = concept)
+    Operation(underlyingNode = underlyingNode, concept = concept), IsFile
 
 class FileWrite(underlyingNode: Node, override val concept: File, val what: List<Node>) :
-    Operation(underlyingNode = underlyingNode, concept = concept)
+    Operation(underlyingNode = underlyingNode, concept = concept), IsFile

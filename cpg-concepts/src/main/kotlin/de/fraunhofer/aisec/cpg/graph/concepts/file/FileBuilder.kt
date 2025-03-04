@@ -28,71 +28,76 @@ package de.fraunhofer.aisec.cpg.graph.concepts.file
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 
-fun MetadataProvider.newFileNode(underlyingNode: Node, fileName: String, accessMode: String): File {
-    val node =
-        File(
-            underlyingNode = underlyingNode,
-            accessMode =
-                when (accessMode) {
-                    "r",
-                    "rt",
-                    "rb" -> FileAccessMode.READ
-                    "w",
-                    "wt",
-                    "wb" -> FileAccessMode.WRITE
-                    "a",
-                    "at",
-                    "ab" -> FileAccessMode.APPEND
-                    else -> FileAccessMode.UNKNOWN
-                },
-            fileName = fileName,
-            opNodes = HashSet(),
-        )
+fun MetadataProvider.newFile(underlyingNode: Node, fileName: String): File {
+    val node = File(underlyingNode = underlyingNode, fileName = fileName)
     node.codeAndLocationFrom(underlyingNode)
-
-    node.name = Name(fileName) // to have a nice name in Neo4j
 
     NodeBuilder.log(node)
     return node
 }
 
-fun MetadataProvider.newFileReadNode(underlyingNode: Node, file: File): FileRead {
+fun MetadataProvider.newFileOpen(underlyingNode: Node, file: File): FileOpen {
+    val node = FileOpen(underlyingNode = underlyingNode, concept = file)
+    node.codeAndLocationFrom(underlyingNode)
+
+    NodeBuilder.log(node)
+    return node
+}
+
+fun MetadataProvider.newFileSetMask(underlyingNode: Node, file: File, mask: Long): FileSetMask {
+    val node = FileSetMask(underlyingNode = underlyingNode, concept = file, mask = mask)
+    node.codeAndLocationFrom(underlyingNode)
+
+    NodeBuilder.log(node)
+    return node
+}
+
+fun MetadataProvider.newFileSetFlags(
+    underlyingNode: Node,
+    file: File,
+    flags: Set<FileFlags>,
+): FileSetFlags {
+    val node = FileSetFlags(underlyingNode = underlyingNode, concept = file, flags = flags)
+    node.codeAndLocationFrom(underlyingNode)
+
+    NodeBuilder.log(node)
+    return node
+}
+
+fun MetadataProvider.newFileClose(underlyingNode: Node, file: File): FileClose {
+    val node = FileClose(underlyingNode = underlyingNode, concept = file)
+    node.codeAndLocationFrom(underlyingNode)
+
+    NodeBuilder.log(node)
+    return node
+}
+
+fun MetadataProvider.newFileRead(underlyingNode: Node, file: File): FileRead {
     val node =
         FileRead(underlyingNode = underlyingNode, concept = file, target = underlyingNode.nextDFG)
     node.codeAndLocationFrom(underlyingNode)
 
-    node.name = Name("read") // to have a nice name in Neo4j
-
-    file.ops += node
-
     // add DFG
+    file.nextDFG += node
     node.nextDFG += underlyingNode
 
     NodeBuilder.log(node)
     return node
 }
 
-fun MetadataProvider.newFileWriteNode(underlyingNode: Node, file: File): FileWrite {
-    val node =
-        FileWrite(
-            underlyingNode = underlyingNode,
-            concept = file,
-            what = (underlyingNode as? CallExpression)?.arguments ?: listOf(),
-        )
+fun MetadataProvider.newFileWrite(underlyingNode: Node, file: File, what: List<Node>): FileWrite {
+    val node = FileWrite(underlyingNode = underlyingNode, concept = file, what = what)
     node.codeAndLocationFrom(underlyingNode)
 
-    node.name = Name("write") // to have a nice name in Neo4j
-
-    file.ops += node
-
     // add DFG
-    underlyingNode.parameters.forEach { it.nextDFG += node }
+    what.forEach { it.nextDFG += node }
+    node.nextDFG += file
 
     NodeBuilder.log(node)
     return node
 }
 
-fun MetadataProvider.newFileAppendNode(underlyingNode: Node, file: File): FileAppend {
+fun MetadataProvider.newFileAppend(underlyingNode: Node, file: File): FileAppend {
     val node =
         FileAppend(
             underlyingNode = underlyingNode,
@@ -100,10 +105,6 @@ fun MetadataProvider.newFileAppendNode(underlyingNode: Node, file: File): FileAp
             what = (underlyingNode as? CallExpression)?.arguments ?: listOf(),
         )
     node.codeAndLocationFrom(underlyingNode)
-
-    node.name = Name("write") // to have a nice name in Neo4j
-
-    file.ops += node
 
     // add DFG
     underlyingNode.parameters.forEach { it.nextDFG += node }
