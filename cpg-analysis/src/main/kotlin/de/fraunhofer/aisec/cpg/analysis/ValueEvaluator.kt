@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.graph.HasOperatorCode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -105,12 +104,18 @@ open class ValueEvaluator(
             // easily be partly path-sensitive in a conditional expression
             is ConditionalExpression -> return handleConditionalExpression(node, depth)
             is AssignExpression -> return handleAssignExpression(node, depth)
+            is Reference -> return handleReference(node, depth)
             else -> return handlePrevDFG(node, depth)
         }
 
         // At this point, we cannot evaluate, and we are calling our [cannotEvaluate] hook, maybe
         // this helps
         return cannotEvaluate(node, this)
+    }
+
+    /** TODO doc */
+    protected open fun handleReference(node: Reference, depth: Int): Any? {
+        return handlePrevDFG(node, depth)
     }
 
     /**

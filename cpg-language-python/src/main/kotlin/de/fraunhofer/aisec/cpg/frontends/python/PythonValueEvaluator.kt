@@ -32,11 +32,25 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.translationUnit
+import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.reconstructedImportName
 import kotlin.math.pow
 
 /** An extended version of the [ValueEvaluator] that supports Python-specific operations. */
 class PythonValueEvaluator : ValueEvaluator() {
+    /**
+     * The values of the corresponding symbols as defined on a linux environment. Must match
+     * [File.FileAccessModeFlags].
+     */
+    internal val linuxMap =
+        mapOf(
+            "os.O_RDONLY" to 0L,
+            "os.O_WRONLY" to 1L,
+            "os.O_RDWR" to 2L,
+            "os.O_CREAT" to 64L,
+            "os.O_TRUNC" to 512L,
+        )
+
     override val cannotEvaluate: (Node?, ValueEvaluator) -> Any?
         get() = { node, evaluator ->
             if (node is InitializerListExpression) {
@@ -51,6 +65,20 @@ class PythonValueEvaluator : ValueEvaluator() {
                 super.cannotEvaluate(node, evaluator)
             }
         }
+
+    override fun handleReference(node: Reference, depth: Int): Any? {
+        return when (node.reconstructedImportName.toString()) {
+            /*
+             * ```python
+             * print("\n".join(['"os.{}" -> if (supportedPlatform(node)) {}L else super.handlePrevDFG(node, depth)'.format(symbol, os.__dict__[symbol]) for symbol in os.__all__ if symbol.startswith('O_')]))
+             * ```
+             */
+            in linuxMap.keys ->
+                if (supportedPlatform(node)) linuxMap[node.reconstructedImportName.toString()]
+                else super.handlePrevDFG(node, depth)
+            else -> super.handlePrevDFG(node, depth)
+        }
+    }
 
     override fun handlePrevDFG(node: Node, depth: Int): Any? {
         // We need to handle sys.platform and sys.version_info specially, since it is often used in
@@ -129,6 +157,21 @@ class PythonValueEvaluator : ValueEvaluator() {
             }
         } else {
             null
+        }
+    }
+
+    internal fun supportedPlatform(node: Reference): Boolean {
+        val platform = node.translationUnit?.sysInfo?.platform
+        return if (platform != "linux") {
+            Util.warnWithFileLocation(
+                node = node,
+                log = log,
+                format = "Didn't find a supported platform. Cannot evaluate the symbol \"{}\".",
+                node.reconstructedImportName.toString(),
+            )
+            false
+        } else {
+            true
         }
     }
 }

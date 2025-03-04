@@ -55,6 +55,7 @@ class FileConceptTest : BaseTest() {
             ) {
                 it.registerLanguage<PythonLanguage>()
                 it.registerPass<PythonFileConceptPass>()
+                it.symbols(mapOf("PYTHON_PLATFORM" to "linux"))
             }
         assertNotNull(result)
 
@@ -77,7 +78,7 @@ class FileConceptTest : BaseTest() {
         val fileSetFlags = fileNodes.filterIsInstance<FileSetFlags>().singleOrNull()
         assertNotNull(fileSetFlags)
         assertEquals(
-            setOf(FileFlags.RDONLY),
+            setOf(FileAccessModeFlags.O_RDONLY),
             fileSetFlags.flags,
             "Expected to find access mode \"RDONLY\".",
         )
@@ -114,6 +115,7 @@ class FileConceptTest : BaseTest() {
             ) {
                 it.registerLanguage<PythonLanguage>()
                 it.registerPass<PythonFileConceptPass>()
+                it.symbols(mapOf("PYTHON_PLATFORM" to "linux"))
             }
         assertNotNull(result)
 
@@ -136,7 +138,7 @@ class FileConceptTest : BaseTest() {
         val fileSetFlags = fileNodes.filterIsInstance<FileSetFlags>().singleOrNull()
         assertNotNull(fileSetFlags)
         assertEquals(
-            setOf(FileFlags.WRONLY),
+            setOf(FileAccessModeFlags.O_WRONLY),
             fileSetFlags.flags,
             "Expected to find access mode \"WRONLY\".",
         )
@@ -173,6 +175,7 @@ class FileConceptTest : BaseTest() {
             ) {
                 it.registerLanguage<PythonLanguage>()
                 it.registerPass<PythonFileConceptPass>()
+                it.symbols(mapOf("PYTHON_PLATFORM" to "linux"))
             }
         assertNotNull(result)
 
@@ -185,8 +188,15 @@ class FileConceptTest : BaseTest() {
 
         val maskNode = fileNodes.filterIsInstance<FileSetMask>().singleOrNull()
         assertNotNull(maskNode)
-
         assertEquals(0x180, maskNode.mask, "Expected the mask to have value 0o600.")
+
+        val flagsNode = fileNodes.filterIsInstance<FileSetFlags>().singleOrNull()
+        assertNotNull(flagsNode)
+        assertEquals(
+            setOf(FileAccessModeFlags.O_WRONLY),
+            flagsNode.flags,
+            "Expected to find exactly the flags \"WRONLY\". \"CREAT\" and \"TRUNC\" are not expected, as they are not access mode flags..",
+        )
 
         // TODO test setMask before write
     }
@@ -203,6 +213,7 @@ class FileConceptTest : BaseTest() {
             ) {
                 it.registerLanguage<PythonLanguage>()
                 it.registerPass<PythonFileConceptPass>()
+                it.symbols(mapOf("PYTHON_PLATFORM" to "linux"))
             }
         assertNotNull(result)
 

@@ -55,7 +55,7 @@ fun MetadataProvider.newFileSetMask(underlyingNode: Node, file: File, mask: Long
 fun MetadataProvider.newFileSetFlags(
     underlyingNode: Node,
     file: File,
-    flags: Set<FileFlags>,
+    flags: Set<FileAccessModeFlags>,
 ): FileSetFlags {
     val node = FileSetFlags(underlyingNode = underlyingNode, concept = file, flags = flags)
     node.codeAndLocationFrom(underlyingNode)
@@ -108,6 +108,14 @@ fun MetadataProvider.newFileAppend(underlyingNode: Node, file: File): FileAppend
 
     // add DFG
     underlyingNode.parameters.forEach { it.nextDFG += node }
+
+    NodeBuilder.log(node)
+    return node
+}
+
+fun MetadataProvider.newFileChmod(underlyingNode: Node, file: File, mode: Long): FileChmod {
+    val node = FileChmod(underlyingNode = underlyingNode, concept = file, mode = mode)
+    node.codeAndLocationFrom(underlyingNode)
 
     NodeBuilder.log(node)
     return node

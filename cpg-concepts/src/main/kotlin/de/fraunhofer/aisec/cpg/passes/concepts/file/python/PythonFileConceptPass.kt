@@ -26,7 +26,8 @@
 package de.fraunhofer.aisec.cpg.passes.concepts.file.python
 
 import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.analysis.MultiValueEvaluator
+import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.python.PythonValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.file.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
@@ -37,13 +38,12 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.concepts.ConceptPass
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLate
+import de.fraunhofer.aisec.cpg.passes.configuration.RequiredFrontend
 
 @ExecuteLate
+@RequiredFrontend(PythonLanguageFrontend::class)
 class PythonFileConceptPass(ctx: TranslationContext) :
     ConceptPass(ctx) { // TODO logging 2 ConceptPass
-
-    /** Indicates a flag value we could not parse. This is an internal issue. */
-    internal val FLAGS_ERROR = 42424242L
 
     /** The file name used if we fail to find it. */
     internal val DEFAULT_FILE_NAME = "DEFAULT_FILE_NAME"
@@ -126,6 +126,39 @@ class PythonFileConceptPass(ctx: TranslationContext) :
                     }
                     newFileOpen(underlyingNode = callExpression, file = newFileNode)
                 }
+                "os.chmod" -> {
+                    val pathArg =
+                        callExpression.argumentEdges["path"]
+                            ?: callExpression.arguments.getOrNull(0)
+                    if (pathArg !is Expression) {
+                        Util.errorWithFileLocation(
+                            callExpression,
+                            log,
+                            "Invalid path argument. Ignoring the entire `os.chmod` call.",
+                        )
+                        return
+                    }
+                    val file = findFile(pathArg)
+                    if (file == null) {
+
+                        Util.errorWithFileLocation(
+                            callExpression,
+                            log,
+                            "Failed to find the corresponding file. Ignoring the entire `os.chmod` call..",
+                        )
+                        return
+                    }
+                    val mode = getArgumentValueByNameOrPosition<Long>(callExpression, "mode", 1)
+                    if (mode == null) {
+                        Util.errorWithFileLocation(
+                            callExpression,
+                            log,
+                            "Failed to find the corresponding mode. Ignoring the entire `os.chmod` call..",
+                        )
+                        return
+                    }
+                    newFileChmod(underlyingNode = callExpression, file = file, mode = mode)
+                }
             }
         }
     }
@@ -161,29 +194,58 @@ class PythonFileConceptPass(ctx: TranslationContext) :
     }
 
     /**
+     * A little helper function to find a [CallExpression]s argument first by name and if this fails
+     * by position. The argument ist evaluated and the result is returned if it has the expected
+     * type [T].
+     *
+     * @param call The [CallExpression] to analyze.
+     * @param name Optionally: the [CallExpression.arguments] name.
+     * @param pos Optionally: the [CallExpression.arguments] position.
+     * @return The evaluated result (of type [T]) or `null`.
+     */
+    internal inline fun <reified T> getArgumentValueByNameOrPosition(
+        call: CallExpression,
+        name: String?,
+        pos: Int?,
+    ): T? {
+        val arg = name?.let { call.argumentEdges[it] } ?: pos?.let { call.arguments.getOrNull(it) }
+        val value =
+            when (arg) {
+                is Literal<*> -> arg.value
+                is Reference -> arg.evaluate(PythonValueEvaluator())
+                else -> null
+            }
+        return if (value is T) {
+            value
+        } else {
+            Util.errorWithFileLocation(
+                call,
+                log,
+                "Evaluated the argument to type \"{}\". Expected \"{}\". Returning \"null\".",
+                value?.let { it::class.simpleName!! },
+                T::class.simpleName!!,
+            )
+            null
+        }
+    }
+
+    /**
      * Parses the name of the file used in a builtin-`open` call or `os.open` call. The name of the
      * parameter depends on the open function but, it's the first parameter if a call without named
      * arguments is analyzed.
      *
-     * @param callExpression The [CallExpression] (builtin-`open` or `os.open`) to be analyzed.
+     * @param call The [CallExpression] (builtin-`open` or `os.open`) to be analyzed.
      * @return The name or [DEFAULT_FILE_NAME] if no name could be found.
      */
-    private fun getFileName(callExpression: CallExpression, argumentName: String): String {
-        val nameArg =
-            callExpression.argumentEdges[argumentName] ?: callExpression.arguments.getOrNull(0)
-        val name =
-            when (nameArg) {
-                is Literal<*> -> nameArg.value as? String
-                is Reference -> null // TODO MultivalueEvaluator
-                else -> null
-            }
+    private fun getFileName(call: CallExpression, argumentName: String): String {
+        val name = getArgumentValueByNameOrPosition<String>(call, argumentName, 0)
         return if (name != null) {
             name
         } else {
             Util.errorWithFileLocation(
-                node = callExpression,
-                log = log,
-                format = "Failed to handle the name. Using a default name of \"{}\".",
+                call,
+                log,
+                "Couldn't evaluate the file name. Defaulting to \"{}\".",
                 DEFAULT_FILE_NAME,
             )
             DEFAULT_FILE_NAME
@@ -199,32 +261,8 @@ class PythonFileConceptPass(ctx: TranslationContext) :
      * open(file, mode='r', buffering=-1, encoding=None, errors=None, newline=None, closefd=True, opener=None)
      * ```
      */
-    private fun getBuiltinOpenMode(callExpression: CallExpression): String? {
-        val modeArg = callExpression.argumentEdges["mode"] ?: callExpression.arguments.getOrNull(1)
-        return when (modeArg) {
-            null -> null
-            is Literal<*> -> {
-                val v = modeArg.value
-                if (v is String) {
-                    v
-                } else {
-                    Util.errorWithFileLocation(
-                        node = callExpression,
-                        log = log,
-                        format = "Expected a string mode.",
-                    )
-                    null
-                }
-            }
-            else -> {
-                Util.errorWithFileLocation(
-                    node = callExpression,
-                    log = log,
-                    format = "Failed to handle the mode.",
-                )
-                return null
-            }
-        }
+    private fun getBuiltinOpenMode(call: CallExpression): String? {
+        return getArgumentValueByNameOrPosition<String>(call, "mode", 1)
     }
 
     /**
@@ -236,91 +274,31 @@ class PythonFileConceptPass(ctx: TranslationContext) :
      * os.open(path, flags, mode=0o777, *, dir_fd=None)
      * ```
      */
-    private fun getOsOpenMask(callExpression: CallExpression): Long? {
-        val maskArgument =
-            callExpression.argumentEdges["mask"] ?: callExpression.arguments.getOrNull(2)
-        return when (maskArgument) {
-            null -> null
-            is Literal<*> -> {
-                val v = maskArgument.value
-                if (v is Long) {
-                    v
-                } else {
-                    Util.errorWithFileLocation(
-                        node = callExpression,
-                        log = log,
-                        format = "Expected an Int mask.",
-                    )
-                    null
-                }
-            }
-            else -> {
-                Util.errorWithFileLocation(
-                    node = callExpression,
-                    log = log,
-                    format = "Failed to handle the mask.",
-                )
-                return null
-            }
-        }
+    internal fun getOsOpenMask(call: CallExpression): Long? {
+        return getArgumentValueByNameOrPosition<Long>(call, "mask", 2)
     }
 
-    private fun getOsOpenFlags(callExpression: CallExpression): Long? {
-        val flagsArg =
-            callExpression.argumentEdges["flags"] ?: callExpression.arguments.getOrNull(1)
-
-        return when (flagsArg) {
-            null -> null
-            is Literal<*> -> {
-                val v = flagsArg.value
-                if (v is Long) {
-                    v
-                } else {
-                    Util.errorWithFileLocation(
-                        node = callExpression,
-                        log = log,
-                        format = "Expected an Int flags argument.",
-                    )
-                    null
-                }
-            }
-            is Reference -> {
-                val evaluated = flagsArg.evaluate(MultiValueEvaluator()) // TODO
-                Util.errorWithFileLocation(
-                    node = callExpression,
-                    log = log,
-                    format = "Handling of os.open flags is not yet implemented.",
-                )
-                FLAGS_ERROR
-            }
-            else -> {
-                Util.errorWithFileLocation(
-                    node = callExpression,
-                    log = log,
-                    format = "Failed to handle the the flags argument.",
-                )
-                return null
-            }
-        }
+    internal fun getOsOpenFlags(call: CallExpression): Long? {
+        return getArgumentValueByNameOrPosition<Long>(call, "flags", 1)
     }
 
-    private fun translateOsOpenFlags(flags: Long): Set<FileFlags> {
-        return when (flags) {
-            0L -> setOf(FileFlags.RDONLY)
-            FLAGS_ERROR -> setOf(FileFlags.UNKNOWN)
-            else -> TODO()
-        }
+    internal fun translateOsOpenFlags(flags: Long): Set<FileAccessModeFlags> {
+        return FileAccessModeFlags.entries
+            .filter { it.value == (flags and O_ACCMODE_MODE_MASK) }
+            .toSet()
     }
 
     /**
      * Translates the `mode` string of the
      * [builtin `open` function](https://docs.python.org/3/library/functions.html#open)
      */
-    private fun translateBuiltinOpenMode(mode: String): Set<FileFlags> {
+    internal fun translateBuiltinOpenMode(mode: String): Set<FileAccessModeFlags> {
         return when (mode) {
-            "w" -> setOf(FileFlags.WRONLY)
+            "w" -> setOf(FileAccessModeFlags.O_WRONLY)
+            // "wb" -> setOf(FileAccessModeFlags.WRONLY,)
+            "w+" -> setOf(FileAccessModeFlags.O_WRONLY) // TODO TRUNC
             "r",
-            "rt" -> setOf(FileFlags.RDONLY)
+            "rt" -> setOf(FileAccessModeFlags.O_RDONLY)
             else -> TODO()
         }
     }
