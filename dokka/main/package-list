@@ -17,6 +17,7 @@ module:cpg-concepts
 de.fraunhofer.aisec.cpg.graph
 de.fraunhofer.aisec.cpg.graph.concepts
 de.fraunhofer.aisec.cpg.graph.concepts.arch
+de.fraunhofer.aisec.cpg.graph.concepts.auth
 de.fraunhofer.aisec.cpg.graph.concepts.config
 de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption
 de.fraunhofer.aisec.cpg.graph.concepts.flows
