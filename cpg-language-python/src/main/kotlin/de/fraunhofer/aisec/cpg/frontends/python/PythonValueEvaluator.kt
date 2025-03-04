@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.python
 import de.fraunhofer.aisec.cpg.analysis.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.HasOperatorCode
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
@@ -77,6 +78,27 @@ class PythonValueEvaluator : ValueEvaluator() {
                 if (supportedPlatform(node)) linuxMap[node.reconstructedImportName.toString()]
                 else super.handlePrevDFG(node, depth)
             else -> super.handlePrevDFG(node, depth)
+        }
+    }
+
+    override fun handleCall(call: CallExpression, depth: Int): Any? {
+        if (call.arguments.size != 2) {
+            // not implemented
+            super.handleCall(call, depth)
+        }
+
+        return when (call.reconstructedImportName.toString()) {
+            "os.path.join" -> {
+                val arg0 = super.evaluate(call.arguments.first())
+                val arg1 = super.evaluate(call.arguments.last())
+                if (arg0 is String && arg1 is String) {
+                    "$arg0/$arg1" // TODO path separator
+                } else {
+                    // not implemented
+                    super.handleCall(call, depth)
+                }
+            }
+            else -> super.handleCall(call, depth)
         }
     }
 

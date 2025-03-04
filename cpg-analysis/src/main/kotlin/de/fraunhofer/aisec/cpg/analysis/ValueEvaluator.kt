@@ -105,12 +105,18 @@ open class ValueEvaluator(
             is ConditionalExpression -> return handleConditionalExpression(node, depth)
             is AssignExpression -> return handleAssignExpression(node, depth)
             is Reference -> return handleReference(node, depth)
+            is CallExpression -> return handleCall(node, depth)
             else -> return handlePrevDFG(node, depth)
         }
 
         // At this point, we cannot evaluate, and we are calling our [cannotEvaluate] hook, maybe
         // this helps
         return cannotEvaluate(node, this)
+    }
+
+    /** TODO doc */
+    protected open fun handleCall(node: CallExpression, depth: Int): Any? {
+        return handlePrevDFG(node, depth)
     }
 
     /** TODO doc */

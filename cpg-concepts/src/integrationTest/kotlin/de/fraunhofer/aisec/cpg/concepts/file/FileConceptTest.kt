@@ -202,6 +202,36 @@ class FileConceptTest : BaseTest() {
     }
 
     @Test
+    fun testChmodBadExample() {
+        val topLevel = Path.of("src", "integrationTest", "resources", "python", "file")
+
+        val result =
+            analyze(
+                files = listOf(topLevel.resolve("file_bad_openstack.py").toFile()),
+                topLevel = topLevel,
+                usePasses = true,
+            ) {
+                it.registerLanguage<PythonLanguage>()
+                it.registerPass<PythonFileConceptPass>()
+                // it.registerPass<PythonPathConceptPass>()
+                it.symbols(mapOf("PYTHON_PLATFORM" to "linux"))
+            }
+        assertNotNull(result)
+
+        val fileNodes =
+            result.conceptNodes.filterIsInstance<IsFile>() +
+                result.operationNodes.filterIsInstance<
+                    IsFile
+                >() // TODO why can't I use `overlays`? It's empty.
+        assertTrue(fileNodes.isNotEmpty())
+
+        val chmodNodes = fileNodes.filterIsInstance<FileChmod>()
+        assertEquals(3, chmodNodes.size)
+
+        // TODO test setMask before write
+    }
+
+    @Test
     fun testEOG() {
         val topLevel = Path.of("src", "integrationTest", "resources", "python", "file")
 

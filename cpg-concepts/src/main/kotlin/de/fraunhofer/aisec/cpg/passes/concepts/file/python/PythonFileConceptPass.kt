@@ -28,12 +28,10 @@ package de.fraunhofer.aisec.cpg.passes.concepts.file.python
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.python.PythonValueEvaluator
-import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.file.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.get
-import de.fraunhofer.aisec.cpg.graph.evaluate
-import de.fraunhofer.aisec.cpg.graph.followPrevFullDFGEdgesUntilHit
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.concepts.ConceptPass
@@ -42,11 +40,14 @@ import de.fraunhofer.aisec.cpg.passes.configuration.RequiredFrontend
 
 @ExecuteLate
 @RequiredFrontend(PythonLanguageFrontend::class)
+// @DependsOn(PythonPathConceptPass::class)
 class PythonFileConceptPass(ctx: TranslationContext) :
     ConceptPass(ctx) { // TODO logging 2 ConceptPass
 
     /** The file name used if we fail to find it. */
     internal val DEFAULT_FILE_NAME = "DEFAULT_FILE_NAME"
+
+    internal val fileCache = mutableMapOf<String, File>()
 
     override fun handleNode(node: Node, tu: TranslationUnitDeclaration) {
         when (node) {
@@ -71,6 +72,7 @@ class PythonFileConceptPass(ctx: TranslationContext) :
              */
             val fileName = getFileName(callExpression, "file")
             val newFileNode = newFile(underlyingNode = callExpression, fileName = fileName)
+            fileCache += fileName to newFileNode
             getBuiltinOpenMode(callExpression)?.let { mode ->
                 val flags = translateBuiltinOpenMode(mode)
                 newFileSetFlags(underlyingNode = callExpression, file = newFileNode, flags = flags)
@@ -105,11 +107,10 @@ class PythonFileConceptPass(ctx: TranslationContext) :
         } else {
             when (callExpression.callee.name.toString()) {
                 "os.open" -> {
-                    val newFileNode =
-                        newFile(
-                            underlyingNode = callExpression,
-                            fileName = getFileName(callExpression, "path"),
-                        )
+                    val fileName = getFileName(callExpression, "path")
+                    val newFileNode = newFile(underlyingNode = callExpression, fileName = fileName)
+                    fileCache += fileName to newFileNode
+
                     getOsOpenFlags(callExpression)?.let { flags ->
                         newFileSetFlags(
                             underlyingNode = callExpression,
@@ -138,9 +139,11 @@ class PythonFileConceptPass(ctx: TranslationContext) :
                         )
                         return
                     }
-                    val file = findFile(pathArg)
+                    val file =
+                        findFile(pathArg)
+                            ?: fileCache[
+                                getArgumentValueByNameOrPosition<String>(callExpression, "path", 0)]
                     if (file == null) {
-
                         Util.errorWithFileLocation(
                             callExpression,
                             log,
@@ -194,42 +197,6 @@ class PythonFileConceptPass(ctx: TranslationContext) :
     }
 
     /**
-     * A little helper function to find a [CallExpression]s argument first by name and if this fails
-     * by position. The argument ist evaluated and the result is returned if it has the expected
-     * type [T].
-     *
-     * @param call The [CallExpression] to analyze.
-     * @param name Optionally: the [CallExpression.arguments] name.
-     * @param pos Optionally: the [CallExpression.arguments] position.
-     * @return The evaluated result (of type [T]) or `null`.
-     */
-    internal inline fun <reified T> getArgumentValueByNameOrPosition(
-        call: CallExpression,
-        name: String?,
-        pos: Int?,
-    ): T? {
-        val arg = name?.let { call.argumentEdges[it] } ?: pos?.let { call.arguments.getOrNull(it) }
-        val value =
-            when (arg) {
-                is Literal<*> -> arg.value
-                is Reference -> arg.evaluate(PythonValueEvaluator())
-                else -> null
-            }
-        return if (value is T) {
-            value
-        } else {
-            Util.errorWithFileLocation(
-                call,
-                log,
-                "Evaluated the argument to type \"{}\". Expected \"{}\". Returning \"null\".",
-                value?.let { it::class.simpleName!! },
-                T::class.simpleName!!,
-            )
-            null
-        }
-    }
-
-    /**
      * Parses the name of the file used in a builtin-`open` call or `os.open` call. The name of the
      * parameter depends on the open function but, it's the first parameter if a call without named
      * arguments is analyzed.
@@ -242,12 +209,20 @@ class PythonFileConceptPass(ctx: TranslationContext) :
         return if (name != null) {
             name
         } else {
-            Util.errorWithFileLocation(
+            Util.warnWithFileLocation(
                 call,
                 log,
-                "Couldn't evaluate the file name. Defaulting to \"{}\".",
-                DEFAULT_FILE_NAME,
+                "Couldn't evaluate the file name. Trying to find the corresponding declaration to use it as a placeholder.",
             )
+            val nameArg =
+                (call.argumentEdges[argumentName] ?: call.arguments.getOrNull(0)) as? Reference
+            if (nameArg != null) {
+                val lastWrite =
+                    nameArg.followPrevDFG { it is Reference && it.access == AccessValues.WRITE }
+                // val decl = path?.last()
+                TODO()
+            }
+
             DEFAULT_FILE_NAME
         }
     }
@@ -300,6 +275,45 @@ class PythonFileConceptPass(ctx: TranslationContext) :
             "r",
             "rt" -> setOf(FileAccessModeFlags.O_RDONLY)
             else -> TODO()
+        }
+    }
+
+    companion object {
+        /**
+         * A little helper function to find a [CallExpression]s argument first by name and if this
+         * fails by position. The argument ist evaluated and the result is returned if it has the
+         * expected type [T].
+         *
+         * @param call The [CallExpression] to analyze.
+         * @param name Optionally: the [CallExpression.arguments] name.
+         * @param pos Optionally: the [CallExpression.arguments] position.
+         * @return The evaluated result (of type [T]) or `null`.
+         */
+        inline fun <reified T> getArgumentValueByNameOrPosition(
+            call: CallExpression,
+            name: String?,
+            pos: Int?,
+        ): T? {
+            val arg =
+                name?.let { call.argumentEdges[it] } ?: pos?.let { call.arguments.getOrNull(it) }
+            val value =
+                when (arg) {
+                    is Literal<*> -> arg.value
+                    is Reference -> arg.evaluate(PythonValueEvaluator())
+                    else -> null
+                }
+            return if (value is T && value != "{UNKNOWN.join}") {
+                value
+            } else {
+                Util.errorWithFileLocation(
+                    call,
+                    log,
+                    "Evaluated the argument to type \"{}\". Expected \"{}\". Returning \"null\".",
+                    value?.let { it::class.simpleName!! },
+                    T::class.simpleName!!,
+                )
+                null
+            }
         }
     }
 }
