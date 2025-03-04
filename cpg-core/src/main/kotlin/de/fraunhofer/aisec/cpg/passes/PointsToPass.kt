@@ -51,13 +51,31 @@ val nodesCreatingUnknownValues = ConcurrentHashMap<Pair<Node, Name>, MemoryAddre
 
 typealias StateEntry = TupleLattice<PowersetLattice.Element<Node>, PowersetLattice.Element<Node>>
 
+typealias DeclarationStateEntry =
+    TupleLattice<PowersetLattice.Element<Node>, PowersetLattice.Element<Pair<Node, Boolean>>>
+
 typealias StateEntryElement =
     TupleLattice.Element<PowersetLattice.Element<Node>, PowersetLattice.Element<Node>>
 
-typealias SingleStateElement =
+typealias DeclarationStateEntryElement =
+    TupleLattice.Element<
+        PowersetLattice.Element<Node>,
+        PowersetLattice.Element<Pair<Node, Boolean>>,
+    >
+
+typealias SingleGeneralStateElement =
     MapLattice.Element<
         Node,
         TupleLattice.Element<PowersetLattice.Element<Node>, PowersetLattice.Element<Node>>,
+    >
+
+typealias SingleDeclarationStateElement =
+    MapLattice.Element<
+        Node,
+        TupleLattice.Element<
+            PowersetLattice.Element<Node>,
+            PowersetLattice.Element<Pair<Node, Boolean>>,
+        >,
     >
 
 typealias SingleState =
@@ -66,9 +84,19 @@ typealias SingleState =
         TupleLattice.Element<PowersetLattice.Element<Node>, PowersetLattice.Element<Node>>,
     >
 
-typealias PointsToStateElement = TupleLattice.Element<SingleStateElement, SingleStateElement>
+typealias SingleDeclarationState =
+    MapLattice<
+        Node,
+        TupleLattice.Element<
+            PowersetLattice.Element<Node>,
+            PowersetLattice.Element<Pair<Node, Boolean>>,
+        >,
+    >
 
-typealias PointsToState = TupleLattice<SingleStateElement, SingleStateElement>
+typealias PointsToStateElement =
+    TupleLattice.Element<SingleGeneralStateElement, SingleDeclarationStateElement>
+
+typealias PointsToState = TupleLattice<SingleGeneralStateElement, SingleDeclarationStateElement>
 
 /**
  * Returns a string that allows a human to identify the node. Mostly, this is simply the node's
@@ -134,8 +162,9 @@ private fun addEntryToEdgePropertiesMap(index: Pair<Node, Node>, entries: Identi
  */
 val edgePropertiesMap = mutableMapOf<Pair<Node, Node>, IdentitySet<Any>>()
 
-// We also need a place to store the derefs of global variables.
-var globalDerefs = mutableMapOf<Node, IdentitySet<Node>>()
+// We also need a place to store the derefs of global variables. The Boolean indicates if this is a
+// value stored for a short function Summary
+var globalDerefs = mutableMapOf<Node, IdentitySet<Pair<Node, Boolean>>>()
 
 @DependsOn(SymbolResolver::class)
 @DependsOn(EvaluationOrderGraphPass::class)
@@ -204,7 +233,12 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         val lattice =
             PointsToState(
                 SingleState(StateEntry(PowersetLattice<Node>(), PowersetLattice<Node>())),
-                SingleState(StateEntry(PowersetLattice<Node>(), PowersetLattice<Node>())),
+                //
+                // SingleDeclarationState(DeclarationStateEntry(PowersetLattice<Node>(),
+                // PowersetLattice<Pair<Node, Boolean>())),
+                SingleDeclarationState(
+                    DeclarationStateEntry(PowersetLattice<Node>(), PowersetLattice())
+                ),
             )
 
         var startState = lattice.bottom
@@ -212,7 +246,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             lattice.pushToDeclarationsState(
                 startState,
                 node,
-                StateEntryElement(PowersetLattice.Element(), PowersetLattice.Element()),
+                DeclarationStateEntryElement(PowersetLattice.Element(), PowersetLattice.Element()),
             )
 
         startState = initializeParameters(lattice, node.parameters, startState)
@@ -409,7 +443,10 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 doubleState,
                 currentNode,
                 doubleState.getFromDecl(currentEdge.end)
-                    ?: StateEntryElement(PowersetLattice.Element(), PowersetLattice.Element()),
+                    ?: DeclarationStateEntryElement(
+                        PowersetLattice.Element(),
+                        PowersetLattice.Element(),
+                    ),
             )
 
         doubleState =
@@ -493,6 +530,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 2,
                                 fetchFields = false,
                                 onlyFetchExistingEntries = true,
+                                excludeShortFSValues = true,
                             )
                             .forEach { derefValue ->
                                 addEntryToEdgePropertiesMap(
@@ -517,6 +555,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                             1,
                                             fetchFields = false,
                                             onlyFetchExistingEntries = true,
+                                            excludeShortFSValues = true,
                                         )
                                         .forEach { derefderefValue ->
                                             addEntryToEdgePropertiesMap(
@@ -783,18 +822,18 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         }
 
         mapDstToSrc.forEach { (dst, values) ->
-            val src = values.map { it.first }.toIdentitySet()
             // If the values of the destination are the same as the destination (e.g. if dst is a
             // CallExpression), we also add destinations to update the generalState, otherwise, the
             // destinationAddresses for the DeclarationState are enough
             val dstValues = doubleState.getValues(dst)
             doubleState =
                 if (dstValues.all { it == dst })
-                    doubleState.updateValues(lattice, src, dstValues, identitySetOf(dst))
-                else doubleState.updateValues(lattice, src, identitySetOf(), identitySetOf(dst))
+                    doubleState.updateValues(lattice, values, dstValues, identitySetOf(dst))
+                else doubleState.updateValues(lattice, values, identitySetOf(), identitySetOf(dst))
 
             // Add the callingContextOut to the edgePropertiesMap and check if we also need the
             // shortFS flag
+            // TODO: Do we still need this?
             values.forEach { v ->
                 if (v.second)
                 // a shortFunctionSummary + the callingContextOut
@@ -831,7 +870,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     addr,
                     TupleLattice.Element(
                         PowersetLattice.Element(addr),
-                        PowersetLattice.Element(currentNode.input),
+                        PowersetLattice.Element(Pair(currentNode.input, false)),
                     ),
                 )
             }
@@ -851,7 +890,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
          * In C(++), both the lhs and the rhs should only have one element
          */
         if (currentNode.lhs.size == 1 && currentNode.rhs.size == 1) {
-            val sources = currentNode.rhs.flatMap { doubleState.getValues(it) }.toIdentitySet()
+            val sources =
+                currentNode.rhs
+                    .flatMap { doubleState.getValues(it) }
+                    .map { Pair(it, false) }
+                    .toIdentitySet()
             val destinations: IdentitySet<Node> = currentNode.lhs.toIdentitySet()
             val destinationsAddresses =
                 destinations.flatMap { doubleState.getAddresses(it) }.toIdentitySet()
@@ -881,8 +924,13 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
             // If we have any information from the dereferenced value, we also fetch that
             values
-                .filter { doubleState.hasDeclarationStateEntry(it) }
-                .flatMap { doubleState.fetchElementFromDeclarationState(it) }
+                .filter { doubleState.hasDeclarationStateEntry(it, true) }
+                .flatMap {
+                    doubleState.fetchElementFromDeclarationState(
+                        addr = it,
+                        excludeShortFSValues = true,
+                    )
+                }
                 .map { it.first }
                 .forEach { derefValue ->
                     values.add(derefValue)
@@ -961,9 +1009,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 lattice.pushToDeclarationsState(
                     doubleState,
                     addr,
-                    StateEntryElement(
+                    DeclarationStateEntryElement(
                         PowersetLattice.Element(addresses),
-                        PowersetLattice.Element(values),
+                        PowersetLattice.Element(values.map { Pair(it, false) }.toIdentitySet()),
                     ),
                 )
         }
@@ -1026,15 +1074,24 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     }
 
                     // Update the states
-                    val state =
+                    val declStateElement =
+                        DeclarationStateEntryElement(
+                            PowersetLattice.Element(addresses),
+                            PowersetLattice.Element(Pair(pmv, false)),
+                        )
+                    val genStateElement =
                         StateEntryElement(
                             PowersetLattice.Element(addresses),
                             PowersetLattice.Element(pmv),
                         )
                     addresses.forEach { addr ->
-                        doubleState = lattice.pushToDeclarationsState(doubleState, addr, state)
+                        doubleState =
+                            lattice.pushToDeclarationsState(doubleState, addr, declStateElement)
                     }
-                    doubleState = lattice.push(doubleState, src, state)
+                    /*// We only write to the generalstate for the param-value itself
+                    if (i == 0)*/ doubleState =
+                        lattice.push(doubleState, src, genStateElement)
+
                     // prepare for next step
                     src = pmv
                     addresses = identitySetOf(pmv)
@@ -1057,17 +1114,17 @@ fun FunctionDeclaration.isStub(): Boolean {
             this.returns.singleOrNull() != null)
 }
 
-val PointsToStateElement.generalState: SingleStateElement
+val PointsToStateElement.generalState: SingleGeneralStateElement
     get() = this.first
 
-val PointsToStateElement.declarationsState: SingleStateElement
+val PointsToStateElement.declarationsState: SingleDeclarationStateElement
     get() = this.second
 
-fun PointsToStateElement.get(key: Node): StateEntryElement? {
+/*fun PointsToStateElement.get(key: Node): StateEntryElement? {
     return this.generalState[key] ?: this.declarationsState[key]
-}
+}*/
 
-fun PointsToStateElement.getFromDecl(key: Node): StateEntryElement? {
+fun PointsToStateElement.getFromDecl(key: Node): DeclarationStateEntryElement? {
     return this.declarationsState[key]
 }
 
@@ -1088,7 +1145,7 @@ fun PointsToState.push(
 fun PointsToState.pushToDeclarationsState(
     currentState: PointsToStateElement,
     newNode: Node,
-    newLatticeElement: StateEntryElement,
+    newLatticeElement: DeclarationStateEntryElement,
 ): PointsToStateElement {
     val newDeclarationsState =
         this.innerLattice2.lub(
@@ -1099,8 +1156,14 @@ fun PointsToState.pushToDeclarationsState(
 }
 
 /** Check if `node` has an entry in the DeclarationState */
-fun PointsToStateElement.hasDeclarationStateEntry(node: Node): Boolean {
-    return (this.declarationsState[node]?.second?.isNotEmpty() == true)
+fun PointsToStateElement.hasDeclarationStateEntry(
+    node: Node,
+    excludeShortFSValues: Boolean = true,
+): Boolean {
+
+    return if (excludeShortFSValues)
+        (this.declarationsState[node]?.second?.filter { !it.second }?.isNotEmpty() == true)
+    else (this.declarationsState[node]?.second?.isNotEmpty() == true)
 }
 
 /**
@@ -1110,27 +1173,30 @@ fun PointsToStateElement.hasDeclarationStateEntry(node: Node): Boolean {
 fun PointsToStateElement.fetchElementFromDeclarationState(
     addr: Node,
     fetchFields: Boolean = false,
+    excludeShortFSValues: Boolean = false,
 ): IdentitySet<Pair<Node, String>> {
     val ret = identitySetOf<Pair<Node, String>>()
 
     // For global nodes, we check the globalDerefs map
     if (isGlobal(addr)) {
         val element = globalDerefs[addr]
-        if (element != null) element.map { ret.add(Pair(it, "")) }
+        if (element != null) element.map { ret.add(Pair(it.first, "")) }
         else {
             val newName = nodeNameToString(addr)
             val newEntry =
                 nodesCreatingUnknownValues.computeIfAbsent(Pair(addr, newName)) {
                     UnknownMemoryValue(newName, true)
                 }
-            globalDerefs[addr] = identitySetOf(newEntry)
+            // TODO: Check if the boolean should be true sometimes
+            globalDerefs[addr] = identitySetOf(Pair(newEntry, false))
             ret.add(Pair(newEntry, ""))
         }
     } else {
 
         // Otherwise, we read the declarationState.
         // Let's start with the main element
-        val elements = this.declarationsState[addr]?.second
+        var elements = this.declarationsState[addr]?.second?.toList()
+        if (excludeShortFSValues) elements = elements?.filter { !it.second }
         if (elements.isNullOrEmpty()) {
             val newName = nodeNameToString(addr)
             val newEntry =
@@ -1140,13 +1206,13 @@ fun PointsToStateElement.fetchElementFromDeclarationState(
             this.declarationsState.computeIfAbsent(addr) {
                 TupleLattice.Element(
                     PowersetLattice.Element(addr),
-                    PowersetLattice.Element(newEntry),
+                    PowersetLattice.Element(Pair(newEntry, false)),
                 )
             }
             val newElements = this.declarationsState[addr]?.second
-            newElements?.add(newEntry)
+            newElements?.add(Pair(newEntry, false))
             ret.add(Pair(newEntry, ""))
-        } else elements.map { ret.add(Pair(it, "")) }
+        } else elements.map { ret.add(Pair(it.first, "")) }
 
         // if fetchFields is true, we also fetch the values for fields
         // TODO: handle globals
@@ -1154,7 +1220,7 @@ fun PointsToStateElement.fetchElementFromDeclarationState(
             val fields = this.declarationsState[addr]?.first?.filter { it != addr }
             fields?.forEach { field ->
                 this.declarationsState[field]?.second?.let {
-                    it.map { ret.add(Pair(it, field.name.localName)) }
+                    it.map { ret.add(Pair(it.first, field.name.localName)) }
                 }
             }
         }
@@ -1316,14 +1382,21 @@ fun PointsToStateElement.getNestedValues(
     nestingDepth: Int,
     fetchFields: Boolean = false,
     onlyFetchExistingEntries: Boolean = false,
+    excludeShortFSValues: Boolean = false,
 ): IdentitySet<Node> {
     if (nestingDepth == -1) return identitySetOf(node)
     if (nestingDepth == 0) return this.getAddresses(node)
     var ret = getValues(node)
     for (i in 1..<nestingDepth) {
         ret =
-            ret.filter { if (onlyFetchExistingEntries) this.hasDeclarationStateEntry(it) else true }
-                .flatMap { this.fetchElementFromDeclarationState(it, fetchFields) }
+            ret.filter {
+                    if (onlyFetchExistingEntries)
+                        this.hasDeclarationStateEntry(it, excludeShortFSValues)
+                    else true
+                }
+                .flatMap {
+                    this.fetchElementFromDeclarationState(it, fetchFields, excludeShortFSValues)
+                }
                 .map { it.first }
                 .toIdentitySet()
     }
@@ -1372,7 +1445,7 @@ fun PointsToStateElement.fetchFieldAddresses(
  */
 fun PointsToStateElement.updateValues(
     lattice: PointsToState,
-    sources: IdentitySet<Node>,
+    sources: IdentitySet<Pair<Node, Boolean>>,
     destinations: IdentitySet<Node>,
     destinationAddresses: IdentitySet<Node>,
 ): PointsToStateElement {
@@ -1393,6 +1466,8 @@ fun PointsToStateElement.updateValues(
             newDeclState[destAddr] =
                 TupleLattice.Element(
                     PowersetLattice.Element(currentEntries),
+                    //                    PowersetLattice.Element(sources.map { Pair(it, false)
+                    // }.toIdentitySet()),
                     PowersetLattice.Element(sources),
                 )
         } else {
@@ -1402,7 +1477,8 @@ fun PointsToStateElement.updateValues(
                 newGenState[addr] =
                     TupleLattice.Element(
                         PowersetLattice.Element(destinationAddresses),
-                        PowersetLattice.Element(sources),
+                        // TODO: This probably doesn't work as intended
+                        PowersetLattice.Element(sources.map { it.first }.toIdentitySet()),
                     )
             }
 
@@ -1413,8 +1489,9 @@ fun PointsToStateElement.updateValues(
             else {
                 if (
                     globalDerefs[destAddr]!!.size == 1 &&
-                        globalDerefs[destAddr]!!.first() is UnknownMemoryValue &&
-                        globalDerefs[destAddr]!!.first().name.localName == destAddr.name.localName
+                        globalDerefs[destAddr]!!.first().first is UnknownMemoryValue &&
+                        globalDerefs[destAddr]!!.first().first.name.localName ==
+                            destAddr.name.localName
                 )
                     globalDerefs[destAddr]!!.remove(globalDerefs[destAddr]!!.first())
                 globalDerefs[destAddr]!!.addAll(sources)
@@ -1427,7 +1504,7 @@ fun PointsToStateElement.updateValues(
         newGenState[d] =
             TupleLattice.Element(
                 PowersetLattice.Element(destinationAddresses),
-                PowersetLattice.Element(sources),
+                PowersetLattice.Element(sources.map { it.first }.toIdentitySet()),
             )
     }
 
