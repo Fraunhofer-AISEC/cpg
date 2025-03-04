@@ -23,36 +23,40 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.concepts.http
+package de.fraunhofer.aisec.cpg.graph.concepts.auth
 
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
-import de.fraunhofer.aisec.cpg.graph.concepts.auth.Authentication
-import de.fraunhofer.aisec.cpg.graph.concepts.flows.RemoteEntryPoint
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 
-/** Represents a single [HttpEndpoint] on the server */
-class HttpEndpoint(
-    underlyingNode: FunctionDeclaration,
-    val httpMethod: HttpMethod,
-    val path: String,
-    val arguments: List<Node>,
-    val authentication: Authentication?,
-) : RemoteEntryPoint(underlyingNode = underlyingNode)
+/** Represents a high-level concept for authentication. */
+abstract class Authentication(underlyingNode: Node) : Concept(underlyingNode)
 
-enum class HttpMethod {
-    GET,
-    POST,
-    PUT,
-    HEAD,
-    PATCH,
-    OPTIONS,
-    CONNECT,
-    TRACE,
-    DELETE,
-}
+/**
+ * Represents a token-based authentication.
+ *
+ * @param token The authentication token, which may be an opaque token.
+ */
+open class TokenBasedAuth(underlyingNode: Node, val token: Node) : Authentication(underlyingNode)
 
-/** Base class for operations on an [HttpEndpoint]. */
-abstract class HttpEndpointOperation(underlyingNode: Node, concept: Concept) :
+/**
+ * Represents a JWT-based authentication, which extends the [TokenBasedAuth].
+ *
+ * @param jwt The JWT containing encoded authentication information.
+ * @param payload The payload.
+ */
+class JwtAuth(underlyingNode: Node, val jwt: Node, val payload: Node) :
+    TokenBasedAuth(underlyingNode, jwt)
+
+/** Abstract base class for authentication operations. */
+abstract class AuthenticationOperation(underlyingNode: Node, concept: Authentication) :
     Operation(underlyingNode, concept)
+
+/**
+ * Represents an authentication operation.
+ *
+ * @param credential The credential can be a call (e.g., a function call that reads a header) or a
+ *   variable that holds the value, e.g. the token
+ */
+class Authenticate(underlyingNode: Node, concept: Authentication, val credential: Node) :
+    AuthenticationOperation(underlyingNode, concept)
