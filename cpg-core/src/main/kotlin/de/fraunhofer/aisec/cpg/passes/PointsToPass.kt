@@ -866,13 +866,20 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             val newDeclState = doubleState.declarationsState
             /* Update the declarationState for the refersTo */
             doubleState.getAddresses(currentNode.input).forEach { addr ->
-                newDeclState.replace(
-                    addr,
-                    TupleLattice.Element(
-                        PowersetLattice.Element(addr),
-                        PowersetLattice.Element(Pair(currentNode.input, false)),
-                    ),
+                val newEntry = Pair(currentNode.input, false)
+                // If we already have exactly that entry, no need to re-write it, otherwise we might
+                // confuse the iterateEOG function
+                if (
+                    !(newDeclState[addr]?.second?.any { it == newEntry } == true &&
+                        newDeclState[addr]?.first == PowersetLattice.Element(addr))
                 )
+                    newDeclState.replace(
+                        addr,
+                        TupleLattice.Element(
+                            PowersetLattice.Element(addr),
+                            PowersetLattice.Element(newEntry),
+                        ),
+                    )
             }
             doubleState =
                 PointsToStateElement(doubleState.generalState, MapLattice.Element(newDeclState))
@@ -1003,7 +1010,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 StateEntryElement(PowersetLattice.Element(addresses), values),
             )
         /* In the DeclarationsState, we save the address which we wrote to the value for easier work with pointers
-         * */
+         */
         addresses.forEach { addr ->
             doubleState =
                 lattice.pushToDeclarationsState(
@@ -1147,6 +1154,14 @@ fun PointsToState.pushToDeclarationsState(
     newNode: Node,
     newLatticeElement: DeclarationStateEntryElement,
 ): PointsToStateElement {
+    // If we already have exactly that entry, no need to re-write it, otherwise we might confuse the
+    // iterateEOG function
+    if (
+        newLatticeElement.second == currentState.declarationsState[newNode]?.second ||
+            (newLatticeElement.first.size == 0 && newLatticeElement.second.size == 0)
+    ) {
+        return currentState
+    }
     val newDeclarationsState =
         this.innerLattice2.lub(
             currentState.declarationsState,
@@ -1203,14 +1218,15 @@ fun PointsToStateElement.fetchElementFromDeclarationState(
                 nodesCreatingUnknownValues.computeIfAbsent(Pair(addr, newName)) {
                     UnknownMemoryValue(newName)
                 }
+            val newPair = Pair(newEntry, false)
             this.declarationsState.computeIfAbsent(addr) {
                 TupleLattice.Element(
                     PowersetLattice.Element(addr),
-                    PowersetLattice.Element(Pair(newEntry, false)),
+                    PowersetLattice.Element(newPair),
                 )
             }
             val newElements = this.declarationsState[addr]?.second
-            newElements?.add(Pair(newEntry, false))
+            newElements?.add(newPair)
             ret.add(Pair(newEntry, ""))
         } else elements.map { ret.add(Pair(it.first, "")) }
 
@@ -1466,13 +1482,20 @@ fun PointsToStateElement.updateValues(
             val currentEntries =
                 this.declarationsState[destAddr]?.first?.toIdentitySet() ?: identitySetOf(destAddr)
 
-            newDeclState[destAddr] =
-                TupleLattice.Element(
-                    PowersetLattice.Element(currentEntries),
-                    //                    PowersetLattice.Element(sources.map { Pair(it, false)
-                    // }.toIdentitySet()),
-                    PowersetLattice.Element(sources),
-                )
+            // If we want to update the State with exactly the same elements as are already in the
+            // state, we do nothing in order not to confuse the iterateEOG function
+            if (
+                newDeclState[destAddr]?.first != PowersetLattice.Element(currentEntries) ||
+                    sources.all { src ->
+                        newDeclState[destAddr]?.second?.none { it == src } == true
+                    }
+            ) {
+                newDeclState[destAddr] =
+                    TupleLattice.Element(
+                        PowersetLattice.Element(currentEntries),
+                        PowersetLattice.Element(sources),
+                    )
+            }
         } else {
             // TODO: We basically do the same as above, but currently we don't get the destinations
             // value from the call

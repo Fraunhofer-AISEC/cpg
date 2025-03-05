@@ -18,7 +18,7 @@ int basics() {
   printf("%d\n", *b);
 }
 
-/*int conditions() {
+int conditions() {
   int i=0;                                                                                                                                            
   int j=1;                                                                      
   int* a;                                                                                               
@@ -76,7 +76,7 @@ int arrays() {
    }
    return 0;
 
-} */
+} 
 
 
 
@@ -142,67 +142,67 @@ int pointertopointer(){
    return 0;
 }
 
-//undefined4 sgx_ecall_key_to_out(long param_1)
-//
-//{
-//  int iVar1;
-//  undefined4 uVar2;
-//  long local_30;
-//  void *local_28;
-//  long local_20;
-//  long local_18;
-//  size_t local_10;
-//  
-//  if ((param_1 == 0) || (iVar1 = sgx_is_outside_enclave(param_1,8), iVar1 == 0)) {
-//    return 2;
-//  }
-//  local_20 = param_1;
-//  iVar1 = memcpy_s(&local_30,8,param_1,8);
-//  if (iVar1 != 0) {
-//    return 1;
-//  }
-//  uVar2 = 0;
-//  local_18 = local_30;
-//  local_10 = 0x10;
-//  local_28 = (void *)0x0;
-//  if ((local_30 != 0) && (iVar1 = sgx_is_outside_enclave(local_30,0x10), iVar1 == 0)) {
-//    return 2;
-//  }
-//  if ((local_18 != 0) && (local_10 != 0)) {
-//  local_28 = dlmalloc(local_10);
-//    if (local_28 == (void *)0x0) {
-//      uVar2 = 3;
-//      goto LAB_001011ce;
-//    }
-//    memset(local_28,0,local_10);
-//  }
-//  printf("%d\n", *local_28);
-//  ecall_key_to_out(local_28);
-//  printf("%d %d\n", *local_28, local_28[1]);
-//  if ((local_28 != (void *)0x0) && /*printf("%d", *local_28) &&*/ 
-//     (iVar1 = memcpy_verw_s(local_18,local_10,local_28,local_10), iVar1 != 0)) {
-//    uVar2 = 1;
-//  }
-//LAB_001011ce:
-//  if (local_28 != (void *)0x0) {
-//    free(local_28);
-//  }
-//  printf("%d %d\n", *local_18, *param_1); return uVar2;
-//}
-//
-//void ecall_key_to_out(/*undefined8*/ void *param_1)
-//{
-//  undefined8 uVar1;
-//  
-//  if ((char)key == '\0') {
-//    derive_secret_key();
-//  }
-//  uVar1 = DAT_0011b1c8;
-//  *param_1 = CONCAT71(key._1_7_,(char)key);
-//  param_1[1] = uVar1;
-//  return;
-//}
-//
+undefined4 sgx_ecall_key_to_out(long param_1)
+
+{
+  int iVar1;
+  undefined4 uVar2;
+  long local_30;
+  void *local_28;
+  long local_20;
+  long local_18;
+  size_t local_10;
+  
+  if ((param_1 == 0) || (iVar1 = sgx_is_outside_enclave(param_1,8), iVar1 == 0)) {
+    return 2;
+  }
+  local_20 = param_1;
+  iVar1 = memcpy_s(&local_30,8,param_1,8);
+  if (iVar1 != 0) {
+    return 1;
+  }
+  uVar2 = 0;
+  local_18 = local_30;
+  local_10 = 0x10;
+  local_28 = (void *)0x0;
+  if ((local_30 != 0) && (iVar1 = sgx_is_outside_enclave(local_30,0x10), iVar1 == 0)) {
+    return 2;
+  }
+  if ((local_18 != 0) && (local_10 != 0)) {
+  local_28 = dlmalloc(local_10);
+    if (local_28 == (void *)0x0) {
+      uVar2 = 3;
+      goto LAB_001011ce;
+    }
+    memset(local_28,0,local_10);
+  }
+  printf("%d\n", *local_28);
+  ecall_key_to_out(local_28);
+  printf("%d %d\n", *local_28, local_28[1]);
+  if ((local_28 != (void *)0x0) && /*printf("%d", *local_28) &&*/ 
+     (iVar1 = memcpy_verw_s(local_18,local_10,local_28,local_10), iVar1 != 0)) {
+    uVar2 = 1;
+  }
+LAB_001011ce:
+  if (local_28 != (void *)0x0) {
+    free(local_28);
+  }
+  printf("%d %d\n", *local_18, *param_1); return uVar2;
+}
+
+void ecall_key_to_out(/*undefined8*/ void *param_1)
+{
+  undefined8 uVar1;
+  
+  if ((char)key == '\0') {
+    derive_secret_key();
+  }
+  uVar1 = DAT_0011b1c8;
+  *param_1 = CONCAT71(key._1_7_,(char)key);
+  param_1[1] = uVar1;
+  return;
+}
+
 int inc(int i) {                                                                  
   i=i+1;
   return i;       
