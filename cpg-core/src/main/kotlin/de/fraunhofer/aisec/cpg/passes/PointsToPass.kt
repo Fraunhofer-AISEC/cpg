@@ -111,7 +111,7 @@ fun nodeNameToString(node: Node): Name {
 }
 
 /** Returns the depth of a Node based on its name */
-fun StringToDepth(name: String): Int {
+fun stringToDepth(name: String): Int {
     return when (name) {
         "value" -> 1
         "derefvalue" -> 2
@@ -141,7 +141,7 @@ fun resolveMemberExpression(node: MemberExpression): Pair<Node, Name> {
 private fun isGlobal(node: Node): Boolean {
     return when (node) {
         is VariableDeclaration -> node.isGlobal
-        is Reference -> (node.refersTo as? VariableDeclaration)?.isGlobal ?: false
+        is Reference -> (node.refersTo as? VariableDeclaration)?.isGlobal == true
         is MemoryAddress -> node.isGlobal
         else -> false
     }
@@ -318,7 +318,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             values
                 .filter { doubleState.hasDeclarationStateEntry(it) }
                 .map { indexes.add(Pair(it, 2)) }
-            // Additionally, we can check out the dereference itself to look for derefdereferences
+            // Additionally, we can check out the "dereference" itself to look for
+            // "derefdereferences"
             values
                 .filter { doubleState.hasDeclarationStateEntry(it) }
                 .flatMap { doubleState.getValues(it) }
@@ -341,7 +342,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     // If so, store the last write for the parameter in the FunctionSummary
                     .forEach { (value, subAccessName) ->
                         // Extract the value depth from the value's localName
-                        val srcValueDepth = StringToDepth(value.name.localName)
+                        val srcValueDepth = stringToDepth(value.name.localName)
                         // Store the information in the functionSummary
                         node.functionSummary
                             .computeIfAbsent(param) { mutableSetOf() }
@@ -412,7 +413,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                         FunctionDeclaration.FSEntry(
                                             dstValueDepth,
                                             matchingDeclarations.first(),
-                                            StringToDepth(sourceParamValue.name.localName),
+                                            stringToDepth(sourceParamValue.name.localName),
                                             subAccessName,
                                             true,
                                         )
@@ -1158,7 +1159,7 @@ fun PointsToState.pushToDeclarationsState(
     // iterateEOG function
     if (
         newLatticeElement.second == currentState.declarationsState[newNode]?.second ||
-            (newLatticeElement.first.size == 0 && newLatticeElement.second.size == 0)
+            (newLatticeElement.first.isEmpty() && newLatticeElement.second.isEmpty())
     ) {
         return currentState
     }
@@ -1177,7 +1178,7 @@ fun PointsToStateElement.hasDeclarationStateEntry(
 ): Boolean {
 
     return if (excludeShortFSValues)
-        (this.declarationsState[node]?.second?.filter { !it.second }?.isNotEmpty() == true)
+        (this.declarationsState[node]?.second?.any { !it.second } == true)
     else (this.declarationsState[node]?.second?.isNotEmpty() == true)
 }
 
@@ -1363,7 +1364,7 @@ fun PointsToStateElement.getAddresses(node: Node): IdentitySet<Node> {
             For references, the address is the same as for the declaration, AKA the refersTo
             */
             node.refersTo?.let { refersTo ->
-                /* In some cases, the refersTo might not yet have an initialized MemoryAddress, for example if it's a FunctionDeclaration. So let's to this here */
+                /* In some cases, the refersTo might not yet have an initialized MemoryAddress, for example if it's a FunctionDeclaration. So let's do this here */
                 if (refersTo.memoryAddresses.isEmpty()) {
                     refersTo.memoryAddresses += MemoryAddress(node.name, isGlobal(node))
                 }
