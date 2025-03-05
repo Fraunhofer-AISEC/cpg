@@ -1272,7 +1272,7 @@ fun PointsToStateElement.getValues(node: Node): IdentitySet<Node> {
         is Declaration -> {
             /* For Declarations, we have to look up the last value written to it.
              */
-            if (node.memoryAddresses.isNotEmpty()) {
+            if (node.memoryAddresses.isEmpty()) {
                 node.memoryAddresses += MemoryAddress(node.name, isGlobal(node))
             }
             node.memoryAddresses
@@ -1329,7 +1329,7 @@ fun PointsToStateElement.getAddresses(node: Node): IdentitySet<Node> {
             /*
              * For declarations, we created a new MemoryAddress node, so that's the one we use here
              */
-            if (node.memoryAddresses.isNotEmpty()) {
+            if (node.memoryAddresses.isEmpty()) {
                 node.memoryAddresses += MemoryAddress(node.name, isGlobal(node))
             }
 
@@ -1364,7 +1364,7 @@ fun PointsToStateElement.getAddresses(node: Node): IdentitySet<Node> {
             */
             node.refersTo?.let { refersTo ->
                 /* In some cases, the refersTo might not yet have an initialized MemoryAddress, for example if it's a FunctionDeclaration. So let's to this here */
-                if (refersTo.memoryAddresses.isNotEmpty()) {
+                if (refersTo.memoryAddresses.isEmpty()) {
                     refersTo.memoryAddresses += MemoryAddress(node.name, isGlobal(node))
                 }
 

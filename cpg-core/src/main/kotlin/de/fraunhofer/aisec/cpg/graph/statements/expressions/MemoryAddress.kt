@@ -41,7 +41,10 @@ open class MemoryAddress(override var name: Name, open var isGlobal: Boolean = f
      */
     @Relationship
     open var usageEdges =
-        memoryAddressEdgesOf(mirrorProperty = HasMemoryAddress::memoryAddressEdges, outgoing = true)
+        memoryAddressEdgesOf(
+            mirrorProperty = HasMemoryAddress::memoryAddressEdges,
+            outgoing = false,
+        )
     open var usages by unwrapping(MemoryAddress::usageEdges)
 
     override fun equals(other: Any?): Boolean {

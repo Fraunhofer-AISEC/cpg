@@ -86,6 +86,61 @@ fun Node.printAST(
     return this.printGraph(maxConnections, selector, *strategies)
 }
 
+data class Quadtuple(
+    val start: Node,
+    val end: Node,
+    val nextRelevant: Node,
+    val relevantEdge: Boolean,
+) {
+    val component1: Node
+        get() = start
+
+    val component2: Node
+        get() = end
+
+    val component3: Node
+        get() = nextRelevant
+
+    val component4: Boolean
+        get() = relevantEdge
+}
+
+fun <EdgeType : Edge<out Node>> nextStep(
+    edge: EdgeType,
+    lastRelevant: Node?,
+    selector: (Node) -> Boolean = { true },
+    strategy: (Node) -> Iterator<EdgeType>,
+): Quadtuple {
+    val isForward = strategy(edge.start).asSequence().firstOrNull()?.end == edge.end
+    var start: Node
+    var end: Node
+    var nextRelevant: Node
+    var relevantEdge = false
+    if (isForward) {
+        start = lastRelevant ?: edge.start
+        end = edge.end
+        nextRelevant =
+            if (selector(end)) {
+                relevantEdge = true
+                end
+            } else {
+                lastRelevant ?: edge.start
+            }
+    } else {
+        start = edge.start
+        end = lastRelevant ?: edge.end
+        nextRelevant =
+            if (selector(start)) {
+                relevantEdge = true
+                start
+            } else {
+                // TODO: Might be useful to propagate/configure edge labels.
+                lastRelevant ?: edge.end
+            }
+    }
+    return Quadtuple(start, end, nextRelevant, relevantEdge)
+}
+
 /**
  * This function prints a partial graph, limited to a particular set of edges, starting with the
  * current [Node] as Markdown, with an embedded [Mermaid](https://mermaid.js.org) graph. The output
@@ -109,23 +164,32 @@ fun <EdgeType : Edge<out Node>> Node.printGraph(
 
     // We use a set with a defined ordering to hold our work-list to have a somewhat consistent
     // ordering of statements in the mermaid file.
-    val worklist = LinkedHashSet<Pair<EdgeType, Node>>()
+    val worklist = LinkedHashSet<Pair<EdgeType, MutableMap<(Node) -> Iterator<EdgeType>, Node>>>()
     val alreadySeen = identitySetOf<EdgeType>()
     var conns = 0
 
     strategies.forEach { strategy ->
+        val nextSteps =
+            strategy(this).asSequence().filter { it !in alreadySeen }.sortedBy { it.end.name }
+
         worklist +=
-            strategy(this)
-                .asSequence()
-                .filter { it !in alreadySeen }
-                .sortedBy { it.end.name }
-                .map { it to this }
+            nextSteps.map {
+                it to
+                    mutableMapOf(
+                        *strategies
+                            .map { str ->
+                                val nextStep = nextStep(it, this, selector, strategy)
+                                str to nextStep.nextRelevant
+                            }
+                            .toTypedArray()
+                    )
+            }
     }
 
     while (worklist.isNotEmpty() && conns < maxConnections) {
         // Take one edge out of the work-list
         val currentElement = worklist.first()
-        val (edge, lastRelevant) = currentElement
+        val (edge, lastRelevantMap) = currentElement
         worklist.remove(currentElement)
 
         if (edge in alreadySeen) {
@@ -135,25 +199,61 @@ fun <EdgeType : Edge<out Node>> Node.printGraph(
         // Add it to the seen-list
         alreadySeen += edge
 
-        val start = lastRelevant
-        val end = edge.end
-        val nextRelevant =
-            if (selector(end)) {
+        for (strategy in strategies) {
+            val lastRelevant = lastRelevantMap[strategy]
+            val (start, end, nextRelevant, relevantEdge) =
+                nextStep(edge, lastRelevant, selector, strategy)
+
+            if (relevantEdge) {
                 builder.append(
                     "${start.hashCode()}[\"${start.nodeLabel}\"]-->|${edge.label()}|${end.hashCode()}[\"${end.nodeLabel}\"]\n"
                 )
                 conns++
-                end
-            } else {
-                lastRelevant
             }
 
-        // Add start and edges to the work-list.
-        strategies.forEach { strategy ->
+            // Add start and edges to the work-list.
             worklist +=
-                strategy(end).asSequence().sortedBy { it.end.name }.map { it to nextRelevant }
+                strategy(end)
+                    .asSequence()
+                    .sortedBy { it.end.name }
+                    .map {
+                        it to
+                            mutableMapOf(
+                                *strategies
+                                    .map { str ->
+                                        val nextStep =
+                                            nextStep(
+                                                it,
+                                                lastRelevantMap[strategy],
+                                                selector,
+                                                strategy,
+                                            )
+                                        str to nextStep.nextRelevant
+                                    }
+                                    .toTypedArray()
+                            )
+                    } // TODO: Also make the map in both directions here.
             worklist +=
-                strategy(start).asSequence().sortedBy { it.end.name }.map { it to nextRelevant }
+                strategy(start)
+                    .asSequence()
+                    .sortedBy { it.end.name }
+                    .map {
+                        it to
+                            mutableMapOf(
+                                *strategies
+                                    .map { str ->
+                                        val nextStep =
+                                            nextStep(
+                                                it,
+                                                lastRelevantMap[strategy],
+                                                selector,
+                                                strategy,
+                                            )
+                                        str to nextStep.nextRelevant
+                                    }
+                                    .toTypedArray()
+                            )
+                    } // TODO: Also make the map in both directions here.
         }
     }
 
