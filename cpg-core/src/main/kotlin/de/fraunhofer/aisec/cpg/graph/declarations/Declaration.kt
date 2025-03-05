@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.declarations
 import de.fraunhofer.aisec.cpg.graph.HasMemoryAddress
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.memoryAddressEdgesOf
+import de.fraunhofer.aisec.cpg.graph.edges.memoryValueEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemoryAddress
@@ -60,4 +61,8 @@ abstract class Declaration : Node(), HasMemoryAddress {
     override var memoryAddressEdges =
         memoryAddressEdgesOf(mirrorProperty = MemoryAddress::usageEdges, outgoing = true)
     override var memoryAddresses by unwrapping(Declaration::memoryAddressEdges)
+
+    /** Each Declaration can also have a MemoryValue. */
+    @Relationship var memoryValueEdges = memoryValueEdgesOf()
+    var memoryValues by unwrapping(Declaration::memoryValueEdges)
 }

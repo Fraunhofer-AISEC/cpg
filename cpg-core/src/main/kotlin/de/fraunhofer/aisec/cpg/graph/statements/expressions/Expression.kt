@@ -28,7 +28,8 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.UnknownLanguage
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
+import de.fraunhofer.aisec.cpg.graph.edges.memoryAddressEdgesOf
+import de.fraunhofer.aisec.cpg.graph.edges.memoryValueEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.types.*
@@ -50,7 +51,7 @@ import org.neo4j.ogm.annotation.Transient
  * <p>This is not possible in Java, the aforementioned code example would prompt a compile error.
  */
 @NodeEntity
-abstract class Expression : Statement(), HasType {
+abstract class Expression : Statement(), HasType, HasMemoryAddress {
     /**
      * Is this node used for writing data instead of just reading it? Determines dataflow direction
      */
@@ -95,9 +96,15 @@ abstract class Expression : Statement(), HasType {
             informObservers(HasType.TypeObserver.ChangeType.ASSIGNED_TYPE)
         }
 
+    /** Each Expression also has a MemoryValue. */
+    @Relationship var memoryValueEdges = memoryValueEdgesOf()
+    var memoryValues by unwrapping(Expression::memoryValueEdges)
+
     /** Each Expression also has a MemoryAddress. */
-    @Relationship var memoryAddressEdges = astEdgesOf<Node>()
-    var memoryAddress by unwrapping(Expression::memoryAddressEdges)
+    @Relationship
+    override var memoryAddressEdges =
+        memoryAddressEdgesOf(mirrorProperty = MemoryAddress::usageEdges, outgoing = true)
+    override var memoryAddresses by unwrapping(Expression::memoryAddressEdges)
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)

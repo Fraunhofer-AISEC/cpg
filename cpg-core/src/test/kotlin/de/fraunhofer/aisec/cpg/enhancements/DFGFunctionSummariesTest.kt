@@ -275,8 +275,11 @@ class DFGFunctionSummariesTest {
 
         val variableA = main.variables["a"]
         assertNotNull(variableA)
-        assertNotNull(variableA.memoryAddress)
-        assertEquals(mutableSetOf<Node>(variableA.memoryAddress!!), argA.prevFullDFG.toMutableSet())
+        assertNotNull(variableA.memoryAddresses.firstOrNull())
+        assertEquals(
+            mutableSetOf<Node>(variableA.memoryAddresses.first()),
+            argA.prevFullDFG.toMutableSet(),
+        )
 
         val prevDfgOfParam0 = param0.prevDFGEdges.singleOrNull { it !is ContextSensitiveDataflow }
         assertNotNull(prevDfgOfParam0)
@@ -285,7 +288,7 @@ class DFGFunctionSummariesTest {
         val returnA = main.allChildren<ReturnStatement>().singleOrNull()?.returnValue as? Reference
         assertNotNull(returnA)
 
-        val literal5 = main.literals.filter { it.value?.equals(5) ?: false }.first()
+        val literal5 = main.literals.first { it.value?.equals(5) == true }
         assertNotNull(literal5)
 
         assertEquals(mutableSetOf<Node>(literal5), returnA.prevDFG)

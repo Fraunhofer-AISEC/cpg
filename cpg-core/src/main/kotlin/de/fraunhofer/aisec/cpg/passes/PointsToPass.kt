@@ -287,8 +287,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             if (newMemoryAddresses.isNotEmpty()) {
                 when (key) {
                     is Expression -> {
-                        key.memoryAddress.clear()
-                        key.memoryAddress.addAll(newMemoryAddresses)
+                        key.memoryAddresses.clear()
+                        key.memoryAddresses += newMemoryAddresses.filterIsInstance<MemoryAddress>()
                     }
                     is Declaration -> {
                         if (
