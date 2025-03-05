@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,27 +23,14 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.concepts
+package de.fraunhofer.aisec.cpg.graph.concepts.file
 
-import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.OverlayNode
+import de.fraunhofer.aisec.cpg.graph.concepts.Concept
+import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 
-/**
- * Represents an operation executed on/with a [Concept] (stored in [concept]). This is typically a
- * `write` on a file or log object or an `execute` on a database.
- */
-abstract class Operation(
-    underlyingNode: Node,
-    /** The [Concept] this operation belongs to. */
-    concept: Concept,
-) : OverlayNode() {
+class Path(underlyingNode: Node, val path: String) :
+    Concept(underlyingNode = underlyingNode), IsFile
 
-    /** The [Concept] this operation belongs to. */
-    open val concept: Concept = concept.also { it.ops += this }
-
-    init {
-        this.underlyingNode = underlyingNode
-        this::class.simpleName?.let { name = Name(it) }
-    }
-}
+class PathJoin(underlyingNode: Node, override val concept: Path) :
+    Operation(underlyingNode = underlyingNode, concept = concept), IsFile {}
