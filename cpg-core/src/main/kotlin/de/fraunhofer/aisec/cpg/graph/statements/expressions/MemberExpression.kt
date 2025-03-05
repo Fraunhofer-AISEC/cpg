@@ -49,7 +49,7 @@ class MemberExpression : Reference(), HasOverloadedOperation, ArgumentHolder, Ha
         astEdgeOf<Expression>(
             ProblemExpression("could not parse base expression"),
             onChanged = { old, new ->
-                exchangeTypeObserver(old, new)
+                exchangeTypeObserverWithAccessPropagation(old, new)
                 updateName()
             },
         )

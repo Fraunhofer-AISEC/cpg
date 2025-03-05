@@ -314,8 +314,10 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
 
         // We need to resolve the path relative to the top level to get the full module identifier
         // with packages. Note: in reality, only directories that have __init__.py file present are
-        // actually packages, but we skip this for now
-        var relative = path.relativeToOrNull(topLevel.toPath())
+        // actually packages, but we skip this for now. Since we are dealing with potentially
+        // relative paths, we need to canonicalize both paths.
+        var relative =
+            path.toFile().canonicalFile.relativeToOrNull(topLevel.canonicalFile)?.toPath()
         var module = path.nameWithoutExtension
         var modulePaths = (relative?.parent?.pathString?.split("/") ?: listOf()) + module
 

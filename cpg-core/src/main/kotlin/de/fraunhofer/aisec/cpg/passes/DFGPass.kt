@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
+import de.fraunhofer.aisec.cpg.graph.edges.flows.field
 import de.fraunhofer.aisec.cpg.graph.edges.flows.indexed
 import de.fraunhofer.aisec.cpg.graph.edges.flows.partial
 import de.fraunhofer.aisec.cpg.graph.statements.*
@@ -206,15 +207,21 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     protected fun handleMemberExpression(node: MemberExpression) {
         when (node.access) {
             AccessValues.WRITE -> {
-                node.nextDFGEdges.add(node.base) { granularity = partial(node.refersTo) }
+                node.nextDFGEdges.add(node.base) {
+                    (node.refersTo as? FieldDeclaration)?.let { granularity = field(it) }
+                }
             }
             AccessValues.READWRITE -> {
-                node.nextDFGEdges.add(node.base) { granularity = partial(node.refersTo) }
+                node.nextDFGEdges.add(node.base) {
+                    (node.refersTo as? FieldDeclaration)?.let { granularity = field(it) }
+                }
                 // We do not make an edge in the other direction on purpose as a workaround for
                 // nested field accesses on the lhs of an assignment.
             }
             else -> {
-                node.prevDFGEdges.add(node.base) { granularity = partial(node.refersTo) }
+                node.prevDFGEdges.add(node.base) {
+                    (node.refersTo as? FieldDeclaration)?.let { granularity = field(it) }
+                }
             }
         }
     }
@@ -225,8 +232,9 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      */
     protected fun handleTupleDeclaration(node: TupleDeclaration) {
         node.initializer?.let { initializer ->
-            node.elements.withIndex().forEach {
-                it.value.prevDFGEdges.add(initializer) { granularity = partial(it.value) }
+            node.prevDFG += initializer
+            node.elements.forEachIndexed { idx, variable ->
+                variable.prevDFGEdges.add(node) { granularity = indexed(idx) }
             }
         }
     }
@@ -387,7 +395,8 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * Check with python and JS implementation
      */
     protected fun handleKeyValueExpression(node: KeyValueExpression) {
-        node.value?.let { node.prevDFGEdges += it }
+        // TODO: Doesn't the node also contain the key?? Should the value be "partial" or "full"?
+        node.prevDFGEdges += node.value
     }
 
     /**
@@ -455,11 +464,24 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * Adds the DFG edge to an [SubscriptExpression]. The whole array `x` flows to the result
-     * `x[i]`.
+     * Adds the DFG edge to an [SubscriptExpression]. The whole array `x` flows to the result `x[i]`
+     * or vice versa depending on the access value.
      */
     protected fun handleSubscriptExpression(node: SubscriptExpression) {
-        node.prevDFGEdges += node.arrayExpression
+        if (node.access == AccessValues.WRITE) {
+                node.nextDFGEdges
+            } else {
+                node.prevDFGEdges
+            }
+            .add(node.arrayExpression) {
+                val literalValue = (node.subscriptExpression as? Literal<*>)?.value
+                granularity =
+                    when (literalValue) {
+                        is Number -> indexed(literalValue)
+                        is String -> indexed(literalValue)
+                        else -> partial(node.subscriptExpression)
+                    }
+            }
     }
 
     /** Adds the DFG edge to an [NewArrayExpression]. The initializer flows to the expression. */

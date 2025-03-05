@@ -50,7 +50,7 @@ open class BinaryOperator :
     var lhsEdge =
         astEdgeOf<Expression>(
             of = ProblemExpression("could not parse lhs"),
-            onChanged = ::exchangeTypeObserver,
+            onChanged = ::exchangeTypeObserverWithAccessPropagation,
         )
     var lhs by unwrapping(BinaryOperator::lhsEdge)
 
@@ -59,7 +59,7 @@ open class BinaryOperator :
     var rhsEdge =
         astEdgeOf<Expression>(
             of = ProblemExpression("could not parse rhs"),
-            onChanged = ::exchangeTypeObserver,
+            onChanged = ::exchangeTypeObserverWithAccessPropagation,
         )
     var rhs by unwrapping(BinaryOperator::rhsEdge)
 

@@ -26,70 +26,72 @@
 package de.fraunhofer.aisec.cpg.passes.concepts.config.python
 
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.analysis.MultiValueEvaluator
+import de.fraunhofer.aisec.cpg.graph.Backward
+import de.fraunhofer.aisec.cpg.graph.GraphToFollow
+import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.conceptNodes
 import de.fraunhofer.aisec.cpg.graph.concepts.config.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
 import de.fraunhofer.aisec.cpg.graph.evaluate
+import de.fraunhofer.aisec.cpg.graph.followDFGEdgesUntilHit
 import de.fraunhofer.aisec.cpg.graph.followPrevDFG
+import de.fraunhofer.aisec.cpg.graph.fqn
+import de.fraunhofer.aisec.cpg.graph.implicit
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.SubscriptExpression
-import de.fraunhofer.aisec.cpg.graph.translationResult
+import de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.passes.concepts.ConceptPass
-import de.fraunhofer.aisec.cpg.passes.concepts.config.ini.IniFileConfigurationPass
+import de.fraunhofer.aisec.cpg.passes.concepts.config.ProvideConfigPass
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
+import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 
 /**
  * This pass is responsible for creating [ConfigurationOperation] nodes based on the
  * [`configparser`](https://docs.python.org/3/library/configparser.html) module of the Python
  * standard library.
  */
-@DependsOn(IniFileConfigurationPass::class, softDependency = true)
 @DependsOn(SymbolResolver::class)
+@ExecuteBefore(ProvideConfigPass::class)
 class PythonStdLibConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) {
     override fun handleNode(node: Node, tu: TranslationUnitDeclaration) {
         when (node) {
-            is MemberCallExpression -> handleMemberCallExpression(node, tu)
-            is SubscriptExpression -> handleSubscriptExpression(node, tu)
+            is ConstructExpression -> handleConstructExpression(node)
+            is MemberCallExpression -> handleMemberCallExpression(node)
+            is SubscriptExpression -> handleSubscriptExpression(node)
         }
     }
 
-    private fun handleMemberCallExpression(
-        call: MemberCallExpression,
-        tu: TranslationUnitDeclaration,
-    ): List<LoadConfigurationFile>? {
-        if (call.name.toString() == "configparser.ConfigParser.read") {
-            val filename = call.arguments.firstOrNull()?.evaluate() as? String
+    /**
+     * Translates a `configparser.ConfigParser()` constructor call into a [Configuration] concept.
+     */
+    private fun handleConstructExpression(expr: ConstructExpression): Configuration? {
+        if (expr.name.toString() == "configparser.ConfigParser") {
+            val conf = Configuration(underlyingNode = expr)
+            expr.prevDFG += conf
+            return conf
+        }
 
-            if (filename == null) {
-                log.warn("Could not determine filename for configparser.ConfigParser.read")
-                return null
-            }
+        return null
+    }
 
-            // Look for config nodes that match the file name
-            val conf =
-                tu.translationResult?.conceptNodes?.filterIsInstance<Configuration>()?.filter {
-                    it.underlyingNode?.name.toString() == filename
+    /**
+     * Translates `configparser.ConfigParser.read(filename)` calls into [LoadConfiguration]
+     * operations.
+     */
+    private fun handleMemberCallExpression(call: MemberCallExpression): List<LoadConfiguration>? {
+        val firstArgument = call.arguments.firstOrNull()
+        if (call.name.toString() == "configparser.ConfigParser.read" && firstArgument != null) {
+            // Look for our config data structure based on our "base" object
+            val paths =
+                call.base?.followDFGEdgesUntilHit(direction = Backward(GraphToFollow.DFG)) {
+                    it is Configuration
                 }
-            return conf?.map {
-                // Create a LoadConfigurationFile operation for each matching config node
-                val op = LoadConfigurationFile(call, it)
-
-                // And add a dataflow edge into the config node. This is a bit trickier, we want
-                // to find the construct expression to the ConfigParser object and then inject it.
-                // This is not perfect but the read() operation is applied on the object itself, and
-                // we would need to set this point as the last write, which we cannot do here.
-                val test = call.base?.followPrevDFG { it is ConstructExpression }
-                val construct = test?.lastOrNull()
-                if (construct is ConstructExpression) {
-                    construct.prevDFGEdges.addContextSensitive(
-                        it,
-                        callingContext = CallingContextOut(construct),
-                    )
-                }
+            paths?.fulfilled?.map {
+                val conf = it.last() as Configuration
+                val op = LoadConfiguration(call, conf, fileExpression = firstArgument)
                 op
             }
         }
@@ -97,45 +99,117 @@ class PythonStdLibConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) 
         return null
     }
 
+    /**
+     * Translates `config["group"]` and `config["group"]["option"]` into operations, such as
+     * [ReadConfigurationGroup] or [ReadConfigurationOption].
+     *
+     * Since the `configparser` module does not provide a way to explicitly define/register options
+     * or groups (except in the deprecated legacy API), we need to implicitly create them here as
+     * well.
+     */
     private fun handleSubscriptExpression(
-        sub: SubscriptExpression,
-        tu: TranslationUnitDeclaration,
-    ): ConfigurationOperation? {
-        // Try to follow the path to the config file (load operation)
+        sub: SubscriptExpression
+    ): MutableList<ConfigurationOperation>? {
+        // We need to check, whether we access a group or an option
         val path =
             sub.arrayExpression.followPrevDFG { it is Configuration || it is ConfigurationGroup }
         val last = path?.lastOrNull()
-        when (last) {
-            // If we can follow it directly to the configuration node, then this is a read group
-            // operation
+        return when (last) {
+            // If we can follow it directly to the configuration node, then we access a group
             is Configuration -> {
-                // Look for the group
-                val group =
-                    last.groups.find { it.name.localName == sub.subscriptExpression.evaluate() }
-                if (group != null) {
-                    val op = ReadConfigurationGroup(sub, conf = last, group = group)
-
-                    // Add an incoming DFG from the option group
-                    sub.prevDFGEdges.add(group)
-
-                    return op
-                }
+                handleGroupAccess(last, sub)
             }
             is ConfigurationGroup -> {
-                // Look for the option
-                val option =
-                    last.options.find { it.name.localName == sub.subscriptExpression.evaluate() }
-                if (option != null) {
-                    val op = ReadConfigurationOption(sub, conf = last.conf, option = option)
-
-                    // Add an incoming DFG from the option
-                    sub.prevDFGEdges.add(option)
-
-                    return op
-                }
+                handleOptionAccess(last, sub)
             }
+            else -> null
+        }
+    }
+
+    /** Translates a group access (`config["group"]`) into a [ReadConfigurationGroup] operation. */
+    private fun handleGroupAccess(
+        conf: Configuration,
+        sub: SubscriptExpression,
+    ): MutableList<ConfigurationOperation>? {
+        val ops = mutableListOf<ConfigurationOperation>()
+
+        // Look for the group
+        val name = sub.subscriptExpression.evaluate() as? String
+        if (name == null) {
+            warnWithFileLocation(
+                sub,
+                log,
+                "We could not evaluate the configuration group name to a string",
+            )
+            return ops
+        }
+
+        var group = conf.groups.find { it.name.localName == name }
+        if (group == null) {
+            // If it does not exist, we create it and implicitly add a registration operation
+            group = ConfigurationGroup(sub, conf = conf).also { it.name = Name(name) }.implicit()
+            val op = RegisterConfigurationGroup(sub, group = group).implicit()
+            ops += op
+        }
+
+        val op = ReadConfigurationGroup(sub, group = group)
+        ops += op
+
+        // Add an incoming DFG from the option group
+        sub.prevDFGEdges.add(group)
+
+        return ops
+    }
+
+    /**
+     * Translates an option access (`config["group"]["option"]`) into a [ReadConfigurationOption]
+     * opertion.
+     */
+    private fun handleOptionAccess(
+        group: ConfigurationGroup,
+        sub: SubscriptExpression,
+    ): MutableList<ConfigurationOperation> {
+        val ops = mutableListOf<ConfigurationOperation>()
+
+        // Look for the option
+        val name = sub.subscriptExpression.evaluate() as? String
+        if (name == null) {
+            warnWithFileLocation(
+                sub,
+                log,
+                "We could not evaluate the configuration group name to a string",
+            )
+            return ops
+        }
+
+        var option = group.options.find { it.name.localName == name }
+        if (option == null) {
+            // If it does not exist, we create it and implicitly add a registration operation
+            option =
+                ConfigurationOption(sub, group = group, key = sub)
+                    .also { it.name = group.name.fqn(name) }
+                    .implicit()
+            val op = RegisterConfigurationOption(sub, option = option).implicit()
+            ops += op
+        }
+
+        val op = ReadConfigurationOption(sub, option = option)
+        ops += op
+
+        // Add an incoming DFG from the option
+        sub.prevDFGEdges.add(option)
+
+        return ops
+    }
+}
+
+val Node.stringValues: Collection<String>?
+    get() {
+        val eval = this.evaluate(MultiValueEvaluator())
+        when (eval) {
+            is String -> return listOf(eval)
+            is Collection<*> -> return eval.filterIsInstance<String>()
         }
 
         return null
     }
-}

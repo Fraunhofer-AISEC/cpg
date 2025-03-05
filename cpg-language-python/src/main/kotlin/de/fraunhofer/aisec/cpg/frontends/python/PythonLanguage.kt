@@ -37,9 +37,11 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation
+import de.fraunhofer.aisec.cpg.helpers.neo4j.SimpleNameConverter
 import java.io.File
 import kotlin.reflect.KClass
 import org.neo4j.ogm.annotation.Transient
+import org.neo4j.ogm.annotation.typeconversion.Convert
 
 /** The Python language. */
 class PythonLanguage :
@@ -52,6 +54,7 @@ class PythonLanguage :
     HasDefaultArguments {
     override val fileExtensions = listOf("py", "pyi")
     override val namespaceDelimiter = "."
+    @Convert(value = SimpleNameConverter::class)
     override val builtinsNamespace: Name = Name("builtins")
 
     @Transient

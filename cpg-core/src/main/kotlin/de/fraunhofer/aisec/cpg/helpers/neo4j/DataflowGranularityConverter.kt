@@ -25,14 +25,16 @@
  */
 package de.fraunhofer.aisec.cpg.helpers.neo4j
 
+import de.fraunhofer.aisec.cpg.graph.edges.flows.FieldDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Granularity
-import de.fraunhofer.aisec.cpg.graph.edges.flows.PartialDataflowGranularity
+import de.fraunhofer.aisec.cpg.graph.edges.flows.IndexedDataflowGranularity
 
 /** This converter converts a [Granularity] into a string-based representation in Neo4J. */
 class DataflowGranularityConverter : CpgCompositeConverter<Granularity> {
     companion object {
-        const val FIELD_GRANULARITY = "granularity"
-        const val FIELD_PARTIAL_TARGET = "partialTarget"
+        const val GRANULARITY = "granularity"
+        const val PARTIAL_TARGET = "partialTarget"
+        const val PARTIAL_TARGET_TYPE = "partialTargetType"
     }
 
     override fun toGraphProperties(value: Granularity): MutableMap<String, *> {
@@ -41,19 +43,23 @@ class DataflowGranularityConverter : CpgCompositeConverter<Granularity> {
         val type = value::class.simpleName?.substringBefore("DataflowGranularity")?.uppercase()
         if (type != null) {
             // The type of granularity
-            map[FIELD_GRANULARITY] = type
+            map[GRANULARITY] = type
         }
 
         // Only for partial
-        if (value is PartialDataflowGranularity) {
-            map[FIELD_PARTIAL_TARGET] = value.partialTarget?.name.toString()
+        if (value is FieldDataflowGranularity) {
+            map[PARTIAL_TARGET] = value.partialTarget.name.toString()
+            map[PARTIAL_TARGET_TYPE] = "field"
+        } else if (value is IndexedDataflowGranularity) {
+            map[PARTIAL_TARGET] = value.partialTarget.toString()
+            map[PARTIAL_TARGET_TYPE] = "index"
         }
 
         return map
     }
 
     override val graphSchema: List<Pair<String, String>>
-        get() = listOf(Pair("String", FIELD_GRANULARITY), Pair("String", FIELD_PARTIAL_TARGET))
+        get() = listOf(Pair("String", GRANULARITY), Pair("String", PARTIAL_TARGET))
 
     override fun toEntityAttribute(value: MutableMap<String, *>): Granularity {
         throw UnsupportedOperationException()

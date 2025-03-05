@@ -37,6 +37,7 @@ import io.github.detekt.sarif4k.*
 import java.io.File
 import java.nio.file.Path
 import kotlin.io.path.Path
+import kotlin.io.path.isDirectory
 
 /** Options common to all subcommands dealing projects. */
 class ProjectOptions : OptionGroup("Project Options") {
@@ -96,6 +97,16 @@ class AnalysisProject(
     var securityGoalsFolder: Path? = projectDir?.resolve("security-goals"),
     /** The folder where the components are located. */
     var componentsFolder: Path? = projectDir?.resolve("components"),
+    /**
+     * The folder where additional libraries can be placed for analysis, these can be stubs
+     * containing only type information or entire source code files. The subfolders are used to
+     * create components and the format should be libraries/<componentName>/<namespacefolders>. In
+     * the case of a stdlib, this would look like libraries/stdlib/[os,sys, ...]. In the case of an
+     * external library it would look like libraries/mylibrary/org/mylibrary/somesubfolder/... if
+     * the namespace starts with org.mylibrary. or libraries/mylibrary/mylibrary/somesubfolder/...
+     * if the namespace starts with mylibrary.
+     */
+    var librariesPath: Path? = projectDir?.resolve("libraries"),
     /** The translation configuration for the project. */
     var config: TranslationConfiguration,
 ) {
@@ -129,6 +140,7 @@ class AnalysisProject(
             sources: List<Path>? = null,
             components: List<String>? = null,
             exclusionPatterns: List<String>? = null,
+            librariesPath: Path? = projectDir.resolve("libraries"),
             configBuilder:
                 ((TranslationConfiguration.Builder) -> TranslationConfiguration.Builder)? =
                 null,
@@ -185,12 +197,22 @@ class AnalysisProject(
                         .topLevels(it.associate { Pair(it, componentDir.resolve(it).toFile()) })
             }
 
+            val addSourcesFolder = librariesPath?.toFile()
+
+            if (librariesPath?.isDirectory() == true) {
+                builder.loadIncludes(true)
+                addSourcesFolder?.listFiles()?.forEach {
+                    builder = builder.includePath(it.toPath())
+                }
+            }
+
             exclusionPatterns?.forEach { builder = builder.exclusionPatterns(it) }
             configBuilder?.invoke(builder)
 
             return AnalysisProject(
                 config = builder.build(),
                 name = projectDir.fileName.toString(),
+                librariesPath = librariesPath,
                 projectDir = projectDir,
             )
         }
@@ -208,7 +230,7 @@ class AnalysisProject(
                 translationOptions.sources,
                 translationOptions.components,
                 translationOptions.exclusionPatterns,
-                configModifier,
+                configBuilder = configModifier,
             )
         }
     }

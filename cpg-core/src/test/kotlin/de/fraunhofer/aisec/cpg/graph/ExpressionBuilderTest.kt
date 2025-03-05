@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.builder.plus
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextIn
 import de.fraunhofer.aisec.cpg.graph.edges.flows.ContextSensitiveDataflow
-import de.fraunhofer.aisec.cpg.graph.edges.flows.PartialDataflowGranularity
+import de.fraunhofer.aisec.cpg.graph.edges.flows.FieldDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
@@ -42,7 +42,7 @@ class ExpressionBuilderTest {
     fun testDuplicateWithDFGProperties() {
         val node1 = Literal<Int>()
         val node2 = Reference()
-        val granularity = PartialDataflowGranularity(FieldDeclaration())
+        val granularity = FieldDataflowGranularity(FieldDeclaration())
         val callingContextIn = CallingContextIn(CallExpression())
         node1.prevDFGEdges.addContextSensitive(node2, granularity, callingContextIn)
 
@@ -59,7 +59,7 @@ class ExpressionBuilderTest {
     fun testDuplicateWithDFGProperties2() {
         val node1 = Literal<Int>()
         val node2 = Reference()
-        val granularity = PartialDataflowGranularity(FieldDeclaration())
+        val granularity = FieldDataflowGranularity(FieldDeclaration())
         val callingContextIn = CallingContextIn(CallExpression())
         node1.nextDFGEdges.addContextSensitive(node2, granularity, callingContextIn)
 

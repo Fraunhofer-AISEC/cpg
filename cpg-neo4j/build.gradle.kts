@@ -68,6 +68,7 @@ dependencies {
 
     // Neo4J Driver
     api(libs.neo4j.driver)
+    api(libs.netty.handler)
 
     // Command line interface support
     api(libs.picocli)
