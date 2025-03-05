@@ -27,12 +27,23 @@ package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.declarations.OperatorDeclaration
+import de.fraunhofer.aisec.cpg.graph.edges.MemoryAddressEdges
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
+
+interface HasMemoryAddress {
+
+    /**
+     * Each Declaration allocates new memory, AKA a new address, so we create a new MemoryAddress
+     * node
+     */
+    var memoryAddressEdges: MemoryAddressEdges
+    var memoryAddresses: MutableSet<MemoryAddress>
+}
 
 /** A simple interface that a node has [language]. */
 interface HasLanguage {

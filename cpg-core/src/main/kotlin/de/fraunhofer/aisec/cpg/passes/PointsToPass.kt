@@ -280,7 +280,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     key.prevDFGEdges.addContextSensitive(
                         prev,
                         granularity,
-                        context!!,
+                        context,
                         functionSummary,
                     )
             }
@@ -295,7 +295,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             newMemoryAddresses.size == 1 &&
                                 newMemoryAddresses.first() is MemoryAddress
                         )
-                            key.memoryAddress = newMemoryAddresses.first() as MemoryAddress
+                            key.memoryAddresses += newMemoryAddresses.first() as MemoryAddress
                     }
                 }
             }
@@ -1256,10 +1256,13 @@ fun PointsToStateElement.getValues(node: Node): IdentitySet<Node> {
         is Declaration -> {
             /* For Declarations, we have to look up the last value written to it.
              */
-            if (node.memoryAddress == null) {
-                node.memoryAddress = MemoryAddress(node.name, isGlobal(node))
+            if (node.memoryAddresses.isNotEmpty()) {
+                node.memoryAddresses += MemoryAddress(node.name, isGlobal(node))
             }
-            fetchElementFromDeclarationState(node.memoryAddress!!).map { it.first }.toIdentitySet()
+            node.memoryAddresses
+                .flatMap { fetchElementFromDeclarationState(it) }
+                .map { it.first }
+                .toIdentitySet()
         }
         is MemoryAddress -> {
             fetchElementFromDeclarationState(node).map { it.first }.toIdentitySet()
@@ -1310,11 +1313,11 @@ fun PointsToStateElement.getAddresses(node: Node): IdentitySet<Node> {
             /*
              * For declarations, we created a new MemoryAddress node, so that's the one we use here
              */
-            if (node.memoryAddress == null) {
-                node.memoryAddress = MemoryAddress(node.name, isGlobal(node))
+            if (node.memoryAddresses.isNotEmpty()) {
+                node.memoryAddresses += MemoryAddress(node.name, isGlobal(node))
             }
 
-            identitySetOf(node.memoryAddress!!)
+            node.memoryAddresses.toIdentitySet()
         }
         is ParameterMemoryValue -> {
             if (node.memoryAddress != null) identitySetOf(node.memoryAddress!!) else identitySetOf()
@@ -1345,11 +1348,11 @@ fun PointsToStateElement.getAddresses(node: Node): IdentitySet<Node> {
             */
             node.refersTo?.let { refersTo ->
                 /* In some cases, the refersTo might not yet have an initialized MemoryAddress, for example if it's a FunctionDeclaration. So let's to this here */
-                if (refersTo.memoryAddress == null) {
-                    refersTo.memoryAddress = MemoryAddress(node.name, isGlobal(node))
+                if (refersTo.memoryAddresses.isNotEmpty()) {
+                    refersTo.memoryAddresses += MemoryAddress(node.name, isGlobal(node))
                 }
 
-                identitySetOf(refersTo.memoryAddress!!)
+                refersTo.memoryAddresses.toIdentitySet()
             } ?: identitySetOf()
         }
         is CastExpression -> {

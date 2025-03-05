@@ -25,8 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
+import de.fraunhofer.aisec.cpg.graph.HasMemoryAddress
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
+import de.fraunhofer.aisec.cpg.graph.edges.memoryAddressEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemoryAddress
@@ -44,7 +45,7 @@ import org.neo4j.ogm.annotation.Relationship
  * however clang does establish a connection between those nodes, we currently do not.
  */
 @NodeEntity
-abstract class Declaration : Node() {
+abstract class Declaration : Node(), HasMemoryAddress {
     @DoNotPersist
     val symbol: Symbol
         get() {
@@ -55,6 +56,8 @@ abstract class Declaration : Node() {
      * Each Declaration allocates new memory, AKA a new address, so we create a new MemoryAddress
      * node
      */
-    @Relationship open var memoryAddressEdge = astOptionalEdgeOf<MemoryAddress>()
-    open var memoryAddress by unwrapping(Declaration::memoryAddressEdge)
+    @Relationship
+    override var memoryAddressEdges =
+        memoryAddressEdgesOf(mirrorProperty = MemoryAddress::usageEdges, outgoing = true)
+    override var memoryAddresses by unwrapping(Declaration::memoryAddressEdges)
 }

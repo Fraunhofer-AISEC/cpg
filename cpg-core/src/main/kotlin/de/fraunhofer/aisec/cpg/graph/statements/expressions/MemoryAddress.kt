@@ -25,12 +25,24 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
+import de.fraunhofer.aisec.cpg.graph.HasMemoryAddress
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
+import de.fraunhofer.aisec.cpg.graph.edges.memoryAddressEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import org.neo4j.ogm.annotation.Relationship
 
 open class MemoryAddress(override var name: Name, open var isGlobal: Boolean = false) : Node() {
+
+    /**
+     * Each Declaration allocates new memory, AKA a new address, so we create a new MemoryAddress
+     * node
+     */
+    @Relationship
+    open var usageEdges =
+        memoryAddressEdgesOf(mirrorProperty = HasMemoryAddress::memoryAddressEdges, outgoing = true)
+    open var usages by unwrapping(MemoryAddress::usageEdges)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) {
