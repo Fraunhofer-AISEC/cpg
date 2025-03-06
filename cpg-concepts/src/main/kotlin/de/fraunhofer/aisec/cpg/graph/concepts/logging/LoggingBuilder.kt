@@ -77,8 +77,11 @@ fun MetadataProvider.newLogWrite(
     logger.ops += node
 
     // connect DFG
-    logArguments.forEach { cpgArgNode -> cpgArgNode.nextDFG += node }
+    node.prevDFG += logArguments
     node.nextDFG += logger
+
+    node.nextEOG += underlyingNode.nextEOG
+    node.prevEOG += underlyingNode
 
     NodeBuilder.log(node)
     return node
@@ -94,6 +97,9 @@ fun MetadataProvider.newLogWrite(
 fun MetadataProvider.newLogGet(underlyingNode: Node, logger: Log): LogGet {
     val node = LogGet(underlyingNode = underlyingNode, concept = logger)
     node.codeAndLocationFrom(underlyingNode)
+
+    node.prevEOG += underlyingNode
+    node.nextEOG += underlyingNode.nextEOG
 
     NodeBuilder.log(node)
     return node
