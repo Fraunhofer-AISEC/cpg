@@ -34,7 +34,11 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.get
 import de.fraunhofer.aisec.cpg.graph.evaluate
 import de.fraunhofer.aisec.cpg.graph.followPrevFullDFGEdgesUntilHit
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.getArgumentValueByNameOrPosition
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.concepts.ConceptPass
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLate
@@ -141,8 +145,11 @@ class PythonFileConceptPass(ctx: TranslationContext) :
                 }
                 "os.chmod" -> {
                     val fileName =
-                        getArgumentValueByNameOrPosition<String>(callExpression, "path", 0)
-                            as? String
+                        callExpression.getArgumentValueByNameOrPosition<String>(
+                            name = "path",
+                            position = 0,
+                            evaluator = PythonValueEvaluator(),
+                        ) as? String
                     if (fileName == null) {
                         Util.errorWithFileLocation(
                             callExpression,
@@ -154,7 +161,12 @@ class PythonFileConceptPass(ctx: TranslationContext) :
 
                     val file = getOrCreateFile(fileName, callExpression)
 
-                    val mode = getArgumentValueByNameOrPosition<Long>(callExpression, "mode", 1)
+                    val mode =
+                        callExpression.getArgumentValueByNameOrPosition<Long>(
+                            name = "mode",
+                            position = 1,
+                            evaluator = PythonValueEvaluator(),
+                        )
                     if (mode == null) {
                         Util.errorWithFileLocation(
                             callExpression,
@@ -233,7 +245,12 @@ class PythonFileConceptPass(ctx: TranslationContext) :
      * @return The name or [DEFAULT_FILE_NAME] if no name could be found.
      */
     private fun getFileName(call: CallExpression, argumentName: String): String {
-        val name = getArgumentValueByNameOrPosition<String>(call, argumentName, 0)
+        val name =
+            call.getArgumentValueByNameOrPosition<String>(
+                name = argumentName,
+                position = 0,
+                evaluator = PythonValueEvaluator(),
+            )
         return if (name != null) {
             name
         } else {
@@ -263,7 +280,11 @@ class PythonFileConceptPass(ctx: TranslationContext) :
      * ```
      */
     internal fun getBuiltinOpenMode(call: CallExpression): String? {
-        return getArgumentValueByNameOrPosition<String>(call, "mode", 1)
+        return call.getArgumentValueByNameOrPosition<String>(
+            name = "mode",
+            position = 1,
+            evaluator = PythonValueEvaluator(),
+        )
     }
 
     /**
@@ -279,7 +300,11 @@ class PythonFileConceptPass(ctx: TranslationContext) :
      * @return The `mask` TODO mask <-> mode confusion
      */
     internal fun getOsOpenMask(call: CallExpression): Long? {
-        return getArgumentValueByNameOrPosition<Long>(call, "mask", 2)
+        return call.getArgumentValueByNameOrPosition<Long>(
+            name = "mask",
+            position = 2,
+            evaluator = PythonValueEvaluator(),
+        )
     }
 
     /**
@@ -291,7 +316,11 @@ class PythonFileConceptPass(ctx: TranslationContext) :
      * ```
      */
     internal fun getOsOpenFlags(call: CallExpression): Long? {
-        return getArgumentValueByNameOrPosition<Long>(call, "flags", 1)
+        return call.getArgumentValueByNameOrPosition<Long>(
+            name = "flags",
+            position = 1,
+            evaluator = PythonValueEvaluator(),
+        )
     }
 
     internal fun translateOsOpenFlags(flags: Long): Set<FileAccessModeFlags> {
@@ -312,45 +341,6 @@ class PythonFileConceptPass(ctx: TranslationContext) :
             "r",
             "rt" -> setOf(FileAccessModeFlags.O_RDONLY)
             else -> TODO()
-        }
-    }
-
-    companion object {
-        /**
-         * A little helper function to find a [CallExpression]s argument first by name and if this
-         * fails by position. The argument ist evaluated and the result is returned if it has the
-         * expected type [T].
-         *
-         * @param call The [CallExpression] to analyze.
-         * @param name Optionally: the [CallExpression.arguments] name.
-         * @param pos Optionally: the [CallExpression.arguments] position.
-         * @return The evaluated result (of type [T]) or `null`.
-         */
-        inline fun <reified T> getArgumentValueByNameOrPosition(
-            call: CallExpression,
-            name: String?,
-            pos: Int?,
-        ): T? {
-            val arg =
-                name?.let { call.argumentEdges[it] } ?: pos?.let { call.arguments.getOrNull(it) }
-            val value =
-                when (arg) {
-                    is Literal<*> -> arg.value
-                    is Reference -> arg.evaluate(PythonValueEvaluator())
-                    else -> null
-                }
-            return if (value is T) {
-                value
-            } else {
-                Util.errorWithFileLocation(
-                    call,
-                    log,
-                    "Evaluated the argument to type \"{}\". Expected \"{}\". Returning \"null\".",
-                    value?.let { it::class.simpleName },
-                    T::class.simpleName,
-                )
-                null
-            }
         }
     }
 }

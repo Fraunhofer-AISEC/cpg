@@ -27,8 +27,10 @@ package de.fraunhofer.aisec.cpg.passes.concepts.file.python
 
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.python.PythonValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.getArgumentValueByNameOrPosition
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.concepts.ConceptPass
@@ -51,9 +53,17 @@ class PythonPathConceptPass(ctx: TranslationContext) : ConceptPass(ctx) {
         when (call.reconstructedImportName.toString()) {
             "os.path.join" -> {
                 val firstArgValue =
-                    PythonFileConceptPass.getArgumentValueByNameOrPosition<String>(call, "a", 0)
+                    call.getArgumentValueByNameOrPosition<String>(
+                        name = "a",
+                        position = 0,
+                        evaluator = PythonValueEvaluator(),
+                    )
                 val secondArgValue =
-                    PythonFileConceptPass.getArgumentValueByNameOrPosition<String>(call, null, 1)
+                    call.getArgumentValueByNameOrPosition<String>(
+                        name = null,
+                        position = 1,
+                        evaluator = PythonValueEvaluator(),
+                    )
                 if (call.arguments.size != 2) {
                     Util.errorWithFileLocation(
                         call,
