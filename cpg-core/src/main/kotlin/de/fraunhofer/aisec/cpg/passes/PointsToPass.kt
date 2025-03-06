@@ -1218,12 +1218,12 @@ fun PointsToState.pushToDeclarationsState(
 ): PointsToStateElement {
     // If we already have exactly that entry, no need to re-write it, otherwise we might confuse the
     // iterateEOG function
-    if (
-        newLatticeElement.second == currentState.declarationsState[newNode]?.second ||
-            (newLatticeElement.first.isEmpty() && newLatticeElement.second.isEmpty())
-    ) {
-        return currentState
+    newLatticeElement.second.removeAll { pair ->
+        currentState.declarationsState[newNode]?.second?.any {
+            it.first === pair.first && it.second == pair.second
+        } == true
     }
+
     val newDeclarationsState =
         this.innerLattice2.lub(
             currentState.declarationsState,
@@ -1282,13 +1282,15 @@ fun PointsToStateElement.fetchElementFromDeclarationState(
                 }
             val newPair = Pair(newEntry, false)
             this.declarationsState.computeIfAbsent(addr) {
-                TupleLattice.Element(
-                    PowersetLattice.Element(addr),
-                    PowersetLattice.Element(newPair),
-                )
+                TupleLattice.Element(PowersetLattice.Element(addr), PowersetLattice.Element())
             }
             val newElements = this.declarationsState[addr]?.second
-            newElements?.add(newPair)
+            if (
+                newElements?.none { it.first === newPair.first && it.second == newPair.second } !=
+                    false
+            ) {
+                newElements?.add(newPair)
+            }
             ret.add(Pair(newEntry, ""))
         } else elements.map { ret.add(Pair(it.first, "")) }
 
