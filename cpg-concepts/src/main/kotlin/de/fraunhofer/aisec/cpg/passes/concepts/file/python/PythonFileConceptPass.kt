@@ -42,7 +42,6 @@ import de.fraunhofer.aisec.cpg.passes.configuration.RequiredFrontend
 
 @ExecuteLate
 @RequiredFrontend(PythonLanguageFrontend::class)
-// @DependsOn(PythonPathConceptPass::class)
 class PythonFileConceptPass(ctx: TranslationContext) :
     ConceptPass(ctx) { // TODO logging 2 ConceptPass
 
@@ -113,7 +112,7 @@ class PythonFileConceptPass(ctx: TranslationContext) :
                                 log = log,
                                 format =
                                     "Handling of \"{}\" is not yet implemented. No concept node is created.",
-                                callExpression.name.localName,
+                                callExpression,
                             )
                     }
                 }
@@ -141,10 +140,10 @@ class PythonFileConceptPass(ctx: TranslationContext) :
                     newFileOpen(underlyingNode = callExpression, file = newFileNode)
                 }
                 "os.chmod" -> {
-                    val pathArg =
-                        callExpression.argumentEdges["path"]
-                            ?: callExpression.arguments.getOrNull(0)
-                    if (pathArg !is Expression) {
+                    val fileName =
+                        getArgumentValueByNameOrPosition<String>(callExpression, "path", 0)
+                            as? String
+                    if (fileName == null) {
                         Util.errorWithFileLocation(
                             callExpression,
                             log,
@@ -152,18 +151,9 @@ class PythonFileConceptPass(ctx: TranslationContext) :
                         )
                         return
                     }
-                    val file =
-                        findFile(pathArg)
-                            ?: fileCache[
-                                getArgumentValueByNameOrPosition<String>(callExpression, "path", 0)]
-                    if (file == null) {
-                        Util.errorWithFileLocation(
-                            callExpression,
-                            log,
-                            "Failed to find the corresponding file. Ignoring the entire `os.chmod` call..",
-                        )
-                        return
-                    }
+
+                    val file = getOrCreateFile(fileName, callExpression)
+
                     val mode = getArgumentValueByNameOrPosition<Long>(callExpression, "mode", 1)
                     if (mode == null) {
                         Util.errorWithFileLocation(
@@ -284,11 +274,22 @@ class PythonFileConceptPass(ctx: TranslationContext) :
      * ```python
      * os.open(path, flags, mode=0o777, *, dir_fd=None)
      * ```
+     *
+     * @param call The `os.open` call.
+     * @return The `mask` TODO mask <-> mode confusion
      */
     internal fun getOsOpenMask(call: CallExpression): Long? {
         return getArgumentValueByNameOrPosition<Long>(call, "mask", 2)
     }
 
+    /**
+     * Handles the `flags` parameter of `os.open` function.
+     *
+     * [`os.open`](https://docs.python.org/3/library/os.html#os.open) signature:
+     * ```python
+     * os.open(path, flags, mode=0o777, *, dir_fd=None)
+     * ```
+     */
     internal fun getOsOpenFlags(call: CallExpression): Long? {
         return getArgumentValueByNameOrPosition<Long>(call, "flags", 1)
     }
