@@ -35,7 +35,27 @@ import de.fraunhofer.aisec.cpg.helpers.Util
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
-class CouldNotResolve
+/**
+ * Represents the result of an evaluation of the [ValueEvaluator]. It can either be a [Success]
+ * value or a [Failure].
+ */
+sealed class Value {
+    /**
+     * Represents a failed evaluation. The [partialValue] contains the attempt of a partial value,
+     * for example in the form of a placeholder.
+     */
+    class Failure(val partialValue: String? = null) : Value()
+
+    /**
+     * Represents a successful evaluation of type [T]. The [value] contains the actual value of the
+     * evaluation.
+     */
+    data class Success<T>(val value: T) : Value()
+}
+
+fun <T> valueOf(value: T): Value.Success<T> {
+    return Value.Success(value)
+}
 
 /**
  * The value evaluator tries to evaluate the (constant) value of an [Expression] basically by
@@ -56,15 +76,22 @@ open class ValueEvaluator(
     /**
      * Contains a reference to a function that gets called if the value cannot be resolved by the
      * standard behaviour.
+     *
+     * It intentionally returns a [Value] instead of a [Value.Failure] in
+     * order to allow the user to recover from an error if he overrides this function factory.
      */
-    open val cannotEvaluate: (Node?, ValueEvaluator) -> Any? = { node: Node?, _: ValueEvaluator ->
-        // end of the line, lets just keep the expression name
-        if (node != null) {
-            "{${node.name}}"
-        } else {
-            CouldNotResolve()
+    open val cannotEvaluate: (Node?, ValueEvaluator) -> Value =
+        { node: Node?, _: ValueEvaluator ->
+            // end of the line, lets just keep the expression name
+            val partialValue =
+                if (node != null) {
+                    "{${node.name}}"
+                } else {
+                    null
+                }
+
+            Value.Failure(partialValue)
         }
-    }
 ) {
     open val log: Logger
         get() = LoggerFactory.getLogger(ValueEvaluator::class.java)
@@ -72,8 +99,10 @@ open class ValueEvaluator(
     /** This property contains the path of the latest execution of [evaluateInternal]. */
     val path: MutableList<Node> = mutableListOf()
 
-    open fun evaluate(node: Any?): Any? {
-        if (node !is Node) return node
+    open fun evaluate(node: Any?): Value {
+        if (node !is Node) {
+            return Value.Failure(null)
+        }
 
         return evaluateInternal(node, 0)
     }
@@ -82,17 +111,17 @@ open class ValueEvaluator(
      * Tries to evaluate this node and returns the result as the specified type [T]. If the
      * evaluation fails, the result is "null".
      */
-    inline fun <reified T> evaluateAs(node: Node?): T? {
+    inline fun <reified T> evaluateAs(node: Node?): Value {
         val result = evaluateInternal(node, 0)
-        return if (result !is T) {
+        return if (result is Value.Success<*> && result.value !is T) {
             Util.errorWithFileLocation(
                 node,
                 log,
                 "Evaluated the node to type \"{}\". Expected type \"{}\". Returning \"null\".",
-                result?.let { it::class.simpleName },
+                result.let { it::class.simpleName },
                 T::class.simpleName,
             )
-            null
+            Value.Failure()
         } else {
             result
         }
@@ -103,9 +132,9 @@ open class ValueEvaluator(
     }
 
     /** Tries to evaluate this node. Anything can happen. */
-    open fun evaluateInternal(node: Node?, depth: Int): Any? {
+    open fun evaluateInternal(node: Node?, depth: Int): Value {
         if (node == null) {
-            return null
+            return cannotEvaluate(node, this)
         }
 
         // Add the expression to the current path
@@ -115,7 +144,7 @@ open class ValueEvaluator(
             is NewArrayExpression -> return handleHasInitializer(node, depth)
             is VariableDeclaration -> return handleHasInitializer(node, depth)
             // For a literal, we can just take its value, and we are finished
-            is Literal<*> -> return node.value
+            is Literal<*> -> return handleLiteral(node, depth)
             is UnaryOperator -> return handleUnaryOp(node, depth)
             is BinaryOperator -> return handleBinaryOperator(node, depth)
             // Casts are just a wrapper in this case, we are interested in the inner expression
@@ -133,11 +162,18 @@ open class ValueEvaluator(
         return cannotEvaluate(node, this)
     }
 
+    private fun handleLiteral(
+        node: Literal<*>,
+        depth: Int
+    ): Value {
+        return Value.Success(node.value)
+    }
+
     /**
      * If a node declaration implements [HasInitializer], we can use the initializer to evaluate
      * their value. If not, we can try to use [handlePrevDFG].
      */
-    protected fun handleHasInitializer(node: HasInitializer, depth: Int): Any? {
+    protected fun handleHasInitializer(node: HasInitializer, depth: Int): Value {
         // If we have an initializer, we can use it. Otherwise, we can fall back to the prevDFG
         return if (node.initializer != null) {
             evaluateInternal(node.initializer, depth + 1)
@@ -170,14 +206,19 @@ open class ValueEvaluator(
      * We are handling some basic arithmetic binary operations and string operations that are more
      * or less language-independent.
      */
-    protected open fun handleBinaryOperator(expr: BinaryOperator, depth: Int): Any? {
+    protected open fun handleBinaryOperator(expr: BinaryOperator, depth: Int): Value {
         // Resolve rhs
-        val rhsValue = evaluateInternal(expr.rhs, depth + 1)
+        val rhsResult = evaluateInternal(expr.rhs, depth + 1)
 
         // Resolve lhs
-        val lhsValue = evaluateInternal(expr.lhs, depth + 1)
+        val lhsResult = evaluateInternal(expr.lhs, depth + 1)
 
-        return computeBinaryOpEffect(lhsValue, rhsValue, expr)
+        // We can only proceed if both sides are successful
+        if(lhsResult !is Value.Success<*> || rhsResult !is Value.Success<*>) {
+            return cannotEvaluate(expr, this)
+        }
+
+        return computeBinaryOpEffect(lhsResult, rhsResult, expr)
     }
 
     /**
@@ -187,10 +228,10 @@ open class ValueEvaluator(
      * [AssignExpression], if [AssignExpression.isCompoundAssignment] is true.
      */
     protected open fun computeBinaryOpEffect(
-        lhsValue: Any?,
-        rhsValue: Any?,
+        lhsValue: Value.Success<*>,
+        rhsValue: Value.Success<*>,
         has: HasOperatorCode?,
-    ): Any? {
+    ): Value {
         val expr = has as? Expression
         return when (has?.operatorCode) {
             "+",
@@ -216,55 +257,55 @@ open class ValueEvaluator(
         }
     }
 
-    private fun handlePlus(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
+    private fun handlePlus(lhsValue: Value.Success<*>, rhsValue: Value.Success<*>, expr: Expression?): Value {
         return when {
-            lhsValue is String -> lhsValue + rhsValue
-            lhsValue is Number && rhsValue is Number -> lhsValue + rhsValue
+            lhsValue.value is String -> valueOf<String>(lhsValue.value + rhsValue.value)
+            lhsValue.value is Number && rhsValue.value is Number -> valueOf<Number>(lhsValue.value + rhsValue.value)
             else -> cannotEvaluate(expr, this)
         }
     }
 
-    private fun handleMinus(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
+    private fun handleMinus(lhsValue: Value.Success<*>, rhsValue: Value.Success<*>, expr: Expression?): Value {
         return when {
-            lhsValue is Number && rhsValue is Number -> lhsValue - rhsValue
+            lhsValue.value is Number && rhsValue.value is Number -> valueOf<Number>(lhsValue.value - rhsValue.value)
             else -> cannotEvaluate(expr, this)
         }
     }
 
-    private fun handleDiv(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
+    private fun handleDiv(lhsValue: Value.Success<*>, rhsValue: Value.Success<*>, expr: Expression?): Value {
         return when {
-            rhsValue == 0 -> cannotEvaluate(expr, this)
-            lhsValue is Number && rhsValue is Number -> lhsValue / rhsValue
+            rhsValue.value == 0 -> cannotEvaluate(expr, this)
+            lhsValue.value is Number && rhsValue.value is Number -> valueOf(lhsValue.value / rhsValue.value)
             else -> cannotEvaluate(expr, this)
         }
     }
 
-    private fun handleTimes(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
+    private fun handleTimes(lhsValue: Value.Success<*>, rhsValue: Value.Success<*>, expr: Expression?): Value {
         return when {
-            lhsValue is Number && rhsValue is Number -> lhsValue * rhsValue
+            lhsValue.value is Number && rhsValue.value is Number -> valueOf(lhsValue.value * rhsValue.value)
             else -> cannotEvaluate(expr, this)
         }
     }
 
-    private fun handleShiftLeft(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
-        return when {
-            // right side must always be an int
-            lhsValue is Int && rhsValue is Int -> lhsValue shl rhsValue
-            lhsValue is Long && rhsValue is Int -> lhsValue shl rhsValue
-            else -> cannotEvaluate(expr, this)
-        }
-    }
-
-    private fun handleShiftRight(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
+    private fun handleShiftLeft(lhsValue: Value.Success<*>, rhsValue: Value.Success<*>, expr: Expression?): Value {
         return when {
             // right side must always be an int
-            lhsValue is Int && rhsValue is Int -> lhsValue shr rhsValue
-            lhsValue is Long && rhsValue is Int -> lhsValue shr rhsValue
+            lhsValue.value is Int && rhsValue.value is Int -> valueOf(lhsValue.value shl rhsValue.value)
+            lhsValue.value is Long && rhsValue.value is Int -> valueOf(lhsValue.value shl rhsValue.value)
             else -> cannotEvaluate(expr, this)
         }
     }
 
-    private fun handleBitwiseAnd(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
+    private fun handleShiftRight(lhsValue: Value.Success<*>, rhsValue: Value.Success<*>, expr: Expression?): Value {
+        return when {
+            // right side must always be an int
+            lhsValue.value is Int && rhsValue.value is Int -> valueOf(lhsValue.value shr rhsValue.value)
+            lhsValue.value is Long && rhsValue.value is Int -> valueOf(lhsValue.value shr rhsValue.value)
+            else -> cannotEvaluate(expr, this)
+        }
+    }
+
+    private fun handleBitwiseAnd(lhsValue: Value.Success<*>, rhsValue: Value.Success<*>, expr: Expression?): Value {
         return when {
             // left and right must be equal and only long and int are supported
             lhsValue is Int && rhsValue is Int -> lhsValue and rhsValue
@@ -273,7 +314,7 @@ open class ValueEvaluator(
         }
     }
 
-    private fun handleBitwiseOr(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
+    private fun handleBitwiseOr(lhsValue: Value.Success<*>, rhsValue: Value.Success<*>, expr: Expression?): Value {
         return when {
             // left and right must be equal and only long and int are supported
             lhsValue is Int && rhsValue is Int -> lhsValue or rhsValue
@@ -282,7 +323,7 @@ open class ValueEvaluator(
         }
     }
 
-    private fun handleBitwiseXor(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
+    private fun handleBitwiseXor(lhsValue: Value.Success<*>, rhsValue: Value.Success<*>, expr: Expression?): Value {
         return when {
             // left and right must be equal and only long and int are supported
             lhsValue is Int && rhsValue is Int -> lhsValue xor rhsValue
@@ -291,7 +332,7 @@ open class ValueEvaluator(
         }
     }
 
-    protected open fun handleGreater(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
+    protected open fun handleGreater(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Value {
         return if (lhsValue is Number && rhsValue is Number) {
             lhsValue.compareTo(rhsValue) > 0
         } else {
@@ -299,7 +340,7 @@ open class ValueEvaluator(
         }
     }
 
-    protected open fun handleGEq(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
+    protected open fun handleGEq(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Value {
         return if (lhsValue is Number && rhsValue is Number) {
             lhsValue.compareTo(rhsValue) >= 0
         } else {
@@ -307,7 +348,7 @@ open class ValueEvaluator(
         }
     }
 
-    protected open fun handleLess(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
+    protected open fun handleLess(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Value {
         return if (lhsValue is Number && rhsValue is Number) {
             lhsValue.compareTo(rhsValue) < 0
         } else {
@@ -315,7 +356,7 @@ open class ValueEvaluator(
         }
     }
 
-    protected open fun handleLEq(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
+    protected open fun handleLEq(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Value {
         return if (lhsValue is Number && rhsValue is Number) {
             lhsValue.compareTo(rhsValue) <= 0
         } else {
@@ -323,7 +364,7 @@ open class ValueEvaluator(
         }
     }
 
-    protected open fun handleEq(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
+    protected open fun handleEq(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Value {
         return when {
             lhsValue is Number && rhsValue is Number -> {
                 lhsValue.compareTo(rhsValue) == 0
@@ -337,7 +378,7 @@ open class ValueEvaluator(
         }
     }
 
-    protected open fun handleNEq(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Any? {
+    protected open fun handleNEq(lhsValue: Any?, rhsValue: Any?, expr: Expression?): Value {
         return when {
             lhsValue is Number && rhsValue is Number -> {
                 lhsValue.compareTo(rhsValue) != 0
@@ -355,26 +396,21 @@ open class ValueEvaluator(
      * We handle some basic unary operators. These also affect pointers and dereferences for
      * languages that support them.
      */
-    protected open fun handleUnaryOp(expr: UnaryOperator, depth: Int): Any? {
+    protected open fun handleUnaryOp(expr: UnaryOperator, depth: Int): Value {
+        val inputResult = evaluateInternal(expr.input, depth + 1)
+        if(inputResult !is Value.Success<*>) {
+            return cannotEvaluate(expr, this)
+        }
+
+        val inputValue = inputResult.value
+        if(inputValue !is Number) {
+            return cannotEvaluate(expr, this)
+        }
+
         return when (expr.operatorCode) {
-            "-" -> {
-                when (val input = evaluateInternal(expr.input, depth + 1)) {
-                    is Number -> -input
-                    else -> cannotEvaluate(expr, this)
-                }
-            }
-            "--" -> {
-                return when (val input = evaluateInternal(expr.input, depth + 1)) {
-                    is Number -> input.dec()
-                    else -> cannotEvaluate(expr, this)
-                }
-            }
-            "++" -> {
-                when (val input = evaluateInternal(expr.input, depth + 1)) {
-                    is Number -> input.inc()
-                    else -> cannotEvaluate(expr, this)
-                }
-            }
+            "-" -> Value.Success(-inputValue)
+            "--" -> Value.Success(inputValue.dec())
+            "++" -> Value.Success(inputValue.inc())
             "*" -> evaluateInternal(expr.input, depth + 1)
             "&" -> evaluateInternal(expr.input, depth + 1)
             else -> cannotEvaluate(expr, this)
@@ -431,7 +467,7 @@ open class ValueEvaluator(
     }
 
     /** Tries to compute the constant value of a node based on its [Node.prevDFG]. */
-    protected open fun handlePrevDFG(node: Node, depth: Int): Any? {
+    protected open fun handlePrevDFG(node: Node, depth: Int): Value {
         // For a reference, we are interested into its last assignment into the reference
         // denoted by the previous DFG edge. We need to filter out any self-references for READWRITE
         // references.
