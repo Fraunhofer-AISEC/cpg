@@ -2099,11 +2099,11 @@ class PointsToPassTest {
         assertNotNull(pDerefLine394)
 
         // FunctionDeclarations
-        val incpFD = tu.functions.filter { it.name.localName == "incp" }.first()
+        val incpFD = tu.functions.firstOrNull { it.name.localName == "incp" }
         assertNotNull(incpFD)
 
         // ParameterMemoryValues
-        val incpDerefValue = incpFD.parameters.first().memoryValue?.memoryValue
+        val incpDerefValue = incpFD.parameters.first().memoryValue?.memoryValues?.singleOrNull()
         assertNotNull(incpDerefValue)
 
         // Literals

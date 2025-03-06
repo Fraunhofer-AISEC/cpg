@@ -258,7 +258,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             // additionally get new MemoryAddresses
             val newMemoryValues = value.second
             val newMemoryAddresses = value.first
-            /*if (key is HasMemoryValue) {
+            if (key is HasMemoryValue) {
                 newMemoryValues.forEach { prev ->
                     val properties = edgePropertiesMap[Pair(key, prev)]
                     var context: CallingContext? = null
@@ -266,9 +266,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     var functionSummary = false
 
                     // the entry in the edgePropertiesMap can contain a lot of things. A
-                    // granularity, a
-                    // callingcontext, or a boolean indicating if this is a functionSummary edge or
-                    // not
+                    // granularity, a callingcontext, or a boolean indicating if this is a
+                    // functionSummary edge or not
                     properties?.forEach { property ->
                         when (property) {
                             is Granularity -> granularity = property
@@ -287,7 +286,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             functionSummary,
                         )
                 }
-            }*/
+            }
 
             val newPrevDFG = value.second // TODO: Replace with value.third for last write
             newPrevDFG.forEach { prev ->
@@ -549,7 +548,10 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         )
                     // Also draw the edges for the (deref)derefvalues if we have any and are
                     // dealing with a pointer parameter (AKA memoryValue is not null)
-                    val derefPMV = memVal.memoryValue
+                    val derefPMV =
+                        memVal.memoryValues
+                            .singleOrNull() // TODO: This is a workaround. Should probably iterate
+                    // through everything???
                     if (derefPMV != null) {
                         doubleState
                             .getNestedValues(
@@ -574,7 +576,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                         ),
                                     )
                                 // The same for the derefderef values
-                                val derefderefPMV = derefPMV.memoryValue
+                                val derefderefPMV =
+                                    (derefPMV as? HasMemoryValue)
+                                        ?.memoryValues
+                                        ?.singleOrNull() // TODO: This is a workaround. Should
+                                // probably iterate through everything???
                                 if (derefderefPMV != null) {
                                     doubleState
                                         .getNestedValues(
@@ -1104,7 +1110,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         // Link the PMVs with each other so that we can find them. This is
                         // especially important outside the respective function where we don't have
                         // a state
-                        (pmv.memoryAddress as ParameterMemoryValue).memoryValue = pmv
+                        (pmv.memoryAddress as ParameterMemoryValue).memoryValues += pmv
                     }
 
                     // Update the states

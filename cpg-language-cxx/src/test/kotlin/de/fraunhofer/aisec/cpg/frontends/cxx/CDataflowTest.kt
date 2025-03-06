@@ -58,7 +58,8 @@ class CDataflowTest {
         val startFunction = renegotiate
         // The start variable is the deref value of the parameter, so we use
         // .memoryValue.memoryValue
-        val startVariable = startFunction.parameters["ctx"]?.memoryValue?.memoryValue!!
+        val startVariable =
+            startFunction.parameters["ctx"]?.memoryValue?.memoryValues?.singleOrNull()
         assertNotNull(startVariable)
 
         // In this example we want to have the list of all fields of "ctx" that

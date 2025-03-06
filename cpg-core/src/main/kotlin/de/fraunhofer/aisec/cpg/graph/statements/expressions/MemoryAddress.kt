@@ -26,14 +26,17 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.HasMemoryAddress
+import de.fraunhofer.aisec.cpg.graph.HasMemoryValue
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
+import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflows
 import de.fraunhofer.aisec.cpg.graph.edges.memoryAddressEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import org.neo4j.ogm.annotation.Relationship
 
-open class MemoryAddress(override var name: Name, open var isGlobal: Boolean = false) : Node() {
+open class MemoryAddress(override var name: Name, open var isGlobal: Boolean = false) :
+    Node(), HasMemoryValue {
 
     /**
      * Each Declaration allocates new memory, AKA a new address, so we create a new MemoryAddress
@@ -58,6 +61,20 @@ open class MemoryAddress(override var name: Name, open var isGlobal: Boolean = f
     override fun hashCode(): Int {
         return super.hashCode()
     }
+
+    @Relationship
+    override var memoryValueEdges =
+        Dataflows<Node>(
+            this,
+            mirrorProperty = HasMemoryValue::memoryValueUsageEdges,
+            outgoing = false,
+        )
+    override var memoryValues by unwrapping(MemoryAddress::memoryValueEdges)
+
+    @Relationship
+    override var memoryValueUsageEdges =
+        Dataflows<Node>(this, mirrorProperty = HasMemoryValue::memoryValueEdges, outgoing = true)
+    override var memoryValueUsages by unwrapping(MemoryAddress::memoryValueUsageEdges)
 }
 
 /**
@@ -73,10 +90,6 @@ class ParameterMemoryValue(override var name: Name) : MemoryAddress(name) {
      */
     var memoryAddressEdge = astOptionalEdgeOf<Node>()
     var memoryAddress by unwrapping(ParameterMemoryValue::memoryAddressEdge)
-
-    /** Same for the value, make sure we don't use it across different functions */
-    var memoryValueEdge = astOptionalEdgeOf<ParameterMemoryValue>()
-    var memoryValue by unwrapping(ParameterMemoryValue::memoryValueEdge)
 }
 
 /** We don't know the value. It might be set somewhere else or not. No idea. */
