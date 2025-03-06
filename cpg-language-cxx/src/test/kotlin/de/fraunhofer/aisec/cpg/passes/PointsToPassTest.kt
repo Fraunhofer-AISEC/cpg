@@ -1256,7 +1256,10 @@ class PointsToPassTest {
                 .size,
         )
         assertTrue(local_28DerefLine179.prevFullDFG.contains(literal0Line177))
-        assertEquals(2, local_28DerefLine179.memoryValues.size)
+        assertEquals(
+            2,
+            local_28DerefLine179.memoryValues.size,
+        ) // TODO: We used memoryAddresses here. Why?
         assertTrue(local_28DerefLine179.memoryValues.contains(literal0Line167))
         assertTrue(local_28DerefLine179.memoryValues.contains(ceLine172))
 
