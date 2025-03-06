@@ -78,11 +78,7 @@ open class ValueEvaluator(
         return evaluateInternal(node, 0)
     }
 
-    open inline fun <reified T> evaluateAs(node: Node?): T? {
-        if (node is T) {
-            return node
-        }
-
+    public inline fun <reified T> evaluateAs(node: Node?): T? {
         val result = evaluateInternal(node, 0)
         return if (result !is T) {
             Util.errorWithFileLocation(
