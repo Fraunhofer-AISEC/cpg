@@ -29,12 +29,12 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.python.PythonValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.argumentValueByNameOrPosition
 import de.fraunhofer.aisec.cpg.graph.concepts.file.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.get
 import de.fraunhofer.aisec.cpg.graph.evaluate
 import de.fraunhofer.aisec.cpg.graph.followPrevFullDFGEdgesUntilHit
-import de.fraunhofer.aisec.cpg.graph.getArgumentValueByNameOrPosition
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
@@ -145,7 +145,7 @@ class PythonFileConceptPass(ctx: TranslationContext) :
                 }
                 "os.chmod" -> {
                     val fileName =
-                        callExpression.getArgumentValueByNameOrPosition<String>(
+                        callExpression.argumentValueByNameOrPosition<String>(
                             name = "path",
                             position = 0,
                             evaluator = PythonValueEvaluator(),
@@ -162,7 +162,7 @@ class PythonFileConceptPass(ctx: TranslationContext) :
                     val file = getOrCreateFile(fileName, callExpression)
 
                     val mode =
-                        callExpression.getArgumentValueByNameOrPosition<Long>(
+                        callExpression.argumentValueByNameOrPosition<Long>(
                             name = "mode",
                             position = 1,
                             evaluator = PythonValueEvaluator(),
@@ -246,7 +246,7 @@ class PythonFileConceptPass(ctx: TranslationContext) :
      */
     private fun getFileName(call: CallExpression, argumentName: String): String {
         val name =
-            call.getArgumentValueByNameOrPosition<String>(
+            call.argumentValueByNameOrPosition<String>(
                 name = argumentName,
                 position = 0,
                 evaluator = PythonValueEvaluator(),
@@ -280,7 +280,7 @@ class PythonFileConceptPass(ctx: TranslationContext) :
      * ```
      */
     internal fun getBuiltinOpenMode(call: CallExpression): String? {
-        return call.getArgumentValueByNameOrPosition<String>(
+        return call.argumentValueByNameOrPosition<String>(
             name = "mode",
             position = 1,
             evaluator = PythonValueEvaluator(),
@@ -300,7 +300,7 @@ class PythonFileConceptPass(ctx: TranslationContext) :
      * @return The `mask` TODO mask <-> mode confusion
      */
     internal fun getOsOpenMask(call: CallExpression): Long? {
-        return call.getArgumentValueByNameOrPosition<Long>(
+        return call.argumentValueByNameOrPosition<Long>(
             name = "mask",
             position = 2,
             evaluator = PythonValueEvaluator(),
@@ -316,7 +316,7 @@ class PythonFileConceptPass(ctx: TranslationContext) :
      * ```
      */
     internal fun getOsOpenFlags(call: CallExpression): Long? {
-        return call.getArgumentValueByNameOrPosition<Long>(
+        return call.argumentValueByNameOrPosition<Long>(
             name = "flags",
             position = 1,
             evaluator = PythonValueEvaluator(),
