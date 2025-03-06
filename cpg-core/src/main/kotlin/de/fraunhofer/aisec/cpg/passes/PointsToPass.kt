@@ -258,7 +258,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             // additionally get new MemoryAddresses
             val newMemoryValues = value.second
             val newMemoryAddresses = value.first
-            if (key is HasMemoryValue) {
+            /*if (key is HasMemoryValue) {
                 newMemoryValues.forEach { prev ->
                     val properties = edgePropertiesMap[Pair(key, prev)]
                     var context: CallingContext? = null
@@ -287,7 +287,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             functionSummary,
                         )
                 }
-            }
+            }*/
 
             val newPrevDFG = value.second // TODO: Replace with value.third for last write
             newPrevDFG.forEach { prev ->

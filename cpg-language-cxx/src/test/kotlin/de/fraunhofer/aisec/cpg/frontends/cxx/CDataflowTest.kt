@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
-import de.fraunhofer.aisec.cpg.graph.edges.flows.PartialDataflowGranularity
+import de.fraunhofer.aisec.cpg.graph.edges.flows.FieldDataflowGranularity
 import de.fraunhofer.aisec.cpg.test.*
 import java.io.File
 import kotlin.test.Test
@@ -72,9 +72,9 @@ class CDataflowTest {
                 .flatMap {
                     it.prevDFGEdges
                         .map(Dataflow::granularity)
-                        .filterIsInstance<PartialDataflowGranularity<*>>()
+                        .filterIsInstance<FieldDataflowGranularity>()
                 }
-                .mapNotNull(PartialDataflowGranularity<*>::partialTarget)
+                .mapNotNull(FieldDataflowGranularity::partialTarget)
                 .toSet()
 
         assertTrue(fields.any { it.name.localName == "i" })
