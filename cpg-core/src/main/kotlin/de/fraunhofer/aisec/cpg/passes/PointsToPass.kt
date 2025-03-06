@@ -233,7 +233,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         val lattice =
             PointsToState(
                 SingleState(StateEntry(PowersetLattice<Node>(), PowersetLattice<Node>())),
-                //
                 // SingleDeclarationState(DeclarationStateEntry(PowersetLattice<Node>(),
                 // PowersetLattice<Pair<Node, Boolean>())),
                 SingleDeclarationState(
@@ -275,9 +274,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             is Boolean -> functionSummary = property
                         }
                     }
-                    if (context == null)
-                        key.memoryValueEdges += Dataflow(prev, key, granularity, functionSummary)
-                    // TODO: add functionSummary flag for contextSensitive DFs
+                    if (context == null) // TODO: add functionSummary flag for contextSensitive DFs
+                     key.memoryValueEdges += Dataflow(prev, key, granularity, functionSummary)
                     else
                         key.memoryValueEdges.addContextSensitive(
                             prev,
@@ -304,9 +302,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         is Boolean -> functionSummary = property
                     }
                 }
-                if (context == null)
-                    key.prevDFGEdges += Dataflow(prev, key, granularity, functionSummary)
-                // TODO: add functionSummary flag for contextSensitive DFs
+                if (context == null) // TODO: add functionSummary flag for contextSensitive DFs
+                 key.prevDFGEdges += Dataflow(prev, key, granularity, functionSummary)
                 else
                     key.prevDFGEdges.addContextSensitive(
                         prev,
@@ -548,11 +545,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         )
                     // Also draw the edges for the (deref)derefvalues if we have any and are
                     // dealing with a pointer parameter (AKA memoryValue is not null)
-                    val derefPMV =
-                        memVal.memoryValues
-                            .singleOrNull() // TODO: This is a workaround. Should probably iterate
-                    // through everything???
-                    if (derefPMV != null) {
+                    memVal.memoryValues.forEach { derefPMV ->
                         doubleState
                             .getNestedValues(
                                 arg,
@@ -576,12 +569,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                         ),
                                     )
                                 // The same for the derefderef values
-                                val derefderefPMV =
-                                    (derefPMV as? HasMemoryValue)
-                                        ?.memoryValues
-                                        ?.singleOrNull() // TODO: This is a workaround. Should
-                                // probably iterate through everything???
-                                if (derefderefPMV != null) {
+                                (derefPMV as? HasMemoryValue)?.memoryValues?.forEach { derefderefPMV
+                                    ->
+                                    // probably iterate through everything???
                                     doubleState
                                         .getNestedValues(
                                             derefValue,
@@ -796,9 +786,18 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                                             )]
                                                         ?.filterIsInstance<Boolean>()
                                                         ?.any { it } == true || shortFS
-                                                mapDstToSrc.computeIfAbsent(d) {
-                                                    identitySetOf()
-                                                } += Pair(value, shortFSEntry)
+                                                val currentSet =
+                                                    mapDstToSrc.computeIfAbsent(d) {
+                                                        identitySetOf()
+                                                    }
+                                                if (
+                                                    currentSet.none {
+                                                        it.first === value &&
+                                                            it.second == shortFSEntry
+                                                    }
+                                                ) {
+                                                    currentSet += Pair(value, shortFSEntry)
+                                                }
                                             }
                                         }
                                     }
@@ -816,12 +815,22 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                             if (it.argumentIndex < currentNode.arguments.size) {
                                                 val arg = currentNode.arguments[it.argumentIndex]
                                                 destination.forEach { d ->
-                                                    mapDstToSrc.computeIfAbsent(d) {
-                                                        identitySetOf()
-                                                    } +=
-                                                        doubleState
-                                                            .getNestedValues(arg, srcValueDepth)
-                                                            .map { Pair(it, shortFS) }
+                                                    val currentSet =
+                                                        mapDstToSrc.computeIfAbsent(d) {
+                                                            identitySetOf()
+                                                        }
+                                                    doubleState
+                                                        .getNestedValues(arg, srcValueDepth)
+                                                        .forEach { value ->
+                                                            if (
+                                                                currentSet.none {
+                                                                    it.first === value &&
+                                                                        it.second == shortFS
+                                                                }
+                                                            ) {
+                                                                currentSet += Pair(value, shortFS)
+                                                            }
+                                                        }
                                                 }
                                             }
                                         }
@@ -830,20 +839,40 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
                                 is MemoryAddress -> {
                                     destination.forEach { d ->
-                                        mapDstToSrc.computeIfAbsent(d) { identitySetOf() } +=
-                                            Pair(srcNode, shortFS)
+                                        val currentSet =
+                                            mapDstToSrc.computeIfAbsent(d) { identitySetOf() }
+                                        if (
+                                            currentSet.none {
+                                                it.first === srcNode && it.second == shortFS
+                                            }
+                                        ) {
+                                            currentSet += Pair(srcNode, shortFS)
+                                        }
                                     }
                                 }
 
                                 else -> {
                                     destination.forEach { d ->
-                                        mapDstToSrc.computeIfAbsent(d) { identitySetOf() } +=
+                                        val currentSet =
+                                            mapDstToSrc.computeIfAbsent(d) { identitySetOf() }
+                                        val newSet =
                                             if (srcValueDepth == 0)
                                                 identitySetOf(Pair(srcNode, shortFS))
                                             else
                                                 doubleState
                                                     .getNestedValues(srcNode, srcValueDepth)
                                                     .map { Pair(it, shortFS) }
+
+                                        newSet.forEach { pair ->
+                                            if (
+                                                currentSet.none {
+                                                    it.first === pair.first &&
+                                                        it.second == pair.second
+                                                }
+                                            ) {
+                                                currentSet += pair
+                                            }
+                                        }
                                     }
                                 }
                             }
