@@ -28,10 +28,12 @@ package de.fraunhofer.aisec.cpg.passes.concepts.file.python
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.python.PythonValueEvaluator
-import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.file.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.get
+import de.fraunhofer.aisec.cpg.graph.evaluate
+import de.fraunhofer.aisec.cpg.graph.followPrevFullDFGEdgesUntilHit
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.concepts.ConceptPass
@@ -47,6 +49,17 @@ class PythonFileConceptPass(ctx: TranslationContext) :
     /** The file name used if we fail to find it. */
     internal val DEFAULT_FILE_NAME = "DEFAULT_FILE_NAME"
 
+    /**
+     * Maps file names to [File] nodes. This is required to prevent the creation of multiple [File]
+     * nodes when API calls do not have a file object but a file name.
+     *
+     * ```python
+     * os.chmod("foo.txt", ...
+     * os.open("foo.txt", ...
+     * ```
+     *
+     * should both operate on the same [File] concept node.
+     */
     internal val fileCache = mutableMapOf<String, File>()
 
     override fun handleNode(node: Node, tu: TranslationUnitDeclaration) {
@@ -212,7 +225,11 @@ class PythonFileConceptPass(ctx: TranslationContext) :
                 .filterIsInstance<FileOpen>() // discard not-relevant overlays
                 .map { it.concept } // move from [FileOpen] to the corresponding [File] concept node
         if (fileCandidates.size > 1) {
-            log.error("Found multiple files. Selecting one at random.")
+            Util.errorWithFileLocation(
+                expression,
+                log,
+                "Found multiple files. Selecting one at random.",
+            )
         }
         return fileCandidates.firstOrNull()
     }
@@ -237,13 +254,10 @@ class PythonFileConceptPass(ctx: TranslationContext) :
             )
             val nameArg =
                 (call.argumentEdges[argumentName] ?: call.arguments.getOrNull(0)) as? Reference
-            if (nameArg != null) {
-                val lastWrite =
-                    nameArg.followPrevDFG { it is Reference && it.access == AccessValues.WRITE }
-                (lastWrite?.lastOrNull()?.evaluate(PythonValueEvaluator()) as? String)
-                    ?: DEFAULT_FILE_NAME
+            if (nameArg != null) { // todo: never executed with current tests
+                (nameArg.evaluate() as? String) ?: DEFAULT_FILE_NAME
             } else {
-                //  not a Refernce
+                //  not a [Reference]
                 DEFAULT_FILE_NAME
             }
         }
@@ -252,8 +266,8 @@ class PythonFileConceptPass(ctx: TranslationContext) :
     /**
      * Handles the `mode` parameter of Pythons builtin `open` function.
      *
-     * Do not confuse with the `mode` in `os.open` (see [TODO]). [Signature
-     * `open`](https://docs.python.org/3/library/functions.html#open):
+     * Do not confuse with the `mode` in `os.open` (see [getOsOpenFlags]).
+     * [`open`](https://docs.python.org/3/library/functions.html#open) signature:
      * ```python
      * open(file, mode='r', buffering=-1, encoding=None, errors=None, newline=None, closefd=True, opener=None)
      * ```
@@ -265,8 +279,8 @@ class PythonFileConceptPass(ctx: TranslationContext) :
     /**
      * Handles the `mask` parameter of `os.open` function.
      *
-     * Do not confuse with the builtin `open` (see [getBuiltinOpenMode]). [Signature
-     * `os.open`](https://docs.python.org/3/library/os.html#os.open):
+     * Do not confuse with the builtin `open` (see [getBuiltinOpenMode]).
+     * [`os.open`](https://docs.python.org/3/library/os.html#os.open) signature:
      * ```python
      * os.open(path, flags, mode=0o777, *, dir_fd=None)
      * ```
