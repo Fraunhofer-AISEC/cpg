@@ -52,14 +52,19 @@ val nodesCreatingUnknownValues = ConcurrentHashMap<Pair<Node, Name>, MemoryAddre
 typealias StateEntry = TupleLattice<PowersetLattice.Element<Node>, PowersetLattice.Element<Node>>
 
 typealias DeclarationStateEntry =
-    TupleLattice<PowersetLattice.Element<Node>, PowersetLattice.Element<Pair<Node, Boolean>>>
+    TripleLattice<
+        PowersetLattice.Element<Node>,
+        PowersetLattice.Element<Pair<Node, Boolean>>,
+        PowersetLattice.Element<Pair<Node, Boolean>>,
+    >
 
 typealias StateEntryElement =
     TupleLattice.Element<PowersetLattice.Element<Node>, PowersetLattice.Element<Node>>
 
 typealias DeclarationStateEntryElement =
-    TupleLattice.Element<
+    TripleLattice.Element<
         PowersetLattice.Element<Node>,
+        PowersetLattice.Element<Pair<Node, Boolean>>,
         PowersetLattice.Element<Pair<Node, Boolean>>,
     >
 
@@ -72,8 +77,9 @@ typealias SingleGeneralStateElement =
 typealias SingleDeclarationStateElement =
     MapLattice.Element<
         Node,
-        TupleLattice.Element<
+        TripleLattice.Element<
             PowersetLattice.Element<Node>,
+            PowersetLattice.Element<Pair<Node, Boolean>>,
             PowersetLattice.Element<Pair<Node, Boolean>>,
         >,
     >
@@ -87,8 +93,9 @@ typealias SingleState =
 typealias SingleDeclarationState =
     MapLattice<
         Node,
-        TupleLattice.Element<
+        TripleLattice.Element<
             PowersetLattice.Element<Node>,
+            PowersetLattice.Element<Pair<Node, Boolean>>,
             PowersetLattice.Element<Pair<Node, Boolean>>,
         >,
     >
@@ -236,7 +243,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 // SingleDeclarationState(DeclarationStateEntry(PowersetLattice<Node>(),
                 // PowersetLattice<Pair<Node, Boolean>())),
                 SingleDeclarationState(
-                    DeclarationStateEntry(PowersetLattice<Node>(), PowersetLattice())
+                    DeclarationStateEntry(
+                        PowersetLattice<Node>(),
+                        PowersetLattice(),
+                        PowersetLattice(),
+                    )
                 ),
             )
 
@@ -245,7 +256,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             lattice.pushToDeclarationsState(
                 startState,
                 node,
-                DeclarationStateEntryElement(PowersetLattice.Element(), PowersetLattice.Element()),
+                DeclarationStateEntryElement(
+                    PowersetLattice.Element(),
+                    PowersetLattice.Element(),
+                    PowersetLattice.Element(),
+                ),
             )
 
         startState = initializeParameters(lattice, node.parameters, startState)
@@ -467,6 +482,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 currentNode,
                 doubleState.getFromDecl(currentEdge.end)
                     ?: DeclarationStateEntryElement(
+                        PowersetLattice.Element(),
                         PowersetLattice.Element(),
                         PowersetLattice.Element(),
                     ),
@@ -937,9 +953,10 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 )
                     newDeclState.replace(
                         addr,
-                        TupleLattice.Element(
+                        TripleLattice.Element(
                             PowersetLattice.Element(addr),
                             PowersetLattice.Element(newEntry),
+                            PowersetLattice.Element(),
                         ),
                     )
             }
@@ -1081,6 +1098,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     DeclarationStateEntryElement(
                         PowersetLattice.Element(addresses),
                         PowersetLattice.Element(values.map { Pair(it, false) }.toIdentitySet()),
+                        PowersetLattice.Element(),
                     ),
                 )
         }
@@ -1147,6 +1165,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         DeclarationStateEntryElement(
                             PowersetLattice.Element(addresses),
                             PowersetLattice.Element(Pair(pmv, false)),
+                            PowersetLattice.Element(),
                         )
                     val genStateElement =
                         StateEntryElement(
@@ -1282,7 +1301,11 @@ fun PointsToStateElement.fetchElementFromDeclarationState(
                 }
             val newPair = Pair(newEntry, false)
             this.declarationsState.computeIfAbsent(addr) {
-                TupleLattice.Element(PowersetLattice.Element(addr), PowersetLattice.Element())
+                TripleLattice.Element(
+                    PowersetLattice.Element(addr),
+                    PowersetLattice.Element(newPair),
+                    PowersetLattice.Element(),
+                )
             }
             val newElements = this.declarationsState[addr]?.second
             if (
@@ -1508,7 +1531,11 @@ fun PointsToStateElement.fetchFieldAddresses(
                     }
                 )
             this.declarationsState.computeIfAbsent(addr) {
-                TupleLattice.Element(PowersetLattice.Element(addr), PowersetLattice.Element())
+                TripleLattice.Element(
+                    PowersetLattice.Element(addr),
+                    PowersetLattice.Element(),
+                    PowersetLattice.Element(),
+                )
             }
             val newElements = this.declarationsState[addr]?.first
             newElements?.addAll(newEntry)
@@ -1555,9 +1582,10 @@ fun PointsToStateElement.updateValues(
                     }
             ) {
                 newDeclState[destAddr] =
-                    TupleLattice.Element(
+                    TripleLattice.Element(
                         PowersetLattice.Element(currentEntries),
                         PowersetLattice.Element(sources),
+                        PowersetLattice.Element(),
                     )
             }
         } else {

@@ -264,76 +264,76 @@ int testFunctionSummaries2() {
    printf("p2p: %x, &p_oldval: %x, &p_newval: %x, *p2p: %x, &oldval: %x, &newval: %x, **p2p: %d\n", p2p, &p_oldval, &p_newval, *p2p, &oldval, &newval, **p2p);
 }
 
-//char key[16]; // 0x1b1c0
-///* WARNING: Unknown calling convention -- yet parameter storage is locked */
-///* derive_secret_key() */
-//
-//undefined8 derive_secret_key(void)
-//
-//{
-//  int iVar1;
-//  undefined8 uVar2;
-//  long in_FS_OFFSET;
-//  int local_3d0;
-//  undefined8 local_3c8;
-//  undefined8 local_3c0;
-//  undefined2 local_2c6;
-//  undefined2 local_2c4;
-//  undefined2 local_218;
-//  undefined2 local_216;
-//  undefined2 local_214;
-//  undefined8 local_210;
-//  undefined8 local_208;
-//  undefined8 local_200;
-//  undefined8 local_1f8;
-//  undefined8 local_1f0;
-//  undefined8 local_1e8;
-//  undefined8 local_1e0;
-//  undefined8 local_1d8;
-//  undefined4 local_1d0;
-//  undefined2 local_1cc;
-//  long local_10;
-//  
-//  local_10 = *(long *)(in_FS_OFFSET + 0x28);
-//  memset(&local_218,0,0x200);
-//  iVar1 = sgx_create_report(0,0,&local_3c8);
-//  if (iVar1 == 0) {
-//    local_218 = 4;
-//    local_216 = 2;
-//    local_210 = local_3c8;
-//    local_208 = local_3c0;
-//    local_214 = local_2c6;
-//    local_200 = 0xff0000000000000b;
-//    local_1f8 = 0;
-//    local_1d0 = 0xf0000000;
-//    local_1cc = local_2c4;
-//    local_1f0 = key_id;
-//    local_1e8 = DAT_0011b1e8;
-//    local_1e0 = DAT_0011b1f0;
-//    local_1d8 = DAT_0011b1f8;
-//    iVar1 = sgx_get_key(&local_218,&key);
-//    if ( iVar1 == 0 ) {
-//      printf("[DEBUG] Fetched key: ");
-//      for (local_3d0 = 0; local_3d0 < 0x10; local_3d0 = local_3d0 + 1) {
-//        printf("%02x",(ulong)*(byte *)((long)&key + (long)local_3d0));
-//      }
-//      printf("\n");
-//      uVar2 = 0;
-//    }
-//    else {
-//      printf("Failed to fetch key");
-//      uVar2 = 0xffffffff;
-//    }
-//  }
-//  else {
-//    uVar2 = 0xffffffff;
-//  }
-//  if (local_10 != *(long *)(in_FS_OFFSET + 0x28)) {
-//                    /* WARNING: Subroutine does not return */
-//    __stack_chk_fail();
-//  }
-//  return uVar2;
-//}
+char key[16]; // 0x1b1c0
+/* WARNING: Unknown calling convention -- yet parameter storage is locked */
+/* derive_secret_key() */
+
+undefined8 derive_secret_key(void)
+
+{
+  int iVar1;
+  undefined8 uVar2;
+  long in_FS_OFFSET;
+  int local_3d0;
+  undefined8 local_3c8;
+  undefined8 local_3c0;
+  undefined2 local_2c6;
+  undefined2 local_2c4;
+  undefined2 local_218;
+  undefined2 local_216;
+  undefined2 local_214;
+  undefined8 local_210;
+  undefined8 local_208;
+  undefined8 local_200;
+  undefined8 local_1f8;
+  undefined8 local_1f0;
+  undefined8 local_1e8;
+  undefined8 local_1e0;
+  undefined8 local_1d8;
+  undefined4 local_1d0;
+  undefined2 local_1cc;
+  long local_10;
+  
+  local_10 = *(long *)(in_FS_OFFSET + 0x28);
+  memset(&local_218,0,0x200);
+  iVar1 = sgx_create_report(0,0,&local_3c8);
+  if (iVar1 == 0) {
+    local_218 = 4;
+    local_216 = 2;
+    local_210 = local_3c8;
+    local_208 = local_3c0;
+    local_214 = local_2c6;
+    local_200 = 0xff0000000000000b;
+    local_1f8 = 0;
+    local_1d0 = 0xf0000000;
+    local_1cc = local_2c4;
+    local_1f0 = key_id;
+    local_1e8 = DAT_0011b1e8;
+    local_1e0 = DAT_0011b1f0;
+    local_1d8 = DAT_0011b1f8;
+    iVar1 = sgx_get_key(&local_218,&key);
+    if ( iVar1 == 0 ) {
+      printf("[DEBUG] Fetched key: ");
+      for (local_3d0 = 0; local_3d0 < 0x10; local_3d0 = local_3d0 + 1) {
+        printf("%02x",(ulong)*(byte *)((long)&key + (long)local_3d0));
+      }
+      printf("\n");
+      uVar2 = 0;
+    }
+    else {
+      printf("Failed to fetch key");
+      uVar2 = 0xffffffff;
+    }
+  }
+  else {
+    uVar2 = 0xffffffff;
+  }
+  if (local_10 != *(long *)(in_FS_OFFSET + 0x28)) {
+                    /* WARNING: Subroutine does not return */
+    __stack_chk_fail();
+  }
+  return uVar2;
+}
 
 
 void ecall_key_to_usercheck(undefined8 *param_1)
