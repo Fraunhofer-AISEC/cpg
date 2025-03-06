@@ -37,7 +37,7 @@ open class PointerDereference : Reference() {
     var inputEdge =
         astEdgeOf<Expression>(
             of = ProblemExpression("could not parse input"),
-            onChanged = { old, new -> exchangeTypeObserver(old, new) },
+            onChanged = ::exchangeTypeObserverWithAccessPropagation,
         )
     /** The expression on which the operation is applied. */
     var input by unwrapping(PointerDereference::inputEdge)

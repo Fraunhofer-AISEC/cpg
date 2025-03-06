@@ -30,8 +30,6 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
-import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
-import de.fraunhofer.aisec.cpg.graph.edges.flows.Granularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.indexed
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -220,7 +218,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                     doubleState.push(variable, PowersetLattice(identitySetOf(currentNode)))
 
                     edgePropertiesMap
-                        .computeIfAbsent(Pair(currentNode, variable)) { mutableSetOf() }
+                        .computeIfAbsent(Triple(currentNode, variable, true)) { mutableSetOf() }
                         .add(indexed(idx))
                 }
             } else {

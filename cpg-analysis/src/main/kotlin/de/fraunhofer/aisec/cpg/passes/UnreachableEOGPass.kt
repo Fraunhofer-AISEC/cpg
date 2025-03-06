@@ -48,7 +48,7 @@ import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 @DependsOn(ControlFlowSensitiveDFGPass::class, softDependency = true)
 @DependsOn(PointsToPass::class, softDependency = true)
 @DependsOn(DFGPass::class, softDependency = true)
-class UnreachableEOGPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
+open class UnreachableEOGPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
 
     protected open val evaluator = ValueEvaluator()
 

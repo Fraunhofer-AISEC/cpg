@@ -30,8 +30,8 @@ import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
-import de.fraunhofer.aisec.cpg.graph.edges.flows.PointerDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.FieldDataflowGranularity
+import de.fraunhofer.aisec.cpg.graph.edges.flows.PointerDataflowGranularity
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 

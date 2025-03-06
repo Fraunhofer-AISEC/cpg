@@ -50,7 +50,10 @@ class MemberExpression : Reference(), HasOverloadedOperation, ArgumentHolder, Ha
             ProblemExpression("could not parse base expression"),
             onChanged = { old, new ->
                 if (new?.end is PointerDereference) {
-                    exchangeTypeObserverWithAccessPropagation(old, (new.end as? PointerDereference)?.inputEdge?.element)
+                    exchangeTypeObserverWithAccessPropagation(
+                        old,
+                        (new.end as? PointerDereference)?.inputEdge?.element,
+                    )
                 } else {
                     exchangeTypeObserverWithAccessPropagation(old, new)
                 }
