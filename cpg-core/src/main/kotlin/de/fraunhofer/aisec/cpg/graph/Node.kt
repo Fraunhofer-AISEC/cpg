@@ -323,8 +323,6 @@ abstract class Node :
         nextPDGEdges.clear()
         nextEOGEdges.clear()
         prevEOGEdges.clear()
-
-        astParent = null
     }
 
     override fun toString(): String {

@@ -29,7 +29,6 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.analysis.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.statements.DoStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
@@ -47,15 +46,20 @@ import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
  * by setting the [EvaluationOrder.unreachable] property to true.
  */
 @DependsOn(ControlFlowSensitiveDFGPass::class, softDependency = true)
-class UnreachableEOGPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
+@DependsOn(PointsToPass::class, softDependency = true)
+@DependsOn(DFGPass::class, softDependency = true)
+class UnreachableEOGPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
+
+    protected open val evaluator = ValueEvaluator()
+
     override fun cleanup() {
         // Nothing to do
     }
 
-    override fun accept(tu: TranslationUnitDeclaration) {
+    override fun accept(node: Node) {
         val walker = SubgraphWalker.IterativeGraphWalker()
         walker.registerOnNodeVisit(::handle)
-        walker.iterate(tu)
+        walker.iterate(node)
     }
 
     /**
@@ -64,175 +68,180 @@ class UnreachableEOGPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
      * @param node every node in the TranslationResult
      */
     protected fun handle(node: Node, parent: Node?) {
-        if (node is FunctionDeclaration) {
-            val unreachabilityState = UnreachabilityState(ReachabilityLattice())
-            var startState = unreachabilityState.bottom
-            for (firstEdge in node.nextEOGEdges) {
-                startState = unreachabilityState.push(startState, firstEdge, Reachability.REACHABLE)
+        val unreachabilityState = UnreachabilityState(ReachabilityLattice())
+        var startState = unreachabilityState.bottom
+        for (firstEdge in node.nextEOGEdges) {
+            startState = unreachabilityState.push(startState, firstEdge, Reachability.REACHABLE)
+        }
+
+        val nextEog = node.nextEOGEdges.toList()
+        val finalStateNew = unreachabilityState.iterateEOG(nextEog, startState, ::transfer)
+
+        for ((key, value) in finalStateNew) {
+            if (value.reachability == Reachability.UNREACHABLE) {
+                key.unreachable = true
+            }
+        }
+    }
+
+    /**
+     * This method is executed for each EOG edge which is in the worklist. [currentEdge] is the edge
+     * to process, [currentState] contains the state which was observed before arriving here.
+     *
+     * This method modifies the state for the next eog edge as follows:
+     * - If the next node in the eog is an [IfStatement], the condition is evaluated and if it is
+     *   either always true or false, the else or then branch receives set to
+     *   [Reachability.UNREACHABLE].
+     * - If the next node in the eog is a [WhileStatement], the condition is evaluated and if it's
+     *   always true or false, either the EOG edge to the loop body or out of the loop body is set
+     *   to [Reachability.UNREACHABLE].
+     * - For all other nodes, we simply propagate the state which led us here.
+     *
+     * Returns the updated state and true because we always expect an update of the state.
+     */
+    fun transfer(
+        lattice: Lattice<UnreachabilityStateElement>,
+        currentEdge: EvaluationOrder,
+        currentState: UnreachabilityStateElement,
+    ): UnreachabilityStateElement {
+        val lattice = lattice as? UnreachabilityState ?: return currentState
+        var newState = currentState
+        when (val currentNode = currentEdge.end) {
+            is IfStatement -> {
+                newState = handleIfStatement(lattice, currentEdge, currentNode, newState)
             }
 
-            val nextEog = node.nextEOGEdges.toList()
-            val finalStateNew = unreachabilityState.iterateEOG(nextEog, startState, ::transfer)
-
-            for ((key, value) in finalStateNew) {
-                if (value.reachability == Reachability.UNREACHABLE) {
-                    key.unreachable = true
+            is LoopStatement -> {
+                newState = handleLoopStatement(lattice, currentEdge, currentNode, newState)
+            }
+            // TODO: Add handling of SwitchStatement once we have a good way to follow the EOG edges
+            //  for them (e.g. based on the branching condition or similar).
+            else -> {
+                // For all other edges, we simply propagate the reachability property of the edge
+                // which made us come here.
+                currentNode.nextEOGEdges.forEach {
+                    newState =
+                        lattice.push(
+                            newState,
+                            it,
+                            newState[currentEdge]?.reachability ?: Reachability.BOTTOM,
+                        )
                 }
             }
         }
-    }
-}
 
-/**
- * This method is executed for each EOG edge which is in the worklist. [currentEdge] is the edge to
- * process, [currentState] contains the state which was observed before arriving here.
- *
- * This method modifies the state for the next eog edge as follows:
- * - If the next node in the eog is an [IfStatement], the condition is evaluated and if it is either
- *   always true or false, the else or then branch receives set to [Reachability.UNREACHABLE].
- * - If the next node in the eog is a [WhileStatement], the condition is evaluated and if it's
- *   always true or false, either the EOG edge to the loop body or out of the loop body is set to
- *   [Reachability.UNREACHABLE].
- * - For all other nodes, we simply propagate the state which led us here.
- *
- * Returns the updated state and true because we always expect an update of the state.
- */
-fun transfer(
-    lattice: Lattice<UnreachabilityStateElement>,
-    currentEdge: EvaluationOrder,
-    currentState: UnreachabilityStateElement,
-): UnreachabilityStateElement {
-    val lattice = lattice as? UnreachabilityState ?: return currentState
-    var newState = currentState
-    when (val currentNode = currentEdge.end) {
-        is IfStatement -> {
-            newState = handleIfStatement(lattice, currentEdge, currentNode, newState)
-        }
-        is LoopStatement -> {
-            newState = handleLoopStatement(lattice, currentEdge, currentNode, newState)
-        }
-        // TODO: Add handling of SwitchStatement once we have a good way to follow the EOG edges for
-        // them (e.g. based on the branching condition or similar).
-        else -> {
-            // For all other edges, we simply propagate the reachability property of the edge
-            // which made us come here.
-            currentNode.nextEOGEdges.forEach {
-                newState =
-                    lattice.push(
-                        newState,
-                        it,
-                        newState[currentEdge]?.reachability ?: Reachability.BOTTOM,
-                    )
+        return newState
+    }
+
+    /**
+     * Evaluates the condition of the [IfStatement] [n] (which is the end node of [enteringEdge]).
+     * If it is always true, then the else-branch receives the [state] [Reachability.UNREACHABLE].
+     * If the condition is always false, then the then-branch receives the [state]
+     * [Reachability.UNREACHABLE]. All other cases simply copy the state which led us here.
+     */
+    private fun handleIfStatement(
+        lattice: UnreachabilityState,
+        enteringEdge: EvaluationOrder,
+        n: IfStatement,
+        state: UnreachabilityStateElement,
+    ): UnreachabilityStateElement {
+        val evalResult = evaluator.evaluate(n.condition)
+
+        val (unreachableEdges, remainingEdges) =
+            if (evalResult == true) {
+                // If the condition is always true, the "false" branch is always unreachable
+                Pair(
+                    n.nextEOGEdges.filter { e -> e.branch == false },
+                    n.nextEOGEdges.filter { e -> e.branch != false },
+                )
+            } else if (evalResult == false) {
+                // If the condition is always false, the "true" branch is always unreachable
+                Pair(
+                    n.nextEOGEdges.filter { e -> e.branch == true },
+                    n.nextEOGEdges.filter { e -> e.branch != true },
+                )
+            } else {
+                Pair(listOf(), n.nextEOGEdges)
             }
-        }
+
+        return propagateState(
+            unreachableEdges = unreachableEdges,
+            remainingEdges = remainingEdges,
+            enteringEdge = enteringEdge,
+            state = state,
+            lattice = lattice,
+        )
     }
 
-    return newState
-}
+    /**
+     * Evaluates the condition of the [LoopStatement] [n] (which is the end node of [enteringEdge]).
+     * If it is always false, then the edge to the code inside the loop receives the [state]
+     * [Reachability.UNREACHABLE]. If the condition is always true, then the edge after the loop
+     * body receives the [state] [Reachability.UNREACHABLE]. All other cases simply copy the state
+     * which led us here.
+     */
+    @Suppress("KotlinConstantConditions")
+    private fun handleLoopStatement(
+        lattice: UnreachabilityState,
+        enteringEdge: EvaluationOrder,
+        n: LoopStatement,
+        state: UnreachabilityStateElement,
+    ): UnreachabilityStateElement {
+        val condition =
+            when (n) {
+                is WhileStatement -> n.condition
+                is DoStatement -> n.condition
+                is ForStatement -> n.condition
+                else -> return state
+            }
+        val evalResult = evaluator.evaluate(condition)
 
-/**
- * Evaluates the condition of the [IfStatement] [n] (which is the end node of [enteringEdge]). If it
- * is always true, then the else-branch receives the [state] [Reachability.UNREACHABLE]. If the
- * condition is always false, then the then-branch receives the [state] [Reachability.UNREACHABLE].
- * All other cases simply copy the state which led us here.
- */
-private fun handleIfStatement(
-    lattice: UnreachabilityState,
-    enteringEdge: EvaluationOrder,
-    n: IfStatement,
-    state: UnreachabilityStateElement,
-): UnreachabilityStateElement {
-    val evalResult = ValueEvaluator().evaluate(n.condition)
-
-    val (unreachableEdges, remainingEdges) =
-        if (evalResult == true) {
-            // If the condition is always true, the "false" branch is always unreachable
-            Pair(
-                n.nextEOGEdges.filter { e -> e.branch == false },
-                n.nextEOGEdges.filter { e -> e.branch != false },
-            )
-        } else if (evalResult == false) {
-            // If the condition is always false, the "true" branch is always unreachable
-            Pair(
-                n.nextEOGEdges.filter { e -> e.branch == true },
-                n.nextEOGEdges.filter { e -> e.branch != true },
-            )
-        } else {
-            Pair(listOf(), n.nextEOGEdges)
-        }
-
-    return propagateState(
-        unreachableEdges = unreachableEdges,
-        remainingEdges = remainingEdges,
-        enteringEdge = enteringEdge,
-        state = state,
-        lattice = lattice,
-    )
-}
-
-/**
- * Evaluates the condition of the [LoopStatement] [n] (which is the end node of [enteringEdge]). If
- * it is always false, then the edge to the code inside the loop receives the [state]
- * [Reachability.UNREACHABLE]. If the condition is always true, then the edge after the loop body
- * receives the [state] [Reachability.UNREACHABLE]. All other cases simply copy the state which led
- * us here.
- */
-private fun handleLoopStatement(
-    lattice: UnreachabilityState,
-    enteringEdge: EvaluationOrder,
-    n: LoopStatement,
-    state: UnreachabilityStateElement,
-): UnreachabilityStateElement {
-    val condition =
-        when (n) {
-            is WhileStatement -> n.condition
-            is DoStatement -> n.condition
-            is ForStatement -> n.condition
-            else -> return state
-        }
-    val evalResult = ValueEvaluator().evaluate(condition)
-
-    val (unreachableEdges, remainingEdges) =
-        if (evalResult is Boolean && evalResult == true) {
-            Pair(
-                n.nextEOGEdges.filter { e -> e.branch == false },
-                n.nextEOGEdges.filter { e -> e.branch != false },
-            )
-        } else if (evalResult is Boolean && evalResult == false) {
-            Pair(
-                n.nextEOGEdges.filter { e -> e.branch == true },
-                n.nextEOGEdges.filter { e -> e.branch != true },
-            )
-        } else {
-            Pair(listOf(), n.nextEOGEdges)
-        }
-    return propagateState(
-        unreachableEdges = unreachableEdges,
-        remainingEdges = remainingEdges,
-        enteringEdge = enteringEdge,
-        state = state,
-        lattice = lattice,
-    )
-}
-
-private fun propagateState(
-    unreachableEdges: List<EvaluationOrder>,
-    remainingEdges: List<EvaluationOrder>,
-    enteringEdge: EvaluationOrder,
-    state: UnreachabilityStateElement,
-    lattice: UnreachabilityState,
-): UnreachabilityStateElement {
-    var newState = state
-    // These edges are definitely unreachable
-    unreachableEdges.forEach { newState = lattice.push(newState, it, Reachability.UNREACHABLE) }
-
-    // For all other edges, we simply propagate the reachability property of the edge which
-    // made us come here.
-    remainingEdges.forEach {
-        newState =
-            lattice.push(newState, it, newState[enteringEdge]?.reachability ?: Reachability.BOTTOM)
+        val (unreachableEdges, remainingEdges) =
+            if (evalResult is Boolean && evalResult == true) {
+                Pair(
+                    n.nextEOGEdges.filter { e -> e.branch == false },
+                    n.nextEOGEdges.filter { e -> e.branch != false },
+                )
+            } else if (evalResult is Boolean && evalResult == false) {
+                Pair(
+                    n.nextEOGEdges.filter { e -> e.branch == true },
+                    n.nextEOGEdges.filter { e -> e.branch != true },
+                )
+            } else {
+                Pair(listOf(), n.nextEOGEdges)
+            }
+        return propagateState(
+            unreachableEdges = unreachableEdges,
+            remainingEdges = remainingEdges,
+            enteringEdge = enteringEdge,
+            state = state,
+            lattice = lattice,
+        )
     }
-    return newState
+
+    private fun propagateState(
+        unreachableEdges: List<EvaluationOrder>,
+        remainingEdges: List<EvaluationOrder>,
+        enteringEdge: EvaluationOrder,
+        state: UnreachabilityStateElement,
+        lattice: UnreachabilityState,
+    ): UnreachabilityStateElement {
+        var newState = state
+        // These edges are definitely unreachable
+        unreachableEdges.forEach { newState = lattice.push(newState, it, Reachability.UNREACHABLE) }
+
+        // For all other edges, we simply propagate the reachability property of the edge which
+        // made us come here.
+        remainingEdges.forEach {
+            newState =
+                lattice.push(
+                    newState,
+                    it,
+                    newState[enteringEdge]?.reachability ?: Reachability.BOTTOM,
+                )
+        }
+        return newState
+    }
 }
 
 /**

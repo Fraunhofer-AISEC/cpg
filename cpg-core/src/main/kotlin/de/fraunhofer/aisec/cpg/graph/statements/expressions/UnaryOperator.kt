@@ -40,7 +40,7 @@ class UnaryOperator : Expression(), HasOverloadedOperation, ArgumentHolder, HasT
         astEdgeOf<Expression>(
             of = ProblemExpression("could not parse input"),
             onChanged = { old, new ->
-                exchangeTypeObserver(old, new)
+                exchangeTypeObserverWithAccessPropagation(old, new)
                 changeExpressionAccess()
             },
         )

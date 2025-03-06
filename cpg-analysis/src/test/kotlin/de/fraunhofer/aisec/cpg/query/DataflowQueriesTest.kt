@@ -756,4 +756,56 @@ class DataflowQueriesTest {
             "Both paths go from the variable through print to baz.",
         )
     }
+
+    @Test
+    fun testImplicitFlows() {
+        val resultVerySimple = FlowQueriesTest.verySimpleDataflow()
+
+        val bazCall = resultVerySimple.calls["baz"]
+        assertNotNull(bazCall, "We expect a call to the function \"baz\".")
+        val bazArg = bazCall.arguments.singleOrNull()
+        assertIs<BinaryOperator>(
+            bazArg,
+            "The argument of the call to \"baz\" is expected to be the binary operator \"a +  b\".",
+        )
+        val bazArgA = bazArg.lhs
+        assertIs<Reference>(
+            bazArgA,
+            "The lhs of the argument is expected to be a Reference with name \"a\".",
+        )
+        assertLocalName(
+            "a",
+            bazArgA,
+            "The lhs of the argument is expected to be a Reference with name \"a\".",
+        )
+        val explicitFlowResult =
+            dataFlow(
+                startNode = bazArgA,
+                direction = Backward(GraphToFollow.DFG),
+                type = May,
+                sensitivities = FieldSensitive + ContextSensitive,
+                scope = Interprocedural(),
+                earlyTermination = null,
+                predicate = { (it as? Literal<*>)?.value == "bla" },
+            )
+        assertFalse(
+            explicitFlowResult.value,
+            "We expect that there is no explicit data flow between the reference \"a\" and the string literal \"bla\".",
+        )
+
+        val implicitFlowResult =
+            dataFlow(
+                startNode = bazArgA,
+                direction = Backward(GraphToFollow.DFG),
+                type = May,
+                sensitivities = FieldSensitive + ContextSensitive + Implicit,
+                scope = Interprocedural(),
+                earlyTermination = null,
+                predicate = { (it as? Literal<*>)?.value == "bla" },
+            )
+        assertTrue(
+            implicitFlowResult.value,
+            "We expect that there is an implicit data flow between the reference \"a\" and the string literal \"bla\".",
+        )
+    }
 }

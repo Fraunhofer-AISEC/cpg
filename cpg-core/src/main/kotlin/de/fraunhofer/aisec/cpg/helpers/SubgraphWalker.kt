@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.StatementHolder
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeCollection
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
@@ -46,8 +45,6 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.lang.annotation.AnnotationFormatError
 import java.lang.reflect.Field
 import java.util.*
-import java.util.function.BiConsumer
-import java.util.function.Consumer
 import org.slf4j.LoggerFactory
 
 /** A type for a node visitor callback for the [SubgraphWalker]. */
@@ -289,35 +286,36 @@ object SubgraphWalker {
         }
 
         /**
-         * Callback function(s) getting three arguments: the type of the class we're currently in,
-         * the root node of the current declaration scope, the currently visited node.
+         * Callback function(s) containing two arguments: the previous node and the currently
+         * visited node.
+         *
+         * The previous node depends on the [strategy], for example for [Strategy.AST_FORWARD], the
+         * previous node is equal to [Node.astParent]. But for a strategy like
+         * [Strategy.EOG_FORWARD], the previous node was the previous EOG node.
          */
-        private val handlers = mutableListOf<TriConsumer<RecordDeclaration?, Node?, Node?>>()
+        private val handlers = mutableListOf<(node: Node, previous: Node?) -> (Unit)>()
 
         fun clearCallbacks() {
             handlers.clear()
         }
 
-        fun registerHandler(handler: TriConsumer<RecordDeclaration?, Node?, Node?>) {
+        /**
+         * Registers a handler that is called whenever a new node is visited. The handler is passed
+         * the current node.
+         */
+        fun registerHandler(handler: (node: Node) -> (Unit)) {
+            handlers.add { node, previous -> handler(node) }
+        }
+
+        /**
+         * Registers a handler that is called whenever a new node is visited. The handler is passed
+         * the current node and the previous node (if it exists).
+         */
+        fun registerHandler(handler: (node: Node, previous: Node?) -> (Unit)) {
             handlers.add(handler)
         }
 
-        fun registerHandler(handler: BiConsumer<Node?, RecordDeclaration?>) {
-            handlers.add(
-                TriConsumer { currClass: RecordDeclaration?, _: Node?, currNode: Node? ->
-                    handler.accept(currNode, currClass)
-                }
-            )
-        }
-
-        fun registerHandler(handler: Consumer<Node?>) {
-            handlers.add(
-                TriConsumer { _: RecordDeclaration?, _: Node?, currNode: Node? ->
-                    handler.accept(currNode)
-                }
-            )
-        }
-
+        /** Informs the walker that a replacement of [from] with [to] was done. */
         fun registerReplacement(from: Node, to: Node) {
             walker?.registerReplacement(from, to)
         }
@@ -339,15 +337,15 @@ object SubgraphWalker {
 
         private fun handleNode(
             current: Node,
-            parent: Node?,
-            handler: TriConsumer<RecordDeclaration?, Node?, Node?>,
+            previous: Node?,
+            handler: (node: Node, previous: Node?) -> (Unit),
         ) {
             // Jump to the node's scope, if it is different from ours.
             if (scopeManager.currentScope != current.scope) {
                 scopeManager.jumpTo(current.scope)
             }
 
-            handler.accept(scopeManager.currentRecord, parent, current)
+            handler(current, previous)
         }
     }
 }
@@ -385,9 +383,11 @@ fun SubgraphWalker.ScopedWalker.replace(parent: Node?, old: Expression, new: Exp
                     // the whole call expression instead.
                     if (parent is MemberCallExpression && new is Reference) {
                         val newCall = parent.toCallExpression(new)
+                        newCall.arguments.forEach { it.astParent = newCall }
                         return replace(parent.astParent, parent, newCall)
                     } else if (new is MemberExpression) {
                         val newCall = parent.toMemberCallExpression(new)
+                        newCall.arguments.forEach { it.astParent = newCall }
                         return replace(parent.astParent, parent, newCall)
                     } else {
                         parent.callee = new

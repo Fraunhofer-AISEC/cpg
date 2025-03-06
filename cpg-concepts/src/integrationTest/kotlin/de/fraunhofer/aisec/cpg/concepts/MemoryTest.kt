@@ -118,7 +118,6 @@ class MemoryTest {
                     direction = Forward(GraphToFollow.EOG),
                     type = Must,
                     scope = Interprocedural(),
-                    verbose = true,
                 )
             }
         assertNotNull(tree)

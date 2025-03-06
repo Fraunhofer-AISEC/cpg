@@ -28,15 +28,18 @@ package de.fraunhofer.aisec.cpg.graph.concepts.http
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
+import de.fraunhofer.aisec.cpg.graph.concepts.auth.Authentication
+import de.fraunhofer.aisec.cpg.graph.concepts.flows.RemoteEntryPoint
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 
 /** Represents a single [HttpEndpoint] on the server */
 class HttpEndpoint(
-    underlyingNode: Node,
+    underlyingNode: FunctionDeclaration,
     val httpMethod: HttpMethod,
     val path: String,
     val arguments: List<Node>,
-    val supportedAuthentications: MutableList<String>,
-) : Concept(underlyingNode = underlyingNode)
+    val authentication: Authentication?,
+) : RemoteEntryPoint(underlyingNode = underlyingNode)
 
 enum class HttpMethod {
     GET,

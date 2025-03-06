@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg
 
+import de.fraunhofer.aisec.cpg.TranslationManager.AdditionalSource
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 
@@ -56,4 +57,22 @@ class TranslationContext(
      * the [TranslationResult.finalCtx] this may either be null or the last component analyzed.
      */
     var currentComponent: Component? = null,
+
+    /**
+     * Set of files, that are available for additional analysis. They are not the primary subjects
+     * of analysis but are available to the language frontend. The files are obtained by expanding
+     * the paths in [TranslationConfiguration.includePaths]. This is done by
+     * [TranslationManager.runFrontends].
+     *
+     * The frontend can decide to add some of the contained files to [importedSources] which will
+     * get them translated into the final graph by the [TranslationManager].
+     */
+    var additionalSources: MutableSet<AdditionalSource> = mutableSetOf(),
+
+    /**
+     * The additional sources from the [additionalSources] chosen to be analyzed along with the code
+     * under analysis. The language frontends are supposed to fill this list, e.g. by analyzing the
+     * import statements of the analyzed code and deciding which sources contain relevant symbols.
+     */
+    var importedSources: MutableSet<AdditionalSource> = mutableSetOf(),
 )

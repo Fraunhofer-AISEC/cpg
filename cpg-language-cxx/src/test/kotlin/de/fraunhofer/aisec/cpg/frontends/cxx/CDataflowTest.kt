@@ -72,9 +72,9 @@ class CDataflowTest {
                 .flatMap {
                     it.prevDFGEdges
                         .map(Dataflow::granularity)
-                        .filterIsInstance<PartialDataflowGranularity>()
+                        .filterIsInstance<PartialDataflowGranularity<*>>()
                 }
-                .mapNotNull(PartialDataflowGranularity::partialTarget)
+                .mapNotNull(PartialDataflowGranularity<*>::partialTarget)
                 .toSet()
 
         assertTrue(fields.any { it.name.localName == "i" })

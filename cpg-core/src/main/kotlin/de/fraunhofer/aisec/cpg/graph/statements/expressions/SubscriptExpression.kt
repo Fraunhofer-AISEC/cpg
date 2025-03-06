@@ -42,15 +42,15 @@ class SubscriptExpression : Expression(), HasBase, HasType.TypeObserver, Argumen
     override var access = AccessValues.READ
         set(value) {
             field = value
-            // Propagate the access value to the array expression
-            arrayExpression.access = value
+            // Do not propagate the access value to the array expression
+            // arrayExpression.access = value
         }
 
     @Relationship("ARRAY_EXPRESSION")
     var arrayExpressionEdge =
         astEdgeOf<Expression>(
             of = ProblemExpression("could not parse array expression"),
-            onChanged = ::exchangeTypeObserver,
+            onChanged = ::exchangeTypeObserverWithoutAccessPropagation,
         )
     /** The array on which the access is happening. This is most likely a [Reference]. */
     var arrayExpression by unwrapping(SubscriptExpression::arrayExpressionEdge)

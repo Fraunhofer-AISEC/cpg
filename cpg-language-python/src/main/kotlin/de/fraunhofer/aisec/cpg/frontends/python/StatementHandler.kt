@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.python
 
+import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.frontends.python.Python.AST.IsAsync
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
@@ -350,6 +352,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 tmpValName,
             )
         }
+
         val result =
             newBlock().codeAndLocationFromOtherRawNode(node as? Python.AST.BaseStmt).implicit()
 
@@ -517,27 +520,54 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         return assertStatement
     }
 
+    /**
+     * Translates a Python [`Import`](https://docs.python.org/3/library/ast.html#ast.Import) into a
+     * [Statement].
+     *
+     * For each import, it handles two cases:
+     * - If an alias is present (e.g., `import foo.bar.baz as fbb`), only the final module is bound
+     *   using the alias.
+     * - Without an alias, it iteratively creates declarations for each parent package (e.g., `foo`,
+     *   `foo.bar`, and `foo.bar.baz`).
+     *
+     *   See also the
+     *   [`Python specification`](https://docs.python.org/3/reference/simple_stmts.html#the-import-statement)
+     *   for details:
+     */
     private fun handleImport(node: Python.AST.Import): Statement {
         val declStmt = newDeclarationStatement(rawNode = node)
         for (imp in node.names) {
             val alias = imp.asname
-            val decl =
-                if (alias != null) {
+            if (alias != null) {
+                // If we have an alias, we import the package with the alias and do NOT import the
+                // parent packages
+                val decl =
                     newImportDeclaration(
                         parseName(imp.name),
                         style = ImportStyle.IMPORT_NAMESPACE,
                         parseName(alias),
                         rawNode = imp,
                     )
-                } else {
-                    newImportDeclaration(
-                        parseName(imp.name),
-                        style = ImportStyle.IMPORT_NAMESPACE,
-                        rawNode = imp,
-                    )
+                conditionallyAddAdditionalSourcesToAnalysis(decl.import)
+                frontend.scopeManager.addDeclaration(decl)
+                declStmt.declarationEdges += decl
+            } else {
+                // If we do not have an alias, we import all the packages along the path - unless we
+                // already have an import for the package in the scope
+                var importName: Name? = parseName(imp.name)
+                while (importName != null) {
+                    val decl =
+                        newImportDeclaration(
+                            importName,
+                            style = ImportStyle.IMPORT_NAMESPACE,
+                            rawNode = imp,
+                        )
+                    conditionallyAddAdditionalSourcesToAnalysis(decl.import)
+                    frontend.scopeManager.addDeclaration(decl)
+                    declStmt.declarationEdges += decl
+                    importName = importName.parent
                 }
-            frontend.scopeManager.addDeclaration(decl)
-            declStmt.declarationEdges += decl
+            }
         }
         return declStmt
     }
@@ -553,7 +583,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             // level.
             var parent =
                 if (isInitModule()) {
-                    frontend.scopeManager.currentNamespace.fqn("__init__")
+                    frontend.scopeManager.currentNamespace.fqn(PythonLanguage.IDENTIFIER_INIT)
                 } else {
                     frontend.scopeManager.currentNamespace
                 }
@@ -582,6 +612,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 if (imp.name == "*") {
                     // In the wildcard case, our "import" is the module name, and we set "wildcard"
                     // to true
+                    conditionallyAddAdditionalSourcesToAnalysis(module)
                     newImportDeclaration(
                         module,
                         style = ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE,
@@ -592,6 +623,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     // name and import that. We also need to take care of any alias
                     val name = module.fqn(imp.name)
                     val alias = imp.asname
+                    conditionallyAddAdditionalSourcesToAnalysis(name)
                     if (alias != null) {
                         newImportDeclaration(
                             name,
@@ -615,12 +647,48 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         return declStmt
     }
 
+    /**
+     * Uses the given name to identify whether one of the files in
+     * [TranslationContext.additionalSources] is the target of the import statement. If it is, it is
+     * added to [TranslationContext.importedSources] for further analysis by the translation
+     * manager.
+     */
+    private fun conditionallyAddAdditionalSourcesToAnalysis(importName: Name) {
+        val ctx = ctx
+        if (ctx == null) {
+            throw TranslationException(
+                "A translation context is needed for the import dependent addition of additional sources."
+            )
+        }
+
+        var currentName: Name? = importName
+        while (!currentName.isNullOrEmpty()) {
+            // Build a set of candidates how files look like for the current name. They are a set of
+            // relative file names, e.g. foo/bar/baz.py and foo/bar/baz/__init__.py
+            val candidates = (language as PythonLanguage).nameToLanguageFiles(currentName)
+
+            // Includes a file in the analysis, if relative to its rootpath it matches the import
+            // statement. Both possible file endings (.py, pyi) are considered.
+            val match =
+                ctx.additionalSources.firstOrNull {
+                    // Check if the relative file is in our candidates
+                    candidates.contains(it.relative)
+                }
+            if (match != null) {
+                // Add the match to the imported sources
+                ctx.importedSources += match
+            }
+
+            currentName = currentName.parent
+        }
+    }
+
     /** Small utility function to check, whether we are inside an __init__ module. */
     private fun isInitModule(): Boolean =
         (frontend.scopeManager.firstScopeIsInstanceOrNull<NameScope>()?.astNode
                 as? NamespaceDeclaration)
             ?.path
-            ?.endsWith("__init__") == true
+            ?.endsWith(PythonLanguage.IDENTIFIER_INIT) == true
 
     private fun handleWhile(node: Python.AST.While): Statement {
         val ret = newWhileStatement(rawNode = node)

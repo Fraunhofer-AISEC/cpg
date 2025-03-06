@@ -28,11 +28,12 @@ package de.fraunhofer.aisec.cpg.concepts
 import de.fraunhofer.aisec.cpg.analysis.MultiValueEvaluator
 import de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.concepts.arch.POSIX
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.LoadLibrary
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.LoadSymbol
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.passes.concepts.memory.CXXDynamicLoadingPass
+import de.fraunhofer.aisec.cpg.passes.concepts.memory.cxx.CXXDynamicLoadingPass
 import de.fraunhofer.aisec.cpg.test.analyze
 import de.fraunhofer.aisec.cpg.test.assertInvokes
 import java.io.File
@@ -46,7 +47,7 @@ import kotlin.test.assertNotNull
 class DynamicLoadingTest {
     @Ignore
     @Test
-    fun testCXX() {
+    fun testCXXPOSIX() {
         val topLevel = File("src/integrationTest/resources/c")
         val result =
             analyze(listOf(), topLevel.toPath(), true) {
@@ -77,6 +78,7 @@ class DynamicLoadingTest {
         val loadLibrary =
             path.lastOrNull()?.operationNodes?.filterIsInstance<LoadLibrary>()?.singleOrNull()
         assertNotNull(loadLibrary)
+        assertIs<POSIX>(loadLibrary.os)
         assertEquals(
             libExample,
             loadLibrary.what,
@@ -93,6 +95,7 @@ class DynamicLoadingTest {
         val loadSymbol =
             dlSym.operationNodes.filterIsInstance<LoadSymbol<FunctionDeclaration>>().singleOrNull()
         assertNotNull(loadSymbol)
+        assertIs<POSIX>(loadSymbol.os)
         assertEquals(myFunc, loadSymbol.what, "\"what\" of the LoadSymbol should be myFunc")
 
         val c = result.refs["c"]
@@ -111,5 +114,44 @@ class DynamicLoadingTest {
         values = a.evaluate(MultiValueEvaluator())
         assertIs<Set<*>>(values)
         assertContains(values, 3)
+    }
+
+    @Test
+    fun testCXXWin32() {
+        val topLevel = File("src/integrationTest/resources/c")
+        val result =
+            analyze(listOf(), topLevel.toPath(), true) {
+                it.registerLanguage<CLanguage>()
+                it.registerPass<CXXDynamicLoadingPass>()
+                it.softwareComponents(
+                    mutableMapOf(
+                        "winmain" to listOf(topLevel.resolve("winmain")),
+                        "winexample" to listOf(topLevel.resolve("winexample")),
+                    )
+                )
+            }
+        assertNotNull(result)
+
+        val winexample = result.components["winexample"]
+        assertNotNull(winexample)
+
+        val dllMain = result.functions["DllMain"]
+        assertNotNull(dllMain)
+
+        val winmain = result.components["winmain"]
+        assertNotNull(winmain)
+
+        val loadLibrary = winmain.operationNodes.filterIsInstance<LoadLibrary>().singleOrNull()
+        assertNotNull(loadLibrary)
+        assertEquals(
+            winexample,
+            loadLibrary.what,
+            "\"what\" of the LoadLibrary should be the winexample component",
+        )
+        assertEquals(
+            dllMain,
+            loadLibrary.entryPoints.singleOrNull()?.underlyingNode,
+            "DllMain should be the only DLL entry point",
+        )
     }
 }

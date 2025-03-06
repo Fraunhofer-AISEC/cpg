@@ -59,4 +59,5 @@ dependencies {
     findProject(":cpg-language-python")?.also {
         integrationTestImplementation(it)
     }
+    integrationTestImplementation(projects.cpgAnalysis)
 }

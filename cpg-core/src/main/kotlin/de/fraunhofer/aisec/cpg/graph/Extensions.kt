@@ -28,11 +28,12 @@ package de.fraunhofer.aisec.cpg.graph
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
-import de.fraunhofer.aisec.cpg.graph.edges.flows.*
+import de.fraunhofer.aisec.cpg.graph.edges.flows.ControlDependence
+import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
+import de.fraunhofer.aisec.cpg.graph.edges.flows.IndexedDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import kotlin.collections.filter
 import kotlin.collections.firstOrNull
@@ -1284,10 +1285,10 @@ val Expression.importedFrom: List<ImportDeclaration>
             return if (name.parent == null) {
                 // If the name does not have a parent, this reference could directly be the name
                 // of an import, let's check
-                imports.filter { it.name.lastPartsMatch(name) }
+                imports.filter { it.import.lastPartsMatch(name) }
             } else {
                 // Otherwise, the parent name could be the import
-                imports.filter { it.name == this.name.parent }
+                imports.filter { it.import == this.name.parent }
             } ?: listOf<ImportDeclaration>()
         }
 

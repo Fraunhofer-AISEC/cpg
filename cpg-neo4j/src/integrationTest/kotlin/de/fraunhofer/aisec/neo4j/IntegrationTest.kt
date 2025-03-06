@@ -37,7 +37,6 @@ import kotlin.reflect.jvm.javaField
 import kotlin.test.Ignore
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
-import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.neo4j.ogm.annotation.Relationship
 import picocli.CommandLine

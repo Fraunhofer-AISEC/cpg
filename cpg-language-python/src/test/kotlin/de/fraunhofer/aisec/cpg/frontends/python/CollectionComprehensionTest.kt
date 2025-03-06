@@ -210,7 +210,7 @@ class CollectionComprehensionTest {
         )
         assertEquals(
             0,
-            granularityTupleToK.index,
+            granularityTupleToK.partialTarget,
             "We expect that the data of the ILE flows to the reference \"k\" with index granularity and index 1",
         )
         assertContains(
@@ -226,7 +226,7 @@ class CollectionComprehensionTest {
         )
         assertEquals(
             1,
-            granularityTupleToV.index,
+            granularityTupleToV.partialTarget,
             "We expect that the data of the ILE flows to the reference \"v\" with index granularity and index 1",
         )
 
@@ -1297,7 +1297,7 @@ class CollectionComprehensionTest {
         )
         assertEquals(
             0,
-            refAGranularity.index,
+            refAGranularity.partialTarget,
             "We expect that there's one DFG edge flowing into the reference \"a\" in the tuple. It should come from the InitializerListExpression and have the index \"0\"",
         )
         val variableDeclarationA = refA.refersTo
@@ -1331,7 +1331,7 @@ class CollectionComprehensionTest {
         )
         assertEquals(
             1,
-            accessB0Granularity.index,
+            accessB0Granularity.partialTarget,
             "We expect that there's one DFG edge flowing into the reference \"b[0]\" in the tuple. It should come from the InitializerListExpression and have the index \"1\"",
         )
     }
@@ -1462,7 +1462,7 @@ class CollectionComprehensionTest {
         )
         assertEquals(
             0,
-            refAGranularity.index,
+            refAGranularity.partialTarget,
             "We expect that there's one DFG edge flowing into the reference \"a\" in the tuple. It should come from the InitializerListExpression and have the index \"0\"",
         )
         val variableDeclarationA = refA.refersTo
@@ -1502,7 +1502,7 @@ class CollectionComprehensionTest {
         )
         assertEquals(
             1,
-            accessBAGranularity.index,
+            accessBAGranularity.partialTarget,
             "We expect that there's one DFG edge flowing into the reference \"b[a]\" in the tuple. It should come from the InitializerListExpression and have the index \"1\"",
         )
     }
@@ -1666,7 +1666,7 @@ class CollectionComprehensionTest {
         )
         assertEquals(
             1,
-            refAGranularity.index,
+            refAGranularity.partialTarget,
             "We expect that there's one DFG edge flowing into the reference \"a\" in the tuple. It should come from the InitializerListExpression and have the index \"0\"",
         )
         assertEquals(
@@ -1687,7 +1687,7 @@ class CollectionComprehensionTest {
         )
         assertEquals(
             0,
-            accessBAGranularity.index,
+            accessBAGranularity.partialTarget,
             "We expect that there's one DFG edge flowing into the reference \"b[a]\" in the tuple. It should come from the InitializerListExpression and have the index \"0\"",
         )
         assertRefersTo(
