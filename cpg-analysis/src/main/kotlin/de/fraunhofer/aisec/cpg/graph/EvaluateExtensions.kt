@@ -52,7 +52,7 @@ val NewArrayExpression.capacity: Int
  * @param evaluator The [ValueEvaluator] to use for evaluation of the argument.
  * @return The evaluated result (of type [T]) or `null`.
  */
-inline fun <reified T> CallExpression.getArgumentValueByNameOrPosition(
+inline fun <reified T> CallExpression.argumentValueByNameOrPosition(
     name: String? = null,
     position: Int? = null,
     evaluator: ValueEvaluator = ValueEvaluator(),
