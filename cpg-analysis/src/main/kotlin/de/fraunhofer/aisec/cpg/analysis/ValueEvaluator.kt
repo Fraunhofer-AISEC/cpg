@@ -66,7 +66,7 @@ open class ValueEvaluator(
         }
     }
 ) {
-    protected open val log: Logger
+    open val log: Logger
         get() = LoggerFactory.getLogger(ValueEvaluator::class.java)
 
     /** This property contains the path of the latest execution of [evaluateInternal]. */
@@ -78,7 +78,11 @@ open class ValueEvaluator(
         return evaluateInternal(node, 0)
     }
 
-    public inline fun <reified T> evaluateAs(node: Node?): T? {
+    /**
+     * Tries to evaluate this node and returns the result as the specified type [T]. If the
+     * evaluation fails, the result is "null".
+     */
+    inline fun <reified T> evaluateAs(node: Node?): T? {
         val result = evaluateInternal(node, 0)
         return if (result !is T) {
             Util.errorWithFileLocation(
