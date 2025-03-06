@@ -28,10 +28,14 @@ package de.fraunhofer.aisec.cpg.graph.concepts.http
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
+import de.fraunhofer.aisec.cpg.graph.concepts.auth.Authentication
 
 /** Represents an [HttpClient]. */
-class HttpClient(underlyingNode: Node, val isTLS: Boolean) :
-    Concept(underlyingNode = underlyingNode)
+class HttpClient(
+    underlyingNode: Node,
+    val isTLS: Boolean? = false,
+    val authentication: Authentication? = null,
+) : Concept(underlyingNode = underlyingNode)
 
 /** Base class for operations on an [HttpClient]. */
 abstract class HttpClientOperation(underlyingNode: Node, concept: Concept) :
