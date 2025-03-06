@@ -25,14 +25,12 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.TypeManager.Companion.log
 import de.fraunhofer.aisec.cpg.analysis.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.edges.get
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewArrayExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
-import de.fraunhofer.aisec.cpg.helpers.Util
 
 fun Node.evaluate(evaluator: ValueEvaluator = ValueEvaluator()): Any? {
     return evaluator.evaluate(this)
@@ -63,19 +61,8 @@ inline fun <reified T> CallExpression.getArgumentValueByNameOrPosition(
     val value =
         when (arg) {
             is Literal<*> -> arg.value
-            is Reference -> arg.evaluate(evaluator)
+            is Reference -> evaluator.evaluateAs<T>(arg)
             else -> null
         }
-    return if (value is T) {
-        value
-    } else {
-        Util.errorWithFileLocation(
-            this,
-            log,
-            "Evaluated the argument to type \"{}\". Expected type \"{}\". Returning \"null\".",
-            value?.let { it::class.simpleName },
-            T::class.simpleName,
-        )
-        null
-    }
+    return value as? T
 }
