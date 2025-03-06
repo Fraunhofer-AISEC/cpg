@@ -28,9 +28,7 @@ package de.fraunhofer.aisec.cpg.graph
 import de.fraunhofer.aisec.cpg.analysis.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.edges.get
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewArrayExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 
 fun Node.evaluate(evaluator: ValueEvaluator = ValueEvaluator()): Any? {
     return evaluator.evaluate(this)
@@ -57,12 +55,8 @@ inline fun <reified T> CallExpression.argumentValueByNameOrPosition(
     position: Int? = null,
     evaluator: ValueEvaluator = ValueEvaluator(),
 ): T? {
-    val arg = name?.let { this.argumentEdges[it] } ?: position?.let { this.arguments.getOrNull(it) }
-    val value =
-        when (arg) {
-            is Literal<*> -> arg.value
-            is Reference -> evaluator.evaluateAs<T>(arg)
-            else -> null
-        }
-    return value as? T
+    val arg =
+        name?.let { this.argumentEdges[it]?.end } ?: position?.let { this.arguments.getOrNull(it) }
+    val value = evaluator.evaluateAs<T>(arg)
+    return value
 }
