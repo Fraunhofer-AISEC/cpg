@@ -256,9 +256,41 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         for ((key, value) in finalState.generalState) {
             // All nodes in the state get new memoryValues, Expressions and Declarations
             // additionally get new MemoryAddresses
-            val newPrevDFGs = value.second
+            val newMemoryValues = value.second
             val newMemoryAddresses = value.first
-            newPrevDFGs.forEach { prev ->
+            if (key is HasMemoryValue) {
+                newMemoryValues.forEach { prev ->
+                    val properties = edgePropertiesMap[Pair(key, prev)]
+                    var context: CallingContext? = null
+                    var granularity = default()
+                    var functionSummary = false
+
+                    // the entry in the edgePropertiesMap can contain a lot of things. A
+                    // granularity, a
+                    // callingcontext, or a boolean indicating if this is a functionSummary edge or
+                    // not
+                    properties?.forEach { property ->
+                        when (property) {
+                            is Granularity -> granularity = property
+                            is CallingContext -> context = property
+                            is Boolean -> functionSummary = property
+                        }
+                    }
+                    if (context == null)
+                        key.memoryValueEdges += Dataflow(prev, key, granularity, functionSummary)
+                    // TODO: add functionSummary flag for contextSensitive DFs
+                    else
+                        key.memoryValueEdges.addContextSensitive(
+                            prev,
+                            granularity,
+                            context,
+                            functionSummary,
+                        )
+                }
+            }
+
+            val newPrevDFG = value.second // TODO: Replace with value.third for last write
+            newPrevDFG.forEach { prev ->
                 val properties = edgePropertiesMap[Pair(key, prev)]
                 var context: CallingContext? = null
                 var granularity = default()
@@ -284,18 +316,12 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         functionSummary,
                     )
             }
+
             if (newMemoryAddresses.isNotEmpty()) {
                 when (key) {
-                    is Expression -> {
+                    is HasMemoryAddress -> {
                         key.memoryAddresses.clear()
                         key.memoryAddresses += newMemoryAddresses.filterIsInstance<MemoryAddress>()
-                    }
-                    is Declaration -> {
-                        if (
-                            newMemoryAddresses.size == 1 &&
-                                newMemoryAddresses.first() is MemoryAddress
-                        )
-                            key.memoryAddresses += newMemoryAddresses.first() as MemoryAddress
                     }
                 }
             }

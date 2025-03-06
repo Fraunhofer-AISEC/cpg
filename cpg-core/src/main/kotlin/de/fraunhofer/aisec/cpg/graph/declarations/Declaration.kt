@@ -26,9 +26,11 @@
 package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.HasMemoryAddress
+import de.fraunhofer.aisec.cpg.graph.HasMemoryValue
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.edges.MemoryAddressEdges
+import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflows
 import de.fraunhofer.aisec.cpg.graph.edges.memoryAddressEdgesOf
-import de.fraunhofer.aisec.cpg.graph.edges.memoryValueEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemoryAddress
@@ -46,7 +48,7 @@ import org.neo4j.ogm.annotation.Relationship
  * however clang does establish a connection between those nodes, we currently do not.
  */
 @NodeEntity
-abstract class Declaration : Node(), HasMemoryAddress {
+abstract class Declaration : Node(), HasMemoryAddress, HasMemoryValue {
     @DoNotPersist
     val symbol: Symbol
         get() {
@@ -55,14 +57,36 @@ abstract class Declaration : Node(), HasMemoryAddress {
 
     /**
      * Each Declaration allocates new memory, AKA a new address, so we create a new MemoryAddress
-     * node
+     * node. Should only be a single address!
      */
     @Relationship
-    override var memoryAddressEdges =
-        memoryAddressEdgesOf(mirrorProperty = MemoryAddress::usageEdges, outgoing = true)
+    override var memoryAddressEdges: MemoryAddressEdges =
+        memoryAddressEdgesOf(
+            mirrorProperty = MemoryAddress::usageEdges,
+            outgoing = true,
+            onAdd = { toAdd ->
+                if (this.memoryAddressEdges.size > 1) {
+                    log.error(
+                        "A declaration should have only a single address but we have ${this.memoryAddressEdges.size}."
+                    )
+                }
+            },
+        )
     override var memoryAddresses by unwrapping(Declaration::memoryAddressEdges)
 
+    /** Where the memory value of this declaration is used. */
+    @Relationship
+    override var memoryValueUsageEdges =
+        Dataflows<Node>(this, mirrorProperty = HasMemoryValue::memoryValueEdges, outgoing = true)
+    override var memoryValueUsages by unwrapping(Declaration::memoryValueUsageEdges)
+
     /** Each Declaration can also have a MemoryValue. */
-    @Relationship var memoryValueEdges = memoryValueEdgesOf()
-    var memoryValues by unwrapping(Declaration::memoryValueEdges)
+    @Relationship
+    override var memoryValueEdges =
+        Dataflows<Node>(
+            this,
+            mirrorProperty = HasMemoryValue::memoryValueUsageEdges,
+            outgoing = false,
+        )
+    override var memoryValues by unwrapping(Declaration::memoryValueEdges)
 }

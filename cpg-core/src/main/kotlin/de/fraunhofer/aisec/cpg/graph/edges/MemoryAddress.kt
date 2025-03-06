@@ -54,11 +54,13 @@ class MemoryAddressEdges(
     thisRef: Node,
     override var mirrorProperty: KProperty<MutableCollection<MemoryAddressEdge>>,
     outgoing: Boolean,
+    onAdd: ((MemoryAddressEdge) -> Unit)? = null,
 ) :
     EdgeSet<MemoryAddress, MemoryAddressEdge>(
         thisRef = thisRef,
         init = { start: Node, end: MemoryAddress -> MemoryAddressEdge(start, end, outgoing) },
         outgoing = outgoing,
+        onAdd = onAdd,
     ),
     MirroredEdgeCollection<MemoryAddress, MemoryAddressEdge>
 
@@ -66,34 +68,12 @@ class MemoryAddressEdges(
 fun Node.memoryAddressEdgesOf(
     mirrorProperty: KProperty<MutableCollection<MemoryAddressEdge>>,
     outgoing: Boolean,
+    onAdd: ((MemoryAddressEdge) -> Unit)? = null,
 ): MemoryAddressEdges {
-    return MemoryAddressEdges(thisRef = this, mirrorProperty = mirrorProperty, outgoing = outgoing)
-}
-
-/** This edge class defines that [end] is a (possible) value of [start]. */
-@RelationshipEntity
-open class MemoryValueEdge(start: Node, end: Node) : Edge<Node>(start, end) {
-    override var labels = setOf("MemoryValue")
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is MemoryValueEdge) return false
-        return super.equals(other)
-    }
-
-    override fun hashCode(): Int {
-        return super.hashCode()
-    }
-}
-
-/** This class represents a container of [MemoryValueEdge] property edges in a [thisRef]. */
-class MemoryValueEdges(thisRef: Node) :
-    EdgeSet<Node, MemoryValueEdge>(
-        thisRef = thisRef,
-        init = { start: Node, end: Node -> MemoryValueEdge(start, end) },
+    return MemoryAddressEdges(
+        thisRef = this,
+        mirrorProperty = mirrorProperty,
+        outgoing = outgoing,
+        onAdd = onAdd,
     )
-
-/** Creates an [Node] container starting from this node. */
-fun Node.memoryValueEdgesOf(): MemoryValueEdges {
-    return MemoryValueEdges(thisRef = this)
 }

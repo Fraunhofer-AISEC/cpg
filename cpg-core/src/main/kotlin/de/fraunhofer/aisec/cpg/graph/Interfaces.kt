@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.declarations.OperatorDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.MemoryAddressEdges
+import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflows
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.HasType
@@ -35,14 +36,26 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 
+/**
+ * Represents that this node (potentially) makes use of the given memory addresses e.g. to load or
+ * store data.
+ */
 interface HasMemoryAddress {
 
-    /**
-     * Each Declaration allocates new memory, AKA a new address, so we create a new MemoryAddress
-     * node
-     */
+    /** The memory addresses which this node uses e.g. to load or store data. */
     var memoryAddressEdges: MemoryAddressEdges
     var memoryAddresses: MutableSet<MemoryAddress>
+}
+
+/** Represents that this node may hold the value(s)/data given by [memoryValues]. */
+interface HasMemoryValue {
+
+    /** The value(s)/data the node holds. */
+    var memoryValueEdges: Dataflows<Node>
+    var memoryValues: MutableSet<Node>
+
+    var memoryValueUsageEdges: Dataflows<Node>
+    var memoryValueUsages: MutableSet<Node>
 }
 
 /** A simple interface that a node has [language]. */

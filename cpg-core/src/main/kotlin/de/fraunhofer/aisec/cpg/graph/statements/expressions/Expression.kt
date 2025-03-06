@@ -28,8 +28,8 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.UnknownLanguage
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflows
 import de.fraunhofer.aisec.cpg.graph.edges.memoryAddressEdgesOf
-import de.fraunhofer.aisec.cpg.graph.edges.memoryValueEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.types.*
@@ -51,7 +51,7 @@ import org.neo4j.ogm.annotation.Transient
  * <p>This is not possible in Java, the aforementioned code example would prompt a compile error.
  */
 @NodeEntity
-abstract class Expression : Statement(), HasType, HasMemoryAddress {
+abstract class Expression : Statement(), HasType, HasMemoryAddress, HasMemoryValue {
     /**
      * Is this node used for writing data instead of just reading it? Determines dataflow direction
      */
@@ -97,8 +97,20 @@ abstract class Expression : Statement(), HasType, HasMemoryAddress {
         }
 
     /** Each Expression also has a MemoryValue. */
-    @Relationship var memoryValueEdges = memoryValueEdgesOf()
-    var memoryValues by unwrapping(Expression::memoryValueEdges)
+    @Relationship
+    override var memoryValueEdges =
+        Dataflows<Node>(
+            this,
+            mirrorProperty = HasMemoryValue::memoryValueUsageEdges,
+            outgoing = false,
+        )
+    override var memoryValues by unwrapping(Expression::memoryValueEdges)
+
+    /** Where the memory value of this Expression is used. */
+    @Relationship
+    override var memoryValueUsageEdges =
+        Dataflows<Node>(this, mirrorProperty = HasMemoryValue::memoryValueEdges, outgoing = true)
+    override var memoryValueUsages by unwrapping(Expression::memoryValueUsageEdges)
 
     /** Each Expression also has a MemoryAddress. */
     @Relationship
