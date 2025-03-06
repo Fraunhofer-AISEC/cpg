@@ -198,7 +198,7 @@ class PythonFileConceptPass(ctx: TranslationContext) :
      * @param expression The start node.
      * @return The [File] node if one is found.
      */
-    private fun findFile(expression: Expression): File? {
+    internal fun findFile(expression: Expression): File? {
         val fulfilledPaths =
             expression
                 .followPrevFullDFGEdgesUntilHit(collectFailedPaths = false) {
@@ -262,7 +262,7 @@ class PythonFileConceptPass(ctx: TranslationContext) :
      * open(file, mode='r', buffering=-1, encoding=None, errors=None, newline=None, closefd=True, opener=None)
      * ```
      */
-    private fun getBuiltinOpenMode(call: CallExpression): String? {
+    internal fun getBuiltinOpenMode(call: CallExpression): String? {
         return getArgumentValueByNameOrPosition<String>(call, "mode", 1)
     }
 
