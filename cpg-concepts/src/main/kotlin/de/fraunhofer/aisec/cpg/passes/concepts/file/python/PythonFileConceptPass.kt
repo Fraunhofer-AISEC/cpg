@@ -71,8 +71,8 @@ class PythonFileConceptPass(ctx: TranslationContext) :
              * TODO: opener https://docs.python.org/3/library/functions.html#open
              */
             val fileName = getFileName(callExpression, "file")
-            val newFileNode = newFile(underlyingNode = callExpression, fileName = fileName)
-            fileCache += fileName to newFileNode
+            val newFileNode: File = getOrCreateFile(fileName, callExpression)
+
             getBuiltinOpenMode(callExpression)?.let { mode ->
                 val flags = translateBuiltinOpenMode(mode)
                 newFileSetFlags(underlyingNode = callExpression, file = newFileNode, flags = flags)
@@ -108,7 +108,7 @@ class PythonFileConceptPass(ctx: TranslationContext) :
             when (callExpression.callee.name.toString()) {
                 "os.open" -> {
                     val fileName = getFileName(callExpression, "path")
-                    val newFileNode = newFile(underlyingNode = callExpression, fileName = fileName)
+                    val newFileNode = getOrCreateFile(fileName, callExpression)
                     fileCache += fileName to newFileNode
 
                     getOsOpenFlags(callExpression)?.let { flags ->
@@ -163,6 +163,27 @@ class PythonFileConceptPass(ctx: TranslationContext) :
                     newFileChmod(underlyingNode = callExpression, file = file, mode = mode)
                 }
             }
+        }
+    }
+
+    /**
+     * Looks for the requested file in the [fileCache]. If none is found, a new [File] is created
+     * and added to the cache.
+     *
+     * @param fileName The name/path of the file.
+     * @param callExpression The [CallExpression] triggering the call lookup. It is used as a basis
+     *   ([File.underlyingNode]) if a new file has to be created.
+     * @return The [File] found in the cache or the new file in case it had to be created.
+     */
+    internal fun getOrCreateFile(fileName: String, callExpression: CallExpression): File {
+        val cached = fileCache[fileName]
+
+        return if (cached != null) {
+            cached
+        } else {
+            val new = newFile(underlyingNode = callExpression, fileName = fileName)
+            fileCache += fileName to new
+            new
         }
     }
 
