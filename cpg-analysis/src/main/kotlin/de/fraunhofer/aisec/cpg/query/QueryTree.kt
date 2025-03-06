@@ -315,4 +315,24 @@ fun <T> const(n: T): QueryTree<T> {
     return QueryTree(n, stringRepresentation = "$n")
 }
 
+/**
+ * This is a helper function to extract all the final nodes visited on successful [dataFlow]
+ * traversals. The helper filters for successful traversals only and maps all those paths to the
+ * last node (i.e. the node that made the traversal stop).
+ *
+ * Use-case to find the terminating nodes (i.e. the `SpecialNodeType` nodes) of the [dataFlow] call
+ * below:
+ * ```
+ * val specialNodes = dataFlow(foo) { it is SpecialNodeType }.successfulLastNodes()
+ * ```
+ *
+ * @return A list of all terminating nodes for successful queries.
+ */
+fun QueryTree<*>.successfulLastNodes(): List<Node> {
+    val successfulPaths = this.children.filter { it.value == true }
+    val innerPath = successfulPaths.flatMap { it.children }
+    val finallyTheEntirePaths = innerPath.map { it.value }
+    return finallyTheEntirePaths.mapNotNull { (it as? List<*>)?.last() }.filterIsInstance<Node>()
+}
+
 class QueryException(override val message: String) : Exception(message)
