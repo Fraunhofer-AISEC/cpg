@@ -233,18 +233,19 @@ class PythonFileConceptPass(ctx: TranslationContext) :
             Util.warnWithFileLocation(
                 call,
                 log,
-                "Couldn't evaluate the file name. Trying to find the corresponding declaration to use it as a placeholder.",
+                "Couldn't evaluate the file name. Trying to find the last write and use its value.",
             )
             val nameArg =
                 (call.argumentEdges[argumentName] ?: call.arguments.getOrNull(0)) as? Reference
             if (nameArg != null) {
                 val lastWrite =
                     nameArg.followPrevDFG { it is Reference && it.access == AccessValues.WRITE }
-                // val decl = path?.last()
-                TODO()
+                (lastWrite?.lastOrNull()?.evaluate(PythonValueEvaluator()) as? String)
+                    ?: DEFAULT_FILE_NAME
+            } else {
+                //  not a Refernce
+                DEFAULT_FILE_NAME
             }
-
-            DEFAULT_FILE_NAME
         }
     }
 
@@ -323,15 +324,15 @@ class PythonFileConceptPass(ctx: TranslationContext) :
                     is Reference -> arg.evaluate(PythonValueEvaluator())
                     else -> null
                 }
-            return if (value is T && value != "{UNKNOWN.join}") {
+            return if (value is T) {
                 value
             } else {
                 Util.errorWithFileLocation(
                     call,
                     log,
                     "Evaluated the argument to type \"{}\". Expected \"{}\". Returning \"null\".",
-                    value?.let { it::class.simpleName!! },
-                    T::class.simpleName!!,
+                    value?.let { it::class.simpleName },
+                    T::class.simpleName,
                 )
                 null
             }
