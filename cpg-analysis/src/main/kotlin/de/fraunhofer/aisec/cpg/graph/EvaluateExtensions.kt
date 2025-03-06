@@ -26,6 +26,8 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.analysis.ValueEvaluator
+import de.fraunhofer.aisec.cpg.graph.edges.get
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewArrayExpression
 
 fun Node.evaluate(evaluator: ValueEvaluator = ValueEvaluator()): Any? {
@@ -36,3 +38,25 @@ val NewArrayExpression.capacity: Int
     get() {
         return dimensions.first().evaluate() as Int
     }
+
+/**
+ * A little helper function to find a [CallExpression]s argument first by [name] and if this fails
+ * by [position]. The argument ist evaluated and the result is returned if it has the expected type
+ * [T].
+ *
+ * @param this The [CallExpression] to analyze.
+ * @param name Optionally: the [CallExpression.arguments] name.
+ * @param position Optionally: the [CallExpression.arguments] position.
+ * @param evaluator The [ValueEvaluator] to use for evaluation of the argument.
+ * @return The evaluated result (of type [T]) or `null`.
+ */
+inline fun <reified T> CallExpression.argumentValueByNameOrPosition(
+    name: String? = null,
+    position: Int? = null,
+    evaluator: ValueEvaluator = ValueEvaluator(),
+): T? {
+    val arg =
+        name?.let { this.argumentEdges[it]?.end } ?: position?.let { this.arguments.getOrNull(it) }
+    val value = evaluator.evaluateAs<T>(arg)
+    return value
+}
