@@ -117,7 +117,7 @@ class CallResolverTest : BaseTest() {
     fun testJava() {
         val result =
             analyze("java", topLevel, true) {
-                it.registerLanguage(JavaLanguage())
+                it.registerLanguage<JavaLanguage>()
                 it.inferenceConfiguration(
                     InferenceConfiguration.builder().inferRecords(false).build()
                 )

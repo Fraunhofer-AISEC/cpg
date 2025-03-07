@@ -42,7 +42,7 @@ internal class SuperCallTest : BaseTest() {
     @Test
     @Throws(Exception::class)
     fun testSimpleCall() {
-        val result = analyze("java", topLevel, true) { it.registerLanguage(JavaLanguage()) }
+        val result = analyze("java", topLevel, true) { it.registerLanguage<JavaLanguage>() }
         val records = result.records
         val superClass = findByUniqueName(records, "SuperClass")
         val superMethods = superClass.methods
@@ -58,7 +58,7 @@ internal class SuperCallTest : BaseTest() {
     @Test
     @Throws(Exception::class)
     fun testInterfaceCall() {
-        val result = analyze("java", topLevel, true) { it.registerLanguage(JavaLanguage()) }
+        val result = analyze("java", topLevel, true) { it.registerLanguage<JavaLanguage>() }
         val records = result.records
         val interface1 = findByUniqueName(records, "Interface1")
         val interface1Methods = interface1.methods
@@ -81,7 +81,7 @@ internal class SuperCallTest : BaseTest() {
     @Test
     @Throws(Exception::class)
     fun testSuperField() {
-        val result = analyze("java", topLevel, true) { it.registerLanguage(JavaLanguage()) }
+        val result = analyze("java", topLevel, true) { it.registerLanguage<JavaLanguage>() }
         val records = result.records
         val superClass = findByUniqueName(records, "SuperClass")
         val superField = findByUniqueName(superClass.fields, "field")
@@ -103,7 +103,7 @@ internal class SuperCallTest : BaseTest() {
     @Test
     @Throws(Exception::class)
     fun testInnerCall() {
-        val result = analyze("java", topLevel, true) { it.registerLanguage(JavaLanguage()) }
+        val result = analyze("java", topLevel, true) { it.registerLanguage<JavaLanguage>() }
         val records = result.records
         val superClass = findByUniqueName(records, "SuperClass")
         val superMethods = superClass.methods
@@ -119,7 +119,7 @@ internal class SuperCallTest : BaseTest() {
     @Test
     @Throws(Exception::class)
     fun testNoExcessFields() {
-        val result = analyze("java", topLevel, true) { it.registerLanguage(JavaLanguage()) }
+        val result = analyze("java", topLevel, true) { it.registerLanguage<JavaLanguage>() }
         val records = result.records
 
         val superClass = records["SuperClass"]

@@ -27,7 +27,8 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.GraphExamples
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
-import de.fraunhofer.aisec.cpg.frontends.TestLanguage
+import de.fraunhofer.aisec.cpg.frontends.TestLanguageWithColon
+import de.fraunhofer.aisec.cpg.frontends.testFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
@@ -281,9 +282,9 @@ class ControlFlowSensitiveDFGPassTest {
     }
 
     fun getForEachTest() =
-        ControlDependenceGraphPassTest.testFrontend(
+        testFrontend(
                 TranslationConfiguration.builder()
-                    .registerLanguage(TestLanguage("::"))
+                    .registerLanguage<TestLanguageWithColon>()
                     .defaultPasses()
                     .registerPass<ControlFlowSensitiveDFGPass>()
                     .configurePass<ControlFlowSensitiveDFGPass>(

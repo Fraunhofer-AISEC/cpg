@@ -25,11 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.enhancements
 
-import de.fraunhofer.aisec.cpg.GraphExamples
 import de.fraunhofer.aisec.cpg.InferenceConfiguration
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
+import de.fraunhofer.aisec.cpg.frontends.testFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextIn
@@ -68,10 +68,10 @@ class DFGFunctionSummariesTest {
     @Test
     fun testMatching() {
         val code =
-            GraphExamples.testFrontend(
+            testFrontend(
                     TranslationConfiguration.builder()
                         .defaultPasses()
-                        .registerLanguage(TestLanguage("."))
+                        .registerLanguage<TestLanguage>()
                         .registerFunctionSummaries(File("src/test/resources/function-dfg2.yml"))
                         .inferenceConfiguration(
                             InferenceConfiguration.builder()
@@ -367,7 +367,7 @@ class DFGFunctionSummariesTest {
         ): TranslationResult {
             val config =
                 TranslationConfiguration.builder()
-                    .registerLanguage(TestLanguage("."))
+                    .registerLanguage<TestLanguage>()
                     .registerFunctionSummaries(File("src/test/resources/function-dfg.yml"))
                     .inferenceConfiguration(
                         InferenceConfiguration.builder()
@@ -385,7 +385,7 @@ class DFGFunctionSummariesTest {
               return a;
             }
              */
-            return GraphExamples.testFrontend(config).build {
+            return testFrontend(config).build {
                 translationResult {
                     translationUnit("DfgInferredCall.c") {
                         function("main", t("int")) {

@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.ruby
 
 import de.fraunhofer.aisec.cpg.ScopeManager
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
@@ -33,8 +34,8 @@ import de.fraunhofer.aisec.cpg.graph.types.*
 import kotlin.reflect.KClass
 
 /** The Ruby Language */
-class RubyLanguage() :
-    Language<RubyLanguageFrontend>(),
+class RubyLanguage(ctx: TranslationContext) :
+    Language<RubyLanguageFrontend>(ctx),
     HasDefaultArguments,
     HasClasses,
     HasSuperClasses,

@@ -81,8 +81,8 @@ import org.slf4j.LoggerFactory
  */
 @RegisterExtraPass(DynamicInvokeResolver::class)
 @RegisterExtraPass(CXXExtraPass::class)
-open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: TranslationContext) :
-    LanguageFrontend<IASTNode, IASTTypeId>(language, ctx) {
+open class CXXLanguageFrontend(ctx: TranslationContext, language: Language<CXXLanguageFrontend>) :
+    LanguageFrontend<IASTNode, IASTTypeId>(ctx, language) {
 
     /**
      * The dialect used by this language frontend, either [GCCLanguage] for C or [GPPLanguage] for

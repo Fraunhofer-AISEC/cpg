@@ -54,8 +54,8 @@ import org.bytedeco.llvm.global.LLVM.*
  * resort to use [Pointer] as the AST node type here.
  */
 @RegisterExtraPass(CompressLLVMPass::class)
-class LLVMIRLanguageFrontend(language: Language<LLVMIRLanguageFrontend>, ctx: TranslationContext) :
-    LanguageFrontend<Pointer, LLVMTypeRef>(language, ctx) {
+class LLVMIRLanguageFrontend(ctx: TranslationContext, language: Language<LLVMIRLanguageFrontend>) :
+    LanguageFrontend<Pointer, LLVMTypeRef>(ctx, language) {
 
     val statementHandler = StatementHandler(this)
     val declarationHandler = DeclarationHandler(this)

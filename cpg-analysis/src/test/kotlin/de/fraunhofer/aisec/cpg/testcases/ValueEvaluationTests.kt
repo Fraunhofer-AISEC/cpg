@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.testcases
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
+import de.fraunhofer.aisec.cpg.frontends.testFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.passes.UnreachableEOGPass
@@ -37,7 +38,7 @@ class ValueEvaluationTests {
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerLanguage(TestLanguage("."))
+                    .registerLanguage<TestLanguage>()
                     .registerPass<UnreachableEOGPass>()
                     .build()
         ) =
@@ -99,7 +100,7 @@ class ValueEvaluationTests {
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerLanguage(TestLanguage("."))
+                    .registerLanguage<TestLanguage>()
                     .registerPass<UnreachableEOGPass>()
                     .build()
         ) =
@@ -141,7 +142,7 @@ class ValueEvaluationTests {
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerLanguage(TestLanguage("."))
+                    .registerLanguage<TestLanguage>()
                     .registerPass<UnreachableEOGPass>()
                     .build()
         ) =
@@ -246,7 +247,7 @@ class ValueEvaluationTests {
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerLanguage(TestLanguage("."))
+                    .registerLanguage<TestLanguage>()
                     .registerPass<UnreachableEOGPass>()
                     .build()
         ) =

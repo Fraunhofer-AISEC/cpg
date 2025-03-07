@@ -25,9 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.GraphExamples.Companion.testFrontend
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
+import de.fraunhofer.aisec.cpg.frontends.testFrontend
 import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.statements.ThrowExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
@@ -42,7 +42,7 @@ class ThrowExpressionTest {
             testFrontend(
                     TranslationConfiguration.builder()
                         .defaultPasses()
-                        .registerLanguage(TestLanguage("."))
+                        .registerLanguage<TestLanguage>()
                         .build()
                 )
                 .build {

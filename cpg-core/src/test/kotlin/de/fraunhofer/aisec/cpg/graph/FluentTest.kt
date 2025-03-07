@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
-import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.TestLanguageWithColon
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
 import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
@@ -50,31 +50,32 @@ class FluentTest {
     @Test
     fun test() {
         val result =
-            TestLanguageFrontend().build {
-                translationResult {
-                    translationUnit("file.cpp") {
-                        function("main", t("int")) {
-                            param("argc", t("int"))
-                            body {
-                                declare { variable("a", t("short")) { literal(1) } }
-                                ifStmt {
-                                    condition { ref("argc") eq literal(1) }
-                                    thenStmt { call("printf") { literal("then") } }
-                                    elseIf {
+            testFrontend { it.registerLanguage<TestLanguageWithColon>() }
+                .build {
+                    translationResult {
+                        translationUnit("file.cpp") {
+                            function("main", t("int")) {
+                                param("argc", t("int"))
+                                body {
+                                    declare { variable("a", t("short")) { literal(1) } }
+                                    ifStmt {
                                         condition { ref("argc") eq literal(1) }
-                                        thenStmt { call("printf") { literal("elseIf") } }
-                                        elseStmt { call("printf") { literal("else") } }
+                                        thenStmt { call("printf") { literal("then") } }
+                                        elseIf {
+                                            condition { ref("argc") eq literal(1) }
+                                            thenStmt { call("printf") { literal("elseIf") } }
+                                            elseStmt { call("printf") { literal("else") } }
+                                        }
                                     }
-                                }
-                                declare { variable("some", t("SomeClass")) }
-                                call("do") { call("some.func") }
+                                    declare { variable("some", t("SomeClass")) }
+                                    call("do") { call("some.func") }
 
-                                returnStmt { ref("a") + literal(2) }
+                                    returnStmt { ref("a") + literal(2) }
+                                }
                             }
                         }
                     }
                 }
-            }
 
         // Let's assert that we did this correctly
         val main = result.functions["main"]
@@ -189,7 +190,7 @@ class FluentTest {
     fun testCollectionComprehensions() {
         val result =
             testFrontend {
-                    it.registerLanguage(TestLanguage("."))
+                    it.registerLanguage<TestLanguage>()
                     it.defaultPasses()
                     it.registerPass<ControlDependenceGraphPass>()
                     it.registerPass<ProgramDependenceGraphPass>()
@@ -242,7 +243,7 @@ class FluentTest {
     fun testCollectionComprehensionsWithDeclaration() {
         val result =
             testFrontend {
-                    it.registerLanguage(TestLanguage("."))
+                    it.registerLanguage<TestLanguage>()
                     it.defaultPasses()
                     it.registerPass<ControlDependenceGraphPass>()
                     it.registerPass<ProgramDependenceGraphPass>()
@@ -296,7 +297,7 @@ class FluentTest {
     fun testCollectionComprehensionsWithTwoDeclarations() {
         val result =
             testFrontend {
-                    it.registerLanguage(TestLanguage("."))
+                    it.registerLanguage<TestLanguage>()
                     it.defaultPasses()
                     it.registerPass<ControlDependenceGraphPass>()
                     it.registerPass<ProgramDependenceGraphPass>()

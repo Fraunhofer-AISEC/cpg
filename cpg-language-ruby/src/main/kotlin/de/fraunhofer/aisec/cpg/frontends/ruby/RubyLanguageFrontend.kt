@@ -39,8 +39,8 @@ import org.jruby.ast.RootNode
 import org.jruby.parser.Parser
 import org.jruby.parser.ParserConfiguration
 
-class RubyLanguageFrontend(language: RubyLanguage, ctx: TranslationContext) :
-    LanguageFrontend<org.jruby.ast.Node, org.jruby.ast.Node>(language, ctx) {
+class RubyLanguageFrontend(ctx: TranslationContext, language: RubyLanguage) :
+    LanguageFrontend<org.jruby.ast.Node, org.jruby.ast.Node>(ctx, language) {
     val declarationHandler: DeclarationHandler = DeclarationHandler(this)
     val expressionHandler: ExpressionHandler = ExpressionHandler(this)
     val statementHandler: StatementHandler = StatementHandler(this)

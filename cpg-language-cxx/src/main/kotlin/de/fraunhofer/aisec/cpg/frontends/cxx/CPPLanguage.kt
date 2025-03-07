@@ -47,8 +47,8 @@ import kotlin.reflect.KClass
 import org.neo4j.ogm.annotation.Transient
 
 /** The C++ language. */
-open class CPPLanguage :
-    CLanguage(),
+open class CPPLanguage(ctx: TranslationContext) :
+    CLanguage(ctx),
     HasDefaultArguments,
     HasTemplates,
     HasStructs,

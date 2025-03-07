@@ -25,12 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.testcases
 
-import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
-import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.TypeManager
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
-import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.TestLanguageWithColon
+import de.fraunhofer.aisec.cpg.frontends.testFrontend
 import de.fraunhofer.aisec.cpg.graph.array
 import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.newNewArrayExpression
@@ -42,7 +40,7 @@ class GraphExamples {
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerLanguage(TestLanguage("."))
+                    .registerLanguage<TestLanguage>()
                     .build()
         ) =
             testFrontend(config).build {
@@ -103,7 +101,7 @@ class GraphExamples {
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerLanguage(TestLanguage("::"))
+                    .registerLanguage<TestLanguageWithColon>()
                     .build()
         ) =
             testFrontend(config).build {
@@ -152,11 +150,5 @@ class GraphExamples {
                     }
                 }
             }
-
-        fun testFrontend(config: TranslationConfiguration): TestLanguageFrontend {
-            val ctx = TranslationContext(config, ScopeManager(), TypeManager())
-            val language = config.languages.filterIsInstance<TestLanguage>().first()
-            return TestLanguageFrontend(language.namespaceDelimiter, language, ctx)
-        }
     }
 }

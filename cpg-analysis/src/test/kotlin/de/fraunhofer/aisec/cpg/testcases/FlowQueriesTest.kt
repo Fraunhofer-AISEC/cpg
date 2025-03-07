@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.testcases
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
+import de.fraunhofer.aisec.cpg.frontends.testFrontend
 import de.fraunhofer.aisec.cpg.graph.array
 import de.fraunhofer.aisec.cpg.graph.builder.assign
 import de.fraunhofer.aisec.cpg.graph.builder.body
@@ -61,7 +62,7 @@ class FlowQueriesTest {
                     .defaultPasses()
                     .registerPass<ControlDependenceGraphPass>()
                     .registerPass<ProgramDependenceGraphPass>()
-                    .registerLanguage(TestLanguage("."))
+                    .registerLanguage<TestLanguage>()
                     .build()
         ) =
             testFrontend(config).build {
@@ -107,7 +108,7 @@ class FlowQueriesTest {
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerLanguage(TestLanguage("."))
+                    .registerLanguage<TestLanguage>()
                     .build()
         ) =
             testFrontend(config).build {
@@ -143,7 +144,7 @@ class FlowQueriesTest {
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerLanguage(TestLanguage("."))
+                    .registerLanguage<TestLanguage>()
                     .build()
         ) =
             testFrontend(config).build {
@@ -184,7 +185,7 @@ class FlowQueriesTest {
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerLanguage(TestLanguage("."))
+                    .registerLanguage<TestLanguage>()
                     .build()
         ) =
             testFrontend(config).build {
@@ -226,7 +227,7 @@ class FlowQueriesTest {
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerLanguage(TestLanguage("."))
+                    .registerLanguage<TestLanguage>()
                     .build()
         ) =
             testFrontend(config).build {
@@ -260,7 +261,7 @@ class FlowQueriesTest {
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerLanguage(TestLanguage("."))
+                    .registerLanguage<TestLanguage>()
                     .build()
         ) =
             testFrontend(config).build {
@@ -298,7 +299,7 @@ class FlowQueriesTest {
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerLanguage(TestLanguage("."))
+                    .registerLanguage<TestLanguage>()
                     .build()
         ) =
             testFrontend(config).build {
@@ -337,7 +338,7 @@ class FlowQueriesTest {
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerLanguage(TestLanguage("."))
+                    .registerLanguage<TestLanguage>()
                     .build()
         ) =
             testFrontend(config).build {
@@ -373,7 +374,7 @@ class FlowQueriesTest {
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerLanguage(TestLanguage("."))
+                    .registerLanguage<TestLanguage>()
                     .build()
         ) =
             testFrontend(config).build {
@@ -414,7 +415,7 @@ class FlowQueriesTest {
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerLanguage(TestLanguage("."))
+                    .registerLanguage<TestLanguage>()
                     .build()
         ) =
             testFrontend(config).build {

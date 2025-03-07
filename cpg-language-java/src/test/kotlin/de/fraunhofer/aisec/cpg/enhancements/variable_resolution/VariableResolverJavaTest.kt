@@ -185,7 +185,7 @@ internal class VariableResolverJavaTest : BaseTest() {
                         topLevel.resolve("ExternalClass.java"),
                     )
                     .map(Path::toFile)
-            val result = analyze(fileNames, topLevel, true) { it.registerLanguage(JavaLanguage()) }
+            val result = analyze(fileNames, topLevel, true) { it.registerLanguage<JavaLanguage>() }
 
             val calls = result.calls { it.name.localName == "printLog" }
             val records = result.records

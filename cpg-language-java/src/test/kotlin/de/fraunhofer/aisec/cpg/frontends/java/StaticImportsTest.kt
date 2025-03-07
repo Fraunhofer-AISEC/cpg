@@ -52,7 +52,7 @@ internal class StaticImportsTest : BaseTest() {
                 topLevel,
                 true,
             ) {
-                it.registerLanguage(JavaLanguage())
+                it.registerLanguage<JavaLanguage>()
             }
         val methods = result.methods
         val test = findByUniqueName(methods, "test")
@@ -83,7 +83,7 @@ internal class StaticImportsTest : BaseTest() {
     fun testAsteriskImport() {
         val result =
             analyze("java", topLevel.resolve("asterisk"), true) {
-                it.registerLanguage(JavaLanguage())
+                it.registerLanguage<JavaLanguage>()
             }
         val methods = result.methods
         val main = methods["main", SearchModifier.UNIQUE]

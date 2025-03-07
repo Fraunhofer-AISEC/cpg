@@ -25,7 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.TestLanguageWithColon
+import de.fraunhofer.aisec.cpg.frontends.testFrontend
 import de.fraunhofer.aisec.cpg.test.*
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
@@ -72,7 +73,7 @@ internal class NameTest {
 
     @Test
     fun testParentNames() {
-        with(TestLanguageFrontend()) {
+        with(testFrontend { it.registerLanguage<TestLanguageWithColon>() }) {
             val tu = newTranslationUnitDeclaration("file.extension")
             this.scopeManager.resetToGlobal(tu)
 

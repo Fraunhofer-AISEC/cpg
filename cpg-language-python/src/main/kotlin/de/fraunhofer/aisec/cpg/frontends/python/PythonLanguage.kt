@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.python
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
 import de.fraunhofer.aisec.cpg.graph.Name
@@ -44,8 +45,8 @@ import org.neo4j.ogm.annotation.Transient
 import org.neo4j.ogm.annotation.typeconversion.Convert
 
 /** The Python language. */
-class PythonLanguage :
-    Language<PythonLanguageFrontend>(),
+class PythonLanguage(ctx: TranslationContext) :
+    Language<PythonLanguageFrontend>(ctx),
     HasShortCircuitOperators,
     HasOperatorOverloading,
     HasFunctionStyleConstruction,

@@ -43,17 +43,16 @@ internal class CXXSymbolConfigurationTest : BaseTest() {
     @Test
     @Throws(TranslationException::class)
     fun testWithoutSymbols() {
+        val ctx =
+            TranslationContext(
+                TranslationConfiguration.builder().build(),
+                ScopeManager(),
+                TypeManager(),
+            )
+
         // parse without symbols
         val tu =
-            CXXLanguageFrontend(
-                    CPPLanguage(),
-                    TranslationContext(
-                        TranslationConfiguration.builder().build(),
-                        ScopeManager(),
-                        TypeManager(),
-                    ),
-                )
-                .parse(File("src/test/resources/symbols.cpp"))
+            CXXLanguageFrontend(ctx, CPPLanguage(ctx)).parse(File("src/test/resources/symbols.cpp"))
         val main = tu.functions["main"]
         assertNotNull(main)
 
@@ -87,12 +86,9 @@ internal class CXXSymbolConfigurationTest : BaseTest() {
                 .build()
 
         // let's try with symbol definitions
+        val ctx = TranslationContext(config, ScopeManager(), TypeManager())
         val tu =
-            CXXLanguageFrontend(
-                    CPPLanguage(),
-                    TranslationContext(config, ScopeManager(), TypeManager()),
-                )
-                .parse(File("src/test/resources/symbols.cpp"))
+            CXXLanguageFrontend(ctx, CPPLanguage(ctx)).parse(File("src/test/resources/symbols.cpp"))
         val main = tu.functions["main"]
         assertNotNull(main)
 

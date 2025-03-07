@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.java
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import de.fraunhofer.aisec.cpg.ScopeManager
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
@@ -41,8 +42,8 @@ import kotlin.reflect.KClass
 import org.neo4j.ogm.annotation.Transient
 
 /** The Java language. */
-open class JavaLanguage :
-    Language<JavaLanguageFrontend>(),
+open class JavaLanguage(ctx: TranslationContext) :
+    Language<JavaLanguageFrontend>(ctx),
     HasClasses,
     HasSuperClasses,
     HasGenerics,

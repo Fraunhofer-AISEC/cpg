@@ -26,8 +26,8 @@
 package de.fraunhofer.aisec.cpg.passes.scopes
 
 import de.fraunhofer.aisec.cpg.*
-import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.TestLanguageWithColon
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.test.*
@@ -45,8 +45,9 @@ internal class ScopeManagerTest : BaseTest() {
     fun testMerge() {
         val tm = TypeManager()
         val s1 = ScopeManager()
-        val frontend1 =
-            TestLanguageFrontend("::", TestLanguage(), TranslationContext(config, s1, tm))
+        val ctx = TranslationContext(config, s1, tm)
+        val language = TestLanguageWithColon(ctx)
+        val frontend1 = TestLanguageFrontend(ctx, language)
         s1.resetToGlobal(frontend1.newTranslationUnitDeclaration("f1.cpp", null))
         with(frontend1) {
             // build a namespace declaration in f1.cpp with the namespace A
@@ -58,8 +59,7 @@ internal class ScopeManagerTest : BaseTest() {
             s1.addDeclaration(namespaceA1)
 
             val s2 = ScopeManager()
-            val frontend2 =
-                TestLanguageFrontend("::", TestLanguage(), TranslationContext(config, s2, tm))
+            val frontend2 = TestLanguageFrontend(TranslationContext(config, s2, tm), language)
             s2.resetToGlobal(frontend2.newTranslationUnitDeclaration("f1.cpp", null))
 
             // and do the same in the other file
@@ -114,8 +114,8 @@ internal class ScopeManagerTest : BaseTest() {
     @Test
     fun testScopeFQN() {
         val s = ScopeManager()
-        val frontend =
-            TestLanguageFrontend("::", TestLanguage(), TranslationContext(config, s, TypeManager()))
+        val ctx = TranslationContext(config, s, TypeManager())
+        val frontend = TestLanguageFrontend(ctx, TestLanguageWithColon(ctx))
         s.resetToGlobal(frontend.newTranslationUnitDeclaration("file.cpp", null))
         with(frontend) {
             assertNull(s.currentNamespace)
@@ -146,8 +146,7 @@ internal class ScopeManagerTest : BaseTest() {
     @Test
     fun testMatchesSignature() {
         val s = ScopeManager()
-        val frontend =
-            TestLanguageFrontend("::", TestLanguage(), TranslationContext(config, s, TypeManager()))
+        val frontend = TestLanguageFrontend(TranslationContext(config, s, TypeManager()))
         with(frontend) {
             val method =
                 newMethodDeclaration("testMethod").apply {

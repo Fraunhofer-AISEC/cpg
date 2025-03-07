@@ -74,24 +74,26 @@ class LanguageTest {
 
     @Test
     fun testMultiLanguage() {
-        class OtherLanguage : TestLanguage()
+        class OtherLanguage(ctx: TranslationContext) : TestLanguage(ctx)
 
-        val otherLanguage = OtherLanguage()
-        val testLanguage = TestLanguage()
+        val ctx =
+            TranslationContext(
+                config = TranslationConfiguration.builder().build(),
+                scopeManager = ScopeManager(),
+                typeManager = TypeManager(),
+            )
+
+        val otherLanguage = OtherLanguage(ctx)
+        val testLanguage = TestLanguage(ctx)
 
         val result =
             TranslationResult(
                 translationManager = TranslationManager.builder().build(),
-                finalCtx =
-                    TranslationContext(
-                        config = TranslationConfiguration.builder().build(),
-                        scopeManager = ScopeManager(),
-                        typeManager = TypeManager(),
-                    ),
+                finalCtx = ctx,
             )
 
         val comp1 =
-            with(TestLanguageFrontend("::", language = otherLanguage)) {
+            with(TestLanguageFrontend(language = otherLanguage)) {
                 val tu = newTranslationUnitDeclaration("tu-language-other")
                 val comp = Component()
                 comp.ctx = this.ctx
@@ -101,7 +103,7 @@ class LanguageTest {
         result.components += comp1
 
         val comp2 =
-            with(TestLanguageFrontend("::", language = testLanguage)) {
+            with(TestLanguageFrontend(language = testLanguage)) {
                 val tu = newTranslationUnitDeclaration("tu-language-test")
                 val comp = Component()
                 comp.ctx = this.ctx

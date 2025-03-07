@@ -57,9 +57,9 @@ import java.nio.file.StandardCopyOption
  * also has built-in support for React dialects TSX and JSX.
  */
 class TypeScriptLanguageFrontend(
-    language: Language<TypeScriptLanguageFrontend>,
     ctx: TranslationContext,
-) : LanguageFrontend<TypeScriptNode, TypeScriptNode>(language, ctx) {
+    language: Language<TypeScriptLanguageFrontend>,
+) : LanguageFrontend<TypeScriptNode, TypeScriptNode>(ctx, language) {
 
     val declarationHandler = DeclarationHandler(this)
     val statementHandler = StatementHandler(this)

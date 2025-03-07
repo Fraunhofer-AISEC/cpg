@@ -276,7 +276,7 @@ class ShortcutsTest {
             GraphExamples.getShortcutClass(
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerLanguage(TestLanguage("."))
+                    .registerLanguage<TestLanguage>()
                     .build()
             )
 

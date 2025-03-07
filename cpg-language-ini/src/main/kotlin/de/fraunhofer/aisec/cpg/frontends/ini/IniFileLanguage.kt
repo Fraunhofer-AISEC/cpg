@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.ini
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.types.StringType
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -38,7 +39,7 @@ import kotlin.reflect.KClass
  * - all `key`s are unique per section
  * - the file is accepted by the [ini4j library](https://ini4j.sourceforge.net/)
  */
-class IniFileLanguage : Language<IniFileFrontend>() {
+class IniFileLanguage(ctx: TranslationContext) : Language<IniFileFrontend>(ctx) {
     override val fileExtensions = listOf("ini", "conf")
     override val namespaceDelimiter: String = "." // no such thing
 

@@ -743,7 +743,7 @@ internal class EOGTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "eog")
         val result =
             analyze(listOf(topLevel.resolve("EOG.java").toFile()), topLevel, true) {
-                it.registerLanguage(JavaLanguage())
+                it.registerLanguage<JavaLanguage>()
             }
 
         // Test If-Block
@@ -932,7 +932,7 @@ internal class EOGTest : BaseTest() {
         val file = File("src/main/java/de/fraunhofer/aisec/cpg/passes/CallResolver.java")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
-                it.registerLanguage(JavaLanguage())
+                it.registerLanguage<JavaLanguage>()
             }
         assertTrue(EvaluationOrderGraphPass.checkEOGInvariant(tu))
     }
@@ -949,7 +949,7 @@ internal class EOGTest : BaseTest() {
         val topLevel = toTranslate.parentFile.toPath()
         val tu =
             analyzeAndGetFirstTU(listOf(toTranslate), topLevel, true) {
-                it.registerLanguage(JavaLanguage())
+                it.registerLanguage<JavaLanguage>()
             }
         var nodes = SubgraphWalker.flattenAST(tu)
         // TODO: until explicitly added Return Statements are either removed again or code and

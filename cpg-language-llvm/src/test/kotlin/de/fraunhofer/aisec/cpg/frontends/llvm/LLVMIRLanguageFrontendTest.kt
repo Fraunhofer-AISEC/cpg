@@ -25,7 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.llvm
 
-import de.fraunhofer.aisec.cpg.*
+import de.fraunhofer.aisec.cpg.ScopeManager
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.TypeManager
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
@@ -35,7 +38,6 @@ import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
 import kotlin.test.*
-import kotlin.test.Test
 import org.junit.jupiter.api.assertThrows
 
 class LLVMIRLanguageFrontendTest {
@@ -43,15 +45,13 @@ class LLVMIRLanguageFrontendTest {
     fun testExceptionBrokenFile() {
         val topLevel = Path.of("src", "test", "resources", "llvm")
 
-        val frontend =
-            LLVMIRLanguageFrontend(
-                LLVMIRLanguage(),
-                TranslationContext(
-                    TranslationConfiguration.builder().build(),
-                    ScopeManager(),
-                    TypeManager(),
-                ),
+        val ctx =
+            TranslationContext(
+                TranslationConfiguration.builder().build(),
+                ScopeManager(),
+                TypeManager(),
             )
+        val frontend = LLVMIRLanguageFrontend(ctx, LLVMIRLanguage(ctx))
         val exception =
             assertThrows<TranslationException> {
                 frontend.parse(topLevel.resolve("main-broken.ll").toFile())
@@ -63,15 +63,13 @@ class LLVMIRLanguageFrontendTest {
     fun test1() {
         val topLevel = Path.of("src", "test", "resources", "llvm")
 
-        val frontend =
-            LLVMIRLanguageFrontend(
-                LLVMIRLanguage(),
-                TranslationContext(
-                    TranslationConfiguration.builder().build(),
-                    ScopeManager(),
-                    TypeManager(),
-                ),
+        val ctx =
+            TranslationContext(
+                TranslationConfiguration.builder().build(),
+                ScopeManager(),
+                TypeManager(),
             )
+        val frontend = LLVMIRLanguageFrontend(ctx, LLVMIRLanguage(ctx))
         frontend.parse(topLevel.resolve("main.ll").toFile())
     }
 

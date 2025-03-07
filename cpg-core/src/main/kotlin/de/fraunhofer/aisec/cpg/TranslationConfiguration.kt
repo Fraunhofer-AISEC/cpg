@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
+import de.fraunhofer.aisec.cpg.TranslationContext.EmptyTranslationContext
 import de.fraunhofer.aisec.cpg.TranslationResult.Companion.DEFAULT_APPLICATION_NAME
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase
 import de.fraunhofer.aisec.cpg.frontends.KClassSerializer
@@ -43,9 +44,8 @@ import java.io.File
 import java.nio.file.Path
 import java.util.*
 import kotlin.reflect.KClass
-import kotlin.reflect.full.createInstance
 import kotlin.reflect.full.findAnnotations
-import kotlin.reflect.full.primaryConstructor
+import kotlin.reflect.full.isSubclassOf
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.apache.commons.lang3.builder.ToStringStyle
 import org.slf4j.LoggerFactory
@@ -109,7 +109,7 @@ private constructor(
         Map<Pair<KClass<out Pass<out Node>>, KClass<out Language<*>>>, KClass<out Pass<out Node>>>,
     /** This list contains the files with function summaries which should be considered. */
     val functionSummaries: DFGFunctionSummaries,
-    languages: List<Language<*>>,
+    languages: List<KClass<out Language<*>>>,
     codeInNodes: Boolean,
     processAnnotations: Boolean,
     disableCleanup: Boolean,
@@ -127,7 +127,7 @@ private constructor(
     val exclusionPatternsByRegex: List<Regex>,
 ) {
     /** This list contains all languages which we want to translate. */
-    val languages: List<Language<*>>
+    @JsonIgnore val languages: List<KClass<out Language<*>>>
 
     /**
      * Switch off cleaning up TypeManager memory after analysis.
@@ -197,7 +197,7 @@ private constructor(
     val passConfigurations: Map<KClass<out Pass<*>>, PassConfiguration>
 
     init {
-        registeredPasses = passes
+        this.registeredPasses = passes
         this.languages = languages
         // Make sure to init this AFTER sourceLocations has been set
         this.codeInNodes = codeInNodes
@@ -239,7 +239,7 @@ private constructor(
      */
     class Builder {
         private var softwareComponents: MutableMap<String, List<File>> = HashMap()
-        private val languages = mutableListOf<Language<*>>()
+        private val languages = mutableListOf<KClass<out Language<*>>>()
         private var topLevels = mutableMapOf<String, File?>()
         private var debugParser = false
         private var failOnError = false
@@ -447,16 +447,18 @@ private constructor(
 
         /** Registers an additional [Language]. */
         fun registerLanguage(language: Language<*>): Builder {
-            languages.add(language)
-            log.info(
-                "Registered language frontend '${language::class.simpleName}' for following file types: ${language.fileExtensions}"
-            )
+            throw UnsupportedOperationException("Use registerLanguage(className: String) instead")
+        }
+
+        /** Registers an additional [Language] by its [KClass]. */
+        fun <T : Language<*>> registerLanguage(clazz: KClass<T>): Builder {
+            languages.add(clazz)
             return this
         }
 
         /** Registers an additional [Language]. */
         inline fun <reified T : Language<*>> registerLanguage(): Builder {
-            T::class.primaryConstructor?.call()?.let { registerLanguage(it) }
+            registerLanguage(T::class)
             return this
         }
 
@@ -501,26 +503,26 @@ private constructor(
         @Throws(ConfigurationException::class)
         fun registerLanguage(className: String): Builder {
             try {
-                val loadedClass = Class.forName(className).kotlin.createInstance() as? Language<*>
+                @Suppress("UNCHECKED_CAST")
+                val loadedClass = Class.forName(className).kotlin as? KClass<out Language<*>>
                 if (loadedClass != null) {
                     registerLanguage(loadedClass)
                 } else
                     throw ConfigurationException(
                         "Failed casting supposed language class '$className'. It does not seem to be an implementation of Language<*>."
                     )
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 throw ConfigurationException(
                     "Failed to load and instantiate class from FQN '$className'. Possible causes of this error:\n" +
-                        "- the given class is unavailable in the class path\n" +
-                        "- the given class does not have a single no-arg constructor\n"
+                        "- the given class is unavailable in the class path\n"
                 )
             }
             return this
         }
 
         /** Unregisters a registered [de.fraunhofer.aisec.cpg.frontends.Language]. */
-        fun unregisterLanguage(language: Class<out Language<*>?>): Builder {
-            languages.removeIf { obj: Language<*>? -> language.isInstance(obj) }
+        fun unregisterLanguage(language: KClass<out Language<*>>): Builder {
+            languages.removeIf { it.isSubclassOf(language) }
             return this
         }
 
@@ -529,13 +531,16 @@ private constructor(
          *
          * This will register
          * - [TypeHierarchyResolver]
-         * - [JavaImportResolver]
          * - [SymbolResolver]
+         * - [ImportResolver]
          * - [DFGPass]
          * - [EvaluationOrderGraphPass]
+         * - [DynamicInvokeResolver]
          * - [TypeResolver]
          * - [ControlFlowSensitiveDFGPass]
          * - [FilenameMapper]
+         * - [ResolveCallExpressionAmbiguityPass]
+         * - [ResolveMemberExpressionAmbiguityPass]
          *
          * to be executed in the order specified by their annotations.
          */
@@ -567,7 +572,7 @@ private constructor(
                 return
             }
 
-            for (frontend in languages.map(Language<*>::frontend)) {
+            for (frontend in languages.map { it.frontend }) {
                 val extraPasses = frontend.findAnnotations<RegisterExtraPass>()
                 if (extraPasses.isNotEmpty()) {
                     for (p in extraPasses) {
@@ -582,7 +587,7 @@ private constructor(
         }
 
         private fun registerReplacedPasses() {
-            for (frontend in languages.map(Language<*>::frontend)) {
+            for (frontend in languages.map { it.frontend }) {
                 val replacedPasses = frontend.findAnnotations<ReplacePass>()
                 if (replacedPasses.isNotEmpty()) {
                     for (p in replacedPasses) {
@@ -721,3 +726,20 @@ private constructor(
         }
     }
 }
+
+/**
+ * Returns the frontend class of a language. Since the [Language.frontend] is a property of a
+ * language, we need to create a temporary object of the language class to access it (using
+ * [EmptyTranslationContext]).
+ */
+val KClass<out Language<*>>.frontend: KClass<out LanguageFrontend<*, *>>
+    get() {
+        // Instantiate a temporary object of the language class
+        val instance =
+            constructors.firstOrNull()?.call(EmptyTranslationContext)
+                ?: throw IllegalArgumentException(
+                    "Could not instantiate temporary object of language class ${this.simpleName}"
+                )
+
+        return instance.frontend
+    }

@@ -40,7 +40,7 @@ internal class ConstructorsTest : BaseTest() {
     @Test
     @Throws(Exception::class)
     fun testJava() {
-        val result = analyze("java", topLevel, true) { it.registerLanguage(JavaLanguage()) }
+        val result = analyze("java", topLevel, true) { it.registerLanguage<JavaLanguage>() }
         val constructors = result.allChildren<ConstructorDeclaration>()
         val noArg = findByUniquePredicate(constructors) { it.parameters.isEmpty() }
         val singleArg = findByUniquePredicate(constructors) { it.parameters.size == 1 }

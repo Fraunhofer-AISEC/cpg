@@ -66,7 +66,10 @@ class JavaCallResolverHelper {
 
             // In case the reference is just called "super", this is a direct superclass, either
             // defined explicitly or java.lang.Object by default
-            if (memberExpression.base.name.toString() == JavaLanguage().superClassKeyword) {
+            if (
+                memberExpression.base.name.toString() ==
+                    (memberExpression.language as? JavaLanguage)?.superClassKeyword
+            ) {
                 if (curClass.superClasses.isNotEmpty()) {
                     target = curClass.superClasses[0].root.recordDeclaration
                 } else {

@@ -47,13 +47,12 @@ class ImportResolverTest {
     fun testImportOrderResolve() {
         val frontend =
             TestLanguageFrontend(
-                namespaceDelimiter = ".",
                 ctx =
                     TranslationContext(
                         TranslationConfiguration.builder().defaultPasses().build(),
                         ScopeManager(),
                         TypeManager(),
-                    ),
+                    )
             )
         var result =
             frontend.build {
