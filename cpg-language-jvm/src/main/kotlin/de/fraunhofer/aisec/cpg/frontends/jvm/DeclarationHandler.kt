@@ -78,14 +78,20 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
 
         // Loop through all fields
         for (sootField in sootClass.fields) {
-            val field = handle(sootField)
-            frontend.scopeManager.addDeclaration(field)
+            val field = handle(sootField) as? FieldDeclaration
+            if (field != null) {
+                frontend.scopeManager.addDeclaration(field)
+                record.addDeclaration(field)
+            }
         }
 
         // Loop through all methods
         for (sootMethod in sootClass.methods) {
-            val method = handle(sootMethod)
-            frontend.scopeManager.addDeclaration(method)
+            val method = handle(sootMethod) as? MethodDeclaration
+            if (method != null) {
+                frontend.scopeManager.addDeclaration(method)
+                record.addDeclaration(method)
+            }
         }
 
         // Leave the class scope
@@ -113,15 +119,17 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
         frontend.scopeManager.enterScope(method)
 
         // Add "@this" as the receiver
-        method.receiver =
+        val receiver =
             newVariableDeclaration("@this", method.recordDeclaration?.toType() ?: unknownType())
                 .implicit("@this")
-        frontend.scopeManager.addDeclaration(method.receiver)
+        frontend.scopeManager.addDeclaration(receiver)
+        method.receiver = receiver
 
         // Add method parameters
         for ((index, type) in sootMethod.parameterTypes.withIndex()) {
             val param = newParameterDeclaration("@parameter${index}", frontend.typeOf(type))
             frontend.scopeManager.addDeclaration(param)
+            method.parameters += param
         }
 
         if (sootMethod.isConcrete) {

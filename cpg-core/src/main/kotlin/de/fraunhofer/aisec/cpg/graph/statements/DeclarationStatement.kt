@@ -78,5 +78,9 @@ open class DeclarationStatement : Statement() {
             propertyEqualsList(declarationEdges, other.declarationEdges)
     }
 
+    override fun addDeclaration(declaration: Declaration) {
+        addIfNotContains(declarationEdges, declaration)
+    }
+
     override fun hashCode() = Objects.hash(super.hashCode(), declarations)
 }

@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.ruby
 
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ProblemDeclaration
 import de.fraunhofer.aisec.cpg.graph.newFunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.newParameterDeclaration
@@ -58,7 +59,13 @@ class DeclarationHandler(lang: RubyLanguageFrontend) :
         frontend.scopeManager.enterScope(func)
 
         for (arg in node.argsNode.args) {
-            frontend.scopeManager.addDeclaration(this.handle(arg))
+            val param = this.handle(arg) as? ParameterDeclaration
+            if (param == null) {
+                continue
+            }
+
+            frontend.scopeManager.addDeclaration(param)
+            func.parameters += param
         }
 
         val body = frontend.statementHandler.handle(node.bodyNode)

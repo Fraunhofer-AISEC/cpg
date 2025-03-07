@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.test.*
 import java.io.File
@@ -52,22 +53,24 @@ class CXXResolveTest {
         val main = tu.functions["main"]
         assertNotNull(main)
 
+        val realCalls = main.calls.filter { it !is ConstructExpression }
+
         // 0, 1 and 2 are construct expressions -> our "real" calls start at index 3
-        val aFoo = main.calls.getOrNull(3)
+        val aFoo = realCalls.getOrNull(0)
         assertIs<MemberCallExpression>(aFoo)
         assertLocalName("foo", aFoo)
         assertLocalName("a", aFoo.base)
         // a.foo should connect to A::foo
         assertLocalName("A", (aFoo.invokes.firstOrNull() as? MethodDeclaration)?.recordDeclaration)
 
-        val bFoo = main.calls.getOrNull(4)
+        val bFoo = realCalls.getOrNull(1)
         assertIs<MemberCallExpression>(bFoo)
         assertLocalName("foo", bFoo)
         assertLocalName("b", bFoo.base)
         // b.foo should connect to B::foo
         assertLocalName("B", (bFoo.invokes.firstOrNull() as? MethodDeclaration)?.recordDeclaration)
 
-        val foo = main.calls.getOrNull(5)
+        val foo = realCalls.getOrNull(2)
         assertNotNull(foo)
 
         // foo should be connected to an inferred non-method function

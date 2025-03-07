@@ -27,4 +27,4 @@ package de.fraunhofer.aisec.cpg.graph.scopes
 
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 
-class FunctionScope(astNode: FunctionDeclaration) : ValueDeclarationScope(astNode)
+class FunctionScope(astNode: FunctionDeclaration) : Scope(astNode)

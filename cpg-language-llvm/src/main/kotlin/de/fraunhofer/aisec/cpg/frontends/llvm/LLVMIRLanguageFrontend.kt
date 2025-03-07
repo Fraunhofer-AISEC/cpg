@@ -118,6 +118,7 @@ class LLVMIRLanguageFrontend(ctx: TranslationContext, language: Language<LLVMIRL
         bench = Benchmark(this.javaClass, "Transform to CPG")
 
         val tu = newTranslationUnitDeclaration(file.name)
+        currentTU = tu
 
         // we need to set our translation unit as the global scope
         scopeManager.resetToGlobal(tu)
@@ -127,8 +128,10 @@ class LLVMIRLanguageFrontend(ctx: TranslationContext, language: Language<LLVMIRL
         while (global != null) {
             // try to parse the variable (declaration)
             val declaration = declarationHandler.handle(global)
-
-            scopeManager.addDeclaration(declaration)
+            if (declaration != null) {
+                scopeManager.addDeclaration(declaration)
+                tu.declarations += declaration
+            }
 
             global = LLVMGetNextGlobal(global)
         }
@@ -138,8 +141,10 @@ class LLVMIRLanguageFrontend(ctx: TranslationContext, language: Language<LLVMIRL
         while (func != null) {
             // try to parse the function (declaration)
             val declaration = declarationHandler.handle(func)
-
-            scopeManager.addDeclaration(declaration)
+            if (declaration != null) {
+                scopeManager.addDeclaration(declaration)
+                tu.declarations += declaration
+            }
 
             func = LLVMGetNextFunction(func)
         }

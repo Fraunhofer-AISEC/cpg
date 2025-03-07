@@ -133,6 +133,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
 
                 val decl = newFieldDeclaration(fieldName, type, modifiers, rawNode = field)
                 frontend.scopeManager.addDeclaration(decl)
+                record.fields += decl
             }
         }
 
@@ -168,12 +169,13 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
 
                     val params = (field.type as? GoStandardLibrary.Ast.FuncType)?.params
                     if (params != null) {
-                        frontend.declarationHandler.handleFuncParams(params)
+                        frontend.declarationHandler.handleFuncParams(method, params)
                     }
 
                     frontend.scopeManager.leaveScope(method)
 
                     frontend.scopeManager.addDeclaration(method)
+                    record.methods += method
                 } else {
                     log.debug("Adding {} as super class of interface {}", type.name, record.name)
                     // Otherwise, it contains either types or interfaces. For now, we
@@ -229,9 +231,8 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                     tuple.initializer = frontend.expressionHandler.handle(valueSpec.values[0])
                 }
 
-                // We need to manually add the variables to the scope manager
-                frontend.scopeManager.addDeclaration(decl, addToAST = false)
-
+                // We need to manually add the variables to the AST
+                frontend.scopeManager.addDeclaration(decl)
                 tuple += decl
             }
             return tuple

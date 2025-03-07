@@ -117,8 +117,9 @@ class StatementHandler(lang: CXXLanguageFrontend) :
 
         catchClause.body = body as? Block
 
-        if (decl != null) {
-            catchClause.parameter = decl as? VariableDeclaration
+        if (decl is VariableDeclaration) {
+            frontend.scopeManager.addDeclaration(decl)
+            catchClause.parameter = decl
         }
         frontend.scopeManager.leaveScope(catchClause)
         return catchClause
@@ -298,10 +299,15 @@ class StatementHandler(lang: CXXLanguageFrontend) :
         } else {
             val declarationStatement = newDeclarationStatement(rawNode = ctx)
             val declaration = frontend.declarationHandler.handle(ctx.declaration)
-            if (declaration is DeclarationSequence) {
-                declarationStatement.declarations = declaration.asMutableList()
-            } else {
-                declarationStatement.singleDeclaration = declaration
+            val declarations =
+                if (declaration is DeclarationSequence) {
+                    declaration.asMutableList()
+                } else {
+                    listOfNotNull(declaration)
+                }
+            declarations.forEach {
+                frontend.scopeManager.addDeclaration(it)
+                declarationStatement.addDeclaration(it)
             }
             declarationStatement
         }

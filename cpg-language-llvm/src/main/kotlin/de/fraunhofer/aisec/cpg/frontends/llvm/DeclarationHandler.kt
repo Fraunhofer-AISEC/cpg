@@ -121,6 +121,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
             val decl = newParameterDeclaration(paramName, type, false, rawNode = param)
 
             frontend.scopeManager.addDeclaration(decl)
+            functionDeclaration.parameters += decl
             frontend.bindingsCache[paramSymbolName] = decl
 
             param = LLVMGetNextParam(param)
@@ -215,14 +216,15 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
             frontend.scopeManager.enterScope(record)
 
             val field = newFieldDeclaration(fieldName, fieldType, listOf(), null, false)
-
             frontend.scopeManager.addDeclaration(field)
+            record.fields += field
 
             frontend.scopeManager.leaveScope(record)
         }
 
-        // add it to the global scope
+        // Add the record to the current TU
         frontend.scopeManager.addDeclaration(record)
+        frontend.currentTU?.declarations += record
 
         return record
     }
