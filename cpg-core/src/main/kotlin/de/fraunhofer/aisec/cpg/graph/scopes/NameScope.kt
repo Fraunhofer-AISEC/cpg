@@ -33,7 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
  * declared in it. This could be a package or other structural elements, like a class. In the first
  * case, the derived [NamespaceScope], in the latter case, the derived [RecordScope] should be used.
  */
-sealed class NameScope(node: Node?) : StructureDeclarationScope(node) {
+sealed class NameScope(node: Node?) : Scope(node) {
 
     init {
         astNode = node

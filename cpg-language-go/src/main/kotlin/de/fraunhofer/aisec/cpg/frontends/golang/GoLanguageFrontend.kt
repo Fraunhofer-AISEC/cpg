@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.frontends.golang.GoStandardLibrary.Modfile
 import de.fraunhofer.aisec.cpg.frontends.golang.GoStandardLibrary.Parser
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.DeclarationSequence
+import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
@@ -178,7 +179,10 @@ class GoLanguageFrontend(ctx: TranslationContext, language: Language<GoLanguageF
         // We parse the imports specifically and not as part of the handler later
         for (spec in f.imports) {
             val import = specificationHandler.handle(spec)
-            scopeManager.addDeclaration(import)
+            if (import is ImportDeclaration) {
+                scopeManager.addDeclaration(import)
+                tu.addDeclaration(import)
+            }
         }
 
         val p = newNamespaceDeclaration(f.name.name)
@@ -209,7 +213,10 @@ class GoLanguageFrontend(ctx: TranslationContext, language: Language<GoLanguageF
             // contain multiple CPG declarations.
             val declaration = declarationHandler.handle(decl)
             if (declaration is DeclarationSequence) {
-                declaration.declarations.forEach { scopeManager.addDeclaration(it) }
+                declaration.declarations.forEach {
+                    scopeManager.addDeclaration(it)
+                    p.addDeclaration(it)
+                }
             } else {
                 // We need to be careful with method declarations. We need to put them in the
                 // respective name scope of the record and NOT on the global scope / namespace scope
@@ -223,8 +230,9 @@ class GoLanguageFrontend(ctx: TranslationContext, language: Language<GoLanguageF
                         // it
                         p.declarations += declaration
                     }
-                } else {
+                } else if (declaration != null) {
                     scopeManager.addDeclaration(declaration)
+                    p.addDeclaration(declaration)
                 }
             }
         }
@@ -235,6 +243,7 @@ class GoLanguageFrontend(ctx: TranslationContext, language: Language<GoLanguageF
         scopeManager.resetToGlobal(tu)
 
         scopeManager.addDeclaration(p)
+        tu.addDeclaration(p)
 
         return tu
     }
@@ -318,12 +327,12 @@ class GoLanguageFrontend(ctx: TranslationContext, language: Language<GoLanguageF
 
                     // Create an anonymous struct, this will add it to the scope manager. This is
                     // somewhat duplicate, but the easiest for now. We need to create it in the
-                    // global
-                    // scope to avoid namespace issues
+                    // global scope to avoid namespace issues
                     var record =
                         scopeManager.withScope(scopeManager.globalScope) {
                             var record = specificationHandler.buildRecordDeclaration(type, name)
                             scopeManager.addDeclaration(record)
+                            currentTU?.declarations += record
                             record
                         }
 

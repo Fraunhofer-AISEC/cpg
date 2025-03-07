@@ -48,27 +48,38 @@ internal class ScopeManagerTest : BaseTest() {
         val ctx = TranslationContext(config, s1, tm)
         val language = TestLanguageWithColon(ctx)
         val frontend1 = TestLanguageFrontend(ctx, language)
-        s1.resetToGlobal(frontend1.newTranslationUnitDeclaration("f1.cpp", null))
         with(frontend1) {
+            val tu1 = frontend1.newTranslationUnitDeclaration("f1.cpp", null)
+            s1.resetToGlobal(tu1)
+
             // build a namespace declaration in f1.cpp with the namespace A
             val namespaceA1 = frontend1.newNamespaceDeclaration("A")
             s1.enterScope(namespaceA1)
+
             val func1 = frontend1.newFunctionDeclaration("func1")
             s1.addDeclaration(func1)
+            namespaceA1.declarations += func1
+
             s1.leaveScope(namespaceA1)
             s1.addDeclaration(namespaceA1)
+            tu1.declarations += namespaceA1
 
             val s2 = ScopeManager()
             val frontend2 = TestLanguageFrontend(TranslationContext(config, s2, tm), language)
-            s2.resetToGlobal(frontend2.newTranslationUnitDeclaration("f1.cpp", null))
+            val tu2 = frontend2.newTranslationUnitDeclaration("f1.cpp", null)
+            s2.resetToGlobal(tu2)
 
             // and do the same in the other file
             val namespaceA2 = frontend2.newNamespaceDeclaration("A")
             s2.enterScope(namespaceA2)
+
             val func2 = frontend2.newFunctionDeclaration("func2")
             s2.addDeclaration(func2)
+            namespaceA2.declarations += func2
+
             s2.leaveScope(namespaceA2)
             s2.addDeclaration(namespaceA2)
+            tu2.declarations += namespaceA2
 
             // merge the two scopes. this replicates the behaviour of parseParallel
             val final = ScopeManager()
@@ -116,8 +127,10 @@ internal class ScopeManagerTest : BaseTest() {
         val s = ScopeManager()
         val ctx = TranslationContext(config, s, TypeManager())
         val frontend = TestLanguageFrontend(ctx, TestLanguageWithColon(ctx))
-        s.resetToGlobal(frontend.newTranslationUnitDeclaration("file.cpp", null))
         with(frontend) {
+            val tu = frontend.newTranslationUnitDeclaration("file.cpp", null)
+            s.resetToGlobal(tu)
+
             assertNull(s.currentNamespace)
 
             val namespaceA = frontend.newNamespaceDeclaration("A", null)
@@ -133,9 +146,12 @@ internal class ScopeManagerTest : BaseTest() {
 
             val func = frontend.newFunctionDeclaration("func")
             s.addDeclaration(func)
+            tu.declarations += func
 
             s.leaveScope(namespaceB)
             s.addDeclaration(namespaceB)
+            namespaceA.declarations += namespaceB
+
             s.leaveScope(namespaceA)
 
             val scope = s.lookupScope(parseName("A::B"))

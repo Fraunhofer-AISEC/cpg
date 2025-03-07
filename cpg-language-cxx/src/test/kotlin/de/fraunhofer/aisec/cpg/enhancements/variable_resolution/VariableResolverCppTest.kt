@@ -141,7 +141,7 @@ internal class VariableResolverCppTest : BaseTest() {
 
     @Test
     fun testVarNameOfSecondLoopAccessed() {
-        val vDeclaration = forStatements?.get(1).variables["varName"]
+        val vDeclaration = forStatements?.get(1)?.initializerStatement.variables["varName"]
         assertUsageOf(callParamMap["func1_second_loop_varName"], vDeclaration)
     }
 
@@ -168,7 +168,7 @@ internal class VariableResolverCppTest : BaseTest() {
     }
 
     @Test
-    fun testVarNameCoughtAsException() {
+    fun testVarNameCaughtAsException() {
         val declaration = outerFunction2.allChildren<CatchClause>()[""].variables["varName"]
         assertUsageOf(callParamMap["func2_catch_varName"], declaration)
     }
