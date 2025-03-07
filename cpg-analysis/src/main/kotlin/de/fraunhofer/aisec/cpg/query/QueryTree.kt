@@ -335,4 +335,24 @@ fun QueryTree<*>.successfulLastNodes(): List<Node> {
     return finallyTheEntirePaths.mapNotNull { (it as? List<*>)?.last() }.filterIsInstance<Node>()
 }
 
+sealed interface TerminationReason {
+    val endNode: Node
+}
+
+data class Success(override val endNode: Node) : TerminationReason
+
+data class PathEnded(override val endNode: Node) : TerminationReason
+
+data class StepsExceeded(override val endNode: Node) : TerminationReason
+
+data class HitEarlyTermination(override val endNode: Node) : TerminationReason
+
+class SinglePathResult(
+    override var value: Boolean,
+    override val children: MutableList<QueryTree<*>> = mutableListOf(),
+    override var stringRepresentation: String = "",
+    override var node: Node? = null,
+    val terminationReason: TerminationReason,
+) : QueryTree<Boolean>(value, children, stringRepresentation, node)
+
 class QueryException(override val message: String) : Exception(message)
