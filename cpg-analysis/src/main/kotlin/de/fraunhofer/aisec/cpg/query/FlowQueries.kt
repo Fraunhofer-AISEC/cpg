@@ -283,6 +283,7 @@ fun Node.alwaysFlowsTo(
         }
     val allChildren =
         nextEOGEvaluation.failed.map {
+            // TODO: We can update this too
             QueryTree(
                 value = false,
                 children = mutableListOf(QueryTree(value = it)),

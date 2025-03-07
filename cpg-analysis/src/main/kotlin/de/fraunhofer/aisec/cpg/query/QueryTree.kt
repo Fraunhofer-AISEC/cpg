@@ -328,6 +328,7 @@ fun <T> const(n: T): QueryTree<T> {
  *
  * @return A list of all terminating nodes for successful queries.
  */
+// TODO: Use the SinglePathResult instead?
 fun QueryTree<*>.successfulLastNodes(): List<Node> {
     val successfulPaths = this.children.filter { it.value == true }
     val innerPath = successfulPaths.flatMap { it.children }

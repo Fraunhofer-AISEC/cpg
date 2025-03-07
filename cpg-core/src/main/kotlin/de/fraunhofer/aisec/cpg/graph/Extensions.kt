@@ -734,6 +734,8 @@ inline fun Node.followXUntilHit(
 
         // No further nodes in the path and the path criteria are not satisfied.
         if (nextNodes.isEmpty() && collectFailedPaths) {
+            // TODO: How to determine if this path is really at the end or if it exceeded the number
+            // of steps?
             failedPaths.add(FailureReason.PATH_ENDED to currentPath.first)
         }
 
