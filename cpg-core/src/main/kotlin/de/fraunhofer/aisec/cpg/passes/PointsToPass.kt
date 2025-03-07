@@ -40,6 +40,7 @@ import de.fraunhofer.aisec.cpg.helpers.functional.*
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
+import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.Pair
 import kotlin.collections.filter
@@ -947,10 +948,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 val newEntry = Pair(currentNode.input, false)
                 // If we already have exactly that entry, no need to re-write it, otherwise we might
                 // confuse the iterateEOG function
-                if (
-                    !(newDeclState[addr]?.second?.any { it == newEntry } == true &&
-                        newDeclState[addr]?.first == PowersetLattice.Element(addr))
-                )
+                if (!(newDeclState[addr]?.second?.any { it == newEntry } == true /*&&
+                        newDeclState[addr]?.first == PowersetLattice.Element(addr)*/))
                     newDeclState.replace(
                         addr,
                         TripleLattice.Element(
@@ -1237,7 +1236,8 @@ fun PointsToState.pushToDeclarationsState(
 ): PointsToStateElement {
     // If we already have exactly that entry, no need to re-write it, otherwise we might confuse the
     // iterateEOG function
-    newLatticeElement.second.removeAll { pair ->
+    val newLatticeCopy = newLatticeElement.duplicate()
+    newLatticeCopy.second.removeAll { pair ->
         currentState.declarationsState[newNode]?.second?.any {
             it.first === pair.first && it.second == pair.second
         } == true
@@ -1246,7 +1246,7 @@ fun PointsToState.pushToDeclarationsState(
     val newDeclarationsState =
         this.innerLattice2.lub(
             currentState.declarationsState,
-            MapLattice.Element(newNode to newLatticeElement),
+            MapLattice.Element(newNode to newLatticeCopy),
         )
     return PointsToStateElement(currentState.generalState, newDeclarationsState)
 }
@@ -1294,6 +1294,16 @@ fun PointsToStateElement.fetchElementFromDeclarationState(
         var elements = this.declarationsState[addr]?.second?.toList()
         if (excludeShortFSValues) elements = elements?.filter { !it.second }
         if (elements.isNullOrEmpty()) {
+            val foo = IdentityHashMap<Node, Boolean>()
+            foo.put(addr, true)
+            foo.put(
+                this.declarationsState
+                    .filter { it.key is MemoryAddress && it.key.name.localName == "printf" }
+                    .entries
+                    .firstOrNull()
+                    ?.key,
+                true,
+            )
             val newName = nodeNameToString(addr)
             val newEntry =
                 nodesCreatingUnknownValues.computeIfAbsent(Pair(addr, newName)) {
@@ -1575,19 +1585,34 @@ fun PointsToStateElement.updateValues(
 
             // If we want to update the State with exactly the same elements as are already in the
             // state, we do nothing in order not to confuse the iterateEOG function
-            if (
-                newDeclState[destAddr]?.first != PowersetLattice.Element(currentEntries) ||
+            /*sources.removeAll { pair ->
+                this.declarationsState[destAddr]?.second?.any {
+                    it.first === pair.first && it.second == pair.second
+                } == true
+            }*/
+            val newSources =
+                sources
+                    .map { pair ->
+                        this.declarationsState[destAddr]?.second?.firstOrNull {
+                            it.first === pair.first && it.second == pair.second
+                        } ?: pair
+                    }
+                    .toIdentitySet()
+            /*            if (
+             */
+            /*newDeclState[destAddr]?.first != PowersetLattice.Element(currentEntries) ||*/
+            /*
                     sources.all { src ->
                         newDeclState[destAddr]?.second?.none { it == src } == true
                     }
-            ) {
-                newDeclState[destAddr] =
-                    TripleLattice.Element(
-                        PowersetLattice.Element(currentEntries),
-                        PowersetLattice.Element(sources),
-                        PowersetLattice.Element(),
-                    )
-            }
+            ) {*/
+            newDeclState[destAddr] =
+                TripleLattice.Element(
+                    PowersetLattice.Element(currentEntries),
+                    PowersetLattice.Element(newSources),
+                    PowersetLattice.Element(),
+                )
+            //            }
         } else {
             // TODO: We basically do the same as above, but currently we don't get the destinations
             // value from the call
