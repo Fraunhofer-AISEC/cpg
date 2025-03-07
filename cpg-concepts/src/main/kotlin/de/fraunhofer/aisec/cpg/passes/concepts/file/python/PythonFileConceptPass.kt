@@ -175,7 +175,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : ConceptPass(ctx) {
                         )
                         return
                     }
-                    newFileChmod(underlyingNode = callExpression, file = file, mode = mode)
+                    newFileSetMask(underlyingNode = callExpression, file = file, mask = mode)
                 }
             }
         }
@@ -352,13 +352,17 @@ class PythonFileConceptPass(ctx: TranslationContext) : ConceptPass(ctx) {
             }
         }
     }
-}
 
-// Replace once #2105 is merged
-private fun QueryTree<*>.successfulLastNodes(): List<Node> {
-    val successfulPaths = this.children.filter { it.value == true }
-    val innerPath = successfulPaths.flatMap { it.children }
-    val finallyTheEntirePaths = innerPath.map { it.value }
+    companion object {
+        // Replace once #2105 is merged
+        fun QueryTree<*>.successfulLastNodes(): List<Node> {
+            val successfulPaths = this.children.filter { it.value == true }
+            val innerPath = successfulPaths.flatMap { it.children }
+            val finallyTheEntirePaths = innerPath.map { it.value }
 
-    return finallyTheEntirePaths.mapNotNull { (it as? List<*>)?.last() }.filterIsInstance<Node>()
+            return finallyTheEntirePaths
+                .mapNotNull { (it as? List<*>)?.last() }
+                .filterIsInstance<Node>()
+        }
+    }
 }

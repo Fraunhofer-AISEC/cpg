@@ -34,10 +34,7 @@ import de.fraunhofer.aisec.cpg.query.executionPath
 import de.fraunhofer.aisec.cpg.test.BaseTest
 import de.fraunhofer.aisec.cpg.test.analyze
 import java.nio.file.Path
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 /**
  * A class for integration tests. They depend on the Python frontend, so we classify them as an
@@ -98,10 +95,29 @@ class FileConceptTest : BaseTest() {
             fileRead,
             file.nextDFG.singleOrNull(),
             "Expected to have exactly one dataflow from \"File\" (it must be to \"FileRead\").",
-        ) // TODO this is not nice. Do we have dfg path queries?
+        )
 
-        // TODO test open -> read -> close
-        // TODO test always closed
+        // follow the EOG from open -> read -> close
+        // tested in two steps: open -> read and read -> close
+        val fileOpenCallExpression =
+            fileNodes.filterIsInstance<FileOpen>().singleOrNull()?.underlyingNode
+        assertNotNull(fileOpenCallExpression)
+        assertTrue(
+            executionPath(startNode = fileOpenCallExpression) { it == fileRead.underlyingNode }
+                .value,
+            "Expected to find an execution path from open to read.",
+        )
+
+        val fileReadCallExpression =
+            fileNodes.filterIsInstance<FileRead>().singleOrNull()?.underlyingNode
+        assertNotNull(fileReadCallExpression)
+        assertTrue(
+            executionPath(startNode = fileReadCallExpression) {
+                    it.overlays.any { it is FileClose }
+                }
+                .value,
+            "Expected to find an execution path from read to close.",
+        )
     }
 
     @Test
@@ -158,10 +174,7 @@ class FileConceptTest : BaseTest() {
             fileWrite,
             file.prevDFG.singleOrNull(),
             "Expected to have exactly one dataflow to \"File\" (it must be to \"FileWrite\").",
-        ) // TODO this is not nice. Do we have dfg path queries?
-
-        // TODO test open -> write -> close
-        // TODO test always closed
+        )
     }
 
     @Test
@@ -199,7 +212,66 @@ class FileConceptTest : BaseTest() {
             "Expected to find exactly the flags \"WRONLY\". \"CREAT\" and \"TRUNC\" are not expected, as they are not access mode flags..",
         )
 
-        // TODO test setMask before write
+        // Tests mask is set before any write:
+        // for all files
+        //   for all FileWrite on the current file
+        //     there is no FileSetMask on the current file after the FileWrite
+        assertTrue(
+            // See also testBadChmodQuery for a failing example
+            fileNodes.filterIsInstance<File>().all { file ->
+                file.ops.filterIsInstance<FileWrite>().none { write ->
+                    val startNode =
+                        write.underlyingNode
+                            ?: return@none true // fail if there is no underlyingNode
+                    executionPath(startNode = startNode, direction = Forward(GraphToFollow.EOG)) {
+                            it.overlays.any { overlay ->
+                                overlay is FileSetMask && write.concept == overlay.concept
+                            }
+                        }
+                        .value == true
+                }
+            },
+            "Found a chmod after a write. But there isn't one.",
+        )
+    }
+
+    @Test
+    fun testBadChmodQuery() {
+        val topLevel = Path.of("src", "integrationTest", "resources", "python", "file")
+
+        val result =
+            analyze(
+                files = listOf(topLevel.resolve("file_os_open_bad.py").toFile()),
+                topLevel = topLevel,
+                usePasses = true,
+            ) {
+                it.registerLanguage<PythonLanguage>()
+                it.registerPass<PythonFileConceptPass>()
+                it.symbols(mapOf("PYTHON_PLATFORM" to "linux"))
+            }
+        assertNotNull(result)
+
+        // Tests mask is set before any write:
+        // for all files
+        //   for all FileWrite on the current file
+        //     there is no FileSetMask on the current file after the FileWrite
+        assertFalse(
+            // See also testBadChmodQuery for a failing example
+            result.conceptNodes.filterIsInstance<File>().all { file ->
+                file.ops.filterIsInstance<FileWrite>().none { write ->
+                    val startNode =
+                        write.underlyingNode
+                            ?: return@none true // fail if there is no underlyingNode
+                    executionPath(startNode = startNode, direction = Forward(GraphToFollow.EOG)) {
+                            it.overlays.any { overlay ->
+                                overlay is FileSetMask && write.concept == overlay.concept
+                            }
+                        }
+                        .value == true
+                }
+            },
+            "Didn't find a chmod after a write. But there is one.",
+        )
     }
 
     @Test
@@ -234,7 +306,7 @@ class FileConceptTest : BaseTest() {
         assertNotNull(write, "Expected to find a file write operation.")
         assertEquals(file, write.concept, "Expected the write to write to our file node.")
 
-        val chmod = conceptNodes.filterIsInstance<FileChmod>().singleOrNull()
+        val chmod = conceptNodes.filterIsInstance<FileSetMask>().singleOrNull()
         assertNotNull(chmod, "Expected to find a file chmod operation.")
         assertEquals(file, chmod.concept, "Expected the chmod to operate on our file node.")
 

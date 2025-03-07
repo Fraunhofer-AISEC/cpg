@@ -116,11 +116,3 @@ fun MetadataProvider.newFileWrite(underlyingNode: Node, file: File, what: List<N
     NodeBuilder.log(node)
     return node
 }
-
-fun MetadataProvider.newFileChmod(underlyingNode: Node, file: File, mode: Long): FileChmod {
-    val node = FileChmod(underlyingNode = underlyingNode, concept = file, mode = mode)
-    node.codeAndLocationFrom(underlyingNode)
-
-    NodeBuilder.log(node)
-    return node
-}

@@ -76,7 +76,8 @@ class FileSetFlags(
 ) : Operation(underlyingNode = underlyingNode, concept = concept), IsFile
 
 /**
- * Represents setting the umask, for example with the `mode` parameter in a Python `os.open` call.
+ * Represents setting the umask, for example with the `mode` parameter in a Python `os.open` call or
+ * a `chmod` call.
  */
 class FileSetMask(underlyingNode: Node, override val concept: File, val mask: Long) :
     Operation(underlyingNode = underlyingNode, concept = concept), IsFile
@@ -102,8 +103,4 @@ class FileRead(underlyingNode: Node, override val concept: File, val target: Set
 
 /** Represents writing to a file. */
 class FileWrite(underlyingNode: Node, override val concept: File, val what: List<Node>) :
-    Operation(underlyingNode = underlyingNode, concept = concept), IsFile
-
-/** Represents changing the permissions on a file. */
-class FileChmod(underlyingNode: Node, override val concept: File, val mode: Long) :
     Operation(underlyingNode = underlyingNode, concept = concept), IsFile
