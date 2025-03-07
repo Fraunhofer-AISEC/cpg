@@ -54,7 +54,7 @@ typealias GeneralStateEntry =
     TripleLattice<
         PowersetLattice.Element<Node>,
         PowersetLattice.Element<Node>,
-        PowersetLattice.Element<Pair<Node, Set<Node>>>,
+        PowersetLattice.Element<Pair<Node, Set<Any>>>,
     >
 
 typealias DeclarationStateEntry =
@@ -66,15 +66,21 @@ typealias DeclarationStateEntry =
 
 typealias GeneralStateEntryElement =
     TripleLattice.Element<
+        // Address
         PowersetLattice.Element<Node>,
+        // MemoryValues
         PowersetLattice.Element<Node>,
-        PowersetLattice.Element<Pair<Node, Set<Node>>>,
+        // prevDFG
+        PowersetLattice.Element<Pair<Node, Set<Any>>>,
     >
 
 typealias DeclarationStateEntryElement =
     TripleLattice.Element<
+        // Address
         PowersetLattice.Element<Node>,
+        // Values
         PowersetLattice.Element<Pair<Node, Boolean>>,
+        // LastWrites
         PowersetLattice.Element<Pair<Node, Boolean>>,
     >
 
@@ -84,7 +90,7 @@ typealias SingleGeneralStateElement =
         TripleLattice.Element<
             PowersetLattice.Element<Node>,
             PowersetLattice.Element<Node>,
-            PowersetLattice.Element<Pair<Node, Set<Node>>>,
+            PowersetLattice.Element<Pair<Node, Set<Any>>>,
         >,
     >
 
@@ -268,55 +274,36 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         var finalState = lattice.iterateEOG(node.nextEOGEdges, startState, ::transfer)
 
         for ((key, value) in finalState.generalState) {
-            // All nodes in the state get new memoryValues, Expressions and Declarations
-            // additionally get new MemoryAddresses
-            val newMemoryValues = value.second
-            val newMemoryAddresses = value.first
-            if (key is HasMemoryValue) {
-                newMemoryValues.forEach { prev ->
-                    val properties = edgePropertiesMap[Pair(key, prev)]
-                    var context: CallingContext? = null
-                    var granularity = default()
-                    var functionSummary = false
-
-                    // the entry in the edgePropertiesMap can contain a lot of things. A
-                    // granularity, a callingcontext, or a boolean indicating if this is a
-                    // functionSummary edge or not
-                    properties?.forEach { property ->
-                        when (property) {
-                            is Granularity -> granularity = property
-                            is CallingContext -> context = property
-                            is Boolean -> functionSummary = property
-                        }
-                    }
-                    if (context == null) // TODO: add functionSummary flag for contextSensitive DFs
-                     key.memoryValueEdges += Dataflow(prev, key, granularity, functionSummary)
-                    else
-                        key.memoryValueEdges.addContextSensitive(
-                            prev,
-                            granularity,
-                            context,
-                            functionSummary,
-                        )
-                }
+            // The generalState values have 3 items: The address, the value, and the prevDFG-Edges
+            // with a set of properties
+            // Let's start with fetch the addresses
+            if (key is HasMemoryAddress) {
+                key.memoryAddresses.clear()
+                key.memoryAddresses += value.first.filterIsInstance<MemoryAddress>()
             }
 
-            val newPrevDFG = value.second // TODO: Replace with value.third for last write
-            newPrevDFG.forEach { prev ->
-                val properties = edgePropertiesMap[Pair(key, prev)]
+            // Then the memoryValues
+            if (key is HasMemoryValue && value.second.isNotEmpty()) {
+                value.second.forEach { v -> key.memoryValues += v }
+            }
+
+            // And now the prevDFGs. These are pairs, where the second item is a with a set of
+            // properties for the edge
+            value.third.forEach { (prev, properties) ->
                 var context: CallingContext? = null
                 var granularity = default()
                 var functionSummary = false
 
-                // the entry in the edgePropertiesMap can contain a lot of things. A granularity, a
+                // the properties can contain a lot of things. A granularity, a
                 // callingcontext, or a boolean indicating if this is a functionSummary edge or not
-                properties?.forEach { property ->
+                properties.forEach { property ->
                     when (property) {
                         is Granularity -> granularity = property
                         is CallingContext -> context = property
                         is Boolean -> functionSummary = property
                     }
                 }
+
                 if (context == null) // TODO: add functionSummary flag for contextSensitive DFs
                  key.prevDFGEdges += Dataflow(prev, key, granularity, functionSummary)
                 else
@@ -326,15 +313,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         context,
                         functionSummary,
                     )
-            }
-
-            if (newMemoryAddresses.isNotEmpty()) {
-                when (key) {
-                    is HasMemoryAddress -> {
-                        key.memoryAddresses.clear()
-                        key.memoryAddresses += newMemoryAddresses.filterIsInstance<MemoryAddress>()
-                    }
-                }
             }
         }
 
@@ -1011,6 +989,14 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         if (access == AccessValues.READ) {
             val addresses = doubleState.getAddresses(currentNode)
             val values = doubleState.getValues(currentNode).toIdentitySet()
+            val lastWrites =
+                addresses
+                    .filter { doubleState.declarationsState[it]?.third?.isNotEmpty() == true }
+                    .flatMapTo(IdentitySet()) {
+                        doubleState.declarationsState[it]?.third!!.map {
+                            Pair(it.first, setOf<Any>(it.second))
+                        }
+                    }
 
             // If we have any information from the dereferenced value, we also fetch that
             values
@@ -1055,7 +1041,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     GeneralStateEntryElement(
                         PowersetLattice.Element(addresses),
                         PowersetLattice.Element(values),
-                        PowersetLattice.Element(),
+                        PowersetLattice.Element(lastWrites),
                     ),
                 )
 
@@ -1107,7 +1093,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     DeclarationStateEntryElement(
                         PowersetLattice.Element(addresses),
                         PowersetLattice.Element(values.map { Pair(it, false) }.toIdentitySet()),
-                        PowersetLattice.Element(),
+                        PowersetLattice.Element(Pair(currentNode, false)),
                     ),
                 )
         }
@@ -1232,10 +1218,19 @@ fun PointsToState.push(
     newNode: Node,
     newLatticeElement: GeneralStateEntryElement,
 ): PointsToStateElement {
+    // If we already have exactly that entry, no need to re-write it, otherwise we might confuse the
+    // iterateEOG function
+    val newLatticeCopy = newLatticeElement.duplicate()
+    newLatticeCopy.third.removeAll { pair ->
+        currentState.generalState[newNode]?.third?.any {
+            it.first === pair.first && it.second.all { it in pair.second }
+        } == true
+    }
+
     val newGeneralState =
         this.innerLattice1.lub(
             currentState.generalState,
-            MapLattice.Element(newNode to newLatticeElement),
+            MapLattice.Element(newNode to newLatticeCopy),
         )
     return PointsToStateElement(newGeneralState, currentState.declarationsState)
 }
