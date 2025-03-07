@@ -90,6 +90,11 @@ class LoggingConceptTest : BaseTest() {
             secretDFG.fulfilled.isNotEmpty(),
             "Expected to find a dataflow from the CallExpression[get_secret] to a logging node.",
         )
+
+        assertTrue(
+            dataFlow(startNode = getSecretCall) { it is Log }.value,
+            "Expected to find a dataflow from the CallExpression[get_secret] to a logging node.",
+        )
     }
 
     @Test
