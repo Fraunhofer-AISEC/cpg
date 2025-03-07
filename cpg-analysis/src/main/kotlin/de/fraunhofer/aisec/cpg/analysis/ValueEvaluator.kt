@@ -135,12 +135,12 @@ open class ValueEvaluator(
         return cannotEvaluate(node, this)
     }
 
-    /** TODO doc */
+    /** Handles a [CallExpression]. Default behaviour is to call [handlePrevDFG] */
     protected open fun handleCall(node: CallExpression, depth: Int): Any? {
         return handlePrevDFG(node, depth)
     }
 
-    /** TODO doc */
+    /** Handles a [Reference]. Default behaviour is to call [handlePrevDFG] */
     protected open fun handleReference(node: Reference, depth: Int): Any? {
         return handlePrevDFG(node, depth)
     }
