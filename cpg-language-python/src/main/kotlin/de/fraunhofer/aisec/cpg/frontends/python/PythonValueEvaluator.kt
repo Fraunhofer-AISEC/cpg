@@ -69,11 +69,6 @@ class PythonValueEvaluator : ValueEvaluator() {
 
     override fun handleReference(node: Reference, depth: Int): Any? {
         return when (node.reconstructedImportName.toString()) {
-            /*
-             * ```python
-             * print("\n".join(['"os.{}" -> if (supportedPlatform(node)) {}L else super.handlePrevDFG(node, depth)'.format(symbol, os.__dict__[symbol]) for symbol in os.__all__ if symbol.startswith('O_')]))
-             * ```
-             */
             in linuxMap.keys ->
                 if (supportedPlatform(node)) linuxMap[node.reconstructedImportName.toString()]
                 else super.handlePrevDFG(node, depth)
