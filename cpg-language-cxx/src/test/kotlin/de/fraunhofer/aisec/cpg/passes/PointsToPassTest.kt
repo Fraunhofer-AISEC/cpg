@@ -475,7 +475,6 @@ class PointsToPassTest {
         // Line 66
         // TODO
         assertEquals(1, n0Line66.memoryAddresses.size)
-        assertTrue(n0Line66.arrayExpression.memoryAddresses.first() is MemoryAddress)
         /*        assertEquals(
             n0Line66.arrayExpression.prevFullDFG.first().fieldAddresses.get("0")?.first() as Node,
             n0Line66.memoryAddresses.first()
@@ -1764,7 +1763,7 @@ class PointsToPassTest {
 
         // FunctionSummaries
         val changepointerFS =
-            tu.functions.filter { it.name.localName == "changepointer" }.first().functionSummary
+            tu.functions.first { it.name.localName == "changepointer" }.functionSummary
 
         // References
         val p2pLine262 =
@@ -1861,12 +1860,11 @@ class PointsToPassTest {
         assertEquals(
             oldvalDecl.memoryAddresses.singleOrNull(),
             p2pLine262.prevDFGEdges
-                .filter {
+                .first {
                     it.granularity is PointerDataflowGranularity &&
                         (it.granularity as PointerDataflowGranularity).pointerTarget ==
                             PointerAccess.currentDerefValue
                 }
-                .first()
                 .start as MemoryAddress?,
         )
         assertEquals(
@@ -1882,12 +1880,11 @@ class PointsToPassTest {
         assertEquals(
             literal1,
             p2pLine262.prevDFGEdges
-                .filter {
+                .first {
                     it.granularity is PointerDataflowGranularity &&
                         (it.granularity as PointerDataflowGranularity).pointerTarget ==
                             PointerAccess.currentDerefDerefValue
                 }
-                .first()
                 .start,
         )
 
@@ -1911,12 +1908,11 @@ class PointsToPassTest {
         assertEquals(
             newvalDecl.memoryAddresses.singleOrNull(),
             p2pLine264.prevDFGEdges
-                .filter {
+                .first {
                     it.granularity is PointerDataflowGranularity &&
                         (it.granularity as PointerDataflowGranularity).pointerTarget ==
                             PointerAccess.currentDerefValue
                 }
-                .first()
                 .start as MemoryAddress?,
         )
         assertEquals(
@@ -1932,12 +1928,11 @@ class PointsToPassTest {
         assertEquals(
             literal2,
             p2pLine264.prevDFGEdges
-                .filter {
+                .first {
                     it.granularity is PointerDataflowGranularity &&
                         (it.granularity as PointerDataflowGranularity).pointerTarget ==
                             PointerAccess.currentDerefDerefValue
                 }
-                .first()
                 .start,
         )
     }
@@ -2165,7 +2160,7 @@ class PointsToPassTest {
         assertEquals(1, incpDerefValue.prevDFGEdges.filter { it.start == literal1 }.size)
         assertEquals(
             ceLine386,
-            ((incpDerefValue.prevDFGEdges.filter { it.start == literal1 }.first()
+            ((incpDerefValue.prevDFGEdges.first { it.start == literal1 }
                         as ContextSensitiveDataflow)
                     .callingContext as CallingContextIn)
                 .call,

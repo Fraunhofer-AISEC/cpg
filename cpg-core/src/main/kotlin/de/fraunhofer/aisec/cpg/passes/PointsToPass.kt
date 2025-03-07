@@ -1311,6 +1311,7 @@ fun PointsToStateElement.fetchElementFromDeclarationState(
         if (fetchFields) {
             val fields =
                 this.declarationsState[addr]?.first?.filterTo(identitySetOf()) { it != addr }
+            this.declarationsState[addr]?.first?.filterTo(identitySetOf()) { it != addr }
             fields?.forEach { field ->
                 this.declarationsState[field]?.second?.let {
                     it.map { ret.add(Pair(it.first, field.name.localName)) }
