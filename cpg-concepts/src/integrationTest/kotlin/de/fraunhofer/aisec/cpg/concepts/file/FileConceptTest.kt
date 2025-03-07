@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.file.*
 import de.fraunhofer.aisec.cpg.passes.concepts.file.python.PythonFileConceptPass
 import de.fraunhofer.aisec.cpg.query.dataFlow
+import de.fraunhofer.aisec.cpg.query.executionPath
 import de.fraunhofer.aisec.cpg.test.BaseTest
 import de.fraunhofer.aisec.cpg.test.analyze
 import java.nio.file.Path
@@ -207,49 +208,42 @@ class FileConceptTest : BaseTest() {
 
         val result =
             analyze(
-                files = listOf(topLevel.resolve("file_bad_openstack.py").toFile()),
+                files = listOf(topLevel.resolve("write_before_chmod.py").toFile()),
                 topLevel = topLevel,
                 usePasses = true,
             ) {
                 it.registerLanguage<PythonLanguage>()
                 it.registerPass<PythonFileConceptPass>()
-                // it.registerPass<PythonPathConceptPass>()
                 it.symbols(mapOf("PYTHON_PLATFORM" to "linux"))
             }
         assertNotNull(result)
 
-        val fileNodes =
+        val conceptNodes =
             result.conceptNodes.filterIsInstance<IsFile>() +
                 result.operationNodes.filterIsInstance<
                     IsFile
                 >() // TODO why can't I use `overlays`? It's empty.
-        assertTrue(fileNodes.isNotEmpty())
-
-        val chmodNodes = fileNodes.filterIsInstance<FileChmod>()
-        assertEquals(3, chmodNodes.size)
-
-        // TODO test setMask before write
-    }
-
-    @Test
-    fun testEOG() {
-        val topLevel = Path.of("src", "integrationTest", "resources", "python", "file")
-
-        val result =
-            analyze(
-                files = listOf(topLevel.resolve("testEOG.py").toFile()),
-                topLevel = topLevel,
-                usePasses = true,
-            ) {
-                it.registerLanguage<PythonLanguage>()
-                it.registerPass<PythonFileConceptPass>()
-                it.symbols(mapOf("PYTHON_PLATFORM" to "linux"))
-            }
-        assertNotNull(result)
-
-        val conceptNodes = result.conceptNodes
         assertTrue(conceptNodes.isNotEmpty())
 
-        // TODO
+        val file = conceptNodes.filterIsInstance<File>().singleOrNull()
+        val fileName = "/tmp/foo.txt"
+        assertNotNull(file, "Expected to find a file.")
+        assertEquals(fileName, file.fileName, "Expected the file to be \"$fileName\".")
+
+        val write = conceptNodes.filterIsInstance<FileWrite>().singleOrNull()
+        assertNotNull(write, "Expected to find a file write operation.")
+        assertEquals(file, write.concept, "Expected the write to write to our file node.")
+
+        val chmod = conceptNodes.filterIsInstance<FileChmod>().singleOrNull()
+        assertNotNull(chmod, "Expected to find a file chmod operation.")
+        assertEquals(file, chmod.concept, "Expected the chmod to operate on our file node.")
+
+        // Let's find our bad example
+        val start = write.underlyingNode
+        assertNotNull(start, "Expected the operation to have a underlying node.")
+        assertTrue(
+            executionPath(startNode = start) { it == chmod.underlyingNode }.value,
+            "Expected to find a violating execution path from write to chmod.",
+        )
     }
 }

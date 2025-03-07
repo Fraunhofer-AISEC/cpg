@@ -25,8 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.graph.concepts.file
 
-import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.MetadataProvider
+import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder
+import de.fraunhofer.aisec.cpg.graph.codeAndLocationFrom
 
 fun MetadataProvider.newFile(underlyingNode: Node, fileName: String): File {
     val node = File(underlyingNode = underlyingNode, fileName = fileName)
@@ -72,6 +74,14 @@ fun MetadataProvider.newFileClose(underlyingNode: Node, file: File): FileClose {
     return node
 }
 
+/**
+ * Creates a new [FileRead] node and attaches the DFG from the corresponding [file] to [this] and
+ * then from [this] to the created node.
+ *
+ * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
+ * @param file The [File] this operation is reading from.
+ * @return The new [FileRead] node.
+ */
 fun MetadataProvider.newFileRead(underlyingNode: Node, file: File): FileRead {
     val node =
         FileRead(underlyingNode = underlyingNode, concept = file, target = underlyingNode.nextDFG)
@@ -85,6 +95,16 @@ fun MetadataProvider.newFileRead(underlyingNode: Node, file: File): FileRead {
     return node
 }
 
+/**
+ * Creates a new [FileWrite] node and attaches the DFG from [what] to [this] and then from [this] to
+ * the [file].
+ *
+ * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
+ * @param file The [File] this operation is writing to.
+ * @param what A list of nodes being written to the [file] (usually the arguments to a `write`
+ *   call).
+ * @return The new [FileWrite] node.
+ */
 fun MetadataProvider.newFileWrite(underlyingNode: Node, file: File, what: List<Node>): FileWrite {
     val node = FileWrite(underlyingNode = underlyingNode, concept = file, what = what)
     node.codeAndLocationFrom(underlyingNode)
@@ -92,22 +112,6 @@ fun MetadataProvider.newFileWrite(underlyingNode: Node, file: File, what: List<N
     // add DFG
     what.forEach { it.nextDFG += node }
     node.nextDFG += file
-
-    NodeBuilder.log(node)
-    return node
-}
-
-fun MetadataProvider.newFileAppend(underlyingNode: Node, file: File): FileAppend {
-    val node =
-        FileAppend(
-            underlyingNode = underlyingNode,
-            concept = file,
-            what = (underlyingNode as? CallExpression)?.arguments ?: listOf(),
-        )
-    node.codeAndLocationFrom(underlyingNode)
-
-    // add DFG
-    underlyingNode.parameters.forEach { it.nextDFG += node }
 
     NodeBuilder.log(node)
     return node

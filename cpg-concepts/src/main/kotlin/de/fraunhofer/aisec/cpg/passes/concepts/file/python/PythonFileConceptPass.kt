@@ -28,26 +28,30 @@ package de.fraunhofer.aisec.cpg.passes.concepts.file.python
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.python.PythonValueEvaluator
+import de.fraunhofer.aisec.cpg.graph.Backward
+import de.fraunhofer.aisec.cpg.graph.GraphToFollow
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.argumentValueByNameOrPosition
 import de.fraunhofer.aisec.cpg.graph.concepts.file.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.edges.get
-import de.fraunhofer.aisec.cpg.graph.evaluate
-import de.fraunhofer.aisec.cpg.graph.followPrevFullDFGEdgesUntilHit
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.concepts.ConceptPass
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLate
 import de.fraunhofer.aisec.cpg.passes.configuration.RequiredFrontend
+import de.fraunhofer.aisec.cpg.query.QueryTree
+import de.fraunhofer.aisec.cpg.query.dataFlow
 
+/**
+ * This pass implements the creating of [Concept] and [Operation] nodes for Python file
+ * manipulation. Currently, this pass supports the builtin `open` and `os.open` with the
+ * corresponding reading and writing functions.
+ */
 @ExecuteLate
 @RequiredFrontend(PythonLanguageFrontend::class)
-class PythonFileConceptPass(ctx: TranslationContext) :
-    ConceptPass(ctx) { // TODO logging 2 ConceptPass
+class PythonFileConceptPass(ctx: TranslationContext) : ConceptPass(ctx) {
 
     /** The file name used if we fail to find it. */
     internal val DEFAULT_FILE_NAME = "DEFAULT_FILE_NAME"
@@ -89,10 +93,9 @@ class PythonFileConceptPass(ctx: TranslationContext) :
             val fileName = getFileName(callExpression, "file")
             val newFileNode: File = getOrCreateFile(fileName, callExpression)
 
-            getBuiltinOpenMode(callExpression)?.let { mode ->
-                val flags = translateBuiltinOpenMode(mode)
-                newFileSetFlags(underlyingNode = callExpression, file = newFileNode, flags = flags)
-            }
+            val mode = getBuiltinOpenMode(callExpression) ?: "r" // default is 'r'
+            val flags = translateBuiltinOpenMode(mode)
+            newFileSetFlags(underlyingNode = callExpression, file = newFileNode, flags = flags)
             newFileOpen(underlyingNode = callExpression, file = newFileNode)
         } else if (callExpression is MemberCallExpression) {
             callExpression.base
@@ -100,7 +103,7 @@ class PythonFileConceptPass(ctx: TranslationContext) :
                 ?.let { fileNode ->
                     when (callExpression.name.localName) {
                         "__enter__" -> {
-                            /* TODO: what about this? we handle __exit__ */
+                            /* TODO: what about this? we handle __exit__ and create a FileClose. However, we already have a FileOpen attached at the `open` */
                         }
                         "__exit__" -> newFileClose(underlyingNode = callExpression, file = fileNode)
                         "read" -> newFileRead(underlyingNode = callExpression, file = fileNode)
@@ -125,7 +128,6 @@ class PythonFileConceptPass(ctx: TranslationContext) :
                 "os.open" -> {
                     val fileName = getFileName(callExpression, "path")
                     val newFileNode = getOrCreateFile(fileName, callExpression)
-                    fileCache += fileName to newFileNode
 
                     getOsOpenFlags(callExpression)?.let { flags ->
                         newFileSetFlags(
@@ -134,13 +136,11 @@ class PythonFileConceptPass(ctx: TranslationContext) :
                             flags = translateOsOpenFlags(flags),
                         )
                     }
-                    getOsOpenMask(callExpression)?.let { mask ->
-                        newFileSetMask(
-                            underlyingNode = callExpression,
-                            file = newFileNode,
-                            mask = mask,
-                        )
-                    }
+                    val mode =
+                        getOsOpenMode(callExpression)
+                            ?: 329L // default is 511 (assuming this is octet notation)
+                    newFileSetMask(underlyingNode = callExpression, file = newFileNode, mask = mode)
+
                     newFileOpen(underlyingNode = callExpression, file = newFileNode)
                 }
                 "os.chmod" -> {
@@ -154,7 +154,7 @@ class PythonFileConceptPass(ctx: TranslationContext) :
                         Util.errorWithFileLocation(
                             callExpression,
                             log,
-                            "Invalid path argument. Ignoring the entire `os.chmod` call.",
+                            "Failed to parse the `path` argument. Ignoring the entire `os.chmod` call.",
                         )
                         return
                     }
@@ -191,38 +191,30 @@ class PythonFileConceptPass(ctx: TranslationContext) :
      * @return The [File] found in the cache or the new file in case it had to be created.
      */
     internal fun getOrCreateFile(fileName: String, callExpression: CallExpression): File {
-        val cached = fileCache[fileName]
-
-        return if (cached != null) {
-            cached
-        } else {
-            val new = newFile(underlyingNode = callExpression, fileName = fileName)
-            fileCache += fileName to new
-            new
-        }
+        return fileCache[fileName]
+            ?: newFile(underlyingNode = callExpression, fileName = fileName).also { file ->
+                fileCache += fileName to file
+            }
     }
 
     /**
      * Walks the DFG backwards until a [FileOpen] node is found.
      *
-     * Note: If multiple [File] nodes are found, one is selected a random and a warning is logged.
+     * Note: If multiple [File] nodes are found on different paths, one is selected a random and a
+     * warning is logged.
      *
      * @param expression The start node.
      * @return The [File] node if one is found.
      */
     internal fun findFile(expression: Expression): File? {
-        val fulfilledPaths =
-            expression
-                .followPrevFullDFGEdgesUntilHit(collectFailedPaths = false) {
-                    it.overlays.any { overlay -> overlay is FileOpen }
-                }
-                .fulfilled
+        val fileOpenPaths =
+            dataFlow(startNode = expression, direction = Backward(GraphToFollow.DFG)) {
+                it.overlays.any { overlay -> overlay is FileOpen }
+            }
+
         val fileCandidates =
-            fulfilledPaths
-                .map { path ->
-                    path.last()
-                } // we're interested in the last node of the path, i.e. the node connected to
-                // the [FileOpen] node
+            fileOpenPaths
+                .successfulLastNodes()
                 .flatMap { it.overlays } // move to the "overlays" world
                 .filterIsInstance<FileOpen>() // discard not-relevant overlays
                 .map { it.concept } // move from [FileOpen] to the corresponding [File] concept node
@@ -254,26 +246,21 @@ class PythonFileConceptPass(ctx: TranslationContext) :
         return if (name != null) {
             name
         } else {
-            Util.warnWithFileLocation(
+            Util.errorWithFileLocation(
                 call,
                 log,
-                "Couldn't evaluate the file name. Trying to find the last write and use its value.",
+                "Couldn't evaluate the file name. Using \"$DEFAULT_FILE_NAME\" instead. Expect errors.",
             )
-            val nameArg =
-                (call.argumentEdges[argumentName] ?: call.arguments.getOrNull(0)) as? Reference
-            if (nameArg != null) { // todo: never executed with current tests
-                (nameArg.evaluate() as? String) ?: DEFAULT_FILE_NAME
-            } else {
-                //  not a [Reference]
-                DEFAULT_FILE_NAME
-            }
+            DEFAULT_FILE_NAME
         }
     }
 
     /**
      * Handles the `mode` parameter of Pythons builtin `open` function.
      *
-     * Do not confuse with the `mode` in `os.open` (see [getOsOpenFlags]).
+     * Do not confuse with the `flags` in `os.open` which perform similar actions (see
+     * [getOsOpenFlags]).
+     *
      * [`open`](https://docs.python.org/3/library/functions.html#open) signature:
      * ```python
      * open(file, mode='r', buffering=-1, encoding=None, errors=None, newline=None, closefd=True, opener=None)
@@ -291,17 +278,18 @@ class PythonFileConceptPass(ctx: TranslationContext) :
      * Handles the `mask` parameter of `os.open` function.
      *
      * Do not confuse with the builtin `open` (see [getBuiltinOpenMode]).
+     *
      * [`os.open`](https://docs.python.org/3/library/os.html#os.open) signature:
      * ```python
      * os.open(path, flags, mode=0o777, *, dir_fd=None)
      * ```
      *
      * @param call The `os.open` call.
-     * @return The `mask` TODO mask <-> mode confusion
+     * @return The `mode`
      */
-    internal fun getOsOpenMask(call: CallExpression): Long? {
+    internal fun getOsOpenMode(call: CallExpression): Long? {
         return call.argumentValueByNameOrPosition<Long>(
-            name = "mask",
+            name = "mode",
             position = 2,
             evaluator = PythonValueEvaluator(),
         )
@@ -323,6 +311,13 @@ class PythonFileConceptPass(ctx: TranslationContext) :
         )
     }
 
+    /**
+     * Translates the mode numerical codes to [FileAccessModeFlags]. The [flags] `0b10` is
+     * translated to [FileAccessModeFlags.O_RDWR] for example.
+     *
+     * @param flags The numerical flags to parse.
+     * @return A set of corresponding [FileAccessModeFlags]
+     */
     internal fun translateOsOpenFlags(flags: Long): Set<FileAccessModeFlags> {
         return FileAccessModeFlags.entries
             .filter { it.value == (flags and O_ACCMODE_MODE_MASK) }
@@ -335,12 +330,35 @@ class PythonFileConceptPass(ctx: TranslationContext) :
      */
     internal fun translateBuiltinOpenMode(mode: String): Set<FileAccessModeFlags> {
         return when (mode) {
-            "w" -> setOf(FileAccessModeFlags.O_WRONLY)
-            // "wb" -> setOf(FileAccessModeFlags.WRONLY,)
+            "w",
+            "wb",
+            "wt" -> setOf(FileAccessModeFlags.O_WRONLY) // TODO binary vs text
             "w+" -> setOf(FileAccessModeFlags.O_WRONLY) // TODO TRUNC
             "r",
-            "rt" -> setOf(FileAccessModeFlags.O_RDONLY)
-            else -> TODO()
+            "rb",
+            "rt" -> setOf(FileAccessModeFlags.O_RDONLY) // TODO binary vs text
+            "x" -> setOf(FileAccessModeFlags.O_WRONLY) // TODO create. Is there xt and xb?
+            "a" -> setOf(FileAccessModeFlags.O_WRONLY) // TODO append. binary?
+            "w+b",
+            "r+b" ->
+                setOf(
+                    FileAccessModeFlags.O_RDWR
+                ) // TODO BINARY, truncating (w) or no truncating (r)
+            else -> {
+                log.error(
+                    "Failed to parse the mode string \"$mode\". Returning an empty set of file modes."
+                )
+                emptySet()
+            }
         }
     }
+}
+
+// Replace once #2105 is merged
+private fun QueryTree<*>.successfulLastNodes(): List<Node> {
+    val successfulPaths = this.children.filter { it.value == true }
+    val innerPath = successfulPaths.flatMap { it.children }
+    val finallyTheEntirePaths = innerPath.map { it.value }
+
+    return finallyTheEntirePaths.mapNotNull { (it as? List<*>)?.last() }.filterIsInstance<Node>()
 }
