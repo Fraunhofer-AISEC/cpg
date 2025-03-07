@@ -1087,7 +1087,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertNotNull(function)
         assertEquals("testExpressionInExpressionList()int", function.signature)
 
-        val locals = function.body?.locals
+        val locals = function.body.variables
         assertNotNull(locals)
 
         // Expecting x, foo, t
@@ -1341,9 +1341,10 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CLanguage>()
             }
-        // TU should only contain two AST declarations (EnumDeclaration and FunctionDeclaration),
-        // but NOT any EnumConstantDeclarations
-        assertEquals(2, tu.declarations.size)
+        // TU should only contain three AST declarations (EnumDeclaration, TypedefDeclaration and
+        // FunctionDeclaration), but NOT any EnumConstantDeclarations
+        assertEquals(3, tu.declarations.size)
+        assertEquals(0, tu.declarations.filterIsInstance<EnumConstantDeclaration>().size)
 
         val main = tu.functions["main"]
         assertNotNull(main)

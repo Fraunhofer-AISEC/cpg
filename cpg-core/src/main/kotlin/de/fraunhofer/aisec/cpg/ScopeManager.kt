@@ -343,47 +343,11 @@ class ScopeManager : ScopeProvider {
     /**
      * This function MUST be called when a language frontend first handles a [Declaration]. It adds
      * a declaration to the scope manager, taking into account the currently active scope.
-     * Furthermore, it adds the declaration to the [de.fraunhofer.aisec.cpg.graph.DeclarationHolder]
-     * that is associated with the current scope through [ValueDeclarationScope.addValueDeclaration]
-     * and [StructureDeclarationScope.addStructureDeclaration].
-     *
-     * Setting [Scope.astNode] to false is useful, if you want to make sure a certain declaration is
-     * visible within a scope, but is not directly part of the scope's AST. An example is the way
-     * C/C++ handles unscoped enum constants. They are visible in the enclosing scope, e.g., a
-     * translation unit, but they are added to the AST of their enum declaration, not the
-     * translation unit. The enum declaration is then added to the translation unit.
      *
      * @param declaration the declaration to add
-     * @param addToAST specifies, whether the declaration also gets added to the [Scope.astNode] of
-     *   the current scope (if it implements [DeclarationHolder]). Defaults to true.
      */
-    @JvmOverloads
-    fun addDeclaration(declaration: Declaration?, addToAST: Boolean = true) {
-        if (declaration != null) {
-            // New stuff here
-            currentScope?.addSymbol(declaration.symbol, declaration)
-        }
-
-        // Legacy stuff here
-        when (declaration) {
-            is ProblemDeclaration,
-            is IncludeDeclaration -> {
-                // directly add problems and includes to the global scope
-                this.globalScope?.addDeclaration(declaration, addToAST, this)
-            }
-            is ValueDeclaration -> {
-                val scope = this.firstScopeIsInstanceOrNull<ValueDeclarationScope>()
-                scope?.addDeclaration(declaration, addToAST, this)
-            }
-            is ImportDeclaration,
-            is EnumDeclaration,
-            is RecordDeclaration,
-            is NamespaceDeclaration,
-            is TemplateDeclaration -> {
-                val scope = this.firstScopeIsInstanceOrNull<StructureDeclarationScope>()
-                scope?.addDeclaration(declaration, addToAST, this)
-            }
-        }
+    fun addDeclaration(declaration: Declaration) {
+        currentScope?.addSymbol(declaration.symbol, declaration)
     }
 
     /**
@@ -483,11 +447,10 @@ class ScopeManager : ScopeProvider {
     }
 
     /**
-     * Adds typedefs to a [ValueDeclarationScope]. The language frontend needs to decide on the
-     * scope of the typedef. Most likely, typedefs are global. Therefore, the [GlobalScope] is set
-     * as default.
+     * Adds typedefs to a [Scope]. The language frontend needs to decide on the scope of the
+     * typedef. Most likely, typedefs are global. Therefore, the [GlobalScope] is set as default.
      */
-    fun addTypedef(typedef: TypedefDeclaration, scope: ValueDeclarationScope? = globalScope) {
+    fun addTypedef(typedef: TypedefDeclaration, scope: Scope? = globalScope) {
         scope?.addTypedef(typedef)
     }
 
@@ -684,45 +647,43 @@ class ScopeManager : ScopeProvider {
         // We need to build a path from the current scope to the top most one. This ensures us that
         // a local definition overwrites / shadows one that was there on a higher scope.
         while (current != null) {
-            if (current is ValueDeclarationScope) {
-                // This is a little bit of a hack to support partial FQN resolution at least with
-                // typedefs, but it's not really ideal.
-                // And this also should be merged with the scope manager logic when resolving names.
-                //
-                // The better approach would be to harmonize the FQN of all types in one pass before
-                // all this happens.
-                //
-                // This process has several steps:
-                // First, do a quick local lookup, to see if we have a typedef our current scope
-                // (only do this if the name is not qualified)
-                if (!alias.isQualified() && current == scope) {
-                    val decl = current.typedefs[alias]
-                    if (decl != null) {
-                        return decl.type
-                    }
+            // This is a little bit of a hack to support partial FQN resolution at least with
+            // typedefs, but it's not really ideal.
+            // And this also should be merged with the scope manager logic when resolving names.
+            //
+            // The better approach would be to harmonize the FQN of all types in one pass before
+            // all this happens.
+            //
+            // This process has several steps:
+            // First, do a quick local lookup, to see if we have a typedef our current scope
+            // (only do this if the name is not qualified)
+            if (!alias.isQualified() && current == scope) {
+                val decl = current.typedefs[alias]
+                if (decl != null) {
+                    return decl.type
                 }
+            }
 
-                // Next, try to look up the name either by its FQN (if it is qualified) or make it
-                // qualified based on the current namespace
-                val key =
-                    current.typedefs.keys.firstOrNull {
-                        var lookupName = alias
+            // Next, try to look up the name either by its FQN (if it is qualified) or make it
+            // qualified based on the current namespace
+            val key =
+                current.typedefs.keys.firstOrNull {
+                    var lookupName = alias
 
-                        // If the lookup name is already a FQN, we can use the name directly
-                        lookupName =
-                            if (lookupName.isQualified()) {
-                                lookupName
-                            } else {
-                                // Otherwise, we want to make an FQN out of it using the current
-                                // namespace
-                                currentNamespace?.fqn(lookupName.localName) ?: lookupName
-                            }
+                    // If the lookup name is already a FQN, we can use the name directly
+                    lookupName =
+                        if (lookupName.isQualified()) {
+                            lookupName
+                        } else {
+                            // Otherwise, we want to make an FQN out of it using the current
+                            // namespace
+                            currentNamespace?.fqn(lookupName.localName) ?: lookupName
+                        }
 
-                        it.lastPartsMatch(lookupName)
-                    }
-                if (key != null) {
-                    return current.typedefs[key]?.type
+                    it.lastPartsMatch(lookupName)
                 }
+            if (key != null) {
+                return current.typedefs[key]?.type
             }
 
             current = current.parent
