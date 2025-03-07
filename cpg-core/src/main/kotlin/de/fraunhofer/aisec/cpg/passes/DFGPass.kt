@@ -117,9 +117,9 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             is CastExpression -> handleCastExpression(node)
             is BinaryOperator -> handleBinaryOp(node, parent)
             // The PointsToPass will draw the DFG Edges for these
-            // is AssignExpression -> handleAssignExpression(node)
+            is AssignExpression -> handleAssignExpression(node)
             // is Reference -> handleReference(node)
-            // is VariableDeclaration -> handleVariableDeclaration(node)
+            is VariableDeclaration -> handleVariableDeclaration(node)
             // is SubscriptExpression -> handleSubscriptExpression(node)
             is NewArrayExpression -> handleNewArrayExpression(node)
             is ConditionalExpression -> handleConditionalExpression(node)
@@ -247,8 +247,7 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * variable.
      */
     protected fun handleVariableDeclaration(node: VariableDeclaration) {
-        // Leave this to the PointsToPass
-        /*node.initializer?.let { node.prevDFGEdges += it }*/
+        node.initializer?.let { node.prevDFGEdges += it }
     }
 
     /**
