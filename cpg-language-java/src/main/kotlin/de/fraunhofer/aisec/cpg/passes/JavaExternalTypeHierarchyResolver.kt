@@ -29,6 +29,8 @@ import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSol
 import com.github.javaparser.symbolsolver.resolution.typesolvers.JavaParserTypeSolver
 import com.github.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeSolver
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.frontends.UnknownLanguage
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
@@ -47,7 +49,9 @@ class JavaExternalTypeHierarchyResolver(ctx: TranslationContext) : ComponentPass
     override fun accept(component: Component) {
         val provider =
             object : ContextProvider, LanguageProvider, ScopeProvider {
-                override val language = JavaLanguage()
+                override val language: Language<*>
+                    get() = ctx.availableLanguage<JavaLanguage>() ?: UnknownLanguage
+
                 override val ctx: TranslationContext = this@JavaExternalTypeHierarchyResolver.ctx
                 override val scope: Scope?
                     get() = scopeManager.globalScope
