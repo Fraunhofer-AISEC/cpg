@@ -545,7 +545,9 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     protected fun handleDeclarationStatement(node: DeclarationStatement) {
         // loop through declarations
         for (declaration in node.declarations) {
-            if (declaration is VariableDeclaration) {
+            if (declaration is ImportDeclaration) {
+                handleEOG(declaration)
+            } else if (declaration is VariableDeclaration) {
                 // analyze the initializers if there is one
                 handleEOG(declaration)
             } else if (declaration is FunctionDeclaration) {
