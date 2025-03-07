@@ -44,19 +44,30 @@ fun FulfilledAndFailedPaths.toQueryTree(
     queryType: String,
 ): List<QueryTree<Boolean>> {
     return this.fulfilled.map {
-        QueryTree(
+        SinglePathResult(
             true,
             mutableListOf(QueryTree(it)),
             "$queryType from $startNode to ${it.last()} fulfills the requirement",
             startNode,
+            Success(it.last()),
         )
     } +
-        this.failed.map {
-            QueryTree(
-                false,
-                mutableListOf(QueryTree(it)),
-                "$queryType from $startNode to ${it.last()} does not fulfill the requirement",
+        this.failed.map { (reason, nodes) ->
+            SinglePathResult(
+                true,
+                mutableListOf(QueryTree(nodes)),
+                "$queryType from $startNode to ${nodes.last()} fulfills the requirement",
                 startNode,
+                if (reason == FailureReason.PATH_ENDED) {
+                    PathEnded(nodes.last())
+                } else if (reason == FailureReason.HIT_EARLY_TERMINATION) {
+                    HitEarlyTermination(nodes.last())
+                } else {
+                    // TODO: We cannot set this (yet) but it might be useful to differentiate
+                    // between "path is really at the end" or "we just stopped". Requires adaptions
+                    // in followXUntilHit and all of its callers
+                    StepsExceeded(nodes.last())
+                },
             )
         }
 }
@@ -272,13 +283,14 @@ fun Node.alwaysFlowsTo(
         }
     val allChildren =
         nextEOGEvaluation.failed.map {
+            // TODO: We can update this too
             QueryTree(
                 value = false,
                 children = mutableListOf(QueryTree(value = it)),
                 stringRepresentation =
                     "The EOG path reached the end  " +
                         if (earlyTermination != null)
-                            "(or ${it.lastOrNull()} which a predicate marking the end) "
+                            "(or ${it.second.lastOrNull()} which a predicate marking the end) "
                         else "" + "before passing through a node matching the required predicate.",
                 node = this,
             )
