@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
+import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
 import de.fraunhofer.aisec.cpg.graph.edges.flows.field
 import de.fraunhofer.aisec.cpg.graph.edges.flows.indexed
 import de.fraunhofer.aisec.cpg.graph.edges.flows.partial
@@ -41,7 +42,7 @@ import de.fraunhofer.aisec.cpg.passes.inference.DFGFunctionSummaries
 
 /** Adds the DFG edges for various types of nodes. */
 @DependsOn(SymbolResolver::class)
-class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
+open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     private val callsInferredFunctions = mutableListOf<CallExpression>()
 
     override fun accept(component: Component) {
@@ -71,8 +72,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     private fun connectInferredCallArguments(functionSummaries: DFGFunctionSummaries) {
         for (call in callsInferredFunctions) {
             for (invoked in call.invokes.filter { it.isInferred }) {
-                val changedParams =
-                    functionSummaries.functionToChangedParameters[invoked] ?: mapOf()
+                val changedParams = invoked.functionSummary
                 for ((param, _) in changedParams) {
                     if (param == (invoked as? MethodDeclaration)?.receiver) {
                         (call as? MemberCallExpression)
@@ -87,6 +87,9 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                         )
                         arg.access = AccessValues.READWRITE
                         (arg as? Reference)?.let {
+                            // The access value stays on READ. Even if it's a pointer, only the
+                            // dereference will be written.
+                            // it.access = AccessValues.READWRITE
                             it.refersTo?.let { it1 -> it.nextDFGEdges += it1 }
                         }
                     }
@@ -109,19 +112,20 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             // Expressions
             is CollectionComprehension -> handleCollectionComprehension(node)
             is ComprehensionExpression -> handleComprehensionExpression(node)
-            is CallExpression -> handleCallExpression(node, inferDfgForUnresolvedSymbols)
+            //            is CallExpression -> handleCallExpression(node,
+            // inferDfgForUnresolvedSymbols)
             is CastExpression -> handleCastExpression(node)
             is BinaryOperator -> handleBinaryOp(node, parent)
+            // The PointsToPass will draw the DFG Edges for these
             is AssignExpression -> handleAssignExpression(node)
+            // is Reference -> handleReference(node)
+            is VariableDeclaration -> handleVariableDeclaration(node)
+            // is SubscriptExpression -> handleSubscriptExpression(node)
             is NewArrayExpression -> handleNewArrayExpression(node)
-            is SubscriptExpression -> handleSubscriptExpression(node)
             is ConditionalExpression -> handleConditionalExpression(node)
             is MemberExpression -> handleMemberExpression(node)
-            is Reference -> handleReference(node)
             is ExpressionList -> handleExpressionList(node)
             is NewExpression -> handleNewExpression(node)
-            // We keep the logic for the InitializerListExpression in that class because the
-            // performance would decrease too much.
             is InitializerListExpression -> handleInitializerListExpression(node)
             is KeyValueExpression -> handleKeyValueExpression(node)
             is LambdaExpression -> handleLambdaExpression(node)
@@ -139,7 +143,6 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             is FieldDeclaration -> handleFieldDeclaration(node)
             is FunctionDeclaration -> handleFunctionDeclaration(node, functionSummaries)
             is TupleDeclaration -> handleTupleDeclaration(node)
-            is VariableDeclaration -> handleVariableDeclaration(node)
         }
     }
 
@@ -178,7 +181,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     protected fun handleAssignExpression(node: AssignExpression) {
-        // If this is a compound assign, we also need to model a dataflow to the node itself
+        /*        // If this is a compound assign, we also need to model a dataflow to the node itself
         if (node.isCompoundAssignment) {
             node.lhs.firstOrNull()?.let {
                 node.prevDFGEdges += it
@@ -189,7 +192,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             // Find all targets of rhs and connect them
             node.rhs.forEach {
                 val targets = node.findTargets(it)
-                targets.forEach { target -> it.nextDFGEdges += target }
+                targets.forEach { target -> it.nextDFGEdges += Dataflow(start = it, end = target) }
             }
         }
 
@@ -197,7 +200,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         // rhs to the node itself
         if (node.usedAsExpression) {
             node.expressionValue?.nextDFGEdges += node
-        }
+        }*/
     }
 
     /**
@@ -251,7 +254,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * Adds the DFG edge for a [FunctionDeclaration]. The data flows from the return statement(s) to
      * the function.
      */
-    protected fun handleFunctionDeclaration(
+    protected open fun handleFunctionDeclaration(
         node: FunctionDeclaration,
         functionSummaries: DFGFunctionSummaries,
     ) {
@@ -260,7 +263,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
             if (!summaryExists) {
                 // If the function is inferred, we connect all parameters to the function
-                // declaration.  The condition should make sure that we don't add edges multiple
+                // declaration. The condition should make sure that we don't add edges multiple
                 // times, i.e., we only handle the declaration exactly once.
                 node.prevDFGEdges.addAll(node.parameters)
                 // If it's a method with a receiver, we connect that one too.
@@ -374,10 +377,14 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * case of the operators "++" and "--" also from the node back to the input.
      */
     protected fun handleUnaryOperator(node: UnaryOperator) {
-        node.input.let {
-            node.prevDFGEdges += it
-            if (node.operatorCode == "++" || node.operatorCode == "--") {
-                node.nextDFGEdges += it
+        if ((node.input as? Reference)?.access == AccessValues.WRITE) {
+            node.input.let { node.nextDFGEdges += it }
+        } else {
+            node.input.let {
+                node.prevDFGEdges += it
+                if (node.operatorCode == "++" || node.operatorCode == "--") {
+                    node.nextDFGEdges += it
+                }
             }
         }
     }
@@ -445,10 +452,10 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         node.refersTo?.let {
             when (node.access) {
                 AccessValues.WRITE -> node.nextDFGEdges += it
-                AccessValues.READ -> node.prevDFGEdges += it
+                AccessValues.READ -> node.prevDFGEdges += Dataflow(start = it, end = node)
                 else -> {
                     node.nextDFGEdges += it
-                    node.prevDFGEdges += it
+                    node.prevDFGEdges += Dataflow(start = it, end = node)
                 }
             }
         }

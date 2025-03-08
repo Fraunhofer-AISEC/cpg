@@ -91,6 +91,30 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder, EOGStart
             return if (isDefinition) this else field
         }
 
+    /**
+     * Saves the information on which parameter(s) of the function are modified by the function.
+     * This is interesting since we need to add DFG edges between the modified parameter and the
+     * respective argument(s). For each [ParameterDeclaration] as well as the
+     * [MethodDeclaration.receiver] that has some incoming DFG-edge within this
+     * [FunctionDeclaration], we store all previous DFG nodes. The map stores a List of FSEntries
+     * for each modified parameter. `derefDst` indicates if we write to the parameter's value or
+     * it's dereferenced value, `srcNode` indicates the new source value and `derefSource` if it
+     * should be dereferenced Additionally, `subAccessName` indicates sub-accesses, i.e. to parts of
+     * a struct or to array-expressions
+     */
+    data class FSEntry(
+        val destValueDepth: Int =
+            1, // 0: Address, 1: Value, 2: DerefValue, 3: DerefderefValue, ....
+        val srcNode: Node,
+        val srcValueDepth: Int = 1, // 0: Address, 1: Value, 2: DerefValue, 3:
+        val subAccessName: String,
+        // We use shortFunctionSummaries to draw "short" DFG-Edges that allow us to follow DFG Paths
+        // without going into functions. Not as detailed, but faster
+        val shortFunctionSummary: Boolean = false,
+    )
+
+    var functionSummary = mutableMapOf<Node, MutableSet<FSEntry>>()
+
     /** Returns true, if this function has a [body] statement. */
     fun hasBody(): Boolean {
         return body != null
