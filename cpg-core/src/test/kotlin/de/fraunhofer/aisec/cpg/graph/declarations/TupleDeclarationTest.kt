@@ -70,10 +70,10 @@ class TupleDeclarationTest {
                                 listOf(newVariableDeclaration("a"), newVariableDeclaration("b")),
                                 newCallExpression(newReference("func")),
                             )
-                        scopeManager.declareSymbol(tuple)
+                        declareSymbol(tuple)
                         declarations += tuple
 
-                        tuple.elements.forEach { scopeManager.declareSymbol(it) }
+                        tuple.elements.forEach { declareSymbol(it) }
 
                         function("main") { body { call("print") { ref("a") } } }
                     }
@@ -163,10 +163,10 @@ class TupleDeclarationTest {
                                             ),
                                             newCallExpression(newReference("func")),
                                         )
-                                    scopeManager.declareSymbol(tuple)
+                                    declareSymbol(tuple)
                                     declarations += tuple
 
-                                    tuple.elements.forEach { scopeManager.declareSymbol(it) }
+                                    tuple.elements.forEach { declareSymbol(it) }
                                 }
                                 call("print") { ref("a") }
                             }

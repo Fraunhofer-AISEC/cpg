@@ -63,19 +63,19 @@ class ImportResolverTest {
                             // intentionally
                             // create them in reverse order
                             var tuB = newTranslationUnitDeclaration("file.b")
-                            scopeManager.resetToGlobal(tuB)
+                            resetToGlobal(tuB)
 
                             var pkgB = newNamespaceDeclaration("b")
-                            scopeManager.declareSymbol(pkgB)
+                            declareSymbol(pkgB)
                             tuB.declarations += pkgB
 
-                            scopeManager.enterScope(pkgB)
+                            enterScope(pkgB)
                             var import =
                                 newImportDeclaration(
                                     parseName("a"),
                                     style = ImportStyle.IMPORT_NAMESPACE,
                                 )
-                            scopeManager.declareSymbol(import)
+                            declareSymbol(import)
                             pkgB.declarations += import
 
                             import =
@@ -83,46 +83,46 @@ class ImportResolverTest {
                                     parseName("c.bar"),
                                     style = ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE,
                                 )
-                            scopeManager.declareSymbol(import)
+                            declareSymbol(import)
                             pkgB.declarations += import
 
-                            scopeManager.leaveScope(pkgB)
+                            leaveScope(pkgB)
                             tuB
                         }
                         .also { this.addTranslationUnit(it) }
 
                     with(frontend) {
                             var tuA = newTranslationUnitDeclaration("file.a")
-                            scopeManager.resetToGlobal(tuA)
+                            resetToGlobal(tuA)
 
                             var pkgA = newNamespaceDeclaration("a")
-                            scopeManager.declareSymbol(pkgA)
+                            declareSymbol(pkgA)
                             tuA.declarations += pkgA
 
-                            scopeManager.enterScope(pkgA)
+                            enterScope(pkgA)
                             var foo = newVariableDeclaration(parseName("a.foo"))
-                            scopeManager.declareSymbol(foo)
+                            declareSymbol(foo)
                             pkgA.declarations += foo
 
-                            scopeManager.leaveScope(pkgA)
+                            leaveScope(pkgA)
                             tuA
                         }
                         .also { this.addTranslationUnit(it) }
 
                     with(frontend) {
                             var tuA = newTranslationUnitDeclaration("file.c")
-                            scopeManager.resetToGlobal(tuA)
+                            resetToGlobal(tuA)
 
                             var pkgA = newNamespaceDeclaration("c")
-                            scopeManager.declareSymbol(pkgA)
+                            declareSymbol(pkgA)
                             tuA.declarations += pkgA
 
-                            scopeManager.enterScope(pkgA)
+                            enterScope(pkgA)
                             var foo = newVariableDeclaration(parseName("c.bar"))
-                            scopeManager.declareSymbol(foo)
+                            declareSymbol(foo)
                             pkgA.declarations += foo
 
-                            scopeManager.leaveScope(pkgA)
+                            leaveScope(pkgA)
                             tuA
                         }
                         .also { this.addTranslationUnit(it) }

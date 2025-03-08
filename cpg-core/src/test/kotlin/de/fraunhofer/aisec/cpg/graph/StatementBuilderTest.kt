@@ -55,35 +55,35 @@ class StatementBuilderTest {
                     var tu =
                         with(frontend) {
                             var tu = newTranslationUnitDeclaration("main.file")
-                            scopeManager.resetToGlobal(tu)
+                            resetToGlobal(tu)
 
                             var globalA = newVariableDeclaration("a")
-                            scopeManager.declareSymbol(globalA)
+                            declareSymbol(globalA)
                             tu.declarations += globalA
 
                             var func = newFunctionDeclaration("main")
-                            scopeManager.enterScope(func)
+                            enterScope(func)
 
                             var body = newBlock()
-                            scopeManager.enterScope(body)
+                            enterScope(body)
 
                             var localA = newVariableDeclaration("a")
                             var stmt = newDeclarationStatement()
                             stmt.declarations += localA
-                            scopeManager.declareSymbol(localA)
+                            declareSymbol(localA)
                             body += stmt
 
-                            body += newLookupScopeStatement(listOf("a"), scopeManager.globalScope)
+                            body += newLookupScopeStatement(listOf("a"), globalScope)
                             body += newReference("a")
 
-                            scopeManager.leaveScope(body)
+                            leaveScope(body)
                             func.body = body
-                            scopeManager.leaveScope(func)
+                            leaveScope(func)
 
-                            scopeManager.declareSymbol(func)
+                            declareSymbol(func)
                             tu.declarations += func
 
-                            scopeManager.leaveScope(tu)
+                            leaveScope(tu)
                             tu
                         }
 

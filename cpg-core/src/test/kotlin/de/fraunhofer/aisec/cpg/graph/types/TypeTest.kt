@@ -39,7 +39,7 @@ class TypeTest {
     fun testType() {
         with(TestLanguageFrontend()) {
             val tu = newTranslationUnitDeclaration("file.extension")
-            this.scopeManager.resetToGlobal(tu)
+            resetToGlobal(tu)
 
             val func = newFunctionDeclaration("main")
             assertLocalName("main", func)
