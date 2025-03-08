@@ -84,7 +84,7 @@ fun Pass<*>.tryNamespaceInference(name: Name, source: Node): NamespaceDeclaratio
     }
 
     return (holder ?: scopeManager.translationUnitForInference<NamespaceDeclaration>(source))
-        ?.startInference(ctx)
+        .startInference(ctx)
         ?.inferNamespaceDeclaration(name, null, source)
 }
 
@@ -105,7 +105,7 @@ internal fun Pass<*>.tryRecordInference(type: Type, source: Node): RecordDeclara
             type.name,
             language = source.language,
             location = source.location,
-            scope = type.scope,
+            scope = type.scope ?: scopeManager.currentScope,
         )
     var scope = extractedScope?.scope
 
@@ -179,7 +179,7 @@ internal fun Pass<*>.tryVariableInference(ref: Reference): VariableDeclaration? 
     } else if (ref.name.isQualified()) {
         // For now, we only infer globals at the top-most global level, i.e., no globals in
         // namespaces
-        val extractedScope = scopeManager.extractScope(ref, ref.language, null)
+        val extractedScope = scopeManager.extractScope(ref, ref.language)
         when (val scope = extractedScope?.scope) {
             is NameScope -> {
                 log.warn(
@@ -317,7 +317,7 @@ internal fun Pass<*>.tryFunctionInference(
             scope = scopeManager.globalScope
         }
         val func =
-            when (val start = scope?.astNode) {
+            when (val start = scope.astNode) {
                 is TranslationUnitDeclaration -> start.inferFunction(call, ctx = this.ctx)
                 is NamespaceDeclaration -> start.inferFunction(call, ctx = this.ctx)
                 else -> null
@@ -400,9 +400,8 @@ internal fun Pass<*>.tryMethodInference(
         }
 
     if (inferGlobalFunction) {
-        var currentTU =
-            scopeManager.currentScope?.globalScope?.astNode as? TranslationUnitDeclaration
-        return listOfNotNull(currentTU?.inferFunction(call, ctx = ctx))
+        var tu = scopeManager.translationUnitForInference<FunctionDeclaration>(call)
+        return listOfNotNull(tu?.inferFunction(call, ctx = ctx))
     }
 
     var records =

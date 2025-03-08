@@ -131,7 +131,7 @@ class ResolveMemberExpressionAmbiguityPass(ctx: TranslationContext) : Translatio
                 name,
                 language = hint.language,
                 location = hint.location,
-                startScope = hint.scope,
+                startScope = hint.scope ?: scopeManager.currentScope,
                 predicate = { it is NamespaceDeclaration },
             )
         // There can be multiple declarations for the same namespace because the declaration can

@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.types
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import de.fraunhofer.aisec.cpg.PopulatedByPass
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
@@ -81,33 +82,38 @@ abstract class Type : Node {
      */
     @PopulatedByPass(TypeResolver::class) var declaredFrom: DeclaresType? = null
 
-    constructor() {
-        name = Name(EMPTY_NAME, null, language)
+    constructor(ctx: TranslationContext?) {
+        this.ctx = ctx
+        this.name = Name(EMPTY_NAME, null, language)
     }
 
-    constructor(typeName: String?) {
-        name = language.parseName(typeName ?: UNKNOWN_TYPE_STRING)
-        typeOrigin = Origin.UNRESOLVED
+    constructor(ctx: TranslationContext?, typeName: String?) {
+        this.ctx = ctx
+        this.name = language.parseName(typeName ?: UNKNOWN_TYPE_STRING)
+        this.typeOrigin = Origin.UNRESOLVED
     }
 
-    constructor(type: Type?) {
+    constructor(ctx: TranslationContext?, type: Type?) {
+        this.ctx = ctx
         type?.name?.let { name = it.clone() }
-        typeOrigin = type?.typeOrigin
+        this.typeOrigin = type?.typeOrigin
     }
 
-    constructor(typeName: CharSequence, language: Language<*>) {
-        name =
+    constructor(ctx: TranslationContext?, typeName: CharSequence, language: Language<*>) {
+        this.ctx = ctx
+        this.name =
             if (this is FunctionType) {
                 Name(typeName.toString(), null, language)
             } else {
                 language.parseName(typeName)
             }
         this.language = language
-        typeOrigin = Origin.UNRESOLVED
+        this.typeOrigin = Origin.UNRESOLVED
     }
 
-    constructor(fullTypeName: Name, language: Language<*>) {
-        name = fullTypeName.clone()
+    constructor(ctx: TranslationContext?, fullTypeName: Name, language: Language<*>) {
+        this.ctx = ctx
+        this.name = fullTypeName.clone()
         typeOrigin = Origin.UNRESOLVED
         this.language = language
     }
@@ -283,7 +289,7 @@ fun TypeOperations.apply(root: Type): Type {
             var wrap = this[i]
             type =
                 when (wrap) {
-                    TypeOperation.REFERENCE -> ReferenceType(type)
+                    TypeOperation.REFERENCE -> ReferenceType(root.ctx, type)
                     TypeOperation.ARRAY -> type.reference(PointerOrigin.ARRAY)
                     TypeOperation.POINTER -> type.reference(PointerOrigin.POINTER)
                 }

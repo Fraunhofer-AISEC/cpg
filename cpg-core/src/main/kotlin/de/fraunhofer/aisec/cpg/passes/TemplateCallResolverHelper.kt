@@ -222,7 +222,7 @@ fun handleDefaultTemplateParameters(
  * example.
  */
 internal fun realizeType(
-    language: Language<*>?,
+    language: Language<*>,
     parameterizedTypeResolution: Map<ParameterizedType, TypeParameterDeclaration>,
     incomingType: Type,
     initializationSignature: Map<Declaration?, Node?>,

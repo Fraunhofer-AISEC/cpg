@@ -150,7 +150,7 @@ class TypeManager {
                 }
             }
         }
-        return if (scope!!.parent != null)
+        return if (scope?.parent != null)
             searchTemplateScopeForDefinedParameterizedTypes(scope.parent, name)
         else null
     }
@@ -187,7 +187,7 @@ class TypeManager {
     ): ParameterizedType {
         var parameterizedType = getTypeParameter(templateDeclaration, typeName)
         if (parameterizedType == null) {
-            parameterizedType = ParameterizedType(typeName, language)
+            parameterizedType = ParameterizedType(templateDeclaration.ctx, typeName, language)
             addTypeParameter(templateDeclaration, parameterizedType)
         }
         return parameterizedType
@@ -376,5 +376,7 @@ fun Reference.nameIsType(): Type? {
     }
 
     // Lastly, check if the reference contains a symbol that points to type (declaration)
-    return scopeManager.lookupTypeSymbolByName(name, language, scope)?.declaredType
+    return scopeManager
+        .lookupTypeSymbolByName(name, language, scope ?: scopeManager.currentScope)
+        ?.declaredType
 }

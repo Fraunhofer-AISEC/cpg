@@ -236,7 +236,7 @@ class DFGFunctionSummariesTest {
 
     @Test
     fun testPropagateArguments() {
-        val dfgTest = getDfgInferredCall() { defaultPasses() }
+        val dfgTest = getDfgInferredCall { defaultPasses() }
         assertNotNull(dfgTest)
 
         val main = dfgTest.functions["main"]

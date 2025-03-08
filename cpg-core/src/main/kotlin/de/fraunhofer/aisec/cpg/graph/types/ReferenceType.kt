@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
 import de.fraunhofer.aisec.cpg.graph.unknownType
 import java.util.*
@@ -39,15 +40,15 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 class ReferenceType : Type, SecondOrderType {
     override var elementType: Type = unknownType()
 
-    constructor() : super()
+    constructor(ctx: TranslationContext) : super(ctx)
 
-    constructor(reference: Type) : super() {
+    constructor(ctx: TranslationContext?, reference: Type) : super(ctx) {
         language = reference.language
         name = reference.name.append("&")
         this.elementType = reference
     }
 
-    constructor(type: Type, reference: Type) : super(type) {
+    constructor(ctx: TranslationContext?, type: Type, reference: Type) : super(ctx, type) {
         language = reference.language
         name = reference.name.append("&")
         this.elementType = reference
@@ -57,7 +58,7 @@ class ReferenceType : Type, SecondOrderType {
      * @return Referencing a ReferenceType results in a PointerType to the original ReferenceType
      */
     override fun reference(pointer: PointerOrigin?): Type {
-        return PointerType(this, pointer)
+        return PointerType(ctx, this, pointer)
     }
 
     /**

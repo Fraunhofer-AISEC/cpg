@@ -71,10 +71,10 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
     override val isInferred: Boolean
         get() = true
 
-    val scopeManager: ScopeManager
-    val typeManager: TypeManager
+    val scopeManager: ScopeManager = ctx.scopeManager
+    val typeManager: TypeManager = ctx.typeManager
 
-    override val scope: Scope?
+    override val scope: Scope
         get() = scopeManager.currentScope
 
     fun inferFunctionDeclaration(
@@ -294,7 +294,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
     }
 
     private fun inferTemplateParameter(name: String): TypeParameterDeclaration {
-        val parameterizedType = ParameterizedType(name, language)
+        val parameterizedType = ParameterizedType(ctx, name, language)
         typeManager.addTypeParameter(start as FunctionTemplateDeclaration, parameterizedType)
 
         val decl = newTypeParameterDeclaration(name)
@@ -548,11 +548,6 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
         val log: Logger = LoggerFactory.getLogger(Inference::class.java)
     }
 
-    init {
-        this.scopeManager = ctx.scopeManager
-        this.typeManager = ctx.typeManager
-    }
-
     /**
      * This function tries to infer a return type for an inferred [FunctionDeclaration] based the
      * original [CallExpression] (as the [hint]) parameter that was used to infer the function.
@@ -607,7 +602,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
                 val returnTypes = func?.returnTypes
 
                 return if (returnTypes != null && returnTypes.size > 1) {
-                    TupleType(returnTypes)
+                    TupleType(ctx, returnTypes)
                 } else {
                     returnTypes?.singleOrNull()
                 }

@@ -36,4 +36,4 @@ class Encrypt(
     concept: Cipher,
     /** The key used for encryption */
     val key: Secret,
-) : CipherOperation(underlyingNode = underlyingNode, concept = concept) {}
+) : CipherOperation(underlyingNode = underlyingNode, concept = concept)

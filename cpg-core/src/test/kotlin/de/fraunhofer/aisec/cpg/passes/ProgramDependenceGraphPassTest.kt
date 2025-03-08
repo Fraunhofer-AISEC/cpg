@@ -57,14 +57,8 @@ class ProgramDependenceGraphPassTest {
                     val expectedPrevEdges =
                         t.prevCDGEdges +
                             t.prevDFGEdges.filter {
-                                if (
-                                    "remove next" in (it.start.comment ?: "") &&
-                                        "remove prev" in (t.comment ?: "")
-                                ) {
-                                    false
-                                } else {
-                                    true
-                                }
+                                !("remove next" in (it.start.comment ?: "") &&
+                                    "remove prev" in (t.comment ?: ""))
                             }
                     assertTrue(
                         "prevPDGEdges did not contain all prevCDGEdges and edges to all prevDFG.\n" +
@@ -77,14 +71,8 @@ class ProgramDependenceGraphPassTest {
                     val expectedNextEdges =
                         t.nextCDGEdges +
                             t.nextDFGEdges.filter {
-                                if (
-                                    "remove next" in (t.comment ?: "") &&
-                                        "remove prev" in (it.end.comment ?: "")
-                                ) {
-                                    false
-                                } else {
-                                    true
-                                }
+                                !("remove next" in (t.comment ?: "") &&
+                                    "remove prev" in (it.end.comment ?: ""))
                             }
                     assertTrue(
                         "nextPDGEdges did not contain all nextCDGEdges and edges to all nextDFG." +

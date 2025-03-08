@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.unknownType
 
@@ -32,7 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.unknownType
  * Represents a tuple of types. Primarily used in resolving function calls with multiple return
  * values.
  */
-class TupleType(types: List<Type>) : Type() {
+class TupleType(ctx: TranslationContext?, types: List<Type>) : Type(ctx) {
     var types: List<Type> = listOf()
         set(value) {
             field = value

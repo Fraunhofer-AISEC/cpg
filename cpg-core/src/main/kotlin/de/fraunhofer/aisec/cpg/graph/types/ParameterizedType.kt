@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
 
@@ -33,16 +34,20 @@ import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
  * generics in the graph are represented as [ParameterizedType] nodes.
  */
 class ParameterizedType : Type {
-    constructor(type: Type) : super(type) {
+    constructor(ctx: TranslationContext?, type: Type) : super(ctx, type) {
         language = type.language
     }
 
-    constructor(typeName: String?, language: Language<*>) : super(typeName) {
+    constructor(
+        ctx: TranslationContext?,
+        typeName: String?,
+        language: Language<*>,
+    ) : super(ctx, typeName) {
         this.language = language
     }
 
     override fun reference(pointer: PointerOrigin?): Type {
-        return PointerType(this, pointer)
+        return PointerType(ctx, this, pointer)
     }
 
     override fun dereference(): Type {

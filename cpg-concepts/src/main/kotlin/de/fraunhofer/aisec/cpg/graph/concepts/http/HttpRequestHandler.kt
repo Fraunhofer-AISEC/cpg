@@ -38,7 +38,7 @@ class HttpRequestHandler(
 
 /** Base class for Http operations. */
 abstract class HttpRequestHandlerOperation(underlyingNode: Node, concept: Concept) :
-    Operation(underlyingNode, concept) {}
+    Operation(underlyingNode, concept)
 
 /** Registers an [HttpEndpoint]. */
 class RegisterHttpEndpoint(underlyingNode: Node, concept: Concept, val httpEndpoint: HttpEndpoint) :

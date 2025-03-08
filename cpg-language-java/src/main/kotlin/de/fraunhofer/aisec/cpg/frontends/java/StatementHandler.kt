@@ -550,42 +550,27 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
     }
 
     init {
-        map[com.github.javaparser.ast.stmt.IfStmt::class.java] =
-            HandlerInterface { stmt: Statement ->
-                handleIfStatement(stmt)
-            }
-        map[com.github.javaparser.ast.stmt.AssertStmt::class.java] =
-            HandlerInterface { stmt: Statement ->
-                handleAssertStatement(stmt)
-            }
-        map[com.github.javaparser.ast.stmt.WhileStmt::class.java] =
-            HandlerInterface { stmt: Statement ->
-                handleWhileStatement(stmt)
-            }
-        map[com.github.javaparser.ast.stmt.DoStmt::class.java] =
-            HandlerInterface { stmt: Statement ->
-                handleDoStatement(stmt)
-            }
-        map[com.github.javaparser.ast.stmt.ForEachStmt::class.java] =
-            HandlerInterface { stmt: Statement ->
-                handleForEachStatement(stmt)
-            }
-        map[com.github.javaparser.ast.stmt.ForStmt::class.java] =
-            HandlerInterface { stmt: Statement ->
-                handleForStatement(stmt)
-            }
-        map[com.github.javaparser.ast.stmt.BreakStmt::class.java] =
-            HandlerInterface { stmt: Statement ->
-                handleBreakStatement(stmt)
-            }
-        map[com.github.javaparser.ast.stmt.ContinueStmt::class.java] =
-            HandlerInterface { stmt: Statement ->
-                handleContinueStatement(stmt)
-            }
-        map[com.github.javaparser.ast.stmt.ReturnStmt::class.java] =
-            HandlerInterface { stmt: Statement ->
-                handleReturnStatement(stmt)
-            }
+        map[IfStmt::class.java] = HandlerInterface { stmt: Statement -> handleIfStatement(stmt) }
+        map[AssertStmt::class.java] = HandlerInterface { stmt: Statement ->
+            handleAssertStatement(stmt)
+        }
+        map[WhileStmt::class.java] = HandlerInterface { stmt: Statement ->
+            handleWhileStatement(stmt)
+        }
+        map[DoStmt::class.java] = HandlerInterface { stmt: Statement -> handleDoStatement(stmt) }
+        map[ForEachStmt::class.java] = HandlerInterface { stmt: Statement ->
+            handleForEachStatement(stmt)
+        }
+        map[ForStmt::class.java] = HandlerInterface { stmt: Statement -> handleForStatement(stmt) }
+        map[BreakStmt::class.java] = HandlerInterface { stmt: Statement ->
+            handleBreakStatement(stmt)
+        }
+        map[ContinueStmt::class.java] = HandlerInterface { stmt: Statement ->
+            handleContinueStatement(stmt)
+        }
+        map[ReturnStmt::class.java] = HandlerInterface { stmt: Statement ->
+            handleReturnStatement(stmt)
+        }
         map[BlockStmt::class.java] = HandlerInterface { stmt: Statement ->
             handleBlockStatement(stmt)
         }
@@ -598,22 +583,16 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         map[ExpressionStmt::class.java] = HandlerInterface { stmt: Statement ->
             handleExpressionStatement(stmt)
         }
-        map[com.github.javaparser.ast.stmt.SwitchStmt::class.java] =
-            HandlerInterface { stmt: Statement ->
-                handleSwitchStatement(stmt)
-            }
-        map[com.github.javaparser.ast.stmt.EmptyStmt::class.java] =
-            HandlerInterface { stmt: Statement ->
-                handleEmptyStatement(stmt)
-            }
-        map[com.github.javaparser.ast.stmt.SynchronizedStmt::class.java] =
-            HandlerInterface { stmt: Statement ->
-                handleSynchronizedStatement(stmt)
-            }
-        map[com.github.javaparser.ast.stmt.TryStmt::class.java] =
-            HandlerInterface { stmt: Statement ->
-                handleTryStatement(stmt)
-            }
+        map[SwitchStmt::class.java] = HandlerInterface { stmt: Statement ->
+            handleSwitchStatement(stmt)
+        }
+        map[EmptyStmt::class.java] = HandlerInterface { stmt: Statement ->
+            handleEmptyStatement(stmt)
+        }
+        map[SynchronizedStmt::class.java] = HandlerInterface { stmt: Statement ->
+            handleSynchronizedStatement(stmt)
+        }
+        map[TryStmt::class.java] = HandlerInterface { stmt: Statement -> handleTryStatement(stmt) }
         map[ThrowStmt::class.java] = HandlerInterface { stmt: Statement -> handleThrowStmt(stmt) }
     }
 }

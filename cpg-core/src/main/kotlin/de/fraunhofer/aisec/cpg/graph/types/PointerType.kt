@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.Name
 import java.util.*
 import org.neo4j.ogm.annotation.Relationship
@@ -45,9 +46,13 @@ class PointerType : Type, SecondOrderType {
     var pointerOrigin: PointerOrigin? = null
         private set
 
-    constructor() : super()
+    constructor(ctx: TranslationContext) : super(ctx)
 
-    constructor(elementType: Type, pointerOrigin: PointerOrigin?) : super() {
+    constructor(
+        ctx: TranslationContext?,
+        elementType: Type,
+        pointerOrigin: PointerOrigin?,
+    ) : super(ctx) {
         language = elementType.language
         name =
             if (pointerOrigin == PointerOrigin.ARRAY) {
@@ -59,7 +64,12 @@ class PointerType : Type, SecondOrderType {
         this.elementType = elementType
     }
 
-    constructor(type: Type?, elementType: Type, pointerOrigin: PointerOrigin?) : super(type) {
+    constructor(
+        ctx: TranslationContext?,
+        type: Type?,
+        elementType: Type,
+        pointerOrigin: PointerOrigin?,
+    ) : super(ctx, type) {
         language = elementType.language
         name =
             if (pointerOrigin == PointerOrigin.ARRAY) {
@@ -80,7 +90,7 @@ class PointerType : Type, SecondOrderType {
         if (origin == null) {
             origin = PointerOrigin.ARRAY
         }
-        return PointerType(this, origin)
+        return PointerType(ctx, this, origin)
     }
 
     /** @return dereferencing a PointerType yields the type the pointer was pointing towards */

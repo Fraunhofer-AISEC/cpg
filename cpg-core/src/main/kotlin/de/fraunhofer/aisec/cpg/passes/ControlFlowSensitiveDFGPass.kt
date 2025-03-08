@@ -631,7 +631,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
             }
         }
 
-        override fun needsUpdate(other: State<de.fraunhofer.aisec.cpg.graph.Node, V>): Boolean {
+        override fun needsUpdate(other: State<Node, V>): Boolean {
             return if (other is DFGPassState) {
                 generalState.needsUpdate(other.generalState) ||
                     declarationsState.needsUpdate(other.declarationsState)
@@ -640,10 +640,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
             }
         }
 
-        override fun push(
-            newNode: de.fraunhofer.aisec.cpg.graph.Node,
-            newLatticeElement: LatticeElement<V>?,
-        ): Boolean {
+        override fun push(newNode: Node, newLatticeElement: LatticeElement<V>?): Boolean {
             return generalState.push(newNode, newLatticeElement)
         }
 

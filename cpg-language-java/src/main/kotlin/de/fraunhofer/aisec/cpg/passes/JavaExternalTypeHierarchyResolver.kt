@@ -53,7 +53,7 @@ class JavaExternalTypeHierarchyResolver(ctx: TranslationContext) : ComponentPass
                     get() = ctx.availableLanguage<JavaLanguage>() ?: UnknownLanguage
 
                 override val ctx: TranslationContext = this@JavaExternalTypeHierarchyResolver.ctx
-                override val scope: Scope?
+                override val scope: Scope
                     get() = scopeManager.globalScope
             }
         val resolver = CombinedTypeSolver()

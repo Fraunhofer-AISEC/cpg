@@ -191,7 +191,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
 
         frontend.typeManager.addTypeParameter(
             recordDeclaration,
-            classInterDecl.typeParameters.map { ParameterizedType(it.nameAsString, language) },
+            classInterDecl.typeParameters.map { ParameterizedType(ctx, it.nameAsString, language) },
         )
 
         processImportDeclarations(recordDeclaration)

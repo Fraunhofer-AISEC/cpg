@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.scopes
 
 import com.fasterxml.jackson.annotation.JsonBackReference
 import de.fraunhofer.aisec.cpg.PopulatedByPass
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.HasImplicitReceiver
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.Name
@@ -61,10 +62,11 @@ typealias SymbolMap = MutableMap<Symbol, MutableList<Declaration>>
  */
 @NodeEntity
 sealed class Scope(
+    ctx: TranslationContext,
     @Relationship(value = "SCOPE", direction = Relationship.Direction.INCOMING)
     @JsonBackReference
-    open var astNode: Node?
-) : Node() {
+    open var astNode: Node?,
+) : Node(ctx) {
 
     /** FQN Name currently valid */
     var scopedName: String? = null

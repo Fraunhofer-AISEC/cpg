@@ -100,7 +100,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
     private lateinit var walker: SubgraphWalker.ScopedWalker
 
-    override val scope: Scope?
+    override val scope: Scope
         get() = scopeManager.currentScope
 
     override fun accept(component: Component) {
@@ -219,6 +219,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
         func.type =
             typeManager.registerType(
                 FunctionType(
+                    ctx,
                     funcTypeName(func.signatureTypes, func.returnTypes),
                     func.signatureTypes,
                     func.returnTypes,
@@ -262,9 +263,9 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 if (init is InitializerListExpression) {
                     init.type = type.elementType
                 } else if (init is KeyValueExpression && init.value is InitializerListExpression) {
-                    init.value?.type = type.elementType
+                    init.value.type = type.elementType
                 } else if (init is KeyValueExpression && init.key is InitializerListExpression) {
-                    init.key?.type = type.elementType
+                    init.key.type = type.elementType
                 }
             }
         } else if (type?.isMap == true) {

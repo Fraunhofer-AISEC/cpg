@@ -275,7 +275,7 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
                     part,
                     import.language,
                     import.location,
-                    import.scope,
+                    import.scope ?: scopeManager.currentScope,
                 ) {
                     // We are only interested in "leaf" namespace declarations, meaning that they do
                     // not have sub-declarations. The reason for that is that we usually need to
@@ -403,7 +403,7 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
 fun ScopeManager.updateImportedSymbols(import: ImportDeclaration) {
     // We always need to search at the global scope because we are "importing" something, so by
     // definition, this is not in the scope of the current file.
-    val scope = globalScope ?: return
+    val scope = globalScope
 
     // Let's do some importing. We need to import either a wildcard
     if (import.style == ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE) {

@@ -111,7 +111,7 @@ internal class StaticImportsTest : BaseTest() {
                 }
             }
         }
-        val testFields = a.fields
+        a.fields
         val staticField = a.fields["staticField"]
         val inferredNonStaticField = b.fields["nonStaticField"]
         assertNotNull(staticField)

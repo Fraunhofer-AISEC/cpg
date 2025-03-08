@@ -632,9 +632,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
     }
 
     init {
-        map[com.github.javaparser.ast.expr.AssignExpr::class.java] = HandlerInterface {
-            handleAssignmentExpression(it)
-        }
+        map[AssignExpr::class.java] = HandlerInterface { handleAssignmentExpression(it) }
         map[FieldAccessExpr::class.java] = HandlerInterface {
             handleFieldAccessExpression(it.asFieldAccessExpr())
         }
@@ -651,19 +649,13 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         }
         map[MethodCallExpr::class.java] = HandlerInterface { handleMethodCallExpression(it) }
         map[ObjectCreationExpr::class.java] = HandlerInterface { handleObjectCreationExpr(it) }
-        map[com.github.javaparser.ast.expr.ConditionalExpr::class.java] = HandlerInterface {
-            handleConditionalExpression(it)
-        }
+        map[ConditionalExpr::class.java] = HandlerInterface { handleConditionalExpression(it) }
         map[EnclosedExpr::class.java] = HandlerInterface { handleEnclosedExpression(it) }
         map[ArrayAccessExpr::class.java] = HandlerInterface { handleArrayAccessExpr(it) }
         map[ArrayCreationExpr::class.java] = HandlerInterface { handleArrayCreationExpr(it) }
         map[ArrayInitializerExpr::class.java] = HandlerInterface { handleArrayInitializerExpr(it) }
-        map[com.github.javaparser.ast.expr.CastExpr::class.java] = HandlerInterface {
-            handleCastExpr(it)
-        }
-        map[com.github.javaparser.ast.expr.LambdaExpr::class.java] = HandlerInterface {
-            handleLambdaExpr(it)
-        }
+        map[CastExpr::class.java] = HandlerInterface { handleCastExpr(it) }
+        map[LambdaExpr::class.java] = HandlerInterface { handleLambdaExpr(it) }
     }
 }
 

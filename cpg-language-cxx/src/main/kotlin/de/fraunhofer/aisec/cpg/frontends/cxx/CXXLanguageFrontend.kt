@@ -707,14 +707,15 @@ open class CXXLanguageFrontend(ctx: TranslationContext, language: Language<CXXLa
             type =
                 when {
                     op is IASTPointer -> type.pointer()
-                    op is ICPPASTReferenceOperator && !op.isRValueReference -> ReferenceType(type)
+                    op is ICPPASTReferenceOperator && !op.isRValueReference ->
+                        ReferenceType(ctx, type)
                     // this is a little bit of a workaround until we re-design reference types, this
                     // is a && r-value reference used by move semantics in C++. This is actually
                     // just one level of reference (with a different operator), but for now we just
                     // make a double reference out of it to at least differentiate it from a &
                     // reference.
                     op is ICPPASTReferenceOperator && op.isRValueReference ->
-                        ReferenceType(ReferenceType(type))
+                        ReferenceType(ctx, ReferenceType(ctx, type))
                     else -> type
                 }
         }
@@ -772,7 +773,7 @@ open class CXXLanguageFrontend(ctx: TranslationContext, language: Language<CXXLa
                 ) {
                     it.typeName
                 } + type.typeName
-            type = FunctionType(name, paramTypes, listOf(type), language)
+            type = FunctionType(ctx, name, paramTypes, listOf(type), language)
         }
 
         // Lastly, there might be further nested declarators that adjust the type further.

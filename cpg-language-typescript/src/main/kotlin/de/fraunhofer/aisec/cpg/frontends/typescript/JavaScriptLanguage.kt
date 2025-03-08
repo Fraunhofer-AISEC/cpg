@@ -73,9 +73,9 @@ open class JavaScriptLanguage(ctx: TranslationContext) :
     @Transient
     override val builtInTypes =
         mapOf(
-            "boolean" to BooleanType("boolean", language = this),
-            "number" to FloatingPointType("number", 64, this, NumericType.Modifier.SIGNED),
-            "bigint" to IntegerType("bigint", null, this, NumericType.Modifier.SIGNED),
-            "string" to StringType("string", this),
+            "boolean" to BooleanType(ctx, "boolean", language = this),
+            "number" to FloatingPointType(ctx, "number", 64, this, NumericType.Modifier.SIGNED),
+            "bigint" to IntegerType(ctx, "bigint", null, this, NumericType.Modifier.SIGNED),
+            "string" to StringType(ctx, "string", this),
         )
 }

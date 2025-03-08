@@ -874,7 +874,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         // behind that is that we wrap each file in a namespace (as defined in the python spec). So
         // the "global" scope is actually our current namespace scope.
         var pythonGlobalScope =
-            frontend.scopeManager.globalScope?.children?.firstOrNull { it is NamespaceScope }
+            frontend.scopeManager.globalScope.children.firstOrNull { it is NamespaceScope }
 
         return newLookupScopeStatement(
             global.names.map { parseName(it).localName },

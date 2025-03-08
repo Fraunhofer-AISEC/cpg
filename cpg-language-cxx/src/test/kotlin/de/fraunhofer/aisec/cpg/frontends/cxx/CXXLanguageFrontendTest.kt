@@ -248,9 +248,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             assertNotNull(a)
 
             val type = a.type
-            assertTrue(
-                type is PointerType && type.pointerOrigin == PointerType.PointerOrigin.POINTER
-            )
+            assertTrue(type is PointerType && type.pointerOrigin == POINTER)
 
             val elementType = (a.type as? PointerType)?.elementType
             assertNotNull(elementType)
@@ -664,6 +662,9 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertNotNull(language)
         assertEquals(language, tu.language)
 
+        val ctx = language.ctx
+        assertNotNull(ctx)
+
         val recordDeclaration = tu.records.firstOrNull()
         assertNotNull(recordDeclaration)
         assertLocalName("SomeClass", recordDeclaration)
@@ -696,6 +697,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertEquals(tu.primitiveType("int"), methodWithParam.parameters[0].type)
         assertEquals(
             FunctionType(
+                ctx,
                 "(int)void*",
                 listOf(tu.primitiveType("int")),
                 listOf(tu.incompleteType().reference(POINTER)),
@@ -715,6 +717,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertLocalName("inlineMethod", inlineMethod)
         assertEquals(
             FunctionType(
+                ctx,
                 "()void*",
                 listOf(),
                 listOf(tu.incompleteType().reference(POINTER)),
@@ -727,7 +730,13 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val inlineConstructor = recordDeclaration.constructors[0]
         assertEquals(recordDeclaration.name.localName, inlineConstructor.name.localName)
         assertEquals(
-            FunctionType("()SomeClass", listOf(), listOf(tu.objectType("SomeClass")), language),
+            FunctionType(
+                ctx,
+                "()SomeClass",
+                listOf(),
+                listOf(tu.objectType("SomeClass")),
+                language,
+            ),
             inlineConstructor.type,
         )
         assertTrue(inlineConstructor.hasBody())
@@ -738,6 +747,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertEquals(tu.primitiveType("int"), constructorDefinition.parameters[0].type)
         assertEquals(
             FunctionType(
+                ctx,
                 "(int)SomeClass",
                 listOf(tu.primitiveType("int")),
                 listOf(tu.objectType("SomeClass")),

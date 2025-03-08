@@ -117,51 +117,56 @@ open class CPPLanguage(ctx: TranslationContext) :
     override val builtInTypes =
         mapOf(
             // Integer types
-            "short int" to IntegerType("short int", 16, this, NumericType.Modifier.SIGNED),
+            "short int" to IntegerType(ctx, "short int", 16, this, NumericType.Modifier.SIGNED),
             "unsigned short int" to
-                IntegerType("unsigned short int", 16, this, NumericType.Modifier.UNSIGNED),
-            "int" to IntegerType("int", 32, this, NumericType.Modifier.SIGNED),
-            "unsigned int" to IntegerType("unsigned int", 32, this, NumericType.Modifier.UNSIGNED),
-            "long int" to IntegerType("long int", 64, this, NumericType.Modifier.SIGNED),
+                IntegerType(ctx, "unsigned short int", 16, this, NumericType.Modifier.UNSIGNED),
+            "int" to IntegerType(ctx, "int", 32, this, NumericType.Modifier.SIGNED),
+            "unsigned int" to
+                IntegerType(ctx, "unsigned int", 32, this, NumericType.Modifier.UNSIGNED),
+            "long int" to IntegerType(ctx, "long int", 64, this, NumericType.Modifier.SIGNED),
             "unsigned long int" to
-                IntegerType("unsigned long int", 64, this, NumericType.Modifier.UNSIGNED),
-            "long long int" to IntegerType("long long int", 64, this, NumericType.Modifier.SIGNED),
+                IntegerType(ctx, "unsigned long int", 64, this, NumericType.Modifier.UNSIGNED),
+            "long long int" to
+                IntegerType(ctx, "long long int", 64, this, NumericType.Modifier.SIGNED),
             "unsigned long long int" to
-                IntegerType("unsigned long long int", 64, this, NumericType.Modifier.UNSIGNED),
+                IntegerType(ctx, "unsigned long long int", 64, this, NumericType.Modifier.UNSIGNED),
 
             // Boolean type
-            "bool" to BooleanType("bool", language = this),
+            "bool" to BooleanType(ctx, "bool", language = this),
 
             // Character types
-            "signed char" to IntegerType("signed char", 8, this, NumericType.Modifier.SIGNED),
-            "unsigned char" to IntegerType("unsigned char", 8, this, NumericType.Modifier.UNSIGNED),
-            "char" to IntegerType("char", 8, this, NumericType.Modifier.NOT_APPLICABLE),
-            "wchar_t" to IntegerType("wchar_t", 32, this, NumericType.Modifier.NOT_APPLICABLE),
-            "char8_t" to IntegerType("char8_t", 8, this, NumericType.Modifier.NOT_APPLICABLE),
-            "char16_t" to IntegerType("char16_t", 16, this, NumericType.Modifier.NOT_APPLICABLE),
-            "char32_t" to IntegerType("char32_t", 32, this, NumericType.Modifier.NOT_APPLICABLE),
+            "signed char" to IntegerType(ctx, "signed char", 8, this, NumericType.Modifier.SIGNED),
+            "unsigned char" to
+                IntegerType(ctx, "unsigned char", 8, this, NumericType.Modifier.UNSIGNED),
+            "char" to IntegerType(ctx, "char", 8, this, NumericType.Modifier.NOT_APPLICABLE),
+            "wchar_t" to IntegerType(ctx, "wchar_t", 32, this, NumericType.Modifier.NOT_APPLICABLE),
+            "char8_t" to IntegerType(ctx, "char8_t", 8, this, NumericType.Modifier.NOT_APPLICABLE),
+            "char16_t" to
+                IntegerType(ctx, "char16_t", 16, this, NumericType.Modifier.NOT_APPLICABLE),
+            "char32_t" to
+                IntegerType(ctx, "char32_t", 32, this, NumericType.Modifier.NOT_APPLICABLE),
 
             // Floating-point types
-            "float" to FloatingPointType("float", 32, this, NumericType.Modifier.SIGNED),
-            "double" to FloatingPointType("double", 64, this, NumericType.Modifier.SIGNED),
+            "float" to FloatingPointType(ctx, "float", 32, this, NumericType.Modifier.SIGNED),
+            "double" to FloatingPointType(ctx, "double", 64, this, NumericType.Modifier.SIGNED),
             "long double" to
-                FloatingPointType("long double", 128, this, NumericType.Modifier.SIGNED),
+                FloatingPointType(ctx, "long double", 128, this, NumericType.Modifier.SIGNED),
 
             // Convenience types, defined in headers. They are not part of the language per se, but
             // part of the standard library. We therefore also consider them to be "built-in" types,
             // because we often don't parse all the headers which define them internally.
-            "std::string" to StringType("std::string", this),
-            "int8_t" to IntegerType("int8_t", 8, this, NumericType.Modifier.SIGNED),
-            "int16_t" to IntegerType("int16_t", 16, this, NumericType.Modifier.SIGNED),
-            "int32_t" to IntegerType("int32_t", 32, this, NumericType.Modifier.SIGNED),
-            "int64_t" to IntegerType("int64_t", 64, this, NumericType.Modifier.SIGNED),
-            "uint8_t" to IntegerType("uint8_t", 8, this, NumericType.Modifier.UNSIGNED),
-            "uint16_t" to IntegerType("uint16_t", 16, this, NumericType.Modifier.UNSIGNED),
-            "uint32_t" to IntegerType("uint32_t", 32, this, NumericType.Modifier.UNSIGNED),
-            "uint64_t" to IntegerType("uint64_t", 64, this, NumericType.Modifier.UNSIGNED),
+            "std::string" to StringType(ctx, "std::string", this),
+            "int8_t" to IntegerType(ctx, "int8_t", 8, this, NumericType.Modifier.SIGNED),
+            "int16_t" to IntegerType(ctx, "int16_t", 16, this, NumericType.Modifier.SIGNED),
+            "int32_t" to IntegerType(ctx, "int32_t", 32, this, NumericType.Modifier.SIGNED),
+            "int64_t" to IntegerType(ctx, "int64_t", 64, this, NumericType.Modifier.SIGNED),
+            "uint8_t" to IntegerType(ctx, "uint8_t", 8, this, NumericType.Modifier.UNSIGNED),
+            "uint16_t" to IntegerType(ctx, "uint16_t", 16, this, NumericType.Modifier.UNSIGNED),
+            "uint32_t" to IntegerType(ctx, "uint32_t", 32, this, NumericType.Modifier.UNSIGNED),
+            "uint64_t" to IntegerType(ctx, "uint64_t", 64, this, NumericType.Modifier.UNSIGNED),
 
             // Other commonly used extension types
-            "__int128" to IntegerType("__int128", 128, this, NumericType.Modifier.SIGNED),
+            "__int128" to IntegerType(ctx, "__int128", 128, this, NumericType.Modifier.SIGNED),
         )
 
     override fun tryCast(

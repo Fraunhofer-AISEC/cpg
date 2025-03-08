@@ -25,8 +25,13 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
 
 /** Represents a [List] type that contains multiple elements. */
-class ListType(typeName: CharSequence, override var elementType: Type, language: Language<*>) :
-    ObjectType(typeName, listOf(elementType), false, language), SecondOrderType
+class ListType(
+    ctx: TranslationContext,
+    typeName: CharSequence,
+    override var elementType: Type,
+    language: Language<*>,
+) : ObjectType(ctx, typeName, listOf(elementType), false, language), SecondOrderType

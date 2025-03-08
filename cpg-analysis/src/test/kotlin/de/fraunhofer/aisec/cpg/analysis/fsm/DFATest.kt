@@ -125,7 +125,7 @@ class DFATest {
         q1.addEdge(
             Edge(op = "valid", nextState = q2)
         ) // invalid because a DFA must not contain epsilon edges
-        val dfa = DFA(setOf(q1, q2)) // this adds the necessary checks to [State.addEdge]
+        DFA(setOf(q1, q2)) // this adds the necessary checks to [State.addEdge]
 
         assertFailsWith<IllegalArgumentException>(
             message =

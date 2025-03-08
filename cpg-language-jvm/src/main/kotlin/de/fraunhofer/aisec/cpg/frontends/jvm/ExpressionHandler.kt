@@ -355,6 +355,7 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
         // help in inferring some (unknown) functions later
         ref.type =
             FunctionType(
+                ctx,
                 this.name,
                 this.parameterTypes.map { frontend.typeOf(it) },
                 listOf(frontend.typeOf(this.type)),
