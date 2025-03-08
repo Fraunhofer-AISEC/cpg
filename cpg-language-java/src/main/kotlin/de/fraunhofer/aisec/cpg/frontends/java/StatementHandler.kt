@@ -115,13 +115,13 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         val thenStatement = ifStmt.thenStmt
         val optionalElseStatement = ifStmt.elseStmt
         val ifStatement = newIfStatement(rawNode = stmt)
-        frontend.scopeManager.enterScope(ifStatement)
+        enterScope(ifStatement)
         ifStatement.thenStatement = handle(thenStatement)
         ifStatement.condition =
             frontend.expressionHandler.handle(conditionExpression)
                 as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
         optionalElseStatement.ifPresent { ifStatement.elseStatement = handle(it) }
-        frontend.scopeManager.leaveScope(ifStatement)
+        leaveScope(ifStatement)
         return ifStatement
     }
 
@@ -144,18 +144,18 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         val conditionExpression = whileStmt.condition
         val statement = whileStmt.body
         val whileStatement = newWhileStatement(rawNode = stmt)
-        frontend.scopeManager.enterScope(whileStatement)
+        enterScope(whileStatement)
         whileStatement.statement = handle(statement)
         whileStatement.condition =
             frontend.expressionHandler.handle(conditionExpression)
                 as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-        frontend.scopeManager.leaveScope(whileStatement)
+        leaveScope(whileStatement)
         return whileStatement
     }
 
     private fun handleForEachStatement(stmt: Statement): ForEachStatement {
         val statement = newForEachStatement(rawNode = stmt)
-        frontend.scopeManager.enterScope(statement)
+        enterScope(statement)
         val forEachStmt = stmt.asForEachStmt()
         val variable = frontend.expressionHandler.handle(forEachStmt.variable)
         val iterable = frontend.expressionHandler.handle(forEachStmt.iterable)
@@ -166,14 +166,14 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         }
         statement.iterable = iterable
         statement.statement = handle(forEachStmt.body)
-        frontend.scopeManager.leaveScope(statement)
+        leaveScope(statement)
         return statement
     }
 
     private fun handleForStatement(stmt: Statement): ForStatement {
         val forStmt = stmt.asForStmt()
         val statement = this.newForStatement(rawNode = stmt)
-        frontend.scopeManager.enterScope(statement)
+        enterScope(statement)
         if (forStmt.initialization.size > 1) {
             // code will be set later
             val initExprList = this.newExpressionList()
@@ -226,7 +226,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
             statement.iterationStatement = frontend.expressionHandler.handle(forStmt.update[0])
         }
         statement.statement = handle(forStmt.body)
-        frontend.scopeManager.leaveScope(statement)
+        leaveScope(statement)
         return statement
     }
 
@@ -235,12 +235,12 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         val conditionExpression = doStmt.condition
         val statement = doStmt.body
         val doStatement = newDoStatement(rawNode = stmt)
-        frontend.scopeManager.enterScope(doStatement)
+        enterScope(doStatement)
         doStatement.statement = handle(statement)
         doStatement.condition =
             frontend.expressionHandler.handle(conditionExpression)
                 as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-        frontend.scopeManager.leaveScope(doStatement)
+        leaveScope(doStatement)
         return doStatement
     }
 
@@ -287,12 +287,12 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
 
         // first of, all we need a compound statement
         val compoundStatement = newBlock(rawNode = stmt)
-        frontend.scopeManager.enterScope(compoundStatement)
+        enterScope(compoundStatement)
         for (child in blockStmt.statements) {
             val statement = handle(child)
             statement?.let { compoundStatement.statements += it }
         }
-        frontend.scopeManager.leaveScope(compoundStatement)
+        leaveScope(compoundStatement)
         return compoundStatement
     }
 
@@ -411,7 +411,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         val switchStmt = stmt.asSwitchStmt()
         val switchStatement = newSwitchStatement(rawNode = stmt)
 
-        frontend.scopeManager.enterScope(switchStatement)
+        enterScope(switchStatement)
         switchStatement.selector =
             frontend.expressionHandler.handle(switchStmt.selector)
                 as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
@@ -441,14 +441,14 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
             }
         }
         switchStatement.statement = compoundStatement
-        frontend.scopeManager.leaveScope(switchStatement)
+        leaveScope(switchStatement)
         return switchStatement
     }
 
     private fun handleExplicitConstructorInvocation(stmt: Statement): ConstructExpression {
         val explicitConstructorInvocationStmt = stmt.asExplicitConstructorInvocationStmt()
         var containingClass = ""
-        val currentRecord = frontend.scopeManager.currentRecord
+        val currentRecord = currentRecord
         if (currentRecord == null) {
             log.error(
                 "Explicit constructor invocation has to be located inside a record declaration!"
@@ -463,11 +463,11 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
 
         // Create a reference either to "this"
         if (explicitConstructorInvocationStmt.isThis) {
-            frontend.scopeManager.currentRecord?.toType()?.let { node.type = it }
+            currentRecord?.toType()?.let { node.type = it }
             node.callee = this.newReference(name)
         } else {
             // or to our direct (first) super type
-            frontend.scopeManager.currentRecord?.superTypes?.firstOrNull()?.let {
+            currentRecord?.superTypes?.firstOrNull()?.let {
                 node.type = it
                 node.callee = this.newReference(it.name)
             }
@@ -486,7 +486,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
     private fun handleTryStatement(stmt: Statement): TryStatement {
         val tryStmt = stmt.asTryStmt()
         val tryStatement = newTryStatement(rawNode = stmt)
-        frontend.scopeManager.enterScope(tryStatement)
+        enterScope(tryStatement)
         val resources =
             tryStmt.resources
                 .mapNotNull { ctx -> frontend.expressionHandler.handle(ctx) }
@@ -494,7 +494,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         val tryBlock = handleBlockStatement(tryStmt.tryBlock)
         val catchClauses = tryStmt.catchClauses.map(::handleCatchClause).toMutableList()
         val finallyBlock = tryStmt.finallyBlock.map(::handleBlockStatement).orElse(null)
-        frontend.scopeManager.leaveScope(tryStatement)
+        leaveScope(tryStatement)
         tryStatement.resources = resources
         tryStatement.tryBlock = tryBlock
         tryStatement.finallyBlock = finallyBlock
@@ -503,7 +503,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
             if (r is DeclarationStatement) {
                 for (d in r.declarations) {
                     if (d is VariableDeclaration) {
-                        frontend.scopeManager.addDeclaration(d)
+                        declareSymbol(d)
                     }
                 }
             }
@@ -515,7 +515,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         catchCls: CatchClause
     ): de.fraunhofer.aisec.cpg.graph.statements.CatchClause {
         val cClause = newCatchClause(rawNode = catchCls)
-        frontend.scopeManager.enterScope(cClause)
+        enterScope(cClause)
         val possibleTypes = mutableSetOf<Type>()
         val concreteType: Type
         if (catchCls.parameter.type is UnionType) {
@@ -540,8 +540,8 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         val body = handleBlockStatement(catchCls.body)
         cClause.body = body
         cClause.parameter = parameter
-        frontend.scopeManager.addDeclaration(parameter)
-        frontend.scopeManager.leaveScope(cClause)
+        declareSymbol(parameter)
+        leaveScope(cClause)
         return cClause
     }
 

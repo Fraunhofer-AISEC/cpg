@@ -150,7 +150,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
                 scopeManager.isInRecord && !scopeManager.isInFunction -> {
                     // We end up here for fields declared directly in the class body. These are
                     // class attributes; more or less static fields.
-                    newFieldDeclaration(scopeManager.currentNamespace.fqn(ref.name.localName))
+                    newFieldDeclaration(scopeManager.currentNamePrefix.fqn(ref.name.localName))
                 }
                 else -> {
                     null
@@ -186,7 +186,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
         // Make sure we add the declaration at the correct place, i.e. with the scope we set at the
         // creation time
         scopeManager.withScope(decl.scope) {
-            scopeManager.addDeclaration(decl)
+            scopeManager.declareSymbol(decl)
             (it?.astNode as? DeclarationHolder)?.addDeclaration(decl)
             decl
         }

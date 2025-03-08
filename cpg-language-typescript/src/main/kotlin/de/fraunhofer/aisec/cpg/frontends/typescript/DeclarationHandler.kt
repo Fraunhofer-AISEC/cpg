@@ -91,7 +91,7 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
             }
             ?.mapNotNull { this.handle(it) }
             ?.map {
-                this.frontend.scopeManager.addDeclaration(it)
+                this.frontend.scopeManager.declareSymbol(it)
                 record.addDeclaration(it)
             }
 
@@ -124,7 +124,7 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
             } else {
                 val decl = this.handle(childNode)
                 if (decl != null) {
-                    this.frontend.scopeManager.addDeclaration(decl)
+                    this.frontend.scopeManager.declareSymbol(decl)
                     tu.declarations += decl
                 }
             }
@@ -172,7 +172,7 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
                     this.frontend.processAnnotations(param, it)
                 }
 
-                this.frontend.scopeManager.addDeclaration(param)
+                this.frontend.scopeManager.declareSymbol(param)
                 func.parameters += param
             }
 

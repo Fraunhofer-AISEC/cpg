@@ -76,8 +76,7 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
 
                     // TODO: this will only find methods within the current translation unit.
                     //  this is a limitation that we have for C++ as well
-                    val record =
-                        frontend.scopeManager.lookupScope(recordName)?.astNode as? RecordDeclaration
+                    val record = lookupScope(recordName)?.astNode as? RecordDeclaration
 
                     // now this gets a little bit hacky, we will add it to the record declaration
                     // this is strictly speaking not 100 % true, since the method property edge is
@@ -90,7 +89,7 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
                         record.addMethod(method)
 
                         // Enter scope of record
-                        frontend.scopeManager.enterScope(record)
+                        enterScope(record)
                     }
                 }
                 method
@@ -104,12 +103,12 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
                 newFunctionDeclaration(funcDecl.name.name, localNameOnly, rawNode = funcDecl)
             }
 
-        frontend.scopeManager.enterScope(func)
+        enterScope(func)
 
         val receiver = (func as? MethodDeclaration)?.receiver
         if (receiver != null) {
             // Add the receiver do the scope manager, so we can resolve the receiver value
-            frontend.scopeManager.addDeclaration(receiver)
+            declareSymbol(receiver)
         }
 
         val returnTypes = mutableListOf<Type>()
@@ -130,7 +129,7 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
                         )
 
                     // Add parameter to scope
-                    frontend.scopeManager.addDeclaration(returnParam)
+                    declareSymbol(returnParam)
 
                     // TODO(oxisto): Add the return parameter to the function declaration's AST. See
                     //  https://github.com/Fraunhofer-AISEC/cpg/issues/430
@@ -160,12 +159,10 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
             func.body = body
         }
 
-        frontend.scopeManager.leaveScope(func)
+        leaveScope(func)
 
         // Leave scope of record, if applicable
-        (func as? MethodDeclaration)?.recordDeclaration?.let {
-            frontend.scopeManager.leaveScope(it)
-        }
+        (func as? MethodDeclaration)?.recordDeclaration?.let { leaveScope(it) }
 
         return func
     }
@@ -212,7 +209,7 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
 
                 val p = newParameterDeclaration(name, type, variadic, rawNode = param)
 
-                frontend.scopeManager.addDeclaration(p)
+                declareSymbol(p)
                 func.parameters += p
 
                 frontend.setComment(p, param)

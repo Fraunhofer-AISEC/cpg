@@ -56,7 +56,7 @@ class DeclarationHandler(lang: RubyLanguageFrontend) :
     private fun handleDefnNode(node: DefnNode): FunctionDeclaration {
         val func = newFunctionDeclaration(node.name.idString())
 
-        frontend.scopeManager.enterScope(func)
+        enterScope(func)
 
         for (arg in node.argsNode.args) {
             val param = this.handle(arg) as? ParameterDeclaration
@@ -64,7 +64,7 @@ class DeclarationHandler(lang: RubyLanguageFrontend) :
                 continue
             }
 
-            frontend.scopeManager.addDeclaration(param)
+            declareSymbol(param)
             func.parameters += param
         }
 
@@ -84,7 +84,7 @@ class DeclarationHandler(lang: RubyLanguageFrontend) :
         }
         func.body = body
 
-        frontend.scopeManager.leaveScope(func)
+        leaveScope(func)
 
         return func
     }

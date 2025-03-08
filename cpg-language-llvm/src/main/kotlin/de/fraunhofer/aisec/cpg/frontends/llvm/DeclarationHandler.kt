@@ -107,7 +107,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
 
         functionDeclaration.type = frontend.typeOf(returnType)
 
-        frontend.scopeManager.enterScope(functionDeclaration)
+        enterScope(functionDeclaration)
 
         var param = LLVMGetFirstParam(func)
         while (param != null) {
@@ -120,7 +120,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
             // TODO: support variardic
             val decl = newParameterDeclaration(paramName, type, false, rawNode = param)
 
-            frontend.scopeManager.addDeclaration(decl)
+            declareSymbol(decl)
             functionDeclaration.parameters += decl
             frontend.bindingsCache[paramSymbolName] = decl
 
@@ -166,7 +166,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
             bb = LLVMGetNextBasicBlock(bb)
         }
 
-        frontend.scopeManager.leaveScope(functionDeclaration)
+        leaveScope(functionDeclaration)
 
         return functionDeclaration
     }
@@ -195,7 +195,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
             }
 
         // try to see, if the struct already exists as a record declaration
-        var record = frontend.scopeManager.getRecordForName(Name(name), language)
+        var record = getRecordForName(Name(name), language)
 
         // if yes, return it
         if (record != null) {
@@ -213,17 +213,17 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
             // there are no names, so we need to invent some dummy ones for easier reading
             val fieldName = "field_$i"
 
-            frontend.scopeManager.enterScope(record)
+            enterScope(record)
 
             val field = newFieldDeclaration(fieldName, fieldType, listOf(), null, false)
-            frontend.scopeManager.addDeclaration(field)
+            declareSymbol(field)
             record.fields += field
 
-            frontend.scopeManager.leaveScope(record)
+            leaveScope(record)
         }
 
         // Add the record to the current TU
-        frontend.scopeManager.addDeclaration(record)
+        declareSymbol(record)
         frontend.currentTU?.declarations += record
 
         return record

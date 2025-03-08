@@ -64,7 +64,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
         val cls = newRecordDeclaration(stmt.name, "class", rawNode = stmt)
         stmt.bases.map { cls.superClasses.add(frontend.typeOf(it)) }
 
-        frontend.scopeManager.enterScope(cls)
+        enterScope(cls)
 
         stmt.keywords.forEach {
             cls.additionalProblems +=
@@ -77,7 +77,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
                 // declarations directly to the class
                 is Python.AST.Def -> {
                     val decl = handle(s)
-                    frontend.scopeManager.addDeclaration(decl)
+                    declareSymbol(decl)
                     cls.addDeclaration(decl)
                 }
                 // All other statements are added to the statements block of the class
@@ -85,7 +85,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
             }
         }
 
-        frontend.scopeManager.leaveScope(cls)
+        leaveScope(cls)
 
         return cls
     }
@@ -102,8 +102,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
      * `receiver` (most often called `self`).
      */
     private fun handleFunctionDef(s: Python.AST.NormalOrAsyncFunctionDef): FunctionDeclaration {
-        var recordDeclaration =
-            (frontend.scopeManager.currentScope as? RecordScope)?.astNode as? RecordDeclaration
+        var recordDeclaration = (currentScope as? RecordScope)?.astNode as? RecordDeclaration
         val language = language
         val func =
             if (recordDeclaration != null) {
@@ -141,7 +140,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
             } else {
                 newFunctionDeclaration(name = s.name, rawNode = s)
             }
-        frontend.scopeManager.enterScope(func)
+        enterScope(func)
 
         frontend.statementHandler.addAsyncWarning(s, func)
 
@@ -163,7 +162,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
             func.body = frontend.statementHandler.makeBlock(s.body, parentNode = s)
         }
 
-        frontend.scopeManager.leaveScope(func)
+        leaveScope(func)
 
         return func
     }
@@ -229,7 +228,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
             arg.modifiers += MODIFIER_KEYWORD_ONLY_ARGUMENT
         }
 
-        frontend.scopeManager.addDeclaration(arg)
+        declareSymbol(arg)
         func.parameters += arg
 
         return arg
@@ -268,7 +267,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
                 val defaultValue =
                     args.defaults.getOrNull(0)?.let { frontend.expressionHandler.handle(it) }
                 defaultValue?.let {
-                    frontend.scopeManager.addDeclaration(recvNode)
+                    declareSymbol(recvNode)
                     result.additionalProblems +=
                         newProblemExpression("Receiver with default value", rawNode = args)
                 }

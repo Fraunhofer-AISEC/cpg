@@ -141,8 +141,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             } else {
                 if (capture.isByReference) {
                     val valueDeclaration =
-                        frontend.scopeManager
-                            .lookupSymbolByName(
+                        lookupSymbolByName(
                                 newName(capture.identifier?.toString() ?: ""),
                                 language = language,
                             ) {
@@ -165,9 +164,9 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 ?: newFunctionDeclaration("lambda${lambda.hashCode()}")
         anonymousFunction.type = FunctionType.computeType(anonymousFunction)
 
-        frontend.scopeManager.enterScope(anonymousFunction)
+        enterScope(anonymousFunction)
         anonymousFunction.body = frontend.statementHandler.handle(node.body)
-        frontend.scopeManager.leaveScope(anonymousFunction)
+        leaveScope(anonymousFunction)
 
         lambda.function = anonymousFunction
 
@@ -513,14 +512,14 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         // Handle pre-defined expressions
         if (name == "__FUNCTION__" || name == "__func__") {
             return newLiteral(
-                frontend.scopeManager.currentFunction?.name?.localName ?: "",
+                currentFunction?.name?.localName ?: "",
                 primitiveType("char").pointer(),
                 rawNode = ctx,
             )
         } else if (name == "__PRETTY_FUNCTION__") {
             // This is not 100 % compatible with CLANG, but this is ok for now
             return newLiteral(
-                frontend.scopeManager.currentFunction?.signature ?: "",
+                currentFunction?.signature ?: "",
                 primitiveType("char").pointer(),
                 rawNode = ctx,
             )
@@ -1007,7 +1006,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     private fun handleThisLiteral(ctx: IASTLiteralExpression): Reference {
         // We should be in a record here. However since we are a fuzzy parser, maybe things went
         // wrong, so we might have an unknown type.
-        val recordType = frontend.scopeManager.currentRecord?.toType() ?: unknownType()
+        val recordType = currentRecord?.toType() ?: unknownType()
         // We do want to make sure that the type of the expression is at least a pointer.
         val pointerType = recordType.pointer()
 

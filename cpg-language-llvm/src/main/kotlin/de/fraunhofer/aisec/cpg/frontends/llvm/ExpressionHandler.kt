@@ -441,7 +441,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                 var record = (baseType as? ObjectType)?.recordDeclaration
 
                 if (record == null) {
-                    record = frontend.scopeManager.getRecordForName(baseType.name, language)
+                    record = getRecordForName(baseType.name, language)
                     if (record != null) {
                         (baseType as? ObjectType)?.recordDeclaration = record
                     }

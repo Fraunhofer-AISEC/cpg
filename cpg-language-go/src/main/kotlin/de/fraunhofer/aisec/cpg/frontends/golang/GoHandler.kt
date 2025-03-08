@@ -98,8 +98,7 @@ abstract class GoHandler<ResultNode : Node?, HandlerNode : GoStandardLibrary.Ast
             // might be suitable to look up the specific package in the scope manager. In the
             // future, we might need a better solution.
             val namespace =
-                frontend.scopeManager
-                    .filterScopes {
+                filterScopes {
                         it is NamespaceScope &&
                             (it.astNode as? NamespaceDeclaration)?.path == filename
                     }

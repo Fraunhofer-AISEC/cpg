@@ -74,13 +74,13 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
         }
 
         // Enter the class scope
-        frontend.scopeManager.enterScope(record)
+        enterScope(record)
 
         // Loop through all fields
         for (sootField in sootClass.fields) {
             val field = handle(sootField) as? FieldDeclaration
             if (field != null) {
-                frontend.scopeManager.addDeclaration(field)
+                declareSymbol(field)
                 record.addDeclaration(field)
             }
         }
@@ -89,19 +89,19 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
         for (sootMethod in sootClass.methods) {
             val method = handle(sootMethod) as? MethodDeclaration
             if (method != null) {
-                frontend.scopeManager.addDeclaration(method)
+                declareSymbol(method)
                 record.addDeclaration(method)
             }
         }
 
         // Leave the class scope
-        frontend.scopeManager.leaveScope(record)
+        leaveScope(record)
 
         return record
     }
 
     private fun handleMethod(sootMethod: SootMethod): MethodDeclaration {
-        val record = frontend.scopeManager.currentRecord
+        val record = currentRecord
 
         val method =
             if (sootMethod.name == "<init>") {
@@ -110,25 +110,25 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
                 newMethodDeclaration(
                     sootMethod.name,
                     sootMethod.isStatic,
-                    frontend.scopeManager.currentRecord,
+                    currentRecord,
                     rawNode = sootMethod,
                 )
             }
 
         // Enter method scope
-        frontend.scopeManager.enterScope(method)
+        enterScope(method)
 
         // Add "@this" as the receiver
         val receiver =
             newVariableDeclaration("@this", method.recordDeclaration?.toType() ?: unknownType())
                 .implicit("@this")
-        frontend.scopeManager.addDeclaration(receiver)
+        declareSymbol(receiver)
         method.receiver = receiver
 
         // Add method parameters
         for ((index, type) in sootMethod.parameterTypes.withIndex()) {
             val param = newParameterDeclaration("@parameter${index}", frontend.typeOf(type))
-            frontend.scopeManager.addDeclaration(param)
+            declareSymbol(param)
             method.parameters += param
         }
 
@@ -138,7 +138,7 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
         }
 
         // Leave method scope
-        frontend.scopeManager.leaveScope(method)
+        leaveScope(method)
 
         return method
     }

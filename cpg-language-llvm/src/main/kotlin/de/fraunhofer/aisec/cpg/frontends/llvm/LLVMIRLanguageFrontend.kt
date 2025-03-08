@@ -121,7 +121,7 @@ class LLVMIRLanguageFrontend(ctx: TranslationContext, language: Language<LLVMIRL
         currentTU = tu
 
         // we need to set our translation unit as the global scope
-        scopeManager.resetToGlobal(tu)
+        resetToGlobal(tu)
 
         // loop through globals
         var global = LLVMGetFirstGlobal(mod)
@@ -129,7 +129,7 @@ class LLVMIRLanguageFrontend(ctx: TranslationContext, language: Language<LLVMIRL
             // try to parse the variable (declaration)
             val declaration = declarationHandler.handle(global)
             if (declaration != null) {
-                scopeManager.addDeclaration(declaration)
+                declareSymbol(declaration)
                 tu.declarations += declaration
             }
 
@@ -142,7 +142,7 @@ class LLVMIRLanguageFrontend(ctx: TranslationContext, language: Language<LLVMIRL
             // try to parse the function (declaration)
             val declaration = declarationHandler.handle(func)
             if (declaration != null) {
-                scopeManager.addDeclaration(declaration)
+                declareSymbol(declaration)
                 tu.declarations += declaration
             }
 
@@ -250,7 +250,7 @@ class LLVMIRLanguageFrontend(ctx: TranslationContext, language: Language<LLVMIRL
 
     /** Determines if a struct with [name] exists in the scope. */
     fun isKnownStructTypeName(name: String): Boolean {
-        return this.scopeManager.getRecordForName(Name(name), language) != null
+        return getRecordForName(Name(name), language) != null
     }
 
     fun getOperandValueAtIndex(instr: LLVMValueRef, idx: Int): Expression {

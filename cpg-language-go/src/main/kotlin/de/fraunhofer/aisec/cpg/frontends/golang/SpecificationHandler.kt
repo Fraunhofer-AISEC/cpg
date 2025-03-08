@@ -113,7 +113,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
     ): RecordDeclaration {
         val record = newRecordDeclaration(name, "struct", rawNode = typeSpec)
 
-        frontend.scopeManager.enterScope(record)
+        enterScope(record)
 
         if (!structType.incomplete) {
             for (field in structType.fields.list) {
@@ -132,12 +132,12 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                     }
 
                 val decl = newFieldDeclaration(fieldName, type, modifiers, rawNode = field)
-                frontend.scopeManager.addDeclaration(decl)
+                declareSymbol(decl)
                 record.fields += decl
             }
         }
 
-        frontend.scopeManager.leaveScope(record)
+        leaveScope(record)
 
         return record
     }
@@ -151,7 +151,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
         // Make sure to register the type
         frontend.typeManager.registerType(record.toType())
 
-        frontend.scopeManager.enterScope(record)
+        enterScope(record)
 
         if (!interfaceType.incomplete) {
             for (field in interfaceType.methods.list) {
@@ -165,16 +165,16 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                     val method = newMethodDeclaration(field.names[0].name, rawNode = field)
                     method.type = type
 
-                    frontend.scopeManager.enterScope(method)
+                    enterScope(method)
 
                     val params = (field.type as? GoStandardLibrary.Ast.FuncType)?.params
                     if (params != null) {
                         frontend.declarationHandler.handleFuncParams(method, params)
                     }
 
-                    frontend.scopeManager.leaveScope(method)
+                    leaveScope(method)
 
-                    frontend.scopeManager.addDeclaration(method)
+                    declareSymbol(method)
                     record.methods += method
                 } else {
                     log.debug("Adding {} as super class of interface {}", type.name, record.name)
@@ -186,7 +186,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
             }
         }
 
-        frontend.scopeManager.leaveScope(record)
+        leaveScope(record)
 
         return record
     }
@@ -214,7 +214,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                 // in a namespace are FQNs. Otherwise we cannot resolve them properly when we access
                 // them outside of the package.
                 val fqn =
-                    if (frontend.scopeManager.currentScope is NameScope) {
+                    if (currentScope is NameScope) {
                         fqn(ident.name)
                     } else {
                         ident.name
@@ -232,7 +232,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                 }
 
                 // We need to manually add the variables to the AST
-                frontend.scopeManager.addDeclaration(decl)
+                declareSymbol(decl)
                 tuple += decl
             }
             return tuple
@@ -246,7 +246,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                 // in a namespace are FQNs. Otherwise we cannot resolve them properly when we access
                 // them outside of the package.
                 val fqn =
-                    if (frontend.scopeManager.currentScope is NameScope) {
+                    if (currentScope is NameScope) {
                         fqn(ident.name)
                     } else {
                         ident.name
@@ -313,7 +313,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
         val funcType = frontend.typeOf(type)
         val typedef = newTypedefDeclaration(funcType, frontend.typeOf(spec.name), rawNode = spec)
 
-        frontend.scopeManager.addTypedef(typedef)
+        addTypedef(typedef)
 
         return typedef
     }
@@ -333,7 +333,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                 val aliasType = frontend.typeOf(spec.name)
                 val typedef = newTypedefDeclaration(targetType, aliasType, rawNode = spec)
 
-                frontend.scopeManager.addTypedef(typedef)
+                addTypedef(typedef)
                 typedef
             }
             // Otherwise, we are creating a new type, which is *different*. Since Go allows to add
@@ -350,8 +350,8 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                 frontend.typeManager.registerType(record.toType())
 
                 // Make sure to add the scope to the scope manager
-                frontend.scopeManager.enterScope(record)
-                frontend.scopeManager.leaveScope(record)
+                enterScope(record)
+                leaveScope(record)
 
                 record
             }

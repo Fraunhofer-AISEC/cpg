@@ -53,13 +53,13 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         val lambdaExpr = expr.asLambdaExpr()
         val lambda = newLambdaExpression(rawNode = lambdaExpr)
         val anonymousFunction = newFunctionDeclaration("", rawNode = lambdaExpr)
-        frontend.scopeManager.enterScope(anonymousFunction)
+        enterScope(anonymousFunction)
         for (parameter in lambdaExpr.parameters) {
             val resolvedType = frontend.getTypeAsGoodAsPossible(parameter.type)
             val param =
                 newParameterDeclaration(parameter.nameAsString, resolvedType, parameter.isVarArgs)
             frontend.processAnnotations(param, parameter)
-            frontend.scopeManager.addDeclaration(param)
+            declareSymbol(param)
             anonymousFunction.parameters += param
         }
 
@@ -68,7 +68,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         val functionType = FunctionType.computeType(anonymousFunction)
         anonymousFunction.type = functionType
         anonymousFunction.body = frontend.statementHandler.handle(lambdaExpr.body)
-        frontend.scopeManager.leaveScope(anonymousFunction)
+        leaveScope(anonymousFunction)
 
         lambda.function = anonymousFunction
 
@@ -232,7 +232,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         for (variable in variableDeclarationExpr.variables) {
             val declaration = frontend.declarationHandler.handleVariableDeclarator(variable)
             frontend.processAnnotations(declaration, variableDeclarationExpr)
-            frontend.scopeManager.addDeclaration(declaration)
+            declareSymbol(declaration)
             declarationStatement.declarations += declaration
         }
         return declarationStatement
@@ -332,7 +332,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
 
     private fun handleThisExpression(expr: Expression): Reference {
         val thisExpr = expr.asThisExpr()
-        val qualifiedName = frontend.scopeManager.currentRecord?.name.toString()
+        val qualifiedName = currentRecord?.name.toString()
         var type = this.objectType(qualifiedName)
         var name = thisExpr.toString()
 
@@ -549,7 +549,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
     private fun createImplicitThis():
         de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression {
         val base: de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-        val thisType = frontend.scopeManager.currentRecord?.toType() ?: unknownType()
+        val thisType = currentRecord?.toType() ?: unknownType()
         base = newReference("this", thisType).implicit("this")
         return base
     }
@@ -596,7 +596,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
             val anonymousRecord = newRecordDeclaration(anonymousClassName, "class")
             anonymousRecord.isImplicit = true
 
-            frontend.scopeManager.enterScope(anonymousRecord)
+            enterScope(anonymousRecord)
 
             anonymousRecord.addSuperClass(objectType(constructorName))
             val anonymousClassBody = objectCreationExpr.anonymousClassBody.get()
@@ -616,11 +616,11 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                     constructorDeclaration.parameters +=
                         newParameterDeclaration("arg${i}", arg.type)
                 }
-                frontend.scopeManager.addDeclaration(constructorDeclaration)
+                declareSymbol(constructorDeclaration)
                 anonymousRecord.constructors += constructorDeclaration
                 ctor.anonymousClass = anonymousRecord
 
-                frontend.scopeManager.leaveScope(anonymousRecord)
+                leaveScope(anonymousRecord)
             }
         }
 

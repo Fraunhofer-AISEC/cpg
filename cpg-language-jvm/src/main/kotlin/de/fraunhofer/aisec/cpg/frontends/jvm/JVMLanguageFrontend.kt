@@ -129,7 +129,7 @@ class JVMLanguageFrontend(
             }
         // This contains the whole directory
         val tu = newTranslationUnitDeclaration(file.parent)
-        scopeManager.resetToGlobal(tu)
+        resetToGlobal(tu)
 
         val packages = mutableMapOf<String, NamespaceDeclaration>()
 
@@ -138,22 +138,22 @@ class JVMLanguageFrontend(
             val pkg =
                 packages.computeIfAbsent(sootClass.type.packageName.name) {
                     val pkg = newNamespaceDeclaration(it)
-                    scopeManager.addDeclaration(pkg)
+                    declareSymbol(pkg)
                     tu.addDeclaration(pkg)
                     pkg
                 }
 
             // Enter namespace scope
-            scopeManager.enterScope(pkg)
+            enterScope(pkg)
 
             val decl = declarationHandler.handle(sootClass)
             if (decl != null) {
-                scopeManager.addDeclaration(decl)
+                declareSymbol(decl)
                 pkg.addDeclaration(decl)
             }
 
             // Leave namespace scope
-            scopeManager.leaveScope(pkg)
+            leaveScope(pkg)
 
             // We need to clear the processed because they need to be per-file and we only have one
             // frontend for all files

@@ -121,7 +121,7 @@ open class JavaLanguageFrontend(ctx: TranslationContext, language: Language<Java
             // starting point is always a translation declaration
             val tud = newTranslationUnitDeclaration(file.toString(), rawNode = context)
             currentTU = tud
-            scopeManager.resetToGlobal(tud)
+            resetToGlobal(tud)
             val packDecl = context?.packageDeclaration?.orElse(null)
 
             // We need to create nested namespace (if we have a package declaration) so that we have
@@ -134,11 +134,11 @@ open class JavaLanguageFrontend(ctx: TranslationContext, language: Language<Java
                     var fqn = previous?.name.fqn(path)
 
                     val nsd = newNamespaceDeclaration(fqn, rawNode = packDecl)
-                    scopeManager.addDeclaration(nsd)
+                    declareSymbol(nsd)
                     val holder = previous ?: tud
                     holder.addDeclaration(nsd)
 
-                    scopeManager.enterScope(nsd)
+                    enterScope(nsd)
                     nsd
                 } ?: tud
 
@@ -147,17 +147,17 @@ open class JavaLanguageFrontend(ctx: TranslationContext, language: Language<Java
                 // along the way
                 val declaration = declarationHandler.handle(type)
                 if (declaration != null) {
-                    scopeManager.addDeclaration(declaration)
+                    declareSymbol(declaration)
                     holder.addDeclaration(declaration)
                 }
             }
 
             // We put imports and includes directly into the file scope, because otherwise the
             // import would be visible as symbols in the whole namespace
-            scopeManager.enterScope(tud)
+            enterScope(tud)
             for (anImport in context?.imports ?: listOf()) {
                 val incl = newIncludeDeclaration(anImport.nameAsString)
-                scopeManager.addDeclaration(incl)
+                declareSymbol(incl)
                 tud.addDeclaration(incl)
             }
 
@@ -168,14 +168,12 @@ open class JavaLanguageFrontend(ctx: TranslationContext, language: Language<Java
                         style = ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE,
                     )
                     .implicit("import java.lang.*")
-            scopeManager.addDeclaration(decl)
+            declareSymbol(decl)
             tud.addDeclaration(decl)
-            scopeManager.leaveScope(tud)
+            leaveScope(tud)
 
             if (holder is NamespaceDeclaration) {
-                tud.allChildren<NamespaceDeclaration>().reversed().forEach {
-                    scopeManager.leaveScope(it)
-                }
+                tud.allChildren<NamespaceDeclaration>().reversed().forEach { leaveScope(it) }
             }
             bench.addMeasurement()
             tud
@@ -380,10 +378,7 @@ open class JavaLanguageFrontend(ctx: TranslationContext, language: Language<Java
         return try {
             // Resolve type first with ParameterizedType
             var type: de.fraunhofer.aisec.cpg.graph.types.Type? =
-                typeManager.getTypeParameter(
-                    scopeManager.currentRecord,
-                    resolved.returnType.describe(),
-                )
+                typeManager.getTypeParameter(currentRecord, resolved.returnType.describe())
             if (type == null) {
                 type = typeOf(resolved.returnType)
             }
@@ -403,9 +398,9 @@ open class JavaLanguageFrontend(ctx: TranslationContext, language: Language<Java
      * @return the FQN
      */
     private fun getFQNInCurrentPackage(simpleName: String): String {
-        // TODO: Somehow we cannot use scopeManager.currentNamespace. not sure why
+        // TODO: Somehow we cannot use currentNamespace. not sure why
         val theScope =
-            scopeManager.firstScopeOrNull { scope: Scope -> scope.astNode is NamespaceDeclaration }
+            firstScopeOrNull { scope: Scope -> scope.astNode is NamespaceDeclaration }
                 ?: return simpleName
         // If scope is null we are in a default package
         return theScope.name?.fqn(simpleName).toString()

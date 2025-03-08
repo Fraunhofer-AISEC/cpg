@@ -63,12 +63,12 @@ class RubyLanguageFrontend(ctx: TranslationContext, language: RubyLanguage) :
     private fun handleRootNode(node: RootNode): TranslationUnitDeclaration {
         val tu = newTranslationUnitDeclaration(node.file, rawNode = node)
 
-        scopeManager.resetToGlobal(tu)
+        resetToGlobal(tu)
 
         // The root node can either contain a single node or a block node
         if (node.bodyNode is MethodDefNode) {
             val decl = declarationHandler.handle(node.bodyNode)
-            scopeManager.addDeclaration(decl)
+            declareSymbol(decl)
             tu.declarations += decl
         } else if (node.bodyNode is BlockNode) {
             // Otherwise, we need to loop over the block
@@ -76,7 +76,7 @@ class RubyLanguageFrontend(ctx: TranslationContext, language: RubyLanguage) :
             for (innerNode in block.filterNotNull()) {
                 if (innerNode is MethodDefNode) {
                     val decl = declarationHandler.handle(innerNode)
-                    scopeManager.addDeclaration(decl)
+                    declareSymbol(decl)
                     tu.declarations += decl
                 } else {
                     val stmt = statementHandler.handle(innerNode)

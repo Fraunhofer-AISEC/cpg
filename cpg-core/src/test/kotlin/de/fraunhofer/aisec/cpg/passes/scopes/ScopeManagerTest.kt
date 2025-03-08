@@ -57,11 +57,11 @@ internal class ScopeManagerTest : BaseTest() {
             s1.enterScope(namespaceA1)
 
             val func1 = frontend1.newFunctionDeclaration("func1")
-            s1.addDeclaration(func1)
+            s1.declareSymbol(func1)
             namespaceA1.declarations += func1
 
             s1.leaveScope(namespaceA1)
-            s1.addDeclaration(namespaceA1)
+            s1.declareSymbol(namespaceA1)
             tu1.declarations += namespaceA1
 
             val s2 = ScopeManager()
@@ -74,11 +74,11 @@ internal class ScopeManagerTest : BaseTest() {
             s2.enterScope(namespaceA2)
 
             val func2 = frontend2.newFunctionDeclaration("func2")
-            s2.addDeclaration(func2)
+            s2.declareSymbol(func2)
             namespaceA2.declarations += func2
 
             s2.leaveScope(namespaceA2)
-            s2.addDeclaration(namespaceA2)
+            s2.declareSymbol(namespaceA2)
             tu2.declarations += namespaceA2
 
             // merge the two scopes. this replicates the behaviour of parseParallel
@@ -131,25 +131,25 @@ internal class ScopeManagerTest : BaseTest() {
             val tu = frontend.newTranslationUnitDeclaration("file.cpp", null)
             s.resetToGlobal(tu)
 
-            assertNull(s.currentNamespace)
+            assertNull(s.currentNamePrefix)
 
             val namespaceA = frontend.newNamespaceDeclaration("A", null)
             s.enterScope(namespaceA)
 
-            assertEquals("A", s.currentNamespace.toString())
+            assertEquals("A", s.currentNamePrefix.toString())
 
             // nested namespace A::B
             val namespaceB = frontend.newNamespaceDeclaration("B", null)
             s.enterScope(namespaceB)
 
-            assertEquals("A::B", s.currentNamespace.toString())
+            assertEquals("A::B", s.currentNamePrefix.toString())
 
             val func = frontend.newFunctionDeclaration("func")
-            s.addDeclaration(func)
+            s.declareSymbol(func)
             tu.declarations += func
 
             s.leaveScope(namespaceB)
-            s.addDeclaration(namespaceB)
+            s.declareSymbol(namespaceB)
             namespaceA.declarations += namespaceB
 
             s.leaveScope(namespaceA)

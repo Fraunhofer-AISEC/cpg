@@ -310,7 +310,7 @@ class PythonLanguageFrontend(ctx: TranslationContext, language: Language<PythonL
                 ) // could be one of "ast.{Module,Interactive,Expression,FunctionType}
 
         val tud = newTranslationUnitDeclaration(path.toString(), rawNode = pythonASTModule)
-        scopeManager.resetToGlobal(tud)
+        resetToGlobal(tud)
 
         // We need to resolve the path relative to the top level to get the full module identifier
         // with packages. Note: in reality, only directories that have __init__.py file present are
@@ -338,14 +338,14 @@ class PythonLanguageFrontend(ctx: TranslationContext, language: Language<PythonL
                 } else {
                     val nsd = newNamespaceDeclaration(fqn, rawNode = pythonASTModule)
                     nsd.path = relative?.parent?.pathString + "/" + module
-                    scopeManager.addDeclaration(nsd)
+                    declareSymbol(nsd)
 
                     // Add the namespace to the parent namespace -- or the translation unit, if it
                     // is the top one
                     val holder = previous ?: tud
                     holder.addDeclaration(nsd)
 
-                    scopeManager.enterScope(nsd)
+                    enterScope(nsd)
                     nsd
                 }
             }
@@ -361,7 +361,7 @@ class PythonLanguageFrontend(ctx: TranslationContext, language: Language<PythonL
                     // add declarations directly to the class
                     is Python.AST.Def -> {
                         val decl = declarationHandler.handle(stmt)
-                        scopeManager.addDeclaration(decl)
+                        declareSymbol(decl)
                         it.addDeclaration(decl)
                     }
                     // All other statements are added to the (static) statements block of the
@@ -372,7 +372,7 @@ class PythonLanguageFrontend(ctx: TranslationContext, language: Language<PythonL
         }
 
         // Leave scopes in reverse order
-        tud.allChildren<NamespaceDeclaration>().reversed().forEach { scopeManager.leaveScope(it) }
+        tud.allChildren<NamespaceDeclaration>().reversed().forEach { leaveScope(it) }
 
         return tud
     }

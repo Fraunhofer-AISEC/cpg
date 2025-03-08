@@ -64,7 +64,7 @@ class StatementHandler(lang: TypeScriptLanguageFrontend) :
         val decl = this.frontend.declarationHandler.handle(node)
 
         if (decl != null) {
-            this.frontend.scopeManager.addDeclaration(decl)
+            this.frontend.scopeManager.declareSymbol(decl)
             statement.declarations += decl
         }
 
@@ -107,7 +107,7 @@ class StatementHandler(lang: TypeScriptLanguageFrontend) :
             val decl = this.frontend.declarationHandler.handle(variableNode)
 
             if (decl != null) {
-                this.frontend.scopeManager.addDeclaration(decl)
+                this.frontend.scopeManager.declareSymbol(decl)
                 statement.declarations += decl
             }
         }

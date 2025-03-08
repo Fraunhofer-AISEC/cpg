@@ -103,21 +103,21 @@ class IniFileFrontend(ctx: TranslationContext, language: Language<IniFileFronten
             }
 
         val tud = newTranslationUnitDeclaration(name = file.name, rawNode = ini)
-        scopeManager.resetToGlobal(tud)
+        resetToGlobal(tud)
 
         val nsd = newNamespaceDeclaration(name = namespace, rawNode = ini)
-        scopeManager.addDeclaration(nsd)
+        declareSymbol(nsd)
         tud.namespaces += nsd
 
-        scopeManager.enterScope(nsd)
+        enterScope(nsd)
 
         ini.values.forEach {
             val record = handleSection(it)
-            scopeManager.addDeclaration(record)
+            declareSymbol(record)
             nsd.addDeclaration(record)
         }
 
-        scopeManager.enterScope(nsd)
+        enterScope(nsd)
         return tud
     }
 
@@ -127,13 +127,13 @@ class IniFileFrontend(ctx: TranslationContext, language: Language<IniFileFronten
      */
     private fun handleSection(section: Section): RecordDeclaration {
         val record = newRecordDeclaration(name = section.name, kind = "section", rawNode = section)
-        scopeManager.enterScope(record)
+        enterScope(record)
         section.entries.forEach {
             val field = handleEntry(it)
-            scopeManager.addDeclaration(field)
+            declareSymbol(field)
             record.fields += field
         }
-        scopeManager.leaveScope(record)
+        leaveScope(record)
 
         return record
     }

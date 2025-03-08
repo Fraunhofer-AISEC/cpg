@@ -550,7 +550,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
          * Take a little shortcut and set refersTo, in case this is a method receiver. This allows us to play more
          * nicely with member (call) expressions on the current class, since then their base type is known.
          */
-        val currentFunction = frontend.scopeManager.currentFunction
+        val currentFunction = currentFunction
         if (currentFunction is MethodDeclaration) {
             val recv = currentFunction.receiver
             recv.let {
@@ -566,13 +566,13 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     private fun handleLambda(node: Python.AST.Lambda): Expression {
         val lambda = newLambdaExpression(rawNode = node)
         val function = newFunctionDeclaration(name = "", rawNode = node)
-        frontend.scopeManager.enterScope(function)
+        enterScope(function)
         for (arg in node.args.args) {
             this.frontend.declarationHandler.handleArgument(function, arg)
         }
 
         function.body = handle(node.body)
-        frontend.scopeManager.leaveScope(function)
+        leaveScope(function)
         lambda.function = function
         return lambda
     }

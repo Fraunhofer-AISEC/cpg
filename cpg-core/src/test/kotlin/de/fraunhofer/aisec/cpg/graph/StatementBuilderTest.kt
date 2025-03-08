@@ -58,7 +58,7 @@ class StatementBuilderTest {
                             scopeManager.resetToGlobal(tu)
 
                             var globalA = newVariableDeclaration("a")
-                            scopeManager.addDeclaration(globalA)
+                            scopeManager.declareSymbol(globalA)
                             tu.declarations += globalA
 
                             var func = newFunctionDeclaration("main")
@@ -70,7 +70,7 @@ class StatementBuilderTest {
                             var localA = newVariableDeclaration("a")
                             var stmt = newDeclarationStatement()
                             stmt.declarations += localA
-                            scopeManager.addDeclaration(localA)
+                            scopeManager.declareSymbol(localA)
                             body += stmt
 
                             body += newLookupScopeStatement(listOf("a"), scopeManager.globalScope)
@@ -80,7 +80,7 @@ class StatementBuilderTest {
                             func.body = body
                             scopeManager.leaveScope(func)
 
-                            scopeManager.addDeclaration(func)
+                            scopeManager.declareSymbol(func)
                             tu.declarations += func
 
                             scopeManager.leaveScope(tu)

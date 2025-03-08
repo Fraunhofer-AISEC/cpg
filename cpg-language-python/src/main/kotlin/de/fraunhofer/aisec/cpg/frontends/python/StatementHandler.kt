@@ -32,7 +32,6 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.scopes.FunctionScope
-import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.NamespaceScope
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.AssertStatement
@@ -79,7 +78,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 )
             is Python.AST.Def -> {
                 val decl = frontend.declarationHandler.handleNode(node)
-                frontend.scopeManager.addDeclaration(decl)
+                declareSymbol(decl)
                 wrapDeclarationToStatement(decl)
             }
         }
@@ -552,7 +551,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                         rawNode = imp,
                     )
                 conditionallyAddAdditionalSourcesToAnalysis(decl.import)
-                frontend.scopeManager.addDeclaration(decl)
+                declareSymbol(decl)
                 declStmt.declarations += decl
             } else {
                 // If we do not have an alias, we import all the packages along the path - unless we
@@ -566,7 +565,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                             rawNode = imp,
                         )
                     conditionallyAddAdditionalSourcesToAnalysis(decl.import)
-                    frontend.scopeManager.addDeclaration(decl)
+                    declareSymbol(decl)
                     declStmt.declarations += decl
                     importName = importName.parent
                 }
@@ -586,9 +585,9 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             // level.
             var parent =
                 if (isInitModule()) {
-                    frontend.scopeManager.currentNamespace.fqn(PythonLanguage.IDENTIFIER_INIT)
+                    currentNamePrefix.fqn(PythonLanguage.IDENTIFIER_INIT)
                 } else {
-                    frontend.scopeManager.currentNamespace
+                    currentNamePrefix
                 }
 
             // If the level is specified, we need to relative the module path. We basically need to
@@ -644,7 +643,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 }
 
             // Finally, add our declaration to the scope and the declaration statement
-            frontend.scopeManager.addDeclaration(decl)
+            declareSymbol(decl)
             declStmt.declarations += decl
         }
         return declStmt
@@ -688,10 +687,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
     /** Small utility function to check, whether we are inside an __init__ module. */
     private fun isInitModule(): Boolean =
-        (frontend.scopeManager.firstScopeIsInstanceOrNull<NameScope>()?.astNode
-                as? NamespaceDeclaration)
-            ?.path
-            ?.endsWith(PythonLanguage.IDENTIFIER_INIT) == true
+        currentNamespace?.path?.endsWith(PythonLanguage.IDENTIFIER_INIT) == true
 
     private fun handleWhile(node: Python.AST.While): Statement {
         val ret = newWhileStatement(rawNode = node)
@@ -873,8 +869,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         // Technically, our global scope is not identical to the python "global" scope. The reason
         // behind that is that we wrap each file in a namespace (as defined in the python spec). So
         // the "global" scope is actually our current namespace scope.
-        var pythonGlobalScope =
-            frontend.scopeManager.globalScope?.children?.firstOrNull { it is NamespaceScope }
+        var pythonGlobalScope = globalScope?.children?.firstOrNull { it is NamespaceScope }
 
         return newLookupScopeStatement(
             global.names.map { parseName(it).localName },
@@ -889,10 +884,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      */
     private fun handleNonLocal(global: Python.AST.Nonlocal): LookupScopeStatement {
         // We need to find the first outer function scope
-        var outerFunctionScope =
-            frontend.scopeManager.firstScopeOrNull {
-                it is FunctionScope && it != frontend.scopeManager.currentScope
-            }
+        var outerFunctionScope = firstScopeOrNull { it is FunctionScope && it != currentScope }
 
         return newLookupScopeStatement(
             global.names.map { parseName(it).localName },

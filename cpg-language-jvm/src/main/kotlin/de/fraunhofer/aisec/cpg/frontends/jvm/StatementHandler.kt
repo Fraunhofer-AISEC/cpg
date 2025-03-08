@@ -66,7 +66,7 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
                 // We need to wrap them into a declaration statement and put them into the outer
                 // block
                 val stmt = newDeclarationStatement(rawNode = local)
-                frontend.scopeManager.addDeclaration(decl)
+                frontend.scopeManager.declareSymbol(decl)
                 stmt.declarations += decl
                 outerBlock += stmt
             }

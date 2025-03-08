@@ -138,7 +138,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         val nsd = newNamespaceDeclaration(ctx.name.toString(), rawNode = ctx)
 
         // Enter the namespace scope
-        frontend.scopeManager.enterScope(nsd)
+        enterScope(nsd)
 
         // Finally, handle all declarations within that namespace
         for (child in ctx.declarations) {
@@ -147,11 +147,11 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 continue
             }
 
-            frontend.scopeManager.addDeclaration(decl)
+            declareSymbol(decl)
             nsd.declarations += decl
         }
 
-        frontend.scopeManager.leaveScope(nsd)
+        leaveScope(nsd)
 
         return nsd
     }
@@ -193,18 +193,18 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         // We want to determine, whether this is a function definition that is external to its
         // scope. This is a usual case in C++, where the named scope, such as a record or namespace
         // only includes the AST element for a function declaration and the definition is outside.
-        val outsideOfScope = frontend.scopeManager.currentScope != declaration.scope
+        val outsideOfScope = currentScope != declaration.scope
 
         // Store the reference to a declaration holder of a named scope.
         val holder = (declaration.scope as? NameScope)?.astNode
 
         if (holder != null && outsideOfScope) {
             // everything inside the method is within the scope of its record or namespace
-            frontend.scopeManager.enterScope(holder)
+            enterScope(holder)
         }
 
         // Enter the scope of our function
-        frontend.scopeManager.enterScope(declaration)
+        enterScope(declaration)
 
         // Since this is a definition, the body should always be there, but we need to make sure in
         // case of parsing errors.
@@ -233,10 +233,10 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
         frontend.processAttributes(declaration, ctx)
 
-        frontend.scopeManager.leaveScope(declaration)
+        leaveScope(declaration)
 
         if (holder != null && outsideOfScope) {
-            frontend.scopeManager.leaveScope(holder)
+            leaveScope(holder)
         }
 
         return declaration
@@ -277,7 +277,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             }
 
         templateDeclaration.location = frontend.locationOf(ctx)
-        frontend.scopeManager.enterScope(templateDeclaration)
+        enterScope(templateDeclaration)
         addTemplateParameters(ctx, templateDeclaration)
 
         // Handle Template
@@ -287,7 +287,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             templateDeclaration.addDeclaration(innerDeclaration)
         }
 
-        frontend.scopeManager.leaveScope(templateDeclaration)
+        leaveScope(templateDeclaration)
         if (templateDeclaration is FunctionTemplateDeclaration) {
             // Fix typeName
             templateDeclaration.name = templateDeclaration.realizations[0].name.clone()
@@ -346,7 +346,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                             it.nextDFGEdges += nonTypeTemplateParamDeclaration
                         }
                     }
-                    frontend.scopeManager.addDeclaration(nonTypeTemplateParamDeclaration)
+                    declareSymbol(nonTypeTemplateParamDeclaration)
                     templateDeclaration.parameters += nonTypeTemplateParamDeclaration
                 }
             }
@@ -360,7 +360,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
      */
     private fun addRealizationToScope(templateDeclaration: TemplateDeclaration) {
         for (declaration in templateDeclaration.realizations) {
-            frontend.scopeManager.addDeclaration(declaration)
+            declareSymbol(declaration)
         }
     }
 
@@ -631,10 +631,10 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         // scope,
         // but its alias name is FQN'd.
         val (scope, doFqn) =
-            if (frontend.scopeManager.currentScope is RecordScope) {
-                Pair(frontend.scopeManager.globalScope, true)
-            } else if (frontend.scopeManager.currentScope is Scope) {
-                Pair(frontend.scopeManager.currentScope as Scope, false)
+            if (currentScope is RecordScope) {
+                Pair(globalScope, true)
+            } else if (currentScope is Scope) {
+                Pair(currentScope as Scope, false)
             } else {
                 TODO()
             }
@@ -643,7 +643,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         val declaration =
             frontend.newTypedefDeclaration(type, frontend.typeOf(aliasName, doFqn = doFqn))
 
-        frontend.scopeManager.addTypedef(declaration, scope)
+        addTypedef(declaration, scope)
 
         return declaration
     }
@@ -662,19 +662,19 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             // scope when we create it. But, the symbol of the enum can both be resolved using just
             // the enum constant `THIS` as well as `MyEnum::THIS` (at least in C++11). So we need to
             // put the symbol both in the outer scope as well as the enum's scope.
-            frontend.scopeManager.enterScope(enum)
+            enterScope(enum)
             val enumConst =
                 newEnumConstantDeclaration(enumerator.name.toString(), rawNode = enumerator)
-            frontend.scopeManager.addDeclaration(enumConst)
+            declareSymbol(enumConst)
             entries += enumConst
 
-            frontend.scopeManager.leaveScope(enum)
+            leaveScope(enum)
 
             // In C/C++, default enums are of type int
             enumConst.type = primitiveType("int")
 
             // Also put the symbol in the outer scope (but do not add AST nodes)
-            frontend.scopeManager.addDeclaration(enumConst)
+            declareSymbol(enumConst)
         }
 
         enum.entries = entries
@@ -733,7 +733,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         // There might have been errors in the previous translation unit and in any case
         // we need to reset the scope manager scope to global, to avoid spilling scope errors into
         // other translation units
-        frontend.scopeManager.resetToGlobal(node)
+        resetToGlobal(node)
         frontend.currentTU = node
         val problematicIncludes = HashMap<String?, HashSet<ProblemDeclaration>>()
 
@@ -741,11 +741,11 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             val decl = handle(declaration) ?: continue
             if (decl is DeclarationSequence) {
                 decl.declarations.forEach {
-                    frontend.scopeManager.addDeclaration(it)
+                    declareSymbol(it)
                     node.addDeclaration(it)
                 }
             } else {
-                frontend.scopeManager.addDeclaration(decl)
+                declareSymbol(decl)
                 node.addDeclaration(decl)
             }
         }

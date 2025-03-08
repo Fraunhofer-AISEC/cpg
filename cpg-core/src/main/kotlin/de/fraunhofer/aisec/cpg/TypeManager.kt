@@ -213,7 +213,7 @@ class TypeManager {
         return firstOrderTypes.any { type: Type -> type.root.name == name }
     }
 
-    fun resolvePossibleTypedef(alias: Type, scopeManager: ScopeManager): Type {
+    fun resolvePossibleTypedef(alias: Type, scopeManager: ScopeManagerProvider): Type {
         val finalToCheck = alias.root
         val applicable = scopeManager.typedefFor(finalToCheck.name, alias.scope)
         return applicable ?: alias

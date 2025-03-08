@@ -102,7 +102,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
     private fun handleBlockStmt(blockStmt: GoStandardLibrary.Ast.BlockStmt): Statement {
         val compound = newBlock(rawNode = blockStmt)
 
-        frontend.scopeManager.enterScope(compound)
+        enterScope(compound)
 
         for (stmt in blockStmt.list) {
             val node = handle(stmt)
@@ -113,7 +113,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
             }
         }
 
-        frontend.scopeManager.leaveScope(compound)
+        leaveScope(compound)
 
         return compound
     }
@@ -142,7 +142,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
             }
 
         // We need to find the current block / scope and add the statements to it
-        val currentBlock = frontend.scopeManager.currentBlock
+        val currentBlock = currentBlock
 
         if (currentBlock == null) {
             log.error("could not find block to add case clauses")
@@ -161,7 +161,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
                 null
             }
 
-        block?.let { frontend.scopeManager.enterScope(it) }
+        block?.let { enterScope(it) }
 
         // TODO(oxisto): This variable is not yet resolvable
         if (isTypeSwitch && typeSwitchLhs != null) {
@@ -190,7 +190,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
 
             // Add the variable to the declaration statement as well as to the current scope (aka
             // our block wrapper)
-            frontend.scopeManager.addDeclaration(decl)
+            declareSymbol(decl)
             stmt.declarations += decl
 
             if (block != null) {
@@ -210,7 +210,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
             currentBlock += block
         }
 
-        block?.let { frontend.scopeManager.leaveScope(it) }
+        block?.let { leaveScope(it) }
 
         // this is a little trick, to not add the case statement in handleStmt because we added it
         // already. otherwise, the order is screwed up.
@@ -224,11 +224,11 @@ class StatementHandler(frontend: GoLanguageFrontend) :
         val declaration = frontend.declarationHandler.handle(declStmt.decl)
         if (declaration is DeclarationSequence) {
             for (declaration in declaration.declarations) {
-                frontend.scopeManager.addDeclaration(declaration)
+                declareSymbol(declaration)
             }
             stmt.declarations = declaration.asMutableList()
         } else if (declaration != null) {
-            frontend.scopeManager.addDeclaration(declaration)
+            declareSymbol(declaration)
             stmt.singleDeclaration = declaration
         }
 
@@ -263,14 +263,14 @@ class StatementHandler(frontend: GoLanguageFrontend) :
     private fun handleForStmt(forStmt: GoStandardLibrary.Ast.ForStmt): ForStatement {
         val stmt = newForStatement(rawNode = forStmt)
 
-        frontend.scopeManager.enterScope(stmt)
+        enterScope(stmt)
 
         forStmt.init?.let { stmt.initializerStatement = handle(it) }
         forStmt.cond?.let { stmt.condition = frontend.expressionHandler.handle(it) }
         forStmt.post?.let { stmt.iterationStatement = handle(it) }
         forStmt.body?.let { stmt.statement = handle(it) }
 
-        frontend.scopeManager.leaveScope(stmt)
+        leaveScope(stmt)
 
         return stmt
     }
@@ -291,7 +291,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
     private fun handleIfStmt(ifStmt: GoStandardLibrary.Ast.IfStmt): IfStatement {
         val stmt = newIfStatement(rawNode = ifStmt)
 
-        frontend.scopeManager.enterScope(stmt)
+        enterScope(stmt)
 
         ifStmt.init?.let { stmt.initializerStatement = frontend.statementHandler.handle(it) }
 
@@ -300,7 +300,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
 
         ifStmt.`else`?.let { stmt.elseStatement = frontend.statementHandler.handle(it) }
 
-        frontend.scopeManager.leaveScope(stmt)
+        leaveScope(stmt)
 
         return stmt
     }
@@ -316,7 +316,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
     private fun handleRangeStmt(rangeStmt: GoStandardLibrary.Ast.RangeStmt): ForEachStatement {
         val forEach = newForEachStatement(rawNode = rangeStmt)
 
-        frontend.scopeManager.enterScope(forEach)
+        enterScope(forEach)
 
         // TODO: Support other use cases that do not use DEFINE
         if (rangeStmt.tokString == ":=") {
@@ -328,7 +328,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
                 val ref = frontend.expressionHandler.handle(it)
                 if (ref is Reference) {
                     val key = newVariableDeclaration(ref.name, rawNode = it)
-                    frontend.scopeManager.addDeclaration(key)
+                    declareSymbol(key)
                     stmt.declarationEdges += key
                 }
             }
@@ -338,7 +338,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
                 val ref = frontend.expressionHandler.handle(it)
                 if (ref is Reference) {
                     val key = newVariableDeclaration(ref.name, rawNode = it)
-                    frontend.scopeManager.addDeclaration(key)
+                    declareSymbol(key)
                     stmt.declarationEdges += key
                 }
             }
@@ -349,7 +349,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
         forEach.iterable = frontend.expressionHandler.handle(rangeStmt.x)
         forEach.statement = frontend.statementHandler.handle(rangeStmt.body)
 
-        frontend.scopeManager.leaveScope(forEach)
+        leaveScope(forEach)
 
         return forEach
     }
@@ -381,7 +381,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
     private fun handleSwitchStmt(switchStmt: GoStandardLibrary.Ast.SwitchStmt): Statement {
         val switch = newSwitchStatement(rawNode = switchStmt)
 
-        frontend.scopeManager.enterScope(switch)
+        enterScope(switch)
 
         switchStmt.init?.let { switch.initializerStatement = handle(it) }
         switchStmt.tag?.let { switch.selector = frontend.expressionHandler.handle(it) }
@@ -391,7 +391,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
 
         switch.statement = block
 
-        frontend.scopeManager.leaveScope(switch)
+        leaveScope(switch)
 
         return switch
     }
@@ -401,7 +401,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
     ): SwitchStatement {
         val switch = newSwitchStatement(rawNode = typeSwitchStmt)
 
-        frontend.scopeManager.enterScope(switch)
+        enterScope(switch)
 
         typeSwitchStmt.init?.let { switch.initializerStatement = handle(it) }
 
@@ -417,17 +417,17 @@ class StatementHandler(frontend: GoLanguageFrontend) :
 
         val body = newBlock(rawNode = typeSwitchStmt.body)
 
-        frontend.scopeManager.enterScope(body)
+        enterScope(body)
 
         for (c in typeSwitchStmt.body.list.filterIsInstance<GoStandardLibrary.Ast.CaseClause>()) {
             handleCaseClause(c, lhs, rhs)
         }
 
-        frontend.scopeManager.leaveScope(body)
+        leaveScope(body)
 
         switch.statement = body
 
-        frontend.scopeManager.leaveScope(switch)
+        leaveScope(switch)
 
         return switch
     }

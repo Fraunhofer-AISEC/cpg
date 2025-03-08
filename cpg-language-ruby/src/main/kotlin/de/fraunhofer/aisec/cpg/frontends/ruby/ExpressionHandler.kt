@@ -74,7 +74,7 @@ class ExpressionHandler(lang: RubyLanguageFrontend) :
         // so we create an anonymous function declaration out of the bodyNode and varNode
         val func = newFunctionDeclaration("", rawNode = node)
 
-        frontend.scopeManager.enterScope(func)
+        enterScope(func)
 
         for (arg in node.argsNode.args) {
             val param = frontend.declarationHandler.handle(arg) as? ParameterDeclaration
@@ -82,13 +82,13 @@ class ExpressionHandler(lang: RubyLanguageFrontend) :
                 continue
             }
 
-            frontend.scopeManager.addDeclaration(param)
+            declareSymbol(param)
             func.parameters += param
         }
 
         func.body = frontend.statementHandler.handle(node.bodyNode)
 
-        frontend.scopeManager.leaveScope(func)
+        leaveScope(func)
 
         val lambda = newLambdaExpression()
         lambda.function = func

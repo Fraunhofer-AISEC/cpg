@@ -91,7 +91,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
 
     private fun handleTryBlockStatement(tryBlockStatement: CPPASTTryBlockStatement): TryStatement {
         val tryStatement = newTryStatement()
-        frontend.scopeManager.enterScope(tryStatement)
+        enterScope(tryStatement)
         val statement = handle(tryBlockStatement.tryBody) as Block?
         val catchClauses =
             Arrays.stream(tryBlockStatement.catchHandlers)
@@ -99,13 +99,13 @@ class StatementHandler(lang: CXXLanguageFrontend) :
                 .collect(Collectors.toList())
         tryStatement.tryBlock = statement
         tryStatement.catchClauses = catchClauses
-        frontend.scopeManager.leaveScope(tryStatement)
+        leaveScope(tryStatement)
         return tryStatement
     }
 
     private fun handleCatchHandler(catchHandler: ICPPASTCatchHandler): CatchClause {
         val catchClause = newCatchClause(rawNode = catchHandler)
-        frontend.scopeManager.enterScope(catchClause)
+        enterScope(catchClause)
 
         val body = frontend.statementHandler.handle(catchHandler.catchBody)
 
@@ -118,17 +118,17 @@ class StatementHandler(lang: CXXLanguageFrontend) :
         catchClause.body = body as? Block
 
         if (decl is VariableDeclaration) {
-            frontend.scopeManager.addDeclaration(decl)
+            declareSymbol(decl)
             catchClause.parameter = decl
         }
-        frontend.scopeManager.leaveScope(catchClause)
+        leaveScope(catchClause)
         return catchClause
     }
 
     private fun handleIfStatement(ctx: IASTIfStatement): IfStatement {
         val statement = newIfStatement(rawNode = ctx)
 
-        frontend.scopeManager.enterScope(statement)
+        enterScope(statement)
 
         // We need some special treatment for C++ IfStatements
         if (ctx is CPPASTIfStatement) {
@@ -150,7 +150,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
             statement.elseStatement = handle(ctx.elseClause)
         }
 
-        frontend.scopeManager.leaveScope(statement)
+        leaveScope(statement)
 
         return statement
     }
@@ -194,7 +194,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
     private fun handleWhileStatement(ctx: IASTWhileStatement): WhileStatement {
         val statement = newWhileStatement(rawNode = ctx)
 
-        frontend.scopeManager.enterScope(statement)
+        enterScope(statement)
 
         // Special treatment for C++ while
         if (ctx is CPPASTWhileStatement && ctx.conditionDeclaration != null) {
@@ -208,24 +208,24 @@ class StatementHandler(lang: CXXLanguageFrontend) :
 
         statement.statement = handle(ctx.body)
 
-        frontend.scopeManager.leaveScope(statement)
+        leaveScope(statement)
 
         return statement
     }
 
     private fun handleDoStatement(ctx: IASTDoStatement): DoStatement {
         val statement = newDoStatement(rawNode = ctx)
-        frontend.scopeManager.enterScope(statement)
+        enterScope(statement)
         statement.condition = frontend.expressionHandler.handle(ctx.condition)
         statement.statement = handle(ctx.body)
-        frontend.scopeManager.leaveScope(statement)
+        leaveScope(statement)
         return statement
     }
 
     private fun handleForStatement(ctx: IASTForStatement): ForStatement {
         val statement = newForStatement(rawNode = ctx)
 
-        frontend.scopeManager.enterScope(statement)
+        enterScope(statement)
 
         statement.initializerStatement = handle(ctx.initializerStatement)
 
@@ -254,14 +254,14 @@ class StatementHandler(lang: CXXLanguageFrontend) :
 
         statement.statement = handle(ctx.body)
 
-        frontend.scopeManager.leaveScope(statement)
+        leaveScope(statement)
 
         return statement
     }
 
     private fun handleForEachStatement(ctx: CPPASTRangeBasedForStatement): ForEachStatement {
         val statement = newForEachStatement(rawNode = ctx)
-        frontend.scopeManager.enterScope(statement)
+        enterScope(statement)
         val decl = frontend.declarationHandler.handle(ctx.declaration)
         val `var` = newDeclarationStatement()
         `var`.singleDeclaration = decl
@@ -269,7 +269,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
         statement.variable = `var`
         statement.iterable = iterable
         statement.statement = handle(ctx.body)
-        frontend.scopeManager.leaveScope(statement)
+        leaveScope(statement)
         return statement
     }
 
@@ -306,7 +306,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
                     listOfNotNull(declaration)
                 }
             declarations.forEach {
-                frontend.scopeManager.addDeclaration(it)
+                declareSymbol(it)
                 declarationStatement.addDeclaration(it)
             }
             declarationStatement
@@ -327,7 +327,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
     private fun handleCompoundStatement(ctx: IASTCompoundStatement): Block {
         val block = newBlock(rawNode = ctx)
 
-        frontend.scopeManager.enterScope(block)
+        enterScope(block)
 
         for (statement in ctx.statements) {
             val handled = handle(statement)
@@ -336,7 +336,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
             }
         }
 
-        frontend.scopeManager.leaveScope(block)
+        leaveScope(block)
 
         return block
     }
@@ -344,7 +344,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
     private fun handleSwitchStatement(ctx: IASTSwitchStatement): SwitchStatement {
         val switchStatement = newSwitchStatement(rawNode = ctx)
 
-        frontend.scopeManager.enterScope(switchStatement)
+        enterScope(switchStatement)
 
         // Special treatment for C++ switch
         if (ctx is CPPASTSwitchStatement) {
@@ -363,7 +363,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
 
         switchStatement.statement = handle(ctx.body)
 
-        frontend.scopeManager.leaveScope(switchStatement)
+        leaveScope(switchStatement)
 
         return switchStatement
     }

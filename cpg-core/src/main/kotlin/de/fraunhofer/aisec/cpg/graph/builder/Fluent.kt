@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CollectionComprehension
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
+import de.fraunhofer.aisec.cpg.graph.types.IncompleteType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.passes.executePass
@@ -76,7 +77,7 @@ fun LanguageFrontend<*, *>.translationUnit(
 ): TranslationUnitDeclaration {
     val node = (this@LanguageFrontend).newTranslationUnitDeclaration(name)
 
-    scopeManager.resetToGlobal(node)
+    resetToGlobal(node)
     init(node)
     this@TranslationResult.components.firstOrNull()?.translationUnits?.add(node)
 
@@ -95,10 +96,11 @@ fun LanguageFrontend<*, *>.namespace(
 ): NamespaceDeclaration {
     val node = (this@LanguageFrontend).newNamespaceDeclaration(name)
 
-    scopeManager.enterScope(node)
+    enterScope(node)
     init(node)
-    scopeManager.leaveScope(node)
-    scopeManager.addDeclaration(node)
+    leaveScope(node)
+    declareSymbol(node)
+
     addDeclaration(node)
 
     return node
@@ -117,10 +119,10 @@ fun LanguageFrontend<*, *>.record(
 ): RecordDeclaration {
     val node = (this@LanguageFrontend).newRecordDeclaration(name, kind)
 
-    scopeManager.enterScope(node)
+    enterScope(node)
     init(node)
-    scopeManager.leaveScope(node)
-    scopeManager.addDeclaration(node)
+    leaveScope(node)
+    declareSymbol(node)
     addDeclaration(node)
 
     return node
@@ -144,7 +146,7 @@ fun LanguageFrontend<*, *>.field(
         init(node)
     }
 
-    scopeManager.addDeclaration(node)
+    declareSymbol(node)
     addDeclaration(node)
 
     return node
@@ -183,11 +185,11 @@ fun LanguageFrontend<*, *>.function(
     // Make sure that our function has the correct type
     node.type = FunctionType.computeType(node)
 
-    scopeManager.enterScope(node)
+    enterScope(node)
     init?.let { it(node) }
-    scopeManager.leaveScope(node)
+    leaveScope(node)
 
-    scopeManager.addDeclaration(node)
+    declareSymbol(node)
     addDeclaration(node)
 
     return node
@@ -208,13 +210,13 @@ fun LanguageFrontend<*, *>.method(
     node.returnTypes = listOf(returnType)
     node.type = FunctionType.computeType(node)
 
-    scopeManager.enterScope(node)
+    enterScope(node)
     if (init != null) {
         init(node)
     }
-    scopeManager.leaveScope(node)
+    leaveScope(node)
 
-    scopeManager.addDeclaration(node)
+    declareSymbol(node)
     (this@RecordDeclaration).addMethod(node)
 
     return node
@@ -233,11 +235,11 @@ fun LanguageFrontend<*, *>.constructor(
     val node =
         newConstructorDeclaration(recordDeclaration.name, recordDeclaration = recordDeclaration)
 
-    scopeManager.enterScope(node)
+    enterScope(node)
     init(node)
-    scopeManager.leaveScope(node)
+    leaveScope(node)
 
-    scopeManager.addDeclaration(node)
+    declareSymbol(node)
     recordDeclaration.addConstructor(node)
 
     return node
@@ -287,7 +289,7 @@ fun LanguageFrontend<*, *>.param(
     val node = (this@LanguageFrontend).newParameterDeclaration(name, type)
     init?.let { it(node) }
 
-    scopeManager.addDeclaration(node)
+    declareSymbol(node)
     this@FunctionDeclaration.parameters += node
 
     return node
@@ -417,8 +419,8 @@ fun LanguageFrontend<*, *>.variable(
     val node = newVariableDeclaration(name, type)
     if (init != null) init(node)
 
+    declareSymbol(node)
     declarations += node
-    scopeManager.addDeclaration(node)
 
     return node
 }
@@ -437,8 +439,8 @@ fun LanguageFrontend<*, *>.problemDecl(
     val node = newProblemDeclaration(problem = description, problemType = type)
     if (init != null) init(node)
 
+    declareSymbol(node)
     declarations += node
-    scopeManager.addDeclaration(node)
 
     return node
 }
@@ -673,7 +675,7 @@ fun LanguageFrontend<*, *>.forInitializer(
 
     val single = node.singleDeclaration
     if (single != null) {
-        scopeManager.addDeclaration(single)
+        declareSymbol(single)
     }
 
     return node
@@ -1527,11 +1529,11 @@ private fun <T : Node> LanguageFrontend<*, *>.scopeIfNecessary(
     init: T.() -> Unit,
 ) {
     if (needsScope) {
-        scopeManager.enterScope(node)
+        enterScope(node)
     }
     init(node)
     if (needsScope) {
-        scopeManager.leaveScope(node)
+        leaveScope(node)
     }
 }
 
@@ -1540,7 +1542,7 @@ fun LanguageFrontend<*, *>.receiver(name: String, type: Type): VariableDeclarati
     val node = newVariableDeclaration(name, type)
 
     this@MethodDeclaration.receiver = node
-    scopeManager.addDeclaration(node)
+    declareSymbol(node)
 
     return node
 }

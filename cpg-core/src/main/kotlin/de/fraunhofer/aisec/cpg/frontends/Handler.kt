@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends
 
+import de.fraunhofer.aisec.cpg.ScopeManagerProvider
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation
 import java.lang.reflect.ParameterizedType
@@ -51,10 +52,9 @@ abstract class Handler<ResultNode : Node?, HandlerNode, L : LanguageFrontend<in 
 ) :
     LanguageProvider by frontend,
     CodeAndLocationProvider<HandlerNode> by frontend,
-    ScopeProvider by frontend,
-    NamespaceProvider by frontend,
     ContextProvider by frontend,
-    RawNodeTypeProvider<HandlerNode> {
+    RawNodeTypeProvider<HandlerNode>,
+    ScopeManagerProvider by frontend {
     protected val map = HashMap<Class<out HandlerNode>, HandlerInterface<ResultNode, HandlerNode>>()
     private val typeOfT: Class<*>?
 

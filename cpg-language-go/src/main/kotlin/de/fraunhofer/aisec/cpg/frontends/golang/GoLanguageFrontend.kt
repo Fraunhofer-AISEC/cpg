@@ -169,24 +169,24 @@ class GoLanguageFrontend(ctx: TranslationContext, language: Language<GoLanguageF
         currentFileSet = fset
 
         val tu = newTranslationUnitDeclaration(file.absolutePath, rawNode = f)
-        scopeManager.resetToGlobal(tu)
+        resetToGlobal(tu)
         currentTU = tu
 
         // We need to keep imports on a special file scope. We can simulate this by "entering" the
         // translation unit
-        scopeManager.enterScope(tu)
+        enterScope(tu)
 
         // We parse the imports specifically and not as part of the handler later
         for (spec in f.imports) {
             val import = specificationHandler.handle(spec)
             if (import is ImportDeclaration) {
-                scopeManager.addDeclaration(import)
+                declareSymbol(import)
                 tu.addDeclaration(import)
             }
         }
 
         val p = newNamespaceDeclaration(f.name.name)
-        scopeManager.enterScope(p)
+        enterScope(p)
 
         try {
             // we need to construct the package "path" (e.g. "encoding/json") out of the
@@ -214,7 +214,7 @@ class GoLanguageFrontend(ctx: TranslationContext, language: Language<GoLanguageF
             val declaration = declarationHandler.handle(decl)
             if (declaration is DeclarationSequence) {
                 declaration.declarations.forEach {
-                    scopeManager.addDeclaration(it)
+                    declareSymbol(it)
                     p.addDeclaration(it)
                 }
             } else {
@@ -223,26 +223,26 @@ class GoLanguageFrontend(ctx: TranslationContext, language: Language<GoLanguageF
                 // TODO: this is broken if we see the declaration of the method before the class :(
                 if (declaration is MethodDeclaration) {
                     declaration.recordDeclaration?.let {
-                        scopeManager.enterScope(it)
-                        scopeManager.addDeclaration(declaration)
-                        scopeManager.leaveScope(it)
+                        enterScope(it)
+                        declareSymbol(declaration)
+                        leaveScope(it)
                         // But still add it to the AST of the namespace so our AST walker can find
                         // it
                         p.declarations += declaration
                     }
                 } else if (declaration != null) {
-                    scopeManager.addDeclaration(declaration)
+                    declareSymbol(declaration)
                     p.addDeclaration(declaration)
                 }
             }
         }
 
-        scopeManager.leaveScope(p)
-        scopeManager.leaveScope(tu)
+        leaveScope(p)
+        leaveScope(tu)
 
-        scopeManager.resetToGlobal(tu)
+        resetToGlobal(tu)
 
-        scopeManager.addDeclaration(p)
+        declareSymbol(p)
         tu.addDeclaration(p)
 
         return tu
@@ -329,9 +329,9 @@ class GoLanguageFrontend(ctx: TranslationContext, language: Language<GoLanguageF
                     // somewhat duplicate, but the easiest for now. We need to create it in the
                     // global scope to avoid namespace issues
                     var record =
-                        scopeManager.withScope(scopeManager.globalScope) {
+                        withScope(globalScope) {
                             var record = specificationHandler.buildRecordDeclaration(type, name)
-                            scopeManager.addDeclaration(record)
+                            declareSymbol(record)
                             currentTU?.declarations += record
                             record
                         }
@@ -383,7 +383,7 @@ class GoLanguageFrontend(ctx: TranslationContext, language: Language<GoLanguageF
                 }
             }
 
-        return typeManager.registerType(typeManager.resolvePossibleTypedef(cpgType, scopeManager))
+        return typeManager.registerType(typeManager.resolvePossibleTypedef(cpgType, this))
     }
 
     /**

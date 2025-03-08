@@ -154,7 +154,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
         for (method in record.embeddedStructs.flatMap { it.methods }) {
             // Add it to the scope, but do NOT add it to the underlying AST field (methods),
             // otherwise we would duplicate the method in the AST
-            scopeManager.addDeclaration(method)
+            scopeManager.declareSymbol(method)
         }
 
         scopeManager.leaveScope(record)
@@ -225,7 +225,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     func.language,
                 )
             )
-        scopeManager.addDeclaration(func)
+        scopeManager.declareSymbol(func)
         this.declarations += func
     }
 
@@ -366,7 +366,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     }
 
                     // Add it to the scope, so other assignments / references can "see" it.
-                    scopeManager.addDeclaration(decl)
+                    scopeManager.declareSymbol(decl)
                     assign.declarations += decl
                 }
             }

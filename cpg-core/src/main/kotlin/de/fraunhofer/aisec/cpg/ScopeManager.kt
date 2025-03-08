@@ -49,11 +49,11 @@ import org.slf4j.LoggerFactory
  * the scope and [resetToGlobal] when they first handle a new [TranslationUnitDeclaration].
  * Afterward the currently valid "stack" of scopes within the tree can be accessed.
  *
- * If a language frontend encounters a [Declaration] node, it MUST call [addDeclaration], rather
- * than adding the declaration to the node itself. This ensures that all declarations are properly
+ * If a language frontend encounters a [Declaration] node, it MUST call [declareSymbol], rather than
+ * adding the declaration to the node itself. This ensures that all declarations are properly
  * registered in the scope map and can be resolved later.
  */
-class ScopeManager : ScopeProvider {
+class ScopeManager : ScopeProvider, ScopeManagerProvider {
     /**
      * A map associating each CPG node with its scope. The key type is intentionally a nullable
      * [Node] because the [GlobalScope] is not associated to a CPG node when it is first created. It
@@ -70,7 +70,7 @@ class ScopeManager : ScopeProvider {
     private val nameScopeMap: MutableMap<Name, NameScope> = mutableMapOf()
 
     /** The currently active scope. */
-    var currentScope: Scope? = null
+    override var currentScope: Scope? = null
         private set
 
     /** True, if the scope manager is currently in a [FunctionScope]. */
@@ -81,15 +81,15 @@ class ScopeManager : ScopeProvider {
     val isInRecord: Boolean
         get() = this.firstScopeOrNull { it is RecordScope } != null
 
-    val globalScope: GlobalScope?
+    override val globalScope: GlobalScope?
         get() = scopeMap[null] as? GlobalScope
 
     /** The current function, according to the scope that is currently active. */
-    val currentFunction: FunctionDeclaration?
+    override val currentFunction: FunctionDeclaration?
         get() = this.firstScopeIsInstanceOrNull<FunctionScope>()?.astNode as? FunctionDeclaration
 
     /** The current block, according to the scope that is currently active. */
-    val currentBlock: Block?
+    override val currentBlock: Block?
         get() = currentScope?.astNode as? Block ?: currentScope?.astNode?.firstParentOrNull<Block>()
 
     /**
@@ -102,10 +102,13 @@ class ScopeManager : ScopeProvider {
                 as? MethodDeclaration
 
     /** The current record, according to the scope that is currently active. */
-    val currentRecord: RecordDeclaration?
+    override val currentRecord: RecordDeclaration?
         get() = this.firstScopeIsInstanceOrNull<RecordScope>()?.astNode as? RecordDeclaration
 
-    val currentNamespace: Name?
+    override val currentNamespace: NamespaceDeclaration?
+        get() = this.firstScopeIsInstanceOrNull<NamespaceScope>()?.astNode as? NamespaceDeclaration
+
+    override val currentNamePrefix: Name?
         get() {
             val namedScope = this.firstScopeIsInstanceOrNull<NameScope>()
             return if (namedScope is NameScope) namedScope.name else null
@@ -219,10 +222,10 @@ class ScopeManager : ScopeProvider {
      * The scope manager has an internal association between the type of scope, e.g. a [LocalScope]
      * and the CPG node it represents, e.g. a [Block].
      *
-     * Afterward, all calls to [addDeclaration] will be distributed to the [DeclarationHolder] that
+     * Afterward, all calls to [declareSymbol] will be distributed to the [DeclarationHolder] that
      * is currently in-scope.
      */
-    fun enterScope(nodeToScope: Node) {
+    override fun enterScope(nodeToScope: Node) {
         var newScope: Scope? = null
 
         // check, if the node does not have an entry in the scope map
@@ -258,7 +261,7 @@ class ScopeManager : ScopeProvider {
         // push the new scope
         if (newScope != null) {
             pushScope(newScope)
-            newScope.scopedName = currentNamespace?.toString()
+            newScope.scopedName = currentNamePrefix?.toString()
         } else {
             currentScope = scopeMap[nodeToScope]
         }
@@ -307,7 +310,7 @@ class ScopeManager : ScopeProvider {
      * @param nodeToLeave the AST node
      * @return the scope that was just left
      */
-    fun leaveScope(nodeToLeave: Node): Scope? {
+    override fun leaveScope(nodeToLeave: Node): Scope? {
         // Check to return as soon as we know that there is no associated scope. This check could be
         // omitted but will increase runtime if leaving a node without scope will happen often.
         if (!scopeMap.containsKey(nodeToLeave)) {
@@ -342,11 +345,12 @@ class ScopeManager : ScopeProvider {
 
     /**
      * This function MUST be called when a language frontend first handles a [Declaration]. It adds
-     * a declaration to the scope manager, taking into account the currently active scope.
+     * the [Declaration.symbol] to the scope manager, taking into account the currently active
+     * scope.
      *
      * @param declaration the declaration to add
      */
-    fun addDeclaration(declaration: Declaration) {
+    override fun declareSymbol(declaration: Declaration) {
         currentScope?.addSymbol(declaration.symbol, declaration)
     }
 
@@ -358,8 +362,7 @@ class ScopeManager : ScopeProvider {
      * @param searchScope the scope to start the search in
      * @param predicate the search predicate
      */
-    @JvmOverloads
-    fun firstScopeOrNull(searchScope: Scope? = currentScope, predicate: Predicate<Scope>): Scope? {
+    override fun firstScopeOrNull(searchScope: Scope?, predicate: Predicate<Scope>): Scope? {
         // start at searchScope
         var scope = searchScope
 
@@ -393,12 +396,12 @@ class ScopeManager : ScopeProvider {
      *
      * @param predicate the search predicate
      */
-    fun filterScopes(predicate: (Scope) -> Boolean): List<Scope> {
+    override fun filterScopes(predicate: (Scope) -> Boolean): List<Scope> {
         return scopeMap.values.filter(predicate).distinct()
     }
 
     /** This function returns the [Scope] associated with a node. */
-    fun lookupScope(node: Node): Scope? {
+    override fun lookupScope(node: Node): Scope? {
         return if (node is TranslationUnitDeclaration) {
             globalScope
         } else scopeMap[node]
@@ -410,7 +413,7 @@ class ScopeManager : ScopeProvider {
      * Note: Beware that this only does a very simple lookup in the scope table and DOES NOT take
      * into account any eventual aliases that might be active in the current scope.
      */
-    fun lookupScope(fqn: Name): NameScope? {
+    override fun lookupScope(fqn: Name): NameScope? {
         return this.nameScopeMap[fqn]
     }
 
@@ -437,7 +440,7 @@ class ScopeManager : ScopeProvider {
      * This function MUST be called when a language frontend first enters a translation unit. It
      * sets the [GlobalScope] to the current translation unit specified in [declaration].
      */
-    fun resetToGlobal(declaration: TranslationUnitDeclaration?) {
+    override fun resetToGlobal(declaration: TranslationUnitDeclaration?) {
         val global = this.globalScope
         if (global != null) {
             // update the AST node to this translation unit declaration
@@ -450,7 +453,7 @@ class ScopeManager : ScopeProvider {
      * Adds typedefs to a [Scope]. The language frontend needs to decide on the scope of the
      * typedef. Most likely, typedefs are global. Therefore, the [GlobalScope] is set as default.
      */
-    fun addTypedef(typedef: TypedefDeclaration, scope: Scope? = globalScope) {
+    override fun addTypedef(typedef: TypedefDeclaration, scope: Scope?) {
         scope?.addTypedef(typedef)
     }
 
@@ -607,7 +610,7 @@ class ScopeManager : ScopeProvider {
      * Handle with care, here be dragons. Should not be exposed outside the cpg-core module.
      */
     @PleaseBeCareful
-    internal fun jumpTo(scope: Scope?): Scope? {
+    override fun jumpTo(scope: Scope?): Scope? {
         val oldScope = currentScope
         currentScope = scope
         return oldScope
@@ -619,7 +622,7 @@ class ScopeManager : ScopeProvider {
      * will also be used as a return value of this function. This can be useful, if you create
      * objects, such as a [Node] inside this scope and want to return it to the calling function.
      */
-    fun <T : Any> withScope(scope: Scope?, init: (scope: Scope?) -> T): T {
+    override fun <T : Any> withScope(scope: Scope?, init: (scope: Scope?) -> T): T {
         val oldScope = jumpTo(scope)
         val ret = init(scope)
         jumpTo(oldScope)
@@ -635,13 +638,13 @@ class ScopeManager : ScopeProvider {
      *
      * @return the declaration, or null if it does not exist
      */
-    fun getRecordForName(name: Name, language: Language<*>): RecordDeclaration? {
+    override fun getRecordForName(name: Name, language: Language<*>): RecordDeclaration? {
         return lookupSymbolByName(name, language)
             .filterIsInstance<RecordDeclaration>()
             .singleOrNull()
     }
 
-    fun typedefFor(alias: Name, scope: Scope? = currentScope): Type? {
+    override fun typedefFor(alias: Name, scope: Scope?): Type? {
         var current = scope
 
         // We need to build a path from the current scope to the top most one. This ensures us that
@@ -677,7 +680,7 @@ class ScopeManager : ScopeProvider {
                         } else {
                             // Otherwise, we want to make an FQN out of it using the current
                             // namespace
-                            currentNamespace?.fqn(lookupName.localName) ?: lookupName
+                            currentNamePrefix?.fqn(lookupName.localName) ?: lookupName
                         }
 
                     it.lastPartsMatch(lookupName)
@@ -746,13 +749,13 @@ class ScopeManager : ScopeProvider {
      * are found in a "local" scope, these shadow all other occurrences of the same / symbol in a
      * "higher" scope and only the ones from the lower ones will be returned.
      */
-    fun lookupSymbolByName(
+    override fun lookupSymbolByName(
         name: Name,
         language: Language<*>,
-        location: PhysicalLocation? = null,
-        startScope: Scope? = currentScope,
-        replaceImports: Boolean = true,
-        predicate: ((Declaration) -> Boolean)? = null,
+        location: PhysicalLocation?,
+        startScope: Scope?,
+        replaceImports: Boolean,
+        predicate: ((Declaration) -> Boolean)?,
     ): List<Declaration> {
         val extractedScope = extractScope(name, language, location, startScope)
         val scope: Scope?
@@ -1044,3 +1047,70 @@ data class CallResolutionResult(
         UNRESOLVED,
     }
 }
+
+/**
+ * Provides an interface to access functions of the [ScopeManager]. This is in preparation to a
+ * revamp of the scope manager and decouples its public interface from the actual inner
+ * implementation.
+ *
+ * The naming of this interface will probably change.
+ */
+interface ScopeManagerProvider : ScopeProvider, NamespaceProvider, LookupAPI {
+
+    val currentScope: Scope?
+
+    val currentRecord: RecordDeclaration?
+
+    val currentBlock: Block?
+
+    val currentNamespace: NamespaceDeclaration?
+
+    val currentFunction: FunctionDeclaration?
+
+    val currentNamePrefix: Name?
+
+    val globalScope: Scope?
+
+    override val scope: Scope?
+        get() = currentScope
+
+    override val namespace: Name?
+        get() = currentNamePrefix
+
+    fun enterScope(node: Node)
+
+    fun leaveScope(node: Node): Scope?
+
+    @PleaseBeCareful fun jumpTo(scope: Scope?): Scope?
+
+    fun resetToGlobal(declaration: TranslationUnitDeclaration?)
+
+    fun declareSymbol(declaration: Declaration)
+
+    fun addTypedef(typedef: TypedefDeclaration, scope: Scope? = globalScope)
+
+    fun typedefFor(alias: Name, scope: Scope? = currentScope): Type?
+
+    fun getRecordForName(name: Name, language: Language<*>): RecordDeclaration?
+
+    fun lookupScope(node: Node): Scope?
+
+    fun lookupScope(name: Name): NameScope?
+
+    fun <T : Any> withScope(scope: Scope?, init: (scope: Scope?) -> T): T
+
+    fun filterScopes(predicate: (Scope) -> Boolean): List<Scope>
+
+    fun firstScopeOrNull(searchScope: Scope? = currentScope, predicate: Predicate<Scope>): Scope?
+
+    fun lookupSymbolByName(
+        name: Name,
+        language: Language<*>,
+        location: PhysicalLocation? = null,
+        startScope: Scope? = currentScope,
+        replaceImports: Boolean = true,
+        predicate: ((Declaration) -> Boolean)? = null,
+    ): List<Declaration>
+}
+
+interface LookupAPI {}

@@ -28,12 +28,10 @@ package de.fraunhofer.aisec.cpg.frontends
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
-import java.util.*
 import org.slf4j.LoggerFactory
 
 /**
@@ -61,26 +59,13 @@ abstract class LanguageFrontend<AstNode, TypeNode>(
     ProcessedListener(),
     CodeAndLocationProvider<AstNode>,
     LanguageProvider,
-    ScopeProvider,
-    NamespaceProvider,
     ContextProvider,
-    RawNodeTypeProvider<AstNode> {
-    val scopeManager: ScopeManager = ctx.scopeManager
+    RawNodeTypeProvider<AstNode>,
+    ScopeManagerProvider by ctx.scopeManager {
     val typeManager: TypeManager = ctx.typeManager
     val config: TranslationConfiguration = ctx.config
 
     var currentTU: TranslationUnitDeclaration? = null
-
-    @Throws(TranslationException::class)
-    fun parseAll(): List<TranslationUnitDeclaration> {
-        val units = ArrayList<TranslationUnitDeclaration>()
-        for (componentFiles in config.softwareComponents.values) {
-            for (sourceFile in componentFiles) {
-                units.add(parse(sourceFile))
-            }
-        }
-        return units
-    }
 
     @Throws(TranslationException::class) abstract fun parse(file: File): TranslationUnitDeclaration
 
@@ -133,14 +118,4 @@ abstract class LanguageFrontend<AstNode, TypeNode>(
         // Allow non-Java frontends to access the logger (i.e. jep)
         val log = LoggerFactory.getLogger(LanguageFrontend::class.java)
     }
-
-    override val scope: Scope?
-        get() {
-            return this.scopeManager.currentScope
-        }
-
-    override val namespace: Name?
-        get() {
-            return this.scopeManager.currentNamespace
-        }
 }

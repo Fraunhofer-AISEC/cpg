@@ -522,7 +522,7 @@ open class CXXLanguageFrontend(ctx: TranslationContext, language: Language<CXXLa
                         // It could be, that this is a parameterized type
                         val paramType =
                             typeManager.searchTemplateScopeForDefinedParameterizedTypes(
-                                scopeManager.currentScope,
+                                currentScope,
                                 specifier.name.toString(),
                             )
                         if (paramType != null) {
@@ -554,7 +554,7 @@ open class CXXLanguageFrontend(ctx: TranslationContext, language: Language<CXXLa
 
         type =
             if (resolveTypeDef) {
-                typeManager.registerType(typeManager.resolvePossibleTypedef(type, scopeManager))
+                typeManager.registerType(typeManager.resolvePossibleTypedef(type, this))
             } else {
                 typeManager.registerType(type)
             }
@@ -685,7 +685,7 @@ open class CXXLanguageFrontend(ctx: TranslationContext, language: Language<CXXLa
 
         var typeName =
             if (doFqn) {
-                scopeManager.currentNamespace.fqn(name.toString())
+                currentNamePrefix.fqn(name.toString())
             } else {
                 parseName(name.toString())
             }
@@ -789,7 +789,7 @@ open class CXXLanguageFrontend(ctx: TranslationContext, language: Language<CXXLa
         if (type is SecondOrderType) {
             val templateType =
                 typeManager.searchTemplateScopeForDefinedParameterizedTypes(
-                    scopeManager.currentScope,
+                    currentScope,
                     type.root.name.toString(),
                 )
             if (templateType != null) {

@@ -1135,12 +1135,12 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             // For the "invoke" instruction, the call is surrounded by a try statement which also
             // contains a goto statement after the call.
             val tryStatement = newTryStatement(rawNode = instr)
-            frontend.scopeManager.enterScope(tryStatement)
+            enterScope(tryStatement)
             val tryBlock = newBlock(rawNode = instr)
             tryBlock.statements += declarationOrNot(callExpr, instr)
             tryBlock.statements += tryContinue
             tryStatement.tryBlock = tryBlock
-            frontend.scopeManager.leaveScope(tryStatement)
+            leaveScope(tryStatement)
 
             val catchClause = newCatchClause(rawNode = instr)
             catchClause.name = Name(gotoCatch.labelName)
@@ -1400,7 +1400,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
         val declStatement = newDeclarationStatement(rawNode = instr)
         // add the declaration to the current scope
-        frontend.scopeManager.addDeclaration(declaration)
+        declareSymbol(declaration)
         declStatement.singleDeclaration = declaration
 
         val mutableFunctionStatements = firstBB.statements.toMutableList()
@@ -1447,7 +1447,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             decl.initializer = rhs
 
             // add the declaration to the current scope
-            frontend.scopeManager.addDeclaration(decl)
+            declareSymbol(decl)
 
             // add it to our bindings cache
             frontend.bindingsCache[symbolName] = decl

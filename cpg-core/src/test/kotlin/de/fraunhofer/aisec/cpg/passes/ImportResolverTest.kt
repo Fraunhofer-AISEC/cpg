@@ -66,7 +66,7 @@ class ImportResolverTest {
                             scopeManager.resetToGlobal(tuB)
 
                             var pkgB = newNamespaceDeclaration("b")
-                            scopeManager.addDeclaration(pkgB)
+                            scopeManager.declareSymbol(pkgB)
                             tuB.declarations += pkgB
 
                             scopeManager.enterScope(pkgB)
@@ -75,7 +75,7 @@ class ImportResolverTest {
                                     parseName("a"),
                                     style = ImportStyle.IMPORT_NAMESPACE,
                                 )
-                            scopeManager.addDeclaration(import)
+                            scopeManager.declareSymbol(import)
                             pkgB.declarations += import
 
                             import =
@@ -83,7 +83,7 @@ class ImportResolverTest {
                                     parseName("c.bar"),
                                     style = ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE,
                                 )
-                            scopeManager.addDeclaration(import)
+                            scopeManager.declareSymbol(import)
                             pkgB.declarations += import
 
                             scopeManager.leaveScope(pkgB)
@@ -96,12 +96,12 @@ class ImportResolverTest {
                             scopeManager.resetToGlobal(tuA)
 
                             var pkgA = newNamespaceDeclaration("a")
-                            scopeManager.addDeclaration(pkgA)
+                            scopeManager.declareSymbol(pkgA)
                             tuA.declarations += pkgA
 
                             scopeManager.enterScope(pkgA)
                             var foo = newVariableDeclaration(parseName("a.foo"))
-                            scopeManager.addDeclaration(foo)
+                            scopeManager.declareSymbol(foo)
                             pkgA.declarations += foo
 
                             scopeManager.leaveScope(pkgA)
@@ -114,12 +114,12 @@ class ImportResolverTest {
                             scopeManager.resetToGlobal(tuA)
 
                             var pkgA = newNamespaceDeclaration("c")
-                            scopeManager.addDeclaration(pkgA)
+                            scopeManager.declareSymbol(pkgA)
                             tuA.declarations += pkgA
 
                             scopeManager.enterScope(pkgA)
                             var foo = newVariableDeclaration(parseName("c.bar"))
-                            scopeManager.addDeclaration(foo)
+                            scopeManager.declareSymbol(foo)
                             pkgA.declarations += foo
 
                             scopeManager.leaveScope(pkgA)

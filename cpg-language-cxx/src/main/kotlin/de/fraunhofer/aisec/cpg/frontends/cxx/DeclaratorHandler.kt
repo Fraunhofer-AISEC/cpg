@@ -101,7 +101,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
 
         // Check, if the name is qualified or if we are within a record scope
         return if (
-            frontend.scopeManager.currentScope is RecordScope ||
+            currentScope is RecordScope ||
                 language.namespaceDelimiter.let { name.contains(it) } == true
         ) {
             // If yes, treat this like a field declaration
@@ -240,26 +240,25 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             // matching name scope for the parent name. We also need to take the current namespace
             // into account
             parentScope =
-                frontend.scopeManager.lookupScope(
+                lookupScope(
                     parseName(
-                        frontend.scopeManager.currentNamespace
+                        currentNamePrefix
                             .fqn(parent.toString(), delimiter = parent.delimiter)
                             .toString()
                     )
                 )
 
             declaration = createAppropriateFunction(name, parentScope, ctx.parent)
-        } else if (frontend.scopeManager.isInRecord) {
+        } else if (currentRecord != null) {
             // If the current scope is already a record, it's a method
-            declaration =
-                createAppropriateFunction(name, frontend.scopeManager.currentScope, ctx.parent)
+            declaration = createAppropriateFunction(name, currentScope, ctx.parent)
         } else {
             // a plain old function, outside any named scope
             declaration = newFunctionDeclaration(name, rawNode = ctx.parent)
         }
 
         // We want to determine, whether we are currently outside a named scope on the AST
-        val outsideOfScope = frontend.scopeManager.currentScope != declaration.scope
+        val outsideOfScope = currentScope != declaration.scope
 
         // If we know our parent scope, but are outside the actual scope on the AST, we
         // need to temporarily enter the scope. This way, we can do a little trick
@@ -267,15 +266,15 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         // (probably the global scope), but associate it to the named scope.
         if (parentScope != null && outsideOfScope) {
             // Bypass the scope manager and manually add it to the AST parent
-            val scopeParent = frontend.scopeManager.currentScope?.astNode
+            val scopeParent = currentScope?.astNode
             if (scopeParent != null && scopeParent is DeclarationHolder) {
                 scopeParent.addDeclaration(declaration)
             }
 
             // Enter the name scope
             parentScope.astNode?.let {
-                frontend.scopeManager.enterScope(it)
-                frontend.scopeManager.addDeclaration(declaration)
+                enterScope(it)
+                declareSymbol(declaration)
             }
 
             // We also need to by-pass the scope manager for this, because it will
@@ -289,7 +288,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         }
 
         // Enter the scope of the function itself
-        frontend.scopeManager.enterScope(declaration)
+        enterScope(declaration)
 
         // Create the method receiver (if this is a method)
         if (declaration is MethodDeclaration) {
@@ -328,7 +327,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             }
 
             if (arg is ParameterDeclaration) {
-                frontend.scopeManager.addDeclaration(arg)
+                declareSymbol(arg)
                 declaration.parameters += arg
             }
             i++
@@ -342,15 +341,15 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             val varargs = newParameterDeclaration("va_args", unknownType(), true)
             varargs.isImplicit = true
             varargs.argumentIndex = i
-            frontend.scopeManager.addDeclaration(varargs)
+            declareSymbol(varargs)
             declaration.parameters += varargs
         }
-        frontend.scopeManager.leaveScope(declaration)
+        leaveScope(declaration)
 
         // if we know our record declaration, but are outside the actual record, we
         // need to leave the record scope again afterwards
         if (parentScope != null && outsideOfScope) {
-            parentScope.astNode?.let { frontend.scopeManager.leaveScope(it) }
+            parentScope.astNode?.let { leaveScope(it) }
         }
 
         // We recognize an ambiguity here, but cannot solve it at the moment
@@ -358,7 +357,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             name.isNotEmpty() &&
                 ctx.parent is CPPASTDeclarator &&
                 declaration.body == null &&
-                frontend.scopeManager.currentFunction != null
+                currentFunction != null
         ) {
             val problem =
                 newProblemDeclaration(
@@ -394,7 +393,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         thisDeclaration.isImplicit = true
 
         // Add it to the scope of the method
-        frontend.scopeManager.addDeclaration(thisDeclaration)
+        declareSymbol(thisDeclaration)
 
         // We need to manually set the receiver, since the scope manager cannot figure this out
         declaration.receiver = thisDeclaration
@@ -404,7 +403,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         // unfortunately we are not told whether this is a field or not, so we have to find it out
         // ourselves
         val result: ValueDeclaration
-        val recordDeclaration = frontend.scopeManager.currentRecord
+        val recordDeclaration = currentRecord
         if (recordDeclaration == null) {
             // variable
             result =
@@ -451,7 +450,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                     .toMutableList()
         }
 
-        frontend.scopeManager.enterScope(recordDeclaration)
+        enterScope(recordDeclaration)
 
         processMembers(recordDeclaration, ctx)
 
@@ -465,11 +464,11 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
 
             // and set the type, constructors always have implicitly the return type of their class
             constructorDeclaration.type = FunctionType.computeType(constructorDeclaration)
-            frontend.scopeManager.addDeclaration(constructorDeclaration)
+            declareSymbol(constructorDeclaration)
             recordDeclaration.constructors += constructorDeclaration
         }
 
-        frontend.scopeManager.leaveScope(recordDeclaration)
+        leaveScope(recordDeclaration)
 
         return recordDeclaration
     }
@@ -498,7 +497,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
 
             val declaration = frontend.declarationHandler.handle(member)
             if (declaration != null) {
-                frontend.scopeManager.addDeclaration(declaration)
+                declareSymbol(declaration)
                 recordDeclaration.addDeclaration(declaration)
             }
         }

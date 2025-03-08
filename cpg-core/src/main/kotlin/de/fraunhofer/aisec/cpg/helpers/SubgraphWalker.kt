@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.helpers
 
 import de.fraunhofer.aisec.cpg.ScopeManager
+import de.fraunhofer.aisec.cpg.ScopeManagerProvider
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.ContextProvider
@@ -271,10 +272,10 @@ object SubgraphWalker {
     class ScopedWalker {
         lateinit var strategy: (Node) -> Iterator<Node>
         private var walker: IterativeGraphWalker? = null
-        private val scopeManager: ScopeManager
+        private val scopeManager: ScopeManagerProvider
 
-        constructor(lang: LanguageFrontend<*, *>) {
-            scopeManager = lang.scopeManager
+        constructor(frontend: LanguageFrontend<*, *>) {
+            scopeManager = frontend
         }
 
         constructor(

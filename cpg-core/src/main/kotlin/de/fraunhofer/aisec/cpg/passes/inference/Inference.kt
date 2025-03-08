@@ -148,7 +148,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
             )
 
             // Add it to the scope
-            scopeManager.addDeclaration(inferred)
+            scopeManager.declareSymbol(inferred)
             start.addDeclaration(inferred)
 
             // Some magic that adds it to static imports. Not sure if this really needed
@@ -183,7 +183,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
             val inferred = newConstructorDeclaration(start.name.localName, record)
             createInferredParameters(inferred, signature)
 
-            scopeManager.addDeclaration(inferred)
+            scopeManager.declareSymbol(inferred)
             record?.addConstructor(inferred)
 
             inferred
@@ -228,7 +228,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
                 val param = newParameterDeclaration(paramName, targetType, false)
                 param.argumentIndex = i
 
-                scopeManager.addDeclaration(param)
+                scopeManager.declareSymbol(param)
                 function.parameters += param
             }
 
@@ -427,7 +427,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
             scopeManager.enterScope(declaration)
             scopeManager.leaveScope(declaration)
 
-            scopeManager.addDeclaration(declaration)
+            scopeManager.declareSymbol(declaration)
             start.addDeclaration(declaration)
             declaration
         }
@@ -462,7 +462,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
             hint.typeObservers += TypeInferenceObserver(inferred)
 
             // Add it to the scope
-            scopeManager.addDeclaration(inferred)
+            scopeManager.declareSymbol(inferred)
             (start as? DeclarationHolder)?.addDeclaration(inferred)
 
             inferred
@@ -490,7 +490,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
             val inferred = newNamespaceDeclaration(name)
             inferred.path = path
 
-            scopeManager.addDeclaration(inferred)
+            scopeManager.declareSymbol(inferred)
             (start as? DeclarationHolder)?.addDeclaration(inferred)
 
             // We need to "enter" the scope to make it known to the scope map of the ScopeManager
