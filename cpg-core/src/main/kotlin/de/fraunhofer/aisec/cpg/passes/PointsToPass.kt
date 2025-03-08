@@ -988,17 +988,10 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             else null
         if (access == AccessValues.READ) {
             val addresses = doubleState.getAddresses(currentNode)
-            val values = doubleState.getValues(currentNode).toIdentitySet()
-            val lastWrites =
-                addresses
-                    .filter { doubleState.declarationsState[it]?.third?.isNotEmpty() == true }
-                    .flatMapTo(IdentitySet()) {
-                        doubleState.declarationsState[it]?.third!!.map {
-                            Pair(it.first, setOf<Any>(it.second))
-                        }
-                    }
+            val values = doubleState.getValues(currentNode)
+            val lastWrites = doubleState.getLastWrites(currentNode)
 
-            // If we have any information from the dereferenced value, we also fetch that
+            /*// If we have any information from the dereferenced value, we also fetch that
             values
                 .filter { doubleState.hasDeclarationStateEntry(it, true) }
                 .flatMap {
@@ -1032,7 +1025,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 )
                             }
                     }
-                }
+                }*/
 
             doubleState =
                 lattice.push(
@@ -1340,6 +1333,27 @@ fun PointsToStateElement.fetchElementFromDeclarationState(
     }
 
     return ret
+}
+
+fun PointsToStateElement.getLastWrites(node: Node): IdentitySet<Pair<Node, Set<Any>>> {
+    return when (node) {
+        is PointerReference -> {
+            // For pointerReferences, we take the memoryAddress of the refersTo
+            return (node.input as Reference).refersTo?.memoryAddresses?.mapTo(IdentitySet()) {
+                Pair<Node, Set<Any>>(it, setOf())
+            } ?: identitySetOf(Pair(node, setOf()))
+        }
+        else ->
+            // For the rest, we read the declarationState to determine when the memoryAddress of the
+            // node was last written to
+            this.getAddresses(node)
+                .filter { this.declarationsState[it]?.third?.isNotEmpty() == true }
+                .flatMapTo(IdentitySet()) {
+                    this.declarationsState[it]?.third!!.map {
+                        Pair(it.first, setOf<Any>(it.second))
+                    }
+                }
+    }
 }
 
 fun PointsToStateElement.getValues(node: Node): IdentitySet<Node> {

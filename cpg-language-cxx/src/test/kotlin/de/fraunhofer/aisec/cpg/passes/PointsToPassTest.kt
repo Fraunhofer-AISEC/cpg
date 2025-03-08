@@ -103,10 +103,18 @@ class PointsToPassTest {
                     it.location?.region?.startLine == 6 && it.location?.region?.startColumn == 11
                 }
                 .first()
+        assertNotNull(iRefLine6)
         val iRefLine8 = tu.allChildren<Reference> { it.location?.region?.startLine == 8 }.first()
         val iRefLine9 = tu.allChildren<Reference> { it.location?.region?.startLine == 9 }.first()
         val iRefLine10 = tu.allChildren<Reference> { it.location?.region?.startLine == 10 }.first()
         val iRefLine11 = tu.allChildren<Reference> { it.location?.region?.startLine == 11 }.first()
+
+        val aRefLine7 =
+            tu.allChildren<Reference> {
+                    it.location?.region?.startLine == 7 && it.name.localName == "a"
+                }
+                .first()
+        assertNotNull(aRefLine7)
         val aRefLine15 =
             tu.allChildren<Reference> {
                     it.location?.region?.startLine == 15 && it.name.localName == "a"
@@ -132,21 +140,19 @@ class PointsToPassTest {
         assertEquals(iDecl.memoryAddresses.singleOrNull(), aDecl.memoryValues.singleOrNull())
 
         assertEquals(iDecl, iRefLine6.prevDFG.singleOrNull())
+        assertEquals(literal0, iRefLine6.memoryValues.singleOrNull())
 
+        assertEquals(iDecl.memoryAddresses.singleOrNull(), iPointerRef.prevFullDFG.singleOrNull())
         assertTrue(iPointerRef.memoryAddresses.isEmpty())
-        //        assertEquals(?, iPointerRef.prevDFG.singleOrNull())
         assertEquals(
-            iPointerRef.memoryValues.first() as MemoryAddress?,
             iDecl.memoryAddresses.singleOrNull(),
+            iPointerRef.memoryValues.first() as MemoryAddress?,
         )
 
         // Line 7
         assertLocalName("b", bDecl.memoryAddresses.singleOrNull())
-        assertEquals(1, bDecl.prevFullDFG.size)
-        assertEquals(
-            iDecl.memoryAddresses.singleOrNull(),
-            bDecl.prevFullDFG.first() as MemoryAddress?,
-        )
+        assertEquals(aRefLine7, bDecl.prevFullDFG.singleOrNull())
+        assertEquals(iDecl.memoryAddresses.singleOrNull(), bDecl.memoryValues.singleOrNull())
 
         // Line 8
         assertEquals(1, iRefLine8.memoryAddresses.size)
