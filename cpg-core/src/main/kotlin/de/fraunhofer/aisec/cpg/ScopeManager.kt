@@ -53,13 +53,20 @@ import org.slf4j.LoggerFactory
  * than adding the declaration to the node itself. This ensures that all declarations are properly
  * registered in the scope map and can be resolved later.
  */
-class ScopeManager : ScopeProvider {
+class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, ContextProvider {
+
+    /**
+     * The top-most scope in the scope tree. This is the root of the tree and is not associated with
+     * any particular AST node.
+     */
+    val globalScope: GlobalScope = GlobalScope(ctx)
+
     /**
      * A map associating each CPG node with its scope. The key type is intentionally a nullable
-     * [Node] because the [GlobalScope] is not associated to a CPG node when it is first created. It
-     * is later associated using the [resetToGlobal] function.
+     * [Node] because the [GlobalScope] is not associated to a CPG node.
      */
-    private val scopeMap: MutableMap<Node?, Scope> = IdentityHashMap()
+    private val scopeMap: MutableMap<Node?, Scope> =
+        IdentityHashMap<Node?, Scope>().also { it[null] = globalScope }
 
     /**
      * A lookup map for each [NameScope] and its associated FQN (as a [Name]). This is mainly needed
@@ -69,10 +76,6 @@ class ScopeManager : ScopeProvider {
      */
     private val nameScopeMap: MutableMap<Name, NameScope> = mutableMapOf()
 
-    /** The currently active scope. */
-    var currentScope: Scope? = null
-        private set
-
     /** True, if the scope manager is currently in a [FunctionScope]. */
     val isInFunction: Boolean
         get() = this.firstScopeOrNull { it is FunctionScope } != null
@@ -81,8 +84,12 @@ class ScopeManager : ScopeProvider {
     val isInRecord: Boolean
         get() = this.firstScopeOrNull { it is RecordScope } != null
 
-    val globalScope: GlobalScope?
-        get() = scopeMap[null] as? GlobalScope
+    /**
+     * The currently active scope. When the [ScopeManager] is initialized, this is set to the global
+     * scope
+     */
+    var currentScope: Scope = globalScope
+        private set
 
     /** The current function, according to the scope that is currently active. */
     val currentFunction: FunctionDeclaration?
@@ -90,7 +97,7 @@ class ScopeManager : ScopeProvider {
 
     /** The current block, according to the scope that is currently active. */
     val currentBlock: Block?
-        get() = currentScope?.astNode as? Block ?: currentScope?.astNode?.firstParentOrNull<Block>()
+        get() = currentScope.astNode as? Block ?: currentScope.astNode?.firstParentOrNull<Block>()
 
     /**
      * The current method in the active scope tree, this ensures that 'this' keywords are mapped
@@ -111,10 +118,6 @@ class ScopeManager : ScopeProvider {
             return if (namedScope is NameScope) namedScope.name else null
         }
 
-    init {
-        pushScope(GlobalScope())
-    }
-
     companion object {
         private val LOGGER = LoggerFactory.getLogger(ScopeManager::class.java)
     }
@@ -126,7 +129,7 @@ class ScopeManager : ScopeProvider {
      * @param toMerge The scope managers to merge into this one
      */
     fun mergeFrom(toMerge: Collection<ScopeManager>) {
-        val globalScopes = toMerge.mapNotNull { it.globalScope }
+        val globalScopes = toMerge.map { it.globalScope }
         val currGlobalScope = scopeMap[null]
         if (currGlobalScope !is GlobalScope) {
             LOGGER.error("Scope for null node is not a GlobalScope or is null")
@@ -203,10 +206,10 @@ class ScopeManager : ScopeProvider {
                 nameScopeMap[name] = scope
             }
         }
-        currentScope?.let {
-            it.children.add(scope)
-            scope.parent = it
-        }
+
+        currentScope.children.add(scope)
+        scope.parent = currentScope
+
         currentScope = scope
     }
 
@@ -223,11 +226,9 @@ class ScopeManager : ScopeProvider {
      * is currently in-scope.
      */
     fun enterScope(nodeToScope: Node) {
-        var newScope: Scope? = null
-
         // check, if the node does not have an entry in the scope map
         if (!scopeMap.containsKey(nodeToScope)) {
-            newScope =
+            val newScope =
                 when (nodeToScope) {
                     is WhileStatement,
                     is DoStatement,
@@ -239,11 +240,11 @@ class ScopeManager : ScopeProvider {
                     is IfStatement,
                     is CatchClause,
                     is CollectionComprehension,
-                    is Block -> LocalScope(nodeToScope)
-                    is FunctionDeclaration -> FunctionScope(nodeToScope)
-                    is RecordDeclaration -> RecordScope(nodeToScope)
-                    is TemplateDeclaration -> TemplateScope(nodeToScope)
-                    is TranslationUnitDeclaration -> FileScope(nodeToScope)
+                    is Block -> LocalScope(ctx, nodeToScope)
+                    is FunctionDeclaration -> FunctionScope(ctx, nodeToScope)
+                    is RecordDeclaration -> RecordScope(ctx, nodeToScope)
+                    is TemplateDeclaration -> TemplateScope(ctx, nodeToScope)
+                    is TranslationUnitDeclaration -> FileScope(ctx, nodeToScope)
                     is NamespaceDeclaration -> newNamespaceIfNecessary(nodeToScope)
                     else -> {
                         LOGGER.error(
@@ -253,14 +254,18 @@ class ScopeManager : ScopeProvider {
                         return
                     }
                 }
+
+            if (newScope != null) {
+                // push the new scope
+                pushScope(newScope)
+                newScope.scopedName = currentNamespace?.toString()
+            }
         }
 
-        // push the new scope
-        if (newScope != null) {
-            pushScope(newScope)
-            newScope.scopedName = currentNamespace?.toString()
-        } else {
-            currentScope = scopeMap[nodeToScope]
+        // We need to check again because of the newNamespaceIfNecessary function
+        var existing = scopeMap[nodeToScope]
+        if (existing != null) {
+            currentScope = existing
         }
     }
 
@@ -281,7 +286,9 @@ class ScopeManager : ScopeProvider {
      */
     private fun newNamespaceIfNecessary(nodeToScope: NamespaceDeclaration): NamespaceScope? {
         val existingScope =
-            filterScopes { it is NamespaceScope && it.name == nodeToScope.name }.firstOrNull()
+            filterScopes { it is NamespaceScope && it.name == nodeToScope.name }
+                .filterIsInstance<NamespaceScope>()
+                .firstOrNull()
 
         return if (existingScope != null) {
             // update the AST node to this namespace declaration
@@ -291,11 +298,9 @@ class ScopeManager : ScopeProvider {
             // scope
             scopeMap[nodeToScope] = existingScope
 
-            // do NOT return a new name scope, but rather return null, so enterScope knows that it
-            // does not need to push a new scope
             null
         } else {
-            NamespaceScope(nodeToScope)
+            NamespaceScope(ctx, nodeToScope)
         }
     }
 
@@ -336,7 +341,7 @@ class ScopeManager : ScopeProvider {
         }
 
         // go back to the parent of the scope we just left
-        currentScope = leaveScope.parent
+        currentScope = leaveScope.parent ?: globalScope
         return leaveScope
     }
 
@@ -347,7 +352,7 @@ class ScopeManager : ScopeProvider {
      * @param declaration the declaration to add
      */
     fun addDeclaration(declaration: Declaration) {
-        currentScope?.addSymbol(declaration.symbol, declaration)
+        currentScope.addSymbol(declaration.symbol, declaration)
     }
 
     /**
@@ -359,16 +364,16 @@ class ScopeManager : ScopeProvider {
      * @param predicate the search predicate
      */
     @JvmOverloads
-    fun firstScopeOrNull(searchScope: Scope? = currentScope, predicate: Predicate<Scope>): Scope? {
+    fun firstScopeOrNull(searchScope: Scope = currentScope, predicate: Predicate<Scope>): Scope? {
         // start at searchScope
-        var scope = searchScope
+        var scope: Scope? = searchScope
 
         while (scope != null) {
             if (predicate.test(scope)) {
                 return scope
             }
 
-            // go up-wards in the scope tree
+            // go upwards in the scope tree
             scope = scope.parent
         }
 
@@ -382,7 +387,7 @@ class ScopeManager : ScopeProvider {
      * @param searchScope the scope to start the search in
      */
     inline fun <reified T : Scope> firstScopeIsInstanceOrNull(
-        searchScope: Scope? = currentScope
+        searchScope: Scope = currentScope
     ): T? {
         return this.firstScopeOrNull(searchScope) { it is T } as? T
     }
@@ -422,7 +427,7 @@ class ScopeManager : ScopeProvider {
     fun getLabelStatement(labelString: String?): LabelStatement? {
         if (labelString == null) return null
         var labelStatement: LabelStatement?
-        var searchScope = currentScope
+        var searchScope: Scope? = currentScope
         while (searchScope != null) {
             labelStatement = searchScope.labelStatements[labelString]
             if (labelStatement != null) {
@@ -439,19 +444,17 @@ class ScopeManager : ScopeProvider {
      */
     fun resetToGlobal(declaration: TranslationUnitDeclaration?) {
         val global = this.globalScope
-        if (global != null) {
-            // update the AST node to this translation unit declaration
-            global.astNode = declaration
-            currentScope = global
-        }
+        // update the AST node to this translation unit declaration
+        global.astNode = declaration
+        currentScope = global
     }
 
     /**
      * Adds typedefs to a [Scope]. The language frontend needs to decide on the scope of the
      * typedef. Most likely, typedefs are global. Therefore, the [GlobalScope] is set as default.
      */
-    fun addTypedef(typedef: TypedefDeclaration, scope: Scope? = globalScope) {
-        scope?.addTypedef(typedef)
+    fun addTypedef(typedef: TypedefDeclaration, scope: Scope = globalScope) {
+        scope.addTypedef(typedef)
     }
 
     /**
@@ -482,7 +485,7 @@ class ScopeManager : ScopeProvider {
     fun extractScope(
         node: HasNameAndLocation,
         language: Language<*> = node.language,
-        scope: Scope? = currentScope,
+        scope: Scope = currentScope,
     ): ScopeExtraction? {
         return extractScope(node.name, language, node.location, scope)
     }
@@ -508,7 +511,7 @@ class ScopeManager : ScopeProvider {
         name: Name,
         language: Language<*>,
         location: PhysicalLocation? = null,
-        scope: Scope? = currentScope,
+        scope: Scope = currentScope,
     ): ScopeExtraction? {
         var n = name
         var s: Scope? = null
@@ -608,9 +611,13 @@ class ScopeManager : ScopeProvider {
      */
     @PleaseBeCareful
     internal fun jumpTo(scope: Scope?): Scope? {
-        val oldScope = currentScope
-        currentScope = scope
-        return oldScope
+        return if (scope != null) {
+            val oldScope = currentScope
+            currentScope = scope
+            return oldScope
+        } else {
+            null
+        }
     }
 
     /**
@@ -642,7 +649,7 @@ class ScopeManager : ScopeProvider {
     }
 
     fun typedefFor(alias: Name, scope: Scope? = currentScope): Type? {
-        var current = scope
+        var current: Scope? = scope
 
         // We need to build a path from the current scope to the top most one. This ensures us that
         // a local definition overwrites / shadows one that was there on a higher scope.
@@ -693,7 +700,7 @@ class ScopeManager : ScopeProvider {
     }
 
     /** Returns the current scope for the [ScopeProvider] interface. */
-    override val scope: Scope?
+    override val scope: Scope
         get() = currentScope
 
     /**
@@ -702,7 +709,7 @@ class ScopeManager : ScopeProvider {
      */
     fun lookupSymbolByNodeName(
         node: Node,
-        scope: Scope? = node.scope,
+        scope: Scope = node.scope ?: currentScope,
         replaceImports: Boolean = true,
         predicate: ((Declaration) -> Boolean)? = null,
     ): List<Declaration> {
@@ -722,7 +729,7 @@ class ScopeManager : ScopeProvider {
      */
     inline fun <reified T : Declaration> lookupSymbolByNodeNameOfType(
         node: Node,
-        scope: Scope? = node.scope,
+        scope: Scope = node.scope ?: currentScope,
         replaceImports: Boolean = true,
     ): List<T> {
         return lookupSymbolByName(node.name, node.language, node.location, scope, replaceImports) {
@@ -750,7 +757,7 @@ class ScopeManager : ScopeProvider {
         name: Name,
         language: Language<*>,
         location: PhysicalLocation? = null,
-        startScope: Scope? = currentScope,
+        startScope: Scope = currentScope,
         replaceImports: Boolean = true,
         predicate: ((Declaration) -> Boolean)? = null,
     ): List<Declaration> {
@@ -784,13 +791,13 @@ class ScopeManager : ScopeProvider {
                     // Otherwise, we can look up the symbol alone (without any FQN) starting from
                     // the startScope
                     startScope
-                        ?.lookupSymbol(
+                        .lookupSymbol(
                             n.localName,
                             languageOnly = language,
                             replaceImports = replaceImports,
                             predicate = predicate,
                         )
-                        ?.toMutableList() ?: mutableListOf()
+                        .toMutableList()
                 }
             }
 
@@ -820,7 +827,7 @@ class ScopeManager : ScopeProvider {
     fun lookupTypeSymbolByName(
         name: Name,
         language: Language<*>,
-        startScope: Scope?,
+        startScope: Scope,
     ): DeclaresType? {
         var symbols =
             lookupSymbolByName(name = name, language = language, startScope = startScope) {
@@ -849,17 +856,8 @@ class ScopeManager : ScopeProvider {
      * @param TypeToInfer the type of the node that should be inferred
      * @param source the source that was responsible for the inference
      */
-    fun <TypeToInfer : Node> translationUnitForInference(
-        source: Node
-    ): TranslationUnitDeclaration? {
-        // TODO(oxisto): This workaround is needed because it seems that not all types have a proper
-        //  context :(. In this case we need to fall back to the global scope's astNode, which can
-        //  be error-prone in a multi-language scenario.
-        return if (source.ctx == null) {
-            globalScope?.astNode as? TranslationUnitDeclaration
-        } else {
-            source.language.translationUnitForInference<TypeToInfer>(source)
-        }
+    fun <TypeToInfer : Node> translationUnitForInference(source: Node): TranslationUnitDeclaration {
+        return source.language.translationUnitForInference<TypeToInfer>(source)
     }
 }
 

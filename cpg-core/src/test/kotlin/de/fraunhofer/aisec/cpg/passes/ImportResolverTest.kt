@@ -25,10 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.TypeManager
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.translationResult
@@ -47,12 +45,7 @@ class ImportResolverTest {
     fun testImportOrderResolve() {
         val frontend =
             TestLanguageFrontend(
-                ctx =
-                    TranslationContext(
-                        TranslationConfiguration.builder().defaultPasses().build(),
-                        ScopeManager(),
-                        TypeManager(),
-                    )
+                ctx = TranslationContext(TranslationConfiguration.builder().defaultPasses().build())
             )
         var result =
             frontend.build {

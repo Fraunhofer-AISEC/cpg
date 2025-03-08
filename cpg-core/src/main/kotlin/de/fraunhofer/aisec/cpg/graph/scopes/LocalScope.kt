@@ -25,10 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.graph.scopes
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.Node
 
 /**
  * Scope of validity associated to the local statement. Variables declared inside this statement are
  * not visible outside.
  */
-class LocalScope(astNode: Node) : Scope(astNode) {}
+class LocalScope(ctx: TranslationContext, astNode: Node) : Scope(ctx, astNode)

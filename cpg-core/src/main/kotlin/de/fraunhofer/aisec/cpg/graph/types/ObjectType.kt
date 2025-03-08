@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.PopulatedByPass
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
@@ -57,40 +58,36 @@ open class ObjectType : Type {
         private set
 
     constructor(
+        ctx: TranslationContext,
         typeName: CharSequence,
         generics: List<Type>,
         primitive: Boolean,
         language: Language<*>,
-    ) : super(typeName, language) {
+    ) : super(ctx, typeName, language) {
         this.generics = generics
         isPrimitive = primitive
         this.language = language
     }
 
     constructor(
+        ctx: TranslationContext,
         type: Type?,
         generics: List<Type>,
         primitive: Boolean,
         language: Language<*>,
-    ) : super(type) {
+    ) : super(ctx, type) {
         this.language = language
         this.generics = generics
         isPrimitive = primitive
     }
 
-    /** Empty default constructor for use in Neo4J persistence. */
-    constructor() : super() {
-        isPrimitive = false
-        this.generics = mutableListOf<Type>()
-    }
-
     /** @return PointerType to a ObjectType, e.g. int* */
     override fun reference(pointer: PointerOrigin?): PointerType {
-        return PointerType(this, pointer)
+        return PointerType(ctx, this, pointer)
     }
 
     fun reference(): PointerType {
-        return PointerType(this, PointerOrigin.POINTER)
+        return PointerType(ctx, this, PointerOrigin.POINTER)
     }
 
     /**

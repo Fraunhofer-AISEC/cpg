@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
 
@@ -37,11 +38,11 @@ import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
  * unknown size apart from void. Therefore, this Type is not called VoidType
  */
 class IncompleteType : Type {
-    constructor(language: Language<*>) : super("void", language)
+    constructor(ctx: TranslationContext?, language: Language<*>) : super(ctx, "void", language)
 
     /** @return PointerType to a IncompleteType, e.g. void* */
     override fun reference(pointer: PointerOrigin?): Type {
-        return PointerType(this, pointer)
+        return PointerType(ctx, this, pointer)
     }
 
     /** @return dereferencing void results in void therefore the same type is returned */

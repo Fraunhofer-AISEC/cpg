@@ -50,7 +50,7 @@ class CDataflowTest {
 
         val i = assertNotNull(tu.fields["tls_context::i"])
         val j = assertNotNull(tu.fields["tls_context::j"])
-        val k = assertNotNull(tu.fields["tls_context::k"])
+        assertNotNull(tu.fields["tls_context::k"])
 
         val renegotiate = tu.functions["renegotiate"]
         assertNotNull(renegotiate)

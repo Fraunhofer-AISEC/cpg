@@ -267,7 +267,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         // (probably the global scope), but associate it to the named scope.
         if (parentScope != null && outsideOfScope) {
             // Bypass the scope manager and manually add it to the AST parent
-            val scopeParent = frontend.scopeManager.currentScope?.astNode
+            val scopeParent = frontend.scopeManager.currentScope.astNode
             if (scopeParent != null && scopeParent is DeclarationHolder) {
                 scopeParent.addDeclaration(declaration)
             }

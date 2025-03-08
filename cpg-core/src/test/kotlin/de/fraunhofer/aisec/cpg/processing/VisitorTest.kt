@@ -26,12 +26,10 @@
 package de.fraunhofer.aisec.cpg.processing
 
 import de.fraunhofer.aisec.cpg.GraphExamples
-import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.TranslationResult
-import de.fraunhofer.aisec.cpg.TypeManager
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Node
@@ -145,12 +143,7 @@ class VisitorTest : BaseTest() {
         val tr =
             TranslationResult(
                 translationManager = TranslationManager.builder().build(),
-                finalCtx =
-                    TranslationContext(
-                        config = TranslationConfiguration.builder().build(),
-                        scopeManager = ScopeManager(),
-                        typeManager = TypeManager(),
-                    ),
+                finalCtx = TranslationContext(config = TranslationConfiguration.builder().build()),
             )
         tr.components += component1
         tr.components += component2

@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.unknownType
 
@@ -35,9 +36,10 @@ import de.fraunhofer.aisec.cpg.graph.unknownType
  *
  * Note: This is intentionally a distinct type and not the [UnknownType].
  */
-class AutoType(override var language: Language<*>) : Type("auto", language) {
+class AutoType(ctx: TranslationContext?, override var language: Language<*>) :
+    Type(ctx, "auto", language) {
     override fun reference(pointer: PointerType.PointerOrigin?): Type {
-        return PointerType(this, pointer)
+        return PointerType(ctx, this, pointer)
     }
 
     override fun dereference(): Type {

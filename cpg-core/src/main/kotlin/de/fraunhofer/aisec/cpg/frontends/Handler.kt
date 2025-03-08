@@ -53,7 +53,6 @@ abstract class Handler<ResultNode : Node?, HandlerNode, L : LanguageFrontend<in 
     CodeAndLocationProvider<HandlerNode> by frontend,
     ScopeProvider by frontend,
     NamespaceProvider by frontend,
-    ContextProvider by frontend,
     RawNodeTypeProvider<HandlerNode> {
     protected val map = HashMap<Class<out HandlerNode>, HandlerInterface<ResultNode, HandlerNode>>()
     private val typeOfT: Class<*>?

@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.scopes
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.LookupScopeStatement
@@ -35,6 +36,8 @@ import kotlin.test.assertEquals
 class ScopeTest {
     @Test
     fun testLookup() {
+        val ctx = TranslationContext()
+
         // some mock variable declarations, global and local
         var globalA = VariableDeclaration()
         globalA.name = Name("a")
@@ -42,9 +45,9 @@ class ScopeTest {
         localA.name = Name("a")
 
         // two scopes, global and local
-        val globalScope = GlobalScope()
+        val globalScope = GlobalScope(ctx)
         globalScope.addSymbol("a", globalA)
-        val scope = LocalScope(Block())
+        val scope = LocalScope(ctx, Block())
         scope.parent = globalScope
         scope.addSymbol("a", localA)
 

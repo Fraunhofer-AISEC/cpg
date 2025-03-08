@@ -53,12 +53,13 @@ class RubyLanguage(ctx: TranslationContext) :
     override val builtInTypes =
         mapOf(
             // The bit width of the Integer type in Ruby is only limited by your memory
-            "Integer" to IntegerType("Integer", null, this, NumericType.Modifier.SIGNED),
-            "Float" to FloatingPointType("Float", 64, this, NumericType.Modifier.SIGNED),
-            "String" to StringType("String", this),
+            "Integer" to IntegerType(ctx, "Integer", null, this, NumericType.Modifier.SIGNED),
+            "Float" to FloatingPointType(ctx, "Float", 64, this, NumericType.Modifier.SIGNED),
+            "String" to StringType(ctx, "String", this),
             // The bit width of Booleans is not defined in the specification and
             // implementation-dependant
-            "Boolean" to BooleanType("Boolean", null, this, NumericType.Modifier.NOT_APPLICABLE),
+            "Boolean" to
+                BooleanType(ctx, "Boolean", null, this, NumericType.Modifier.NOT_APPLICABLE),
         )
 
     override val compoundAssignmentOperators =

@@ -53,8 +53,8 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
     private fun handleClass(sootClass: SootClass): RecordDeclaration {
         val record =
             newRecordDeclaration(
-                sootClass.getName(),
-                if (sootClass.isInterface()) {
+                sootClass.name,
+                if (sootClass.isInterface) {
                     "interface"
                 } else {
                     "class"

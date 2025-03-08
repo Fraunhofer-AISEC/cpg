@@ -82,7 +82,7 @@ abstract class TranslationUnitPass(ctx: TranslationContext) : Pass<TranslationUn
  */
 abstract class EOGStarterPass(ctx: TranslationContext) : Pass<Node>(ctx)
 
-open class PassConfiguration {}
+open class PassConfiguration
 
 /**
  * Represents an abstract class that enhances the graph before it is persisted. Passes can exist at
@@ -113,7 +113,7 @@ sealed class Pass<T : Node>(final override val ctx: TranslationContext) :
      * actually setting the correct scope within the [scopeManager], e.g., by using the
      * [ScopedWalker].
      */
-    override val scope: Scope?
+    override val scope: Scope
         get() = scopeManager.currentScope
 
     abstract fun cleanup()

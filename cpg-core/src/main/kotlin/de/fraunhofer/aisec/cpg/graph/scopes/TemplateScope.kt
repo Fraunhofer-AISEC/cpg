@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.scopes
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.Node
 
-class TemplateScope(node: Node) : Scope(node)
+class TemplateScope(ctx: TranslationContext, node: Node) : Scope(ctx, node)

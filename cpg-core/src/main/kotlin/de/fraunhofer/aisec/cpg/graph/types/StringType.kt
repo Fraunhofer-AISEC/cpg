@@ -25,13 +25,15 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
 
 class StringType(
+    ctx: TranslationContext,
     typeName: CharSequence = "",
     language: Language<*>,
     generics: List<Type> = listOf(),
-) : ObjectType(typeName, generics, false, language) {
+) : ObjectType(ctx, typeName, generics, false, language) {
 
     init {
         // Built-in types are always resolved

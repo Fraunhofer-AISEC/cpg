@@ -245,7 +245,7 @@ open class CallExpression :
         if (newType.returnTypes.size == 1) {
             this.type = newType.returnTypes.single()
         } else if (newType.returnTypes.size > 1) {
-            this.type = TupleType(newType.returnTypes)
+            this.type = TupleType(ctx, newType.returnTypes)
         }
     }
 

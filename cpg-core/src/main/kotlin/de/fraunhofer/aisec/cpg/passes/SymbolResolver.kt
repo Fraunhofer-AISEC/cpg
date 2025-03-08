@@ -524,7 +524,12 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         val language = source.language
 
         // Set the start scope. This can either be the call's scope or a scope specified in an FQN
-        val extractedScope = ctx.scopeManager.extractScope(source, language, source.scope)
+        val extractedScope =
+            ctx.scopeManager.extractScope(
+                source,
+                language,
+                source.scope ?: scopeManager.currentScope,
+            )
 
         // If we could not extract the scope (even though one was specified), we can only return an
         // empty result

@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
@@ -36,7 +37,7 @@ import java.util.concurrent.ConcurrentHashMap
  * is used. Ideally, this type is only assigned temporary and then later replaced with an actual
  * known type. But, because we sometimes do fuzzy parsing, this might not be the case all the time.
  */
-class UnknownType private constructor() : Type() {
+class UnknownType private constructor(ctx: TranslationContext?) : Type(ctx) {
     init {
         name = Name(UNKNOWN_TYPE_STRING, null, language)
     }
@@ -68,16 +69,13 @@ class UnknownType private constructor() : Type() {
 
     companion object {
         /** A map of [UnknownType] and their respective [Language]. */
-        private val unknownTypes = ConcurrentHashMap<Language<*>?, UnknownType>()
-        private val unknownTypeNull = UnknownType()
+        private val unknownTypes = ConcurrentHashMap<Language<*>, UnknownType>()
 
         /** Use this function to obtain an [UnknownType] for the particular [language]. */
         @JvmStatic
-        fun getUnknownType(language: Language<*>?): UnknownType {
-            if (language == null) return unknownTypeNull
-
+        fun getUnknownType(language: Language<*>): UnknownType {
             return unknownTypes.computeIfAbsent(language) {
-                val unknownType = UnknownType()
+                val unknownType = UnknownType(language.ctx)
                 unknownType.language = language
                 unknownType
             }

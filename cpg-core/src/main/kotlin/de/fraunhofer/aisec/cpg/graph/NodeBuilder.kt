@@ -58,7 +58,7 @@ interface MetadataProvider
  * A simple interface that everything, that supplies a language, should implement. Examples include
  * each [Node], but also transformation steps, such as [Handler].
  */
-interface LanguageProvider : MetadataProvider {
+interface LanguageProvider : ContextProvider {
     val language: Language<*>
 }
 

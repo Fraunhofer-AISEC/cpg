@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.scopes
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
@@ -38,7 +39,8 @@ import org.neo4j.ogm.annotation.Relationship
  * namespace. This scope is special in a way that it will only exist once (per [GlobalScope]) and
  * contains all symbols declared in this namespace, even if they are spread across multiple files.
  */
-class NamespaceScope(astNode: NamespaceDeclaration) : NameScope(astNode) {
+class NamespaceScope(ctx: TranslationContext, astNode: NamespaceDeclaration) :
+    NameScope(ctx, astNode) {
 
     /**
      * This is the mirror property to [Scope.importedScopeEdges]. It specifies which other [Scope]s

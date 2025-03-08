@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
+import de.fraunhofer.aisec.cpg.frontends.UnknownLanguage
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import java.util.*
@@ -33,10 +34,10 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 /** Represents a type alias definition as found in C/C++: `typedef unsigned long ulong;` */
 class TypedefDeclaration : Declaration() /*, DeclaresType*/ {
     /** The already existing type that is to be aliased */
-    var type: Type = UnknownType.getUnknownType(null)
+    var type: Type = UnknownType.getUnknownType(UnknownLanguage)
 
     /** The newly created alias to be defined */
-    var alias: Type = UnknownType.getUnknownType(null)
+    var alias: Type = UnknownType.getUnknownType(UnknownLanguage)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

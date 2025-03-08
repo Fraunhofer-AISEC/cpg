@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.scopes
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 
-class FunctionScope(astNode: FunctionDeclaration) : Scope(astNode)
+class FunctionScope(ctx: TranslationContext, astNode: FunctionDeclaration) : Scope(ctx, astNode)

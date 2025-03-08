@@ -63,14 +63,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 /** The base class for all graph objects that are going to be persisted in the database. */
-abstract class Node :
-    IVisitable<Node>,
-    Persistable,
-    LanguageProvider,
-    ScopeProvider,
-    ContextProvider,
-    HasNameAndLocation,
-    HasScope {
+abstract class Node(
     /**
      * Because we are updating type information in the properties of the node, we need a reference
      * to managers such as the [TypeManager] instance which is responsible for this particular node.
@@ -78,6 +71,14 @@ abstract class Node :
      * [ContextProvider] is provided.
      */
     @get:JsonIgnore @Transient override var ctx: TranslationContext? = null
+) :
+    IVisitable<Node>,
+    Persistable,
+    LanguageProvider,
+    ScopeProvider,
+    ContextProvider,
+    HasNameAndLocation,
+    HasScope {
 
     /** This property holds the full name using our new [Name] class. */
     @Convert(NameConverter::class) override var name: Name = Name(EMPTY_NAME)

@@ -601,8 +601,8 @@ fun MetadataProvider.newProblemExpression(
     return node
 }
 
-fun MetadataProvider.newProblemType(rawNode: Any? = null): ProblemType {
-    val node = ProblemType()
+fun ContextProvider.newProblemType(rawNode: Any? = null): ProblemType {
+    val node = ProblemType(ctx)
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
     log(node)
