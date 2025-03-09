@@ -95,7 +95,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         val ignoreUnreachableDeclarations: Boolean = false,
     ) : PassConfiguration()
 
-    protected lateinit var walker: ScopedWalker
+    protected lateinit var walker: ScopedWalker<EvaluatedNode>
 
     protected val templateList = mutableListOf<TemplateDeclaration>()
 
@@ -124,16 +124,14 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
     override fun accept(component: Component) {
         ctx.currentComponent = component
-        walker = ScopedWalker(scopeManager)
+        walker = ScopedWalker(scopeManager, strategy = if (passConfig?.skipUnreachableEOG == true) {
+            Strategy::REACHABLE_EOG_FORWARD
+        } else {
+            Strategy::EOG_FORWARD
+        })
 
         cacheTemplates(component)
 
-        walker.strategy =
-            if (passConfig?.skipUnreachableEOG == true) {
-                Strategy::REACHABLE_EOG_FORWARD
-            } else {
-                Strategy::EOG_FORWARD
-            }
         walker.clearCallbacks()
         walker.registerHandler(this::handle)
 

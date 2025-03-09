@@ -92,13 +92,13 @@ class ProgramDependenceGraphPass(ctx: TranslationContext) : TranslationUnitPass(
                         it.dependence = DependenceType.DATA
                         t.prevPDGEdges.add(it)
                     }
-                    t.prevPDGEdges += t.prevCDGEdges
+                    // t.prevPDGEdges += t.prevCDGEdges
                 } else if (t is DataflowNode) {
                     t.prevDFGEdges.forEach {
                         it.dependence = DependenceType.DATA
                         t.prevPDGEdges.add(it)
                     }
-                    t.prevPDGEdges += t.prevCDGEdges
+                    // t.prevPDGEdges += t.prevCDGEdges
                 }
             }
         }

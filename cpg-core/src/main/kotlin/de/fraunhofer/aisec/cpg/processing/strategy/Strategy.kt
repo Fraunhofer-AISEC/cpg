@@ -60,12 +60,12 @@ object Strategy {
      * @param x Current node in EOG.
      * @return Iterator over successors.
      */
-    fun EOG_FORWARD(x: EvaluatedNode): Iterator<Node> {
+    fun EOG_FORWARD(x: EvaluatedNode): Iterator<EvaluatedNode> {
         return x.nextEOG.iterator()
     }
 
     /** A strategy to traverse the EOG in forward direction, but only if the edge is reachable. */
-    fun REACHABLE_EOG_FORWARD(x: EvaluatedNode): Iterator<Node> {
+    fun REACHABLE_EOG_FORWARD(x: EvaluatedNode): Iterator<EvaluatedNode> {
         return x.nextEOGEdges.filter { !it.unreachable }.map { it.end }.iterator()
     }
 

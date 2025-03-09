@@ -56,7 +56,7 @@ open class UnreachableEOGPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
     }
 
     override fun accept(node: AstNode) {
-        val walker = SubgraphWalker.IterativeGraphWalker()
+        val walker = SubgraphWalker.IterativeGraphWalker(TODO())
         walker.registerOnNodeVisit(::handle)
         walker.iterate(node)
     }

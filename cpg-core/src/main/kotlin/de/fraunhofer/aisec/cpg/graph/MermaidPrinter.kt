@@ -30,12 +30,11 @@ import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.edges.flows.FieldDataflowGranularity
-import de.fraunhofer.aisec.cpg.graph.printGraph
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 
 /** Utility function to print the DFG using [printGraph]. */
-fun Node.printDFG(
+fun DataflowNode.printDFG(
     maxConnections: Int = 25,
     vararg strategies: (DataflowNode) -> Iterator<Dataflow> =
         arrayOf<(DataflowNode) -> Iterator<Dataflow>>(
@@ -43,11 +42,14 @@ fun Node.printDFG(
             Strategy::DFG_EDGES_BACKWARD,
         ),
 ): String {
-    return this.printGraph(maxConnections = maxConnections, *strategies)
+    return printGraph<DataflowNode, Dataflow>(
+        maxConnections = maxConnections,
+        strategies = strategies,
+    )
 }
 
 /** Utility function to print the EOG using [printGraph]. */
-fun Node.printEOG(
+fun EvaluatedNode.printEOG(
     maxConnections: Int = 25,
     vararg strategies: (EvaluatedNode) -> Iterator<EvaluationOrder> =
         arrayOf<(EvaluatedNode) -> Iterator<EvaluationOrder>>(
@@ -55,7 +57,7 @@ fun Node.printEOG(
             Strategy::EOG_EDGES_BACKWARD,
         ),
 ): String {
-    return this.printGraph(maxConnections, *strategies)
+    return printGraph(maxConnections, strategies = strategies)
 }
 
 /** Utility function to print the AST using [printGraph]. */
