@@ -221,18 +221,22 @@ class DFGTest {
         assertNotNull(bReturned)
         val backwardsPathCToA =
             cRead
-                .followDFGEdgesUntilHit(direction = Backward(GraphToFollow.DFG)) { it == aReturned }
+                .followDFGEdgesUntilHit<AstNode>(direction = Backward(GraphToFollow.DFG)) {
+                    it == aReturned
+                }
                 .fulfilled
         assertEquals(1, backwardsPathCToA.size)
         val backwardsPathCToB =
             cRead
-                .followDFGEdgesUntilHit(direction = Backward(GraphToFollow.DFG)) { it == bReturned }
+                .followDFGEdgesUntilHit<AstNode>(direction = Backward(GraphToFollow.DFG)) {
+                    it == bReturned
+                }
                 .fulfilled
         assertEquals(0, backwardsPathCToB.size)
 
-        val forwardsPathAToC = aReturned.followDFGEdgesUntilHit { it == cRead }.fulfilled
+        val forwardsPathAToC = aReturned.followDFGEdgesUntilHit<AstNode> { it == cRead }.fulfilled
         assertEquals(1, forwardsPathAToC.size)
-        val forwardsPathBToC = bReturned.followDFGEdgesUntilHit { it == cRead }.fulfilled
+        val forwardsPathBToC = bReturned.followDFGEdgesUntilHit<AstNode> { it == cRead }.fulfilled
         assertEquals(0, forwardsPathBToC.size)
     }
 
