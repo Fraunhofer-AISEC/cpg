@@ -270,9 +270,9 @@ fun DataflowNode.alwaysFlowsTo(
             findAllPossiblePaths = true,
             scope = scope,
             sensitivities = sensitivities,
-            earlyTermination = earlyTerminationPredicate,
+            earlyTermination = { n, ctx -> n is DataflowNode && earlyTerminationPredicate(n, ctx) },
         ) {
-            predicate(it) && it in nextDFGPaths
+            it is DataflowNode && predicate(it) && it in nextDFGPaths
         }
     val allChildren =
         nextEOGEvaluation.failed.map {

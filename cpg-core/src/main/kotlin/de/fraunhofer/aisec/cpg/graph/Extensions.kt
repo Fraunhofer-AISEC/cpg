@@ -263,15 +263,15 @@ fun DataflowNode.collectAllPrevFullDFGPaths(): List<List<Node>> {
  * Hence, if "fulfilled" is a non-empty list, a data flow from [this] to such a node is **possible
  * but not mandatory**. If the list "failed" is empty, the data flow is mandatory.
  */
-fun <EvaluatedNodeType : EvaluatedNode> EvaluatedNode.followEOGEdgesUntilHit(
+fun EvaluatedNode.followEOGEdgesUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
     direction: AnalysisDirection = Forward(GraphToFollow.EOG),
     vararg sensitivities: AnalysisSensitivity = FilterUnreachableEOG + ContextSensitive,
     scope: AnalysisScope = Interprocedural(),
-    earlyTermination: (EvaluatedNodeType, Context) -> Boolean = { _, _ -> false },
-    predicate: (EvaluatedNodeType) -> Boolean,
-): FulfilledAndFailedPaths<EvaluatedNodeType> {
+    earlyTermination: (EvaluatedNode, Context) -> Boolean = { _, _ -> false },
+    predicate: (EvaluatedNode) -> Boolean,
+): FulfilledAndFailedPaths<EvaluatedNode> {
     return this.followXUntilHit(
         x = { currentNode, ctx, path ->
             direction.pickNextStep(currentNode, scope, ctx, sensitivities = sensitivities)
@@ -292,15 +292,15 @@ fun <EvaluatedNodeType : EvaluatedNode> EvaluatedNode.followEOGEdgesUntilHit(
  * Hence, if "fulfilled" is a non-empty list, a data flow from [this] to such a node is **possible
  * but not mandatory**. If the list "failed" is empty, the data flow is mandatory.
  */
-fun <DataflowNodeType : DataflowNode> DataflowNodeType.followDFGEdgesUntilHit(
+fun DataflowNode.followDFGEdgesUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
     direction: AnalysisDirection = Forward(GraphToFollow.DFG),
     vararg sensitivities: AnalysisSensitivity = FieldSensitive + ContextSensitive,
     scope: AnalysisScope = Interprocedural(),
-    earlyTermination: (DataflowNodeType, Context) -> Boolean = { _, _ -> false },
-    predicate: (DataflowNodeType) -> Boolean,
-): FulfilledAndFailedPaths<DataflowNodeType> {
+    earlyTermination: (DataflowNode, Context) -> Boolean = { _, _ -> false },
+    predicate: (DataflowNode) -> Boolean,
+): FulfilledAndFailedPaths<DataflowNode> {
     return this.followXUntilHit(
         x = { currentNode, ctx, path ->
             direction.pickNextStep(currentNode, scope, ctx, sensitivities = sensitivities)
@@ -432,7 +432,7 @@ fun EvaluatedNode.collectAllNextEOGPaths(
 ): List<List<EvaluatedNode>> {
     // We make everything fail to reach the end of the CDG. Then, we use the stuff collected in the
     // failed paths (everything)
-    return this.followEOGEdgesUntilHit<EvaluatedNode>(
+    return this.followEOGEdgesUntilHit(
             collectFailedPaths = true,
             findAllPossiblePaths = true,
             scope = if (interproceduralAnalysis) Interprocedural() else Intraprocedural(),
@@ -451,7 +451,7 @@ fun EvaluatedNode.collectAllPrevEOGPaths(
 ): List<List<EvaluatedNode>> {
     // We make everything fail to reach the end of the CDG. Then, we use the stuff collected in the
     // failed paths (everything)
-    return this.followEOGEdgesUntilHit<EvaluatedNode>(
+    return this.followEOGEdgesUntilHit(
             direction = Backward(GraphToFollow.EOG),
             collectFailedPaths = true,
             findAllPossiblePaths = true,
