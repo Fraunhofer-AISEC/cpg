@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.frontends.UnknownLanguage
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.flows.*
 import de.fraunhofer.aisec.cpg.graph.edges.overlay.*
@@ -62,11 +63,15 @@ import org.neo4j.ogm.annotation.typeconversion.Convert
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
+/**
+ * This node is part of the abstract syntax tree. It can be connected to other [AstNode]s via an
+ * [AstEdge].
+ */
 abstract class AstNode(
     override val ctx: TranslationContext,
 
     /**
-     * The language of this node. This property is set in [Node.applyMetadata] by a
+     * The language of this node. This property is set in [AstNode.applyMetadata] by a
      * [LanguageProvider] at the time when the node is created.
      */
     @Relationship(value = "LANGUAGE", direction = Relationship.Direction.OUTGOING)

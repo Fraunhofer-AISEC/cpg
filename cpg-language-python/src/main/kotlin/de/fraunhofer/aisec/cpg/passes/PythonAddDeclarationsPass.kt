@@ -289,5 +289,5 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
     }
 
     override val language: Language<*>
-        get() = ctx.availableLanguage<PythonLanguage>() ?: UnknownLanguage
+        get() = ctx.availableLanguage<PythonLanguage>() ?: UnknownLanguage(ctx)
 }

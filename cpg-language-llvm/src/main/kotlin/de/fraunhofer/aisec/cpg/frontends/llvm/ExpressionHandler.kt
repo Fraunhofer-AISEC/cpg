@@ -43,8 +43,8 @@ import org.bytedeco.llvm.global.LLVM.*
  * This handler primarily handles operands, as returned by [LLVMGetOperand] and turns them into an
  * [Expression]. Operands are basically arguments to an instruction.
  */
-class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
-    Handler<Expression, LLVMValueRef, LLVMIRLanguageFrontend>(::ProblemExpression, lang) {
+class ExpressionHandler(frontend: LLVMIRLanguageFrontend) :
+    Handler<Expression, LLVMValueRef, LLVMIRLanguageFrontend>(frontend) {
     init {
         map.put(LLVMValueRef::class.java) { handleValue(it) }
     }
@@ -519,4 +519,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
         castExpr.expression = frontend.getOperandValueAtIndex(instr, 0)
         return castExpr
     }
+
+    override val problemConstructor: (String, LLVMValueRef?) -> Expression
+        get() = { problem, rawNode -> newProblemExpression(problem, rawNode = rawNode) }
 }

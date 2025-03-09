@@ -31,8 +31,8 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 
-class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
-    Handler<Expression, TypeScriptNode, TypeScriptLanguageFrontend>(::ProblemExpression, lang) {
+class ExpressionHandler(frontend: TypeScriptLanguageFrontend) :
+    Handler<Expression, TypeScriptNode, TypeScriptLanguageFrontend>(frontend) {
     init {
         map.put(TypeScriptNode::class.java, ::handleNode)
     }
@@ -58,7 +58,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
             "JsxClosingElement" -> return handleJsxClosingElement(node)
         }
 
-        return ProblemExpression("No handler was implemented for nodes of type " + node.type)
+        return problemConstructor("No handler was implemented for node of type " + node.type, node)
     }
 
     private fun handleJsxAttribute(node: TypeScriptNode): KeyValueExpression {
@@ -83,7 +83,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
     private fun handleJsxExpression(node: TypeScriptNode): Expression {
         // for now, we just treat this as a wrapper and directly return the first node
         return node.children?.first()?.let { this.handle(it) }
-            ?: ProblemExpression("problem parsing expression")
+            ?: newProblemExpression("problem parsing expression")
     }
 
     private fun handleJsxOpeningElement(node: TypeScriptNode): ExpressionList {
@@ -183,7 +183,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
     private fun handlePropertyAccessExpression(node: TypeScriptNode): Expression {
         val base =
             node.children?.first()?.let { this.handle(it) }
-                ?: ProblemExpression("problem parsing base")
+                ?: newProblemExpression("problem parsing base")
 
         val name = node.children?.last()?.let { this.frontend.codeOf(it) } ?: ""
 
@@ -200,7 +200,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
             if (propertyAccess != null) {
                 val memberExpressionExpression =
                     this.handle(propertyAccess) as? MemberExpression
-                        ?: return ProblemExpression("node is not a member expression")
+                        ?: return newProblemExpression("node is not a member expression")
 
                 newMemberCallExpression(memberExpressionExpression, rawNode = node)
             } else {
@@ -220,4 +220,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
 
         return call
     }
+
+    override val problemConstructor: (String, TypeScriptNode?) -> Expression
+        get() = { problem, rawNode -> newProblemExpression(problem, rawNode = rawNode) }
 }

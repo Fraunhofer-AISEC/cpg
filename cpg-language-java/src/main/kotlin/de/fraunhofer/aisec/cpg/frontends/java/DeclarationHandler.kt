@@ -50,11 +50,10 @@ import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.matchesSignature
-import java.util.function.Supplier
 import kotlin.collections.set
 
-open class DeclarationHandler(lang: JavaLanguageFrontend) :
-    Handler<Declaration, Node, JavaLanguageFrontend>(Supplier { ProblemDeclaration() }, lang) {
+open class DeclarationHandler(frontend: JavaLanguageFrontend) :
+    Handler<Declaration, Node, JavaLanguageFrontend>(frontend) {
     fun handleConstructorDeclaration(
         constructorDeclaration: ConstructorDeclaration
     ): de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration {
@@ -233,7 +232,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
     fun handleFieldDeclaration(
         fieldDecl: com.github.javaparser.ast.body.FieldDeclaration
     ): DeclarationSequence {
-        val declarationSequence = DeclarationSequence()
+        val declarationSequence = DeclarationSequence(ctx)
 
         val modifiers = fieldDecl.modifiers.map { modifier -> modifier.keyword.asString() }
 
@@ -437,7 +436,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
     fun /* TODO refine return type*/ handleAnnotationDeclaration(
         annotationConstDecl: AnnotationDeclaration?
     ): Declaration {
-        return ProblemDeclaration(
+        return newProblemDeclaration(
             "AnnotationDeclaration not supported yet",
             ProblemNode.ProblemType.TRANSLATION,
         )
@@ -446,7 +445,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
     fun /* TODO refine return type*/ handleAnnotationMemberDeclaration(
         annotationMemberDecl: AnnotationMemberDeclaration?
     ): Declaration {
-        return ProblemDeclaration(
+        return newProblemDeclaration(
             "AnnotationMemberDeclaration not supported yet",
             ProblemNode.ProblemType.TRANSLATION,
         )
@@ -473,6 +472,9 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
 
         return declaration
     }
+
+    override val problemConstructor: (String, Node?) -> Declaration
+        get() = { problem, rawNode -> newProblemDeclaration(problem, rawNode = rawNode) }
 
     companion object {
         private fun addImplicitReturn(body: BlockStmt) {

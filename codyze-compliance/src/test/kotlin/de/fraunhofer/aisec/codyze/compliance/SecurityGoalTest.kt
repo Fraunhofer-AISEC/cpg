@@ -75,9 +75,9 @@ class SecurityGoalTest {
                 translationManager = TranslationManager.builder().build(),
                 TranslationContext(config = TranslationConfiguration.builder().build()),
             )
-        val auth = Component().also { it.name = Name("auth") }
+        val auth = Component(result.finalCtx).also { it.name = Name("auth") }
         result.components += auth
-        val webserver = Component().also { it.name = Name("webserver") }
+        val webserver = Component(result.finalCtx).also { it.name = Name("webserver") }
         result.components += webserver
 
         val goal1 = loadSecurityGoal(stream, result)

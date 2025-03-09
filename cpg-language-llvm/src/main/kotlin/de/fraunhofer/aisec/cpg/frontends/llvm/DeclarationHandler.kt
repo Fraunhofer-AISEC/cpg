@@ -29,7 +29,6 @@ import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.ProblemDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -42,8 +41,8 @@ import org.bytedeco.llvm.global.LLVM.*
  * This handler is in charge of parsing all LLVM IR language constructs that are related to
  * declarations, mainly functions and types.
  */
-class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
-    Handler<Declaration, Pointer, LLVMIRLanguageFrontend>(::ProblemDeclaration, lang) {
+class DeclarationHandler(frontend: LLVMIRLanguageFrontend) :
+    Handler<Declaration, Pointer, LLVMIRLanguageFrontend>(frontend) {
     init {
         map.put(LLVMValueRef::class.java) { handleValue(it as LLVMValueRef) }
         map.put(LLVMTypeRef::class.java) { handleStructureType(it as LLVMTypeRef) }
@@ -277,4 +276,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
             .replace("{", "%7b")
             .replace("}", "%7d")
     }
+
+    override val problemConstructor: (String, Pointer?) -> Declaration
+        get() = { problem, rawNode -> newProblemDeclaration(problem, rawNode = rawNode) }
 }

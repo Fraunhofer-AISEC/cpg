@@ -26,10 +26,11 @@
 package de.fraunhofer.aisec.cpg.frontends.ruby
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.helpers.Util
 
-abstract class RubyHandler<ResultNode : Node, HandlerNode : org.jruby.ast.Node>(
+abstract class RubyHandler<ResultNode : AstNode, HandlerNode : org.jruby.ast.Node>(
     frontend: RubyLanguageFrontend
 ) : Handler<ResultNode, HandlerNode, RubyLanguageFrontend>(frontend) {
     /**
@@ -61,6 +62,6 @@ abstract class RubyHandler<ResultNode : Node, HandlerNode : org.jruby.ast.Node>(
             "Parsing of type $name is not supported (yet)",
         )
 
-        return this.problemConstructor("Parsing of type $name is not supported (yet)")
+        return this.problemConstructor("Parsing of type $name is not supported (yet)", node)
     }
 }

@@ -116,9 +116,7 @@ class ExpressionHandler(lang: RubyLanguageFrontend) : RubyHandler<Expression, No
     }
 
     private fun handleCallNode(node: CallNode): Expression {
-        val base =
-            handle(node.receiverNode) as? Expression
-                ?: return ProblemExpression("could not parse base")
+        val base = handle(node.receiverNode)
         val callee = newMemberExpression(node.name.asJavaString(), base)
 
         val mce = newMemberCallExpression(callee, false)
@@ -159,4 +157,7 @@ class ExpressionHandler(lang: RubyLanguageFrontend) : RubyHandler<Expression, No
     private fun handleFloatNode(node: FloatNode): Literal<Double> {
         return newLiteral(node.value, primitiveType("Float"))
     }
+
+    override val problemConstructor: (String, Node?) -> Expression
+        get() = { problem, rawNode -> newProblemExpression(problem, rawNode = rawNode) }
 }

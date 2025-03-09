@@ -27,9 +27,9 @@ package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.*
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
 import de.fraunhofer.aisec.cpg.graph.Name
-import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.autoType
 import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
@@ -227,9 +227,9 @@ class PythonLanguage(ctx: TranslationContext) :
             // would not match
             if (hint != null && targetType !is UnknownType && targetType !is AutoType) {
                 val match = super.tryCast(type, targetType, hint, targetHint)
-                if (match == CastNotPossible) {
+                if (match == CastNotPossible && hint is AstNode) {
                     warnWithFileLocation(
-                        hint as Node,
+                        hint,
                         log,
                         "Argument type of call to {} ({}) does not match type annotation on the function parameter ({}), but since Python does have runtime checks, we ignore this",
                         hint.astParent?.name,

@@ -391,11 +391,8 @@ fun ContextProvider.newProblemDeclaration(
     problemType: ProblemNode.ProblemType = ProblemNode.ProblemType.PARSING,
     rawNode: Any? = null,
 ): ProblemDeclaration {
-    val node = ProblemDeclaration(ctx)
+    val node = ProblemDeclaration(ctx, problem, problemType)
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
-
-    node.problem = problem
-    node.problemType = problemType
 
     log(node)
     return node

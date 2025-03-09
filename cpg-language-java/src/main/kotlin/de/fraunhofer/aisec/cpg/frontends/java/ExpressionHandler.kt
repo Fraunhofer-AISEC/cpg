@@ -41,13 +41,12 @@ import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import java.util.function.Supplier
 import kotlin.collections.set
 import kotlin.jvm.optionals.getOrNull
 import org.slf4j.LoggerFactory
 
-class ExpressionHandler(lang: JavaLanguageFrontend) :
-    Handler<Statement, Expression, JavaLanguageFrontend>(Supplier { ProblemExpression() }, lang) {
+class ExpressionHandler(frontend: JavaLanguageFrontend) :
+    Handler<Statement, Expression, JavaLanguageFrontend>(frontend) {
 
     private fun handleLambdaExpr(expr: Expression): Statement {
         val lambdaExpr = expr.asLambdaExpr()
@@ -626,6 +625,9 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
 
         return newExpression
     }
+
+    override val problemConstructor: (String, Expression?) -> Statement
+        get() = { problem, rawNode -> newProblemExpression(problem, rawNode = rawNode) }
 
     companion object {
         private val log = LoggerFactory.getLogger(ExpressionHandler::class.java)

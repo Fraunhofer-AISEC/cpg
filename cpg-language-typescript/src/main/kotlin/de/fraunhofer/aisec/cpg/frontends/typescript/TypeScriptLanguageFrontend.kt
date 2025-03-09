@@ -204,7 +204,7 @@ class TypeScriptLanguageFrontend(
     internal fun getIdentifierName(node: TypeScriptNode) =
         node.firstChild("Identifier")?.let { this.codeOf(it) } ?: ""
 
-    fun processAnnotations(node: Node, astNode: TypeScriptNode) {
+    fun processAnnotations(node: AstNode, astNode: TypeScriptNode) {
         // filter for decorators
         astNode.children
             ?.filter { it.type == "Decorator" }

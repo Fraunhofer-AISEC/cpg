@@ -34,10 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.graph.unknownType
 
 class TypeHandler(frontend: TypeScriptLanguageFrontend) :
-    Handler<Type, TypeScriptNode, TypeScriptLanguageFrontend>(
-        { UnknownType.getUnknownType(frontend.language) },
-        frontend,
-    ) {
+    Handler<Type, TypeScriptNode, TypeScriptLanguageFrontend>(frontend) {
 
     init {
         map.put(TypeScriptNode::class.java, ::handleNode)
@@ -80,4 +77,7 @@ class TypeHandler(frontend: TypeScriptLanguageFrontend) :
 
         return unknownType()
     }
+
+    override val problemConstructor: (String, TypeScriptNode?) -> Type
+        get() = { problem, rawNode -> UnknownType.getUnknownType(frontend.language) }
 }

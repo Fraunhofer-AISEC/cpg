@@ -26,9 +26,9 @@
 package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
-import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.AstNode
 
-abstract class PythonHandler<ResultNode : Node, HandlerNode : Python.AST.AST>(
+abstract class PythonHandler<ResultNode : AstNode, HandlerNode : Python.AST.AST>(
     frontend: PythonLanguageFrontend
 ) : Handler<ResultNode, HandlerNode, PythonLanguageFrontend>(frontend) {
     /**

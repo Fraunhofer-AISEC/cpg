@@ -54,14 +54,12 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
-import java.util.function.Supplier
 import kotlin.collections.set
 import org.slf4j.LoggerFactory
 
-class StatementHandler(lang: JavaLanguageFrontend?) :
+class StatementHandler(frontend: JavaLanguageFrontend) :
     Handler<de.fraunhofer.aisec.cpg.graph.statements.Statement, Statement, JavaLanguageFrontend>(
-        Supplier { ProblemExpression() },
-        lang!!,
+        frontend
     ) {
     fun handleExpressionStatement(
         stmt: Statement
@@ -437,7 +435,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
             }
             for (subStmt in sentry.statements) {
                 compoundStatement.statements +=
-                    handle(subStmt) ?: ProblemExpression("Could not parse statement")
+                    handle(subStmt) ?: newProblemExpression("could not parse statement")
             }
         }
         switchStatement.statement = compoundStatement
@@ -544,6 +542,10 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         frontend.scopeManager.leaveScope(cClause)
         return cClause
     }
+
+    override val problemConstructor:
+        (String, Statement?) -> de.fraunhofer.aisec.cpg.graph.statements.Statement
+        get() = { problem, rawNode -> newProblemExpression(problem, rawNode = rawNode) }
 
     companion object {
         private val log = LoggerFactory.getLogger(StatementHandler::class.java)

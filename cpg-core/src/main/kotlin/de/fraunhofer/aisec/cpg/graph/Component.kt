@@ -48,7 +48,7 @@ import org.neo4j.ogm.annotation.Transient
  * This node holds all translation units belonging to this software component as well as (potential)
  * entry points or interactions with other software.
  */
-open class Component internal constructor(ctx: TranslationContext) : AstNode(ctx) {
+open class Component(ctx: TranslationContext) : AstNode(ctx) {
     @Relationship("TRANSLATION_UNITS")
     val translationUnitEdges = astEdgesOf<TranslationUnitDeclaration>()
     /** All translation units belonging to this application. */

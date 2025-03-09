@@ -28,17 +28,17 @@ package de.fraunhofer.aisec.cpg.frontends.typescript
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.newBlock
 import de.fraunhofer.aisec.cpg.graph.newDeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.newProblemExpression
 import de.fraunhofer.aisec.cpg.graph.newReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import kotlin.collections.plusAssign
 
-class StatementHandler(lang: TypeScriptLanguageFrontend) :
-    Handler<Statement, TypeScriptNode, TypeScriptLanguageFrontend>(::ProblemExpression, lang) {
+class StatementHandler(frontend: TypeScriptLanguageFrontend) :
+    Handler<Statement, TypeScriptNode, TypeScriptLanguageFrontend>(frontend) {
     init {
         map.put(TypeScriptNode::class.java, ::handleNode)
     }
@@ -53,7 +53,7 @@ class StatementHandler(lang: TypeScriptLanguageFrontend) :
             "FunctionDeclaration" -> return handleFunctionDeclaration(node)
         }
 
-        return ProblemExpression("No handler was implemented for nodes of type " + node.type)
+        return problemConstructor("No handler was implemented for node of type " + node.type, node)
     }
 
     private fun handleFunctionDeclaration(node: TypeScriptNode): Statement {
@@ -94,7 +94,7 @@ class StatementHandler(lang: TypeScriptLanguageFrontend) :
         // this is possible because in our CPG, expression inherit from statements
         // and can be directly added to a compound statement
         return node.children?.first()?.let { this.frontend.expressionHandler.handle(it) }
-            ?: ProblemExpression("problem parsing expression")
+            ?: newProblemExpression("problem parsing expression")
     }
 
     private fun handleVariableStatement(node: TypeScriptNode): DeclarationStatement {
@@ -114,4 +114,7 @@ class StatementHandler(lang: TypeScriptLanguageFrontend) :
 
         return statement
     }
+
+    override val problemConstructor: (String, TypeScriptNode?) -> Statement
+        get() = { problem, rawNode -> newProblemExpression(problem, rawNode = rawNode) }
 }

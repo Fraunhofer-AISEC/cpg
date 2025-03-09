@@ -38,7 +38,7 @@ import sootup.java.core.JavaSootMethod
 import sootup.java.core.jimple.basic.JavaLocal
 
 class DeclarationHandler(frontend: JVMLanguageFrontend) :
-    Handler<Declaration, Any, JVMLanguageFrontend>(::ProblemDeclaration, frontend) {
+    Handler<Declaration, Any, JVMLanguageFrontend>(frontend) {
     init {
         map.put(SootClass::class.java) { handleClass(it as SootClass) }
         map.put(JavaSootClass::class.java) { handleClass(it as SootClass) }
@@ -155,4 +155,7 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
     private fun handleLocal(local: Local): VariableDeclaration {
         return newVariableDeclaration(local.name, frontend.typeOf(local.type), rawNode = local)
     }
+
+    override val problemConstructor: (String, Any?) -> Declaration
+        get() = { problem, rawNode -> newProblemDeclaration(problem, rawNode = rawNode) }
 }

@@ -40,7 +40,7 @@ import sootup.core.signatures.SootClassMemberSignature
 import sootup.java.core.jimple.basic.JavaLocal
 
 class ExpressionHandler(frontend: JVMLanguageFrontend) :
-    Handler<Expression, Value, JVMLanguageFrontend>(::ProblemExpression, frontend) {
+    Handler<Expression, Value, JVMLanguageFrontend>(frontend) {
 
     init {
         map.put(Local::class.java) { handleLocal(it as Local) }
@@ -374,4 +374,7 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
 
         return ref
     }
+
+    override val problemConstructor: (String, Value?) -> Expression
+        get() = { problem, rawNode -> newProblemExpression(problem, rawNode = rawNode) }
 }

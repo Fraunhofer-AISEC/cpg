@@ -30,13 +30,12 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import sootup.core.jimple.common.stmt.*
 import sootup.core.model.Body
 import sootup.core.util.printer.NormalStmtPrinter
 
 class StatementHandler(frontend: JVMLanguageFrontend) :
-    Handler<Statement, Any, JVMLanguageFrontend>(::ProblemExpression, frontend) {
+    Handler<Statement, Any, JVMLanguageFrontend>(frontend) {
     init {
         map.put(Body::class.java) { handleBody(it as Body) }
         map.put(JAssignStmt::class.java) { handleAbstractDefinitionStmt(it as JAssignStmt) }
@@ -163,4 +162,7 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
 
     private fun handleReturnVoidStmt(returnStmt: JReturnVoidStmt) =
         newReturnStatement(rawNode = returnStmt)
+
+    override val problemConstructor: (String, Any?) -> Statement
+        get() = { problem, rawNode -> newProblemExpression(problem, rawNode = rawNode) }
 }

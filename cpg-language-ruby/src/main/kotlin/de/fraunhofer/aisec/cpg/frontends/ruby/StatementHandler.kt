@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.ruby
 
 import de.fraunhofer.aisec.cpg.graph.newBlock
+import de.fraunhofer.aisec.cpg.graph.newProblemExpression
 import de.fraunhofer.aisec.cpg.graph.newReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
@@ -62,4 +63,7 @@ class StatementHandler(lang: RubyLanguageFrontend) : RubyHandler<Statement, Node
 
         return stmt
     }
+
+    override val problemConstructor: (String, Node?) -> Statement
+        get() = { problem, rawNode -> newProblemExpression(problem, rawNode = rawNode) }
 }
