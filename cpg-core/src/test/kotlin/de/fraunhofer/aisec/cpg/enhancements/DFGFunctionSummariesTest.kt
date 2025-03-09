@@ -269,7 +269,7 @@ class DFGFunctionSummariesTest {
 
         val variableA = main.variables["a"]
         assertNotNull(variableA)
-        assertEquals(mutableSetOf<Node>(variableA), argA.prevDFG)
+        assertEquals(mutableSetOf<DataflowNode>(variableA), argA.prevDFG)
 
         val prevDfgOfParam0 = param0.prevDFGEdges.singleOrNull { it !is ContextSensitiveDataflow }
         assertNotNull(prevDfgOfParam0)
@@ -278,7 +278,7 @@ class DFGFunctionSummariesTest {
         val returnA = main.allChildren<ReturnStatement>().singleOrNull()?.returnValue as? Reference
         assertNotNull(returnA)
 
-        assertEquals(mutableSetOf<Node>(returnA), param0.nextDFG)
+        assertEquals(mutableSetOf<DataflowNode>(returnA), param0.nextDFG)
 
         // Check that also the CallingContext property is set correctly
         val nextDfgOfParam0 =
@@ -336,7 +336,7 @@ class DFGFunctionSummariesTest {
 
         val variableA = main.variables["a"]
         assertNotNull(variableA)
-        assertEquals(mutableSetOf<Node>(variableA, param0), argA.prevDFG)
+        assertEquals(mutableSetOf<DataflowNode>(variableA, param0), argA.prevDFG)
 
         val prevDfgOfParam0 = param0.prevDFGEdges.singleOrNull { it !is ContextSensitiveDataflow }
         assertNotNull(prevDfgOfParam0)
@@ -345,9 +345,9 @@ class DFGFunctionSummariesTest {
         val returnA = main.allChildren<ReturnStatement>().singleOrNull()?.returnValue as? Reference
         assertNotNull(returnA)
 
-        assertEquals(mutableSetOf<Node>(argA), param0.nextDFG)
+        assertEquals(mutableSetOf<DataflowNode>(argA), param0.nextDFG)
 
-        assertEquals(mutableSetOf<Node>(returnA, argA), variableA.nextDFG)
+        assertEquals(mutableSetOf<DataflowNode>(returnA, argA), variableA.nextDFG)
 
         // Check that also the CallingContext property is set correctly
         val nextDfgOfParam0 =

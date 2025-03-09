@@ -37,7 +37,7 @@ import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.helpers.Util.Connect
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
-import de.fraunhofer.aisec.cpg.processing.IVisitor
+import de.fraunhofer.aisec.cpg.processing.Visitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.test.*
@@ -432,7 +432,7 @@ internal class EOGTest : BaseTest() {
         // Print EOG edges for debugging
         nodes[0].accept(
             Strategy::EOG_BACKWARD,
-            object : IVisitor<Node>() {
+            object : Visitor<Node>() {
                 override fun visit(t: Node) {
                     println(
                         PhysicalLocation.locationLink(t.location) +

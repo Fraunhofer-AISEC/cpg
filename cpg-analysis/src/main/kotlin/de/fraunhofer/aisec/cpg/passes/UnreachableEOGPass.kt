@@ -41,6 +41,7 @@ import de.fraunhofer.aisec.cpg.helpers.functional.Lattice
 import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.Order
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
+import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 
 /**
  * A [Pass] which uses a simple logic to determine constant values and mark unreachable code regions
@@ -56,7 +57,7 @@ open class UnreachableEOGPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
     }
 
     override fun accept(node: AstNode) {
-        val walker = SubgraphWalker.IterativeGraphWalker(TODO())
+        val walker = SubgraphWalker.IterativeGraphWalker(Strategy::AST_FORWARD)
         walker.registerOnNodeVisit(::handle)
         walker.iterate(node)
     }
@@ -66,7 +67,7 @@ open class UnreachableEOGPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
      *
      * @param node every node in the TranslationResult
      */
-    protected fun handle(node: Node, parent: Node?) {
+    protected fun handle(node: AstNode, parent: Node?) {
         val unreachabilityState = UnreachabilityState(ReachabilityLattice())
         var startState = unreachabilityState.bottom
         for (firstEdge in node.nextEOGEdges) {

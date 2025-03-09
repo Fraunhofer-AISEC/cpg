@@ -123,7 +123,7 @@ class ControlFlowSensitiveDFGPassTest {
                         .map(Dataflow::start),
                 )
                 // ... and only have one outgoing DFG edge to the "i" parameter of doSomething
-                assertEquals(mutableSetOf<Node>(i), me.nextDFG)
+                assertEquals(mutableSetOf<DataflowNode>(i), me.nextDFG)
             }
 
             // Back to the second case (the member write).
@@ -143,7 +143,10 @@ class ControlFlowSensitiveDFGPassTest {
                 // To double-check, the baseOfMemberWrite node should only have two incoming DFG
                 // edges at all: the partial DFG from the member write and the full DFG from its
                 // declaration
-                assertEquals(mutableSetOf<Node>(memberWrite13, s1), baseOfMemberWrite13.prevDFG)
+                assertEquals(
+                    mutableSetOf<DataflowNode>(memberWrite13, s1),
+                    baseOfMemberWrite13.prevDFG,
+                )
 
                 // Even though this was a partial write, we consider this to be the last point of
                 // write for s1 in terms of control-flow sensitivity. Therefore, the next read
@@ -162,7 +165,7 @@ class ControlFlowSensitiveDFGPassTest {
                 assertEquals(15, memberRead15.location?.region?.startLine)
 
                 // This finally flows to "i"
-                assertEquals(mutableSetOf<Node>(i), memberRead15.nextDFG)
+                assertEquals(mutableSetOf<DataflowNode>(i), memberRead15.nextDFG)
 
                 // We should also have a full flow between the member write and the member read.
                 // This is a FULL flow because both occasions are only referring to the field.
@@ -230,7 +233,11 @@ class ControlFlowSensitiveDFGPassTest {
         assertPartialEdgeBetween(meIn[0], refO[0], `in`)
     }
 
-    private fun assertPartialEdgeBetween(from: Node, to: Node, partialTarget: Declaration?) {
+    private fun assertPartialEdgeBetween(
+        from: DataflowNode,
+        to: DataflowNode,
+        partialTarget: Declaration?,
+    ) {
         val edge =
             from.nextDFGEdges
                 .filter { it.granularity is PartialDataflowGranularity<*> }
@@ -242,7 +249,7 @@ class ControlFlowSensitiveDFGPassTest {
         )
     }
 
-    private fun assertFullEdgeBetween(from: Node, to: Node) {
+    private fun assertFullEdgeBetween(from: DataflowNode, to: DataflowNode) {
         assertContains(
             from.nextDFGEdges
                 .filter { it.granularity is FullDataflowGranularity }
@@ -252,7 +259,7 @@ class ControlFlowSensitiveDFGPassTest {
     }
 
     private inline fun <reified T : Node> assertSinglePartialEdgeFrom(
-        from: Node,
+        from: DataflowNode,
         partialTarget: Declaration?,
     ): T {
         val partialEdge =
@@ -267,7 +274,7 @@ class ControlFlowSensitiveDFGPassTest {
     }
 
     private inline fun <reified T : Node> assertSinglePartialEdgeTo(
-        to: Node,
+        to: DataflowNode,
         partialTarget: Declaration?,
     ): T {
         val partialEdge =

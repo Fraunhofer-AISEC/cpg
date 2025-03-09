@@ -34,7 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.collections.UnwrappedEdgeSet
 import kotlin.reflect.KProperty1
 import kotlin.reflect.jvm.isAccessible
 
-fun <EdgeType : Edge<Node>> MutableList<Node>.add(
+fun <EdgeType : Edge<out Node>> MutableList<out Node>.add(
     target: Node,
     builder: EdgeType.() -> Unit,
 ): Boolean {

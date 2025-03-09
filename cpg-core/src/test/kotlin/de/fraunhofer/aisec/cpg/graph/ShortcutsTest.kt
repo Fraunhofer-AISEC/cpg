@@ -376,7 +376,9 @@ class ShortcutsTest {
         val attrAssignment = assignExpr.lhs.first()
 
         val paramPassed =
-            attrAssignment.followEOGEdgesUntilHit(direction = Backward(GraphToFollow.EOG)) {
+            attrAssignment.followEOGEdgesUntilHit<EvaluatedNode>(
+                direction = Backward(GraphToFollow.EOG)
+            ) {
                 it is Literal<*>
             }
         assertEquals(1, paramPassed.fulfilled.size)
@@ -406,7 +408,7 @@ class ShortcutsTest {
         // - the then/then (fails)
         // - the then/else (fails)
         val paramPassedIntraproceduralOnly =
-            ifCondition.followEOGEdgesUntilHit(
+            ifCondition.followEOGEdgesUntilHit<EvaluatedNode>(
                 direction = Forward(GraphToFollow.EOG),
                 scope = Intraprocedural(),
             ) {
@@ -423,7 +425,7 @@ class ShortcutsTest {
         // - the then/then and 3 paths when we enter magic2 through this path (=> 3 fails)
         // - the then/else and 3 paths when we enter magic2 through this path (=> 3 fails)
         val paramPassedInterprocedural =
-            ifCondition.followEOGEdgesUntilHit(
+            ifCondition.followEOGEdgesUntilHit<EvaluatedNode>(
                 direction = Forward(GraphToFollow.EOG),
                 scope = Interprocedural(),
             ) {

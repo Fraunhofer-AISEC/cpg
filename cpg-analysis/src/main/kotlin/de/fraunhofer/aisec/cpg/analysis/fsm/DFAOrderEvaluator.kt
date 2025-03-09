@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.analysis.fsm
 
+import de.fraunhofer.aisec.cpg.graph.DataflowNode
+import de.fraunhofer.aisec.cpg.graph.EvaluatedNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
@@ -129,14 +131,14 @@ open class DFAOrderEvaluator(
      * `false`, if it is correct, the method returns `true`. The flag [stopOnWrongBase] makes the
      * FSM stop evaluation of a base if an unexpected operation was observed for that base.
      */
-    fun evaluateOrder(startNode: Node, stopOnWrongBase: Boolean = true): Boolean {
+    fun evaluateOrder(startNode: EvaluatedNode, stopOnWrongBase: Boolean = true): Boolean {
         // First dummy edge to simulate that we are in the start state.
         dfa.initializeOrderEvaluation(startNode)
 
         // Stores the current markings in the FSM (i.e., which base is at which FSM-node).
         val baseToFSM = mutableMapOf<String, DFA>()
         // Stores the states (i.e., nodes and their states in the fsm) to avoid endless loops.
-        val seenStates = mutableSetOf<Pair<Node, String>>()
+        val seenStates = mutableSetOf<Pair<EvaluatedNode, String>>()
         // Maps a node to all the paths which were followed to reach the node.
         startNode.addEogPath("")
         // Collect bases (with their eogPath) which have already been found to be incorrect due to
@@ -399,7 +401,7 @@ open class DFAOrderEvaluator(
      * TODO: The idea of returning only one of multiple elements looks quite dangerous! Why are
      *   exactly those expressions "interesting"?
      */
-    private fun Node.getSuitableDFGTarget(): Node? {
+    private fun DataflowNode.getSuitableDFGTarget(): Node? {
         return this.nextDFG
             .filter {
                 it is Reference ||
@@ -423,13 +425,13 @@ open class DFAOrderEvaluator(
      * statement and add the path ([eogPath]) to [nodeToEOGPathSet].
      */
     private fun getNextNodes(
-        node: Node,
+        node: EvaluatedNode,
         eogPath: String,
         baseToFSM: MutableMap<String, DFA>,
-        seenStates: Set<Pair<Node, String>>,
+        seenStates: Set<Pair<EvaluatedNode, String>>,
         interproceduralFlows: MutableMap<String, Boolean>,
-    ): List<Node> {
-        val outNodes = mutableListOf<Node>()
+    ): List<EvaluatedNode> {
+        val outNodes = mutableListOf<EvaluatedNode>()
         outNodes +=
             if (eliminateUnreachableCode) {
                 node.nextEOGEdges.filter { e -> e.unreachable != true }.map { it.end }
@@ -471,10 +473,10 @@ open class DFAOrderEvaluator(
      * - Each node gets a copy of the current DFA
      */
     private fun getNextNodesForAllOutgoingNodes(
-        outNodes: MutableList<Node>,
+        outNodes: MutableList<EvaluatedNode>,
         eogPath: String,
         baseToFSM: MutableMap<String, DFA>,
-        seenStates: Set<Pair<Node, String>>,
+        seenStates: Set<Pair<EvaluatedNode, String>>,
         interproceduralFlows: MutableMap<String, Boolean>,
     ) {
         val newBases = mutableMapOf<String, DFA>()
@@ -521,7 +523,10 @@ open class DFAOrderEvaluator(
      * [node]. It is used to keep track of the states which have already been analyzed and to avoid
      * getting stuck in loops.
      */
-    private fun getStateSnapshot(node: Node, baseToFSM: Map<String, DFA>): Pair<Node, String> {
+    private fun getStateSnapshot(
+        node: EvaluatedNode,
+        baseToFSM: Map<String, DFA>,
+    ): Pair<EvaluatedNode, String> {
         val grouped =
             baseToFSM.entries
                 .groupBy { e -> e.key.split("|")[1] }

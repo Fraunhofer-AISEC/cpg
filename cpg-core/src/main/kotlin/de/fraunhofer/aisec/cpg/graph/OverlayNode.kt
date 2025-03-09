@@ -34,7 +34,7 @@ import org.neo4j.ogm.annotation.Relationship
  * Represents an extra node added to the CPG. These nodes can live next to the regular nodes,
  * typically having shared edges to extend the original graph.
  */
-abstract class OverlayNode : Node(TranslationContext.EmptyTranslationContext) {
+abstract class OverlayNode : DataflowNode(TranslationContext.EmptyTranslationContext) {
 
     @Relationship(value = "OVERLAY", direction = Relationship.Direction.INCOMING)
     /** All [OverlayNode]s nodes are connected to an original cpg [Node] by this. */

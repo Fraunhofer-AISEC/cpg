@@ -61,8 +61,8 @@ class VisitorTest : BaseTest() {
         // Let's visit
         tu.accept(
             Strategy::AST_FORWARD,
-            object : IVisitor<Node>() {
-                override fun visit(t: Node) {
+            object : Visitor<AstNode>() {
+                override fun visit(t: AstNode) {
                     visited += t
                 }
             },
@@ -85,10 +85,10 @@ class VisitorTest : BaseTest() {
         val firstStmt = method.bodyOrNull<de.fraunhofer.aisec.cpg.graph.statements.Statement>(0)
         assertNotNull(firstStmt)
 
-        firstStmt.accept(
+        firstStmt.accept<EvaluatedNode>(
             Strategy::EOG_FORWARD,
-            object : IVisitor<Node>() {
-                override fun visit(t: Node) {
+            object : Visitor<EvaluatedNode>() {
+                override fun visit(t: EvaluatedNode) {
                     log.info("Node: $t")
                     nodeList.add(t)
                 }
@@ -103,10 +103,10 @@ class VisitorTest : BaseTest() {
         assertNotNull(recordDeclaration)
 
         val nodeList = mutableListOf<Node>()
-        recordDeclaration!!.accept(
+        recordDeclaration?.accept(
             Strategy::AST_FORWARD,
-            object : IVisitor<Node>() {
-                override fun visit(t: Node) {
+            object : Visitor<AstNode>() {
+                override fun visit(t: AstNode) {
                     log.info("Node: $t")
                     nodeList.add(t)
                 }
@@ -124,9 +124,9 @@ class VisitorTest : BaseTest() {
         val returnStatements: MutableList<ReturnStatement> = ArrayList()
         assertNotNull(recordDeclaration)
 
-        recordDeclaration!!.accept(
+        recordDeclaration?.accept(
             Strategy::AST_FORWARD,
-            object : IVisitor<Node>() {
+            object : Visitor<AstNode>() {
                 fun visit(r: ReturnStatement) {
                     returnStatements.add(r)
                 }

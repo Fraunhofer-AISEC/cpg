@@ -39,7 +39,7 @@ import kotlin.collections.all
  * Converts the [FulfilledAndFailedPaths] to a list of [QueryTree]s containing the failed and
  * fulfilled paths.
  */
-fun FulfilledAndFailedPaths.toQueryTree(
+fun FulfilledAndFailedPaths<*>.toQueryTree(
     startNode: Node,
     queryType: String,
 ): List<QueryTree<Boolean>> {
@@ -64,7 +64,7 @@ fun FulfilledAndFailedPaths.toQueryTree(
 /** Determines if the predicate [Must] or [May] hold */
 sealed class AnalysisType {
     abstract fun createQueryTree(
-        evalRes: FulfilledAndFailedPaths,
+        evalRes: FulfilledAndFailedPaths<*>,
         startNode: Node,
         queryType: String,
     ): QueryTree<Boolean>
@@ -76,7 +76,7 @@ sealed class AnalysisType {
  */
 object Must : AnalysisType() {
     override fun createQueryTree(
-        evalRes: FulfilledAndFailedPaths,
+        evalRes: FulfilledAndFailedPaths<*>,
         startNode: Node,
         queryType: String,
     ): QueryTree<Boolean> {
@@ -96,7 +96,7 @@ object Must : AnalysisType() {
  */
 object May : AnalysisType() {
     override fun createQueryTree(
-        evalRes: FulfilledAndFailedPaths,
+        evalRes: FulfilledAndFailedPaths<*>,
         startNode: Node,
         queryType: String,
     ): QueryTree<Boolean> {
@@ -126,17 +126,19 @@ object May : AnalysisType() {
  * used as a criterion to make the query fail if this predicate is fulfilled before [predicate].
  */
 fun dataFlow(
-    startNode: Node,
+    startNode: DataflowNode,
     direction: AnalysisDirection = Forward(GraphToFollow.DFG),
     type: AnalysisType = May,
     vararg sensitivities: AnalysisSensitivity = FieldSensitive + ContextSensitive,
     scope: AnalysisScope = Interprocedural(),
-    earlyTermination: ((Node) -> Boolean)? = null,
-    predicate: (Node) -> Boolean,
+    earlyTermination: ((DataflowNode) -> Boolean)? = null,
+    predicate: (DataflowNode) -> Boolean,
 ): QueryTree<Boolean> {
     val collectFailedPaths = type == Must
     val findAllPossiblePaths = type == Must
-    val earlyTermination = { n: Node, ctx: Context -> earlyTermination?.let { it(n) } == true }
+    val earlyTermination = { n: DataflowNode, ctx: Context ->
+        earlyTermination?.let { it(n) } == true
+    }
 
     val evalRes =
         if (direction is Bidirectional) {
@@ -144,7 +146,7 @@ fun dataFlow(
             } else {
                 arrayOf(direction)
             }
-            .fold(FulfilledAndFailedPaths(listOf(), listOf())) { result, direction ->
+            .fold(FulfilledAndFailedPaths<DataflowNode>(listOf(), listOf())) { result, direction ->
                 result +
                     startNode.followDFGEdgesUntilHit(
                         collectFailedPaths = collectFailedPaths,
@@ -173,16 +175,18 @@ fun dataFlow(
  * predicate is fulfilled before [predicate].
  */
 fun executionPath(
-    startNode: Node,
+    startNode: EvaluatedNode,
     direction: AnalysisDirection = Forward(GraphToFollow.EOG),
     type: AnalysisType = May,
     scope: AnalysisScope = Interprocedural(),
-    earlyTermination: ((Node) -> Boolean)? = null,
-    predicate: (Node) -> Boolean,
+    earlyTermination: ((EvaluatedNode) -> Boolean)? = null,
+    predicate: (EvaluatedNode) -> Boolean,
 ): QueryTree<Boolean> {
     val collectFailedPaths = type == Must
     val findAllPossiblePaths = type == Must
-    val earlyTermination = { n: Node, ctx: Context -> earlyTermination?.let { it(n) } == true }
+    val earlyTermination = { n: EvaluatedNode, ctx: Context ->
+        earlyTermination?.let { it(n) } == true
+    }
 
     val evalRes =
         if (direction is Bidirectional) {
@@ -190,7 +194,7 @@ fun executionPath(
             } else {
                 arrayOf(direction)
             }
-            .fold(FulfilledAndFailedPaths(listOf(), listOf())) { result, direction ->
+            .fold(FulfilledAndFailedPaths<EvaluatedNode>(listOf(), listOf())) { result, direction ->
                 result +
                     startNode.followEOGEdgesUntilHit(
                         collectFailedPaths = collectFailedPaths,
@@ -216,9 +220,9 @@ fun executionPath(
  * can be configured with [scope] and [sensitivities].
  */
 fun dataFlowWithValidator(
-    source: Node,
-    validatorPredicate: (Node) -> Boolean,
-    sinkPredicate: (Node) -> Boolean,
+    source: DataflowNode,
+    validatorPredicate: (DataflowNode) -> Boolean,
+    sinkPredicate: (DataflowNode) -> Boolean,
     scope: AnalysisScope,
     vararg sensitivities: AnalysisSensitivity,
 ): QueryTree<Boolean> {
@@ -238,13 +242,13 @@ fun dataFlowWithValidator(
  * in a failure of the requirement (if `false`) or if it does not affect the evaluation. The
  * analysis can be configured with [scope] and [sensitivities].
  */
-fun Node.alwaysFlowsTo(
+fun DataflowNode.alwaysFlowsTo(
     allowOverwritingValue: Boolean = false,
-    earlyTermination: ((Node) -> Boolean)? = null,
+    earlyTermination: ((DataflowNode) -> Boolean)? = null,
     scope: AnalysisScope,
     vararg sensitivities: AnalysisSensitivity =
         ContextSensitive + FieldSensitive + FilterUnreachableEOG,
-    predicate: (Node) -> Boolean,
+    predicate: (DataflowNode) -> Boolean,
 ): QueryTree<Boolean> {
     val nextDFGPaths =
         this.collectAllNextDFGPaths(
@@ -252,7 +256,7 @@ fun Node.alwaysFlowsTo(
                 contextSensitive = ContextSensitive in sensitivities,
             )
             .flatten()
-    val earlyTerminationPredicate = { n: Node, ctx: Context ->
+    val earlyTerminationPredicate = { n: DataflowNode, ctx: Context ->
         earlyTermination?.let { it(n) } == true ||
             (!allowOverwritingValue &&
                 // TODO: This should be replaced with some check if the memory location/whatever
@@ -316,14 +320,14 @@ fun Node.alwaysFlowsTo(
  * [predicate] is fulfilled on all execution paths. Note: Constant values (literals) are not
  * followed if [followLiterals] is set to `false`.
  */
-fun Node.allNonLiteralsFlowTo(
-    predicate: (Node) -> Boolean,
+fun DataflowNode.allNonLiteralsFlowTo(
+    predicate: (DataflowNode) -> Boolean,
     allowOverwritingValue: Boolean = false,
     scope: AnalysisScope,
     vararg sensitivities: AnalysisSensitivity,
     followLiterals: Boolean = false,
 ): QueryTree<Boolean> {
-    val worklist = mutableListOf<Node>(this)
+    val worklist = mutableListOf<DataflowNode>(this)
     val finalPathsChecked = mutableListOf<QueryTree<Boolean>>()
     while (worklist.isNotEmpty()) {
         val currentNode = worklist.removeFirst()

@@ -49,7 +49,7 @@ import de.fraunhofer.aisec.cpg.helpers.neo4j.LocationConverter
 import de.fraunhofer.aisec.cpg.helpers.neo4j.NameConverter
 import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
-import de.fraunhofer.aisec.cpg.processing.IVisitable
+import de.fraunhofer.aisec.cpg.processing.Visitable
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.util.*
 import kotlin.uuid.Uuid
@@ -337,7 +337,7 @@ abstract class Node(
      * All managers are bundled in [TranslationContext].
      */
     @get:JsonIgnore @Transient override val ctx: TranslationContext
-) : IVisitable<Node>, Persistable, ContextProvider, ScopeProvider {
+) : Persistable, ContextProvider, ScopeProvider, Visitable {
 
     /** This property holds the full name using our new [Name] class. */
     @Convert(NameConverter::class) open var name: Name = Name(EMPTY_NAME)

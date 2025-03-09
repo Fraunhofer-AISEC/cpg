@@ -44,8 +44,8 @@ object Util {
      * @param searchCode exact code that a node needs to have.
      * @return a list of nodes with the specified String.
      */
-    fun subnodesOfCode(node: AstNode?, searchCode: String): List<Node> {
-        return SubgraphWalker.flattenAST(node).filter { n: Node ->
+    fun subnodesOfCode(node: AstNode?, searchCode: String): List<AstNode> {
+        return SubgraphWalker.flattenAST(node).filter { n ->
             n.code != null && n.code == searchCode
         }
     }

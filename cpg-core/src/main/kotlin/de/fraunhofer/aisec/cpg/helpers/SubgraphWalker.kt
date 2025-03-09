@@ -50,7 +50,7 @@ import java.util.*
 import org.slf4j.LoggerFactory
 
 /** A type for a node visitor callback for the [SubgraphWalker]. */
-typealias Callback = (node: Node, parent: Node?) -> Unit
+typealias Callback<NodeType> = (node: NodeType, parent: NodeType?) -> Unit
 
 /** Helper class for graph walking: Walking through ast-, cfg-, ...- edges */
 object SubgraphWalker {
@@ -204,14 +204,14 @@ object SubgraphWalker {
         var exits = mutableListOf<EvaluatedNode>()
     }
 
-    class IterativeGraphWalker<NodeType: Node>(var strategy: (NodeType) -> Iterator<NodeType>) {
+    class IterativeGraphWalker<NodeType : Node>(var strategy: (NodeType) -> Iterator<NodeType>) {
 
         /**
          * This callback is triggered whenever a new node is visited for the first time. This is the
          * place where usual graph manipulation will happen. The current node and its parent are
          * passed to the consumer.
          */
-        private val onNodeVisit: MutableList<Callback> = mutableListOf()
+        private val onNodeVisit: MutableList<Callback<NodeType>> = mutableListOf()
 
         private val replacements = mutableMapOf<NodeType, NodeType>()
 
@@ -241,9 +241,7 @@ object SubgraphWalker {
                     strategy(current).asSequence().filter { it !in seen }.toMutableList()
 
                 seen.addAll(unseenChildren)
-                unseenChildren.asReversed().forEach { child ->
-                    todo.push(Pair(child, current))
-                }
+                unseenChildren.asReversed().forEach { child -> todo.push(Pair(child, current)) }
             }
         }
 
@@ -257,7 +255,7 @@ object SubgraphWalker {
         }
 
         /** Registers a [Callback]. */
-        fun registerOnNodeVisit(callback: Callback) {
+        fun registerOnNodeVisit(callback: Callback<NodeType>) {
             onNodeVisit.add(callback)
         }
     }
@@ -278,10 +276,7 @@ object SubgraphWalker {
             scopeManager = lang.scopeManager
         }
 
-        constructor(
-            scopeManager: ScopeManager,
-            strategy: (NodeType) -> Iterator<NodeType>,
-        ) {
+        constructor(scopeManager: ScopeManager, strategy: (NodeType) -> Iterator<NodeType>) {
             this.scopeManager = scopeManager
             this.strategy = strategy
         }
@@ -291,10 +286,10 @@ object SubgraphWalker {
          * visited node.
          *
          * The previous node depends on the [strategy], for example for [Strategy.AST_FORWARD], the
-         * previous node is equal to [Node.astParent]. But for a strategy like
+         * previous node is equal to [AstNode.astParent]. But for a strategy like
          * [Strategy.EOG_FORWARD], the previous node was the previous EOG node.
          */
-        private val handlers = mutableListOf<(node: Node, previous: Node?) -> (Unit)>()
+        private val handlers = mutableListOf<(node: NodeType, previous: NodeType?) -> (Unit)>()
 
         fun clearCallbacks() {
             handlers.clear()
@@ -304,7 +299,7 @@ object SubgraphWalker {
          * Registers a handler that is called whenever a new node is visited. The handler is passed
          * the current node.
          */
-        fun registerHandler(handler: (node: Node) -> (Unit)) {
+        fun registerHandler(handler: (node: NodeType) -> (Unit)) {
             handlers.add { node, previous -> handler(node) }
         }
 
@@ -336,9 +331,9 @@ object SubgraphWalker {
         }
 
         private fun handleNode(
-            current: Node,
-            previous: Node?,
-            handler: (node: Node, previous: Node?) -> (Unit),
+            current: NodeType,
+            previous: NodeType?,
+            handler: (node: NodeType, previous: NodeType?) -> (Unit),
         ) {
             // Jump to the node's scope, if it is different from ours.
             if (scopeManager.currentScope != current.scope) {
@@ -366,7 +361,7 @@ object SubgraphWalker {
  *   [MemberExpression]), we also replace the [CallExpression] with a [MemberCallExpression].
  */
 context(ContextProvider)
-fun SubgraphWalker.ScopedWalker<EvaluatedNode>.replace(
+fun SubgraphWalker.ScopedWalker<AstNode>.replace(
     parent: AstNode?,
     old: Expression,
     new: Expression,

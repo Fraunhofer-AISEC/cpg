@@ -263,15 +263,15 @@ fun DataflowNode.collectAllPrevFullDFGPaths(): List<List<Node>> {
  * Hence, if "fulfilled" is a non-empty list, a data flow from [this] to such a node is **possible
  * but not mandatory**. If the list "failed" is empty, the data flow is mandatory.
  */
-fun EvaluatedNode.followEOGEdgesUntilHit(
+fun <EvaluatedNodeType : EvaluatedNode> EvaluatedNode.followEOGEdgesUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
     direction: AnalysisDirection = Forward(GraphToFollow.EOG),
     vararg sensitivities: AnalysisSensitivity = FilterUnreachableEOG + ContextSensitive,
     scope: AnalysisScope = Interprocedural(),
-    earlyTermination: (EvaluatedNode, Context) -> Boolean = { _, _ -> false },
-    predicate: (EvaluatedNode) -> Boolean,
-): FulfilledAndFailedPaths<EvaluatedNode> {
+    earlyTermination: (EvaluatedNodeType, Context) -> Boolean = { _, _ -> false },
+    predicate: (EvaluatedNodeType) -> Boolean,
+): FulfilledAndFailedPaths<EvaluatedNodeType> {
     return this.followXUntilHit(
         x = { currentNode, ctx, path ->
             direction.pickNextStep(currentNode, scope, ctx, sensitivities = sensitivities)
@@ -292,15 +292,15 @@ fun EvaluatedNode.followEOGEdgesUntilHit(
  * Hence, if "fulfilled" is a non-empty list, a data flow from [this] to such a node is **possible
  * but not mandatory**. If the list "failed" is empty, the data flow is mandatory.
  */
-fun DataflowNode.followDFGEdgesUntilHit(
+fun <DataflowNodeType : DataflowNode> DataflowNodeType.followDFGEdgesUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
     direction: AnalysisDirection = Forward(GraphToFollow.DFG),
     vararg sensitivities: AnalysisSensitivity = FieldSensitive + ContextSensitive,
     scope: AnalysisScope = Interprocedural(),
-    earlyTermination: (DataflowNode, Context) -> Boolean = { _, _ -> false },
-    predicate: (DataflowNode) -> Boolean,
-): FulfilledAndFailedPaths<DataflowNode> {
+    earlyTermination: (DataflowNodeType, Context) -> Boolean = { _, _ -> false },
+    predicate: (DataflowNodeType) -> Boolean,
+): FulfilledAndFailedPaths<DataflowNodeType> {
     return this.followXUntilHit(
         x = { currentNode, ctx, path ->
             direction.pickNextStep(currentNode, scope, ctx, sensitivities = sensitivities)
@@ -432,7 +432,7 @@ fun EvaluatedNode.collectAllNextEOGPaths(
 ): List<List<EvaluatedNode>> {
     // We make everything fail to reach the end of the CDG. Then, we use the stuff collected in the
     // failed paths (everything)
-    return this.followEOGEdgesUntilHit(
+    return this.followEOGEdgesUntilHit<EvaluatedNode>(
             collectFailedPaths = true,
             findAllPossiblePaths = true,
             scope = if (interproceduralAnalysis) Interprocedural() else Intraprocedural(),
@@ -451,7 +451,7 @@ fun EvaluatedNode.collectAllPrevEOGPaths(
 ): List<List<EvaluatedNode>> {
     // We make everything fail to reach the end of the CDG. Then, we use the stuff collected in the
     // failed paths (everything)
-    return this.followEOGEdgesUntilHit(
+    return this.followEOGEdgesUntilHit<EvaluatedNode>(
             direction = Backward(GraphToFollow.EOG),
             collectFailedPaths = true,
             findAllPossiblePaths = true,
@@ -682,7 +682,7 @@ fun EvaluatedNode.followPrevCDGUntilHit(
  * Hence, if "fulfilled" is a non-empty list, a path from [this] to such a node is **possible but
  * not mandatory**. If the list "failed" is empty, the path is mandatory.
  */
-inline fun <T : Node> T.followXUntilHit(
+inline fun <T : Node> Node.followXUntilHit(
     noinline x: (T, Context, List<T>) -> Collection<Pair<T, Context>>,
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
@@ -697,7 +697,9 @@ inline fun <T : Node> T.followXUntilHit(
     val failedPaths = mutableListOf<List<T>>()
     // The list of paths where we're not done yet.
     val worklist = mutableSetOf<Pair<List<T>, Context>>()
-    worklist.add(Pair(listOf(this), context)) // We start only with the "from" node (=this)
+    worklist.add(
+        Pair(listOfNotNull(this as? T), context)
+    ) // We start only with the "from" node (=this)
 
     val alreadySeenNodes = mutableSetOf<T>()
 

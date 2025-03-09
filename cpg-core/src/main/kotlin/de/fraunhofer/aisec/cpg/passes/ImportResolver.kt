@@ -200,7 +200,7 @@ class ImportDependencies<T : AstNode>(modules: MutableList<T>) :
  */
 class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
 
-    lateinit var walker: SubgraphWalker.ScopedWalker
+    lateinit var walker: SubgraphWalker.ScopedWalker<AstNode>
     lateinit var tr: TranslationResult
 
     override fun accept(tr: TranslationResult) {
@@ -212,7 +212,7 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
 
         // In order to resolve imports as good as possible, we need the information which namespace
         // does an import on which other
-        walker = SubgraphWalker.ScopedWalker(scopeManager)
+        walker = SubgraphWalker.ScopedWalker(scopeManager, Strategy::AST_FORWARD)
         walker.registerHandler { node ->
             if (node is Component) {
                 // Create a new import dependency object for the component, to make sure that all

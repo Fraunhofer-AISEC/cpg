@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.enhancements
 
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.newLiteral
 import kotlin.test.Test
@@ -43,8 +42,8 @@ class OverlayTest {
 
             overlay1.nextDFG += overlay2
 
-            var codeNode1: Node = newLiteral(1)
-            var codeNode2: Node = newLiteral(2)
+            var codeNode1 = newLiteral(1)
+            var codeNode2 = newLiteral(2)
 
             overlay2.nextDFG += codeNode1
             codeNode1.nextDFG += codeNode2

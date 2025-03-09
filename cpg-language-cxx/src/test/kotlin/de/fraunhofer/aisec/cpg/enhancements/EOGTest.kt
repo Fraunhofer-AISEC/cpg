@@ -38,7 +38,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.helpers.Util.Connect
-import de.fraunhofer.aisec.cpg.processing.IVisitor
+import de.fraunhofer.aisec.cpg.processing.Visitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.test.*
@@ -471,8 +471,8 @@ internal class EOGTest : BaseTest() {
         // Print EOG edges for debugging
         nodes[0].accept(
             Strategy::EOG_BACKWARD,
-            object : IVisitor<Node>() {
-                override fun visit(t: Node) {
+            object : Visitor<EvaluatedNode>() {
+                override fun visit(t: EvaluatedNode) {
                     println(
                         PhysicalLocation.locationLink(t.location) +
                             " -> " +
@@ -979,7 +979,7 @@ internal class EOGTest : BaseTest() {
      * - path for the file to test.
      */
     @Throws(Exception::class)
-    private fun translateToNodes(path: String): List<Node> {
+    private fun translateToNodes(path: String): List<AstNode> {
         val toTranslate = File(path)
         val topLevel = toTranslate.parentFile.toPath()
         val tu =

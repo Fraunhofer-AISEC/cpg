@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.analysis
 
 import de.fraunhofer.aisec.cpg.graph.AstNode
+import de.fraunhofer.aisec.cpg.graph.DataflowNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
@@ -79,7 +80,7 @@ class MultiValueEvaluator : ValueEvaluator() {
             // While we are not handling different paths of variables with If statements, we can
             // easily be partly path-sensitive in a conditional expression
             is ConditionalExpression -> return handleConditionalExpression(node, depth)
-            else -> return handlePrevDFG(node, depth)
+            is DataflowNode -> return handlePrevDFG(node, depth)
         }
 
         // At this point, we cannot evaluate, and we are calling our [cannotEvaluate] hook, maybe
@@ -210,7 +211,7 @@ class MultiValueEvaluator : ValueEvaluator() {
      * In contrast to the implementation of [ValueEvaluator], this one can handle more than one
      * value.
      */
-    override fun handlePrevDFG(node: Node, depth: Int): Collection<Any?> {
+    override fun handlePrevDFG(node: DataflowNode, depth: Int): Collection<Any?> {
         // For a reference, we are interested in its last assignment into the reference
         // denoted by the previous DFG edge. We need to filter out any self-references for READWRITE
         // references.

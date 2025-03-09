@@ -52,6 +52,7 @@ class ControlDependenceGraphPassTest {
 
         val assignment1 =
             result.assignments.firstOrNull { 1 == (it.value as? Literal<*>)?.value }?.start
+                as AstNode
         assertNotNull(assignment1)
         assertEquals(1, assignment1.prevCDG.size)
         assertTrue(if0 in assignment1.prevCDG)

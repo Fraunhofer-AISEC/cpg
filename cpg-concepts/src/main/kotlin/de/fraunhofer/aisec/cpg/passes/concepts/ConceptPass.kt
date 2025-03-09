@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes.concepts
 
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.allEOGStarters
 import de.fraunhofer.aisec.cpg.graph.component
@@ -43,12 +44,11 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
  */
 abstract class ConceptPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
 
-    lateinit var walker: SubgraphWalker.ScopedWalker
+    lateinit var walker: SubgraphWalker.ScopedWalker<AstNode>
 
     override fun accept(tu: TranslationUnitDeclaration) {
         ctx.currentComponent = tu.component
-        walker = SubgraphWalker.ScopedWalker(ctx.scopeManager)
-        walker.strategy = Strategy::EOG_FORWARD
+        walker = SubgraphWalker.ScopedWalker(ctx.scopeManager, Strategy::EOG_FORWARD)
         walker.registerHandler { node -> handleNode(node, tu) }
 
         // Gather all resolution EOG starters; and make sure they really do not have a

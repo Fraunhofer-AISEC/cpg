@@ -46,7 +46,7 @@ import de.fraunhofer.aisec.cpg.passes.inference.tryRecordInference
 @DependsOn(ImportResolver::class)
 open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
-    lateinit var walker: SubgraphWalker.ScopedWalker
+    lateinit var walker: SubgraphWalker.ScopedWalker<Node>
 
     override fun accept(component: Component) {
         ctx.currentComponent = component

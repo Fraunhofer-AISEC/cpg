@@ -35,14 +35,13 @@ import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin.ARRAY
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin.POINTER
 import de.fraunhofer.aisec.cpg.passes.*
-import de.fraunhofer.aisec.cpg.processing.IVisitor
+import de.fraunhofer.aisec.cpg.processing.Visitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import de.fraunhofer.aisec.cpg.sarif.Region
 import de.fraunhofer.aisec.cpg.test.*
 import java.io.File
 import java.nio.file.Path
 import java.util.function.Consumer
-import kotlin.Throws
 import kotlin.test.*
 
 internal class CXXLanguageFrontendTest : BaseTest() {
@@ -1239,11 +1238,11 @@ internal class CXXLanguageFrontendTest : BaseTest() {
 
         // we need to assert, that we have a consistent chain of EOG edges from the first statement
         // to the return statement. otherwise, the EOG chain is somehow broken
-        val eogEdges = ArrayList<Node>()
+        val eogEdges = mutableListOf<EvaluatedNode>()
         main.accept(
             Strategy::EOG_FORWARD,
-            object : IVisitor<Node>() {
-                override fun visit(t: Node) {
+            object : Visitor<EvaluatedNode>() {
+                override fun visit(t: EvaluatedNode) {
                     println(t)
                     eogEdges.add(t)
                 }

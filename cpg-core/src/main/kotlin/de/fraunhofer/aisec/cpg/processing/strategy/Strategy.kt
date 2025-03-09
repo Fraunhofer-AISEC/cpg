@@ -60,13 +60,17 @@ object Strategy {
      * @param x Current node in EOG.
      * @return Iterator over successors.
      */
-    fun EOG_FORWARD(x: EvaluatedNode): Iterator<EvaluatedNode> {
-        return x.nextEOG.iterator()
+    fun EOG_FORWARD(x: EvaluatedNode): Iterator<AstNode> {
+        return x.nextEOG.filterIsInstance<AstNode>().iterator()
     }
 
     /** A strategy to traverse the EOG in forward direction, but only if the edge is reachable. */
-    fun REACHABLE_EOG_FORWARD(x: EvaluatedNode): Iterator<EvaluatedNode> {
-        return x.nextEOGEdges.filter { !it.unreachable }.map { it.end }.iterator()
+    fun REACHABLE_EOG_FORWARD(x: EvaluatedNode): Iterator<AstNode> {
+        return x.nextEOGEdges
+            .filter { !it.unreachable }
+            .map { it.end }
+            .filterIsInstance<AstNode>()
+            .iterator()
     }
 
     fun COMPONENTS_LEAST_IMPORTS(x: TranslationResult): Iterator<Component> {
@@ -95,7 +99,7 @@ object Strategy {
      * @param x Current node in EOG.
      * @return Iterator over successors.
      */
-    fun EOG_BACKWARD(x: EvaluatedNode): Iterator<Node> {
+    fun EOG_BACKWARD(x: EvaluatedNode): Iterator<EvaluatedNode> {
         return x.prevEOG.iterator()
     }
 
@@ -105,7 +109,11 @@ object Strategy {
      * @param x Current node in DFG.
      * @return Iterator over successors.
      */
-    fun DFG_FORWARD(x: DataflowNode): Iterator<Node> {
+    fun DFG_FORWARD(x: Node): Iterator<DataflowNode> {
+        if (x !is DataflowNode) {
+            return emptyList<DataflowNode>().iterator()
+        }
+
         return x.nextDFG.iterator()
     }
 
@@ -115,7 +123,11 @@ object Strategy {
      * @param x Current node in DFG.
      * @return Iterator over predecessor.
      */
-    fun DFG_BACKWARD(x: DataflowNode): Iterator<Node> {
+    fun DFG_BACKWARD(x: Node): Iterator<Node> {
+        if (x !is DataflowNode) {
+            return emptyList<DataflowNode>().iterator()
+        }
+
         return x.prevDFG.iterator()
     }
 
@@ -125,8 +137,8 @@ object Strategy {
      * @param x
      * @return
      */
-    fun AST_FORWARD(x: Node): Iterator<AstNode> {
-        return if (x is AstNode) x.astChildren.iterator() else emptyList<AstNode>().iterator()
+    fun AST_FORWARD(x: AstNode): Iterator<AstNode> {
+        return x.astChildren.iterator()
     }
 
     /**
@@ -135,7 +147,11 @@ object Strategy {
      * @param x Current node in DFG.
      * @return Iterator over successor edges.
      */
-    fun DFG_EDGES_FORWARD(x: DataflowNode): Iterator<Dataflow> {
+    fun DFG_EDGES_FORWARD(x: Node): Iterator<Dataflow> {
+        if (x !is DataflowNode) {
+            return emptyList<Dataflow>().iterator()
+        }
+
         return x.nextDFGEdges.iterator()
     }
 
@@ -145,7 +161,11 @@ object Strategy {
      * @param x Current node in DFG.
      * @return Iterator over predecessor edges.
      */
-    fun DFG_EDGES_BACKWARD(x: DataflowNode): Iterator<Dataflow> {
+    fun DFG_EDGES_BACKWARD(x: Node): Iterator<Dataflow> {
+        if (x !is DataflowNode) {
+            return emptyList<Dataflow>().iterator()
+        }
+
         return x.prevDFGEdges.iterator()
     }
 
@@ -155,7 +175,11 @@ object Strategy {
      * @param x Current node in EOG.
      * @return Iterator over successor edges.
      */
-    fun EOG_EDGES_FORWARD(x: EvaluatedNode): Iterator<EvaluationOrder> {
+    fun EOG_EDGES_FORWARD(x: Node): Iterator<EvaluationOrder> {
+        if (x !is EvaluatedNode) {
+            return emptyList<EvaluationOrder>().iterator()
+        }
+
         return x.nextEOGEdges.iterator()
     }
 
@@ -165,7 +189,11 @@ object Strategy {
      * @param x Current node in EOG.
      * @return Iterator over predecessor edges.
      */
-    fun EOG_EDGES_BACKWARD(x: EvaluatedNode): Iterator<EvaluationOrder> {
+    fun EOG_EDGES_BACKWARD(x: Node): Iterator<EvaluationOrder> {
+        if (x !is EvaluatedNode) {
+            return emptyList<EvaluationOrder>().iterator()
+        }
+
         return x.prevEOGEdges.iterator()
     }
 

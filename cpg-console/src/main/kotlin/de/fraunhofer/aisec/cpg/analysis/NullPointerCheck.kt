@@ -33,7 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.processing.IVisitor
+import de.fraunhofer.aisec.cpg.processing.Visitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation.Companion.locationLink
 import org.jline.utils.AttributedString
@@ -50,7 +50,7 @@ class NullPointerCheck {
         for (tu in result.components.flatMap { it.translationUnits }) {
             tu.accept(
                 Strategy::AST_FORWARD,
-                object : IVisitor<Node>() {
+                object : Visitor<AstNode>() {
                     fun visit(v: MemberCallExpression) {
                         handleHasBase(v)
                     }
