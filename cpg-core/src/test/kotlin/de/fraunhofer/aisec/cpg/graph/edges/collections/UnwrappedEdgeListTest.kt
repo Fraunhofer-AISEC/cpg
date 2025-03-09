@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.edges.collections
 
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdges
@@ -67,7 +68,7 @@ class UnwrappedEdgeListTest {
             var node3 = newLiteral(3)
             var node4 = newLiteral(4)
 
-            var list = AstEdges<Node, AstEdge<Node>>(thisRef = node1)
+            var list = AstEdges<AstNode, AstEdge<AstNode>>(thisRef = node1)
             list += node2
             list += node3
 

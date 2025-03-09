@@ -43,18 +43,18 @@ open class AstEdge<T : AstNode>(start: AstNode, end: T) : Edge<T>(start, end) {
 }
 
 /** Creates an [AstEdges] container starting from this node. */
-fun <NodeType : AstNode> Node.astEdgesOf(
+fun <NodeType : AstNode> AstNode.astEdgesOf(
     onAdd: ((AstEdge<NodeType>) -> Unit)? = null,
     onRemove: ((AstEdge<NodeType>) -> Unit)? = null,
 ): AstEdges<NodeType, AstEdge<NodeType>> {
-    return AstEdges(thisRef = this as AstNode, onAdd = onAdd, onRemove = onRemove)
+    return AstEdges(thisRef = this, onAdd = onAdd, onRemove = onRemove)
 }
 
 /**
  * Creates a single optional [AstEdge] starting from this node (wrapped in a [EdgeSingletonList]
  * container).
  */
-fun <NodeType : AstNode> Node.astOptionalEdgeOf(
+fun <NodeType : AstNode> AstNode.astOptionalEdgeOf(
     onChanged: ((old: AstEdge<NodeType>?, new: AstEdge<NodeType>?) -> Unit)? = null
 ): EdgeSingletonList<NodeType, NodeType?, AstEdge<NodeType>> {
     return EdgeSingletonList(

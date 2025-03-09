@@ -92,7 +92,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) : CXXHandler<Declaration, IAS
         // This is just a nested declarator, i.e. () wrapping the real declarator
         if (ctx.initializer == null && ctx.nestedDeclarator is IASTDeclarator) {
             return handle(ctx.nestedDeclarator)
-                ?: ProblemDeclaration("could not parse nested declaration")
+                ?: newProblemDeclaration("could not parse nested declaration")
         }
 
         val name = ctx.name.toString()
@@ -501,6 +501,9 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) : CXXHandler<Declaration, IAS
             }
         }
     }
+
+    override val problemConstructor: (String, IASTNode?) -> Declaration
+        get() = { problem, rawNode -> newProblemDeclaration(problem, rawNode = rawNode) }
 }
 
 /**

@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.edges.collections
 
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.newLiteral
@@ -39,7 +39,7 @@ class EdgeSingletonListTest {
     @Test
     fun testNullable() {
         with(TestLanguageFrontend()) {
-            class MyNode : Node(ctx) {
+            class MyNode : AstNode(ctx) {
                 var edge = astOptionalEdgeOf<Expression>()
                 var unwrapped by unwrapping(MyNode::edge)
             }

@@ -284,7 +284,7 @@ class StatementHandler(lang: CXXLanguageFrontend) : CXXHandler<Statement, IASTSt
     private fun handleExpressionStatement(ctx: IASTExpressionStatement): Expression {
         val expression =
             frontend.expressionHandler.handle(ctx.expression)?.codeAndLocationFromOtherRawNode(ctx)
-                ?: ProblemExpression("could not parse expression in statement")
+                ?: newProblemExpression("could not parse expression in statement")
 
         return expression
     }
@@ -375,4 +375,7 @@ class StatementHandler(lang: CXXLanguageFrontend) : CXXHandler<Statement, IASTSt
     private fun handleDefaultStatement(ctx: IASTDefaultStatement): DefaultStatement {
         return newDefaultStatement(rawNode = ctx)
     }
+
+    override val problemConstructor: (String, IASTStatement?) -> Statement
+        get() = { problem, rawNode -> newProblemExpression(problem, rawNode = rawNode) }
 }

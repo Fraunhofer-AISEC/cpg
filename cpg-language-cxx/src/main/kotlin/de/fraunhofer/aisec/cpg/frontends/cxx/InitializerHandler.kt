@@ -38,8 +38,8 @@ import org.eclipse.cdt.core.dom.ast.IASTInitializer
 import org.eclipse.cdt.core.dom.ast.IASTInitializerList
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTConstructorInitializer
 
-class InitializerHandler(lang: CXXLanguageFrontend) :
-    CXXHandler<Expression, IASTInitializer>(lang) {
+class InitializerHandler(frontend: CXXLanguageFrontend) :
+    CXXHandler<Expression, IASTInitializer>(frontend) {
 
     override fun handleNode(node: IASTInitializer): Expression {
         return when (node) {
@@ -91,4 +91,7 @@ class InitializerHandler(lang: CXXLanguageFrontend) :
         return frontend.expressionHandler.handle(ctx.initializerClause)
             ?: return newProblemExpression("could not parse initializer clause")
     }
+
+    override val problemConstructor: (String, IASTInitializer?) -> Expression
+        get() = { problem, rawNode -> newProblemExpression(problem, rawNode = rawNode) }
 }
