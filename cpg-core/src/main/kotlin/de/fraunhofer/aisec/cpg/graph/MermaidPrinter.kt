@@ -30,14 +30,15 @@ import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.edges.flows.FieldDataflowGranularity
+import de.fraunhofer.aisec.cpg.graph.printGraph
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 
 /** Utility function to print the DFG using [printGraph]. */
 fun Node.printDFG(
     maxConnections: Int = 25,
-    vararg strategies: (Node) -> Iterator<Dataflow> =
-        arrayOf<(Node) -> Iterator<Dataflow>>(
+    vararg strategies: (DataflowNode) -> Iterator<Dataflow> =
+        arrayOf<(DataflowNode) -> Iterator<Dataflow>>(
             Strategy::DFG_EDGES_FORWARD,
             Strategy::DFG_EDGES_BACKWARD,
         ),
@@ -48,8 +49,8 @@ fun Node.printDFG(
 /** Utility function to print the EOG using [printGraph]. */
 fun Node.printEOG(
     maxConnections: Int = 25,
-    vararg strategies: (Node) -> Iterator<EvaluationOrder> =
-        arrayOf<(Node) -> Iterator<EvaluationOrder>>(
+    vararg strategies: (EvaluatedNode) -> Iterator<EvaluationOrder> =
+        arrayOf<(EvaluatedNode) -> Iterator<EvaluationOrder>>(
             Strategy::EOG_EDGES_FORWARD,
             Strategy::EOG_EDGES_BACKWARD,
         ),
@@ -80,9 +81,9 @@ fun AstNode.printAST(
  *   implementations.
  * @return The Mermaid graph as a string encapsulated in triple-backticks.
  */
-fun <EdgeType : Edge<out Node>> Node.printGraph(
+fun <NodeType : Node, EdgeType : Edge<out NodeType>> NodeType.printGraph(
     maxConnections: Int = 25,
-    vararg strategies: (Node) -> Iterator<EdgeType>,
+    vararg strategies: (NodeType) -> Iterator<EdgeType>,
 ): String {
     val builder = StringBuilder()
 
@@ -122,7 +123,7 @@ fun <EdgeType : Edge<out Node>> Node.printGraph(
         // Add start and edges to the work-list.
         strategies.forEach { strategy ->
             worklist += strategy(end).asSequence().sortedBy { it.end.name }
-            worklist += strategy(start).asSequence().sortedBy { it.end.name }
+            worklist += strategy(start as NodeType).asSequence().sortedBy { it.end.name }
         }
     }
 

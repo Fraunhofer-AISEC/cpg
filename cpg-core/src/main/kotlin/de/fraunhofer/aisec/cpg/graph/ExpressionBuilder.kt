@@ -40,8 +40,8 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
 /**
  * Creates a new [Literal]. This is the top-most [Node] that a [LanguageFrontend] or [Handler]
  * should create. The [MetadataProvider] receiver will be used to fill different meta-data using
- * [Node.applyMetadata]. Calling this extension function outside of Kotlin requires an appropriate
- * [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
+ * [AstNode.applyMetadata]. Calling this extension function outside of Kotlin requires an
+ * appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
  */
 @JvmOverloads
 fun <V> ContextProvider.newLiteral(
@@ -63,8 +63,8 @@ fun <V> ContextProvider.newLiteral(
  * Creates a new [BinaryOperator] or a [ShortCircuitOperator] if the language implements
  * [HasShortCircuitOperators] and if the [operatorCode] is contained in
  * [HasShortCircuitOperators.operatorCodes]. The [MetadataProvider] receiver will be used to fill
- * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
- * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * different meta-data using [AstNode.applyMetadata]. Calling this extension function outside of
+ * Kotlin requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
  * prepended argument.
  */
 @JvmOverloads
@@ -92,8 +92,8 @@ fun ContextProvider.newBinaryOperator(operatorCode: String, rawNode: Any? = null
 /**
  * Creates a new [UnaryOperator]. This is the top-most [Node] that a [LanguageFrontend] or [Handler]
  * should create. The [MetadataProvider] receiver will be used to fill different meta-data using
- * [Node.applyMetadata]. Calling this extension function outside of Kotlin requires an appropriate
- * [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
+ * [AstNode.applyMetadata]. Calling this extension function outside of Kotlin requires an
+ * appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
  */
 @JvmOverloads
 fun ContextProvider.newUnaryOperator(
@@ -116,9 +116,9 @@ fun ContextProvider.newUnaryOperator(
 
 /**
  * Creates a new [AssignExpression]. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
- * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
- * argument.
+ * meta-data using [AstNode.applyMetadata]. Calling this extension function outside of Kotlin
+ * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
  */
 @JvmOverloads
 fun ContextProvider.newAssignExpression(
@@ -141,8 +141,8 @@ fun ContextProvider.newAssignExpression(
 /**
  * Creates a new [NewExpression]. This is the top-most [Node] that a [LanguageFrontend] or [Handler]
  * should create. The [MetadataProvider] receiver will be used to fill different meta-data using
- * [Node.applyMetadata]. Calling this extension function outside of Kotlin requires an appropriate
- * [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
+ * [AstNode.applyMetadata]. Calling this extension function outside of Kotlin requires an
+ * appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
  */
 @JvmOverloads
 fun ContextProvider.newNewExpression(
@@ -160,8 +160,8 @@ fun ContextProvider.newNewExpression(
 
 /**
  * Creates a new [ConstructExpression]. The [MetadataProvider] receiver will be used to fill
- * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
- * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * different meta-data using [AstNode.applyMetadata]. Calling this extension function outside of
+ * Kotlin requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
  * prepended argument.
  */
 @JvmOverloads
@@ -178,8 +178,8 @@ fun ContextProvider.newConstructExpression(
 
 /**
  * Creates a new [ConditionalExpression]. The [MetadataProvider] receiver will be used to fill
- * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
- * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * different meta-data using [AstNode.applyMetadata]. Calling this extension function outside of
+ * Kotlin requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
  * prepended argument.
  */
 @JvmOverloads
@@ -204,8 +204,8 @@ fun ContextProvider.newConditionalExpression(
 
 /**
  * Creates a new [KeyValueExpression]. The [MetadataProvider] receiver will be used to fill
- * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
- * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * different meta-data using [AstNode.applyMetadata]. Calling this extension function outside of
+ * Kotlin requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
  * prepended argument.
  */
 @JvmOverloads
@@ -226,9 +226,9 @@ fun ContextProvider.newKeyValueExpression(
 
 /**
  * Creates a new [LambdaExpression]. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
- * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
- * argument.
+ * meta-data using [AstNode.applyMetadata]. Calling this extension function outside of Kotlin
+ * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
  */
 @JvmOverloads
 fun ContextProvider.newLambdaExpression(rawNode: Any? = null): LambdaExpression {
@@ -241,7 +241,7 @@ fun ContextProvider.newLambdaExpression(rawNode: Any? = null): LambdaExpression 
 
 /**
  * Creates a new [Block]. The [MetadataProvider] receiver will be used to fill different meta-data
- * using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires an
+ * using [AstNode.applyMetadata]. Calling this extension function outside of Kotlin requires an
  * appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
  */
 @JvmOverloads
@@ -255,9 +255,9 @@ fun ContextProvider.newBlock(rawNode: Any? = null): Block {
 
 /**
  * Creates a new [CallExpression]. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
- * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
- * argument.
+ * meta-data using [AstNode.applyMetadata]. Calling this extension function outside of Kotlin
+ * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
  */
 @JvmOverloads
 fun ContextProvider.newCallExpression(
@@ -285,8 +285,8 @@ fun ContextProvider.newCallExpression(
 
 /**
  * Creates a new [MemberCallExpression]. The [MetadataProvider] receiver will be used to fill
- * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
- * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * different meta-data using [AstNode.applyMetadata]. Calling this extension function outside of
+ * Kotlin requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
  * prepended argument.
  */
 @JvmOverloads
@@ -309,8 +309,8 @@ fun ContextProvider.newOperatorCallExpression(
 
 /**
  * Creates a new [MemberCallExpression]. The [MetadataProvider] receiver will be used to fill
- * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
- * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * different meta-data using [AstNode.applyMetadata]. Calling this extension function outside of
+ * Kotlin requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
  * prepended argument.
  */
 @JvmOverloads
@@ -342,9 +342,9 @@ fun ContextProvider.newMemberCallExpression(
 
 /**
  * Creates a new [MemberExpression]. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
- * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
- * argument.
+ * meta-data using [AstNode.applyMetadata]. Calling this extension function outside of Kotlin
+ * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
  */
 @JvmOverloads
 fun ContextProvider.newMemberExpression(
@@ -367,9 +367,9 @@ fun ContextProvider.newMemberExpression(
 
 /**
  * Creates a new [CastExpression]. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
- * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
- * argument.
+ * meta-data using [AstNode.applyMetadata]. Calling this extension function outside of Kotlin
+ * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
  */
 @JvmOverloads
 fun ContextProvider.newCastExpression(rawNode: Any? = null): CastExpression {
@@ -382,9 +382,9 @@ fun ContextProvider.newCastExpression(rawNode: Any? = null): CastExpression {
 
 /**
  * Creates a new [TypeIdExpression]. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
- * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
- * argument.
+ * meta-data using [AstNode.applyMetadata]. Calling this extension function outside of Kotlin
+ * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
  */
 @JvmOverloads
 fun ContextProvider.newTypeIdExpression(
@@ -406,8 +406,8 @@ fun ContextProvider.newTypeIdExpression(
 
 /**
  * Creates a new [SubscriptExpression]. The [MetadataProvider] receiver will be used to fill
- * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
- * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * different meta-data using [AstNode.applyMetadata]. Calling this extension function outside of
+ * Kotlin requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
  * prepended argument.
  */
 @JvmOverloads
@@ -421,9 +421,9 @@ fun ContextProvider.newSubscriptExpression(rawNode: Any? = null): SubscriptExpre
 
 /**
  * Creates a new [RangeExpression]. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
- * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
- * argument.
+ * meta-data using [AstNode.applyMetadata]. Calling this extension function outside of Kotlin
+ * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
  */
 @JvmOverloads
 fun ContextProvider.newRangeExpression(
@@ -443,8 +443,8 @@ fun ContextProvider.newRangeExpression(
 
 /**
  * Creates a new [NewArrayExpression]. The [MetadataProvider] receiver will be used to fill
- * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
- * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * different meta-data using [AstNode.applyMetadata]. Calling this extension function outside of
+ * Kotlin requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
  * prepended argument.
  */
 @JvmOverloads
@@ -458,9 +458,9 @@ fun ContextProvider.newNewArrayExpression(rawNode: Any? = null): NewArrayExpress
 
 /**
  * Creates a new [Reference]. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
- * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
- * argument.
+ * meta-data using [AstNode.applyMetadata]. Calling this extension function outside of Kotlin
+ * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
  */
 @JvmOverloads
 fun ContextProvider.newReference(
@@ -479,9 +479,9 @@ fun ContextProvider.newReference(
 
 /**
  * Creates a new [DeleteExpression]. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
- * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
- * argument.
+ * meta-data using [AstNode.applyMetadata]. Calling this extension function outside of Kotlin
+ * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
  */
 @JvmOverloads
 fun ContextProvider.newDeleteExpression(rawNode: Any? = null): DeleteExpression {
@@ -494,9 +494,9 @@ fun ContextProvider.newDeleteExpression(rawNode: Any? = null): DeleteExpression 
 
 /**
  * Creates a new [ExpressionList]. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
- * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
- * argument.
+ * meta-data using [AstNode.applyMetadata]. Calling this extension function outside of Kotlin
+ * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
  */
 @JvmOverloads
 fun ContextProvider.newExpressionList(rawNode: Any? = null): ExpressionList {
@@ -510,9 +510,9 @@ fun ContextProvider.newExpressionList(rawNode: Any? = null): ExpressionList {
 /**
  * Creates a new [InitializerListExpression]. This is the top-most [Node] that a [LanguageFrontend]
  * or [Handler] should create. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
- * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
- * argument.
+ * meta-data using [AstNode.applyMetadata]. Calling this extension function outside of Kotlin
+ * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
  */
 @JvmOverloads
 fun ContextProvider.newInitializerListExpression(
@@ -548,9 +548,9 @@ fun ContextProvider.newCollectionComprehension(rawNode: Any? = null): Collection
 
 /**
  * Creates a new [TypeExpression]. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
- * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
- * argument.
+ * meta-data using [AstNode.applyMetadata]. Calling this extension function outside of Kotlin
+ * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
  */
 @JvmOverloads
 fun ContextProvider.newTypeExpression(
@@ -569,9 +569,9 @@ fun ContextProvider.newTypeExpression(
 
 /**
  * Creates a new [ThrowExpression]. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
- * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
- * argument.
+ * meta-data using [AstNode.applyMetadata]. Calling this extension function outside of Kotlin
+ * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
  */
 @JvmOverloads
 fun ContextProvider.newThrowExpression(rawNode: Any? = null): ThrowExpression {
@@ -584,9 +584,9 @@ fun ContextProvider.newThrowExpression(rawNode: Any? = null): ThrowExpression {
 
 /**
  * Creates a new [ProblemExpression]. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
- * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
- * argument.
+ * meta-data using [AstNode.applyMetadata]. Calling this extension function outside of Kotlin
+ * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
  */
 @JvmOverloads
 fun ContextProvider.newProblemExpression(
@@ -637,7 +637,7 @@ fun <T> Literal<T>.duplicate(implicit: Boolean): Literal<T> {
     for (edge in this.prevDFGEdges) {
         if (edge is ContextSensitiveDataflow) {
             duplicate.prevDFGEdges.addContextSensitive(
-                edge.start,
+                edge.start as DataflowNode,
                 edge.granularity,
                 edge.callingContext,
             )

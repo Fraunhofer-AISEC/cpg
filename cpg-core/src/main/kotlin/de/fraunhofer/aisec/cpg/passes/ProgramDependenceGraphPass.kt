@@ -93,7 +93,7 @@ class ProgramDependenceGraphPass(ctx: TranslationContext) : TranslationUnitPass(
                         t.prevPDGEdges.add(it)
                     }
                     t.prevPDGEdges += t.prevCDGEdges
-                } else {
+                } else if (t is DataflowNode) {
                     t.prevDFGEdges.forEach {
                         it.dependence = DependenceType.DATA
                         t.prevPDGEdges.add(it)
@@ -103,7 +103,11 @@ class ProgramDependenceGraphPass(ctx: TranslationContext) : TranslationUnitPass(
             }
         }
 
-    private fun allEOGsFromToFlowThrough(from: Node, to: Node, through: Node): Boolean {
+    private fun allEOGsFromToFlowThrough(
+        from: EvaluatedNode,
+        to: EvaluatedNode,
+        through: EvaluatedNode,
+    ): Boolean {
         val worklist = mutableListOf(from)
         val alreadySeenNodes = identitySetOf<Node>()
 

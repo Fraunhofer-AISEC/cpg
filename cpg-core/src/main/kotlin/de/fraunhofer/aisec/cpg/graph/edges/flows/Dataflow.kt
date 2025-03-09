@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.edges.flows
 
 import com.fasterxml.jackson.annotation.JsonIgnore
-import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.DataflowNode
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeSet
 import de.fraunhofer.aisec.cpg.graph.edges.collections.MirroredEdgeCollection
@@ -147,13 +147,13 @@ fun indexed(idx: String): StringIndexedDataflowGranularity {
  */
 @RelationshipEntity
 open class Dataflow(
-    start: Node,
-    end: Node,
+    start: DataflowNode,
+    end: DataflowNode,
     /** The granularity of this dataflow. */
     @Convert(DataflowGranularityConverter::class)
     @JsonIgnore
     var granularity: Granularity = default(),
-) : ProgramDependence(start, end, DependenceType.DATA) {
+) : ProgramDependence<DataflowNode>(start, end, DependenceType.DATA) {
     override var labels = super.labels.plus("DFG")
 
     override fun equals(other: Any?): Boolean {
@@ -188,8 +188,8 @@ class CallingContextOut(
  */
 @RelationshipEntity
 class ContextSensitiveDataflow(
-    start: Node,
-    end: Node,
+    start: DataflowNode,
+    end: DataflowNode,
     /** The granularity of this dataflow. */
     granularity: Granularity = default(),
     val callingContext: CallingContext,
@@ -209,13 +209,17 @@ class ContextSensitiveDataflow(
 }
 
 /** This class represents a container of [Dataflow] property edges in a [thisRef]. */
-class Dataflows<T : Node>(
-    thisRef: Node,
+class Dataflows<T : DataflowNode>(
+    thisRef: DataflowNode,
     override var mirrorProperty: KProperty<MutableCollection<Dataflow>>,
     outgoing: Boolean,
 ) :
-    EdgeSet<Node, Dataflow>(thisRef = thisRef, init = ::Dataflow, outgoing = outgoing),
-    MirroredEdgeCollection<Node, Dataflow> {
+    EdgeSet<DataflowNode, Dataflow>(
+        thisRef = thisRef,
+        init = { start, end -> Dataflow(start as DataflowNode, end) },
+        outgoing = outgoing,
+    ),
+    MirroredEdgeCollection<DataflowNode, Dataflow> {
 
     /**
      * Adds a [ContextSensitiveDataflow] edge from/to (depending on [outgoing]) the node which
@@ -228,9 +232,9 @@ class Dataflows<T : Node>(
     ) {
         val edge =
             if (outgoing) {
-                ContextSensitiveDataflow(thisRef, node, granularity, callingContext)
+                ContextSensitiveDataflow(thisRef as DataflowNode, node, granularity, callingContext)
             } else {
-                ContextSensitiveDataflow(node, thisRef, granularity, callingContext)
+                ContextSensitiveDataflow(node, thisRef as DataflowNode, granularity, callingContext)
             }
 
         this.add(edge)

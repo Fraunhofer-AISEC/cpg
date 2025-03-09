@@ -91,14 +91,15 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
         log.trace("Handling {} (complexity: {})", node.name, c)
 
         clearFlowsOfVariableDeclarations(node)
-        val startState = DFGPassState<Set<Node>>()
+        val startState = DFGPassState<Set<DataflowNode>>()
 
         startState.declarationsState.push(node, PowersetLattice(identitySetOf()))
         node.parameters.forEach {
             startState.declarationsState.push(it, PowersetLattice(identitySetOf(it)))
         }
         val finalState =
-            iterateEOG(node.nextEOGEdges, startState, ::transfer) as? DFGPassState ?: return
+            iterateEOG(node.nextEOGEdges, startState, ::transfer)
+                as? DFGPassState<Set<DataflowNode>> ?: return
 
         removeUnreachableImplicitReturnStatement(
             node,
@@ -180,10 +181,10 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
      * even if every path reaching this point already contains a return statement.
      */
     protected open fun transfer(
-        currentEdge: Edge<Node>,
-        state: State<Node, Set<Node>>,
-        worklist: Worklist<Edge<Node>, Node, Set<Node>>,
-    ): State<Node, Set<Node>> {
+        currentEdge: Edge<EvaluatedNode>,
+        state: State<DataflowNode, Set<DataflowNode>>,
+        worklist: Worklist<Edge<EvaluatedNode>, DataflowNode, Set<DataflowNode>>,
+    ): State<DataflowNode, Set<DataflowNode>> {
         // We will set this if we write to a variable
         val writtenDeclaration: Declaration?
         val currentNode = currentEdge.end
@@ -258,7 +259,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                             ?: (assignment.target as? Reference)?.refersTo)
                         ?.let {
                             doubleState.declarationsState[it] =
-                                PowersetLattice(identitySetOf(assignment.target as Node))
+                                PowersetLattice(identitySetOf(assignment.target as DataflowNode))
                         }
                 }
             }
@@ -454,7 +455,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
         currentNode: Expression,
         base: Expression,
         subElement: Node?,
-        doubleState: DFGPassState<Set<Node>>,
+        doubleState: DFGPassState<Set<DataflowNode>>,
     ) {
         val writtenDeclaration = (base as? Reference)?.refersTo ?: return
 
@@ -501,7 +502,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
      */
     protected fun handleComprehensionExpression(
         currentNode: ComprehensionExpression,
-        state: DFGPassState<Set<Node>>,
+        state: DFGPassState<Set<DataflowNode>>,
     ) {
         val writtenTo =
             when (val variable = currentNode.variable) {
@@ -599,7 +600,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
          * A mapping of a [Node] to its [LatticeElement]. The keys of this state will later get the
          * DFG edges from the value!
          */
-        var generalState: State<Node, V> = State(),
+        var generalState: State<DataflowNode, V> = State(),
         /**
          * It's main purpose is to store the most recent mapping of a [Declaration] to its
          * [LatticeElement]. However, it is also used to figure out if we have to continue with the
@@ -610,17 +611,17 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
         var declarationsState: State<Any?, V> = State(),
 
         /** The [returnStatements] which are reachable. */
-        var returnStatements: State<Node, V> = State(),
-    ) : State<Node, V>() {
+        var returnStatements: State<DataflowNode, V> = State(),
+    ) : State<DataflowNode, V>() {
         override fun duplicate(): DFGPassState<V> {
             return DFGPassState(generalState.duplicate(), declarationsState.duplicate())
         }
 
-        override fun get(key: Node): LatticeElement<V>? {
+        override fun get(key: DataflowNode): LatticeElement<V>? {
             return generalState[key] ?: declarationsState[key]
         }
 
-        override fun lub(other: State<Node, V>): Pair<State<Node, V>, Boolean> {
+        override fun lub(other: State<DataflowNode, V>): Pair<State<DataflowNode, V>, Boolean> {
             return if (other is DFGPassState) {
                 val (_, generalUpdate) = generalState.lub(other.generalState)
                 val (_, declUpdate) = declarationsState.lub(other.declarationsState)
@@ -631,7 +632,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
             }
         }
 
-        override fun needsUpdate(other: State<Node, V>): Boolean {
+        override fun needsUpdate(other: State<DataflowNode, V>): Boolean {
             return if (other is DFGPassState) {
                 generalState.needsUpdate(other.generalState) ||
                     declarationsState.needsUpdate(other.declarationsState)
@@ -640,7 +641,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
             }
         }
 
-        override fun push(newNode: Node, newLatticeElement: LatticeElement<V>?): Boolean {
+        override fun push(newNode: DataflowNode, newLatticeElement: LatticeElement<V>?): Boolean {
             return generalState.push(newNode, newLatticeElement)
         }
 

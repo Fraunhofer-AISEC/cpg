@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.IncompatibleSignature
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.Component
+import de.fraunhofer.aisec.cpg.graph.DataflowNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
@@ -139,8 +140,8 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             }
 
         val invocationCandidates = mutableListOf<FunctionDeclaration>()
-        val work: Deque<Node> = ArrayDeque()
-        val seen = identitySetOf<Node>()
+        val work: Deque<DataflowNode> = ArrayDeque()
+        val seen = identitySetOf<DataflowNode>()
         work.push(expr)
         while (work.isNotEmpty()) {
             val curr = work.pop()
@@ -182,7 +183,7 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             val prevDFGToPush =
                 curr.prevDFGEdges
                     .filter { it.granularity is FullDataflowGranularity }
-                    .map { it.start }
+                    .map { it.start as DataflowNode }
                     .toMutableList()
             if (curr is MemberExpression && prevDFGToPush.isEmpty()) {
                 // TODO: This is only a workaround!

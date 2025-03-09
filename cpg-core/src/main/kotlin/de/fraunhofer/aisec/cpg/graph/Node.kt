@@ -77,7 +77,7 @@ abstract class AstNode(
     @Relationship(value = "LANGUAGE", direction = Relationship.Direction.OUTGOING)
     @JsonBackReference
     override var language: Language<*> = UnknownLanguage(ctx),
-) : Node(ctx), HasNameAndLocation, HasScope, LanguageProvider {
+) : DataflowNode(ctx), HasNameAndLocation, HasScope, LanguageProvider {
 
     /**
      * Virtual property to return a list of the node's children. Uses the [SubgraphWalker] to
@@ -176,6 +176,159 @@ abstract class AstNode(
     }
 }
 
+/**
+ * This class represents a node that is part of the evaluation order graph. It can be connected to
+ * other [EvaluatedNode]s via an [EvaluationOrder] edge.
+ *
+ * An evaluated note offers [EvaluationOrder] and [ControlDependence] edges.
+ */
+sealed class EvaluatedNode(ctx: TranslationContext) : Node(ctx) {
+
+    /** Incoming control flow edges. */
+    @Relationship(value = "EOG", direction = Relationship.Direction.INCOMING)
+    @PopulatedByPass(EvaluationOrderGraphPass::class)
+    var prevEOGEdges: EvaluationOrders<EvaluatedNode> =
+        EvaluationOrders<EvaluatedNode>(
+            this,
+            mirrorProperty = EvaluatedNode::nextEOGEdges,
+            outgoing = false,
+        )
+        protected set
+
+    /** Outgoing control flow edges. */
+    @Relationship(value = "EOG", direction = Relationship.Direction.OUTGOING)
+    @PopulatedByPass(EvaluationOrderGraphPass::class)
+    var nextEOGEdges: EvaluationOrders<EvaluatedNode> =
+        EvaluationOrders<EvaluatedNode>(
+            this,
+            mirrorProperty = EvaluatedNode::prevEOGEdges,
+            outgoing = true,
+        )
+        protected set
+
+    /** Virtual property for accessing [prevEOGEdges] without property edges. */
+    @PopulatedByPass(EvaluationOrderGraphPass::class)
+    var prevEOG by unwrapping(EvaluatedNode::prevEOGEdges)
+
+    /** Virtual property for accessing [nextEOGEdges] without property edges. */
+    @PopulatedByPass(EvaluationOrderGraphPass::class)
+    var nextEOG by unwrapping(EvaluatedNode::nextEOGEdges)
+
+    /**
+     * The nodes which are control-flow dominated, i.e., the children of the Control Dependence
+     * Graph (CDG).
+     */
+    @PopulatedByPass(ControlDependenceGraphPass::class)
+    @Relationship(value = "CDG", direction = Relationship.Direction.OUTGOING)
+    var nextCDGEdges: ControlDependences<EvaluatedNode> =
+        ControlDependences(this, mirrorProperty = EvaluatedNode::prevCDGEdges, outgoing = true)
+        protected set
+
+    var nextCDG by unwrapping(EvaluatedNode::nextCDGEdges)
+
+    /**
+     * The nodes which dominate this node via the control-flow, i.e., the parents of the Control
+     * Dependence Graph (CDG).
+     */
+    @PopulatedByPass(ControlDependenceGraphPass::class)
+    @Relationship(value = "CDG", direction = Relationship.Direction.INCOMING)
+    var prevCDGEdges: ControlDependences<EvaluatedNode> =
+        ControlDependences<EvaluatedNode>(
+            this,
+            mirrorProperty = EvaluatedNode::nextCDGEdges,
+            outgoing = false,
+        )
+        protected set
+
+    var prevCDG by unwrapping(EvaluatedNode::prevCDGEdges)
+}
+
+/**
+ * This class represents a node that is part of the data flow graph. It can be connected to other
+ * [DataflowNode]s via a [Dataflow] edge.
+ *
+ * Currently, we only allow [AstNode] and [OverlayNode] to be part of the DFG.
+ *
+ * A [DataflowNode] offers the following edges:
+ * - [Dataflow]
+ * - [ProgramDependence]
+ * - [EvaluationOrder] (through [EvaluatedNode])
+ * - [ControlDependence] (through [EvaluatedNode])
+ */
+sealed class DataflowNode(ctx: TranslationContext) : EvaluatedNode(ctx) {
+    /** Incoming data flow edges */
+    @Relationship(value = "DFG", direction = Relationship.Direction.INCOMING)
+    @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
+    var prevDFGEdges: Dataflows<DataflowNode> =
+        Dataflows<DataflowNode>(this, mirrorProperty = DataflowNode::nextDFGEdges, outgoing = false)
+        protected set
+
+    /** Virtual property for accessing [prevDFGEdges] without property edges. */
+    @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
+    var prevDFG by unwrapping(DataflowNode::prevDFGEdges)
+
+    /**
+     * Virtual property for accessing [nextDFGEdges] that have a
+     * [de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity].
+     */
+    @DoNotPersist
+    @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
+    val prevFullDFG: List<DataflowNode>
+        get() {
+            return prevDFGEdges
+                .filter { it.granularity is FullDataflowGranularity }
+                .map { it.start as DataflowNode }
+        }
+
+    /** Outgoing data flow edges */
+    @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
+    @Relationship(value = "DFG", direction = Relationship.Direction.OUTGOING)
+    var nextDFGEdges: Dataflows<DataflowNode> =
+        Dataflows<DataflowNode>(this, mirrorProperty = DataflowNode::prevDFGEdges, outgoing = true)
+        protected set
+
+    /** Virtual property for accessing [nextDFGEdges] without property edges. */
+    @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
+    var nextDFG by unwrapping(DataflowNode::nextDFGEdges)
+
+    /**
+     * Virtual property for accessing [nextDFGEdges] that have a
+     * [de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity].
+     */
+    @DoNotPersist
+    @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
+    val nextFullDFG: List<DataflowNode>
+        get() {
+            return nextDFGEdges.filter { it.granularity is FullDataflowGranularity }.map { it.end }
+        }
+
+    /** Outgoing Program Dependence Edges. */
+    @PopulatedByPass(ProgramDependenceGraphPass::class)
+    @Relationship(value = "PDG", direction = Relationship.Direction.OUTGOING)
+    var nextPDGEdges: ProgramDependences<DataflowNode> =
+        ProgramDependences<DataflowNode>(
+            this,
+            mirrorProperty = DataflowNode::prevPDGEdges,
+            outgoing = false,
+        )
+        protected set
+
+    var nextPDG by unwrapping(DataflowNode::nextPDGEdges)
+
+    /** Incoming Program Dependence Edges. */
+    @PopulatedByPass(ProgramDependenceGraphPass::class)
+    @Relationship(value = "PDG", direction = Relationship.Direction.INCOMING)
+    var prevPDGEdges: ProgramDependences<DataflowNode> =
+        ProgramDependences<DataflowNode>(
+            this,
+            mirrorProperty = DataflowNode::nextPDGEdges,
+            outgoing = false,
+        )
+        protected set
+
+    var prevPDG by unwrapping(DataflowNode::prevDFGEdges)
+}
+
 /** The base class for all graph objects that are going to be persisted in the database. */
 abstract class Node(
     /**
@@ -218,114 +371,6 @@ abstract class Node(
      * analyzing snippets of code without an associated file name.
      */
     @PopulatedByPass(FilenameMapper::class) var file: String? = null
-
-    /** Incoming control flow edges. */
-    @Relationship(value = "EOG", direction = Relationship.Direction.INCOMING)
-    @PopulatedByPass(EvaluationOrderGraphPass::class)
-    var prevEOGEdges: EvaluationOrders<Node> =
-        EvaluationOrders<Node>(this, mirrorProperty = Node::nextEOGEdges, outgoing = false)
-        protected set
-
-    /** Outgoing control flow edges. */
-    @Relationship(value = "EOG", direction = Relationship.Direction.OUTGOING)
-    @PopulatedByPass(EvaluationOrderGraphPass::class)
-    var nextEOGEdges: EvaluationOrders<Node> =
-        EvaluationOrders<Node>(this, mirrorProperty = Node::prevEOGEdges, outgoing = true)
-        protected set
-
-    /**
-     * The nodes which are control-flow dominated, i.e., the children of the Control Dependence
-     * Graph (CDG).
-     */
-    @PopulatedByPass(ControlDependenceGraphPass::class)
-    @Relationship(value = "CDG", direction = Relationship.Direction.OUTGOING)
-    var nextCDGEdges: ControlDependences<Node> =
-        ControlDependences(this, mirrorProperty = Node::prevCDGEdges, outgoing = true)
-        protected set
-
-    var nextCDG by unwrapping(Node::nextCDGEdges)
-
-    /**
-     * The nodes which dominate this node via the control-flow, i.e., the parents of the Control
-     * Dependence Graph (CDG).
-     */
-    @PopulatedByPass(ControlDependenceGraphPass::class)
-    @Relationship(value = "CDG", direction = Relationship.Direction.INCOMING)
-    var prevCDGEdges: ControlDependences<Node> =
-        ControlDependences<Node>(this, mirrorProperty = Node::nextCDGEdges, outgoing = false)
-        protected set
-
-    var prevCDG by unwrapping(Node::prevCDGEdges)
-
-    /** Virtual property for accessing [prevEOGEdges] without property edges. */
-    @PopulatedByPass(EvaluationOrderGraphPass::class) var prevEOG by unwrapping(Node::prevEOGEdges)
-
-    /** Virtual property for accessing [nextEOGEdges] without property edges. */
-    @PopulatedByPass(EvaluationOrderGraphPass::class) var nextEOG by unwrapping(Node::nextEOGEdges)
-
-    /** Incoming data flow edges */
-    @Relationship(value = "DFG", direction = Relationship.Direction.INCOMING)
-    @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
-    var prevDFGEdges: Dataflows<Node> =
-        Dataflows<Node>(this, mirrorProperty = Node::nextDFGEdges, outgoing = false)
-        protected set
-
-    /** Virtual property for accessing [prevDFGEdges] without property edges. */
-    @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
-    var prevDFG by unwrapping(Node::prevDFGEdges)
-
-    /**
-     * Virtual property for accessing [nextDFGEdges] that have a
-     * [de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity].
-     */
-    @DoNotPersist
-    @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
-    val prevFullDFG: List<Node>
-        get() {
-            return prevDFGEdges
-                .filter { it.granularity is FullDataflowGranularity }
-                .map { it.start }
-        }
-
-    /** Outgoing data flow edges */
-    @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
-    @Relationship(value = "DFG", direction = Relationship.Direction.OUTGOING)
-    var nextDFGEdges: Dataflows<Node> =
-        Dataflows<Node>(this, mirrorProperty = Node::prevDFGEdges, outgoing = true)
-        protected set
-
-    /** Virtual property for accessing [nextDFGEdges] without property edges. */
-    @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
-    var nextDFG by unwrapping(Node::nextDFGEdges)
-
-    /**
-     * Virtual property for accessing [nextDFGEdges] that have a
-     * [de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity].
-     */
-    @DoNotPersist
-    @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
-    val nextFullDFG: List<Node>
-        get() {
-            return nextDFGEdges.filter { it.granularity is FullDataflowGranularity }.map { it.end }
-        }
-
-    /** Outgoing Program Dependence Edges. */
-    @PopulatedByPass(ProgramDependenceGraphPass::class)
-    @Relationship(value = "PDG", direction = Relationship.Direction.OUTGOING)
-    var nextPDGEdges: ProgramDependences<Node> =
-        ProgramDependences<Node>(this, mirrorProperty = Node::prevPDGEdges, outgoing = false)
-        protected set
-
-    var nextPDG by unwrapping(Node::nextPDGEdges)
-
-    /** Incoming Program Dependence Edges. */
-    @PopulatedByPass(ProgramDependenceGraphPass::class)
-    @Relationship(value = "PDG", direction = Relationship.Direction.INCOMING)
-    var prevPDGEdges: ProgramDependences<Node> =
-        ProgramDependences<Node>(this, mirrorProperty = Node::nextPDGEdges, outgoing = false)
-        protected set
-
-    var prevPDG by unwrapping(Node::prevDFGEdges)
 
     /**
      * If a node is marked as being inferred, it means that it was created artificially and does not

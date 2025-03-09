@@ -89,10 +89,10 @@ object Util {
         q: Quantifier = Quantifier.ALL,
         cn: Connect = Connect.SUBTREE,
         en: Edge,
-        n: Node?,
+        n: EvaluatedNode?,
         cr: Connect = Connect.SUBTREE,
         predicate: ((EvaluationOrder) -> Boolean)? = null,
-        refs: List<Node?>,
+        refs: List<EvaluatedNode?>,
     ): Boolean {
         if (n == null) {
             return false
@@ -102,13 +102,13 @@ object Util {
         val er = if (en == Edge.ENTRIES) Edge.EXITS else Edge.ENTRIES
         var refSide = refs
         nodeSide =
-            if (cn == Connect.SUBTREE) {
+            (if (cn == Connect.SUBTREE) {
                 val border = SubgraphWalker.getEOGPathEdges(n)
                 if (en == Edge.ENTRIES) {
                     val pe = border.entries.flatMap { it.prevEOGEdges }
                     if (Quantifier.ALL == q && pe.any { predicate?.invoke(it) == false })
                         return false
-                    pe.filter { predicate?.invoke(it) != false }.map { it.start }
+                    pe.filter { predicate?.invoke(it) != false }.map { it.start as EvaluatedNode }
                 } else border.exits
             } else {
                 nodeSide.flatMap {
@@ -119,7 +119,8 @@ object Util {
                         pe.filter { predicate?.invoke(it) != false }.map { it.start }
                     } else listOf(it)
                 }
-            }
+            })
+                as List<EvaluatedNode>
         refSide =
             if (cr == Connect.SUBTREE) {
                 val borders = refs.map { SubgraphWalker.getEOGPathEdges(it) }
@@ -129,7 +130,8 @@ object Util {
                         val pe = border.entries.flatMap { it.prevEOGEdges }
                         if (Quantifier.ALL == q && pe.any { predicate?.invoke(it) == false })
                             return false
-                        pe.filter { predicate?.invoke(it) != false }.map { it.start }
+                        pe.filter { predicate?.invoke(it) != false }
+                            .map { it.start as EvaluatedNode }
                     } else border.exits
                 }
             } else {
@@ -138,7 +140,8 @@ object Util {
                         val pe = node?.prevEOGEdges ?: listOf()
                         if (Quantifier.ALL == q && pe.any { predicate?.invoke(it) == false })
                             return false
-                        pe.filter { predicate?.invoke(it) != false }.map { it.start }
+                        pe.filter { predicate?.invoke(it) != false }
+                            .map { it.start as EvaluatedNode }
                     } else listOf(node)
                 }
             }
@@ -502,7 +505,7 @@ object Util {
      * @param branchingDeclaration
      */
     fun addDFGEdgesForMutuallyExclusiveBranchingExpression(
-        n: Node,
+        n: DataflowNode,
         branchingExp: AstNode?,
         branchingDeclaration: AstNode?,
     ) {

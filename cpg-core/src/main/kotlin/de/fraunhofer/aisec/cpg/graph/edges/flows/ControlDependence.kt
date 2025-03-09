@@ -25,7 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.edges.flows
 
-import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.EvaluatedNode
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeList
 import de.fraunhofer.aisec.cpg.graph.edges.collections.MirroredEdgeCollection
 import de.fraunhofer.aisec.cpg.passes.ControlDependenceGraphPass
@@ -38,11 +38,11 @@ import org.neo4j.ogm.annotation.RelationshipEntity
  */
 @RelationshipEntity
 class ControlDependence(
-    start: Node,
-    end: Node,
+    start: EvaluatedNode,
+    end: EvaluatedNode,
     /** A set of [EvaluationOrder.branch] values. */
     var branches: Set<Boolean> = setOf(),
-) : ProgramDependence(start, end, DependenceType.CONTROL) {
+) : ProgramDependence<EvaluatedNode>(start, end, DependenceType.CONTROL) {
 
     override var labels = super.labels.plus("CDG")
 
@@ -60,16 +60,21 @@ class ControlDependence(
 }
 
 /** A container of [ControlDependence] edges. [NodeType] is necessary because of the Neo4J OGM. */
-class ControlDependences<NodeType : Node> :
-    EdgeList<Node, ControlDependence>, MirroredEdgeCollection<Node, ControlDependence> {
+class ControlDependences<NodeType : EvaluatedNode> :
+    EdgeList<EvaluatedNode, ControlDependence>,
+    MirroredEdgeCollection<EvaluatedNode, ControlDependence> {
 
     override var mirrorProperty: KProperty<MutableCollection<ControlDependence>>
 
     constructor(
-        thisRef: Node,
+        thisRef: EvaluatedNode,
         mirrorProperty: KProperty<MutableCollection<ControlDependence>>,
         outgoing: Boolean,
-    ) : super(thisRef = thisRef, init = ::ControlDependence, outgoing = outgoing) {
+    ) : super(
+        thisRef = thisRef,
+        init = { start, end -> ControlDependence(start as EvaluatedNode, end) },
+        outgoing = outgoing,
+    ) {
         this.mirrorProperty = mirrorProperty
     }
 }

@@ -552,7 +552,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * - from base (if available) to the CallExpression
      * - from all arguments to the CallExpression
      */
-    protected fun handleUnresolvedCalls(call: CallExpression, dfgTarget: Node) {
+    protected fun handleUnresolvedCalls(call: CallExpression, dfgTarget: DataflowNode) {
         if (call is MemberCallExpression && !call.isStatic) {
             call.base?.let { dfgTarget.prevDFGEdges += it }
         }

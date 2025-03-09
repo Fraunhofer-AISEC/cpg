@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.edges.flows
 
+import de.fraunhofer.aisec.cpg.graph.EvaluatedNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeList
@@ -40,8 +41,8 @@ import org.neo4j.ogm.annotation.RelationshipEntity
  */
 @RelationshipEntity
 class EvaluationOrder(
-    start: Node,
-    end: Node,
+    start: EvaluatedNode,
+    end: EvaluatedNode,
     /**
      * True, if the edge flows into unreachable code e.g. a branch condition which is always false.
      */
@@ -53,7 +54,7 @@ class EvaluationOrder(
      * Otherwise, this property is null.
      */
     var branch: Boolean? = null,
-) : Edge<Node>(start, end) {
+) : Edge<EvaluatedNode>(start, end) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is EvaluationOrder) return false
@@ -74,23 +75,24 @@ class EvaluationOrder(
 
 /**
  * Holds a container of [EvaluationOrder] edges. The canonical version of this lives in
- * [Node.prevEOGEdges] / [Node.nextEOGEdges] and is populated by the [EvaluationOrderGraphPass].
+ * [EvaluatedNode.prevEOGEdges] / [EvaluatedNode.nextEOGEdges] and is populated by the
+ * [EvaluationOrderGraphPass].
  *
  * Note: We would not actually need the type parameter [NodeType] here, since all target nodes are
- * of type [Node], but if we skip this parameter, the Neo4J exporter does not recognize this as a
- * "list".
+ * of type [EvaluatedNode], but if we skip this parameter, the Neo4J exporter does not recognize
+ * this as a "list".
  */
-class EvaluationOrders<NodeType : Node>(
+class EvaluationOrders<NodeType : EvaluatedNode>(
     thisRef: Node,
     override var mirrorProperty: KProperty<MutableCollection<EvaluationOrder>>,
     outgoing: Boolean = true,
 ) :
-    EdgeList<Node, EvaluationOrder>(
+    EdgeList<EvaluatedNode, EvaluationOrder>(
         thisRef = thisRef,
-        init = ::EvaluationOrder,
+        init = { start, end -> EvaluationOrder(start as EvaluatedNode, end) },
         outgoing = outgoing,
     ),
-    MirroredEdgeCollection<Node, EvaluationOrder>
+    MirroredEdgeCollection<EvaluatedNode, EvaluationOrder>
 
 /**
  * This function inserts the given [newNode] before the current node ([this]) in its existing EOG
@@ -112,8 +114,8 @@ class EvaluationOrders<NodeType : Node>(
  * <node2> -- EOG -->
  * ```
  */
-fun Node.insertNodeBeforeInEOGPath(
-    newNode: Node,
+fun EvaluatedNode.insertNodeBeforeInEOGPath(
+    newNode: EvaluatedNode,
     builder: ((EvaluationOrder) -> Unit) = {},
 ): Boolean {
     // Construct a new edge from the given node to the current node
@@ -155,8 +157,8 @@ fun Node.insertNodeBeforeInEOGPath(
  *                              -- EOG --> <node2>
  * ```
  */
-fun Node.insertNodeAfterwardInEOGPath(
-    newNode: Node,
+fun EvaluatedNode.insertNodeAfterwardInEOGPath(
+    newNode: EvaluatedNode,
     builder: ((EvaluationOrder) -> Unit) = {},
 ): Boolean {
     // Construct a new edge from the current node to the given node

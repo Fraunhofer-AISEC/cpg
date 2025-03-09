@@ -28,24 +28,19 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.BranchingNode
+import de.fraunhofer.aisec.cpg.graph.EvaluatedNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.cyclomaticComplexity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
-import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CollectionComprehension
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ComprehensionExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConditionalExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ShortCircuitOperator
+import de.fraunhofer.aisec.cpg.graph.statements.*
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.functional.Lattice
 import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
-import kotlin.collections.component1
-import kotlin.collections.component2
 
 /** This pass builds the Control Dependence Graph (CDG) by iterating through the EOG. */
 @DependsOn(EvaluationOrderGraphPass::class)
@@ -91,7 +86,9 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
         }
 
         val prevEOGState =
-            PrevEOGState(innerLattice = PrevEOGLattice(innerLattice = PowersetLattice<Node>()))
+            PrevEOGState(
+                innerLattice = PrevEOGLattice(innerLattice = PowersetLattice<EvaluatedNode>())
+            )
 
         // Maps nodes to their "cdg parent" (i.e. the dominator) and also has the information
         // through which path it is reached. If all outgoing paths of the node's dominator result in
@@ -113,7 +110,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
         for ((node, dominatorPaths) in finalState) {
             val dominatorsList =
                 dominatorPaths.entries.map { (k, v) -> Pair(k, v.toMutableSet()) }.toMutableList()
-            val finalDominators = mutableListOf<Pair<Node, MutableSet<Node>>>()
+            val finalDominators = mutableListOf<Pair<EvaluatedNode, MutableSet<EvaluatedNode>>>()
             val conditionKeys =
                 dominatorPaths.entries
                     .filter { (k, _) ->
@@ -242,7 +239,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
                     functionDeclaration.allChildren<
                         ComprehensionExpression
                     >()) // TODO: May be simplified when resolving issue 2027
-                .filterIsInstance<Node>()
+                .filterIsInstance<EvaluatedNode>()
                 .map { branchingNode ->
                     val mergingPoints =
                         if (branchingNode.nextEOGEdges.any { !it.isConditionalBranch() }) {
@@ -284,7 +281,7 @@ fun handleEdge(
     val lattice = lattice as? PrevEOGState ?: return currentState
     var newState = currentState
 
-    val currentStart = currentEdge.start
+    val currentStart = currentEdge.start as EvaluatedNode
 
     // Check if we start in a branching node and if this edge leads to the conditional
     // branch. In this case, the next node will move "one layer downwards" in the CDG.
@@ -381,17 +378,18 @@ private fun IfStatement.allBranchesFromMyThenBranchGoThrough(node: Node?): Boole
     return true
 }
 
-typealias PrevEOGLatticeElement = MapLattice.Element<Node, PowersetLattice.Element<Node>>
+typealias PrevEOGLatticeElement =
+    MapLattice.Element<EvaluatedNode, PowersetLattice.Element<EvaluatedNode>>
 
-typealias PrevEOGLattice = MapLattice<Node, PowersetLattice.Element<Node>>
+typealias PrevEOGLattice = MapLattice<EvaluatedNode, PowersetLattice.Element<EvaluatedNode>>
 
-typealias PrevEOGStateElement = MapLattice.Element<Node, PrevEOGLatticeElement>
+typealias PrevEOGStateElement = MapLattice.Element<EvaluatedNode, PrevEOGLatticeElement>
 
-typealias PrevEOGState = MapLattice<Node, PrevEOGLatticeElement>
+typealias PrevEOGState = MapLattice<EvaluatedNode, PrevEOGLatticeElement>
 
 fun PrevEOGState.push(
     currentElement: PrevEOGStateElement,
-    newNode: Node,
+    newNode: EvaluatedNode,
     newEOGLattice: PrevEOGLatticeElement,
 ): PrevEOGStateElement {
     return this.lub(currentElement, PrevEOGStateElement(newNode to newEOGLattice))

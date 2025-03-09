@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.ContextProvider
+import de.fraunhofer.aisec.cpg.graph.EvaluatedNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.StatementHolder
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
@@ -176,21 +177,19 @@ object SubgraphWalker {
      * @param n - root of the subgraph.
      * @return Two lists, list 1 contains all eog entries and list 2 contains all exits.
      */
-    fun getEOGPathEdges(n: Node?): Border {
+    fun getEOGPathEdges(n: EvaluatedNode?): Border {
         val border = Border()
         val flattedASTTree = if (n is AstNode) flattenAST(n) else listOf()
         val eogNodes =
-            flattedASTTree.filter { node: Node ->
-                node.prevEOG.isNotEmpty() || node.nextEOG.isNotEmpty()
-            }
+            flattedASTTree.filter { node -> node.prevEOG.isNotEmpty() || node.nextEOG.isNotEmpty() }
         // Nodes that are incoming edges, no other node
         border.entries =
             eogNodes
-                .filter { node: Node -> node.prevEOG.any { prev -> prev !in eogNodes } }
+                .filter { node -> node.prevEOG.any { prev -> prev !in eogNodes } }
                 .toMutableList()
         border.exits =
             eogNodes
-                .filter { node: Node -> node.nextEOG.any { next -> next !in eogNodes } }
+                .filter { node -> node.nextEOG.any { next -> next !in eogNodes } }
                 .toMutableList()
         return border
     }
@@ -201,8 +200,8 @@ object SubgraphWalker {
      * EOG subgraph, EOG entries and exits in a CFG subgraph.
      */
     class Border {
-        var entries = mutableListOf<Node>()
-        var exits = mutableListOf<Node>()
+        var entries = mutableListOf<EvaluatedNode>()
+        var exits = mutableListOf<EvaluatedNode>()
     }
 
     class IterativeGraphWalker {

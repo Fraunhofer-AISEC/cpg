@@ -48,7 +48,7 @@ interface StepSelector {
      */
     fun followEdge(
         currentNode: Node,
-        edge: Edge<Node>,
+        edge: Edge<out Node>,
         ctx: Context,
         analysisDirection: AnalysisDirection,
     ): Boolean
@@ -67,7 +67,7 @@ sealed class AnalysisScope(val maxSteps: Int? = null) : StepSelector
 class Intraprocedural(maxSteps: Int? = null) : AnalysisScope(maxSteps) {
     override fun followEdge(
         currentNode: Node,
-        edge: Edge<Node>,
+        edge: Edge<out Node>,
         ctx: Context,
         analysisDirection: AnalysisDirection,
     ): Boolean {
@@ -88,7 +88,7 @@ class Interprocedural(val maxCallDepth: Int? = null, maxSteps: Int? = null) :
     AnalysisScope(maxSteps) {
     override fun followEdge(
         currentNode: Node,
-        edge: Edge<Node>,
+        edge: Edge<out Node>,
         ctx: Context,
         analysisDirection: AnalysisDirection,
     ): Boolean {
@@ -119,42 +119,42 @@ sealed class AnalysisDirection(val graphToFollow: GraphToFollow) {
      * be configured with the [currentNode], the [scope] of the analysis, the current [Context][ctx]
      * and the [sensitivities] which should be used by the analysis.
      */
-    abstract fun pickNextStep(
-        currentNode: Node,
+    abstract fun <T : Node> pickNextStep(
+        currentNode: T,
         scope: AnalysisScope,
         ctx: Context,
         vararg sensitivities: AnalysisSensitivity,
-    ): Collection<Pair<Node, Context>>
+    ): Collection<Pair<T, Context>>
 
     /**
      * Considering the [edge], it determines which node (start or end of the edge) will be used as
      * next step.
      */
-    abstract fun unwrapNextStepFromEdge(edge: Edge<Node>): Node
+    abstract fun <T : Node> unwrapNextStepFromEdge(edge: Edge<T>): Node
 
     /**
      * Determines if the [edge] starting at [currentNode] requires to push a [CallExpression] on the
      * stack.
      */
-    abstract fun edgeRequiresCallPush(currentNode: Node, edge: Edge<Node>): Boolean
+    abstract fun edgeRequiresCallPush(currentNode: Node, edge: Edge<out Node>): Boolean
 
     /**
      * Determines if the [edge] starting at [currentNode] requires to pop a [CallExpression] from
      * the stack.
      */
-    abstract fun edgeRequiresCallPop(currentNode: Node, edge: Edge<Node>): Boolean
+    abstract fun edgeRequiresCallPop(currentNode: Node, edge: Edge<out Node>): Boolean
 
     /**
      * Filters all provided [edges] and checks if they are in [scope] and fulfill the provided
      * [sensitivities] under the given [Context][ctx].
      */
-    internal fun filterEdges(
-        currentNode: Node,
-        edges: Collection<Edge<Node>>,
+    internal fun <T : Node> filterEdges(
+        currentNode: T,
+        edges: Collection<Edge<T>>,
         ctx: Context,
         scope: AnalysisScope,
         vararg sensitivities: AnalysisSensitivity,
-    ): Collection<Pair<Edge<Node>, Context>> {
+    ): Collection<Pair<Edge<T>, Context>> {
         return edges.mapNotNull { edge ->
             val newCtx = ctx.clone()
             if (
@@ -169,14 +169,17 @@ sealed class AnalysisDirection(val graphToFollow: GraphToFollow) {
 
 /** Follow the order of the [graphToFollow] */
 class Forward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) {
-    override fun pickNextStep(
-        currentNode: Node,
+    override fun <T : Node> pickNextStep(
+        currentNode: T,
         scope: AnalysisScope,
         ctx: Context,
         vararg sensitivities: AnalysisSensitivity,
-    ): Collection<Pair<Node, Context>> {
+    ): Collection<Pair<T, Context>> {
         return when (graphToFollow) {
             GraphToFollow.DFG -> {
+                val currentNode =
+                    currentNode as? DataflowNode
+                        ?: throw UnsupportedOperationException("invalid node type")
                 filterEdges(
                         currentNode = currentNode,
                         edges =
@@ -189,10 +192,13 @@ class Forward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) {
                     .map { (edge, newCtx) -> this.unwrapNextStepFromEdge(edge) to newCtx }
             }
             GraphToFollow.EOG -> {
+                val currentNode =
+                    currentNode as? EvaluatedNode
+                        ?: throw UnsupportedOperationException("invalid node type")
                 val interprocedural =
                     if (currentNode is CallExpression && currentNode.invokes.isNotEmpty()) {
                         // Enter the functions/methods which are/can be invoked here
-                        val called = currentNode.invokeEdges as Collection<Edge<Node>>
+                        val called = currentNode.invokeEdges as Collection<EvaluationOrder>
 
                         filterEdges(
                                 currentNode = currentNode,
@@ -224,8 +230,8 @@ class Forward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) {
                         filteredReturnedTo.flatMap { (nextEdge, newCtx) ->
                             // nextEdge.start is the call expression.
                             filterEdges(
-                                    currentNode = nextEdge.start,
-                                    edges = nextEdge.start.nextEOGEdges,
+                                    currentNode = nextEdge.start as EvaluatedNode,
+                                    edges = (nextEdge.start as EvaluatedNode).nextEOGEdges,
                                     ctx = newCtx,
                                     scope = scope,
                                     sensitivities = sensitivities,
@@ -259,13 +265,14 @@ class Forward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) {
                 }
             }
         }
+            as Collection<Pair<T, Context>>
     }
 
-    override fun unwrapNextStepFromEdge(edge: Edge<Node>): Node {
+    override fun <T : Node> unwrapNextStepFromEdge(edge: Edge<T>): T {
         return edge.end
     }
 
-    override fun edgeRequiresCallPush(currentNode: Node, edge: Edge<Node>): Boolean {
+    override fun edgeRequiresCallPush(currentNode: Node, edge: Edge<out Node>): Boolean {
         return when (graphToFollow) {
             GraphToFollow.DFG -> {
                 edge is ContextSensitiveDataflow && edge.callingContext is CallingContextIn
@@ -276,14 +283,16 @@ class Forward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) {
         }
     }
 
-    override fun edgeRequiresCallPop(currentNode: Node, edge: Edge<Node>): Boolean {
+    override fun edgeRequiresCallPop(currentNode: Node, edge: Edge<out Node>): Boolean {
         return when (graphToFollow) {
             GraphToFollow.DFG -> {
                 edge is ContextSensitiveDataflow && edge.callingContext is CallingContextOut
             }
 
             GraphToFollow.EOG -> {
-                edge is Invoke && (currentNode is ReturnStatement || currentNode.nextEOG.isEmpty())
+                edge is Invoke &&
+                    (currentNode is ReturnStatement ||
+                        (currentNode as EvaluatedNode).nextEOG.isEmpty())
             }
         }
     }
@@ -291,14 +300,17 @@ class Forward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) {
 
 /** Against the order of the [graphToFollow] */
 class Backward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) {
-    override fun pickNextStep(
-        currentNode: Node,
+    override fun <T : Node> pickNextStep(
+        currentNode: T,
         scope: AnalysisScope,
         ctx: Context,
         vararg sensitivities: AnalysisSensitivity,
-    ): Collection<Pair<Node, Context>> {
+    ): Collection<Pair<T, Context>> {
         return when (graphToFollow) {
             GraphToFollow.DFG -> {
+                val currentNode =
+                    currentNode as? DataflowNode
+                        ?: throw UnsupportedOperationException("invalid node type")
                 filterEdges(
                         currentNode = currentNode,
                         edges =
@@ -312,6 +324,9 @@ class Backward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) 
             }
 
             GraphToFollow.EOG -> {
+                val currentNode =
+                    currentNode as? EvaluatedNode
+                        ?: throw UnsupportedOperationException("invalid node type")
                 val interprocedural =
                     if (currentNode is CallExpression && currentNode.invokes.isNotEmpty()) {
                         val returnedFrom = currentNode.invokeEdges as Collection<Edge<Node>>
@@ -340,8 +355,8 @@ class Backward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) 
                         filteredCalledBy.flatMap { (nextEdge, newCtx) ->
                             // nextEdge.start is the call expression
                             filterEdges(
-                                    currentNode = nextEdge.start,
-                                    edges = nextEdge.start.prevEOGEdges,
+                                    currentNode = nextEdge.start as EvaluatedNode,
+                                    edges = (nextEdge.start as EvaluatedNode).prevEOGEdges,
                                     ctx = newCtx,
                                     scope = scope,
                                     sensitivities = sensitivities,
@@ -375,13 +390,14 @@ class Backward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) 
                 }
             }
         }
+            as Collection<Pair<T, Context>>
     }
 
-    override fun unwrapNextStepFromEdge(edge: Edge<Node>): Node {
+    override fun <T : Node> unwrapNextStepFromEdge(edge: Edge<T>): Node {
         return edge.start
     }
 
-    override fun edgeRequiresCallPush(currentNode: Node, edge: Edge<Node>): Boolean {
+    override fun edgeRequiresCallPush(currentNode: Node, edge: Edge<out Node>): Boolean {
         return when (graphToFollow) {
             GraphToFollow.DFG -> {
                 edge is ContextSensitiveDataflow && edge.callingContext is CallingContextOut
@@ -393,7 +409,7 @@ class Backward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) 
         }
     }
 
-    override fun edgeRequiresCallPop(currentNode: Node, edge: Edge<Node>): Boolean {
+    override fun edgeRequiresCallPop(currentNode: Node, edge: Edge<out Node>): Boolean {
         return when (graphToFollow) {
             GraphToFollow.DFG -> {
                 edge is ContextSensitiveDataflow && edge.callingContext is CallingContextIn
@@ -408,24 +424,24 @@ class Backward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) 
 
 /** In and against the order of the EOG */
 class Bidirectional(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) {
-    override fun pickNextStep(
-        currentNode: Node,
+    override fun <T : Node> pickNextStep(
+        currentNode: T,
         scope: AnalysisScope,
         ctx: Context,
         vararg sensitivities: AnalysisSensitivity,
-    ): Collection<Pair<Node, Context>> {
+    ): Collection<Pair<T, Context>> {
         TODO("Not yet implemented")
     }
 
-    override fun unwrapNextStepFromEdge(edge: Edge<Node>): Node {
+    override fun <T : Node> unwrapNextStepFromEdge(edge: Edge<T>): Node {
         TODO("Not yet implemented")
     }
 
-    override fun edgeRequiresCallPush(currentNode: Node, edge: Edge<Node>): Boolean {
+    override fun edgeRequiresCallPush(currentNode: Node, edge: Edge<out Node>): Boolean {
         TODO("Not yet implemented")
     }
 
-    override fun edgeRequiresCallPop(currentNode: Node, edge: Edge<Node>): Boolean {
+    override fun edgeRequiresCallPop(currentNode: Node, edge: Edge<out Node>): Boolean {
         TODO("Not yet implemented")
     }
 }
@@ -449,7 +465,7 @@ abstract class AnalysisSensitivity : StepSelector {
 object FilterUnreachableEOG : AnalysisSensitivity() {
     override fun followEdge(
         currentNode: Node,
-        edge: Edge<Node>,
+        edge: Edge<out Node>,
         ctx: Context,
         analysisDirection: AnalysisDirection,
     ): Boolean {
@@ -461,7 +477,7 @@ object FilterUnreachableEOG : AnalysisSensitivity() {
 object OnlyFullDFG : AnalysisSensitivity() {
     override fun followEdge(
         currentNode: Node,
-        edge: Edge<Node>,
+        edge: Edge<out Node>,
         ctx: Context,
         analysisDirection: AnalysisDirection,
     ): Boolean {
@@ -473,7 +489,7 @@ object OnlyFullDFG : AnalysisSensitivity() {
 object ContextSensitive : AnalysisSensitivity() {
     override fun followEdge(
         currentNode: Node,
-        edge: Edge<Node>,
+        edge: Edge<out Node>,
         ctx: Context,
         analysisDirection: AnalysisDirection,
     ): Boolean {
@@ -510,7 +526,7 @@ object ContextSensitive : AnalysisSensitivity() {
 object FieldSensitive : AnalysisSensitivity() {
     override fun followEdge(
         currentNode: Node,
-        edge: Edge<Node>,
+        edge: Edge<out Node>,
         ctx: Context,
         analysisDirection: AnalysisDirection,
     ): Boolean {
@@ -551,7 +567,7 @@ object FieldSensitive : AnalysisSensitivity() {
 object Implicit : AnalysisSensitivity() {
     override fun followEdge(
         currentNode: Node,
-        edge: Edge<Node>,
+        edge: Edge<out Node>,
         ctx: Context,
         analysisDirection: AnalysisDirection,
     ): Boolean {

@@ -28,6 +28,8 @@ package de.fraunhofer.aisec.cpg.processing.strategy
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Component
+import de.fraunhofer.aisec.cpg.graph.DataflowNode
+import de.fraunhofer.aisec.cpg.graph.EvaluatedNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.ast.*
@@ -58,12 +60,12 @@ object Strategy {
      * @param x Current node in EOG.
      * @return Iterator over successors.
      */
-    fun EOG_FORWARD(x: Node): Iterator<Node> {
+    fun EOG_FORWARD(x: EvaluatedNode): Iterator<Node> {
         return x.nextEOG.iterator()
     }
 
     /** A strategy to traverse the EOG in forward direction, but only if the edge is reachable. */
-    fun REACHABLE_EOG_FORWARD(x: Node): Iterator<Node> {
+    fun REACHABLE_EOG_FORWARD(x: EvaluatedNode): Iterator<Node> {
         return x.nextEOGEdges.filter { !it.unreachable }.map { it.end }.iterator()
     }
 
@@ -93,7 +95,7 @@ object Strategy {
      * @param x Current node in EOG.
      * @return Iterator over successors.
      */
-    fun EOG_BACKWARD(x: Node): Iterator<Node> {
+    fun EOG_BACKWARD(x: EvaluatedNode): Iterator<Node> {
         return x.prevEOG.iterator()
     }
 
@@ -103,7 +105,7 @@ object Strategy {
      * @param x Current node in DFG.
      * @return Iterator over successors.
      */
-    fun DFG_FORWARD(x: Node): Iterator<Node> {
+    fun DFG_FORWARD(x: DataflowNode): Iterator<Node> {
         return x.nextDFG.iterator()
     }
 
@@ -113,7 +115,7 @@ object Strategy {
      * @param x Current node in DFG.
      * @return Iterator over predecessor.
      */
-    fun DFG_BACKWARD(x: Node): Iterator<Node> {
+    fun DFG_BACKWARD(x: DataflowNode): Iterator<Node> {
         return x.prevDFG.iterator()
     }
 
@@ -133,7 +135,7 @@ object Strategy {
      * @param x Current node in DFG.
      * @return Iterator over successor edges.
      */
-    fun DFG_EDGES_FORWARD(x: Node): Iterator<Dataflow> {
+    fun DFG_EDGES_FORWARD(x: DataflowNode): Iterator<Dataflow> {
         return x.nextDFGEdges.iterator()
     }
 
@@ -143,7 +145,7 @@ object Strategy {
      * @param x Current node in DFG.
      * @return Iterator over predecessor edges.
      */
-    fun DFG_EDGES_BACKWARD(x: Node): Iterator<Dataflow> {
+    fun DFG_EDGES_BACKWARD(x: DataflowNode): Iterator<Dataflow> {
         return x.prevDFGEdges.iterator()
     }
 
@@ -153,7 +155,7 @@ object Strategy {
      * @param x Current node in EOG.
      * @return Iterator over successor edges.
      */
-    fun EOG_EDGES_FORWARD(x: Node): Iterator<EvaluationOrder> {
+    fun EOG_EDGES_FORWARD(x: EvaluatedNode): Iterator<EvaluationOrder> {
         return x.nextEOGEdges.iterator()
     }
 
@@ -163,7 +165,7 @@ object Strategy {
      * @param x Current node in EOG.
      * @return Iterator over predecessor edges.
      */
-    fun EOG_EDGES_BACKWARD(x: Node): Iterator<EvaluationOrder> {
+    fun EOG_EDGES_BACKWARD(x: EvaluatedNode): Iterator<EvaluationOrder> {
         return x.prevEOGEdges.iterator()
     }
 
