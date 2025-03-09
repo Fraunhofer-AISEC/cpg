@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
@@ -38,7 +39,8 @@ import org.neo4j.ogm.annotation.Relationship
  * Represents a conditional loop statement of the form: `do{...}while(...)`. Where the body, usually
  * a [Block], is executed and re-executed if the [condition] evaluates to true.
  */
-class DoStatement : LoopStatement(), ArgumentHolder {
+class DoStatement internal constructor(ctx: TranslationContext) :
+    LoopStatement(ctx), ArgumentHolder {
     @Relationship("CONDITION") var conditionEdge = astOptionalEdgeOf<Expression>()
     /**
      * The loop condition that is evaluated after the loop statement and may trigger reevaluation.

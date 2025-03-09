@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
@@ -39,7 +40,7 @@ import org.neo4j.ogm.annotation.Relationship
  * contain other statements, but not declarations. Therefore, declarations are wrapped in a
  * [DeclarationStatement].
  */
-open class DeclarationStatement : Statement() {
+open class DeclarationStatement internal constructor(ctx: TranslationContext) : Statement(ctx) {
     /**
      * The list of declarations declared or defined by this statement. It is always a list, even if
      * it only contains a single [Declaration].

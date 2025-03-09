@@ -44,7 +44,7 @@ object Util {
      * @param searchCode exact code that a node needs to have.
      * @return a list of nodes with the specified String.
      */
-    fun subnodesOfCode(node: Node?, searchCode: String): List<Node> {
+    fun subnodesOfCode(node: AstNode?, searchCode: String): List<Node> {
         return SubgraphWalker.flattenAST(node).filter { n: Node ->
             n.code != null && n.code == searchCode
         }
@@ -481,8 +481,8 @@ object Util {
      * @param incoming whether the node connected by an incoming or, if false, outgoing DFG edge
      * @return
      */
-    fun getAdjacentDFGNodes(n: Node?, incoming: Boolean): MutableList<Node> {
-        val subnodes = n?.astChildren ?: listOf()
+    fun getAdjacentDFGNodes(n: AstNode, incoming: Boolean): MutableList<AstNode> {
+        val subnodes = n.astChildren
         val adjacentNodes =
             if (incoming) {
                 subnodes.filter { it.nextDFG.contains(n) }.toMutableList()
@@ -503,10 +503,10 @@ object Util {
      */
     fun addDFGEdgesForMutuallyExclusiveBranchingExpression(
         n: Node,
-        branchingExp: Node?,
-        branchingDeclaration: Node?,
+        branchingExp: AstNode?,
+        branchingDeclaration: AstNode?,
     ) {
-        var conditionNodes = mutableListOf<Node>()
+        var conditionNodes = mutableListOf<AstNode>()
         if (branchingExp != null) {
             conditionNodes = mutableListOf()
             conditionNodes.add(branchingExp)

@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.PopulatedByPass
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration.TemplateInitialization
@@ -46,8 +47,8 @@ import org.neo4j.ogm.annotation.Relationship
  * An expression, which calls another function. It has a list of arguments (list of [Expression]s)
  * and is connected via the INVOKES edge to its [FunctionDeclaration].
  */
-open class CallExpression :
-    Expression(), HasOverloadedOperation, HasType.TypeObserver, ArgumentHolder {
+open class CallExpression internal constructor(ctx: TranslationContext) :
+    Expression(ctx), HasOverloadedOperation, HasType.TypeObserver, ArgumentHolder {
     /**
      * Connection to its [FunctionDeclaration]. This will be populated by the [SymbolResolver]. This
      * will have an effect on the [type]
@@ -90,7 +91,7 @@ open class CallExpression :
      * is intentionally left empty. It is not filled by the [SymbolResolver].
      */
     @Relationship(value = "CALLEE", direction = Relationship.Direction.OUTGOING)
-    private var calleeEdge = astEdgeOf<Expression>(ProblemExpression("could not parse callee"))
+    private var calleeEdge = astEdgeOf<Expression>(ProblemExpression(ctx, "could not parse callee"))
 
     var callee by unwrapping(CallExpression::calleeEdge)
 
@@ -156,14 +157,14 @@ open class CallExpression :
 
     /** If the CallExpression instantiates a template, the call can provide template arguments. */
     @Relationship(value = "TEMPLATE_ARGUMENTS", direction = Relationship.Direction.OUTGOING)
-    var templateArgumentEdges: TemplateArguments<Node>? = null
+    var templateArgumentEdges: TemplateArguments<AstNode>? = null
         set(value) {
             field = value
             template = value != null
         }
 
-    val templateArguments: List<Node>
-        get(): List<Node> {
+    val templateArguments: List<AstNode>
+        get(): List<AstNode> {
             return templateArgumentEdges?.toNodeCollection() ?: listOf()
         }
 
@@ -199,8 +200,8 @@ open class CallExpression :
     }
 
     fun updateTemplateParameters(
-        initializationType: Map<Node?, TemplateInitialization?>,
-        orderedInitializationSignature: List<Node>,
+        initializationType: Map<AstNode?, TemplateInitialization?>,
+        orderedInitializationSignature: List<AstNode>,
     ) {
         if (templateArgumentEdges == null) {
             templateArgumentEdges = TemplateArguments(this)

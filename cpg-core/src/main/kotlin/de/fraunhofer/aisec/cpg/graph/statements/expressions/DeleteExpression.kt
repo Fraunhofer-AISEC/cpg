@@ -25,12 +25,13 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import java.util.Objects
 import org.neo4j.ogm.annotation.Relationship
 
-class DeleteExpression : Expression() {
+class DeleteExpression internal constructor(ctx: TranslationContext) : Expression(ctx) {
     @Relationship("OPERANDS") var operandEdges = astEdgesOf<Expression>()
     var operands by unwrapping(DeleteExpression::operandEdges)
 

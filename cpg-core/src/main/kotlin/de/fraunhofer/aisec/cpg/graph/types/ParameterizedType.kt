@@ -34,12 +34,12 @@ import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
  * generics in the graph are represented as [ParameterizedType] nodes.
  */
 class ParameterizedType : Type {
-    constructor(ctx: TranslationContext?, type: Type) : super(ctx, type) {
+    constructor(ctx: TranslationContext, type: Type) : super(ctx, type) {
         language = type.language
     }
 
     constructor(
-        ctx: TranslationContext?,
+        ctx: TranslationContext,
         typeName: String?,
         language: Language<*>,
     ) : super(ctx, typeName) {

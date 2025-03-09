@@ -47,7 +47,7 @@ import de.fraunhofer.aisec.cpg.helpers.Util
  * [DeclarationHandler], for others, the [StatementHandler] will forward these statements to us.
  */
 class DeclarationHandler(frontend: PythonLanguageFrontend) :
-    PythonHandler<Declaration, Python.AST.Def>(::ProblemDeclaration, frontend) {
+    PythonHandler<Declaration, Python.AST.Def>(frontend) {
     override fun handleNode(node: Python.AST.Def): Declaration {
         return when (node) {
             is Python.AST.FunctionDef -> handleFunctionDef(node)
@@ -420,4 +420,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
 
         return annotations
     }
+
+    override val problemConstructor: (String, Python.AST.Def?) -> Declaration
+        get() = { problem, rawNode -> newProblemDeclaration(problem, rawNode = rawNode) }
 }

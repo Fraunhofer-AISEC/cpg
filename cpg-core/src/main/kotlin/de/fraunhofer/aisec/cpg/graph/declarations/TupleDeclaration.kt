@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
@@ -61,7 +62,7 @@ import de.fraunhofer.aisec.cpg.graph.types.TupleType
  * respective type will be based on a registered type observer to their tuple and implemented also
  * in [VariableDeclaration.typeChanged]
  */
-class TupleDeclaration : VariableDeclaration() {
+class TupleDeclaration internal constructor(ctx: TranslationContext) : VariableDeclaration(ctx) {
     /** The list of elements in this tuple. */
     var elementEdges =
         astEdgesOf<VariableDeclaration>(onAdd = { registerTypeObserver(it.end) }) {

@@ -154,8 +154,7 @@ private constructor(
         var useParallelFrontends = ctx.config.useParallelFrontends
 
         for (sc in ctx.config.softwareComponents.keys) {
-            val component = Component()
-            component.ctx = ctx
+            val component = Component(ctx)
             component.name = Name(sc)
             result.addComponent(component)
 
@@ -286,8 +285,7 @@ private constructor(
                     val compName = Name(includePath.name)
                     var component = result.components.firstOrNull { it.name == compName }
                     if (component == null) {
-                        component = Component()
-                        component.ctx = ctx
+                        component = Component(ctx)
                         component.name = compName
                         result.addComponent(component)
                         ctx.config.topLevels.put(includePath.name, includePath.toFile())

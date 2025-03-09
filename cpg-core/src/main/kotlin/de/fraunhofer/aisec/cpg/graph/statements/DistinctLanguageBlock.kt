@@ -25,10 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 
 /**
  * A Block of code containing code in a different language that is not parsable with the same
  * frontend as the enclosing language.
  */
-class DistinctLanguageBlock() : Block()
+class DistinctLanguageBlock internal constructor(ctx: TranslationContext) : Block(ctx)

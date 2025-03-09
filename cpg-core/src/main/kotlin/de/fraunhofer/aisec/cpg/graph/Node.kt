@@ -62,32 +62,8 @@ import org.neo4j.ogm.annotation.typeconversion.Convert
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
-/** The base class for all graph objects that are going to be persisted in the database. */
-abstract class Node(
-    /**
-     * Because we are updating type information in the properties of the node, we need a reference
-     * to managers such as the [TypeManager] instance which is responsible for this particular node.
-     * All managers are bundled in [TranslationContext]. It is set in [Node.applyMetadata] when a
-     * [ContextProvider] is provided.
-     */
-    @get:JsonIgnore @Transient override var ctx: TranslationContext? = null
-) :
-    IVisitable<Node>,
-    Persistable,
-    LanguageProvider,
-    ScopeProvider,
-    ContextProvider,
-    HasNameAndLocation,
-    HasScope {
-
-    /** This property holds the full name using our new [Name] class. */
-    @Convert(NameConverter::class) override var name: Name = Name(EMPTY_NAME)
-
-    /**
-     * Original code snippet of this node. Most nodes will have a corresponding "code", but in cases
-     * where nodes are created artificially, it may be null.
-     */
-    var code: String? = null
+abstract class AstNode(
+    override val ctx: TranslationContext,
 
     /**
      * The language of this node. This property is set in [Node.applyMetadata] by a
@@ -95,7 +71,126 @@ abstract class Node(
      */
     @Relationship(value = "LANGUAGE", direction = Relationship.Direction.OUTGOING)
     @JsonBackReference
-    override var language: Language<*> = UnknownLanguage
+    override var language: Language<*> = UnknownLanguage(ctx),
+) : Node(ctx), HasNameAndLocation, HasScope, LanguageProvider {
+
+    /**
+     * Virtual property to return a list of the node's children. Uses the [SubgraphWalker] to
+     * retrieve the appropriate nodes.
+     *
+     * Note: This only returns the *direct* children of this node. If you want to have *all*
+     * children, e.g., a flattened AST, you need to call [Node.allChildren].
+     *
+     * For Neo4J OGM, this relationship will be automatically filled by a pre-save event before OGM
+     * persistence. Therefore, this property is a `var` and not a `val`.
+     */
+    @Relationship("AST")
+    @JsonIgnore
+    var astChildren: List<AstNode> = listOf()
+        get() = SubgraphWalker.getAstChildren(this)
+
+    @DoNotPersist @Transient var astParent: AstNode? = null
+
+    /** List of annotations associated with that node. */
+    @Relationship("ANNOTATIONS") var annotationEdges = astEdgesOf<Annotation>()
+    var annotations by unwrapping(AstNode::annotationEdges)
+
+    /**
+     * If a node should be removed from the graph, just removing it from the AST is not enough (see
+     * issue #60). It will most probably be referenced somewhere via DFG or EOG edges. Thus, if it
+     * needs to be disconnected completely, we will have to take care of correctly disconnecting
+     * these implicit edges.
+     *
+     * ATTENTION! Please note that this might kill an entire subgraph, if the node to disconnect has
+     * further children that have no alternative connection paths to the rest of the graph.
+     */
+    fun disconnectFromGraph() {
+        // Disconnect all AST children first
+        this.astChildren.forEach { it.disconnectFromGraph() }
+
+        nextDFGEdges.clear()
+        prevDFGEdges.clear()
+        prevCDGEdges.clear()
+        nextCDGEdges.clear()
+        prevPDGEdges.clear()
+        nextPDGEdges.clear()
+        nextEOGEdges.clear()
+        prevEOGEdges.clear()
+    }
+
+    override fun toString(): String {
+        val builder = ToStringBuilder(this, TO_STRING_STYLE)
+
+        if (name.isNotEmpty()) {
+            builder.append("name", name)
+        }
+
+        return builder.append("location", location).toString()
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) {
+            return true
+        }
+        if (other !is AstNode) {
+            return false
+        }
+        return if (location == null || other.location == null) {
+            // we do not know the exact region. Need to rely on Object equality,
+            // as a different LOC can have the same name/code/comment/file
+            false
+        } else
+            name == other.name &&
+                code == other.code &&
+                comment == other.comment &&
+                location == other.location &&
+                // We need to exclude "file" here, because in C++ the same header node can be
+                // imported in two different files and in this case, the "file" property will be
+                // different. Since want to squash those equal nodes, we will only consider all the
+                // other attributes, including "location" (which contains the *original* file
+                // location in the header file), but not "file".
+                // file == other.file &&
+                isImplicit == other.isImplicit
+    }
+
+    /**
+     * Implementation of hash code. We are including the name and the location in this hash code as
+     * a compromise between including too few attributes and performance. Please note that this
+     * means, that two nodes that might be semantically equal, such as two record declarations with
+     * the same name but different location (e.g. because of header files) will be sorted into
+     * different hash keys.
+     *
+     * That means, that you need to be careful, if you use a [Node] as a key in a hash map. You
+     * should make sure that the [location] is set before you add it to a hash map. This can be a
+     * little tricky, since normally the [Handler] class will set the location after it has
+     * "handled" the node. However, most [NodeBuilder] will have an optional parameter to set the
+     * location already when creating the node.
+     */
+    override fun hashCode(): Int {
+        return Objects.hash(name, location, this.javaClass)
+    }
+}
+
+/** The base class for all graph objects that are going to be persisted in the database. */
+abstract class Node(
+    /**
+     * Because we are updating type information in the properties of the node, we need a reference
+     * to managers such as the [TypeManager] instance which is responsible for this particular node.
+     * All managers are bundled in [TranslationContext].
+     */
+    @get:JsonIgnore @Transient override val ctx: TranslationContext
+) : IVisitable<Node>, Persistable, ContextProvider, ScopeProvider {
+
+    /** This property holds the full name using our new [Name] class. */
+    @Convert(NameConverter::class) open var name: Name = Name(EMPTY_NAME)
+
+    @Convert(LocationConverter::class) var location: PhysicalLocation? = null
+
+    /**
+     * Original code snippet of this node. Most nodes will have a corresponding "code", but in cases
+     * where nodes are created artificially, it may be null.
+     */
+    var code: String? = null
 
     /**
      * The scope this node "lives" in / in which it is defined. This property is set in
@@ -112,8 +207,6 @@ abstract class Node(
 
     /** Optional comment of this node. */
     var comment: String? = null
-
-    @Convert(LocationConverter::class) override var location: PhysicalLocation? = null
 
     /**
      * Name of the containing file. It can be null for artificially created nodes or if just
@@ -158,23 +251,6 @@ abstract class Node(
         protected set
 
     var prevCDG by unwrapping(Node::prevCDGEdges)
-
-    /**
-     * Virtual property to return a list of the node's children. Uses the [SubgraphWalker] to
-     * retrieve the appropriate nodes.
-     *
-     * Note: This only returns the *direct* children of this node. If you want to have *all*
-     * children, e.g., a flattened AST, you need to call [Node.allChildren].
-     *
-     * For Neo4J OGM, this relationship will be automatically filled by a pre-save event before OGM
-     * persistence. Therefore, this property is a `var` and not a `val`.
-     */
-    @Relationship("AST")
-    @JsonIgnore
-    var astChildren: List<Node> = listOf()
-        get() = SubgraphWalker.getAstChildren(this)
-
-    @DoNotPersist @Transient var astParent: Node? = null
 
     /** Virtual property for accessing [prevEOGEdges] without property edges. */
     @PopulatedByPass(EvaluationOrderGraphPass::class) var prevEOG by unwrapping(Node::prevEOGEdges)
@@ -270,10 +346,6 @@ abstract class Node(
     /** Index of the argument if this node is used in a function call or parameter list. */
     var argumentIndex = 0
 
-    /** List of annotations associated with that node. */
-    @Relationship("ANNOTATIONS") var annotationEdges = astEdgesOf<Annotation>()
-    var annotations by unwrapping(Node::annotationEdges)
-
     /**
      * Additional problem nodes. These nodes represent problems which occurred during processing of
      * a node (i.e. only partially processed).
@@ -285,29 +357,6 @@ abstract class Node(
         Overlays(this, mirrorProperty = OverlayNode::underlyingNodeEdge, outgoing = true)
     var overlays by unwrapping(Node::overlayEdges)
 
-    /**
-     * If a node should be removed from the graph, just removing it from the AST is not enough (see
-     * issue #60). It will most probably be referenced somewhere via DFG or EOG edges. Thus, if it
-     * needs to be disconnected completely, we will have to take care of correctly disconnecting
-     * these implicit edges.
-     *
-     * ATTENTION! Please note that this might kill an entire subgraph, if the node to disconnect has
-     * further children that have no alternative connection paths to the rest of the graph.
-     */
-    fun disconnectFromGraph() {
-        // Disconnect all AST children first
-        this.astChildren.forEach { it.disconnectFromGraph() }
-
-        nextDFGEdges.clear()
-        prevDFGEdges.clear()
-        prevCDGEdges.clear()
-        nextCDGEdges.clear()
-        prevPDGEdges.clear()
-        nextPDGEdges.clear()
-        nextEOGEdges.clear()
-        prevEOGEdges.clear()
-    }
-
     override fun toString(): String {
         val builder = ToStringBuilder(this, TO_STRING_STYLE)
 
@@ -315,7 +364,7 @@ abstract class Node(
             builder.append("name", name)
         }
 
-        return builder.append("location", location).toString()
+        return builder.toString()
     }
 
     override fun equals(other: Any?): Boolean {
@@ -325,22 +374,16 @@ abstract class Node(
         if (other !is Node) {
             return false
         }
-        return if (location == null || other.location == null) {
-            // we do not know the exact region. Need to rely on Object equality,
-            // as a different LOC can have the same name/code/comment/file
-            false
-        } else
-            name == other.name &&
-                code == other.code &&
-                comment == other.comment &&
-                location == other.location &&
-                // We need to exclude "file" here, because in C++ the same header node can be
-                // imported in two different files and in this case, the "file" property will be
-                // different. Since want to squash those equal nodes, we will only consider all the
-                // other attributes, including "location" (which contains the *original* file
-                // location in the header file), but not "file".
-                // file == other.file &&
-                isImplicit == other.isImplicit
+        return name == other.name &&
+            code == other.code &&
+            comment == other.comment &&
+            // We need to exclude "file" here, because in C++ the same header node can be
+            // imported in two different files and in this case, the "file" property will be
+            // different. Since want to squash those equal nodes, we will only consider all the
+            // other attributes, including "location" (which contains the *original* file
+            // location in the header file), but not "file".
+            // file == other.file &&
+            isImplicit == other.isImplicit
     }
 
     /**
@@ -357,7 +400,7 @@ abstract class Node(
      * location already when creating the node.
      */
     override fun hashCode(): Int {
-        return Objects.hash(name, location, this.javaClass)
+        return Objects.hash(name, this.javaClass)
     }
 
     companion object {

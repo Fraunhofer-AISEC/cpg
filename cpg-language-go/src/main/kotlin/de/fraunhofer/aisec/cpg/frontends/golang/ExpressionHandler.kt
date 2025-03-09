@@ -36,7 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
 import java.math.BigInteger
 
 class ExpressionHandler(frontend: GoLanguageFrontend) :
-    GoHandler<Expression, GoStandardLibrary.Ast.Expr>(::ProblemExpression, frontend) {
+    GoHandler<Expression, GoStandardLibrary.Ast.Expr>(frontend) {
 
     override fun handleNode(node: GoStandardLibrary.Ast.Expr): Expression {
         return when (node) {
@@ -467,6 +467,9 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
 
         return lambda
     }
+
+    override val problemConstructor: (String, GoStandardLibrary.Ast.Expr?) -> Expression
+        get() = { problem, rawNode -> newProblemExpression(problem, rawNode = rawNode) }
 
     companion object {
         val builtins =

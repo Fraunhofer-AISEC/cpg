@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
@@ -39,7 +40,8 @@ import org.neo4j.ogm.annotation.Relationship
  * This expression denotes the usage of an anonymous / lambda function. It connects the inner
  * anonymous function to the user of a lambda function with an expression.
  */
-class LambdaExpression : Expression(), HasType.TypeObserver {
+class LambdaExpression internal constructor(ctx: TranslationContext) :
+    Expression(ctx), HasType.TypeObserver {
 
     /**
      * If [areVariablesMutable] is false, only the (outer) variables in this list can be modified

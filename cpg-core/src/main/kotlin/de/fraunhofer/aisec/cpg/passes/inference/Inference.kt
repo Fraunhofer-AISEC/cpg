@@ -58,7 +58,7 @@ import org.slf4j.LoggerFactory
  * Since this class implements [IsInferredProvider], all nodes that are created using the node
  * builder functions, will automatically have [Node.isInferred] set to true.
  */
-class Inference internal constructor(val start: Node, override val ctx: TranslationContext) :
+class Inference internal constructor(val start: AstNode, override val ctx: TranslationContext) :
     LanguageProvider,
     ScopeProvider,
     IsInferredProvider,
@@ -627,7 +627,7 @@ interface IsImplicitProvider : MetadataProvider {
  * Returns a new [Inference] object starting from this node. This will check, whether inference is
  * enabled at all (using [InferenceConfiguration.enabled]). Otherwise null, will be returned.
  */
-fun Node.startInference(ctx: TranslationContext): Inference? {
+fun AstNode.startInference(ctx: TranslationContext): Inference? {
     if (!ctx.config.inferenceConfiguration.enabled) {
         return null
     }

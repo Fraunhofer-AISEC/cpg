@@ -49,7 +49,7 @@ class FunctionPointerType : Type {
     var returnType: Type
 
     constructor(
-        ctx: TranslationContext?,
+        ctx: TranslationContext,
         parameters: List<Type> = listOf(),
         language: Language<*>,
         returnType: Type = UnknownType.getUnknownType(language),
@@ -59,10 +59,10 @@ class FunctionPointerType : Type {
     }
 
     constructor(
-        ctx: TranslationContext?,
+        ctx: TranslationContext,
         type: Type,
         parameters: List<Type> = listOf(),
-        language: Language<*> = UnknownLanguage,
+        language: Language<*> = UnknownLanguage(ctx),
         returnType: Type = UnknownType.getUnknownType(language),
     ) : super(ctx, type) {
         this.parameters = parameters

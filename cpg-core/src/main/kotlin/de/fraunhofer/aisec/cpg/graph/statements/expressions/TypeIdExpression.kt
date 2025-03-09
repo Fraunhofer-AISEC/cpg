@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import java.util.Objects
 
@@ -34,7 +35,7 @@ import java.util.Objects
  *
  * TODO: Is such a class really necessary??
  */
-class TypeIdExpression : Expression() {
+class TypeIdExpression internal constructor(ctx: TranslationContext) : Expression(ctx) {
     var referencedType: Type? = null
     var operatorCode: String? = null
 

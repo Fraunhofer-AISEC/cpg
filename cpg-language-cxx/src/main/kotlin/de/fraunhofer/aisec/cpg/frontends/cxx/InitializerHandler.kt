@@ -32,16 +32,14 @@ import de.fraunhofer.aisec.cpg.graph.newInitializerListExpression
 import de.fraunhofer.aisec.cpg.graph.newProblemExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.unknownType
-import java.util.function.Supplier
 import org.eclipse.cdt.core.dom.ast.IASTEqualsInitializer
 import org.eclipse.cdt.core.dom.ast.IASTInitializer
 import org.eclipse.cdt.core.dom.ast.IASTInitializerList
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTConstructorInitializer
 
 class InitializerHandler(lang: CXXLanguageFrontend) :
-    CXXHandler<Expression, IASTInitializer>(Supplier(::ProblemExpression), lang) {
+    CXXHandler<Expression, IASTInitializer>(lang) {
 
     override fun handleNode(node: IASTInitializer): Expression {
         return when (node) {

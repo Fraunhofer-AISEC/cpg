@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
@@ -32,7 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import java.util.*
 import org.neo4j.ogm.annotation.Relationship
 
-class ExpressionList : Expression() {
+class ExpressionList internal constructor(ctx: TranslationContext) : Expression(ctx) {
     @Relationship(value = "SUBEXPR", direction = Relationship.Direction.OUTGOING)
     var expressionEdges = astEdgesOf<Statement>()
     var expressions by unwrapping(ExpressionList::expressionEdges)

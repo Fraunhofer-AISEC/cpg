@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
@@ -36,11 +37,12 @@ import kotlin.test.assertNotNull
 class ExtensionTest {
     @Test
     fun testBodyOrNull() {
-        var func = FunctionDeclaration()
-        var body = Block()
+        val ctx = TranslationContext()
+        var func = FunctionDeclaration(ctx)
+        var body = Block(ctx)
 
         for (i in 0 until 5) {
-            var ref = Reference()
+            var ref = Reference(ctx)
             ref.name = Name("$i")
             body += ref
         }
@@ -51,7 +53,7 @@ class ExtensionTest {
         assertNotNull(last)
         assertLocalName("4", last)
 
-        var ref = Reference()
+        var ref = Reference(ctx)
         ref.name = Name("single")
         func.body = ref
 

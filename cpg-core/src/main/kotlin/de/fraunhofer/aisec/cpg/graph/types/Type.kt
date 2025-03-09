@@ -29,8 +29,8 @@ import com.fasterxml.jackson.annotation.JsonIgnore
 import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Name
-import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.parseName
@@ -64,7 +64,7 @@ enum class TypeOperation {
  * and origin
  */
 @NodeEntity
-abstract class Type : Node {
+abstract class Type : AstNode {
     /** All direct supertypes of this type. */
     @PopulatedByPass(TypeHierarchyResolver::class)
     @Relationship(value = "SUPER_TYPE", direction = Relationship.Direction.OUTGOING)
@@ -82,37 +82,36 @@ abstract class Type : Node {
      */
     @PopulatedByPass(TypeResolver::class) var declaredFrom: DeclaresType? = null
 
-    constructor(ctx: TranslationContext?) {
-        this.ctx = ctx
+    constructor(ctx: TranslationContext) : super(ctx) {
         this.name = Name(EMPTY_NAME, null, language)
     }
 
-    constructor(ctx: TranslationContext?, typeName: String?) {
-        this.ctx = ctx
-        this.name = language.parseName(typeName ?: UNKNOWN_TYPE_STRING)
+    constructor(ctx: TranslationContext, typeName: String?) : this(ctx) {
+        this.name = parseName(typeName ?: UNKNOWN_TYPE_STRING)
         this.typeOrigin = Origin.UNRESOLVED
     }
 
-    constructor(ctx: TranslationContext?, type: Type?) {
-        this.ctx = ctx
+    constructor(ctx: TranslationContext, type: Type?) : this(ctx) {
         type?.name?.let { name = it.clone() }
         this.typeOrigin = type?.typeOrigin
     }
 
-    constructor(ctx: TranslationContext?, typeName: CharSequence, language: Language<*>) {
-        this.ctx = ctx
+    constructor(
+        ctx: TranslationContext,
+        typeName: CharSequence,
+        language: Language<*>,
+    ) : this(ctx) {
+        this.language = language
         this.name =
             if (this is FunctionType) {
                 Name(typeName.toString(), null, language)
             } else {
-                language.parseName(typeName)
+                parseName(typeName)
             }
-        this.language = language
         this.typeOrigin = Origin.UNRESOLVED
     }
 
-    constructor(ctx: TranslationContext?, fullTypeName: Name, language: Language<*>) {
-        this.ctx = ctx
+    constructor(ctx: TranslationContext, fullTypeName: Name, language: Language<*>) : this(ctx) {
         this.name = fullTypeName.clone()
         typeOrigin = Origin.UNRESOLVED
         this.language = language

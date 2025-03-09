@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.OperatorDeclaration
 
@@ -33,7 +34,8 @@ import de.fraunhofer.aisec.cpg.graph.declarations.OperatorDeclaration
  * In this case, we replace the original [BinaryOperator] with an [OperatorCallExpression], which
  * points to its respective [OperatorDeclaration].
  */
-class OperatorCallExpression : CallExpression(), HasOperatorCode, HasBase {
+class OperatorCallExpression internal constructor(ctx: TranslationContext) :
+    CallExpression(ctx), HasOperatorCode, HasBase {
 
     override var operatorCode: String? = null
 

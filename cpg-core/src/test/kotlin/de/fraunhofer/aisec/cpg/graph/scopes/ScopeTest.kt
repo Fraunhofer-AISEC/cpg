@@ -39,15 +39,15 @@ class ScopeTest {
         val ctx = TranslationContext()
 
         // some mock variable declarations, global and local
-        var globalA = VariableDeclaration()
+        var globalA = VariableDeclaration(ctx)
         globalA.name = Name("a")
-        var localA = VariableDeclaration()
+        var localA = VariableDeclaration(ctx)
         localA.name = Name("a")
 
         // two scopes, global and local
         val globalScope = GlobalScope(ctx)
         globalScope.addSymbol("a", globalA)
-        val scope = LocalScope(ctx, Block())
+        val scope = LocalScope(ctx, Block(ctx))
         scope.parent = globalScope
         scope.addSymbol("a", localA)
 
@@ -58,7 +58,7 @@ class ScopeTest {
 
         // now, we pretend to have a lookup scope modifier for a symbol, e.g. through "global" in
         // Python
-        var stmt = LookupScopeStatement()
+        var stmt = LookupScopeStatement(ctx)
         stmt.targetScope = globalScope
         stmt.symbols = listOf("a")
         scope.predefinedLookupScopes["a"] = stmt

@@ -66,7 +66,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
     }
 
     /** We perform the actions for each [FunctionDeclaration]. */
-    override fun accept(node: Node) {
+    override fun accept(node: AstNode) {
         // For now, we only execute this for function declarations, we will support all EOG starters
         // in the future.
         if (node !is FunctionDeclaration) {
@@ -153,7 +153,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
      * Removes all the incoming and outgoing DFG edges for each variable declaration in the block of
      * code [node].
      */
-    protected fun clearFlowsOfVariableDeclarations(node: Node) {
+    protected fun clearFlowsOfVariableDeclarations(node: AstNode) {
         for (varDecl in node.variables /*.filter { it !is FieldDeclaration }*/) {
             varDecl.prevDFGEdges.clear()
             varDecl.nextDFGEdges.clear()

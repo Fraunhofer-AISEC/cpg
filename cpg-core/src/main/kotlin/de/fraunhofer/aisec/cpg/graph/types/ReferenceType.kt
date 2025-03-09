@@ -42,13 +42,13 @@ class ReferenceType : Type, SecondOrderType {
 
     constructor(ctx: TranslationContext) : super(ctx)
 
-    constructor(ctx: TranslationContext?, reference: Type) : super(ctx) {
+    constructor(ctx: TranslationContext, reference: Type) : super(ctx) {
         language = reference.language
         name = reference.name.append("&")
         this.elementType = reference
     }
 
-    constructor(ctx: TranslationContext?, type: Type, reference: Type) : super(ctx, type) {
+    constructor(ctx: TranslationContext, type: Type, reference: Type) : super(ctx, type) {
         language = reference.language
         name = reference.name.append("&")
         this.elementType = reference

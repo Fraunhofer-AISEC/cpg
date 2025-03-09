@@ -27,13 +27,11 @@ package de.fraunhofer.aisec.cpg.frontends.ruby
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.ProblemNode
 import de.fraunhofer.aisec.cpg.helpers.Util
 
 abstract class RubyHandler<ResultNode : Node, HandlerNode : org.jruby.ast.Node>(
-    configConstructor: () -> ResultNode,
-    frontend: RubyLanguageFrontend,
-) : Handler<ResultNode, HandlerNode, RubyLanguageFrontend>(configConstructor, frontend) {
+    frontend: RubyLanguageFrontend
+) : Handler<ResultNode, HandlerNode, RubyLanguageFrontend>(frontend) {
     /**
      * We intentionally override the logic of [Handler.handle] because we do not want the map-based
      * logic, but rather want to make use of the Kotlin-when syntax.
@@ -63,11 +61,6 @@ abstract class RubyHandler<ResultNode : Node, HandlerNode : org.jruby.ast.Node>(
             "Parsing of type $name is not supported (yet)",
         )
 
-        val cpgNode = this.configConstructor.get()
-        if (cpgNode is ProblemNode) {
-            cpgNode.problem = "Parsing of type $name is not supported (yet)"
-        }
-
-        return cpgNode
+        return this.problemConstructor("Parsing of type $name is not supported (yet)")
     }
 }

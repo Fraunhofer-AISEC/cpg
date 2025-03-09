@@ -25,7 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg
 
-import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.passes.Pass
 import de.fraunhofer.aisec.cpg.passes.hardDependencies
 import de.fraunhofer.aisec.cpg.passes.hardExecuteBefore
@@ -55,7 +55,7 @@ private fun mermaidPassName(pass: KClass<out Pass<*>>): String {
  * Builds a markdown representation of a pass dependency graph, based on
  * [Mermaid](https://mermaid.js.org) syntax.
  */
-internal fun buildMermaid(passes: List<KClass<out Pass<out Node>>>): String {
+internal fun buildMermaid(passes: List<KClass<out Pass<out AstNode>>>): String {
     var s = "```mermaid\n"
     s += "flowchart TD;\n"
 

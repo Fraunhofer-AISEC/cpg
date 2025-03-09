@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
@@ -41,14 +42,15 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /** Represents the declaration of a local variable. */
-open class VariableDeclaration : ValueDeclaration(), HasInitializer, HasType.TypeObserver {
+open class VariableDeclaration internal constructor(ctx: TranslationContext) :
+    ValueDeclaration(ctx), HasInitializer, HasType.TypeObserver {
 
     /**
      * We need a way to store the templateParameters that a [VariableDeclaration] might have before
      * the [ConstructExpression] is created.
      */
     @Relationship(value = "TEMPLATE_PARAMETERS", direction = Relationship.Direction.OUTGOING)
-    var templateParameterEdges = astEdgesOf<Node>()
+    var templateParameterEdges = astEdgesOf<AstNode>()
     var templateParameters by unwrapping(VariableDeclaration::templateParameterEdges)
 
     /** Determines if this is a global variable. */

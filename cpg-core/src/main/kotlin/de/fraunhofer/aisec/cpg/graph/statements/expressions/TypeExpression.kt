@@ -25,10 +25,13 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
+import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.graph.types.Type
+
 /**
- * Represets a Type used as an expression for instance when instantiating templates
+ * Represents a Type used as an expression for instance when instantiating templates
  *
- * Note: This Expression is required since we cannot have ASTChilds directly connected to a Type
- * since they are merged.
+ * Note: This Expression is required since we cannot have AST children directly connected to a
+ * [Type] since they are merged.
  */
-class TypeExpression : Expression()
+class TypeExpression internal constructor(ctx: TranslationContext) : Expression(ctx)

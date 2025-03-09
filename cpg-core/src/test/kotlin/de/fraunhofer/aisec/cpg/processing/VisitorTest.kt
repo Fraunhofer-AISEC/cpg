@@ -34,7 +34,6 @@ import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.statements
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.passes.ImportDependencies
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
@@ -50,9 +49,10 @@ class VisitorTest : BaseTest() {
     @Test
     fun testLoopDetection() {
         // Let's create an intentional loop
-        val tu = TranslationUnitDeclaration()
-        val name = NamespaceDeclaration()
-        val func = FunctionDeclaration()
+        val ctx = TranslationContext()
+        val tu = TranslationUnitDeclaration(ctx)
+        val name = NamespaceDeclaration(ctx)
+        val func = FunctionDeclaration(ctx)
         name.addDeclaration(tu)
         name.addDeclaration(func)
         tu.addDeclaration(name)
@@ -137,8 +137,9 @@ class VisitorTest : BaseTest() {
 
     @Test
     fun testFallbackComponentLeastImported() {
-        val component1 = Component().also { it.name = Name("component1") }
-        val component2 = Component().also { it.name = Name("component2") }
+        val ctx = TranslationContext()
+        val component1 = Component(ctx).also { it.name = Name("component1") }
+        val component2 = Component(ctx).also { it.name = Name("component2") }
 
         val tr =
             TranslationResult(
@@ -166,10 +167,11 @@ class VisitorTest : BaseTest() {
 
     @Test
     fun testFallbackTULeastImported() {
-        val component = Component()
+        val ctx = TranslationContext()
+        val component = Component(ctx)
 
-        val tr1 = TranslationUnitDeclaration().also { it.name = Name("tr1") }
-        val tr2 = TranslationUnitDeclaration().also { it.name = Name("tr2") }
+        val tr1 = TranslationUnitDeclaration(ctx).also { it.name = Name("tr1") }
+        val tr2 = TranslationUnitDeclaration(ctx).also { it.name = Name("tr2") }
 
         component.translationUnits += tr1
         component.translationUnits += tr2

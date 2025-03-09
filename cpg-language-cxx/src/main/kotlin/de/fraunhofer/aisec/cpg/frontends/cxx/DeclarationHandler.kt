@@ -37,7 +37,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.Util
-import java.util.function.Supplier
 import org.eclipse.cdt.core.dom.ast.*
 import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit.IDependencyTree.IASTInclusionNode
 import org.eclipse.cdt.internal.core.dom.parser.cpp.*
@@ -59,8 +58,7 @@ import org.eclipse.cdt.internal.core.dom.parser.cpp.*
  * handler. In fact, in most cases the [DeclaratorHandler] actually creates the CPG [Declaration]
  * and the [DeclarationHandler] modifies the declaration depending on the declaration specifiers.
  */
-class DeclarationHandler(lang: CXXLanguageFrontend) :
-    CXXHandler<Declaration, IASTNode>(Supplier(::ProblemDeclaration), lang) {
+class DeclarationHandler(lang: CXXLanguageFrontend) : CXXHandler<Declaration, IASTNode>(lang) {
 
     override fun handleNode(node: IASTNode): Declaration {
         return when (node) {

@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
@@ -35,7 +36,8 @@ import org.neo4j.ogm.annotation.Relationship
  * A method declaration is a [FunctionDeclaration] that is part of to a specific [RecordDeclaration]
  * .
  */
-open class MethodDeclaration : FunctionDeclaration() {
+open class MethodDeclaration internal constructor(ctx: TranslationContext) :
+    FunctionDeclaration(ctx) {
     var isStatic = false
 
     /**

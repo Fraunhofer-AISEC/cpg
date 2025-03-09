@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
@@ -32,7 +33,8 @@ import java.util.*
 import org.neo4j.ogm.annotation.Relationship
 
 /** Node representing a declaration of a FunctionTemplate */
-class FunctionTemplateDeclaration : TemplateDeclaration() {
+class FunctionTemplateDeclaration internal constructor(ctx: TranslationContext) :
+    TemplateDeclaration(ctx) {
     /**
      * Edges pointing to all FunctionDeclarations that are realized by the FunctionTemplate. Before
      * the expansion pass there is only a single FunctionDeclaration which is instantiated After the

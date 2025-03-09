@@ -25,12 +25,13 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
-class EnumDeclaration : RecordDeclaration() {
+class EnumDeclaration internal constructor(ctx: TranslationContext) : RecordDeclaration(ctx) {
     @Relationship(value = "ENTRIES", direction = Relationship.Direction.OUTGOING)
     var entryEdges = astEdgesOf<EnumConstantDeclaration>()
     var entries by unwrapping(EnumDeclaration::entryEdges)

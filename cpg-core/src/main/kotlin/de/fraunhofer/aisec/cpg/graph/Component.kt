@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.multiLanguage
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
@@ -47,7 +48,7 @@ import org.neo4j.ogm.annotation.Transient
  * This node holds all translation units belonging to this software component as well as (potential)
  * entry points or interactions with other software.
  */
-open class Component : Node() {
+open class Component internal constructor(ctx: TranslationContext) : AstNode(ctx) {
     @Relationship("TRANSLATION_UNITS")
     val translationUnitEdges = astEdgesOf<TranslationUnitDeclaration>()
     /** All translation units belonging to this application. */

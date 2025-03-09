@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.graph.concepts.logging
 
-import de.fraunhofer.aisec.cpg.graph.MetadataProvider
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import de.fraunhofer.aisec.cpg.graph.codeAndLocationFrom
@@ -37,7 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.codeAndLocationFrom
  * @param name The name of the logger.
  * @return The new [Log].
  */
-fun MetadataProvider.newLog(underlyingNode: Node, name: String): Log {
+fun ContextProvider.newLog(underlyingNode: Node, name: String): Log {
     val node = Log(underlyingNode = underlyingNode)
     node.codeAndLocationFrom(underlyingNode)
 
@@ -59,7 +58,7 @@ fun MetadataProvider.newLog(underlyingNode: Node, name: String): Log {
  *   the log.
  * @return The new [Log].
  */
-fun MetadataProvider.newLogWrite(
+fun ContextProvider.newLogWrite(
     underlyingNode: Node,
     level: LogLevel,
     logger: Log,
@@ -91,7 +90,7 @@ fun MetadataProvider.newLogWrite(
  * @param logger The corresponding [Log], i.e. the log where the underlying nodes is writing to.
  * @return The new [LogGet].
  */
-fun MetadataProvider.newLogGet(underlyingNode: Node, logger: Log): LogGet {
+fun ContextProvider.newLogGet(underlyingNode: Node, logger: Log): LogGet {
     val node = LogGet(underlyingNode = underlyingNode, concept = logger)
     node.codeAndLocationFrom(underlyingNode)
 

@@ -45,7 +45,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import kotlin.collections.plusAssign
 
 class StatementHandler(frontend: PythonLanguageFrontend) :
-    PythonHandler<Statement, Python.AST.BaseStmt>(::ProblemExpression, frontend) {
+    PythonHandler<Statement, Python.AST.BaseStmt>(frontend) {
 
     override fun handleNode(node: Python.AST.BaseStmt): Statement {
         return when (node) {
@@ -953,4 +953,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 )
         }
     }
+
+    override val problemConstructor: (String, Python.AST.BaseStmt?) -> Statement
+        get() = { problem, rawNode -> newProblemExpression(problem, rawNode = rawNode) }
 }

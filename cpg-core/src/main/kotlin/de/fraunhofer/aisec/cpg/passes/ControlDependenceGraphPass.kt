@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.allChildren
@@ -74,7 +75,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
      *    parent node and the path(s) through which the [BranchingNode] node is reachable. 3.c)
      *    Repeat step 3) until you cannot move the node upwards in the CDG anymore.
      */
-    override fun accept(startNode: Node) {
+    override fun accept(startNode: AstNode) {
         // For now, we only execute this for function declarations, we will support all EOG starters
         // in the future.
         if (startNode !is FunctionDeclaration) {
@@ -290,9 +291,10 @@ fun handleEdge(
     if (
         currentStart is BranchingNode ||
             currentStart is ComprehensionExpression ||
-            currentStart.astParent is
-                ComprehensionExpression && // TODO: May be simplified when resolving issue 2027
-                currentStart == (currentStart.astParent as ComprehensionExpression).iterable
+            (currentStart is AstNode &&
+                currentStart.astParent is
+                    ComprehensionExpression && // TODO: May be simplified when resolving issue 2027
+                currentStart == (currentStart.astParent as ComprehensionExpression).iterable)
     ) { // && currentEdge.isConditionalBranch()) {
         // We start in a branching node and end in one of the branches, so we have the
         // following state:
@@ -342,8 +344,9 @@ private fun EvaluationOrder.isConditionalBranch(): Boolean {
     } else
         (this.start is IfStatement ||
             this.start is ComprehensionExpression ||
-            (this.start.astParent is ComprehensionExpression &&
-                this.start == (this.start.astParent as ComprehensionExpression).iterable) ||
+            ((this.start as? AstNode)?.astParent is ComprehensionExpression &&
+                this.start ==
+                    ((this.start as? AstNode)?.astParent as ComprehensionExpression).iterable) ||
             this.start is ConditionalExpression ||
             this.start is ShortCircuitOperator) && branch == false ||
             (this.start is IfStatement &&

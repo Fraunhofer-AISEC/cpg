@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
@@ -34,7 +35,7 @@ import java.util.*
 import org.neo4j.ogm.annotation.Relationship
 
 /** A [Statement] which represents a try/catch block, primarily used for exception handling. */
-class TryStatement : Statement() {
+class TryStatement internal constructor(ctx: TranslationContext) : Statement(ctx) {
     /**
      * This represents some kind of resource which is typically opened (or similar) while entering
      * the [tryBlock]. If this operation fails, we may continue with the [finallyBlock]. However,

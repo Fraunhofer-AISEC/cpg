@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.HasDefault
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
@@ -33,7 +34,8 @@ import java.util.*
 import org.neo4j.ogm.annotation.Relationship
 
 /** A declaration of a type template parameter */
-class TypeParameterDeclaration : ValueDeclaration(), HasDefault<Type?> {
+class TypeParameterDeclaration internal constructor(ctx: TranslationContext) :
+    ValueDeclaration(ctx), HasDefault<Type?> {
     @Relationship(value = "DEFAULT", direction = Relationship.Direction.OUTGOING)
     var defaultEdge = astOptionalEdgeOf<Type>()
     /** TemplateParameters can define a default for the type parameter. */

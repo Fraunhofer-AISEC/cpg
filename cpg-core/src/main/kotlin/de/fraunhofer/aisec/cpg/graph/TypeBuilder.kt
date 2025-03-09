@@ -34,11 +34,11 @@ import de.fraunhofer.aisec.cpg.graph.types.*
  * Creates a new [UnknownType] and sets the appropriate language, if this [MetadataProvider]
  * includes a [LanguageProvider].
  */
-fun MetadataProvider?.unknownType(): Type {
+fun ContextProvider.unknownType(): Type {
     return if (this is LanguageProvider) {
         UnknownType.getUnknownType(language)
     } else {
-        UnknownType.getUnknownType(UnknownLanguage)
+        UnknownType.getUnknownType(UnknownLanguage(ctx))
     }
 }
 
@@ -149,5 +149,5 @@ fun LanguageProvider.primitiveType(name: CharSequence): Type {
  * [LanguageProvider].
  */
 fun LanguageProvider.isPrimitive(type: Type): Boolean {
-    return language?.primitiveTypeNames?.contains(type.typeName) == true
+    return language.primitiveTypeNames.contains(type.typeName) == true
 }

@@ -42,7 +42,7 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
  *
  * This method can be used similar to the logical implication to test "sel => mustSatisfy".
  */
-inline fun <reified T> Node.allExtended(
+inline fun <reified T> AstNode.allExtended(
     noinline sel: ((T) -> Boolean)? = null,
     noinline mustSatisfy: (T) -> QueryTree<Boolean>,
 ): QueryTree<Boolean> {
@@ -60,7 +60,7 @@ inline fun <reified T> Node.allExtended(
  *
  * This method can be used similar to the logical implication to test "sel => mustSatisfy".
  */
-inline fun <reified T> Node.evaluateExtended(
+inline fun <reified T> AstNode.evaluateExtended(
     noinline sel: ((T) -> Boolean)? = null,
     noinline mustSatisfy: (T) -> QueryTree<Boolean>,
 ): List<QueryTree<Boolean>> {
@@ -81,7 +81,7 @@ inline fun <reified T> Node.evaluateExtended(
  *
  * This method can be used similar to the logical implication to test "sel => mustSatisfy".
  */
-inline fun <reified T> Node.all(
+inline fun <reified T> AstNode.all(
     noinline sel: ((T) -> Boolean)? = null,
     noinline mustSatisfy: (T) -> Boolean,
 ): Pair<Boolean, List<T>> {
@@ -98,7 +98,7 @@ inline fun <reified T> Node.all(
  * evaluation. This filter should be rather simple in most cases since its evaluation is not part of
  * the resulting reasoning chain.
  */
-inline fun <reified T> Node.existsExtended(
+inline fun <reified T> AstNode.existsExtended(
     noinline sel: ((T) -> Boolean)? = null,
     noinline mustSatisfy: (T) -> QueryTree<Boolean>,
 ): QueryTree<Boolean> {
@@ -111,7 +111,7 @@ inline fun <reified T> Node.existsExtended(
  * The optional argument [sel] can be used to filter nodes which are considered during the
  * evaluation.
  */
-inline fun <reified T> Node.exists(
+inline fun <reified T> AstNode.exists(
     noinline sel: ((T) -> Boolean)? = null,
     noinline mustSatisfy: (T) -> Boolean,
 ): Pair<Boolean, List<T>> {

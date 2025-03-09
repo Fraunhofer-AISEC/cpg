@@ -37,7 +37,7 @@ import java.util.concurrent.ConcurrentHashMap
  * is used. Ideally, this type is only assigned temporary and then later replaced with an actual
  * known type. But, because we sometimes do fuzzy parsing, this might not be the case all the time.
  */
-class UnknownType private constructor(ctx: TranslationContext?) : Type(ctx) {
+class UnknownType private constructor(ctx: TranslationContext) : Type(ctx) {
     init {
         name = Name(UNKNOWN_TYPE_STRING, null, language)
     }

@@ -26,8 +26,8 @@
 package de.fraunhofer.aisec.cpg.graph.scopes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 
 /** Represents the scope of a record or class, most likely created by a [RecordDeclaration]. */
-class RecordScope(ctx: TranslationContext, node: Node) : NameScope(ctx, node)
+class RecordScope(ctx: TranslationContext, node: AstNode) : NameScope(ctx, node)

@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
@@ -37,11 +38,12 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /** A unary operator expression, involving one expression and an operator, such as `a++`. */
-class UnaryOperator : Expression(), HasOverloadedOperation, ArgumentHolder, HasType.TypeObserver {
+class UnaryOperator internal constructor(ctx: TranslationContext) :
+    Expression(ctx), HasOverloadedOperation, ArgumentHolder, HasType.TypeObserver {
     @Relationship("INPUT")
     var inputEdge =
         astEdgeOf<Expression>(
-            of = ProblemExpression("could not parse input"),
+            of = ProblemExpression(ctx, "could not parse input"),
             onChanged = { old, new ->
                 exchangeTypeObserverWithAccessPropagation(old, new)
                 changeExpressionAccess()

@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.HasDefault
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
@@ -33,8 +34,9 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.*
 import org.neo4j.ogm.annotation.Relationship
 
-/** A declaration of a function or nontype template parameter. */
-class ParameterDeclaration : ValueDeclaration(), HasDefault<Expression?>, ArgumentHolder {
+/** A declaration of a function or non-type template parameter. */
+class ParameterDeclaration internal constructor(ctx: TranslationContext) :
+    ValueDeclaration(ctx), HasDefault<Expression?>, ArgumentHolder {
     var isVariadic = false
 
     @Relationship(value = "DEFAULT", direction = Relationship.Direction.OUTGOING)

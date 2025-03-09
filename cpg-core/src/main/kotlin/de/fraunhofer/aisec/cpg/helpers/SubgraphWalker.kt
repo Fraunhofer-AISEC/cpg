@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.helpers
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.StatementHolder
@@ -94,8 +95,8 @@ object SubgraphWalker {
      * @return a list of children from the node's AST
      */
     @JvmStatic
-    fun getAstChildren(node: Node?): List<Node> {
-        val children = ArrayList<Node>()
+    fun getAstChildren(node: AstNode?): List<AstNode> {
+        val children = ArrayList<AstNode>()
         if (node == null) return children
         val classType: Class<*> = node.javaClass
 
@@ -119,7 +120,9 @@ object SubgraphWalker {
 
                 when (obj) {
                     is EdgeCollection<*, *> -> {
-                        children.addAll(obj.toNodeCollection({ it is AstEdge<*> }))
+                        children.addAll(
+                            obj.toNodeCollection({ it is AstEdge<*> }).filterIsInstance<AstNode>()
+                        )
                     }
                     else -> {
                         throw AnnotationFormatError(
@@ -142,19 +145,19 @@ object SubgraphWalker {
      * @param n the node which contains the ast children to flatten
      * @return the flattened nodes
      */
-    fun flattenAST(n: Node?): List<Node> {
+    fun flattenAST(n: AstNode?): List<AstNode> {
         if (n == null) {
             return ArrayList()
         }
 
         // We are using an identity set here, to avoid placing the *same* node in the identitySet
         // twice, possibly resulting in loops
-        val identitySet = IdentitySet<Node>()
+        val identitySet = IdentitySet<AstNode>()
         flattenASTInternal(identitySet, n)
         return identitySet.toSortedList()
     }
 
-    private fun flattenASTInternal(identitySet: MutableSet<Node>, n: Node) {
+    private fun flattenASTInternal(identitySet: MutableSet<AstNode>, n: AstNode) {
         // Add the node itself and abort if its already there, to detect possible loops
         if (!identitySet.add(n)) {
             return
@@ -175,7 +178,7 @@ object SubgraphWalker {
      */
     fun getEOGPathEdges(n: Node?): Border {
         val border = Border()
-        val flattedASTTree = flattenAST(n)
+        val flattedASTTree = if (n is AstNode) flattenAST(n) else listOf()
         val eogNodes =
             flattedASTTree.filter { node: Node ->
                 node.prevEOG.isNotEmpty() || node.nextEOG.isNotEmpty()
@@ -220,11 +223,11 @@ object SubgraphWalker {
          *
          * @param root The node where we should start
          */
-        fun iterate(root: Node) {
+        fun iterate(root: AstNode) {
             var todo = ArrayDeque<Pair<Node, Node?>>()
             val seen = identitySetOf<Node>()
 
-            todo.push(Pair<Node, Node?>(root, null))
+            todo.push(Pair<Node, AstNode?>(root, null))
             while (todo.isNotEmpty()) {
                 var (current, parent) = todo.pop()
                 onNodeVisit.forEach { it(current, parent) }
@@ -325,7 +328,7 @@ object SubgraphWalker {
          *
          * @param root The node where AST descent is started
          */
-        fun iterate(root: Node) {
+        fun iterate(root: AstNode) {
             val walker = IterativeGraphWalker()
             walker.strategy = this.strategy
             handlers.forEach { h -> walker.registerOnNodeVisit { n, p -> handleNode(n, p, h) } }
@@ -366,7 +369,11 @@ object SubgraphWalker {
  *   [MemberExpression]), we also replace the [CallExpression] with a [MemberCallExpression].
  */
 context(ContextProvider)
-fun SubgraphWalker.ScopedWalker.replace(parent: Node?, old: Expression, new: Expression): Boolean {
+fun SubgraphWalker.ScopedWalker.replace(
+    parent: AstNode?,
+    old: Expression,
+    new: Expression,
+): Boolean {
     // We do not allow to replace nodes where the DFG (or other dependent nodes, such as PDG have
     // been set). The reason for that is that these edges contain a lot of information on the edges
     // themselves and replacing this edge would be very complicated.
@@ -437,7 +444,6 @@ fun SubgraphWalker.ScopedWalker.replace(parent: Node?, old: Expression, new: Exp
 }
 
 private fun CallExpression.duplicateTo(call: CallExpression, callee: Reference) {
-    call.ctx = this.ctx
     call.language = this.language
     call.scope = this.scope
     call.argumentEdges.clear()
@@ -457,21 +463,21 @@ private fun CallExpression.duplicateTo(call: CallExpression, callee: Reference) 
 }
 
 fun MemberCallExpression.toCallExpression(callee: Reference): CallExpression {
-    val call = CallExpression()
+    val call = CallExpression(ctx)
     duplicateTo(call, callee)
 
     return call
 }
 
 fun CallExpression.toMemberCallExpression(callee: MemberExpression): MemberCallExpression {
-    val call = MemberCallExpression()
+    val call = MemberCallExpression(ctx)
     duplicateTo(call, callee)
 
     return call
 }
 
 fun CallExpression.toConstructExpression(callee: Reference): ConstructExpression {
-    val construct = ConstructExpression()
+    val construct = ConstructExpression(ctx)
     duplicateTo(construct, callee)
 
     return construct

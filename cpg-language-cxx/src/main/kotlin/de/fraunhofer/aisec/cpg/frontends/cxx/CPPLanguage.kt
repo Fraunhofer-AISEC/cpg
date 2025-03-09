@@ -29,8 +29,8 @@ import de.fraunhofer.aisec.cpg.CallResolutionResult
 import de.fraunhofer.aisec.cpg.SignatureMatches
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.*
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
-import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.primitiveType
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
@@ -252,7 +252,7 @@ open class CPPLanguage(ctx: TranslationContext) :
             ctx.scopeManager.lookupSymbolByNodeNameOfType<FunctionTemplateDeclaration>(templateCall)
         for (functionTemplateDeclaration in instantiationCandidates) {
             val initializationType =
-                mutableMapOf<Node?, TemplateDeclaration.TemplateInitialization?>()
+                mutableMapOf<AstNode?, TemplateDeclaration.TemplateInitialization?>()
             val orderedInitializationSignature = mutableMapOf<Declaration, Int>()
             val explicitInstantiation = mutableListOf<ParameterizedType>()
             if (

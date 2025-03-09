@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
@@ -34,7 +35,9 @@ import java.util.*
 import org.neo4j.ogm.annotation.Relationship
 import org.slf4j.LoggerFactory
 
-class CastExpression : Expression(), ArgumentHolder, HasType.TypeObserver {
+/** Represents a cast expression, such as `(int) 5`. */
+class CastExpression internal constructor(ctx: TranslationContext) :
+    Expression(ctx), ArgumentHolder, HasType.TypeObserver {
     /**
      * The [Expression] that is cast to [castType].
      *
@@ -47,7 +50,7 @@ class CastExpression : Expression(), ArgumentHolder, HasType.TypeObserver {
     @Relationship(type = "EXPRESSION")
     var expressionEdge =
         astEdgeOf<Expression>(
-            of = ProblemExpression("could not parse inner expression"),
+            of = ProblemExpression(ctx, "could not parse inner expression"),
             onChanged = ::exchangeTypeObserverWithAccessPropagation,
         )
     var expression by unwrapping(CastExpression::expressionEdge)

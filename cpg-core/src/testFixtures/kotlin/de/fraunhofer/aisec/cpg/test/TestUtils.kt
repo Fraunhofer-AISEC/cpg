@@ -89,7 +89,7 @@ fun <S : Node> findByName(nodes: Collection<S>, name: String): Collection<S> {
 }
 
 /**
- * Like [TestUtils.analyze], but for all files in a directory tree having a specific file extension
+ * Like [analyze], but for all files in a directory tree having a specific file extension
  *
  * @param fileExtension All files found in the directory must end on this String. An empty string
  *   matches all files

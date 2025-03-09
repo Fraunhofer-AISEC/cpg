@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
@@ -34,7 +35,7 @@ import org.neo4j.ogm.annotation.Relationship
  * Declaration of a field within a [RecordDeclaration]. It contains the modifiers associated with
  * the field as well as an initializer [Expression] which provides an initial value for the field.
  */
-class FieldDeclaration : VariableDeclaration() {
+class FieldDeclaration internal constructor(ctx: TranslationContext) : VariableDeclaration(ctx) {
     /** Specifies, whether this field declaration is also a definition, i.e. has an initializer. */
     var isDefinition = false
 

@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
@@ -36,8 +37,8 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /** The top most declaration, representing a translation unit, for example a file. */
-class TranslationUnitDeclaration :
-    Declaration(), DeclarationHolder, StatementHolder, EOGStarterHolder {
+class TranslationUnitDeclaration internal constructor(ctx: TranslationContext) :
+    Declaration(ctx), DeclarationHolder, StatementHolder, EOGStarterHolder {
     /** A list of declarations within this unit. */
     @Relationship(value = "DECLARATIONS", direction = Relationship.Direction.OUTGOING)
     val declarationEdges = astEdgesOf<Declaration>()
@@ -76,9 +77,9 @@ class TranslationUnitDeclaration :
     }
 
     @DoNotPersist
-    override val eogStarters: List<Node>
+    override val eogStarters: List<AstNode>
         get() {
-            val list = mutableListOf<Node>()
+            val list = mutableListOf<AstNode>()
             // Add all top-level declarations
             list += declarations
             // Add the TU itself, so that we can catch any static statements in the TU

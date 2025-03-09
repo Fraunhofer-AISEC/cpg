@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import java.util.*
@@ -38,7 +39,8 @@ import java.util.*
  * While this node implements [HasBase], this is basically just a shortcut to access the base of the
  * underlying [callee] property, if appropriate.
  */
-class MemberCallExpression : CallExpression(), HasBase, HasOperatorCode {
+class MemberCallExpression internal constructor(ctx: TranslationContext) :
+    CallExpression(ctx), HasBase, HasOperatorCode {
     /**
      * The base object. This is basically a shortcut to accessing the base of the [callee], if it
      * has one (i.e., if it implements [HasBase]). This is the case for example, if it is a

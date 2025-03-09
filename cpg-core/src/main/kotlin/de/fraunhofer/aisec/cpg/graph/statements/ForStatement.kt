@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
@@ -42,7 +43,8 @@ import org.neo4j.ogm.annotation.Relationship
  * that declares variables, can change them in an iteration statement and is executed until the
  * condition evaluates to false.
  */
-class ForStatement : LoopStatement(), BranchingNode, StatementHolder {
+class ForStatement internal constructor(ctx: TranslationContext) :
+    LoopStatement(ctx), BranchingNode, StatementHolder {
 
     @Relationship("INITIALIZER_STATEMENT")
     var initializerStatementEdge = astOptionalEdgeOf<Statement>()
@@ -58,7 +60,7 @@ class ForStatement : LoopStatement(), BranchingNode, StatementHolder {
     @Relationship("ITERATION_STATEMENT") var iterationStatementEdge = astOptionalEdgeOf<Statement>()
     var iterationStatement by unwrapping(ForStatement::iterationStatementEdge)
 
-    override val branchedBy: Node?
+    override val branchedBy: AstNode?
         get() = condition ?: conditionDeclaration
 
     override var statementEdges: AstEdges<Statement, AstEdge<Statement>>

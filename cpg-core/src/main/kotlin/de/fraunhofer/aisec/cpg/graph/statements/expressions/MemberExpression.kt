@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.HasBase
 import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
@@ -43,11 +44,12 @@ import org.neo4j.ogm.annotation.Relationship
  * use-case is access of a member function (method) as part of the [MemberCallExpression.callee]
  * property of a [MemberCallExpression].
  */
-class MemberExpression : Reference(), HasOverloadedOperation, ArgumentHolder, HasBase {
+class MemberExpression internal constructor(ctx: TranslationContext) :
+    Reference(ctx), HasOverloadedOperation, ArgumentHolder, HasBase {
     @Relationship("BASE")
     var baseEdge =
         astEdgeOf<Expression>(
-            ProblemExpression("could not parse base expression"),
+            ProblemExpression(ctx, "could not parse base expression"),
             onChanged = { old, new ->
                 exchangeTypeObserverWithAccessPropagation(old, new)
                 updateName()

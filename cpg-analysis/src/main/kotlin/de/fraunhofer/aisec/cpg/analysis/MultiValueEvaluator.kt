@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.analysis
 
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
@@ -226,7 +227,11 @@ class MultiValueEvaluator : ValueEvaluator() {
             return (internalRes as? Collection<*>) ?: mutableSetOf(internalRes)
         }
 
-        if (node is Reference && prevDFG.size == 2 && prevDFG.all(::isSimpleForLoop)) {
+        if (
+            node is Reference &&
+                prevDFG.size == 2 &&
+                prevDFG.filterIsInstance<AstNode>().all(::isSimpleForLoop)
+        ) {
             return handleSimpleLoopVariable(node, depth)
         }
 
@@ -251,7 +256,7 @@ class MultiValueEvaluator : ValueEvaluator() {
         if (element is Collection<*>) this.addAll(element) else this.add(element)
     }
 
-    private fun isSimpleForLoop(node: Node): Boolean {
+    private fun isSimpleForLoop(node: AstNode): Boolean {
         // Are we in the for statement somehow?
         var forStatement = node.astParent as? ForStatement
         if (forStatement == null) forStatement = node.astParent?.astParent as? ForStatement
@@ -275,8 +280,12 @@ class MultiValueEvaluator : ValueEvaluator() {
 
     private fun handleSimpleLoopVariable(expr: Reference, depth: Int): Collection<Any?> {
         val loop =
-            expr.prevDFG.firstOrNull { it.astParent is ForStatement }?.astParent as? ForStatement
+            expr.prevDFG
+                .filterIsInstance<AstNode>()
+                .firstOrNull { it.astParent is ForStatement }
+                ?.astParent as? ForStatement
                 ?: expr.prevDFG
+                    .filterIsInstance<AstNode>()
                     .firstOrNull { it.astParent?.astParent is ForStatement }
                     ?.astParent
                     ?.astParent as? ForStatement

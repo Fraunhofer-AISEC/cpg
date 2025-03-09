@@ -58,10 +58,10 @@ fun Node.printEOG(
 }
 
 /** Utility function to print the AST using [printGraph]. */
-fun Node.printAST(
+fun AstNode.printAST(
     maxConnections: Int = 25,
-    vararg strategies: (Node) -> Iterator<AstEdge<out Node>> =
-        arrayOf<(Node) -> Iterator<AstEdge<out Node>>>(
+    vararg strategies: (Node) -> Iterator<AstEdge<out AstNode>> =
+        arrayOf<(Node) -> Iterator<AstEdge<out AstNode>>>(
             Strategy::AST_EDGES_FORWARD,
             Strategy::AST_EDGES_BACKWARD,
         ),

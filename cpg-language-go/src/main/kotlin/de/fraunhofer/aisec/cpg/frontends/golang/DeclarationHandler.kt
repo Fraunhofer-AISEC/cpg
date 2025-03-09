@@ -33,7 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 
 class DeclarationHandler(frontend: GoLanguageFrontend) :
-    GoHandler<Declaration?, GoStandardLibrary.Ast.Decl>(::ProblemDeclaration, frontend) {
+    GoHandler<Declaration?, GoStandardLibrary.Ast.Decl>(frontend) {
 
     override fun handleNode(node: GoStandardLibrary.Ast.Decl): Declaration? {
         return when (node) {
@@ -229,7 +229,7 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
         // Reset the initializers
         frontend.declCtx.constInitializers.clear()
 
-        val sequence = DeclarationSequence()
+        val sequence = DeclarationSequence(ctx)
 
         for (spec in genDecl.specs) {
             // We parse imports specifications directly in the frontend
@@ -249,4 +249,7 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
 
         return sequence
     }
+
+    override val problemConstructor: (String, GoStandardLibrary.Ast.Decl?) -> Declaration
+        get() = { problem, rawNode -> newProblemDeclaration(problem, rawNode = rawNode) }
 }

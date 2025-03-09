@@ -38,7 +38,7 @@ import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
  * unknown size apart from void. Therefore, this Type is not called VoidType
  */
 class IncompleteType : Type {
-    constructor(ctx: TranslationContext?, language: Language<*>) : super(ctx, "void", language)
+    constructor(ctx: TranslationContext, language: Language<*>) : super(ctx, "void", language)
 
     /** @return PointerType to a IncompleteType, e.g. void* */
     override fun reference(pointer: PointerOrigin?): Type {

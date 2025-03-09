@@ -708,7 +708,7 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
      * arguments [scope] and [predicate] are forwarded.
      */
     fun lookupSymbolByNodeName(
-        node: Node,
+        node: AstNode,
         scope: Scope = node.scope ?: currentScope,
         replaceImports: Boolean = true,
         predicate: ((Declaration) -> Boolean)? = null,
@@ -728,7 +728,7 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
      * Additionally, it adds a predicate to the search that the declaration must be of type [T].
      */
     inline fun <reified T : Declaration> lookupSymbolByNodeNameOfType(
-        node: Node,
+        node: AstNode,
         scope: Scope = node.scope ?: currentScope,
         replaceImports: Boolean = true,
     ): List<T> {
@@ -856,7 +856,9 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
      * @param TypeToInfer the type of the node that should be inferred
      * @param source the source that was responsible for the inference
      */
-    fun <TypeToInfer : Node> translationUnitForInference(source: Node): TranslationUnitDeclaration {
+    fun <TypeToInfer : Node> translationUnitForInference(
+        source: AstNode
+    ): TranslationUnitDeclaration {
         return source.language.translationUnitForInference<TypeToInfer>(source)
     }
 }

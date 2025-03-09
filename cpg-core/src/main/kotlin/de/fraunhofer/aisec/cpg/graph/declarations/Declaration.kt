@@ -25,7 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
-import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import org.neo4j.ogm.annotation.NodeEntity
@@ -40,7 +41,7 @@ import org.neo4j.ogm.annotation.NodeEntity
  * however clang does establish a connection between those nodes, we currently do not.
  */
 @NodeEntity
-abstract class Declaration : Node() {
+abstract class Declaration internal constructor(ctx: TranslationContext) : AstNode(ctx) {
     @DoNotPersist
     val symbol: Symbol
         get() {

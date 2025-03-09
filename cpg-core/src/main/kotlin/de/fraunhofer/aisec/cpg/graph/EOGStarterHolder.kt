@@ -46,5 +46,5 @@ import de.fraunhofer.aisec.cpg.passes.SymbolResolver
  * i.e., they should have a valid [Node.nextEOG], but an empty [Node.prevEOG].
  */
 interface EOGStarterHolder {
-    val eogStarters: List<Node>
+    val eogStarters: List<AstNode>
 }

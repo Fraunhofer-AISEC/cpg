@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.PopulatedByPass
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.scopes.FileScope
@@ -123,7 +124,7 @@ import org.neo4j.ogm.annotation.typeconversion.Convert
  * In this example, the [name] and [import] is set to `std` and [style] is
  * [ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE].
  */
-class ImportDeclaration : Declaration() {
+class ImportDeclaration internal constructor(ctx: TranslationContext) : Declaration(ctx) {
 
     /**
      * The imported symbol: This usually refers to a [NamespaceDeclaration] / its [NameScope] or a

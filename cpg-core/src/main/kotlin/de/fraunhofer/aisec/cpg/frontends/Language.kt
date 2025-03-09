@@ -34,7 +34,9 @@ import de.fraunhofer.aisec.cpg.CallResolutionResult
 import de.fraunhofer.aisec.cpg.SignatureResult
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.ancestors
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Component
+import de.fraunhofer.aisec.cpg.graph.LanguageProvider
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
@@ -89,7 +91,10 @@ data class ImplicitCast(override var depthDistance: Int) : CastResult(depthDista
  * persisted in the final graph (database) and each node links to its corresponding language using
  * the [Node.language] property.
  */
-abstract class Language<T : LanguageFrontend<*, *>> : Node {
+abstract class Language<T : LanguageFrontend<*, *>> : Node, LanguageProvider {
+
+    override val language: Language<T>
+        get() = this
 
     /** The file extensions without the dot */
     abstract val fileExtensions: List<String>
@@ -123,9 +128,7 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node {
     /** All operators which perform a simple assignment from the rhs to the lhs. */
     open val simpleAssignmentOperators: Set<String> = setOf("=")
 
-    constructor(ctx: TranslationContext? = null) : super() {
-        this.ctx = ctx
-    }
+    constructor(ctx: TranslationContext) : super(ctx)
 
     /**
      * Creates a new [LanguageFrontend] object to parse the language. It requires the
@@ -163,7 +166,6 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node {
     }
 
     init {
-        this.language = this
         this::class.simpleName?.let { this.name = Name(it) }
     }
 
@@ -428,7 +430,11 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node {
         // connection to the AST. We add several fallbacks here to make sure that we have a
         // component.
         val component =
-            source.scope?.astNode?.component ?: source.component ?: source.ctx?.currentComponent
+            if (source is AstNode) {
+                source.component ?: source.scope?.astNode?.component ?: source.ctx.currentComponent
+            } else {
+                source.ctx.currentComponent
+            }
         if (component == null) {
             val msg =
                 "No suitable component found that should be used for inference. " +
@@ -464,7 +470,7 @@ internal class KClassSerializer : JsonSerializer<KClass<*>>() {
  * Represents a language definition with no known implementation or specifics. The class is used as
  * a placeholder or to handle cases where the language is not explicitly defined or supported.
  */
-object UnknownLanguage : Language<Nothing>() {
+class UnknownLanguage(ctx: TranslationContext) : Language<Nothing>(ctx) {
     override val fileExtensions: List<String>
         get() = listOf()
 
@@ -477,7 +483,7 @@ object UnknownLanguage : Language<Nothing>() {
  * Represents a "language" that is not really a language. The class is used in cases where the
  * language is not explicitly defined or supported, for example in an [OverlayNode].
  */
-object NoLanguage : Language<Nothing>() {
+class NoLanguage(ctx: TranslationContext) : Language<Nothing>(ctx) {
     override val fileExtensions = listOf<String>()
     override val frontend: KClass<out Nothing> = Nothing::class
     override val builtInTypes: Map<String, Type> = mapOf()
@@ -501,13 +507,13 @@ class MultipleLanguages(ctx: TranslationContext, val languages: Set<Language<*>>
  * Returns the single language of a node and its children. If the node has multiple children with
  * different languages, it returns a [MultipleLanguages] object.
  */
-fun Node.multiLanguage(): Language<*> {
+fun AstNode.multiLanguage(): Language<*> {
     val languages = astChildren.map { it.language }.toSet()
     return if (languages.size == 1) {
         languages.single()
     } else if (languages.size > 1) {
-        MultipleLanguages(ctx!!, languages = languages)
+        MultipleLanguages(ctx, languages = languages)
     } else {
-        UnknownLanguage
+        UnknownLanguage(ctx)
     }
 }

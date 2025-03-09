@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
@@ -43,7 +44,8 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /** Represents the declaration or definition of a function. */
-open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder, EOGStarterHolder {
+open class FunctionDeclaration internal constructor(ctx: TranslationContext) :
+    ValueDeclaration(ctx), DeclarationHolder, EOGStarterHolder {
     @Relationship("BODY") var bodyEdge = astOptionalEdgeOf<Statement>()
     /** The function body. Usualfly a [Block]. */
     var body by unwrapping(FunctionDeclaration::bodyEdge)
@@ -161,7 +163,7 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder, EOGStart
     }
 
     @DoNotPersist
-    override val eogStarters: List<Node>
+    override val eogStarters: List<AstNode>
         get() = listOfNotNull(this)
 
     override fun equals(other: Any?): Boolean {

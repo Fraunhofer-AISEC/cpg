@@ -33,8 +33,7 @@ import org.jruby.ast.Node
 import org.jruby.ast.types.INameNode
 import org.jruby.ast.visitor.OperatorCallNode
 
-class ExpressionHandler(lang: RubyLanguageFrontend) :
-    RubyHandler<Expression, Node>({ ProblemExpression() }, lang) {
+class ExpressionHandler(lang: RubyLanguageFrontend) : RubyHandler<Expression, Node>(lang) {
 
     override fun handleNode(node: Node): Expression {
         return when (node) {

@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
 
 /**
@@ -33,7 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
  * will be converted into a list-structure and all its children will be added to the parent, i.e.
  * the translation unit. It should NOT end up in the final graph.
  */
-class DeclarationSequence : Declaration(), DeclarationHolder {
+class DeclarationSequence(ctx: TranslationContext) : Declaration(ctx), DeclarationHolder {
     val children = mutableListOf<Declaration>()
 
     override fun addDeclaration(declaration: Declaration) {

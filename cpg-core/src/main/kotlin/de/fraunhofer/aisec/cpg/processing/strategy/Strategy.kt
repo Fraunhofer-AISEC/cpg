@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.processing.strategy
 
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
@@ -122,8 +123,8 @@ object Strategy {
      * @param x
      * @return
      */
-    fun AST_FORWARD(x: Node): Iterator<Node> {
-        return x.astChildren.iterator()
+    fun AST_FORWARD(x: Node): Iterator<AstNode> {
+        return if (x is AstNode) x.astChildren.iterator() else emptyList<AstNode>().iterator()
     }
 
     /**
@@ -172,8 +173,9 @@ object Strategy {
      * @param x Current node in EOG.
      * @return Iterator over successor edges.
      */
-    fun AST_EDGES_FORWARD(x: Node): Iterator<AstEdge<out Node>> {
-        return x.astEdges.iterator()
+    fun AST_EDGES_FORWARD(x: Node): Iterator<AstEdge<out AstNode>> {
+        return if (x is AstNode) x.astEdges.iterator()
+        else emptyList<AstEdge<out AstNode>>().iterator()
     }
 
     /**
@@ -182,7 +184,11 @@ object Strategy {
      * @param x Current node in EOG.
      * @return Iterator over successor edges.
      */
-    fun AST_EDGES_BACKWARD(x: Node): Iterator<AstEdge<out Node>> {
+    fun AST_EDGES_BACKWARD(x: Node): Iterator<AstEdge<out AstNode>> {
+        if (x !is AstNode) {
+            return emptyList<AstEdge<out AstNode>>().iterator()
+        }
+
         return (x.astParent?.astEdges?.filter { it.end == x } ?: emptyList()).iterator()
     }
 }

@@ -40,7 +40,7 @@ import de.fraunhofer.aisec.cpg.graph.unknownType
 class FunctionType
 @JvmOverloads
 constructor(
-    ctx: TranslationContext?,
+    ctx: TranslationContext,
     typeName: String = "",
     var parameters: List<Type> = listOf(),
     var returnTypes: List<Type> = listOf(),

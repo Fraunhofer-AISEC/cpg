@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.edges
 
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeCollection
@@ -99,7 +100,7 @@ inline fun <reified EdgeType : Edge<out Node>> Node.allEdges(
 }
 
 /** A shortcut to return all [AstEdge] edges starting from this node. */
-val Node.astEdges: Collection<AstEdge<out Node>>
+val AstNode.astEdges: Collection<AstEdge<out AstNode>>
     get() {
         return allEdges()
     }

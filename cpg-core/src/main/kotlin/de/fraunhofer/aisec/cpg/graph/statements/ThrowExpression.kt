@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
@@ -34,7 +35,8 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /** Represents a `throw` or `raise` statement/expression. */
-class ThrowExpression : Expression(), ArgumentHolder {
+class ThrowExpression internal constructor(ctx: TranslationContext) :
+    Expression(ctx), ArgumentHolder {
 
     /** The exception object to be raised. */
     @Relationship(value = "EXCEPTION") var exceptionEdge = astOptionalEdgeOf<Expression>()

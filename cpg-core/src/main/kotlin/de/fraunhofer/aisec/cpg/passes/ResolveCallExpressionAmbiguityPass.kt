@@ -127,7 +127,7 @@ class ResolveCallExpressionAmbiguityPass(ctx: TranslationContext) : TranslationU
 context(ContextProvider)
 fun SubgraphWalker.ScopedWalker.replaceCallWithCast(
     type: Type,
-    parent: Node,
+    parent: AstNode,
     call: CallExpression,
     pointer: Boolean,
 ) {
@@ -150,7 +150,7 @@ fun SubgraphWalker.ScopedWalker.replaceCallWithCast(
 context(ContextProvider)
 fun SubgraphWalker.ScopedWalker.replaceCallWithConstruct(
     type: ObjectType,
-    parent: Node,
+    parent: AstNode,
     call: CallExpression,
 ) {
     val callee = call.callee

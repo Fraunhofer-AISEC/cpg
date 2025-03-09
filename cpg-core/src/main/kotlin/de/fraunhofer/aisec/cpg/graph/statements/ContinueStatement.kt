@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import java.util.Objects
 
 /**
@@ -32,7 +33,7 @@ import java.util.Objects
  * loop condition. Can have a loop label, e.g. in Java, to specify which of the nested loops
  * condition should be reevaluated.
  */
-class ContinueStatement : Statement() {
+class ContinueStatement internal constructor(ctx: TranslationContext) : Statement(ctx) {
     /** Specifies the loop in a nested structure that the label will 'continue' */
     var label: String? = null
 

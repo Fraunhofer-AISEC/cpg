@@ -135,5 +135,5 @@ open class TranslationContext(
      * [TranslationConfiguration] to instantiate the language. This language instance is then not
      * used after the config is built.
      */
-    internal object EmptyTranslationContext : TranslationContext()
+    object EmptyTranslationContext : TranslationContext()
 }

@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.HasOperatorOverloading
 import de.fraunhofer.aisec.cpg.graph.HasOperatorCode
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
@@ -39,7 +40,8 @@ import de.fraunhofer.aisec.cpg.graph.types.ObjectType
  * There are some very special cases for C++, where we can have a global operator for a particular
  * class. In this case we just pretend like it is a method operator.
  */
-class OperatorDeclaration : MethodDeclaration(), HasOperatorCode {
+class OperatorDeclaration internal constructor(ctx: TranslationContext) :
+    MethodDeclaration(ctx), HasOperatorCode {
     /** The operator code which this operator declares. */
     override var operatorCode: String? = null
 

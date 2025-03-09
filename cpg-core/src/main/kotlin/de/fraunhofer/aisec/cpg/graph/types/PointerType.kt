@@ -49,7 +49,7 @@ class PointerType : Type, SecondOrderType {
     constructor(ctx: TranslationContext) : super(ctx)
 
     constructor(
-        ctx: TranslationContext?,
+        ctx: TranslationContext,
         elementType: Type,
         pointerOrigin: PointerOrigin?,
     ) : super(ctx) {
@@ -65,7 +65,7 @@ class PointerType : Type, SecondOrderType {
     }
 
     constructor(
-        ctx: TranslationContext?,
+        ctx: TranslationContext,
         type: Type?,
         elementType: Type,
         pointerOrigin: PointerOrigin?,

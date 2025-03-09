@@ -378,7 +378,7 @@ open class CXXLanguageFrontend(ctx: TranslationContext, language: Language<CXXLa
      * @param node the node to process
      * @param owner the AST node which holds the attribute
      */
-    fun processAttributes(node: Node, owner: IASTNode) {
+    fun processAttributes(node: AstNode, owner: IASTNode) {
         if (config.processAnnotations && owner is IASTAttributeOwner) { // set attributes
             node.annotations += handleAttributes(owner)
         }

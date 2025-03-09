@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
@@ -34,7 +35,8 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /** Represents a statement that returns out of the current function. */
-class ReturnStatement : Statement(), ArgumentHolder {
+class ReturnStatement internal constructor(ctx: TranslationContext) :
+    Statement(ctx), ArgumentHolder {
     @Relationship(value = "RETURN_VALUES") var returnValueEdges = astEdgesOf<Expression>()
 
     /** The expression whose value will be returned. */

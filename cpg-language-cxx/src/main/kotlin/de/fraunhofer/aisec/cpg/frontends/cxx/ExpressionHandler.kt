@@ -36,7 +36,6 @@ import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver.Companion.addImplicitTemplateParametersToCall
 import java.math.BigInteger
 import java.util.*
-import java.util.function.Supplier
 import kotlin.math.max
 import kotlin.math.pow
 import org.eclipse.cdt.core.dom.ast.*
@@ -59,8 +58,7 @@ import org.eclipse.cdt.internal.core.model.ASTStringUtil
  * IASTExpression extends IASTInitializerClause. The later is the appropriate Interface type for the
  * handler.
  */
-class ExpressionHandler(lang: CXXLanguageFrontend) :
-    CXXHandler<Expression, IASTNode>(Supplier(::ProblemExpression), lang) {
+class ExpressionHandler(lang: CXXLanguageFrontend) : CXXHandler<Expression, IASTNode>() {
 
     override fun handleNode(node: IASTNode): Expression {
         return when (node) {
@@ -75,7 +73,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             is IASTExpressionList -> handleExpressionList(node)
             is IASTInitializerList ->
                 frontend.initializerHandler.handle(node)
-                    ?: ProblemExpression("could not parse initializer list")
+                    ?: ProblemExpression(ctx, "could not parse initializer list")
             is IASTArraySubscriptExpression -> handleArraySubscriptExpression(node)
             is IASTTypeIdExpression -> handleTypeIdExpression(node)
             is IGNUASTCompoundStatementExpression -> handleCompoundStatementExpression(node)

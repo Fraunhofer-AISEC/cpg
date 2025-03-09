@@ -26,14 +26,14 @@
 package de.fraunhofer.aisec.cpg.frontends
 
 import de.fraunhofer.aisec.cpg.*
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
+import de.fraunhofer.aisec.cpg.graph.newProblemExpression
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
-import java.util.function.Supplier
 import kotlin.reflect.KClass
 import kotlin.test.assertNotNull
 
@@ -130,4 +130,7 @@ open class TestLanguageFrontend(
 }
 
 class TestHandler(frontend: TestLanguageFrontend) :
-    Handler<Node, Any, TestLanguageFrontend>(Supplier { ProblemExpression() }, frontend)
+    Handler<AstNode, Any, TestLanguageFrontend>(frontend) {
+    override val problemConstructor: (String, Any?) -> AstNode
+        get() = { problem, rawNode -> newProblemExpression(problem, rawNode = rawNode) }
+}

@@ -25,10 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 
-class GotoStatement : Statement() {
+class GotoStatement internal constructor(ctx: TranslationContext) : Statement(ctx) {
     var labelName: String = ""
     var targetLabel: LabelStatement? = null
 

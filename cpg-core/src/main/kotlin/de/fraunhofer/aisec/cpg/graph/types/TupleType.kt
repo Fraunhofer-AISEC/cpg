@@ -33,7 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.unknownType
  * Represents a tuple of types. Primarily used in resolving function calls with multiple return
  * values.
  */
-class TupleType(ctx: TranslationContext?, types: List<Type>) : Type(ctx) {
+class TupleType(ctx: TranslationContext, types: List<Type>) : Type(ctx) {
     var types: List<Type> = listOf()
         set(value) {
             field = value

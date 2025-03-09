@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgeOf
@@ -36,11 +37,12 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /** This class holds the variable, iterable and predicate of the [CollectionComprehension]. */
-class ComprehensionExpression : Expression(), ArgumentHolder {
+class ComprehensionExpression internal constructor(ctx: TranslationContext) :
+    Expression(ctx), ArgumentHolder {
     @Relationship("VARIABLE")
     var variableEdge =
         astEdgeOf<Statement>(
-            of = ProblemExpression("Missing variableEdge in ${this::class}"),
+            of = ProblemExpression(ctx, "Missing variableEdge in ${this::class}"),
             onChanged = { _, new -> (new?.end as? Expression)?.access = AccessValues.WRITE },
         )
 
@@ -52,7 +54,7 @@ class ComprehensionExpression : Expression(), ArgumentHolder {
 
     @Relationship("ITERABLE")
     var iterableEdge =
-        astEdgeOf<Expression>(ProblemExpression("Missing iterable in ${this::class}"))
+        astEdgeOf<Expression>(ProblemExpression(ctx, "Missing iterable in ${this::class}"))
 
     /** This field contains the iteration subject of the loop. */
     var iterable by unwrapping(ComprehensionExpression::iterableEdge)

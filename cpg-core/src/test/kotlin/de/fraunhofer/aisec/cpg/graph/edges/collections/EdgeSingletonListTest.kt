@@ -39,7 +39,7 @@ class EdgeSingletonListTest {
     @Test
     fun testNullable() {
         with(TestLanguageFrontend()) {
-            class MyNode : Node() {
+            class MyNode : Node(ctx) {
                 var edge = astOptionalEdgeOf<Expression>()
                 var unwrapped by unwrapping(MyNode::edge)
             }

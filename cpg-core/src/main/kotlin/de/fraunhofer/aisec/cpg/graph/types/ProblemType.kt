@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.TranslationContext
 
-class ProblemType(ctx: TranslationContext?) : Type(ctx) {
+class ProblemType(ctx: TranslationContext) : Type(ctx) {
     override fun reference(pointer: PointerType.PointerOrigin?): Type {
         return this
     }

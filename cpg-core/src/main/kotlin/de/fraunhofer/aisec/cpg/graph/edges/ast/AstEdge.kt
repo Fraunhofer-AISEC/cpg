@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.edges.ast
 
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeList
@@ -33,7 +34,7 @@ import org.neo4j.ogm.annotation.*
 
 /** This property edge describes a parent/child relationship in the Abstract Syntax Tree (AST). */
 @RelationshipEntity
-open class AstEdge<T : Node>(start: Node, end: T) : Edge<T>(start, end) {
+open class AstEdge<T : AstNode>(start: AstNode, end: T) : Edge<T>(start, end) {
     init {
         end.astParent = start
     }
@@ -42,23 +43,23 @@ open class AstEdge<T : Node>(start: Node, end: T) : Edge<T>(start, end) {
 }
 
 /** Creates an [AstEdges] container starting from this node. */
-fun <NodeType : Node> Node.astEdgesOf(
+fun <NodeType : AstNode> Node.astEdgesOf(
     onAdd: ((AstEdge<NodeType>) -> Unit)? = null,
     onRemove: ((AstEdge<NodeType>) -> Unit)? = null,
 ): AstEdges<NodeType, AstEdge<NodeType>> {
-    return AstEdges(thisRef = this, onAdd = onAdd, onRemove = onRemove)
+    return AstEdges(thisRef = this as AstNode, onAdd = onAdd, onRemove = onRemove)
 }
 
 /**
  * Creates a single optional [AstEdge] starting from this node (wrapped in a [EdgeSingletonList]
  * container).
  */
-fun <NodeType : Node> Node.astOptionalEdgeOf(
+fun <NodeType : AstNode> Node.astOptionalEdgeOf(
     onChanged: ((old: AstEdge<NodeType>?, new: AstEdge<NodeType>?) -> Unit)? = null
 ): EdgeSingletonList<NodeType, NodeType?, AstEdge<NodeType>> {
     return EdgeSingletonList(
         thisRef = this,
-        init = ::AstEdge,
+        init = { start, end -> AstEdge(start as AstNode, end) },
         outgoing = true,
         onChanged = onChanged,
         of = null,
@@ -68,13 +69,13 @@ fun <NodeType : Node> Node.astOptionalEdgeOf(
 /**
  * Creates a single [AstEdge] starting from this node (wrapped in a [EdgeSingletonList] container).
  */
-fun <NodeType : Node> Node.astEdgeOf(
+fun <NodeType : AstNode> AstNode.astEdgeOf(
     of: NodeType,
     onChanged: ((old: AstEdge<NodeType>?, new: AstEdge<NodeType>?) -> Unit)? = null,
 ): EdgeSingletonList<NodeType, NodeType, AstEdge<NodeType>> {
     return EdgeSingletonList(
         thisRef = this,
-        init = ::AstEdge,
+        init = { start, end -> AstEdge(start as AstNode, end) },
         outgoing = true,
         onChanged = onChanged,
         of = of,
@@ -82,13 +83,13 @@ fun <NodeType : Node> Node.astEdgeOf(
 }
 
 /** This property edge list describes elements that are AST children of a node. */
-open class AstEdges<NodeType : Node, PropertyEdgeType : AstEdge<NodeType>>(
-    thisRef: Node,
+open class AstEdges<NodeType : AstNode, PropertyEdgeType : AstEdge<NodeType>>(
+    thisRef: AstNode,
     onAdd: ((PropertyEdgeType) -> Unit)? = null,
     onRemove: ((PropertyEdgeType) -> Unit)? = null,
     @Suppress("UNCHECKED_CAST")
     init: (start: Node, end: NodeType) -> PropertyEdgeType = { start, end ->
-        AstEdge(start, end) as PropertyEdgeType
+        AstEdge(start as AstNode, end) as PropertyEdgeType
     },
 ) :
     EdgeList<NodeType, PropertyEdgeType>(

@@ -29,7 +29,6 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
-import java.util.function.Supplier
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -44,10 +43,9 @@ import org.slf4j.LoggerFactory
  * @param <T> the raw ast node specific to the parser
  * @param <L> the language frontend </L></T></S>
  */
-abstract class Handler<ResultNode : Node?, HandlerNode, L : LanguageFrontend<in HandlerNode, *>>(
-    protected val configConstructor: Supplier<ResultNode>,
+abstract class Handler<ResultNode : AstNode?, HandlerNode, L : LanguageFrontend<in HandlerNode, *>>(
     /** Returns the frontend which used this handler. */
-    val frontend: L,
+    val frontend: L
 ) :
     LanguageProvider by frontend,
     CodeAndLocationProvider<HandlerNode> by frontend,
@@ -56,6 +54,9 @@ abstract class Handler<ResultNode : Node?, HandlerNode, L : LanguageFrontend<in 
     RawNodeTypeProvider<HandlerNode> {
     protected val map = HashMap<Class<out HandlerNode>, HandlerInterface<ResultNode, HandlerNode>>()
     private val typeOfT: Class<*>?
+
+    protected abstract val problemConstructor:
+        (problem: String, rawNode: HandlerNode?) -> ResultNode
 
     /**
      * This property contains the last node this handler has successfully processed. It is safe to
@@ -115,12 +116,7 @@ abstract class Handler<ResultNode : Node?, HandlerNode, L : LanguageFrontend<in 
                 log,
                 "Parsing of type ${ctx.javaClass} is not supported (yet)",
             )
-            ret = configConstructor.get()
-            if (ret is ProblemNode) {
-                val problem = ret
-                problem.problem =
-                    String.format("Parsing of type ${ctx.javaClass} is not supported (yet)")
-            }
+            ret = problemConstructor("Parsing of type ${ctx.javaClass} is not supported (yet)", ctx)
         }
 
         // In case the node is empty, we report a problem
@@ -131,7 +127,11 @@ abstract class Handler<ResultNode : Node?, HandlerNode, L : LanguageFrontend<in 
                 log,
                 "Parsing of type ${ctx.javaClass} did not produce a proper CPG node",
             )
-            ret = configConstructor.get()
+            ret =
+                problemConstructor(
+                    "Parsing of type ${ctx.javaClass} did not produce a proper CPG node",
+                    ctx,
+                )
         }
 
         if (ret != null) {

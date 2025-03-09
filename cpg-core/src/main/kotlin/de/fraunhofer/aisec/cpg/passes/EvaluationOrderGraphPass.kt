@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.CastNotPossible
 import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
 import de.fraunhofer.aisec.cpg.frontends.ProcessedListener
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.EOGStarterHolder
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.StatementHolder
@@ -762,7 +763,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         }
         // Forwards all open and uncaught throwing nodes to the outer scope that may handle them
         val outerCatchingNode =
-            node.firstParentOrNull<Node> { parent ->
+            node.firstParentOrNull<AstNode> { parent ->
                 parent is TryStatement || parent is LoopStatement
             }
         if (outerCatchingNode != null) {
@@ -1318,7 +1319,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
      * from index 0 to n and then the whole node is evaluated.
      */
     protected fun handleThrowOperator(
-        throwExpression: Node,
+        throwExpression: AstNode,
         throwType: Type?,
         vararg inputs: Expression?,
     ) {
@@ -1328,7 +1329,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         if (throwType != null) {
             // Here, we identify the encapsulating ast node that can handle or relay a throw
             val handlingOrRelayingParent =
-                throwExpression.firstParentOrNull<Node> { parent ->
+                throwExpression.firstParentOrNull<AstNode> { parent ->
                     parent is TryStatement || parent is FunctionDeclaration
                 }
             if (handlingOrRelayingParent != null) {
@@ -1386,7 +1387,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
          * @param n
          * @return
          */
-        fun checkEOGInvariant(n: Node): Boolean {
+        fun checkEOGInvariant(n: AstNode): Boolean {
             val allNodes = SubgraphWalker.flattenAST(n)
             var ret = true
             for (node in allNodes) {

@@ -54,6 +54,10 @@ object NodeBuilder {
  */
 interface MetadataProvider
 
+interface ContextProvider : MetadataProvider {
+    val ctx: TranslationContext
+}
+
 /**
  * A simple interface that everything, that supplies a language, should implement. Examples include
  * each [Node], but also transformation steps, such as [Handler].
@@ -100,21 +104,13 @@ interface NamespaceProvider : MetadataProvider {
  *
  * Note, that one provider can implement multiple provider interfaces.
  */
-fun Node.applyMetadata(
+fun AstNode.applyMetadata(
     provider: MetadataProvider?,
     name: CharSequence? = EMPTY_NAME,
     rawNode: Any? = null,
     doNotPrependNamespace: Boolean = false,
     defaultNamespace: Name? = null,
 ) {
-    // We definitely need a context provider, because otherwise we cannot set the context and the
-    // node cannot access necessary information about the current translation context it lives in.
-    this.ctx =
-        (provider as? ContextProvider)?.ctx
-            ?: throw TranslationException(
-                "Trying to create a node without a ContextProvider. This will fail."
-            )
-
     // We try to set the code and especially the location as soon as possible because the hashCode
     // implementation of the Node class relies on it. Otherwise, we could have a problem that the
     // location is not yet set, but the node is put into a hashmap. In this case the hashCode is
@@ -177,7 +173,7 @@ fun LanguageProvider.newName(
     } else if (name.contains(language.namespaceDelimiter)) {
         // Let's check, if this is an FQN as string / char sequence by any chance. Then we need
         // to parse the name. In the future, we might drop compatibility for this
-        language.parseName(name)
+        parseName(name)
     } else {
         // Otherwise, a local name is supplied. Some nodes only want a local name. In this case,
         // we create a new name with the supplied (local) name and set the parent to null.
@@ -199,8 +195,8 @@ fun LanguageProvider.newName(
  * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newAnnotation(name: CharSequence?, rawNode: Any? = null): Annotation {
-    val node = Annotation()
+fun ContextProvider.newAnnotation(name: CharSequence?, rawNode: Any? = null): Annotation {
+    val node = Annotation(ctx)
     node.applyMetadata(this, name, rawNode, doNotPrependNamespace = true)
 
     log(node)
@@ -214,12 +210,12 @@ fun MetadataProvider.newAnnotation(name: CharSequence?, rawNode: Any? = null): A
  * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newAnnotationMember(
+fun ContextProvider.newAnnotationMember(
     name: CharSequence?,
     value: Expression?,
     rawNode: Any? = null,
 ): AnnotationMember {
-    val node = AnnotationMember()
+    val node = AnnotationMember(ctx)
     node.applyMetadata(this, name, rawNode, true)
 
     node.value = value
@@ -231,10 +227,6 @@ fun MetadataProvider.newAnnotationMember(
 /** Returns a new [Name] based on the [localName] and the current namespace as parent. */
 fun NamespaceProvider.fqn(localName: String): Name {
     return this.namespace.fqn(localName)
-}
-
-interface ContextProvider : MetadataProvider {
-    val ctx: TranslationContext?
 }
 
 /**
@@ -304,16 +296,16 @@ fun <T : Node, AstNode> T.codeAndLocationFromOtherRawNode(rawNode: AstNode?): T 
  *   line.
  */
 context(CodeAndLocationProvider<AstNode>)
-fun <T : Node, AstNode> T.codeAndLocationFromChildren(
+fun <T : de.fraunhofer.aisec.cpg.graph.AstNode, AstNode> T.codeAndLocationFromChildren(
     parentNode: AstNode,
     lineBreakSequence: CharSequence = "\n",
 ): T {
-    var first: Node? = null
-    var last: Node? = null
+    var first: de.fraunhofer.aisec.cpg.graph.AstNode? = null
+    var last: de.fraunhofer.aisec.cpg.graph.AstNode? = null
 
     // Search through all children to find the first and last node based on region startLine and
     // startColumn
-    val worklist: MutableList<Node> = this.astChildren.toMutableList()
+    val worklist = this.astChildren.toMutableList()
     while (worklist.isNotEmpty()) {
         val current = worklist.removeFirst()
         if (current.location == null || current.location?.region == Region()) {

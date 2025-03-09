@@ -27,12 +27,10 @@ package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.Node
-import java.util.function.Supplier
 
 abstract class PythonHandler<ResultNode : Node, HandlerNode : Python.AST.AST>(
-    configConstructor: Supplier<ResultNode>,
-    lang: PythonLanguageFrontend,
-) : Handler<ResultNode, HandlerNode, PythonLanguageFrontend>(configConstructor, lang) {
+    frontend: PythonLanguageFrontend
+) : Handler<ResultNode, HandlerNode, PythonLanguageFrontend>(frontend) {
     /**
      * We intentionally override the logic of [Handler.handle] because we do not want the map-based
      * logic, but rather want to make use of the Kotlin-when syntax.

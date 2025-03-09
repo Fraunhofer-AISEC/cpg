@@ -26,14 +26,14 @@
 package de.fraunhofer.aisec.cpg.graph.scopes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.AstNode
 
 /**
  * A scope which acts as a namespace with a certain name, which is prefixed to all local names
  * declared in it. This could be a package or other structural elements, like a class. In the first
  * case, the derived [NamespaceScope], in the latter case, the derived [RecordScope] should be used.
  */
-sealed class NameScope(ctx: TranslationContext, node: Node) : Scope(ctx, node) {
+sealed class NameScope(ctx: TranslationContext, node: AstNode) : Scope(ctx, node) {
 
     init {
         astNode = node

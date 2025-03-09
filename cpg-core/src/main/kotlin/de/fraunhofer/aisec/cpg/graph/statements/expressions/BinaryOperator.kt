@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
@@ -42,14 +43,14 @@ import org.neo4j.ogm.annotation.Relationship
  *
  * Note: For assignments, i.e., using an `=` or `+=`, etc. the [AssignExpression] MUST be used.
  */
-open class BinaryOperator :
-    Expression(), HasOverloadedOperation, ArgumentHolder, HasType.TypeObserver {
+open class BinaryOperator internal constructor(ctx: TranslationContext) :
+    Expression(ctx), HasOverloadedOperation, ArgumentHolder, HasType.TypeObserver {
 
     /** The left-hand expression. */
     @Relationship("LHS")
     var lhsEdge =
         astEdgeOf<Expression>(
-            of = ProblemExpression("could not parse lhs"),
+            of = ProblemExpression(ctx, "could not parse lhs"),
             onChanged = ::exchangeTypeObserverWithAccessPropagation,
         )
     var lhs by unwrapping(BinaryOperator::lhsEdge)
@@ -58,7 +59,7 @@ open class BinaryOperator :
     @Relationship("RHS")
     var rhsEdge =
         astEdgeOf<Expression>(
-            of = ProblemExpression("could not parse rhs"),
+            of = ProblemExpression(ctx, "could not parse rhs"),
             onChanged = ::exchangeTypeObserverWithAccessPropagation,
         )
     var rhs by unwrapping(BinaryOperator::rhsEdge)
