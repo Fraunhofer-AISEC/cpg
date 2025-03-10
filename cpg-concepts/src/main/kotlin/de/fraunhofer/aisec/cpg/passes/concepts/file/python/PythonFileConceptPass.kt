@@ -85,7 +85,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : ConceptPass(ctx) {
              * open('foo.bar', 'r')
              * ```
              *
-             * We model this with a [File] node to represent the [Concept] and a [FileOpen] node for
+             * We model this with a [File] node to represent the [Concept] and a [OpenFile] node for
              * the opening operation.
              *
              * TODO: opener https://docs.python.org/3/library/functions.html#open
@@ -103,7 +103,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : ConceptPass(ctx) {
                 ?.let { fileNode ->
                     when (callExpression.name.localName) {
                         "__enter__" -> {
-                            /* TODO: what about this? we handle __exit__ and create a FileClose. However, we already have a FileOpen attached at the `open` */
+                            /* TODO: what about this? we handle __exit__ and create a CloseFile. However, we already have a OpenFile attached at the `open` */
                         }
                         "__exit__" -> newFileClose(underlyingNode = callExpression, file = fileNode)
                         "read" -> newFileRead(underlyingNode = callExpression, file = fileNode)
@@ -198,7 +198,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : ConceptPass(ctx) {
     }
 
     /**
-     * Walks the DFG backwards until a [FileOpen] node is found.
+     * Walks the DFG backwards until a [OpenFile] node is found.
      *
      * Note: If multiple [File] nodes are found on different paths, one is selected a random and a
      * warning is logged.
@@ -207,17 +207,17 @@ class PythonFileConceptPass(ctx: TranslationContext) : ConceptPass(ctx) {
      * @return The [File] node if one is found.
      */
     internal fun findFile(expression: Expression): File? {
-        val fileOpenPaths =
+        val openFilePaths =
             dataFlow(startNode = expression, direction = Backward(GraphToFollow.DFG)) {
-                it.overlays.any { overlay -> overlay is FileOpen }
+                it.overlays.any { overlay -> overlay is OpenFile }
             }
 
         val fileCandidates =
-            fileOpenPaths
+            openFilePaths
                 .successfulLastNodes()
                 .flatMap { it.overlays } // move to the "overlays" world
-                .filterIsInstance<FileOpen>() // discard not-relevant overlays
-                .map { it.concept } // move from [FileOpen] to the corresponding [File] concept node
+                .filterIsInstance<OpenFile>() // discard not-relevant overlays
+                .map { it.concept } // move from [OpenFile] to the corresponding [File] concept node
         if (fileCandidates.size > 1) {
             Util.errorWithFileLocation(
                 expression,

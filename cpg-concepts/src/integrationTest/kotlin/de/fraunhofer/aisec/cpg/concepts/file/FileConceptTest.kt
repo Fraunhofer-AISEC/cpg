@@ -73,11 +73,11 @@ class FileConceptTest : BaseTest() {
             "Expected to find 5 operations (open, read, flags, 2 x close (one for normally exiting `with` and one for the `catch` exit)).",
         )
 
-        val fileSetFlags = fileNodes.filterIsInstance<FileSetFlags>().singleOrNull()
-        assertNotNull(fileSetFlags)
+        val setFileFlags = fileNodes.filterIsInstance<SetFileFlags>().singleOrNull()
+        assertNotNull(setFileFlags)
         assertEquals(
             setOf(FileAccessModeFlags.O_RDONLY),
-            fileSetFlags.flags,
+            setFileFlags.flags,
             "Expected to find access mode \"RDONLY\".",
         )
 
@@ -89,31 +89,31 @@ class FileConceptTest : BaseTest() {
             "Expected to find dataflow from the \"File\" to the \"content\" variable.",
         )
 
-        val fileRead = fileNodes.filterIsInstance<FileRead>().singleOrNull()
-        assertNotNull(fileRead)
+        val readFile = fileNodes.filterIsInstance<ReadFile>().singleOrNull()
+        assertNotNull(readFile)
         assertEquals(
-            fileRead,
+            readFile,
             file.nextDFG.singleOrNull(),
-            "Expected to have exactly one dataflow from \"File\" (it must be to \"FileRead\").",
+            "Expected to have exactly one dataflow from \"File\" (it must be to \"ReadFile\").",
         )
 
         // follow the EOG from open -> read -> close
         // tested in two steps: open -> read and read -> close
-        val fileOpenCallExpression =
-            fileNodes.filterIsInstance<FileOpen>().singleOrNull()?.underlyingNode
-        assertNotNull(fileOpenCallExpression)
+        val openFileCallExpression =
+            fileNodes.filterIsInstance<OpenFile>().singleOrNull()?.underlyingNode
+        assertNotNull(openFileCallExpression)
         assertTrue(
-            executionPath(startNode = fileOpenCallExpression) { it == fileRead.underlyingNode }
+            executionPath(startNode = openFileCallExpression) { it == readFile.underlyingNode }
                 .value,
             "Expected to find an execution path from open to read.",
         )
 
-        val fileReadCallExpression =
-            fileNodes.filterIsInstance<FileRead>().singleOrNull()?.underlyingNode
-        assertNotNull(fileReadCallExpression)
+        val readFileCallExpression =
+            fileNodes.filterIsInstance<ReadFile>().singleOrNull()?.underlyingNode
+        assertNotNull(readFileCallExpression)
         assertTrue(
-            executionPath(startNode = fileReadCallExpression) {
-                    it.overlays.any { it is FileClose }
+            executionPath(startNode = readFileCallExpression) {
+                    it.overlays.any { it is CloseFile }
                 }
                 .value,
             "Expected to find an execution path from read to close.",
@@ -152,11 +152,11 @@ class FileConceptTest : BaseTest() {
             "Expected to find 5 operations (open, read, flags, 2 x close (one for normally exiting `with` and one for the `catch` exit)).",
         )
 
-        val fileSetFlags = fileNodes.filterIsInstance<FileSetFlags>().singleOrNull()
-        assertNotNull(fileSetFlags)
+        val setFileFlags = fileNodes.filterIsInstance<SetFileFlags>().singleOrNull()
+        assertNotNull(setFileFlags)
         assertEquals(
             setOf(FileAccessModeFlags.O_WRONLY),
-            fileSetFlags.flags,
+            setFileFlags.flags,
             "Expected to find access mode \"WRONLY\".",
         )
 
@@ -168,12 +168,12 @@ class FileConceptTest : BaseTest() {
             "Expected to find dataflow from the \"Hello world!\" literal to the \"File\" node.",
         )
 
-        val fileWrite = fileNodes.filterIsInstance<FileWrite>().singleOrNull()
-        assertNotNull(fileWrite)
+        val writeFile = fileNodes.filterIsInstance<WriteFile>().singleOrNull()
+        assertNotNull(writeFile)
         assertEquals(
-            fileWrite,
+            writeFile,
             file.prevDFG.singleOrNull(),
-            "Expected to have exactly one dataflow to \"File\" (it must be to \"FileWrite\").",
+            "Expected to have exactly one dataflow to \"File\" (it must be to \"WriteFile\").",
         )
     }
 
@@ -200,11 +200,11 @@ class FileConceptTest : BaseTest() {
                 >() // TODO why can't I use `overlays`? It's empty.
         assertTrue(fileNodes.isNotEmpty())
 
-        val maskNode = fileNodes.filterIsInstance<FileSetMask>().singleOrNull()
+        val maskNode = fileNodes.filterIsInstance<SetFileMask>().singleOrNull()
         assertNotNull(maskNode)
         assertEquals(0x180, maskNode.mask, "Expected the mask to have value 0o600.")
 
-        val flagsNode = fileNodes.filterIsInstance<FileSetFlags>().singleOrNull()
+        val flagsNode = fileNodes.filterIsInstance<SetFileFlags>().singleOrNull()
         assertNotNull(flagsNode)
         assertEquals(
             setOf(FileAccessModeFlags.O_WRONLY),
@@ -214,18 +214,18 @@ class FileConceptTest : BaseTest() {
 
         // Tests mask is set before any write:
         // for all files
-        //   for all FileWrite on the current file
-        //     there is no FileSetMask on the current file after the FileWrite
+        //   for all WriteFile on the current file
+        //     there is no SetFileMask on the current file after the WriteFile
         assertTrue(
             // See also testBadChmodQuery for a failing example
             fileNodes.filterIsInstance<File>().all { file ->
-                file.ops.filterIsInstance<FileWrite>().none { write ->
+                file.ops.filterIsInstance<WriteFile>().none { write ->
                     val startNode =
                         write.underlyingNode
                             ?: return@none true // fail if there is no underlyingNode
                     executionPath(startNode = startNode, direction = Forward(GraphToFollow.EOG)) {
                             it.overlays.any { overlay ->
-                                overlay is FileSetMask && write.concept == overlay.concept
+                                overlay is SetFileMask && write.concept == overlay.concept
                             }
                         }
                         .value == true
@@ -253,18 +253,18 @@ class FileConceptTest : BaseTest() {
 
         // Tests mask is set before any write:
         // for all files
-        //   for all FileWrite on the current file
-        //     there is no FileSetMask on the current file after the FileWrite
+        //   for all WriteFile on the current file
+        //     there is no SetFileMask on the current file after the WriteFile
         assertFalse(
             // See also testBadChmodQuery for a failing example
             result.conceptNodes.filterIsInstance<File>().all { file ->
-                file.ops.filterIsInstance<FileWrite>().none { write ->
+                file.ops.filterIsInstance<WriteFile>().none { write ->
                     val startNode =
                         write.underlyingNode
                             ?: return@none true // fail if there is no underlyingNode
                     executionPath(startNode = startNode, direction = Forward(GraphToFollow.EOG)) {
                             it.overlays.any { overlay ->
-                                overlay is FileSetMask && write.concept == overlay.concept
+                                overlay is SetFileMask && write.concept == overlay.concept
                             }
                         }
                         .value == true
@@ -302,11 +302,11 @@ class FileConceptTest : BaseTest() {
         assertNotNull(file, "Expected to find a file.")
         assertEquals(fileName, file.fileName, "Expected the file to be \"$fileName\".")
 
-        val write = conceptNodes.filterIsInstance<FileWrite>().singleOrNull()
+        val write = conceptNodes.filterIsInstance<WriteFile>().singleOrNull()
         assertNotNull(write, "Expected to find a file write operation.")
         assertEquals(file, write.concept, "Expected the write to write to our file node.")
 
-        val chmod = conceptNodes.filterIsInstance<FileSetMask>().singleOrNull()
+        val chmod = conceptNodes.filterIsInstance<SetFileMask>().singleOrNull()
         assertNotNull(chmod, "Expected to find a file chmod operation.")
         assertEquals(file, chmod.concept, "Expected the chmod to operate on our file node.")
 

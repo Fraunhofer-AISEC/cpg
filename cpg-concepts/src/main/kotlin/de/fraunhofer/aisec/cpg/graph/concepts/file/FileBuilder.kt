@@ -38,16 +38,16 @@ fun MetadataProvider.newFile(underlyingNode: Node, fileName: String): File {
     return node
 }
 
-fun MetadataProvider.newFileOpen(underlyingNode: Node, file: File): FileOpen {
-    val node = FileOpen(underlyingNode = underlyingNode, concept = file)
+fun MetadataProvider.newFileOpen(underlyingNode: Node, file: File): OpenFile {
+    val node = OpenFile(underlyingNode = underlyingNode, concept = file)
     node.codeAndLocationFrom(underlyingNode)
 
     NodeBuilder.log(node)
     return node
 }
 
-fun MetadataProvider.newFileSetMask(underlyingNode: Node, file: File, mask: Long): FileSetMask {
-    val node = FileSetMask(underlyingNode = underlyingNode, concept = file, mask = mask)
+fun MetadataProvider.newFileSetMask(underlyingNode: Node, file: File, mask: Long): SetFileMask {
+    val node = SetFileMask(underlyingNode = underlyingNode, concept = file, mask = mask)
     node.codeAndLocationFrom(underlyingNode)
 
     NodeBuilder.log(node)
@@ -58,16 +58,16 @@ fun MetadataProvider.newFileSetFlags(
     underlyingNode: Node,
     file: File,
     flags: Set<FileAccessModeFlags>,
-): FileSetFlags {
-    val node = FileSetFlags(underlyingNode = underlyingNode, concept = file, flags = flags)
+): SetFileFlags {
+    val node = SetFileFlags(underlyingNode = underlyingNode, concept = file, flags = flags)
     node.codeAndLocationFrom(underlyingNode)
 
     NodeBuilder.log(node)
     return node
 }
 
-fun MetadataProvider.newFileClose(underlyingNode: Node, file: File): FileClose {
-    val node = FileClose(underlyingNode = underlyingNode, concept = file)
+fun MetadataProvider.newFileClose(underlyingNode: Node, file: File): CloseFile {
+    val node = CloseFile(underlyingNode = underlyingNode, concept = file)
     node.codeAndLocationFrom(underlyingNode)
 
     NodeBuilder.log(node)
@@ -75,16 +75,16 @@ fun MetadataProvider.newFileClose(underlyingNode: Node, file: File): FileClose {
 }
 
 /**
- * Creates a new [FileRead] node and attaches the DFG from the corresponding [file] to [this] and
+ * Creates a new [ReadFile] node and attaches the DFG from the corresponding [file] to [this] and
  * then from [this] to the created node.
  *
  * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
  * @param file The [File] this operation is reading from.
- * @return The new [FileRead] node.
+ * @return The new [ReadFile] node.
  */
-fun MetadataProvider.newFileRead(underlyingNode: Node, file: File): FileRead {
+fun MetadataProvider.newFileRead(underlyingNode: Node, file: File): ReadFile {
     val node =
-        FileRead(underlyingNode = underlyingNode, concept = file, target = underlyingNode.nextDFG)
+        ReadFile(underlyingNode = underlyingNode, concept = file, target = underlyingNode.nextDFG)
     node.codeAndLocationFrom(underlyingNode)
 
     // add DFG
@@ -96,17 +96,17 @@ fun MetadataProvider.newFileRead(underlyingNode: Node, file: File): FileRead {
 }
 
 /**
- * Creates a new [FileWrite] node and attaches the DFG from [what] to [this] and then from [this] to
+ * Creates a new [WriteFile] node and attaches the DFG from [what] to [this] and then from [this] to
  * the [file].
  *
  * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
  * @param file The [File] this operation is writing to.
  * @param what A list of nodes being written to the [file] (usually the arguments to a `write`
  *   call).
- * @return The new [FileWrite] node.
+ * @return The new [WriteFile] node.
  */
-fun MetadataProvider.newFileWrite(underlyingNode: Node, file: File, what: List<Node>): FileWrite {
-    val node = FileWrite(underlyingNode = underlyingNode, concept = file, what = what)
+fun MetadataProvider.newFileWrite(underlyingNode: Node, file: File, what: List<Node>): WriteFile {
+    val node = WriteFile(underlyingNode = underlyingNode, concept = file, what = what)
     node.codeAndLocationFrom(underlyingNode)
 
     // add DFG

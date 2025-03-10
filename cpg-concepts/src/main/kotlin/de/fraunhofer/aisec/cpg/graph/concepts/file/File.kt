@@ -69,7 +69,7 @@ class File(underlyingNode: Node, val fileName: String) :
     Concept(underlyingNode = underlyingNode), IsFile
 
 /** Represents setting flags on a file. For example when opening the file. */
-class FileSetFlags(
+class SetFileFlags(
     underlyingNode: Node,
     override val concept: File,
     val flags: Set<FileAccessModeFlags>,
@@ -79,28 +79,28 @@ class FileSetFlags(
  * Represents setting the umask, for example with the `mode` parameter in a Python `os.open` call or
  * a `chmod` call.
  */
-class FileSetMask(underlyingNode: Node, override val concept: File, val mask: Long) :
+class SetFileMask(underlyingNode: Node, override val concept: File, val mask: Long) :
     Operation(underlyingNode = underlyingNode, concept = concept), IsFile
 
 /** Represents closing a file. */
-class FileClose(underlyingNode: Node, override val concept: File) :
+class CloseFile(underlyingNode: Node, override val concept: File) :
     Operation(underlyingNode = underlyingNode, concept = concept), IsFile
 
 /** Represents deleting a file. */
-class FileDelete(underlyingNode: Node, override val concept: File) :
+class DeleteFile(underlyingNode: Node, override val concept: File) :
     Operation(underlyingNode = underlyingNode, concept = concept), IsFile
 
 /**
  * Represents opening a file. This is usually done with the same underlying node the [concept] field
  * is attached to.
  */
-class FileOpen(underlyingNode: Node, override val concept: File) :
+class OpenFile(underlyingNode: Node, override val concept: File) :
     Operation(underlyingNode = underlyingNode, concept = concept), IsFile
 
 /** Represents reading from a file. */
-class FileRead(underlyingNode: Node, override val concept: File, val target: Set<Node>) :
+class ReadFile(underlyingNode: Node, override val concept: File, val target: Set<Node>) :
     Operation(underlyingNode = underlyingNode, concept = concept), IsFile
 
 /** Represents writing to a file. */
-class FileWrite(underlyingNode: Node, override val concept: File, val what: List<Node>) :
+class WriteFile(underlyingNode: Node, override val concept: File, val what: List<Node>) :
     Operation(underlyingNode = underlyingNode, concept = concept), IsFile
