@@ -190,7 +190,15 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
         }
 
         override fun equals(other: Any?): Boolean {
-            return other is Element<T> && super<IdentitySet>.equals(other)
+            return other is Element<T> &&
+                this.size == other.size &&
+                this.all { t ->
+                    if (t is Pair<*, *>)
+                        other.any {
+                            it is Pair<*, *> && it.first === t.first && it.second === t.second
+                        }
+                    else t in other
+                }
         }
 
         override fun compare(other: Lattice.Element): Order {
@@ -199,7 +207,14 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
                     throw IllegalArgumentException(
                         "$other should be of type PowersetLattice.Element<T> but is of type ${other.javaClass}"
                     )
-                super<IdentitySet>.equals(other) -> Order.EQUAL
+                this.size == other.size &&
+                    this.all { t ->
+                        if (t is Pair<*, *>)
+                            other.any {
+                                it is Pair<*, *> && it.first === t.first && it.second === t.second
+                            }
+                        else t in other
+                    } -> Order.EQUAL
                 this.size > other.size && this.containsAll(other) -> Order.GREATER
                 other.size > this.size && other.containsAll(this) -> Order.LESSER
                 else -> Order.UNEQUAL

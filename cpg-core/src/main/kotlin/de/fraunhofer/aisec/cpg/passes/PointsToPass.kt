@@ -622,8 +622,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                                     lattice.push(
                                                         doubleState,
                                                         derefderefPMV,
-                                                        //
-                                                        //      TripleLattice.Element(
                                                         GeneralStateEntryElement(
                                                             PowersetLattice.Element(derefderefPMV),
                                                             PowersetLattice.Element(
@@ -993,7 +991,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         doubleState: PointsToStateElement,
     ): PointsToStateElement {
         var doubleState = doubleState
-        /* For AssignExpressions, we update the value of the rhs with the lhs
+        /* For AssignExpressions, we update the value of the lhs with the rhs
          * In C(++), both the lhs and the rhs should only have one element
          */
         if (currentNode.lhs.size == 1 && currentNode.rhs.size == 1) {
@@ -1418,9 +1416,10 @@ fun PointsToStateElement.getLastWrites(node: Node): IdentitySet<Pair<Node, Set<A
 fun PointsToStateElement.getValues(node: Node): IdentitySet<Node> {
     return when (node) {
         is PointerReference -> {
-            /* For PointerReferences, the value is the address of the input
+            /*
+             * For PointerReferences, the value is the address of the input
              * For example, the value of `&i` is the address of `i`
-             * */
+             */
             this.getAddresses(node.input)
         }
         is PointerDereference -> {
@@ -1471,8 +1470,7 @@ fun PointsToStateElement.getValues(node: Node): IdentitySet<Node> {
             }
         }
         is Reference -> {
-            /* For References, we have to look up the last value written to its declaration.
-             */
+            /* For References, we have to look up the last value written to its declaration. */
             val retVals = identitySetOf<Node>()
             this.getAddresses(node).forEach { addr ->
                 // For globals fetch the values from the globalDeref map
@@ -1516,8 +1514,8 @@ fun PointsToStateElement.getAddresses(node: Node): IdentitySet<Node> {
         }
         is PointerDereference -> {
             /*
-            PointerDereferences have as address the value of their input.
-            For example, the address of `*a` is the value of `a`
+             * PointerDereferences have as address the value of their input.
+             * For example, the address of `*a` is the value of `a`
              */
             this.getValues(node.input)
         }
@@ -1543,7 +1541,7 @@ fun PointsToStateElement.getAddresses(node: Node): IdentitySet<Node> {
         }
         is CastExpression -> {
             /*
-            For CastExpressions we take the expression as the cast itself does not have any impact on the address
+             * For CastExpressions we take the expression as the cast itself does not have any impact on the address
              */
             this.getAddresses(node.expression)
         }
@@ -1659,11 +1657,7 @@ fun PointsToStateElement.updateValues(
 
             // If we want to update the State with exactly the same elements as are already in the
             // state, we do nothing in order not to confuse the iterateEOG function
-            /*sources.removeAll { pair ->
-                this.declarationsState[destAddr]?.second?.any {
-                    it.first === pair.first && it.second == pair.second
-                } == true
-            }*/
+
             val newSources =
                 sources
                     .map { pair ->
@@ -1672,21 +1666,13 @@ fun PointsToStateElement.updateValues(
                         } ?: pair
                     }
                     .toIdentitySet()
-            /*            if (
-             */
-            /*newDeclState[destAddr]?.first != PowersetLattice.Element(currentEntries) ||*/
-            /*
-                    sources.all { src ->
-                        newDeclState[destAddr]?.second?.none { it == src } == true
-                    }
-            ) {*/
+
             newDeclState[destAddr] =
                 TripleLattice.Element(
                     PowersetLattice.Element(currentEntries),
                     PowersetLattice.Element(newSources),
                     PowersetLattice.Element(),
                 )
-            //            }
         } else {
             // TODO: We basically do the same as above, but currently we don't get the destinations
             // value from the call
@@ -1730,7 +1716,7 @@ fun PointsToStateElement.updateValues(
 
     /* When we are dealing with SubscriptExpression, we also have to initialize the arrayExpression
     , since that hasn't been done yet */
-    destinations.filterIsInstance<SubscriptExpression>().forEach { d ->
+    /*destinations.filterIsInstance<SubscriptExpression>().forEach { d ->
         val aEaddresses = this.getAddresses(d.arrayExpression)
         val aEvalues = this.getValues(d.arrayExpression)
 
@@ -1744,7 +1730,7 @@ fun PointsToStateElement.updateValues(
                     PowersetLattice.Element(),
                 ),
             )
-    }
+    }*/
 
     return doubleState
 }
