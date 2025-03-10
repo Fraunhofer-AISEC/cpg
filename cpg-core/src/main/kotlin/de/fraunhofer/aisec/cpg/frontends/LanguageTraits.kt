@@ -300,7 +300,8 @@ interface HasBuiltins : LanguageTrait {
     /** Returns the namespace under which builtins exist. */
     val builtinsNamespace: Name
 
-    fun getBuiltinsFileCandidates(): Set<File>
+    /** Name of files that may contain the builtin functions of a language */
+    val builtinsFileCandidates: Set<File>
 }
 
 /**

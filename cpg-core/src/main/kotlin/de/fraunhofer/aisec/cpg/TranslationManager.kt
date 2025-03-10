@@ -276,7 +276,7 @@ private constructor(
         usedLanguages.filterIsInstance<HasBuiltins>().forEach { hasBuiltins ->
             // Includes a file in the analysis, if relative to its rootpath it matches the name of
             // a builtins file candidate.
-            val builtinsCandidates = hasBuiltins.getBuiltinsFileCandidates()
+            val builtinsCandidates = hasBuiltins.builtinsFileCandidates
             ctx.additionalSources
                 .filter { builtinsCandidates.contains(it.relative) }
                 .forEach { ctx.importedSources.add(it) }

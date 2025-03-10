@@ -216,26 +216,30 @@ sealed class Scope(
         // If the symbol was still not resolved, and we are performing an unqualified resolution, we
         // search in the
         // languages builtin scope for the symbol
-        if (list.isNullOrEmpty() && !qualifiedLookup) {
-            list = mutableListOf()
+        val scopeManager = (ctx ?: this.astNode?.ctx)?.scopeManager
+        if (
+            list.isNullOrEmpty() &&
+                !qualifiedLookup &&
+                languageOnly is HasBuiltins &&
+                scopeManager != null
+        ) {
             // If the language has builtins we can search there for the symbol
-            (languageOnly as? HasBuiltins)?.let {
-                val builtinNamespace = it.builtinsNamespace
-                // Retrieve the builtins scope from the builtins namespace
-                (ctx ?: this.astNode?.ctx)?.scopeManager?.lookupScope(builtinNamespace)?.let {
-                    builtinScope ->
-                    // Obviously we don't want to search in the builtins scope if we already failed
-                    // finding the symbol in the builtins scope
-                    if (builtinScope != this) {
-                        list.addAll(
-                            builtinScope.lookupSymbol(
+            val builtinNamespace = languageOnly.builtinsNamespace
+            // Retrieve the builtins scope from the builtins namespace
+            val builtinScope = scopeManager.lookupScope(builtinNamespace)
+            if (builtinScope != null) {
+                // Obviously we don't want to search in the builtins scope if we already failed
+                // finding the symbol in the builtins scope
+                if (builtinScope != this) {
+                    list =
+                        builtinScope
+                            .lookupSymbol(
                                 symbol,
                                 languageOnly = languageOnly,
                                 replaceImports = replaceImports,
                                 predicate = predicate,
                             )
-                        )
-                    }
+                            .toMutableList()
                 }
             }
         }
