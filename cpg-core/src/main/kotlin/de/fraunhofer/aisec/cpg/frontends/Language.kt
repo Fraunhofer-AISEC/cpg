@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.CallResolutionResult
 import de.fraunhofer.aisec.cpg.SignatureResult
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.ancestors
+import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
@@ -122,6 +123,9 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node {
 
     /** All operators which perform a simple assignment from the rhs to the lhs. */
     open val simpleAssignmentOperators: Set<String> = setOf("=")
+
+    /** The standard evaluator to be used with this language. */
+    open val evaluator: ValueEvaluator = ValueEvaluator()
 
     constructor(ctx: TranslationContext? = null) : super() {
         this.ctx = ctx

@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
 import de.fraunhofer.aisec.cpg.graph.Name
@@ -179,6 +180,9 @@ class PythonLanguage(ctx: TranslationContext) :
                     language = this,
                 ),
         )
+
+    override val evaluator: ValueEvaluator
+        get() = PythonValueEvaluator()
 
     override fun propagateTypeOfBinaryOperation(operation: BinaryOperator): Type {
         val autoType = autoType()
