@@ -345,7 +345,7 @@ internal class ClassTemplateTest : BaseTest() {
 
     @Test
     @Throws(Exception::class)
-    fun testTemplateOverrindingDefaults() {
+    fun testTemplateOverridingDefaults() {
         // Test pair3-1.cpp: Override defaults of template
         val result =
             analyze(listOf(Path.of(topLevel.toString(), "pair3-1.cpp").toFile()), topLevel, true) {

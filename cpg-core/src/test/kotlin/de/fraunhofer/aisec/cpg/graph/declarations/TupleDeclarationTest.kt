@@ -71,7 +71,9 @@ class TupleDeclarationTest {
                                 newCallExpression(newReference("func")),
                             )
                         scopeManager.addDeclaration(tuple)
-                        tuple.elements.forEach { scopeManager.addDeclaration(it, addToAST = false) }
+                        declarations += tuple
+
+                        tuple.elements.forEach { scopeManager.addDeclaration(it) }
 
                         function("main") { body { call("print") { ref("a") } } }
                     }
@@ -161,11 +163,10 @@ class TupleDeclarationTest {
                                             ),
                                             newCallExpression(newReference("func")),
                                         )
-                                    this.declarationEdges += tuple
                                     scopeManager.addDeclaration(tuple)
-                                    tuple.elements.forEach {
-                                        scopeManager.addDeclaration(it, addToAST = false)
-                                    }
+                                    declarations += tuple
+
+                                    tuple.elements.forEach { scopeManager.addDeclaration(it) }
                                 }
                                 call("print") { ref("a") }
                             }

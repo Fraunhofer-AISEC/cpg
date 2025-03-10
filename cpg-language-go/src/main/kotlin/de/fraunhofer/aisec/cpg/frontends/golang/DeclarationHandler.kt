@@ -106,9 +106,10 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
 
         frontend.scopeManager.enterScope(func)
 
-        if (func is MethodDeclaration && func.receiver != null) {
+        val receiver = (func as? MethodDeclaration)?.receiver
+        if (receiver != null) {
             // Add the receiver do the scope manager, so we can resolve the receiver value
-            frontend.scopeManager.addDeclaration(func.receiver)
+            frontend.scopeManager.addDeclaration(receiver)
         }
 
         val returnTypes = mutableListOf<Type>()
@@ -121,7 +122,7 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
 
                 // If the function has named return variables, be sure to declare them as well
                 if (returnVar.names.isNotEmpty()) {
-                    val param =
+                    val returnParam =
                         newVariableDeclaration(
                             returnVar.names[0].name,
                             frontend.typeOf(returnVar.type),
@@ -129,7 +130,10 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
                         )
 
                     // Add parameter to scope
-                    frontend.scopeManager.addDeclaration(param)
+                    frontend.scopeManager.addDeclaration(returnParam)
+
+                    // TODO(oxisto): Add the return parameter to the function declaration's AST. See
+                    //  https://github.com/Fraunhofer-AISEC/cpg/issues/430
                 }
             }
         }
@@ -138,7 +142,7 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
         func.returnTypes = returnTypes
 
         // Parse parameters
-        handleFuncParams(funcDecl.type.params)
+        handleFuncParams(func, funcDecl.type.params)
 
         // Only parse function body in non-dependencies
         if (!frontend.isDependency) {
@@ -166,7 +170,10 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
         return func
     }
 
-    internal fun handleFuncParams(list: GoStandardLibrary.Ast.FieldList) {
+    internal fun handleFuncParams(
+        func: FunctionDeclaration,
+        list: GoStandardLibrary.Ast.FieldList,
+    ) {
         for (param in list.list) {
             // We need to differentiate between three cases:
             // - an empty list of names, which means that the parameter is unnamed; and we also give
@@ -206,6 +213,8 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
                 val p = newParameterDeclaration(name, type, variadic, rawNode = param)
 
                 frontend.scopeManager.addDeclaration(p)
+                func.parameters += p
+
                 frontend.setComment(p, param)
             }
         }

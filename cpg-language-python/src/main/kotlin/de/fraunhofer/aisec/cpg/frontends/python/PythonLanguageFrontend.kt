@@ -339,6 +339,12 @@ class PythonLanguageFrontend(ctx: TranslationContext, language: Language<PythonL
                     val nsd = newNamespaceDeclaration(fqn, rawNode = pythonASTModule)
                     nsd.path = relative?.parent?.pathString + "/" + module
                     scopeManager.addDeclaration(nsd)
+
+                    // Add the namespace to the parent namespace -- or the translation unit, if it
+                    // is the top one
+                    val holder = previous ?: tud
+                    holder.addDeclaration(nsd)
+
                     scopeManager.enterScope(nsd)
                     nsd
                 }
@@ -353,7 +359,11 @@ class PythonLanguageFrontend(ctx: TranslationContext, language: Language<PythonL
                 when (stmt) {
                     // In order to be as compatible as possible with existing languages, we try to
                     // add declarations directly to the class
-                    is Python.AST.Def -> declarationHandler.handle(stmt)
+                    is Python.AST.Def -> {
+                        val decl = declarationHandler.handle(stmt)
+                        scopeManager.addDeclaration(decl)
+                        it.addDeclaration(decl)
+                    }
                     // All other statements are added to the (static) statements block of the
                     // namespace.
                     else -> it.statements += statementHandler.handle(stmt)

@@ -58,9 +58,9 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
             val resolvedType = frontend.getTypeAsGoodAsPossible(parameter.type)
             val param =
                 newParameterDeclaration(parameter.nameAsString, resolvedType, parameter.isVarArgs)
-            anonymousFunction.parameterEdges += param
             frontend.processAnnotations(param, parameter)
             frontend.scopeManager.addDeclaration(param)
+            anonymousFunction.parameters += param
         }
 
         // TODO: We cannot easily identify the signature of the lambda
@@ -231,9 +231,9 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         val declarationStatement = newDeclarationStatement(rawNode = expr)
         for (variable in variableDeclarationExpr.variables) {
             val declaration = frontend.declarationHandler.handleVariableDeclarator(variable)
-            declarationStatement.declarationEdges += declaration
             frontend.processAnnotations(declaration, variableDeclarationExpr)
             frontend.scopeManager.addDeclaration(declaration)
+            declarationStatement.declarations += declaration
         }
         return declarationStatement
     }
@@ -613,13 +613,13 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                         .implicit(anonymousRecord.name.localName)
 
                 ctor.arguments.forEachIndexed { i, arg ->
-                    constructorDeclaration.parameterEdges +=
+                    constructorDeclaration.parameters +=
                         newParameterDeclaration("arg${i}", arg.type)
                 }
-                anonymousRecord.addConstructor(constructorDeclaration)
+                frontend.scopeManager.addDeclaration(constructorDeclaration)
+                anonymousRecord.constructors += constructorDeclaration
                 ctor.anonymousClass = anonymousRecord
 
-                frontend.scopeManager.addDeclaration(constructorDeclaration)
                 frontend.scopeManager.leaveScope(anonymousRecord)
             }
         }

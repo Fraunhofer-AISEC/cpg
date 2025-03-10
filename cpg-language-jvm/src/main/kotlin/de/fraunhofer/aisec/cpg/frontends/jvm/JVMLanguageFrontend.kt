@@ -139,6 +139,7 @@ class JVMLanguageFrontend(
                 packages.computeIfAbsent(sootClass.type.packageName.name) {
                     val pkg = newNamespaceDeclaration(it)
                     scopeManager.addDeclaration(pkg)
+                    tu.addDeclaration(pkg)
                     pkg
                 }
 
@@ -146,7 +147,10 @@ class JVMLanguageFrontend(
             scopeManager.enterScope(pkg)
 
             val decl = declarationHandler.handle(sootClass)
-            scopeManager.addDeclaration(decl)
+            if (decl != null) {
+                scopeManager.addDeclaration(decl)
+                pkg.addDeclaration(decl)
+            }
 
             // Leave namespace scope
             scopeManager.leaveScope(pkg)
