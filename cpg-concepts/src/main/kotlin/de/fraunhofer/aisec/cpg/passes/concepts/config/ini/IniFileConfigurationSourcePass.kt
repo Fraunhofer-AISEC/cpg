@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes.concepts.config.ini
 
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.conceptNodes
 import de.fraunhofer.aisec.cpg.graph.concepts.config.*
@@ -49,7 +50,7 @@ class IniFileConfigurationSourcePass(ctx: TranslationContext) : ConceptPass(ctx)
     override fun handleNode(node: Node, tu: TranslationUnitDeclaration) {
         // Since we cannot directly depend on the ini frontend, we have to check the language here
         // based on the node's language.
-        if (node.language.name.localName != "IniFileLanguage") {
+        if (node is AstNode && node.language.name.localName != "IniFileLanguage") {
             return
         }
 

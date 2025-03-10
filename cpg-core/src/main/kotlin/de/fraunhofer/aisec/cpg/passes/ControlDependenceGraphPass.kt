@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.BranchingNode
+import de.fraunhofer.aisec.cpg.graph.DataflowNode
 import de.fraunhofer.aisec.cpg.graph.EvaluatedNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.allChildren
@@ -108,9 +109,26 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
 
         // Collect the information, identify merge points, etc. This is not really efficient yet :(
         for ((node, dominatorPaths) in finalState) {
+            if (node !is DataflowNode) {
+                // The filtering here is necessary since we get an EOG node from the worklist, but
+                // we need to work on dataflow-nodes because the CDG is only available there. In
+                // practice this will always either be a overlay node or an ast node and they
+                // implement both EOG and DFG nodes.
+                continue
+            }
+
             val dominatorsList =
-                dominatorPaths.entries.map { (k, v) -> Pair(k, v.toMutableSet()) }.toMutableList()
-            val finalDominators = mutableListOf<Pair<EvaluatedNode, MutableSet<EvaluatedNode>>>()
+                dominatorPaths.entries
+                    .mapNotNull { (k, v) ->
+                        // Filtering because of the same reason as above
+                        if (k is DataflowNode) {
+                            Pair(k, v.toMutableSet())
+                        } else {
+                            null
+                        }
+                    }
+                    .toMutableList()
+            val finalDominators = mutableListOf<Pair<DataflowNode, MutableSet<EvaluatedNode>>>()
             val conditionKeys =
                 dominatorPaths.entries
                     .filter { (k, _) ->
@@ -126,6 +144,11 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
                 for (k1 in conditionKeys) {
                     dominatorsList.removeIf { k1 == it.first }
                     finalState[k1]?.forEach { (newK, newV) ->
+                        if (newK !is DataflowNode) {
+                            // Filtering because of the same reason as above
+                            return@forEach
+                        }
+
                         val entry = dominatorsList.firstOrNull { it.first == newK }
                         entry?.let {
                             dominatorsList.remove(entry)
@@ -146,6 +169,11 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
                     // entries in finalDominators list and update it (if necessary)
                     val newDominatorMap = finalState[k]
                     newDominatorMap?.forEach { (newK, newV) ->
+                        if (newK !is DataflowNode) {
+                            // Filtering because of the same reason as above
+                            return@forEach
+                        }
+
                         when {
                             dominatorsList.any { it.first == newK } -> {
                                 // Entry exists => update it

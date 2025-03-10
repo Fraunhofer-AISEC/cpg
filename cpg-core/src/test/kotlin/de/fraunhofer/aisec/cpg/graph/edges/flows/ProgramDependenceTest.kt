@@ -52,8 +52,7 @@ class ProgramDependenceTest {
             // This should result in a combined PDG of 2 edges
             var combined = mutableListOf<Edge<DataflowNode>>()
             combined += node2.prevDFGEdges
-            // TODO(fix CDG assignment)
-            // combined += node2.prevCDGEdges
+            combined += node2.prevCDGEdges
             node2.prevPDGEdges += combined
 
             // Should contain 2 PDG edges now

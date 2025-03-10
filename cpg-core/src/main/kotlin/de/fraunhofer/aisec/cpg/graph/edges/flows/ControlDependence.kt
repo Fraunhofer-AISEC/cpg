@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.edges.flows
 
+import de.fraunhofer.aisec.cpg.graph.DataflowNode
 import de.fraunhofer.aisec.cpg.graph.EvaluatedNode
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeList
 import de.fraunhofer.aisec.cpg.graph.edges.collections.MirroredEdgeCollection
@@ -35,14 +36,19 @@ import org.neo4j.ogm.annotation.RelationshipEntity
 /**
  * An edge in a Control Dependence Graph (CDG). Denotes that the [start] node exercises control
  * dependence on the [end] node. See [ControlDependenceGraphPass].
+ *
+ * Actually it would be sufficient to target an [EvaluatedNode] here, since we only need EOG
+ * information, but since we need to combine [ControlDependence] and [Dataflow] nodes into a common
+ * [ProgramDependence] graph, we need to target the same node type here. This is sort-of ok because
+ * the control dependence is basically an implicit dataflow.
  */
 @RelationshipEntity
 class ControlDependence(
-    start: EvaluatedNode,
-    end: EvaluatedNode,
+    start: DataflowNode,
+    end: DataflowNode,
     /** A set of [EvaluationOrder.branch] values. */
     var branches: Set<Boolean> = setOf(),
-) : ProgramDependence<EvaluatedNode>(start, end, DependenceType.CONTROL) {
+) : ProgramDependence<DataflowNode>(start, end, DependenceType.CONTROL) {
 
     override var labels = super.labels.plus("CDG")
 
@@ -59,10 +65,10 @@ class ControlDependence(
     }
 }
 
-/** A container of [ControlDependence] edges. [NodeType] is necessary because of the Neo4J OGM. */
-class ControlDependences<NodeType : EvaluatedNode> :
-    EdgeList<EvaluatedNode, ControlDependence>,
-    MirroredEdgeCollection<EvaluatedNode, ControlDependence> {
+/** A container of [ControlDependence] edges. */
+class ControlDependences :
+    EdgeList<DataflowNode, ControlDependence>,
+    MirroredEdgeCollection<DataflowNode, ControlDependence> {
 
     override var mirrorProperty: KProperty<MutableCollection<ControlDependence>>
 
@@ -72,7 +78,7 @@ class ControlDependences<NodeType : EvaluatedNode> :
         outgoing: Boolean,
     ) : super(
         thisRef = thisRef,
-        init = { start, end -> ControlDependence(start as EvaluatedNode, end) },
+        init = { start, end -> ControlDependence(start as DataflowNode, end) },
         outgoing = outgoing,
     ) {
         this.mirrorProperty = mirrorProperty

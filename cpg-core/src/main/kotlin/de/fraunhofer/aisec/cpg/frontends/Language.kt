@@ -431,9 +431,12 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node, LanguageProvider {
         // component.
         val component =
             if (source is AstNode) {
-                source.component ?: source.scope?.astNode?.component ?: source.ctx.currentComponent
+                source.component
+                    ?: source.ctx.currentComponent
+                    ?: source.scope?.astNode?.component
+                    ?: source.ctx.currentComponent
             } else {
-                source.ctx.currentComponent
+                source.ctx.currentComponent ?: source.scope?.astNode?.component
             }
         if (component == null) {
             val msg =

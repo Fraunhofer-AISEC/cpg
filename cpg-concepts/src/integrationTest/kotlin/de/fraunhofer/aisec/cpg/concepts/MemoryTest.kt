@@ -101,6 +101,7 @@ class MemoryTest {
         // Key is used in encryption
         var tree =
             key.underlyingNode?.let {
+                assertIs<DataflowNode>(it)
                 dataFlow(it) { node -> node.overlayEdges.any { edge -> edge.end is Encrypt } }
             }
         assertNotNull(tree)
@@ -109,6 +110,7 @@ class MemoryTest {
         // Tree is deleted in all paths
         tree =
             key.underlyingNode?.let {
+                assertIs<DataflowNode>(it)
                 executionPath(
                     startNode = it,
                     predicate = { node ->

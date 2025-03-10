@@ -496,7 +496,7 @@ fun DataflowNode.collectAllPrevPDGPaths(interproceduralAnalysis: Boolean): List<
  * Iterates the prev CDG edges until there are no more edges available (or until a loop is
  * detected). Returns a list of possible paths (each path is represented by a list of nodes).
  */
-fun EvaluatedNode.collectAllPrevCDGPaths(interproceduralAnalysis: Boolean): List<List<Node>> {
+fun DataflowNode.collectAllPrevCDGPaths(interproceduralAnalysis: Boolean): List<List<Node>> {
     // We make everything fail to reach the end of the CDG. Then, we use the stuff collected in the
     // failed paths (everything)
     return this.followPrevCDGUntilHit(
@@ -513,7 +513,7 @@ fun EvaluatedNode.collectAllPrevCDGPaths(interproceduralAnalysis: Boolean): List
  * Iterates the next CDG edges until there are no more edges available (or until a loop is
  * detected). Returns a list of possible paths (each path is represented by a list of nodes).
  */
-fun EvaluatedNode.collectAllNextCDGPaths(interproceduralAnalysis: Boolean): List<List<Node>> {
+fun DataflowNode.collectAllNextCDGPaths(interproceduralAnalysis: Boolean): List<List<Node>> {
     // We make everything fail to reach the end of the CDG. Then, we use the stuff collected in the
     // failed paths (everything)
     return this.followNextCDGUntilHit(
@@ -566,13 +566,13 @@ fun DataflowNode.followNextPDGUntilHit(
  * Hence, if "fulfilled" is a non-empty list, a data flow from [this] to such a node is **possible
  * but not mandatory**. If the list "failed" is empty, the data flow is mandatory.
  */
-fun EvaluatedNode.followNextCDGUntilHit(
+fun DataflowNode.followNextCDGUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
     interproceduralAnalysis: Boolean = false,
-    earlyTermination: (EvaluatedNode, Context) -> Boolean = { _, _ -> false },
-    predicate: (EvaluatedNode) -> Boolean,
-): FulfilledAndFailedPaths<EvaluatedNode> {
+    earlyTermination: (DataflowNode, Context) -> Boolean = { _, _ -> false },
+    predicate: (DataflowNode) -> Boolean,
+): FulfilledAndFailedPaths<DataflowNode> {
     return followXUntilHit(
         x = { currentNode, ctx, _ ->
             val nextNodes = currentNode.nextCDG.toMutableList()
@@ -640,14 +640,14 @@ fun DataflowNode.followPrevPDGUntilHit(
  * Hence, if "fulfilled" is a non-empty list, a CDG path from [this] to such a node is **possible
  * but not mandatory**. If the list "failed" is empty, the data flow is mandatory.
  */
-fun EvaluatedNode.followPrevCDGUntilHit(
+fun DataflowNode.followPrevCDGUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
     interproceduralAnalysis: Boolean = false,
     interproceduralMaxDepth: Int? = null,
-    earlyTermination: (EvaluatedNode, Context) -> Boolean = { _, _ -> false },
-    predicate: (EvaluatedNode) -> Boolean,
-): FulfilledAndFailedPaths<EvaluatedNode> {
+    earlyTermination: (DataflowNode, Context) -> Boolean = { _, _ -> false },
+    predicate: (DataflowNode) -> Boolean,
+): FulfilledAndFailedPaths<DataflowNode> {
     return followXUntilHit(
         x = { currentNode, ctx, _ ->
             val nextNodes = currentNode.prevCDG.toMutableList()

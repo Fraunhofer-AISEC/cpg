@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph.concepts.logging
 
+import de.fraunhofer.aisec.cpg.graph.ContextProvider
+import de.fraunhofer.aisec.cpg.graph.DataflowNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import de.fraunhofer.aisec.cpg.graph.codeAndLocationFrom
@@ -62,7 +64,7 @@ fun ContextProvider.newLogWrite(
     underlyingNode: Node,
     level: LogLevel,
     logger: Log,
-    logArguments: List<Node>,
+    logArguments: List<DataflowNode>,
 ): LogWrite {
     val node =
         LogWrite(

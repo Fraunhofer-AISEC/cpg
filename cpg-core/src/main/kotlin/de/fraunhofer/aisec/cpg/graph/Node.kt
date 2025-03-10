@@ -213,34 +213,6 @@ sealed class EvaluatedNode(ctx: TranslationContext) : Node(ctx) {
     /** Virtual property for accessing [nextEOGEdges] without property edges. */
     @PopulatedByPass(EvaluationOrderGraphPass::class)
     var nextEOG by unwrapping(EvaluatedNode::nextEOGEdges)
-
-    /**
-     * The nodes which are control-flow dominated, i.e., the children of the Control Dependence
-     * Graph (CDG).
-     */
-    @PopulatedByPass(ControlDependenceGraphPass::class)
-    @Relationship(value = "CDG", direction = Relationship.Direction.OUTGOING)
-    var nextCDGEdges: ControlDependences<EvaluatedNode> =
-        ControlDependences(this, mirrorProperty = EvaluatedNode::prevCDGEdges, outgoing = true)
-        protected set
-
-    var nextCDG by unwrapping(EvaluatedNode::nextCDGEdges)
-
-    /**
-     * The nodes which dominate this node via the control-flow, i.e., the parents of the Control
-     * Dependence Graph (CDG).
-     */
-    @PopulatedByPass(ControlDependenceGraphPass::class)
-    @Relationship(value = "CDG", direction = Relationship.Direction.INCOMING)
-    var prevCDGEdges: ControlDependences<EvaluatedNode> =
-        ControlDependences<EvaluatedNode>(
-            this,
-            mirrorProperty = EvaluatedNode::nextCDGEdges,
-            outgoing = false,
-        )
-        protected set
-
-    var prevCDG by unwrapping(EvaluatedNode::prevCDGEdges)
 }
 
 /**
@@ -301,6 +273,30 @@ sealed class DataflowNode(ctx: TranslationContext) : EvaluatedNode(ctx) {
         get() {
             return nextDFGEdges.filter { it.granularity is FullDataflowGranularity }.map { it.end }
         }
+
+    /**
+     * The nodes which are control-flow dominated, i.e., the children of the Control Dependence
+     * Graph (CDG).
+     */
+    @PopulatedByPass(ControlDependenceGraphPass::class)
+    @Relationship(value = "CDG", direction = Relationship.Direction.OUTGOING)
+    var nextCDGEdges: ControlDependences =
+        ControlDependences(this, mirrorProperty = DataflowNode::prevCDGEdges, outgoing = true)
+        protected set
+
+    var nextCDG by unwrapping(DataflowNode::nextCDGEdges)
+
+    /**
+     * The nodes which dominate this node via the control-flow, i.e., the parents of the Control
+     * Dependence Graph (CDG).
+     */
+    @PopulatedByPass(ControlDependenceGraphPass::class)
+    @Relationship(value = "CDG", direction = Relationship.Direction.INCOMING)
+    var prevCDGEdges: ControlDependences =
+        ControlDependences(this, mirrorProperty = DataflowNode::nextCDGEdges, outgoing = false)
+        protected set
+
+    var prevCDG by unwrapping(DataflowNode::prevCDGEdges)
 
     /** Outgoing Program Dependence Edges. */
     @PopulatedByPass(ProgramDependenceGraphPass::class)
