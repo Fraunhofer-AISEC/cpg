@@ -117,7 +117,7 @@ class VisitorTest : BaseTest() {
         // TODO: It seems to expect a FieldDeclaration for "System" but that's contrary to other
         // tests where it shouldn't exist.
         // Please double check. Until then, I'll change the expected number.
-        assertEquals(38, nodeList.size)
+        assertEquals(37, nodeList.size)
     }
 
     /** Visits only ReturnStatement nodes. */

@@ -68,6 +68,8 @@ class TestCommon {
                 "EOG",
                 "LANGUAGE",
                 "MEMORY_ADDRESS",
+                "MEMORY_VALUE",
+                "MEMORY_VALUE_USAGE",
                 "OVERLAY",
                 "OVERRIDES",
                 "PARAMETERS",
