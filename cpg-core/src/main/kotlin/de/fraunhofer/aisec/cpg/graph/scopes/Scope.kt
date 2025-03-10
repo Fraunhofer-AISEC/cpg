@@ -215,7 +215,7 @@ sealed class Scope(
 
         // If the symbol was still not resolved, and we are performing an unqualified resolution, we
         // search in the
-        // languages builtin scope for the symbol
+        // language's builtin scope for the symbol
         if (list.isNullOrEmpty() && !qualifiedLookup) {
             list = mutableListOf()
             // If the language has builtins we can search there for the symbol
