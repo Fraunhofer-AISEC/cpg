@@ -126,7 +126,7 @@ open class ValueEvaluator(
             is ConditionalExpression -> return handleConditionalExpression(node, depth)
             is AssignExpression -> return handleAssignExpression(node, depth)
             is Reference -> return handleReference(node, depth)
-            is CallExpression -> return handleCall(node, depth)
+            is CallExpression -> return handleCallExpression(node, depth)
             else -> return handlePrevDFG(node, depth)
         }
 
@@ -136,7 +136,7 @@ open class ValueEvaluator(
     }
 
     /** Handles a [CallExpression]. Default behaviour is to call [handlePrevDFG] */
-    protected open fun handleCall(node: CallExpression, depth: Int): Any? {
+    protected open fun handleCallExpression(node: CallExpression, depth: Int): Any? {
         return handlePrevDFG(node, depth)
     }
 
