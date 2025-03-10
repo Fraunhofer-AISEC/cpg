@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.concepts
 
+import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.TranslationResult.Companion.DEFAULT_APPLICATION_NAME
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.graph.*
@@ -40,6 +41,8 @@ import de.fraunhofer.aisec.cpg.graph.concepts.memory.MemoryManagementMode
 import de.fraunhofer.aisec.cpg.graph.edges.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeleteExpression
 import de.fraunhofer.aisec.cpg.query.Must
+import de.fraunhofer.aisec.cpg.query.allExtended
+import de.fraunhofer.aisec.cpg.query.alwaysFlowsTo
 import de.fraunhofer.aisec.cpg.query.dataFlow
 import de.fraunhofer.aisec.cpg.query.executionPath
 import de.fraunhofer.aisec.cpg.test.analyze
@@ -48,20 +51,179 @@ import kotlin.test.*
 
 class MemoryTest {
     @Test
-    fun testMemoryDelete() {
+    fun testMemoryDeleteFunction() {
         val topLevel = File("src/integrationTest/resources/python")
         val result =
             analyze(listOf(topLevel.resolve("encrypt_with_key.py")), topLevel.toPath(), true) {
                 it.registerLanguage<PythonLanguage>()
             }
+        assertNotNull(result)
+        mapNodesToConcepts(result, true)
+
+        val key = result.allChildrenWithOverlays<Secret>().singleOrNull()
+        assertNotNull(key)
+
+        // Key is used in encryption
+        var tree =
+            key.underlyingNode?.let {
+                dataFlow(it) { node -> node.overlayEdges.any { edge -> edge.end is Encrypt } }
+            }
+        assertNotNull(tree)
+        assertEquals(true, tree.value)
+
+        // Tree is deleted in all paths
+        tree =
+            key.underlyingNode?.let {
+                executionPath(
+                    startNode = it,
+                    predicate = { node ->
+                        node.overlayEdges.any { edge -> edge.end is DeAllocate }
+                    },
+                    direction = Forward(GraphToFollow.EOG),
+                    type = Must,
+                    scope = Interprocedural(),
+                )
+            }
+        assertNotNull(tree)
+        assertEquals(true, tree.value)
+        assertEquals(2, tree.children.size)
+
+        val queryTreeResult =
+            result.allExtended<GetSecret>(
+                null,
+                { secret ->
+                    secret.alwaysFlowsTo(
+                        scope = Interprocedural(),
+                        sensitivities = FilterUnreachableEOG + FieldSensitive + ContextSensitive,
+                        predicate = { it is DeAllocate },
+                    )
+                },
+            )
+
+        println(queryTreeResult.printNicely())
+        assertTrue(queryTreeResult.value)
+    }
+
+    @Test
+    fun testMemoryDeleteFailFunction() {
+        val topLevel = File("src/integrationTest/resources/python")
+        val result =
+            analyze(listOf(topLevel.resolve("encrypt_with_key_fail.py")), topLevel.toPath(), true) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(result)
+        mapNodesToConcepts(result, true)
+
+        val queryTreeResult =
+            result.allExtended<GetSecret>(
+                null,
+                { secret ->
+                    secret.alwaysFlowsTo(
+                        scope = Interprocedural(),
+                        sensitivities = FilterUnreachableEOG + FieldSensitive + ContextSensitive,
+                        predicate = { it is DeAllocate },
+                    )
+                },
+            )
+
+        println(queryTreeResult.printNicely())
+        assertFalse(queryTreeResult.value)
+    }
+
+    @Test
+    fun testMemoryDeleteCall() {
+        val topLevel = File("src/integrationTest/resources/python")
+        val result =
+            analyze(listOf(topLevel.resolve("encrypt_with_key.py")), topLevel.toPath(), true) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(result)
+        mapNodesToConcepts(result, false)
+
+        val key = result.allChildrenWithOverlays<Secret>().singleOrNull()
+        assertNotNull(key)
+
+        // Key is used in encryption
+        var tree =
+            key.underlyingNode?.let {
+                dataFlow(it) { node -> node.overlayEdges.any { edge -> edge.end is Encrypt } }
+            }
+        assertNotNull(tree)
+        assertEquals(true, tree.value)
+
+        // Tree is deleted in all paths
+        tree =
+            key.underlyingNode?.let {
+                executionPath(
+                    startNode = it,
+                    predicate = { node ->
+                        node.overlayEdges.any { edge -> edge.end is DeAllocate }
+                    },
+                    direction = Forward(GraphToFollow.EOG),
+                    type = Must,
+                    scope = Interprocedural(),
+                )
+            }
+        assertNotNull(tree)
+        assertEquals(true, tree.value)
+        assertEquals(2, tree.children.size)
+
+        val queryTreeResult =
+            result.allExtended<GetSecret>(
+                null,
+                { secret ->
+                    secret.alwaysFlowsTo(
+                        scope = Interprocedural(),
+                        sensitivities = FilterUnreachableEOG + FieldSensitive + ContextSensitive,
+                        predicate = { it is DeAllocate },
+                    )
+                },
+            )
+
+        println(queryTreeResult.printNicely())
+        assertTrue(queryTreeResult.value)
+    }
+
+    @Test
+    fun testMemoryDeleteFailCall() {
+        val topLevel = File("src/integrationTest/resources/python")
+        val result =
+            analyze(listOf(topLevel.resolve("encrypt_with_key_fail.py")), topLevel.toPath(), true) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(result)
+        mapNodesToConcepts(result, false)
+
+        val queryTreeResult =
+            result.allExtended<GetSecret>(
+                null,
+                { secret ->
+                    secret.alwaysFlowsTo(
+                        scope = Interprocedural(),
+                        sensitivities = FilterUnreachableEOG + FieldSensitive + ContextSensitive,
+                        predicate = { it is DeAllocate },
+                    )
+                },
+            )
+
+        println(queryTreeResult.printNicely())
+        assertFalse(queryTreeResult.value)
+    }
+
+    fun mapNodesToConcepts(result: TranslationResult, mapToFunctionDeclaration: Boolean) {
         // Secrets (key) concepts
         val key = Secret(underlyingNode = assertNotNull(result.variables["key"]))
+        val getSecretFromServer =
+            if (mapToFunctionDeclaration) {
+                result.functions["get_secret_from_server"]
+            } else {
+                result.calls["get_secret_from_server"]
+            }
         val getSecret =
-            GetSecret(
-                underlyingNode = assertNotNull(result.functions["get_secret_from_server"]),
-                concept = key,
-            )
+            GetSecret(underlyingNode = assertNotNull(getSecretFromServer), concept = key)
         key.ops += getSecret
+        getSecretFromServer.prevEOG += getSecret
+        getSecretFromServer.prevDFG += getSecret
 
         // Cipher (encryption) concepts
         val cipher =
@@ -93,7 +255,11 @@ class MemoryTest {
         val ops =
             result.allChildren<DeleteExpression>().flatMap { delete ->
                 delete.operands.map {
-                    DeAllocate(underlyingNode = delete, concept = memory, what = it)
+                    val deallocate =
+                        DeAllocate(underlyingNode = delete, concept = memory, what = it)
+                    deallocate.prevEOG += delete
+                    deallocate.prevDFG += it
+                    deallocate
                 }
             }
         memory.ops += ops
@@ -120,7 +286,7 @@ class MemoryTest {
                 )
             }
         assertNotNull(tree)
-        assertEquals(true, tree.value)
-        assertEquals(2, tree.children.size)
+        /*assertEquals(true, tree.value)
+        assertEquals(2, tree.children.size)*/
     }
 }
