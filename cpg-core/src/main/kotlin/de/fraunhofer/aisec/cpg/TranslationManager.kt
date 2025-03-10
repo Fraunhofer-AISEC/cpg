@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg
 
+import de.fraunhofer.aisec.cpg.TranslationContext.EmptyTranslationContext.language
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Name
@@ -139,6 +140,9 @@ private constructor(
         result: TranslationResult,
     ): Set<LanguageFrontend<*, *>> {
         val usedFrontends = mutableSetOf<LanguageFrontend<*, *>>()
+
+        // Contains all languages used in this frontend run, used to load additional builtin files
+        val usedLanguages = mutableSetOf<Language<*>>()
 
         // If loadIncludes is active, the files stored in the include paths are made available for
         // conditional analysis by providing them to the frontends over the
@@ -261,6 +265,9 @@ private constructor(
                     parseSequentially(component, result, ctx, sourceLocations)
                 }
             )
+
+            // Collects all used languages used in the main analysis code
+            usedLanguages.addAll(sourceLocations.mapNotNull { it.language }.toSet())
         }
 
         // Adds all languages provided as additional sources that may be relevant in the main code
