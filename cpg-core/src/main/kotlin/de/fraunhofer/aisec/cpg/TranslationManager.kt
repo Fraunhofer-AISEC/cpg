@@ -275,7 +275,6 @@ private constructor(
                 .forEach { ctx.importedSources.add(it) }
         }
 
-
         // A set of processed files from [TranslationContext.additionalSources] that is used as
         // negative to the
         // worklist in ctx.importedSources it is used to filter out files that were already

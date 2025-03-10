@@ -143,8 +143,9 @@ sealed class Scope(
      * are in a qualified lookup.
      *
      * @param symbol the symbol to lookup
-     * @param qualifiedLookup whether the lookup is looked to a specific namespace, and we therefore should stay in the
-     * current scope for lookup. If the lookup is unqualified we traverse the current scopes parents if no match was found.
+     * @param qualifiedLookup whether the lookup is looked to a specific namespace, and we therefore
+     *   should stay in the current scope for lookup. If the lookup is unqualified we traverse the
+     *   current scopes parents if no match was found.
      * @param replaceImports whether any symbols pointing to [ImportDeclaration.importedSymbols] or
      *   wildcards should be replaced with their actual nodes
      * @param predicate An optional predicate which should be used in the lookup.
@@ -194,7 +195,8 @@ sealed class Scope(
                 break
             }
 
-            // If we do not have a hit, we can go up one scope, unless [qualifiedLookup] is set to true
+            // If we do not have a hit, we can go up one scope, unless [qualifiedLookup] is set to
+            // true
             // (or we had a modified scope)
             scope =
                 if (qualifiedLookup || modifiedScoped != null) {
@@ -211,7 +213,8 @@ sealed class Scope(
                 }
         }
 
-        // If the symbol was still not resolved, and we are performing an unqualified resolution, we search in the
+        // If the symbol was still not resolved, and we are performing an unqualified resolution, we
+        // search in the
         // languages builtin scope for the symbol
         if (list.isNullOrEmpty() && !qualifiedLookup) {
             list = mutableListOf()
