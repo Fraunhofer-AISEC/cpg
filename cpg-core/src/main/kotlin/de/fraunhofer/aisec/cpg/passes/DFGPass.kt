@@ -28,11 +28,7 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
-import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
-import de.fraunhofer.aisec.cpg.graph.edges.flows.field
-import de.fraunhofer.aisec.cpg.graph.edges.flows.indexed
-import de.fraunhofer.aisec.cpg.graph.edges.flows.partial
+import de.fraunhofer.aisec.cpg.graph.edges.flows.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.IterativeGraphWalker
@@ -119,6 +115,8 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             // The PointsToPass will draw the DFG Edges for these
             is AssignExpression -> handleAssignExpression(node)
             // is Reference -> handleReference(node)
+            is PointerReference -> handlePointerReference(node)
+            is PointerDereference -> handlePointerDereference(node)
             is VariableDeclaration -> handleVariableDeclaration(node)
             // is SubscriptExpression -> handleSubscriptExpression(node)
             is NewArrayExpression -> handleNewArrayExpression(node)
@@ -181,7 +179,7 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     protected fun handleAssignExpression(node: AssignExpression) {
-        /*        // If this is a compound assign, we also need to model a dataflow to the node itself
+        // If this is a compound assign, we also need to model a dataflow to the node itself
         if (node.isCompoundAssignment) {
             node.lhs.firstOrNull()?.let {
                 node.prevDFGEdges += it
@@ -200,7 +198,7 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         // rhs to the node itself
         if (node.usedAsExpression) {
             node.expressionValue?.nextDFGEdges += node
-        }*/
+        }
     }
 
     /**
@@ -458,6 +456,28 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     node.prevDFGEdges += Dataflow(start = it, end = node)
                 }
             }
+        }
+    }
+
+    /**
+     * Adds the DFG edges to a [PointerReference] as follows:
+     * - A partial DFG edge from the input to the PointerReference
+     */
+    protected fun handlePointerReference(node: PointerReference) {
+        node.input.let {
+            node.prevDFGEdges +=
+                Dataflow(it, node, granularity = PartialDataflowGranularity("PointerReference"))
+        }
+    }
+
+    /**
+     * Adds the DFG edges to a [PointerDereference] as follows:
+     * - A partial DFG edge from the input to the PointerReference
+     */
+    protected fun handlePointerDereference(node: PointerDereference) {
+        node.input.let {
+            node.prevDFGEdges +=
+                Dataflow(it, node, granularity = PartialDataflowGranularity("PointerDereference"))
         }
     }
 

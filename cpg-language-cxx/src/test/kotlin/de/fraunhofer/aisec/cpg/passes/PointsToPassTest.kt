@@ -31,10 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextIn
-import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
-import de.fraunhofer.aisec.cpg.graph.edges.flows.ContextSensitiveDataflow
-import de.fraunhofer.aisec.cpg.graph.edges.flows.PointerDataflowGranularity
+import de.fraunhofer.aisec.cpg.graph.edges.flows.*
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
@@ -76,9 +73,16 @@ class PointsToPassTest {
 
         // Literals
         val literal0 = tu.allChildren<Literal<*>> { it.location?.region?.startLine == 4 }.first()
+        assertNotNull(literal0)
         val literal1 = tu.allChildren<Literal<*>> { it.location?.region?.startLine == 5 }.first()
+        assertNotNull(literal1)
+        val literal1Line11 =
+            tu.allChildren<Literal<*>> { it.location?.region?.startLine == 11 }.first()
+        assertNotNull(literal1Line11)
         val literal2 = tu.allChildren<Literal<*>> { it.location?.region?.startLine == 9 }.first()
+        assertNotNull(literal2)
         val literal3 = tu.allChildren<Literal<*>> { it.location?.region?.startLine == 17 }.first()
+        assertNotNull(literal3)
 
         // PointerReferences
         val iPointerRef =
@@ -106,9 +110,23 @@ class PointsToPassTest {
                 .first()
         assertNotNull(iRefLine6)
         val iRefLine8 = tu.allChildren<Reference> { it.location?.region?.startLine == 8 }.first()
+        assertNotNull(iRefLine8)
         val iRefLine9 = tu.allChildren<Reference> { it.location?.region?.startLine == 9 }.first()
+        assertNotNull(iRefLine9)
         val iRefLine10 = tu.allChildren<Reference> { it.location?.region?.startLine == 10 }.first()
-        val iRefLine11 = tu.allChildren<Reference> { it.location?.region?.startLine == 11 }.first()
+        assertNotNull(iRefLine10)
+        val iRefLeftLine11 =
+            tu.allChildren<Reference> {
+                    it.location?.region?.startLine == 11 && it.location?.region?.startColumn == 3
+                }
+                .first()
+        assertNotNull(iRefLeftLine11)
+        val iRefRightLine11 =
+            tu.allChildren<Reference> {
+                    it.location?.region?.startLine == 11 && it.location?.region?.startColumn == 7
+                }
+                .first()
+        assertNotNull(iRefRightLine11)
 
         val aRefLine7 =
             tu.allChildren<Reference> {
@@ -116,24 +134,38 @@ class PointsToPassTest {
                 }
                 .first()
         assertNotNull(aRefLine7)
+        val aRefLine12 =
+            tu.allChildren<Reference> {
+                    it.location?.region?.startLine == 12 &&
+                        it.name.localName == "a" &&
+                        it.location?.region?.startColumn == 19
+                }
+                .first()
+        assertNotNull(aRefLine12)
         val aRefLine15 =
             tu.allChildren<Reference> {
                     it.location?.region?.startLine == 15 && it.name.localName == "a"
                 }
                 .first()
+        assertNotNull(aRefLine15)
 
         // UnaryOperators
         val iUO = tu.allChildren<UnaryOperator> { it.location?.region?.startLine == 13 }.first()
+        assertNotNull(iUO)
+
+        // BinaryOperators
+        val binOp = tu.allChildren<BinaryOperator> { it.location?.region?.startLine == 11 }.first()
+        assertNotNull(binOp)
 
         // Line 4
         assertLocalName("i", iDecl.memoryAddresses.singleOrNull())
         assertEquals(literal0, iDecl.fullMemoryValues.singleOrNull())
-        assertEquals(literal0, iDecl.fullMemoryValues.singleOrNull())
+        assertEquals(literal0, iDecl.prevDFG.singleOrNull())
 
         // Line 5
         assertLocalName("j", jDecl.memoryAddresses.singleOrNull())
         assertEquals(literal1, jDecl.fullMemoryValues.singleOrNull())
-        assertEquals(literal1, jDecl.fullMemoryValues.singleOrNull())
+        assertEquals(literal1, jDecl.prevDFG.singleOrNull())
 
         // Line 6
         assertLocalName("a", aDecl.memoryAddresses.singleOrNull())
@@ -149,35 +181,52 @@ class PointsToPassTest {
         )
         assertTrue(iPointerRef.memoryAddresses.isEmpty())
         assertEquals(iDecl.memoryAddresses.single(), iPointerRef.fullMemoryValues.first())
+        assertEquals(iDecl.memoryAddresses.single(), iPointerRef.prevFullDFG.singleOrNull())
+        assertEquals(
+            iRefLine6,
+            iPointerRef.prevDFGEdges
+                .firstOrNull { it.granularity is PartialDataflowGranularity<*> }
+                ?.start,
+        )
 
         // Line 7
         assertLocalName("b", bDecl.memoryAddresses.singleOrNull())
         assertEquals(aRefLine7, bDecl.prevFullDFG.singleOrNull())
         assertEquals(iDecl.memoryAddresses.singleOrNull(), bDecl.fullMemoryValues.singleOrNull())
+        assertEquals(aDecl, aRefLine7.prevDFG.singleOrNull())
 
         // Line 8
         assertEquals(1, iRefLine8.memoryAddresses.size)
         assertEquals(iDecl.memoryAddresses.singleOrNull(), iRefLine8.memoryAddresses.first())
         assertEquals(1, iRefLine8.fullMemoryValues.size)
         assertEquals(literal0, iRefLine8.fullMemoryValues.first())
+        assertEquals(iDecl, iRefLine8.prevFullDFG.singleOrNull())
 
         // Line 9
         assertEquals(1, iRefLine9.memoryAddresses.size)
         assertEquals(iDecl.memoryAddresses.singleOrNull(), iRefLine9.memoryAddresses.first())
         assertEquals(1, iRefLine9.fullMemoryValues.size)
         assertEquals(literal2, iRefLine9.fullMemoryValues.filterIsInstance<Literal<*>>().first())
+        assertEquals(literal2, iRefLine9.prevDFG.singleOrNull())
 
         // Line 10
         assertEquals(1, iRefLine10.memoryAddresses.size)
         assertEquals(iDecl.memoryAddresses.singleOrNull(), iRefLine10.memoryAddresses.first())
         assertEquals(1, iRefLine10.fullMemoryValues.size)
         assertEquals(literal2, iRefLine10.fullMemoryValues.first())
+        assertEquals(iRefLine9, iRefLine10.prevFullDFG.singleOrNull())
 
         // Line 11
-        assertEquals(1, iRefLine11.memoryAddresses.size)
-        assertEquals(iDecl.memoryAddresses.singleOrNull(), iRefLine11.memoryAddresses.first())
-        assertEquals(1, iRefLine11.fullMemoryValues.size)
-        assertTrue(iRefLine11.fullMemoryValues.filterIsInstance<BinaryOperator>().isNotEmpty())
+        assertEquals(1, iRefLeftLine11.memoryAddresses.size)
+        assertEquals(iDecl.memoryAddresses.singleOrNull(), iRefLeftLine11.memoryAddresses.first())
+        assertEquals(1, iRefLeftLine11.fullMemoryValues.size)
+        assertEquals(binOp, iRefLeftLine11.fullMemoryValues.singleOrNull())
+        assertEquals(binOp, iRefLeftLine11.prevFullDFG.singleOrNull())
+
+        assertEquals(2, binOp.prevDFG.size)
+        assertEquals(setOf<Node>(iRefRightLine11, literal1Line11), binOp.prevDFG)
+        // TODO: What do we expect here?
+        // assertEquals(2, binOp.memoryValues.size)
 
         // Line 12
         assertEquals(1, aPointerDerefLine12.memoryAddresses.size)
@@ -186,8 +235,13 @@ class PointsToPassTest {
             aPointerDerefLine12.memoryAddresses.first(),
         )
         assertEquals(1, aPointerDerefLine12.fullMemoryValues.size)
-        assertTrue(
-            aPointerDerefLine12.fullMemoryValues.filterIsInstance<BinaryOperator>().isNotEmpty()
+        assertEquals(binOp, aPointerDerefLine12.fullMemoryValues.singleOrNull())
+        assertEquals(iRefLeftLine11, aPointerDerefLine12.prevFullDFG.singleOrNull())
+        assertEquals(
+            aRefLine12,
+            aPointerDerefLine12.prevDFGEdges
+                .first { it.granularity is PartialDataflowGranularity<*> }
+                .start,
         )
 
         // Line 13 should only update the DeclarationState, not much here to test

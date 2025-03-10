@@ -1019,7 +1019,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
         /* If we have an Expression that is written to, we handle it later and ignore it now */
         val access =
-            if (currentNode is Reference) currentNode.access
+            if (currentNode is Reference || currentNode is BinaryOperator) currentNode.access
             else if (currentNode is SubscriptExpression && currentNode.arrayExpression is Reference)
                 (currentNode.arrayExpression as Reference).access
             else null
@@ -1486,6 +1486,9 @@ fun PointsToStateElement.getValues(node: Node): IdentitySet<Node> {
         is SubscriptExpression -> {
             this.getAddresses(node).flatMap { this.getValues(it) }.toIdentitySet()
         }
+        is BinaryOperator -> {
+            (this.getValues(node.rhs) + this.getValues(node.lhs)).toIdentitySet()
+        }
         /* In these cases, we simply have to fetch the current value for the MemoryAddress from the DeclarationState */
         else -> identitySetOf(node)
     }
@@ -1659,19 +1662,19 @@ fun PointsToStateElement.updateValues(
             // state, we do nothing in order not to confuse the iterateEOG function
 
             val newSources =
-                sources
-                    .map { pair ->
-                        this.declarationsState[destAddr]?.second?.firstOrNull {
-                            it.first === pair.first && it.second == pair.second
-                        } ?: pair
-                    }
-                    .toIdentitySet()
-
+                sources.mapTo(IdentitySet()) { pair ->
+                    this.declarationsState[destAddr]?.second?.firstOrNull {
+                        it.first === pair.first && it.second == pair.second
+                    } ?: pair
+                }
+            val newPrevDFG =
+                // TODO: To we also need to fetch some properties here?
+                destinations.mapTo(IdentitySet()) { Pair(it, false) }
             newDeclState[destAddr] =
                 TripleLattice.Element(
                     PowersetLattice.Element(currentEntries),
                     PowersetLattice.Element(newSources),
-                    PowersetLattice.Element(),
+                    PowersetLattice.Element(newPrevDFG),
                 )
         } else {
             // TODO: We basically do the same as above, but currently we don't get the destinations
@@ -1680,7 +1683,7 @@ fun PointsToStateElement.updateValues(
                 newGenState[addr] =
                     GeneralStateEntryElement(
                         PowersetLattice.Element(destinationAddresses),
-                        PowersetLattice.Element(sources.map { it.first }.toIdentitySet()),
+                        PowersetLattice.Element(sources.mapTo(IdentitySet()) { it.first }),
                         PowersetLattice.Element(),
                     )
             }
