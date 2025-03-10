@@ -331,12 +331,12 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             // We have to look up the index of the ParameterMemoryValue to check out
             // changes on the dereferences
             values
-                .filter { doubleState.hasDeclarationStateEntry(it) }
+                .filterTo(identitySetOf()) { doubleState.hasDeclarationStateEntry(it) }
                 .map { indexes.add(Pair(it, 2)) }
             // Additionally, we can check out the "dereference" itself to look for
             // "derefdereferences"
             values
-                .filter { doubleState.hasDeclarationStateEntry(it) }
+                .filterTo(identitySetOf()) { doubleState.hasDeclarationStateEntry(it) }
                 .flatMap { doubleState.getValues(it) }
                 .forEach { value ->
                     if (doubleState.hasDeclarationStateEntry(value)) indexes.add(Pair(value, 3))
@@ -344,12 +344,14 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
             indexes.forEach { (index, dstValueDepth) ->
                 val stateEntries =
-                    doubleState.fetchElementFromDeclarationState(index, true).filter {
+                    doubleState.fetchElementFromDeclarationState(index, true).filterTo(
+                        identitySetOf()
+                    ) {
                         it.first.name != param.name
                     }
                 stateEntries
                     // See if we can find something that is different from the initial value
-                    .filter {
+                    .filterTo(identitySetOf()) {
                         !(it.first is ParameterMemoryValue &&
                             it.first.name.localName.contains("derefvalue") &&
                             it.first.name.parent == param.name)
@@ -993,7 +995,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
             /*// If we have any information from the dereferenced value, we also fetch that
             values
-                .filter { doubleState.hasDeclarationStateEntry(it, true) }
+                .filterTo(identitySetOf()) { doubleState.hasDeclarationStateEntry(it, true) }
                 .flatMap {
                     doubleState.fetchElementFromDeclarationState(
                         addr = it,
@@ -1126,7 +1128,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     val pmvName = "deref".repeat(i) + "value"
                     val pmv =
                         ParameterMemoryValue(Name(pmvName, param.name)).apply {
-                            memoryAddress = addresses.first() /* TODO: might there also be more? */
+                            memoryAddresses.addAll(
+                                addresses.filterIsInstance<MemoryAddress>()
+                            ) /* TODO: might there also be more? */
                         }
                     // In the first step, we link the ParameterDeclaration to the PMV to be able to
                     // also access it outside the function
@@ -1146,7 +1150,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         // Link the PMVs with each other so that we can find them. This is
                         // especially important outside the respective function where we don't have
                         // a state
-                        (pmv.memoryAddress as ParameterMemoryValue).memoryValues += pmv
+                        pmv.memoryAddresses.filterIsInstance<ParameterMemoryValue>().forEach {
+                            it.memoryValues += pmv
+                        }
                     }
 
                     // Update the states
@@ -1347,7 +1353,9 @@ fun PointsToStateElement.getLastWrites(node: Node): IdentitySet<Pair<Node, Set<A
             // For the rest, we read the declarationState to determine when the memoryAddress of the
             // node was last written to
             this.getAddresses(node)
-                .filter { this.declarationsState[it]?.third?.isNotEmpty() == true }
+                .filterTo(identitySetOf()) {
+                    this.declarationsState[it]?.third?.isNotEmpty() == true
+                }
                 .flatMapTo(IdentitySet()) {
                     this.declarationsState[it]?.third!!.map {
                         Pair(it.first, setOf<Any>(it.second))
@@ -1447,7 +1455,7 @@ fun PointsToStateElement.getAddresses(node: Node): IdentitySet<Node> {
             node.memoryAddresses.toIdentitySet()
         }
         is ParameterMemoryValue -> {
-            if (node.memoryAddress != null) identitySetOf(node.memoryAddress!!) else identitySetOf()
+            node.memoryAddresses.toIdentitySet()
         }
         is MemoryAddress -> {
             identitySetOf(node)

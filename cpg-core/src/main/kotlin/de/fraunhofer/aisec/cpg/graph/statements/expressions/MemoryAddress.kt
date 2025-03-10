@@ -29,7 +29,6 @@ import de.fraunhofer.aisec.cpg.graph.HasMemoryAddress
 import de.fraunhofer.aisec.cpg.graph.HasMemoryValue
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflows
 import de.fraunhofer.aisec.cpg.graph.edges.memoryAddressEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
@@ -83,20 +82,22 @@ open class MemoryAddress(override var name: Name, open var isGlobal: Boolean = f
  * function's context. This is used for a [ParameterDeclaration] and serves as some sort of stepping
  * stone.
  */
-class ParameterMemoryValue(override var name: Name) : MemoryAddress(name) {
+class ParameterMemoryValue(override var name: Name) : MemoryAddress(name), HasMemoryAddress {
     /**
      * The ParameterMemoryValue is usually the Value of a parameter. Let's use this little helper to
      * get to the parameter's address
      */
-    var memoryAddressEdge = astOptionalEdgeOf<Node>()
-    var memoryAddress by unwrapping(ParameterMemoryValue::memoryAddressEdge)
+    override var memoryAddressEdges =
+        memoryAddressEdgesOf(mirrorProperty = MemoryAddress::usageEdges, outgoing = true)
+
+    override var memoryAddresses by unwrapping(ParameterMemoryValue::memoryAddressEdges)
 }
 
 /** We don't know the value. It might be set somewhere else or not. No idea. */
 class UnknownMemoryValue(
     override var name: Name = Name(""),
     override var isGlobal: Boolean = false,
-) : MemoryAddress(name) {
+) : MemoryAddress(name), HasMemoryAddress {
     override fun equals(other: Any?): Boolean {
         if (this === other) {
             return true
@@ -111,4 +112,9 @@ class UnknownMemoryValue(
     override fun hashCode(): Int {
         return super.hashCode()
     }
+
+    override var memoryAddressEdges =
+        memoryAddressEdgesOf(mirrorProperty = MemoryAddress::usageEdges, outgoing = true)
+
+    override var memoryAddresses by unwrapping(UnknownMemoryValue::memoryAddressEdges)
 }
