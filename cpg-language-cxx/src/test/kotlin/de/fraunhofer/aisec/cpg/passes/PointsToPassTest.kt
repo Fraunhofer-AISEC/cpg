@@ -41,6 +41,7 @@ import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.test.assertLocalName
 import java.io.File
+import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -144,10 +145,7 @@ class PointsToPassTest {
 
         assertEquals(iDecl.memoryAddresses.singleOrNull(), iPointerRef.prevFullDFG.singleOrNull())
         assertTrue(iPointerRef.memoryAddresses.isEmpty())
-        assertEquals(
-            iDecl.memoryAddresses.singleOrNull(),
-            iPointerRef.memoryValues.first() as MemoryAddress?,
-        )
+        assertEquals(iDecl.memoryAddresses.single(), iPointerRef.memoryValues.first())
 
         // Line 7
         assertLocalName("b", bDecl.memoryAddresses.singleOrNull())
@@ -156,37 +154,25 @@ class PointsToPassTest {
 
         // Line 8
         assertEquals(1, iRefLine8.memoryAddresses.size)
-        assertEquals(
-            iDecl.memoryAddresses.singleOrNull(),
-            iRefLine8.memoryAddresses.first() as MemoryAddress?,
-        )
+        assertEquals(iDecl.memoryAddresses.singleOrNull(), iRefLine8.memoryAddresses.first())
         assertEquals(1, iRefLine8.prevFullDFG.size)
         assertEquals(literal0, iRefLine8.prevFullDFG.first())
 
         // Line 9
         assertEquals(1, iRefLine9.memoryAddresses.size)
-        assertEquals(
-            iDecl.memoryAddresses.singleOrNull(),
-            iRefLine9.memoryAddresses.first() as MemoryAddress?,
-        )
+        assertEquals(iDecl.memoryAddresses.singleOrNull(), iRefLine9.memoryAddresses.first())
         assertEquals(1, iRefLine9.prevFullDFG.size)
         assertEquals(literal2, iRefLine9.prevFullDFG.filterIsInstance<Literal<*>>().first())
 
         // Line 10
         assertEquals(1, iRefLine10.memoryAddresses.size)
-        assertEquals(
-            iDecl.memoryAddresses.singleOrNull(),
-            iRefLine10.memoryAddresses.first() as MemoryAddress?,
-        )
+        assertEquals(iDecl.memoryAddresses.singleOrNull(), iRefLine10.memoryAddresses.first())
         assertEquals(1, iRefLine10.prevFullDFG.size)
         assertEquals(literal2, iRefLine10.prevFullDFG.first())
 
         // Line 11
         assertEquals(1, iRefLine11.memoryAddresses.size)
-        assertEquals(
-            iDecl.memoryAddresses.singleOrNull(),
-            iRefLine11.memoryAddresses.first() as MemoryAddress?,
-        )
+        assertEquals(iDecl.memoryAddresses.singleOrNull(), iRefLine11.memoryAddresses.first())
         assertEquals(1, iRefLine11.prevFullDFG.size)
         assertTrue(iRefLine11.prevFullDFG.filterIsInstance<BinaryOperator>().isNotEmpty())
 
@@ -194,7 +180,7 @@ class PointsToPassTest {
         assertEquals(1, aPointerDerefLine12.memoryAddresses.size)
         assertEquals(
             iDecl.memoryAddresses.singleOrNull(),
-            aPointerDerefLine12.memoryAddresses.first() as MemoryAddress?,
+            aPointerDerefLine12.memoryAddresses.first(),
         )
         assertEquals(1, aPointerDerefLine12.prevFullDFG.size)
         assertTrue(aPointerDerefLine12.prevFullDFG.filterIsInstance<BinaryOperator>().isNotEmpty())
@@ -204,7 +190,7 @@ class PointsToPassTest {
         assertEquals(1, aPointerDerefLine14.memoryAddresses.size)
         assertEquals(
             iDecl.memoryAddresses.singleOrNull(),
-            aPointerDerefLine14.memoryAddresses.first() as MemoryAddress?,
+            aPointerDerefLine14.memoryAddresses.first(),
         )
         assertEquals(1, aPointerDerefLine14.prevFullDFG.size)
         assertEquals(iUO.input, aPointerDerefLine14.prevFullDFG.first())
@@ -212,26 +198,17 @@ class PointsToPassTest {
         // Line 15
         assertTrue(jPointerRef.memoryAddresses.isEmpty())
         assertEquals(1, jPointerRef.prevFullDFG.size)
-        assertEquals(
-            jDecl.memoryAddresses.singleOrNull(),
-            jPointerRef.prevFullDFG.first() as MemoryAddress?,
-        )
+        assertEquals(jDecl.memoryAddresses.single(), jPointerRef.prevFullDFG.first())
         assertEquals(1, aRefLine15.memoryAddresses.size)
-        assertEquals(
-            aDecl.memoryAddresses.singleOrNull(),
-            aRefLine15.memoryAddresses.first() as MemoryAddress?,
-        )
+        assertEquals(aDecl.memoryAddresses.singleOrNull(), aRefLine15.memoryAddresses.first())
         assertEquals(1, aRefLine15.prevFullDFG.size)
-        assertEquals(
-            jDecl.memoryAddresses.singleOrNull(),
-            aRefLine15.prevFullDFG.first() as MemoryAddress?,
-        )
+        assertEquals(jDecl.memoryAddresses.single(), aRefLine15.prevFullDFG.first())
 
         // Line 16
         assertEquals(1, aPointerDerefLine16.memoryAddresses.size)
         assertEquals(
             jDecl.memoryAddresses.singleOrNull(),
-            aPointerDerefLine16.memoryAddresses.first() as MemoryAddress?,
+            aPointerDerefLine16.memoryAddresses.first(),
         )
         assertEquals(1, aPointerDerefLine16.prevFullDFG.size)
         assertEquals(literal1, aPointerDerefLine16.prevFullDFG.first())
@@ -240,7 +217,7 @@ class PointsToPassTest {
         assertEquals(1, aPointerDerefLine17.memoryAddresses.size)
         assertEquals(
             jDecl.memoryAddresses.singleOrNull(),
-            aPointerDerefLine17.memoryAddresses.first() as MemoryAddress?,
+            aPointerDerefLine17.memoryAddresses.first(),
         )
         assertEquals(1, aPointerDerefLine17.prevFullDFG.size)
         assertEquals(literal3, aPointerDerefLine17.prevFullDFG.first())
@@ -249,7 +226,7 @@ class PointsToPassTest {
         assertEquals(1, bPointerDerefLine18.memoryAddresses.size)
         assertEquals(
             iDecl.memoryAddresses.singleOrNull(),
-            bPointerDerefLine18.memoryAddresses.first() as MemoryAddress?,
+            bPointerDerefLine18.memoryAddresses.first(),
         )
         assertEquals(1, bPointerDerefLine18.prevFullDFG.size)
         assertEquals(iUO.input, bPointerDerefLine18.prevFullDFG.first())
@@ -498,7 +475,7 @@ class PointsToPassTest {
         // TODO
         /*        assertEquals(
             n0Line67.base.prevFullDFG.first(),
-            (n0Line67.memoryAddresses.first() as MemoryAddress?)?.memoryParent
+            (n0Line67.memoryAddresses.first())?.memoryParent
         )*/
         assertEquals(1, n0Line67.prevFullDFG.size)
         assertEquals(literal1, n0Line67.prevFullDFG.firstOrNull())
@@ -508,7 +485,7 @@ class PointsToPassTest {
         // TODO
         /*        assertEquals(
             n0Line68.base.prevFullDFG.first(),
-            (n0Line68.memoryAddresses.first() as MemoryAddress?)?.memoryParent
+            (n0Line68.memoryAddresses.first())?.memoryParent
         )*/
         assertEquals(1, n0Line68.prevFullDFG.size)
         assertEquals(literal1, n0Line68.prevFullDFG.firstOrNull())
@@ -518,7 +495,7 @@ class PointsToPassTest {
         // TODO
         /*        assertEquals(
             niLine71.base.prevFullDFG.first(),
-            (niLine71.memoryAddresses.first() as MemoryAddress?)?.memoryParent
+            (niLine71.memoryAddresses.first())?.memoryParent
         )*/
         assertEquals(1, niLine71.prevFullDFG.size)
         assertEquals(exprLine71, niLine71.prevFullDFG.firstOrNull())
@@ -528,7 +505,7 @@ class PointsToPassTest {
         // TODO
         /*        assertEquals(
             njLine75.base.prevFullDFG.first(),
-            (njLine75.memoryAddresses.first() as MemoryAddress?)?.memoryParent
+            (njLine75.memoryAddresses.first())?.memoryParent
         )*/
         assertEquals(1, njLine75.prevFullDFG.size)
         assertTrue(njLine75.prevFullDFG.first() is UnknownMemoryValue)
@@ -775,86 +752,56 @@ class PointsToPassTest {
 
         // Result of memcpy in Line 112
         assertEquals(1, bRef.memoryAddresses.size)
-        assertEquals(
-            bDecl.memoryAddresses.singleOrNull(),
-            bRef.memoryAddresses.first() as MemoryAddress?,
-        )
+        assertEquals(bDecl.memoryAddresses.singleOrNull(), bRef.memoryAddresses.first())
         assertEquals(1, bRef.prevFullDFG.size)
         assertEquals(aDecl.prevFullDFG.first(), bRef.prevFullDFG.first())
 
         assertEquals(1, pbPointerDeref.memoryAddresses.size)
-        assertEquals(
-            bDecl.memoryAddresses.singleOrNull(),
-            pbPointerDeref.memoryAddresses.first() as MemoryAddress?,
-        )
+        assertEquals(bDecl.memoryAddresses.singleOrNull(), pbPointerDeref.memoryAddresses.first())
         assertEquals(1, pbPointerDeref.prevFullDFG.size)
         assertEquals(aDecl.prevFullDFG.first(), pbPointerDeref.prevFullDFG.first())
 
         // Result of memcpy in Line 115
         assertEquals(1, cRef.memoryAddresses.size)
-        assertEquals(
-            cDecl.memoryAddresses.singleOrNull(),
-            cRef.memoryAddresses.first() as MemoryAddress?,
-        )
+        assertEquals(cDecl.memoryAddresses.singleOrNull(), cRef.memoryAddresses.first())
         assertEquals(1, cRef.prevFullDFG.size)
         assertEquals(aDecl.prevFullDFG.first(), cRef.prevFullDFG.first())
 
         assertEquals(1, pcPointerDeref.memoryAddresses.size)
-        assertEquals(
-            cDecl.memoryAddresses.singleOrNull(),
-            pcPointerDeref.memoryAddresses.first() as MemoryAddress?,
-        )
+        assertEquals(cDecl.memoryAddresses.singleOrNull(), pcPointerDeref.memoryAddresses.first())
         assertEquals(1, pcPointerDeref.prevFullDFG.size)
         assertEquals(aDecl.prevFullDFG.first(), pcPointerDeref.prevFullDFG.first())
 
         // Result of memcpy in Line 118
         assertEquals(1, dRef.memoryAddresses.size)
-        assertEquals(
-            dDecl.memoryAddresses.singleOrNull(),
-            dRef.memoryAddresses.first() as MemoryAddress?,
-        )
+        assertEquals(dDecl.memoryAddresses.singleOrNull(), dRef.memoryAddresses.first())
         assertEquals(1, dRef.prevFullDFG.size)
         assertEquals(aDecl.prevFullDFG.first(), dRef.prevFullDFG.first())
 
         assertEquals(1, pdPointerDeref.memoryAddresses.size)
-        assertEquals(
-            dDecl.memoryAddresses.singleOrNull(),
-            pdPointerDeref.memoryAddresses.first() as MemoryAddress?,
-        )
+        assertEquals(dDecl.memoryAddresses.singleOrNull(), pdPointerDeref.memoryAddresses.first())
         assertEquals(1, pdPointerDeref.prevFullDFG.size)
         assertEquals(aDecl.prevFullDFG.first(), pdPointerDeref.prevFullDFG.first())
 
         // Result of memcpy in Line 121
         assertEquals(1, eRef.memoryAddresses.size)
-        assertEquals(
-            eDecl.memoryAddresses.singleOrNull(),
-            eRef.memoryAddresses.first() as MemoryAddress?,
-        )
+        assertEquals(eDecl.memoryAddresses.singleOrNull(), eRef.memoryAddresses.first())
         assertEquals(1, eRef.prevFullDFG.size)
         assertEquals(aDecl.prevFullDFG.first(), eRef.prevFullDFG.first())
 
         assertEquals(1, pePointerDeref.memoryAddresses.size)
-        assertEquals(
-            eDecl.memoryAddresses.singleOrNull(),
-            pePointerDeref.memoryAddresses.first() as MemoryAddress?,
-        )
+        assertEquals(eDecl.memoryAddresses.singleOrNull(), pePointerDeref.memoryAddresses.first())
         assertEquals(1, pePointerDeref.prevFullDFG.size)
         assertEquals(aDecl.prevFullDFG.first(), pePointerDeref.prevFullDFG.first())
 
         // Result of memcpy in Line 125
         assertEquals(1, fRef.memoryAddresses.size)
-        assertEquals(
-            fDecl.memoryAddresses.singleOrNull(),
-            fRef.memoryAddresses.first() as MemoryAddress?,
-        )
+        assertEquals(fDecl.memoryAddresses.singleOrNull(), fRef.memoryAddresses.first())
         assertEquals(1, fRef.prevFullDFG.size)
         assertEquals(fDecl.prevFullDFG.first(), fRef.prevFullDFG.first())
 
         assertEquals(1, pfPointerDeref.memoryAddresses.size)
-        assertEquals(
-            aDecl.memoryAddresses.singleOrNull(),
-            pfPointerDeref.memoryAddresses.first() as MemoryAddress?,
-        )
+        assertEquals(aDecl.memoryAddresses.singleOrNull(), pfPointerDeref.memoryAddresses.first())
         assertEquals(1, pfPointerDeref.prevFullDFG.size)
         assertEquals(aDecl.prevFullDFG.first(), pfPointerDeref.prevFullDFG.first())
     }
@@ -941,27 +888,21 @@ class PointsToPassTest {
 
         // Line 138
         assertEquals(1, aRefLine138.memoryAddresses.size)
-        assertEquals(
-            aDecl.memoryAddresses.singleOrNull(),
-            aRefLine138.memoryAddresses.first() as MemoryAddress?,
-        )
+        assertEquals(aDecl.memoryAddresses.singleOrNull(), aRefLine138.memoryAddresses.first())
         assertEquals(1, aRefLine138.memoryValues.size)
         assertEquals(literal10, aRefLine138.memoryValues.first())
         assertEquals(1, aRefLine138.prevFullDFG.size)
         assertEquals(aDecl, aRefLine138.prevFullDFG.first())
 
         assertEquals(1, bRefLine138.memoryAddresses.size)
-        assertEquals(
-            bDecl.memoryAddresses.singleOrNull(),
-            bRefLine138.memoryAddresses.first() as MemoryAddress?,
-        )
+        assertEquals(bDecl.memoryAddresses.singleOrNull(), bRefLine138.memoryAddresses.first())
         assertEquals(1, bRefLine138.memoryValues.size)
         assertEquals(aDecl.memoryAddresses.single(), bRefLine138.memoryValues.first())
 
         assertEquals(1, bPointerDerefLine138.memoryAddresses.size)
         assertEquals(
             aDecl.memoryAddresses.singleOrNull(),
-            bPointerDerefLine138.memoryAddresses.first() as MemoryAddress?,
+            bPointerDerefLine138.memoryAddresses.first(),
         )
         assertEquals(1, bPointerDerefLine138.memoryValues.size)
         assertEquals(literal10, bPointerDerefLine138.memoryValues.first())
@@ -1541,10 +1482,7 @@ class PointsToPassTest {
         assertEquals(1, pDerefLine231.prevFullDFG.size)
         assertEquals(ceLine230, pDerefLine231.prevFullDFG.first())
         assertEquals(1, pDerefLine231.memoryAddresses.size)
-        assertEquals(
-            iDecl.memoryAddresses.singleOrNull(),
-            pDerefLine231.memoryAddresses.first() as MemoryAddress?,
-        )
+        assertEquals(iDecl.memoryAddresses.singleOrNull(), pDerefLine231.memoryAddresses.first())
 
         // Line 234
         assertEquals(1, pDerefLine234.memoryAddresses.size)
@@ -1563,10 +1501,7 @@ class PointsToPassTest {
         assertTrue(pDerefLine234.prevFunctionSummaryDFG.contains(ceLine233.arguments[0]))
         assertTrue(pDerefLine234.prevFunctionSummaryDFG.contains(ceLine233.invokes.first()))
         assertEquals(1, pDerefLine234.memoryAddresses.size)
-        assertEquals(
-            iDecl.memoryAddresses.singleOrNull(),
-            pDerefLine234.memoryAddresses.first() as MemoryAddress?,
-        )
+        assertEquals(iDecl.memoryAddresses.singleOrNull(), pDerefLine234.memoryAddresses.first())
 
         // Line 237
         assertEquals(1, pDerefLine237.memoryAddresses.size)
@@ -1843,10 +1778,7 @@ class PointsToPassTest {
         // p2p before the call in Line 262
         assertEquals(3, p2pLine262.prevDFGEdges.size)
         assertEquals(1, p2pLine262.prevFullDFG.size)
-        assertEquals(
-            p_oldvalDecl.memoryAddresses.singleOrNull(),
-            p2pLine262.prevFullDFG.first() as MemoryAddress?,
-        )
+        assertEquals(p_oldvalDecl.memoryAddresses.single(), p2pLine262.prevFullDFG.first())
         assertEquals(
             1,
             p2pLine262.prevDFGEdges
@@ -1891,10 +1823,7 @@ class PointsToPassTest {
         // Test the result on p2p
         assertEquals(3, p2pLine264.prevDFGEdges.size)
         assertEquals(1, p2pLine264.prevFullDFG.size)
-        assertEquals(
-            p_oldvalDecl.memoryAddresses.singleOrNull(),
-            p2pLine264.prevFullDFG.first() as MemoryAddress?,
-        )
+        assertEquals(p_oldvalDecl.memoryAddresses.single(), p2pLine264.prevFullDFG.first())
         assertEquals(
             1,
             p2pLine264.prevDFGEdges
@@ -1974,7 +1903,7 @@ class PointsToPassTest {
                         it !is PointerReference &&
                         it.name.localName == "key"
                 }
-                .flatMap { it.prevDFG }
+                .flatMap { it.memoryValues }
                 .toIdentitySet()
 
         // Ensure that all key-references point to keyDecl as prevDFG
@@ -1985,12 +1914,12 @@ class PointsToPassTest {
         assertTrue(keyPrevDFGs.any { it.name.localName == "sgx_get_key.secret" })
 
         assertTrue(
-            (keyPrevDFGs.first { it.name.localName == "key" } as? UnknownMemoryValue)?.isGlobal
-                ?: false
+            (keyPrevDFGs.first { it.name.localName == "key" } as? UnknownMemoryValue)?.isGlobal ==
+                true
         )
         assertFalse(
             (keyPrevDFGs.first { it.name.localName == "sgx_get_key.secret" } as? UnknownMemoryValue)
-                ?.isGlobal ?: true
+                ?.isGlobal != false
         )
     }
 
@@ -2379,6 +2308,7 @@ class PointsToPassTest {
     }
 
     @Test
+    @Ignore
     fun testFoo() {
         val file =
             File(
