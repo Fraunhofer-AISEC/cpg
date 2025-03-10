@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.TypeManager
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.DeclaresType
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -89,7 +90,7 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
      */
     fun resolveType(type: Type): Boolean {
         // Check for a possible typedef
-        var target = scopeManager.typedefFor(type.name, type.scope)
+        /*var target = scopeManager.typedefFor(type.name, type.scope)
         if (target != null) {
             if (target.typeOrigin == Type.Origin.UNRESOLVED && type != target) {
                 // Make sure our typedef target is resolved
@@ -103,7 +104,7 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             type.recordDeclaration = originDeclares
             type.typeOrigin = Type.Origin.RESOLVED
             return true
-        }
+        }*/
 
         // Let's start by looking up the type according to their name and scope. We exclusively
         // filter for nodes that implement DeclaresType, because otherwise we will get a lot of
@@ -128,7 +129,14 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             )
             type.name = declaredType.name
             type.declaredFrom = declares
-            type.recordDeclaration = declares as? RecordDeclaration
+            type.recordDeclaration =
+                if (declares is RecordDeclaration) {
+                    declares
+                } else if (declares is TypedefDeclaration) {
+                    declares.type.recordDeclaration
+                } else {
+                    null
+                }
             type.typeOrigin = Type.Origin.RESOLVED
             if (declaredType.superTypes.contains(type))
                 log.warn(

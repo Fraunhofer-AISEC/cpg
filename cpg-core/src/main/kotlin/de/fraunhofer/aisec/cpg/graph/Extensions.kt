@@ -1019,6 +1019,10 @@ val Node?.returns: List<ReturnStatement>
 val Node?.assigns: List<AssignExpression>
     get() = this.allChildren()
 
+/** Returns all [TypedefDeclaration] child edges in this graph, starting with this [Node]. */
+val Node?.typedefs: List<TypedefDeclaration>
+    get() = this.allChildren()
+
 /**
  * This function tries to find the first parent node of type [T] that satisfies the optional
  * condition specified in [predicate]. If [predicate] is `null`, the first AST parent node of type
