@@ -77,20 +77,11 @@ class PythonValueEvaluator : ValueEvaluator() {
     }
 
     override fun handleCall(call: CallExpression, depth: Int): Any? {
-        if (call.arguments.size != 2) {
-            // not implemented
-            super.handleCall(call, depth)
-        }
-
         return when (call.reconstructedImportName.toString()) {
             "os.path.join" -> {
-                val arg0 = super.evaluate(call.arguments.first())
-                val arg1 = super.evaluate(call.arguments.last())
-                if (arg0 is String && arg1 is String) {
-                    "$arg0/$arg1" // TODO path separator
-                } else {
-                    // not implemented
-                    super.handleCall(call, depth)
+                call.arguments.joinToString(separator = "/") { // TODO separator
+                arg ->
+                    super.evaluate(arg).toString()
                 }
             }
             else -> super.handleCall(call, depth)

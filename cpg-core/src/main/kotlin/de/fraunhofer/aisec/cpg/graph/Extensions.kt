@@ -891,7 +891,7 @@ fun Node.followPrevDFG(predicate: (Node) -> Boolean): MutableList<Node>? {
         ?.toMutableList()
 }
 
-/** Returns all  [Node] children in the AST-subgraph, starting with this [Node]. */
+/** Returns all [Node] children in the AST-subgraph, starting with this [Node]. */
 val Node?.nodes: List<Node>
     get() = this.allChildren()
 
