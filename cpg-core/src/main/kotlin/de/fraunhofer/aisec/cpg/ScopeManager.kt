@@ -255,6 +255,8 @@ class ScopeManager : ScopeProvider {
                 }
         }
 
+        newScope?.ctx = nodeToScope.ctx
+
         // push the new scope
         if (newScope != null) {
             pushScope(newScope)
@@ -813,7 +815,7 @@ class ScopeManager : ScopeProvider {
                         .lookupSymbol(
                             n.localName,
                             languageOnly = language,
-                            thisScopeOnly = true,
+                            qualifiedLookup = true,
                             replaceImports = replaceImports,
                             predicate = predicate,
                         )

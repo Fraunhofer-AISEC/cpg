@@ -37,6 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.passes.*
+import java.io.File
 import kotlin.reflect.KClass
 
 /**
@@ -298,6 +299,8 @@ interface HasOperatorOverloading : LanguageTrait {
 interface HasBuiltins : LanguageTrait {
     /** Returns the namespace under which builtins exist. */
     val builtinsNamespace: Name
+
+    fun getBuiltinsFileCandidates(): Set<File>
 }
 
 /**

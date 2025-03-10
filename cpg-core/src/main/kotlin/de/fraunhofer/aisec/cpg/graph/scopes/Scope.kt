@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.scopes
 
 import com.fasterxml.jackson.annotation.JsonBackReference
 import de.fraunhofer.aisec.cpg.PopulatedByPass
+import de.fraunhofer.aisec.cpg.frontends.HasBuiltins
 import de.fraunhofer.aisec.cpg.frontends.HasImplicitReceiver
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.Node
@@ -134,7 +135,7 @@ sealed class Scope(
      * can be used for additional filtering.
      *
      * By default, the lookup algorithm will go to the [Scope.parent] if no match was found in the
-     * current scope. This behaviour can be turned off with [thisScopeOnly]. This is useful for
+     * current scope. This behaviour can be turned off with [qualifiedLookup]. This is useful for
      * qualified lookups, where we want to stay in our lookup-scope.
      *
      * We need to consider the language trait [HasImplicitReceiver] here as well. If the language
@@ -142,8 +143,8 @@ sealed class Scope(
      * are in a qualified lookup.
      *
      * @param symbol the symbol to lookup
-     * @param thisScopeOnly whether we should stay in the current scope for lookup or traverse to
-     *   its parents if no match was found.
+     * @param qualifiedLookup whether the lookup is looked to a specific namespace, and we therefore should stay in the
+     * current scope for lookup. If the lookup is unqualified we traverse the current scopes parents if no match was found.
      * @param replaceImports whether any symbols pointing to [ImportDeclaration.importedSymbols] or
      *   wildcards should be replaced with their actual nodes
      * @param predicate An optional predicate which should be used in the lookup.
@@ -151,7 +152,7 @@ sealed class Scope(
     fun lookupSymbol(
         symbol: Symbol,
         languageOnly: Language<*>? = null,
-        thisScopeOnly: Boolean = false,
+        qualifiedLookup: Boolean = false,
         replaceImports: Boolean = true,
         predicate: ((Declaration) -> Boolean)? = null,
     ): List<Declaration> {
@@ -193,10 +194,10 @@ sealed class Scope(
                 break
             }
 
-            // If we do not have a hit, we can go up one scope, unless thisScopeOnly is set to true
+            // If we do not have a hit, we can go up one scope, unless [qualifiedLookup] is set to true
             // (or we had a modified scope)
             scope =
-                if (thisScopeOnly || modifiedScoped != null) {
+                if (qualifiedLookup || modifiedScoped != null) {
                     break
                 } else {
                     // If our language needs explicit lookup for fields (and other class members),
@@ -208,6 +209,32 @@ sealed class Scope(
                         scope.parent
                     }
                 }
+        }
+
+        // If the symbol was still not resolved, and we are performing an unqualified resolution, we search in the
+        // languages builtin scope for the symbol
+        if (list.isNullOrEmpty() && !qualifiedLookup) {
+            list = mutableListOf()
+            // If the language has builtins we can search there for the symbol
+            (languageOnly as? HasBuiltins)?.let {
+                val builtinNamespace = it.builtinsNamespace
+                // Retrieve the builtins scope from the builtins namespace
+                (ctx ?: this.astNode?.ctx)?.scopeManager?.lookupScope(builtinNamespace)?.let {
+                    builtinScope ->
+                    // Obviously we don't want to search in the builtins scope if we already failed
+                    // finding the symbol in the builtins scope
+                    if (builtinScope != this) {
+                        list.addAll(
+                            builtinScope.lookupSymbol(
+                                symbol,
+                                languageOnly = languageOnly,
+                                replaceImports = replaceImports,
+                                predicate = predicate,
+                            )
+                        )
+                    }
+                }
+            }
         }
 
         return list ?: listOf()

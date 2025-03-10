@@ -258,6 +258,10 @@ class PythonLanguage :
         return filesForNamespace
     }
 
+    override fun getBuiltinsFileCandidates(): Set<File> {
+        return nameToLanguageFiles(builtinsNamespace)
+    }
+
     companion object {
         /**
          * This is a "modifier" to differentiate parameters in functions that are "positional" only.
