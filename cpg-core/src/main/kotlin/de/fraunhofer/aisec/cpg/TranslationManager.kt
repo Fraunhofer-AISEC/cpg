@@ -25,9 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg
 
-import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
-import de.fraunhofer.aisec.cpg.frontends.SupportsParallelParsing
-import de.fraunhofer.aisec.cpg.frontends.TranslationException
+import de.fraunhofer.aisec.cpg.TranslationContext.EmptyTranslationContext.language
+import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
@@ -141,6 +140,9 @@ private constructor(
         result: TranslationResult,
     ): Set<LanguageFrontend<*, *>> {
         val usedFrontends = mutableSetOf<LanguageFrontend<*, *>>()
+
+        // Contains all languages used in this frontend run, used to load additional builtins files
+        val usedLanguages = mutableSetOf<Language<*>>()
 
         // If loadIncludes is active, the files stored in the include paths are made available for
         // conditional analysis by providing them to the frontends over the
@@ -263,6 +265,21 @@ private constructor(
                     parseSequentially(component, result, ctx, sourceLocations)
                 }
             )
+
+            // Collects all used languages used in the main analysis code
+            usedLanguages.addAll(sourceLocations.mapNotNull { it.language }.toSet())
+        }
+
+        // Adds all languages provided as additional sources that may be relevant in the main code
+        usedLanguages.addAll(ctx.additionalSources.mapNotNull { it.relative.language }.toSet())
+
+        usedLanguages.filterIsInstance<HasBuiltins>().forEach { hasBuiltins ->
+            // Includes a file in the analysis, if relative to its rootpath it matches the name of
+            // a builtins file candidate.
+            val builtinsCandidates = hasBuiltins.builtinsFileCandidates
+            ctx.additionalSources
+                .filter { builtinsCandidates.contains(it.relative) }
+                .forEach { ctx.importedSources.add(it) }
         }
 
         // A set of processed files from [TranslationContext.additionalSources] that is used as
