@@ -215,8 +215,22 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
                             }
                         else t in other
                     } -> Order.EQUAL
-                this.size > other.size && this.containsAll(other) -> Order.GREATER
-                other.size > this.size && other.containsAll(this) -> Order.LESSER
+                this.size > other.size &&
+                    other.all { t ->
+                        if (t is Pair<*, *>)
+                            this.any {
+                                it is Pair<*, *> && it.first === t.first && it.second === t.second
+                            }
+                        else t in this
+                    } -> Order.GREATER
+                other.size > this.size &&
+                    this.all { t ->
+                        if (t is Pair<*, *>)
+                            other.any {
+                                it is Pair<*, *> && it.first === t.first && it.second === t.second
+                            }
+                        else t in other
+                    } -> Order.LESSER
                 else -> Order.UNEQUAL
             }
         }
