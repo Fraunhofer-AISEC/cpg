@@ -278,7 +278,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             // with a set of properties
             // Let's start with fetch the addresses
             if (key is HasMemoryAddress) {
-                // key.memoryAddresses.clear()
+                key.memoryAddresses.clear() // TODO: Do we really have to do this??
                 key.memoryAddresses += value.first.filterIsInstance<MemoryAddress>()
             }
 
@@ -1086,6 +1086,20 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     }
                 }
             }
+        } else {
+            // We write to this node, but maybe we probably want to store the memory address which
+            // it has right now
+            val addresses = doubleState.getAddresses(currentNode)
+            doubleState =
+                lattice.push(
+                    doubleState,
+                    currentNode,
+                    GeneralStateEntryElement(
+                        PowersetLattice.Element(addresses),
+                        PowersetLattice.Element(),
+                        PowersetLattice.Element(),
+                    ),
+                )
         }
         return doubleState
     }
