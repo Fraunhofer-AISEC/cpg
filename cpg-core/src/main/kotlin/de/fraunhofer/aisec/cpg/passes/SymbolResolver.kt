@@ -532,9 +532,9 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 source is MemberCallExpression &&
                     (source.base?.type is DynamicType || source.base?.type is UnknownType)
             ) {
-                ctx.scopeManager.extractScope(source, language, source.scope)
+                ScopeManager.ScopeExtraction(null, Name(""))
             } else {
-                null
+                ctx.scopeManager.extractScope(source, language, source.scope)
             }
 
         // If we could not extract the scope (even though one was specified), we can only return an
