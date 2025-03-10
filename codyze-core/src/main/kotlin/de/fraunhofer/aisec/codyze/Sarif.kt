@@ -67,6 +67,7 @@ fun QueryTree<Boolean>.toSarif(ruleID: String): List<Result> {
             locations = listOfNotNull(it.node?.toSarifLocation()),
             stacks = it.node?.toSarifCallStack(),
             codeFlows =
+                // TODO: Use the SinglePathResult instead
                 it.children.mapNotNull { child ->
                     if (child.value is List<*>) {
                         CodeFlow(
