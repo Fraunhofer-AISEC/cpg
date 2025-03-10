@@ -213,6 +213,20 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
         override fun hashCode(): Int {
             return super.hashCode()
         }
+
+        override fun add(element: T): Boolean {
+            if (
+                element is Pair<*, *> &&
+                    this.any {
+                        it is Pair<*, *> &&
+                            it.first === element.first &&
+                            it.second === element.second
+                    }
+            ) {
+                return false
+            }
+            return super.add(element)
+        }
     }
 
     override val bottom: Element<T>
