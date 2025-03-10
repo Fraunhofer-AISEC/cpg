@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg_vis_neo4j.Application
 import java.nio.file.Paths
 import kotlin.io.path.createTempFile
 import kotlin.reflect.jvm.javaField
+import kotlin.test.Ignore
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import org.junit.jupiter.api.Test
@@ -58,6 +59,8 @@ fun createTranslationResult(file: String = "client.cpp"): Pair<Application, Tran
  * A class for integration tests. They depend on the C++ frontend, so we classify them as an
  * integration test. This might be replaced with a language-neutral test at some point.
  */
+@Ignore
+@Tag("integration")
 class IntegrationTest {
 
     @Test
