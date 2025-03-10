@@ -26,10 +26,10 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLast
-import de.fraunhofer.aisec.cpg.processing.IVisitor
+import de.fraunhofer.aisec.cpg.processing.Visitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 
 @ExecuteLast
@@ -40,12 +40,12 @@ class FilenameMapper(ctx: TranslationContext) : TranslationUnitPass(ctx) {
         handle(tu, file)
     }
 
-    protected fun handle(node: Node, file: String) {
+    protected fun handle(node: AstNode, file: String) {
         // Using a visitor to avoid loops in the AST
         node.accept(
             Strategy::AST_FORWARD,
-            object : IVisitor<Node>() {
-                override fun visit(t: Node) {
+            object : Visitor<AstNode>() {
+                override fun visit(t: AstNode) {
                     t.file = file
                 }
             },

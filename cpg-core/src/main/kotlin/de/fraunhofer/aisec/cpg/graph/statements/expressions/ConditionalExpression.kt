@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.commonType
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgeOf
@@ -40,10 +41,11 @@ import org.neo4j.ogm.annotation.Relationship
  * Represents an expression containing a ternary operator: `var x = condition ? valueIfTrue :
  * valueIfFalse`;
  */
-class ConditionalExpression : Expression(), ArgumentHolder, BranchingNode, HasType.TypeObserver {
+class ConditionalExpression internal constructor(ctx: TranslationContext) :
+    Expression(ctx), ArgumentHolder, BranchingNode, HasType.TypeObserver {
     @Relationship("CONDITION")
     var conditionEdge =
-        astEdgeOf<Expression>(ProblemExpression("could not parse condition expression"))
+        astEdgeOf<Expression>(ProblemExpression(ctx, "could not parse condition expression"))
     var condition by unwrapping(ConditionalExpression::conditionEdge)
 
     @Relationship("THEN_EXPRESSION")
@@ -75,7 +77,7 @@ class ConditionalExpression : Expression(), ArgumentHolder, BranchingNode, HasTy
             .build()
     }
 
-    override val branchedBy: Node
+    override val branchedBy: AstNode
         get() = condition
 
     override fun addArgument(expression: Expression) {

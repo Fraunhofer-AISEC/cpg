@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.HasInitializer
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
@@ -39,7 +40,8 @@ import org.neo4j.ogm.annotation.Relationship
  * combination with a [VariableDeclaration].
  */
 // TODO Merge and/or refactor with new Expression
-class NewArrayExpression : Expression(), HasInitializer {
+class NewArrayExpression internal constructor(ctx: TranslationContext) :
+    Expression(ctx), HasInitializer {
     @Relationship("INITIALIZER") var initializerEdge = astOptionalEdgeOf<Expression>()
 
     /**

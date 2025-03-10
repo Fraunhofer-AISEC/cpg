@@ -25,8 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
+import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.BranchingNode
-import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
@@ -39,7 +40,8 @@ import org.neo4j.ogm.annotation.Relationship
  * and default statements. Break statements break out of the switch and labeled breaks in Java are
  * handled properly.
  */
-class SwitchStatement : Statement(), BranchingNode {
+class SwitchStatement internal constructor(ctx: TranslationContext) :
+    Statement(ctx), BranchingNode {
     @Relationship(value = "SELECTOR") var selectorEdge = astOptionalEdgeOf<Expression>()
     /** Selector that determines the case/default statement of the subsequent execution */
     var selector by unwrapping(SwitchStatement::selectorEdge)
@@ -61,7 +63,7 @@ class SwitchStatement : Statement(), BranchingNode {
      */
     var statement by unwrapping(SwitchStatement::statementEdge)
 
-    override val branchedBy: Node?
+    override val branchedBy: AstNode?
         get() = selector
 
     override fun equals(other: Any?): Boolean {

@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.analysis
 
 import de.fraunhofer.aisec.cpg.graph.AccessValues
+import de.fraunhofer.aisec.cpg.graph.DataflowNode
 import de.fraunhofer.aisec.cpg.graph.HasInitializer
 import de.fraunhofer.aisec.cpg.graph.HasOperatorCode
 import de.fraunhofer.aisec.cpg.graph.Node
@@ -125,7 +126,7 @@ open class ValueEvaluator(
             // easily be partly path-sensitive in a conditional expression
             is ConditionalExpression -> return handleConditionalExpression(node, depth)
             is AssignExpression -> return handleAssignExpression(node, depth)
-            else -> return handlePrevDFG(node, depth)
+            is DataflowNode -> return handlePrevDFG(node, depth)
         }
 
         // At this point, we cannot evaluate, and we are calling our [cannotEvaluate] hook, maybe
@@ -142,7 +143,7 @@ open class ValueEvaluator(
         return if (node.initializer != null) {
             evaluateInternal(node.initializer, depth + 1)
         } else {
-            handlePrevDFG(node as Node, depth)
+            handlePrevDFG(node as DataflowNode, depth)
         }
     }
 
@@ -430,8 +431,8 @@ open class ValueEvaluator(
         return cannotEvaluate(expr, this)
     }
 
-    /** Tries to compute the constant value of a node based on its [Node.prevDFG]. */
-    protected open fun handlePrevDFG(node: Node, depth: Int): Any? {
+    /** Tries to compute the constant value of a node based on its [DataflowNode.prevDFG]. */
+    protected open fun handlePrevDFG(node: DataflowNode, depth: Int): Any? {
         // For a reference, we are interested into its last assignment into the reference
         // denoted by the previous DFG edge. We need to filter out any self-references for READWRITE
         // references.

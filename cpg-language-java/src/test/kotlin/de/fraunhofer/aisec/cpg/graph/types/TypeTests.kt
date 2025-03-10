@@ -43,6 +43,9 @@ internal class TypeTests : BaseTest() {
         val language = result.finalCtx.availableLanguage<JavaLanguage>()
         assertNotNull(language)
 
+        val ctx = language.ctx
+        assertNotNull(ctx)
+
         // Check Parameterized
         val recordDeclarations = result.records
         val recordDeclarationBox = findByUniqueName(recordDeclarations, "Box")
@@ -67,7 +70,7 @@ internal class TypeTests : BaseTest() {
         // Return Type of get Method
         val methodDeclarationGet = findByUniqueName(methodDeclarations, "get")
         assertEquals(
-            FunctionType("get()T", listOf(), listOf(typeT), language),
+            FunctionType(ctx, "get()T", listOf(), listOf(typeT), language),
             methodDeclarationGet.type,
         )
     }

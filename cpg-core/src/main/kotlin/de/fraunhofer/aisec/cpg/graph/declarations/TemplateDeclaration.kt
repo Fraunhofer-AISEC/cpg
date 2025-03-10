@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
@@ -36,7 +37,8 @@ import org.neo4j.ogm.annotation.Relationship
 
 /** Abstract class representing the template concept */
 @NodeEntity
-abstract class TemplateDeclaration : Declaration(), DeclarationHolder {
+abstract class TemplateDeclaration internal constructor(ctx: TranslationContext) :
+    Declaration(ctx), DeclarationHolder {
     enum class TemplateInitialization {
         /**
          * Template Parameter is deduced automatically due to matching type provided in the function

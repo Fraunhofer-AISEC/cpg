@@ -34,7 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.DependenceType
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
-import de.fraunhofer.aisec.cpg.processing.IVisitor
+import de.fraunhofer.aisec.cpg.processing.Visitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 
 /**
@@ -47,12 +47,12 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 @DependsOn(DynamicInvokeResolver::class)
 class ProgramDependenceGraphPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
     private val visitor =
-        object : IVisitor<Node>() {
+        object : Visitor<AstNode>() {
             /**
              * Collects the data and control dependence edges of a node and adds them to the program
              * dependence edges
              */
-            override fun visit(t: Node) {
+            override fun visit(t: AstNode) {
                 if (t is Reference) {
                     // We filter all prevDFGEdges if the condition affects the variable of t and
                     // if there's a flow from the prevDFGEdge's node through the condition to t.
@@ -103,7 +103,11 @@ class ProgramDependenceGraphPass(ctx: TranslationContext) : TranslationUnitPass(
             }
         }
 
-    private fun allEOGsFromToFlowThrough(from: Node, to: Node, through: Node): Boolean {
+    private fun allEOGsFromToFlowThrough(
+        from: EvaluatedNode,
+        to: EvaluatedNode,
+        through: EvaluatedNode,
+    ): Boolean {
         val worklist = mutableListOf(from)
         val alreadySeenNodes = identitySetOf<Node>()
 
@@ -135,7 +139,7 @@ class ProgramDependenceGraphPass(ctx: TranslationContext) : TranslationUnitPass(
         // Nothing to do
     }
 
-    private fun handle(node: Node) {
+    private fun handle(node: AstNode) {
         node.accept(Strategy::AST_FORWARD, visitor)
     }
 }

@@ -68,7 +68,9 @@ class DataflowQueriesTest {
                 direction = Forward(GraphToFollow.DFG),
                 scope = Intraprocedural(),
                 type = May,
-                predicate = { (it.astParent as? CallExpression)?.name?.localName == "baz" },
+                predicate = {
+                    it is AstNode && (it.astParent as? CallExpression)?.name?.localName == "baz"
+                },
             )
         assertTrue(
             queryResultMayA.value,
@@ -80,7 +82,7 @@ class DataflowQueriesTest {
             val path = it.children.singleOrNull()?.value as? List<*>
             assertNotNull(path, "There should be a path represented by a list of nodes")
             path.forEach { node ->
-                assertIs<Node>(node, "The list should contain nodes")
+                assertIs<AstNode>(node, "The list should contain nodes")
                 assertLocalName(
                     "main",
                     node.firstParentOrNull<FunctionDeclaration>(),
@@ -96,7 +98,9 @@ class DataflowQueriesTest {
                 direction = Forward(GraphToFollow.DFG),
                 scope = Intraprocedural(1),
                 type = May,
-                predicate = { (it.astParent as? CallExpression)?.name?.localName == "baz" },
+                predicate = {
+                    it is AstNode && (it.astParent as? CallExpression)?.name?.localName == "baz"
+                },
             )
         assertFalse(queryResultMayAMax1.value, "The path is just too short to arrive in baz.")
         queryResultMayAMax1.children.forEach {
@@ -110,7 +114,7 @@ class DataflowQueriesTest {
                 "The maxSize is set to 1, so there should be the start node and only one more element in the path",
             )
             path.forEach { node ->
-                assertIs<Node>(node, "The list should contain nodes")
+                assertIs<AstNode>(node, "The list should contain nodes")
                 assertLocalName(
                     "main",
                     node.firstParentOrNull<FunctionDeclaration>(),
@@ -126,7 +130,9 @@ class DataflowQueriesTest {
                 direction = Forward(GraphToFollow.DFG),
                 scope = Intraprocedural(),
                 type = Must,
-                predicate = { (it.astParent as? CallExpression)?.name?.localName == "baz" },
+                predicate = {
+                    it is AstNode && (it.astParent as? CallExpression)?.name?.localName == "baz"
+                },
             )
         assertFalse(
             queryResultMustA.value,
@@ -138,7 +144,7 @@ class DataflowQueriesTest {
             val path = it.children.singleOrNull()?.value as? List<*>
             assertNotNull(path, "There should be a path represented by a list of nodes")
             path.forEach { node ->
-                assertIs<Node>(node, "The list should contain nodes")
+                assertIs<AstNode>(node, "The list should contain nodes")
                 assertLocalName(
                     "main",
                     node.firstParentOrNull<FunctionDeclaration>(),
@@ -155,7 +161,9 @@ class DataflowQueriesTest {
                 direction = Forward(GraphToFollow.DFG),
                 scope = Intraprocedural(),
                 type = May,
-                predicate = { (it.astParent as? CallExpression)?.name?.localName == "baz" },
+                predicate = {
+                    it is AstNode && (it.astParent as? CallExpression)?.name?.localName == "baz"
+                },
             )
         assertTrue(
             queryResultMayB.value,
@@ -167,7 +175,7 @@ class DataflowQueriesTest {
             val path = it.children.singleOrNull()?.value as? List<*>
             assertNotNull(path, "There should be a path represented by a list of nodes")
             path.forEach { node ->
-                assertIs<Node>(node, "The list should contain nodes")
+                assertIs<AstNode>(node, "The list should contain nodes")
                 assertLocalName(
                     "main",
                     node.firstParentOrNull<FunctionDeclaration>(),
@@ -184,7 +192,9 @@ class DataflowQueriesTest {
                 direction = Forward(GraphToFollow.DFG),
                 scope = Intraprocedural(),
                 type = Must,
-                predicate = { (it.astParent as? CallExpression)?.name?.localName == "baz" },
+                predicate = {
+                    it is AstNode && (it.astParent as? CallExpression)?.name?.localName == "baz"
+                },
             )
         assertFalse(
             queryResultMustB.value,
@@ -196,7 +206,7 @@ class DataflowQueriesTest {
             val path = it.children.singleOrNull()?.value as? List<*>
             assertNotNull(path, "There should be a path represented by a list of nodes")
             path.forEach { node ->
-                assertIs<Node>(node, "The list should contain nodes")
+                assertIs<AstNode>(node, "The list should contain nodes")
                 assertLocalName(
                     "main",
                     node.firstParentOrNull<FunctionDeclaration>(),
@@ -232,7 +242,8 @@ class DataflowQueriesTest {
                 type = May,
                 predicate = {
                     (it as? Literal<*>)?.value == 5 ||
-                        (it.astParent as? CallExpression)?.name?.localName == "baz"
+                        (it is AstNode &&
+                            (it.astParent as? CallExpression)?.name?.localName == "baz")
                 },
             )
         assertTrue(
@@ -245,7 +256,7 @@ class DataflowQueriesTest {
             val path = it.children.singleOrNull()?.value as? List<*>
             assertNotNull(path, "There should be a path represented by a list of nodes")
             path.forEach { node ->
-                assertIs<Node>(node, "The list should contain nodes")
+                assertIs<AstNode>(node, "The list should contain nodes")
                 assertLocalName(
                     "main",
                     node.firstParentOrNull<FunctionDeclaration>(),
@@ -264,7 +275,8 @@ class DataflowQueriesTest {
                 type = Must,
                 predicate = {
                     (it as? Literal<*>)?.value == 5 ||
-                        (it.astParent as? CallExpression)?.name?.localName == "baz"
+                        (it is AstNode &&
+                            (it.astParent as? CallExpression)?.name?.localName == "baz")
                 },
             )
         assertFalse(
@@ -277,7 +289,7 @@ class DataflowQueriesTest {
             val path = it.children.singleOrNull()?.value as? List<*>
             assertNotNull(path, "There should be a path represented by a list of nodes")
             path.forEach { node ->
-                assertIs<Node>(node, "The list should contain nodes")
+                assertIs<AstNode>(node, "The list should contain nodes")
                 assertLocalName(
                     "main",
                     node.firstParentOrNull<FunctionDeclaration>(),
@@ -339,7 +351,7 @@ class DataflowQueriesTest {
             val path = it.children.singleOrNull()?.value as? List<*>
             assertNotNull(path, "There should be a path represented by a list of nodes")
             path.forEach { node ->
-                assertIs<Node>(node, "The list should contain nodes")
+                assertIs<AstNode>(node, "The list should contain nodes")
                 assertLocalName(
                     "main",
                     node.firstParentOrNull<FunctionDeclaration>(),
@@ -372,7 +384,7 @@ class DataflowQueriesTest {
                 "The maxSize is set to 1, so there should be the start node and only one more element in the path",
             )
             path.forEach { node ->
-                assertIs<Node>(node, "The list should contain nodes")
+                assertIs<AstNode>(node, "The list should contain nodes")
                 assertLocalName(
                     "main",
                     node.firstParentOrNull<FunctionDeclaration>(),
@@ -400,7 +412,7 @@ class DataflowQueriesTest {
             val path = it.children.singleOrNull()?.value as? List<*>
             assertNotNull(path, "There should be a path represented by a list of nodes")
             path.forEach { node ->
-                assertIs<Node>(node, "The list should contain nodes")
+                assertIs<AstNode>(node, "The list should contain nodes")
                 assertLocalName(
                     "main",
                     node.firstParentOrNull<FunctionDeclaration>(),
@@ -429,7 +441,7 @@ class DataflowQueriesTest {
             val path = it.children.singleOrNull()?.value as? List<*>
             assertNotNull(path, "There should be a path represented by a list of nodes")
             path.forEach { node ->
-                assertIs<Node>(node, "The list should contain nodes")
+                assertIs<AstNode>(node, "The list should contain nodes")
                 assertLocalName(
                     "main",
                     node.firstParentOrNull<FunctionDeclaration>(),
@@ -458,7 +470,7 @@ class DataflowQueriesTest {
             val path = it.children.singleOrNull()?.value as? List<*>
             assertNotNull(path, "There should be a path represented by a list of nodes")
             path.forEach { node ->
-                assertIs<Node>(node, "The list should contain nodes")
+                assertIs<AstNode>(node, "The list should contain nodes")
                 assertLocalName(
                     "main",
                     node.firstParentOrNull<FunctionDeclaration>(),
@@ -487,7 +499,7 @@ class DataflowQueriesTest {
             val path = it.children.singleOrNull()?.value as? List<*>
             assertNotNull(path, "There should be a path represented by a list of nodes")
             path.forEach { node ->
-                assertIs<Node>(node, "The list should contain nodes")
+                assertIs<AstNode>(node, "The list should contain nodes")
                 assertLocalName(
                     "main",
                     node.firstParentOrNull<FunctionDeclaration>(),
@@ -516,7 +528,7 @@ class DataflowQueriesTest {
             val path = it.children.singleOrNull()?.value as? List<*>
             assertNotNull(path, "There should be a path represented by a list of nodes")
             path.forEach { node ->
-                assertIs<Node>(node, "The list should contain nodes")
+                assertIs<AstNode>(node, "The list should contain nodes")
                 assertLocalName(
                     "main",
                     node.firstParentOrNull<FunctionDeclaration>(),
@@ -535,10 +547,11 @@ class DataflowQueriesTest {
             dataFlowWithValidator(
                 source = linearStartA,
                 validatorPredicate = { node ->
-                    (node.astParent as? CallExpression)?.name?.localName == "print"
+                    node is AstNode &&
+                        (node.astParent as? CallExpression)?.name?.localName == "print"
                 },
                 sinkPredicate = { node ->
-                    (node.astParent as? CallExpression)?.name?.localName == "baz"
+                    node is AstNode && (node.astParent as? CallExpression)?.name?.localName == "baz"
                 },
                 scope = Intraprocedural(),
             )
@@ -554,10 +567,11 @@ class DataflowQueriesTest {
             dataFlowWithValidator(
                 source = linearStartAWithB,
                 validatorPredicate = { node ->
-                    (node.astParent as? CallExpression)?.name?.localName == "print"
+                    node is AstNode &&
+                        (node.astParent as? CallExpression)?.name?.localName == "print"
                 },
                 sinkPredicate = { node ->
-                    (node.astParent as? CallExpression)?.name?.localName == "baz"
+                    node is AstNode && (node.astParent as? CallExpression)?.name?.localName == "baz"
                 },
                 scope = Intraprocedural(),
             )
@@ -573,10 +587,11 @@ class DataflowQueriesTest {
             dataFlowWithValidator(
                 source = linearStartAWithBInterProc,
                 validatorPredicate = { node ->
-                    (node.astParent as? CallExpression)?.name?.localName == "print"
+                    node is AstNode &&
+                        (node.astParent as? CallExpression)?.name?.localName == "print"
                 },
                 sinkPredicate = { node ->
-                    (node.astParent as? CallExpression)?.name?.localName == "baz"
+                    node is AstNode && (node.astParent as? CallExpression)?.name?.localName == "baz"
                 },
                 scope = Intraprocedural(),
             )
@@ -592,10 +607,11 @@ class DataflowQueriesTest {
             dataFlowWithValidator(
                 source = ifStartA,
                 validatorPredicate = { node ->
-                    (node.astParent as? CallExpression)?.name?.localName == "print"
+                    node is AstNode &&
+                        (node.astParent as? CallExpression)?.name?.localName == "print"
                 },
                 sinkPredicate = { node ->
-                    (node.astParent as? CallExpression)?.name?.localName == "baz"
+                    node is AstNode && (node.astParent as? CallExpression)?.name?.localName == "baz"
                 },
                 scope = Intraprocedural(),
             )
@@ -611,10 +627,11 @@ class DataflowQueriesTest {
             dataFlowWithValidator(
                 source = ifStartAWithB,
                 validatorPredicate = { node ->
-                    (node.astParent as? CallExpression)?.name?.localName == "print"
+                    node is AstNode &&
+                        (node.astParent as? CallExpression)?.name?.localName == "print"
                 },
                 sinkPredicate = { node ->
-                    (node.astParent as? CallExpression)?.name?.localName == "baz"
+                    node is AstNode && (node.astParent as? CallExpression)?.name?.localName == "baz"
                 },
                 scope = Intraprocedural(),
             )
@@ -630,10 +647,11 @@ class DataflowQueriesTest {
             dataFlowWithValidator(
                 source = ifStartAWithBInterProc,
                 validatorPredicate = { node ->
-                    (node.astParent as? CallExpression)?.name?.localName == "print"
+                    node is AstNode &&
+                        (node.astParent as? CallExpression)?.name?.localName == "print"
                 },
                 sinkPredicate = { node ->
-                    (node.astParent as? CallExpression)?.name?.localName == "baz"
+                    node is AstNode && (node.astParent as? CallExpression)?.name?.localName == "baz"
                 },
                 scope = Intraprocedural(),
             )
@@ -649,10 +667,11 @@ class DataflowQueriesTest {
             dataFlowWithValidator(
                 source = ifElseStartA,
                 validatorPredicate = { node ->
-                    (node.astParent as? CallExpression)?.name?.localName == "print"
+                    node is AstNode &&
+                        (node.astParent as? CallExpression)?.name?.localName == "print"
                 },
                 sinkPredicate = { node ->
-                    (node.astParent as? CallExpression)?.name?.localName == "baz"
+                    node is AstNode && (node.astParent as? CallExpression)?.name?.localName == "baz"
                 },
                 scope = Intraprocedural(),
             )
@@ -665,10 +684,11 @@ class DataflowQueriesTest {
             dataFlowWithValidator(
                 source = ifElseStartAWithB,
                 validatorPredicate = { node ->
-                    (node.astParent as? CallExpression)?.name?.localName == "print"
+                    node is AstNode &&
+                        (node.astParent as? CallExpression)?.name?.localName == "print"
                 },
                 sinkPredicate = { node ->
-                    (node.astParent as? CallExpression)?.name?.localName == "baz"
+                    node is AstNode && (node.astParent as? CallExpression)?.name?.localName == "baz"
                 },
                 scope = Intraprocedural(),
             )
@@ -681,10 +701,11 @@ class DataflowQueriesTest {
             dataFlowWithValidator(
                 source = ifElseStartAWithBInterProc,
                 validatorPredicate = { node ->
-                    (node.astParent as? CallExpression)?.name?.localName == "print"
+                    node is AstNode &&
+                        (node.astParent as? CallExpression)?.name?.localName == "print"
                 },
                 sinkPredicate = { node ->
-                    (node.astParent as? CallExpression)?.name?.localName == "baz"
+                    node is AstNode && (node.astParent as? CallExpression)?.name?.localName == "baz"
                 },
                 scope = Intraprocedural(),
             )
@@ -703,10 +724,11 @@ class DataflowQueriesTest {
             dataFlowWithValidator(
                 source = linearStartAWithBInterProc,
                 validatorPredicate = { node ->
-                    (node.astParent as? CallExpression)?.name?.localName == "print"
+                    node is AstNode &&
+                        (node.astParent as? CallExpression)?.name?.localName == "print"
                 },
                 sinkPredicate = { node ->
-                    (node.astParent as? CallExpression)?.name?.localName == "baz"
+                    node is AstNode && (node.astParent as? CallExpression)?.name?.localName == "baz"
                 },
                 scope = Interprocedural(),
                 sensitivities = ContextSensitive + FieldSensitive + FilterUnreachableEOG,
@@ -723,10 +745,11 @@ class DataflowQueriesTest {
             dataFlowWithValidator(
                 source = ifStartAWithBInterProc,
                 validatorPredicate = { node ->
-                    (node.astParent as? CallExpression)?.name?.localName == "print"
+                    node is AstNode &&
+                        (node.astParent as? CallExpression)?.name?.localName == "print"
                 },
                 sinkPredicate = { node ->
-                    (node.astParent as? CallExpression)?.name?.localName == "baz"
+                    node is AstNode && (node.astParent as? CallExpression)?.name?.localName == "baz"
                 },
                 scope = Interprocedural(),
             )
@@ -742,10 +765,11 @@ class DataflowQueriesTest {
             dataFlowWithValidator(
                 source = ifElseStartAWithBInterProc,
                 validatorPredicate = { node ->
-                    (node.astParent as? CallExpression)?.name?.localName == "print"
+                    node is AstNode &&
+                        (node.astParent as? CallExpression)?.name?.localName == "print"
                 },
                 sinkPredicate = { node ->
-                    (node.astParent as? CallExpression)?.name?.localName == "baz"
+                    node is AstNode && (node.astParent as? CallExpression)?.name?.localName == "baz"
                 },
                 scope = Interprocedural(),
             )

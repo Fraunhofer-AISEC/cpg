@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
@@ -38,7 +39,8 @@ import org.neo4j.ogm.annotation.Relationship
  * ([arrayExpression]) and `index` ([subscriptExpression]) are of type [Expression]. CPP can
  * overload operators thus changing semantics of array access.
  */
-class SubscriptExpression : Expression(), HasBase, HasType.TypeObserver, ArgumentHolder {
+class SubscriptExpression internal constructor(ctx: TranslationContext) :
+    Expression(ctx), HasBase, HasType.TypeObserver, ArgumentHolder {
     override var access = AccessValues.READ
         set(value) {
             field = value
@@ -49,7 +51,7 @@ class SubscriptExpression : Expression(), HasBase, HasType.TypeObserver, Argumen
     @Relationship("ARRAY_EXPRESSION")
     var arrayExpressionEdge =
         astEdgeOf<Expression>(
-            of = ProblemExpression("could not parse array expression"),
+            of = ProblemExpression(ctx, "could not parse array expression"),
             onChanged = ::exchangeTypeObserverWithoutAccessPropagation,
         )
     /** The array on which the access is happening. This is most likely a [Reference]. */
@@ -57,7 +59,7 @@ class SubscriptExpression : Expression(), HasBase, HasType.TypeObserver, Argumen
 
     @Relationship("SUBSCRIPT_EXPRESSION")
     var subscriptExpressionEdge =
-        astEdgeOf<Expression>(ProblemExpression("could not parse index expression"))
+        astEdgeOf<Expression>(ProblemExpression(ctx, "could not parse index expression"))
     /**
      * The expression which represents the "subscription" or index on which the array is accessed.
      * This can for example be a reference to another variable ([Reference]), a [Literal] or a

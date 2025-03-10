@@ -26,17 +26,14 @@
 package de.fraunhofer.aisec.cpg.processing
 
 import de.fraunhofer.aisec.cpg.GraphExamples
-import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.TranslationResult
-import de.fraunhofer.aisec.cpg.TypeManager
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.statements
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.passes.ImportDependencies
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
@@ -52,9 +49,10 @@ class VisitorTest : BaseTest() {
     @Test
     fun testLoopDetection() {
         // Let's create an intentional loop
-        val tu = TranslationUnitDeclaration()
-        val name = NamespaceDeclaration()
-        val func = FunctionDeclaration()
+        val ctx = TranslationContext()
+        val tu = TranslationUnitDeclaration(ctx)
+        val name = NamespaceDeclaration(ctx)
+        val func = FunctionDeclaration(ctx)
         name.addDeclaration(tu)
         name.addDeclaration(func)
         tu.addDeclaration(name)
@@ -63,8 +61,8 @@ class VisitorTest : BaseTest() {
         // Let's visit
         tu.accept(
             Strategy::AST_FORWARD,
-            object : IVisitor<Node>() {
-                override fun visit(t: Node) {
+            object : Visitor<AstNode>() {
+                override fun visit(t: AstNode) {
                     visited += t
                 }
             },
@@ -87,10 +85,10 @@ class VisitorTest : BaseTest() {
         val firstStmt = method.bodyOrNull<de.fraunhofer.aisec.cpg.graph.statements.Statement>(0)
         assertNotNull(firstStmt)
 
-        firstStmt.accept(
+        firstStmt.accept<EvaluatedNode>(
             Strategy::EOG_FORWARD,
-            object : IVisitor<Node>() {
-                override fun visit(t: Node) {
+            object : Visitor<EvaluatedNode>() {
+                override fun visit(t: EvaluatedNode) {
                     log.info("Node: $t")
                     nodeList.add(t)
                 }
@@ -105,10 +103,10 @@ class VisitorTest : BaseTest() {
         assertNotNull(recordDeclaration)
 
         val nodeList = mutableListOf<Node>()
-        recordDeclaration!!.accept(
+        recordDeclaration?.accept(
             Strategy::AST_FORWARD,
-            object : IVisitor<Node>() {
-                override fun visit(t: Node) {
+            object : Visitor<AstNode>() {
+                override fun visit(t: AstNode) {
                     log.info("Node: $t")
                     nodeList.add(t)
                 }
@@ -126,9 +124,9 @@ class VisitorTest : BaseTest() {
         val returnStatements: MutableList<ReturnStatement> = ArrayList()
         assertNotNull(recordDeclaration)
 
-        recordDeclaration!!.accept(
+        recordDeclaration?.accept(
             Strategy::AST_FORWARD,
-            object : IVisitor<Node>() {
+            object : Visitor<AstNode>() {
                 fun visit(r: ReturnStatement) {
                     returnStatements.add(r)
                 }
@@ -139,18 +137,14 @@ class VisitorTest : BaseTest() {
 
     @Test
     fun testFallbackComponentLeastImported() {
-        val component1 = Component().also { it.name = Name("component1") }
-        val component2 = Component().also { it.name = Name("component2") }
+        val ctx = TranslationContext()
+        val component1 = Component(ctx).also { it.name = Name("component1") }
+        val component2 = Component(ctx).also { it.name = Name("component2") }
 
         val tr =
             TranslationResult(
                 translationManager = TranslationManager.builder().build(),
-                finalCtx =
-                    TranslationContext(
-                        config = TranslationConfiguration.builder().build(),
-                        scopeManager = ScopeManager(),
-                        typeManager = TypeManager(),
-                    ),
+                finalCtx = TranslationContext(config = TranslationConfiguration.builder().build()),
             )
         tr.components += component1
         tr.components += component2
@@ -173,10 +167,11 @@ class VisitorTest : BaseTest() {
 
     @Test
     fun testFallbackTULeastImported() {
-        val component = Component()
+        val ctx = TranslationContext()
+        val component = Component(ctx)
 
-        val tr1 = TranslationUnitDeclaration().also { it.name = Name("tr1") }
-        val tr2 = TranslationUnitDeclaration().also { it.name = Name("tr2") }
+        val tr1 = TranslationUnitDeclaration(ctx).also { it.name = Name("tr1") }
+        val tr2 = TranslationUnitDeclaration(ctx).also { it.name = Name("tr2") }
 
         component.translationUnits += tr1
         component.translationUnits += tr2

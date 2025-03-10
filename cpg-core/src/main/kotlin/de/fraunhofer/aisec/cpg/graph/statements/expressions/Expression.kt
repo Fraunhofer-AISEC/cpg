@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.UnknownLanguage
 import de.fraunhofer.aisec.cpg.graph.*
@@ -47,7 +48,7 @@ import org.neo4j.ogm.annotation.Transient
  * <p>This is not possible in Java, the aforementioned code example would prompt a compile error.
  */
 @NodeEntity
-abstract class Expression : Statement(), HasType {
+abstract class Expression internal constructor(ctx: TranslationContext) : Statement(ctx), HasType {
     /**
      * Is this node used for writing data instead of just reading it? Determines dataflow direction
      */
@@ -55,7 +56,7 @@ abstract class Expression : Statement(), HasType {
 
     @Transient override val typeObservers: MutableSet<HasType.TypeObserver> = identitySetOf()
 
-    override var language: Language<*> = UnknownLanguage
+    override var language: Language<*> = UnknownLanguage(ctx)
         set(value) {
             // We need to adjust an eventual unknown type, once we know the language
             field = value

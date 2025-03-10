@@ -28,7 +28,9 @@ package de.fraunhofer.aisec.cpg.helpers
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.ContextProvider
+import de.fraunhofer.aisec.cpg.graph.EvaluatedNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.StatementHolder
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
@@ -48,7 +50,7 @@ import java.util.*
 import org.slf4j.LoggerFactory
 
 /** A type for a node visitor callback for the [SubgraphWalker]. */
-typealias Callback = (node: Node, parent: Node?) -> Unit
+typealias Callback<NodeType> = (node: NodeType, parent: NodeType?) -> Unit
 
 /** Helper class for graph walking: Walking through ast-, cfg-, ...- edges */
 object SubgraphWalker {
@@ -94,8 +96,8 @@ object SubgraphWalker {
      * @return a list of children from the node's AST
      */
     @JvmStatic
-    fun getAstChildren(node: Node?): List<Node> {
-        val children = ArrayList<Node>()
+    fun getAstChildren(node: AstNode?): List<AstNode> {
+        val children = ArrayList<AstNode>()
         if (node == null) return children
         val classType: Class<*> = node.javaClass
 
@@ -119,7 +121,9 @@ object SubgraphWalker {
 
                 when (obj) {
                     is EdgeCollection<*, *> -> {
-                        children.addAll(obj.toNodeCollection({ it is AstEdge<*> }))
+                        children.addAll(
+                            obj.toNodeCollection({ it is AstEdge<*> }).filterIsInstance<AstNode>()
+                        )
                     }
                     else -> {
                         throw AnnotationFormatError(
@@ -142,19 +146,19 @@ object SubgraphWalker {
      * @param n the node which contains the ast children to flatten
      * @return the flattened nodes
      */
-    fun flattenAST(n: Node?): List<Node> {
+    fun flattenAST(n: AstNode?): List<AstNode> {
         if (n == null) {
             return ArrayList()
         }
 
         // We are using an identity set here, to avoid placing the *same* node in the identitySet
         // twice, possibly resulting in loops
-        val identitySet = IdentitySet<Node>()
+        val identitySet = IdentitySet<AstNode>()
         flattenASTInternal(identitySet, n)
         return identitySet.toSortedList()
     }
 
-    private fun flattenASTInternal(identitySet: MutableSet<Node>, n: Node) {
+    private fun flattenASTInternal(identitySet: MutableSet<AstNode>, n: AstNode) {
         // Add the node itself and abort if its already there, to detect possible loops
         if (!identitySet.add(n)) {
             return
@@ -173,21 +177,19 @@ object SubgraphWalker {
      * @param n - root of the subgraph.
      * @return Two lists, list 1 contains all eog entries and list 2 contains all exits.
      */
-    fun getEOGPathEdges(n: Node?): Border {
+    fun getEOGPathEdges(n: EvaluatedNode?): Border {
         val border = Border()
-        val flattedASTTree = flattenAST(n)
+        val flattedASTTree = if (n is AstNode) flattenAST(n) else listOf()
         val eogNodes =
-            flattedASTTree.filter { node: Node ->
-                node.prevEOG.isNotEmpty() || node.nextEOG.isNotEmpty()
-            }
+            flattedASTTree.filter { node -> node.prevEOG.isNotEmpty() || node.nextEOG.isNotEmpty() }
         // Nodes that are incoming edges, no other node
         border.entries =
             eogNodes
-                .filter { node: Node -> node.prevEOG.any { prev -> prev !in eogNodes } }
+                .filter { node -> node.prevEOG.any { prev -> prev !in eogNodes } }
                 .toMutableList()
         border.exits =
             eogNodes
-                .filter { node: Node -> node.nextEOG.any { next -> next !in eogNodes } }
+                .filter { node -> node.nextEOG.any { next -> next !in eogNodes } }
                 .toMutableList()
         return border
     }
@@ -198,21 +200,20 @@ object SubgraphWalker {
      * EOG subgraph, EOG entries and exits in a CFG subgraph.
      */
     class Border {
-        var entries = mutableListOf<Node>()
-        var exits = mutableListOf<Node>()
+        var entries = mutableListOf<EvaluatedNode>()
+        var exits = mutableListOf<EvaluatedNode>()
     }
 
-    class IterativeGraphWalker {
-        var strategy: (Node) -> Iterator<Node> = Strategy::AST_FORWARD
+    class IterativeGraphWalker<NodeType : Node>(var strategy: (NodeType) -> Iterator<NodeType>) {
 
         /**
          * This callback is triggered whenever a new node is visited for the first time. This is the
          * place where usual graph manipulation will happen. The current node and its parent are
          * passed to the consumer.
          */
-        private val onNodeVisit: MutableList<Callback> = mutableListOf()
+        private val onNodeVisit: MutableList<Callback<NodeType>> = mutableListOf()
 
-        private val replacements = mutableMapOf<Node, Node>()
+        private val replacements = mutableMapOf<NodeType, NodeType>()
 
         /**
          * The core iterative AST traversal algorithm: In a depth-first way we descend into the
@@ -220,11 +221,11 @@ object SubgraphWalker {
          *
          * @param root The node where we should start
          */
-        fun iterate(root: Node) {
-            var todo = ArrayDeque<Pair<Node, Node?>>()
-            val seen = identitySetOf<Node>()
+        fun iterate(root: NodeType) {
+            var todo = ArrayDeque<Pair<NodeType, NodeType?>>()
+            val seen = identitySetOf<NodeType>()
 
-            todo.push(Pair<Node, Node?>(root, null))
+            todo.push(Pair<NodeType, NodeType?>(root, null))
             while (todo.isNotEmpty()) {
                 var (current, parent) = todo.pop()
                 onNodeVisit.forEach { it(current, parent) }
@@ -240,9 +241,7 @@ object SubgraphWalker {
                     strategy(current).asSequence().filter { it !in seen }.toMutableList()
 
                 seen.addAll(unseenChildren)
-                unseenChildren.asReversed().forEach { child: Node ->
-                    todo.push(Pair(child, current))
-                }
+                unseenChildren.asReversed().forEach { child -> todo.push(Pair(child, current)) }
             }
         }
 
@@ -251,12 +250,12 @@ object SubgraphWalker {
          * problems, that the walker still assumes the old node. Calling this function will ensure
          * that the walker knows about the new node.
          */
-        fun registerReplacement(from: Node, to: Node) {
+        fun registerReplacement(from: NodeType, to: NodeType) {
             replacements[from] = to
         }
 
         /** Registers a [Callback]. */
-        fun registerOnNodeVisit(callback: Callback) {
+        fun registerOnNodeVisit(callback: Callback<NodeType>) {
             onNodeVisit.add(callback)
         }
     }
@@ -268,19 +267,16 @@ object SubgraphWalker {
      * currently in the scope of the "consumed" node in the callback. This can be useful for
      * resolving declarations or other scope-related tasks.
      */
-    class ScopedWalker {
-        lateinit var strategy: (Node) -> Iterator<Node>
-        private var walker: IterativeGraphWalker? = null
+    class ScopedWalker<NodeType : Node> {
+        lateinit var strategy: (NodeType) -> Iterator<NodeType>
+        private var walker: IterativeGraphWalker<NodeType>? = null
         private val scopeManager: ScopeManager
 
         constructor(lang: LanguageFrontend<*, *>) {
             scopeManager = lang.scopeManager
         }
 
-        constructor(
-            scopeManager: ScopeManager,
-            strategy: (Node) -> Iterator<Node> = Strategy::AST_FORWARD,
-        ) {
+        constructor(scopeManager: ScopeManager, strategy: (NodeType) -> Iterator<NodeType>) {
             this.scopeManager = scopeManager
             this.strategy = strategy
         }
@@ -290,10 +286,10 @@ object SubgraphWalker {
          * visited node.
          *
          * The previous node depends on the [strategy], for example for [Strategy.AST_FORWARD], the
-         * previous node is equal to [Node.astParent]. But for a strategy like
+         * previous node is equal to [AstNode.astParent]. But for a strategy like
          * [Strategy.EOG_FORWARD], the previous node was the previous EOG node.
          */
-        private val handlers = mutableListOf<(node: Node, previous: Node?) -> (Unit)>()
+        private val handlers = mutableListOf<(node: NodeType, previous: NodeType?) -> (Unit)>()
 
         fun clearCallbacks() {
             handlers.clear()
@@ -303,7 +299,7 @@ object SubgraphWalker {
          * Registers a handler that is called whenever a new node is visited. The handler is passed
          * the current node.
          */
-        fun registerHandler(handler: (node: Node) -> (Unit)) {
+        fun registerHandler(handler: (node: NodeType) -> (Unit)) {
             handlers.add { node, previous -> handler(node) }
         }
 
@@ -316,7 +312,7 @@ object SubgraphWalker {
         }
 
         /** Informs the walker that a replacement of [from] with [to] was done. */
-        fun registerReplacement(from: Node, to: Node) {
+        fun registerReplacement(from: NodeType, to: NodeType) {
             walker?.registerReplacement(from, to)
         }
 
@@ -325,9 +321,8 @@ object SubgraphWalker {
          *
          * @param root The node where AST descent is started
          */
-        fun iterate(root: Node) {
-            val walker = IterativeGraphWalker()
-            walker.strategy = this.strategy
+        fun iterate(root: NodeType) {
+            val walker = IterativeGraphWalker<NodeType>(strategy)
             handlers.forEach { h -> walker.registerOnNodeVisit { n, p -> handleNode(n, p, h) } }
 
             this.walker = walker
@@ -336,9 +331,9 @@ object SubgraphWalker {
         }
 
         private fun handleNode(
-            current: Node,
-            previous: Node?,
-            handler: (node: Node, previous: Node?) -> (Unit),
+            current: NodeType,
+            previous: NodeType?,
+            handler: (node: NodeType, previous: NodeType?) -> (Unit),
         ) {
             // Jump to the node's scope, if it is different from ours.
             if (scopeManager.currentScope != current.scope) {
@@ -366,7 +361,11 @@ object SubgraphWalker {
  *   [MemberExpression]), we also replace the [CallExpression] with a [MemberCallExpression].
  */
 context(ContextProvider)
-fun SubgraphWalker.ScopedWalker.replace(parent: Node?, old: Expression, new: Expression): Boolean {
+fun SubgraphWalker.ScopedWalker<AstNode>.replace(
+    parent: AstNode?,
+    old: Expression,
+    new: Expression,
+): Boolean {
     // We do not allow to replace nodes where the DFG (or other dependent nodes, such as PDG have
     // been set). The reason for that is that these edges contain a lot of information on the edges
     // themselves and replacing this edge would be very complicated.
@@ -437,7 +436,6 @@ fun SubgraphWalker.ScopedWalker.replace(parent: Node?, old: Expression, new: Exp
 }
 
 private fun CallExpression.duplicateTo(call: CallExpression, callee: Reference) {
-    call.ctx = this.ctx
     call.language = this.language
     call.scope = this.scope
     call.argumentEdges.clear()
@@ -457,21 +455,21 @@ private fun CallExpression.duplicateTo(call: CallExpression, callee: Reference) 
 }
 
 fun MemberCallExpression.toCallExpression(callee: Reference): CallExpression {
-    val call = CallExpression()
+    val call = CallExpression(ctx)
     duplicateTo(call, callee)
 
     return call
 }
 
 fun CallExpression.toMemberCallExpression(callee: MemberExpression): MemberCallExpression {
-    val call = MemberCallExpression()
+    val call = MemberCallExpression(ctx)
     duplicateTo(call, callee)
 
     return call
 }
 
 fun CallExpression.toConstructExpression(callee: Reference): ConstructExpression {
-    val construct = ConstructExpression()
+    val construct = ConstructExpression(ctx)
     duplicateTo(construct, callee)
 
     return construct

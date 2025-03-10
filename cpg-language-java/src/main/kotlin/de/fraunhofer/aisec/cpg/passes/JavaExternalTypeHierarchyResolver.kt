@@ -50,10 +50,10 @@ class JavaExternalTypeHierarchyResolver(ctx: TranslationContext) : ComponentPass
         val provider =
             object : ContextProvider, LanguageProvider, ScopeProvider {
                 override val language: Language<*>
-                    get() = ctx.availableLanguage<JavaLanguage>() ?: UnknownLanguage
+                    get() = ctx.availableLanguage<JavaLanguage>() ?: UnknownLanguage(ctx)
 
                 override val ctx: TranslationContext = this@JavaExternalTypeHierarchyResolver.ctx
-                override val scope: Scope?
+                override val scope: Scope
                     get() = scopeManager.globalScope
             }
         val resolver = CombinedTypeSolver()

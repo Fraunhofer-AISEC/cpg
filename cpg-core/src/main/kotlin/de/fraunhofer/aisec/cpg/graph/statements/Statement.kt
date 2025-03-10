@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
+import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
@@ -43,7 +45,8 @@ import org.neo4j.ogm.annotation.Relationship
  * executable code.
  */
 @NodeEntity
-abstract class Statement : Node(), DeclarationHolder {
+abstract class Statement internal constructor(ctx: TranslationContext) :
+    AstNode(ctx), DeclarationHolder {
     /**
      * A list of local variables (or other values) associated to this statement, defined by their
      * [ValueDeclaration] extracted from Block because `for`, `while`, `if`, and `switch` can

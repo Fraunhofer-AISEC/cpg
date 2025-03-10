@@ -82,7 +82,7 @@ interface HasBase : HasOperatorCode {
  *
  * @param <T> type of the default node </T>
  */
-interface HasDefault<T : Node?> : HasScope {
+interface HasDefault<T : AstNode?> : HasScope {
     var default: T
 }
 

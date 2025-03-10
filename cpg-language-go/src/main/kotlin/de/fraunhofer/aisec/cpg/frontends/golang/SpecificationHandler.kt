@@ -32,7 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.helpers.Util
 
 class SpecificationHandler(frontend: GoLanguageFrontend) :
-    GoHandler<Declaration?, GoStandardLibrary.Ast.Spec>(::ProblemDeclaration, frontend) {
+    GoHandler<Declaration?, GoStandardLibrary.Ast.Spec>(frontend) {
 
     override fun handleNode(node: GoStandardLibrary.Ast.Spec): Declaration? {
         return when (node) {
@@ -88,7 +88,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                 is GoStandardLibrary.Ast.ArrayType,
                 is GoStandardLibrary.Ast.StarExpr,
                 is GoStandardLibrary.Ast.ChanType -> handleTypeDef(spec, type)
-                else -> return ProblemDeclaration("not parsing type of type ${type.goType} yet")
+                else -> return newProblemDeclaration("not parsing type of type ${type.goType} yet")
             }
 
         return decl
@@ -237,7 +237,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
             }
             return tuple
         } else {
-            val sequence = DeclarationSequence()
+            val sequence = DeclarationSequence(ctx)
 
             var type = valueSpec.type?.let { frontend.typeOf(it) }
 
@@ -357,4 +357,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
             }
         }
     }
+
+    override val problemConstructor: (String, GoStandardLibrary.Ast.Spec?) -> Declaration
+        get() = { problem, rawNode -> newProblemDeclaration(problem, rawNode = rawNode) }
 }

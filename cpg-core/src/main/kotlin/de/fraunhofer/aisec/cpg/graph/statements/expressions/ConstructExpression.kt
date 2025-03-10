@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.PopulatedByPass
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
@@ -43,7 +44,7 @@ import org.neo4j.ogm.annotation.Relationship
  * * In Java, it is the initializer of a [NewExpression].
  */
 // TODO Merge and/or refactor
-class ConstructExpression : CallExpression() {
+class ConstructExpression internal constructor(ctx: TranslationContext) : CallExpression(ctx) {
     /**
      * The link to the [ConstructorDeclaration]. This is populated by the
      * [de.fraunhofer.aisec.cpg.passes.SymbolResolver] later.

@@ -26,15 +26,14 @@
 package de.fraunhofer.aisec.cpg.frontends.ruby
 
 import de.fraunhofer.aisec.cpg.graph.newBlock
+import de.fraunhofer.aisec.cpg.graph.newProblemExpression
 import de.fraunhofer.aisec.cpg.graph.newReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import org.jruby.ast.*
 
-class StatementHandler(lang: RubyLanguageFrontend) :
-    RubyHandler<Statement, Node>({ ProblemExpression() }, lang) {
+class StatementHandler(lang: RubyLanguageFrontend) : RubyHandler<Statement, Node>(lang) {
 
     override fun handleNode(node: Node): Statement {
         return when (node) {
@@ -64,4 +63,7 @@ class StatementHandler(lang: RubyLanguageFrontend) :
 
         return stmt
     }
+
+    override val problemConstructor: (String, Node?) -> Statement
+        get() = { problem, rawNode -> newProblemExpression(problem, rawNode = rawNode) }
 }

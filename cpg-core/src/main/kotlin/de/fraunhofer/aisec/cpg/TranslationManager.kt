@@ -76,7 +76,7 @@ private constructor(
         var executedFrontends = setOf<LanguageFrontend<*, *>>()
 
         // Build a new global translation context
-        val ctx = TranslationContext(config, ScopeManager(), TypeManager())
+        val ctx = TranslationContext(config)
 
         // Build a new translation result
         val result = TranslationResult(this, ctx)
@@ -154,8 +154,7 @@ private constructor(
         var useParallelFrontends = ctx.config.useParallelFrontends
 
         for (sc in ctx.config.softwareComponents.keys) {
-            val component = Component()
-            component.ctx = ctx
+            val component = Component(ctx)
             component.name = Name(sc)
             result.addComponent(component)
 
@@ -286,8 +285,7 @@ private constructor(
                     val compName = Name(includePath.name)
                     var component = result.components.firstOrNull { it.name == compName }
                     if (component == null) {
-                        component = Component()
-                        component.ctx = ctx
+                        component = Component(ctx)
                         component.name = compName
                         result.addComponent(component)
                         ctx.config.topLevels.put(includePath.name, includePath.toFile())
@@ -357,13 +355,7 @@ private constructor(
             // Build a new translation context for this parallel parsing process. We need to do this
             // until we can use a single scope manager concurrently. We can re-use the global
             // configuration and type manager.
-            val ctx =
-                TranslationContext(
-                    globalCtx.config,
-                    ScopeManager(),
-                    globalCtx.typeManager,
-                    component,
-                )
+            val ctx = TranslationContext(globalCtx.config, globalCtx.typeManager, component)
             parallelContexts.add(ctx)
 
             val future =

@@ -25,9 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.BranchingNode
-import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
@@ -40,7 +41,8 @@ import org.neo4j.ogm.annotation.Relationship
  * Represents a conditional loop statement of the form: `while(...){...}`. The loop body is executed
  * until condition evaluates to false for the first time.
  */
-class WhileStatement : LoopStatement(), BranchingNode, ArgumentHolder {
+class WhileStatement internal constructor(ctx: TranslationContext) :
+    LoopStatement(ctx), BranchingNode, ArgumentHolder {
     @Relationship(value = "CONDITION_DECLARATION")
     var conditionDeclarationEdge = astOptionalEdgeOf<Declaration>()
     /** C++ allows defining a declaration instead of a pure logical expression as condition */
@@ -50,7 +52,7 @@ class WhileStatement : LoopStatement(), BranchingNode, ArgumentHolder {
     /** The condition that decides if the block is executed. */
     var condition by unwrapping(WhileStatement::conditionEdge)
 
-    override val branchedBy: Node?
+    override val branchedBy: AstNode?
         get() = condition ?: conditionDeclaration
 
     override fun toString(): String {

@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
@@ -38,16 +39,18 @@ import org.neo4j.ogm.annotation.Relationship
  * Most often used in combination with an [InitializerListExpression] to represent the creation of
  * an array.
  */
-class KeyValueExpression : Expression(), ArgumentHolder {
+class KeyValueExpression internal constructor(ctx: TranslationContext) :
+    Expression(ctx), ArgumentHolder {
 
-    @Relationship("KEY") var keyEdge = astEdgeOf<Expression>(ProblemExpression("missing key"))
+    @Relationship("KEY") var keyEdge = astEdgeOf<Expression>(ProblemExpression(ctx, "missing key"))
     /**
      * The key of this pair. It is usually a literal, but some languages even allow references to
      * variables as a key.
      */
     var key by unwrapping(KeyValueExpression::keyEdge)
 
-    @Relationship("VALUE") var valueEdge = astEdgeOf<Expression>(ProblemExpression("missing value"))
+    @Relationship("VALUE")
+    var valueEdge = astEdgeOf<Expression>(ProblemExpression(ctx, "missing value"))
 
     /** The value of this pair. It can be any expression */
     var value by unwrapping(KeyValueExpression::valueEdge)

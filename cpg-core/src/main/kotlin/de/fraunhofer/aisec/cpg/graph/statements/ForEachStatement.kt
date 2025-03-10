@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdges
@@ -40,7 +41,8 @@ import org.neo4j.ogm.annotation.Relationship
  * Represent a for statement of the form `for(variable ... iterable){...}` that executes the loop
  * body for each instance of an element in `iterable` that is temporarily stored in `variable`.
  */
-class ForEachStatement : LoopStatement(), BranchingNode, StatementHolder {
+class ForEachStatement internal constructor(ctx: TranslationContext) :
+    LoopStatement(ctx), BranchingNode, StatementHolder {
 
     @Relationship("VARIABLE")
     var variableEdge =
@@ -58,7 +60,7 @@ class ForEachStatement : LoopStatement(), BranchingNode, StatementHolder {
     /** This field contains the iteration subject of the loop. */
     var iterable by unwrapping(ForEachStatement::iterableEdge)
 
-    override val branchedBy: Node?
+    override val branchedBy: AstNode?
         get() = iterable
 
     override var statementEdges: AstEdges<Statement, AstEdge<Statement>>

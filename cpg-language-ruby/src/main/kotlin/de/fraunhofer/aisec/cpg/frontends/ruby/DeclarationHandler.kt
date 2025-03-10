@@ -28,9 +28,9 @@ package de.fraunhofer.aisec.cpg.frontends.ruby
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.ProblemDeclaration
 import de.fraunhofer.aisec.cpg.graph.newFunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.newParameterDeclaration
+import de.fraunhofer.aisec.cpg.graph.newProblemDeclaration
 import de.fraunhofer.aisec.cpg.graph.newReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
@@ -38,8 +38,8 @@ import org.jruby.ast.ArgumentNode
 import org.jruby.ast.DefnNode
 import org.jruby.ast.Node
 
-class DeclarationHandler(lang: RubyLanguageFrontend) :
-    RubyHandler<Declaration, Node>({ ProblemDeclaration() }, lang) {
+class DeclarationHandler(frontend: RubyLanguageFrontend) :
+    RubyHandler<Declaration, Node>(frontend) {
 
     override fun handleNode(node: Node): Declaration {
         return when (node) {
@@ -88,4 +88,7 @@ class DeclarationHandler(lang: RubyLanguageFrontend) :
 
         return func
     }
+
+    override val problemConstructor: (String, Node?) -> Declaration
+        get() = { problem, rawNode -> newProblemDeclaration(problem, rawNode = rawNode) }
 }

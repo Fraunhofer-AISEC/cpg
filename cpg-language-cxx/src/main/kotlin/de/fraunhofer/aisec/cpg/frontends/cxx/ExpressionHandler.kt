@@ -36,7 +36,6 @@ import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver.Companion.addImplicitTemplateParametersToCall
 import java.math.BigInteger
 import java.util.*
-import java.util.function.Supplier
 import kotlin.math.max
 import kotlin.math.pow
 import org.eclipse.cdt.core.dom.ast.*
@@ -59,8 +58,8 @@ import org.eclipse.cdt.internal.core.model.ASTStringUtil
  * IASTExpression extends IASTInitializerClause. The later is the appropriate Interface type for the
  * handler.
  */
-class ExpressionHandler(lang: CXXLanguageFrontend) :
-    CXXHandler<Expression, IASTNode>(Supplier(::ProblemExpression), lang) {
+class ExpressionHandler(frontend: CXXLanguageFrontend) :
+    CXXHandler<Expression, IASTNode>(frontend) {
 
     override fun handleNode(node: IASTNode): Expression {
         return when (node) {
@@ -75,7 +74,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             is IASTExpressionList -> handleExpressionList(node)
             is IASTInitializerList ->
                 frontend.initializerHandler.handle(node)
-                    ?: ProblemExpression("could not parse initializer list")
+                    ?: newProblemExpression("could not parse initializer list")
             is IASTArraySubscriptExpression -> handleArraySubscriptExpression(node)
             is IASTTypeIdExpression -> handleTypeIdExpression(node)
             is IGNUASTCompoundStatementExpression -> handleCompoundStatementExpression(node)
@@ -287,8 +286,8 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
      * @param template
      * @return List of Nodes containing the all the arguments the template was instantiated with.
      */
-    private fun getTemplateArguments(template: CPPASTTemplateId): MutableList<Node> {
-        val templateArguments = mutableListOf<Node>()
+    private fun getTemplateArguments(template: CPPASTTemplateId): MutableList<AstNode> {
+        val templateArguments = mutableListOf<AstNode>()
         for (argument in template.templateArguments) {
             when (argument) {
                 is IASTTypeId -> {
@@ -306,13 +305,14 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 }
             }
         }
+
         return templateArguments
     }
 
     private fun handleConditionalExpression(ctx: IASTConditionalExpression): ConditionalExpression {
         val condition =
             handle(ctx.logicalConditionExpression)
-                ?: ProblemExpression("could not parse condition expression")
+                ?: newProblemExpression("could not parse condition expression")
         return newConditionalExpression(
             condition,
             if (ctx.positiveResultExpression != null) handle(ctx.positiveResultExpression)
@@ -333,7 +333,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     private fun handleCastExpression(ctx: IASTCastExpression): Expression {
         val castExpression = newCastExpression(rawNode = ctx)
         castExpression.expression =
-            handle(ctx.operand) ?: ProblemExpression("could not parse inner expression")
+            handle(ctx.operand) ?: newProblemExpression("could not parse inner expression")
         castExpression.setCastOperator(ctx.operator)
         castExpression.castType = frontend.typeOf(ctx.typeId)
 
@@ -975,7 +975,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             return newLiteral(numberValue, type, rawNode = ctx)
         } catch (ex: NumberFormatException) {
             // It could be that we cannot parse the literal, in this case we return an error
-            return ProblemExpression("could not parse literal: ${ex.message}")
+            return newProblemExpression("could not parse literal: ${ex.message}")
         }
     }
 
@@ -995,7 +995,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             }
         } catch (ex: NumberFormatException) {
             // It could be that we cannot parse the literal, in this case we return an error
-            ProblemExpression("could not parse literal: ${ex.message}")
+            newProblemExpression("could not parse literal: ${ex.message}")
         }
     }
 
@@ -1044,6 +1044,9 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             // Supply the value with the suffix stripped, as well as the suffix
             return Pair(value.substring(0, value.length - suffix.length), suffix)
         }
+
+    override val problemConstructor: (String, IASTNode?) -> Expression
+        get() = { problem, rawNode -> newProblemExpression(problem, rawNode = rawNode) }
 }
 
 private val IASTUnaryExpression.isPostfixOperator: Boolean

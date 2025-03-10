@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.StatementHolder
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
@@ -39,7 +40,7 @@ import org.neo4j.ogm.annotation.Relationship
  * A statement which contains a list of statements. A common example is a function body within a
  * [FunctionDeclaration].
  */
-open class Block : Expression(), StatementHolder {
+open class Block internal constructor(ctx: TranslationContext) : Expression(ctx), StatementHolder {
     /** The list of statements. */
     @Relationship(value = "STATEMENTS", direction = Relationship.Direction.OUTGOING)
     override var statementEdges = astEdgesOf<Statement>()

@@ -25,8 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 
-class AnnotationMember : Node() {
+class AnnotationMember internal constructor(ctx: TranslationContext) : AstNode(ctx) {
     var value: Expression? = null
 }

@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
@@ -43,7 +44,8 @@ import org.neo4j.ogm.annotation.Relationship
  * be set before adding any values to [InitializerListExpression.initializers].
  */
 // TODO Merge and/or refactor
-class InitializerListExpression : Expression(), ArgumentHolder, HasType.TypeObserver {
+class InitializerListExpression internal constructor(ctx: TranslationContext) :
+    Expression(ctx), ArgumentHolder, HasType.TypeObserver {
 
     /** The list of initializers. */
     @Relationship(value = "INITIALIZERS", direction = Relationship.Direction.OUTGOING)

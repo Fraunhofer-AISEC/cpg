@@ -106,9 +106,10 @@ internal class FunctionTemplateTest : BaseTest() {
         val typeParamDeclaration = typeParamDecls[0]
         assertEquals(typeParamDeclaration, functionTemplateDecl.parameters[0])
 
-        val typeT = ParameterizedType("T", language)
-        val intType = IntegerType("int", 32, language, NumericType.Modifier.SIGNED)
-        val floatType = FloatingPointType("float", 32, language, NumericType.Modifier.SIGNED)
+        val typeT = ParameterizedType(result.finalCtx, "T", language)
+        val intType = IntegerType(result.finalCtx, "int", 32, language, NumericType.Modifier.SIGNED)
+        val floatType =
+            FloatingPointType(result.finalCtx, "float", 32, language, NumericType.Modifier.SIGNED)
         assertEquals(typeT, typeParamDeclaration.type)
         assertEquals(intType, typeParamDeclaration.default)
 
@@ -223,7 +224,8 @@ internal class FunctionTemplateTest : BaseTest() {
         assertEquals(fixedMultiply, call.invokes[0])
 
         // Check template parameters
-        val doubleType = FloatingPointType("double", 64, language, NumericType.Modifier.SIGNED)
+        val doubleType =
+            FloatingPointType(result.finalCtx, "double", 64, language, NumericType.Modifier.SIGNED)
         val literal5 = findByUniquePredicate(result.literals) { l: Literal<*> -> l.value == 5 }
         assertEquals(2, call.templateArguments.size)
         assertEquals(doubleType, (call.templateArguments[0] as TypeExpression).type)
@@ -363,7 +365,8 @@ internal class FunctionTemplateTest : BaseTest() {
         assertEquals(fixedMultiply, call.invokes[0])
 
         // Check template parameters
-        val doubleType = FloatingPointType("double", 64, language, NumericType.Modifier.SIGNED)
+        val doubleType =
+            FloatingPointType(result.finalCtx, "double", 64, language, NumericType.Modifier.SIGNED)
         val literal5 = findByUniquePredicate(result.literals) { l: Literal<*> -> l.value == 5 }
         assertEquals(2, call.templateArguments.size)
         assertEquals(doubleType, (call.templateArguments[0] as TypeExpression).type)

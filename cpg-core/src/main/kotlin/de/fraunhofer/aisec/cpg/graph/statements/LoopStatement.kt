@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
@@ -41,7 +42,7 @@ import org.neo4j.ogm.annotation.Relationship
  * The looping criterion can be a condition or the iteration over all elements in a list and is
  * defined by the subclass.
  */
-abstract class LoopStatement : Statement() {
+abstract class LoopStatement internal constructor(ctx: TranslationContext) : Statement(ctx) {
 
     @Relationship("STATEMENT") var statementEdge = astOptionalEdgeOf<Statement>()
     /** This field contains the body of the loop, e.g. a [Block] or single [Statement]. */

@@ -34,8 +34,8 @@ import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase
 import de.fraunhofer.aisec.cpg.frontends.KClassSerializer
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Component
-import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.passes.configuration.*
 import de.fraunhofer.aisec.cpg.passes.inference.DFGFunctionSummaries
@@ -99,14 +99,17 @@ private constructor(
      * always take priority over those in the whitelist.
      */
     val includeBlocklist: List<Path>,
-    passes: List<List<KClass<out Pass<out Node>>>>,
+    passes: List<List<KClass<out Pass<out AstNode>>>>,
     /**
      * This map offers the possibility to replace certain passes for specific languages with other
      * passes. It can either be filled with the [Builder.replacePass] or by using the [ReplacePass]
      * annotation on a [LanguageFrontend].
      */
     val replacedPasses:
-        Map<Pair<KClass<out Pass<out Node>>, KClass<out Language<*>>>, KClass<out Pass<out Node>>>,
+        Map<
+            Pair<KClass<out Pass<out AstNode>>, KClass<out Language<*>>>,
+            KClass<out Pass<out AstNode>>,
+        >,
     /** This list contains the files with function summaries which should be considered. */
     val functionSummaries: DFGFunctionSummaries,
     languages: List<KClass<out Language<*>>>,
@@ -178,7 +181,7 @@ private constructor(
     val addIncludesToGraph: Boolean
 
     /** A list containing a list of passes that run in parallel. */
-    @JsonIgnore val registeredPasses: List<List<KClass<out Pass<out Node>>>>
+    @JsonIgnore val registeredPasses: List<List<KClass<out Pass<out AstNode>>>>
 
     /**
      * A flattened list of [registeredPasses], mainly used for the JSON representation because

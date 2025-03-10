@@ -44,8 +44,8 @@ object Util {
      * @param searchCode exact code that a node needs to have.
      * @return a list of nodes with the specified String.
      */
-    fun subnodesOfCode(node: Node?, searchCode: String): List<Node> {
-        return SubgraphWalker.flattenAST(node).filter { n: Node ->
+    fun subnodesOfCode(node: AstNode?, searchCode: String): List<AstNode> {
+        return SubgraphWalker.flattenAST(node).filter { n ->
             n.code != null && n.code == searchCode
         }
     }
@@ -89,10 +89,10 @@ object Util {
         q: Quantifier = Quantifier.ALL,
         cn: Connect = Connect.SUBTREE,
         en: Edge,
-        n: Node?,
+        n: EvaluatedNode?,
         cr: Connect = Connect.SUBTREE,
         predicate: ((EvaluationOrder) -> Boolean)? = null,
-        refs: List<Node?>,
+        refs: List<EvaluatedNode?>,
     ): Boolean {
         if (n == null) {
             return false
@@ -102,13 +102,13 @@ object Util {
         val er = if (en == Edge.ENTRIES) Edge.EXITS else Edge.ENTRIES
         var refSide = refs
         nodeSide =
-            if (cn == Connect.SUBTREE) {
+            (if (cn == Connect.SUBTREE) {
                 val border = SubgraphWalker.getEOGPathEdges(n)
                 if (en == Edge.ENTRIES) {
                     val pe = border.entries.flatMap { it.prevEOGEdges }
                     if (Quantifier.ALL == q && pe.any { predicate?.invoke(it) == false })
                         return false
-                    pe.filter { predicate?.invoke(it) != false }.map { it.start }
+                    pe.filter { predicate?.invoke(it) != false }.map { it.start as EvaluatedNode }
                 } else border.exits
             } else {
                 nodeSide.flatMap {
@@ -119,7 +119,8 @@ object Util {
                         pe.filter { predicate?.invoke(it) != false }.map { it.start }
                     } else listOf(it)
                 }
-            }
+            })
+                as List<EvaluatedNode>
         refSide =
             if (cr == Connect.SUBTREE) {
                 val borders = refs.map { SubgraphWalker.getEOGPathEdges(it) }
@@ -129,7 +130,8 @@ object Util {
                         val pe = border.entries.flatMap { it.prevEOGEdges }
                         if (Quantifier.ALL == q && pe.any { predicate?.invoke(it) == false })
                             return false
-                        pe.filter { predicate?.invoke(it) != false }.map { it.start }
+                        pe.filter { predicate?.invoke(it) != false }
+                            .map { it.start as EvaluatedNode }
                     } else border.exits
                 }
             } else {
@@ -138,7 +140,8 @@ object Util {
                         val pe = node?.prevEOGEdges ?: listOf()
                         if (Quantifier.ALL == q && pe.any { predicate?.invoke(it) == false })
                             return false
-                        pe.filter { predicate?.invoke(it) != false }.map { it.start }
+                        pe.filter { predicate?.invoke(it) != false }
+                            .map { it.start as EvaluatedNode }
                     } else listOf(node)
                 }
             }
@@ -481,8 +484,8 @@ object Util {
      * @param incoming whether the node connected by an incoming or, if false, outgoing DFG edge
      * @return
      */
-    fun getAdjacentDFGNodes(n: Node?, incoming: Boolean): MutableList<Node> {
-        val subnodes = n?.astChildren ?: listOf()
+    fun getAdjacentDFGNodes(n: AstNode, incoming: Boolean): MutableList<AstNode> {
+        val subnodes = n.astChildren
         val adjacentNodes =
             if (incoming) {
                 subnodes.filter { it.nextDFG.contains(n) }.toMutableList()
@@ -502,11 +505,11 @@ object Util {
      * @param branchingDeclaration
      */
     fun addDFGEdgesForMutuallyExclusiveBranchingExpression(
-        n: Node,
-        branchingExp: Node?,
-        branchingDeclaration: Node?,
+        n: DataflowNode,
+        branchingExp: AstNode?,
+        branchingDeclaration: AstNode?,
     ) {
-        var conditionNodes = mutableListOf<Node>()
+        var conditionNodes = mutableListOf<AstNode>()
         if (branchingExp != null) {
             conditionNodes = mutableListOf()
             conditionNodes.add(branchingExp)

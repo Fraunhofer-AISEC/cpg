@@ -45,7 +45,7 @@ import org.junit.jupiter.api.assertTimeout
 class WalkerTest : BaseTest() {
     @Test
     fun testWalkerSpeed() {
-        val tu = TranslationUnitDeclaration()
+        val tu = TranslationUnitDeclaration(ctx)
 
         // Let's build some fake CPG trees with a good amount of classes
         for (i in 0..100) {

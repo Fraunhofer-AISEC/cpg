@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.codyze.compliance
 
 import com.charleskorn.kaml.Yaml
 import com.charleskorn.kaml.decodeFromStream
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Name
@@ -96,8 +97,10 @@ class ComponentSerializer(val result: TranslationResult?) : KSerializer<Componen
         // Use the context to find the component by name
         val componentName = decoder.decodeString()
 
-        return result?.components?.first { it.name.localName == componentName }
-            ?: Component().also { it.name = Name(componentName) }
+        return result?.components?.firstOrNull { it.name.localName == componentName }
+            ?: Component(result?.finalCtx ?: TranslationContext.EmptyTranslationContext).also {
+                it.name = Name(componentName)
+            }
     }
 }
 

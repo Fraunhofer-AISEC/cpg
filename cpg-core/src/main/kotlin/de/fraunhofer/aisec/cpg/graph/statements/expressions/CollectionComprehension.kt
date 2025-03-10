@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
@@ -43,7 +44,8 @@ import org.neo4j.ogm.annotation.Relationship
  * reason, we represent the `variable, iterable and predicate in its own class
  * [ComprehensionExpression].
  */
-class CollectionComprehension : Expression(), ArgumentHolder {
+class CollectionComprehension internal constructor(ctx: TranslationContext) :
+    Expression(ctx), ArgumentHolder {
 
     @Relationship("COMPREHENSION_EXPRESSIONS")
     var comprehensionExpressionEdges = astEdgesOf<ComprehensionExpression>()
@@ -60,7 +62,7 @@ class CollectionComprehension : Expression(), ArgumentHolder {
     @Relationship("STATEMENT")
     var statementEdge =
         astEdgeOf<Statement>(
-            ProblemExpression("No statement provided but is required in ${this::class}")
+            ProblemExpression(ctx, "No statement provided but is required in ${this::class}")
         )
     /**
      * This field contains the statement which is applied to each element of the input for which the

@@ -47,20 +47,21 @@ import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 import de.fraunhofer.aisec.cpg.passes.configuration.RequiredFrontend
+import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 
 @ExecuteBefore(ImportResolver::class)
 @ExecuteBefore(SymbolResolver::class)
 @RequiredFrontend(PythonLanguageFrontend::class)
 class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), LanguageProvider {
 
-    lateinit var walker: SubgraphWalker.ScopedWalker
+    lateinit var walker: SubgraphWalker.ScopedWalker<AstNode>
 
     override fun cleanup() {
         // nothing to do
     }
 
     override fun accept(p0: Component) {
-        walker = SubgraphWalker.ScopedWalker(ctx.scopeManager)
+        walker = SubgraphWalker.ScopedWalker(ctx.scopeManager, Strategy::AST_FORWARD)
         walker.registerHandler { node -> handle(node) }
 
         for (tu in p0.translationUnits) {
@@ -103,7 +104,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
 
         // Look for a potential scope modifier for this reference
         var targetScope =
-            scopeManager.currentScope?.predefinedLookupScopes[ref.name.toString()]?.targetScope
+            scopeManager.currentScope.predefinedLookupScopes[ref.name.toString()]?.targetScope
 
         // Try to see whether our symbol already exists. There are basically three rules to follow
         // here.
@@ -289,5 +290,5 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
     }
 
     override val language: Language<*>
-        get() = ctx.availableLanguage<PythonLanguage>() ?: UnknownLanguage
+        get() = ctx.availableLanguage<PythonLanguage>() ?: UnknownLanguage(ctx)
 }

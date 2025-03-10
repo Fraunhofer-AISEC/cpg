@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.PopulatedByPass
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.UnknownLanguage
 import de.fraunhofer.aisec.cpg.graph.*
@@ -41,11 +42,12 @@ import org.neo4j.ogm.annotation.Relationship
 
 /** A declaration who has a type. */
 @NodeEntity
-abstract class ValueDeclaration : Declaration(), HasType, HasAliases {
+abstract class ValueDeclaration internal constructor(ctx: TranslationContext) :
+    Declaration(ctx), HasType, HasAliases {
 
     override val typeObservers: MutableSet<HasType.TypeObserver> = identitySetOf()
 
-    override var language: Language<*> = UnknownLanguage
+    override var language: Language<*> = UnknownLanguage(ctx)
         set(value) {
             // We need to adjust an eventual unknown type, once we know the language
             field = value

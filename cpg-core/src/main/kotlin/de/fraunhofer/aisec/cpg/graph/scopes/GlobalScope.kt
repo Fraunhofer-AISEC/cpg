@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.scopes
 
 import de.fraunhofer.aisec.cpg.ScopeManager
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.nodes
@@ -37,7 +38,7 @@ import de.fraunhofer.aisec.cpg.graph.nodes
  * scope that is restricted to a translation unit, i.e. C++ while still maintaining a unique list of
  * global variables.
  */
-class GlobalScope : Scope(null) {
+class GlobalScope(ctx: TranslationContext) : Scope(ctx, null) {
 
     /**
      * Because the way we currently handle parallel parsing in [TranslationManager.parseParallel],

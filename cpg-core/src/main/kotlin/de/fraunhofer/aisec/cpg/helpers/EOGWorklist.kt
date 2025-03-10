@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.helpers
 
+import de.fraunhofer.aisec.cpg.graph.EvaluatedNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import java.util.IdentityHashMap
@@ -52,18 +53,18 @@ abstract class LatticeElement<T>(open val elements: T) : Comparable<LatticeEleme
 }
 
 /**
- * Implements the [LatticeElement] for a lattice over a set of nodes. The lattice itself is
- * constructed by the powerset.
+ * Implements the [LatticeElement] for a lattice over a set of nodes (of [NodeType]). The lattice
+ * itself is constructed by the powerset.
  */
-class PowersetLattice(override val elements: IdentitySet<Node>) :
-    LatticeElement<Set<Node>>(elements) {
-    override fun lub(other: LatticeElement<Set<Node>>) =
+class PowersetLattice<NodeType : Node>(override val elements: IdentitySet<NodeType>) :
+    LatticeElement<Set<NodeType>>(elements) {
+    override fun lub(other: LatticeElement<Set<NodeType>>) =
         PowersetLattice(this.elements.union(other.elements))
 
-    override fun duplicate(): LatticeElement<Set<Node>> =
+    override fun duplicate(): LatticeElement<Set<NodeType>> =
         PowersetLattice(this.elements.toIdentitySet())
 
-    override fun compareTo(other: LatticeElement<Set<Node>>): Int {
+    override fun compareTo(other: LatticeElement<Set<NodeType>>): Int {
         return if (this.elements.containsAll(other.elements)) {
             if (this.elements.size > (other.elements.size)) 1 else 0
         } else {
@@ -239,7 +240,7 @@ class Worklist<K : Any, N : Any, V>() {
  * node which is considered for this analysis. The [transformation] has to return the updated
  * [State].
  */
-inline fun <reified K : Node, V> iterateEOG(
+inline fun <reified K : EvaluatedNode, V> iterateEOG(
     startNode: K,
     startState: State<K, V>,
     transformation: (K, State<K, V>) -> State<K, V>,
@@ -257,7 +258,7 @@ inline fun <reified K : Node, V> iterateEOG(
  * we have to add more elements out-of-order e.g. because the EOG is traversed in an order which is
  * not useful for this analysis. The [transformation] has to return the updated [State].
  */
-inline fun <reified K : Node, V> iterateEOG(
+inline fun <reified K : EvaluatedNode, V> iterateEOG(
     startNode: K,
     startState: State<K, V>,
     transformation: (K, State<K, V>, Worklist<K, K, V>) -> State<K, V>,
@@ -277,7 +278,7 @@ inline fun <reified K : Node, V> iterateEOG(
         // the state-changing checks.
         val insideBB =
             (nextNode.nextEOGEdges.size == 1 &&
-                nextNode.prevEOGEdges.singleOrNull()?.start?.nextEOG?.size == 1)
+                (nextNode.prevEOGEdges.singleOrNull()?.start as EvaluatedNode).nextEOG.size == 1)
         val newState =
             transformation(nextNode, if (insideBB) state else state.duplicate(), worklist)
         if (worklist.update(nextNode, newState)) {
@@ -291,7 +292,7 @@ inline fun <reified K : Node, V> iterateEOG(
     return worklist.mop()
 }
 
-inline fun <reified K : Edge<Node>, N : Any, V> iterateEOG(
+inline fun <reified K : Edge<EvaluatedNode>, N : Any, V> iterateEOG(
     startEdges: List<K>,
     startState: State<N, V>,
     transformation: (K, State<N, V>) -> State<N, V>,
@@ -299,7 +300,7 @@ inline fun <reified K : Edge<Node>, N : Any, V> iterateEOG(
     return iterateEOG(startEdges, startState) { k, s, _ -> transformation(k, s) }
 }
 
-inline fun <reified K : Edge<Node>, N : Any, V> iterateEOG(
+inline fun <reified K : Edge<EvaluatedNode>, N : Any, V> iterateEOG(
     startEdges: List<K>,
     startState: State<N, V>,
     transformation: (K, State<N, V>, Worklist<K, N, V>) -> State<N, V>,
@@ -322,7 +323,7 @@ inline fun <reified K : Edge<Node>, N : Any, V> iterateEOG(
         val insideBB =
             (nextEdge.end.nextEOG.size == 1 &&
                 nextEdge.end.prevEOG.size == 1 &&
-                nextEdge.start.nextEOG.size == 1)
+                (nextEdge.start as EvaluatedNode).nextEOG.size == 1)
         val newState =
             transformation(nextEdge, if (insideBB) state else state.duplicate(), worklist)
         if (insideBB || worklist.update(nextEdge, newState)) {

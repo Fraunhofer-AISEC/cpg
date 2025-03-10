@@ -25,7 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.analysis.fsm
 
-import de.fraunhofer.aisec.cpg.graph.statements.EmptyStatement
+import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
+import de.fraunhofer.aisec.cpg.graph.newEmptyStatement
 import kotlin.test.*
 
 /**
@@ -230,7 +231,7 @@ class DFAEqualityTest {
         val dfa = getDfa()
         val oldDfa = getDfa()
 
-        val emptyNode = EmptyStatement()
+        val emptyNode = with(TestLanguageFrontend()) { newEmptyStatement() }
         dfa.initializeOrderEvaluation(emptyNode)
         dfa.makeTransitionWithOp(setOf("create()"), emptyNode)
 

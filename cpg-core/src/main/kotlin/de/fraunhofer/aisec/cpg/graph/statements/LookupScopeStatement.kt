@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.newLookupScopeStatement
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
@@ -43,7 +44,7 @@ import java.util.Objects
  * The [newLookupScopeStatement] node builder will add this automatically, so it is STRONGLY
  * encouraged that the node builder is used instead of creating the node itself.
  */
-class LookupScopeStatement : Statement() {
+class LookupScopeStatement internal constructor(ctx: TranslationContext) : Statement(ctx) {
 
     /** The symbols this statement affects. */
     var symbols: List<Symbol> = listOf()

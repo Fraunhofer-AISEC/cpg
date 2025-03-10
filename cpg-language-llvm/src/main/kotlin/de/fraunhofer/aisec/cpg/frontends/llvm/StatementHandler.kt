@@ -42,8 +42,8 @@ import org.bytedeco.llvm.LLVM.LLVMBasicBlockRef
 import org.bytedeco.llvm.LLVM.LLVMValueRef
 import org.bytedeco.llvm.global.LLVM.*
 
-class StatementHandler(lang: LLVMIRLanguageFrontend) :
-    Handler<Statement, Pointer, LLVMIRLanguageFrontend>(::ProblemExpression, lang) {
+class StatementHandler(frontend: LLVMIRLanguageFrontend) :
+    Handler<Statement, Pointer, LLVMIRLanguageFrontend>(frontend) {
     init {
         map.put(LLVMValueRef::class.java) { handleInstruction(it as LLVMValueRef) }
         map.put(LLVMBasicBlockRef::class.java) { handleBasicBlock(it as LLVMBasicBlockRef) }
@@ -1336,7 +1336,11 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * therefore adds dummy statements to the end of basic blocks where a certain variable is
      * declared and initialized. The original phi instruction is not added to the CPG.
      */
-    fun handlePhi(instr: LLVMValueRef, tu: TranslationUnitDeclaration, flatAST: MutableList<Node>) {
+    fun handlePhi(
+        instr: LLVMValueRef,
+        tu: TranslationUnitDeclaration,
+        flatAST: MutableList<AstNode>,
+    ) {
         val labelMap = mutableMapOf<LabelStatement, Expression>()
         val numOps = LLVMGetNumOperands(instr)
         var i = 0
@@ -1642,4 +1646,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
     private fun llvmInternalRef(name: String): Reference {
         return newReference(name)
     }
+
+    override val problemConstructor: (String, Pointer?) -> Statement
+        get() = { problem, rawNode -> newProblemExpression(problem, rawNode = rawNode) }
 }

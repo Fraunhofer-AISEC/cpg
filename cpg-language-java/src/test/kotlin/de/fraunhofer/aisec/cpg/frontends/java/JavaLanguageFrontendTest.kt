@@ -854,10 +854,10 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertEquals(2, enum.entries.size)
 
         val valueField = enum.fields["value"]
-        assertTrue { valueField?.modifiers?.contains("private") ?: false }
+        assertTrue { valueField?.modifiers?.contains("private") == true }
 
         val nameField = enum.fields["NAME"]
-        assertTrue { nameField?.modifiers?.containsAll(listOf("public", "static")) ?: false }
+        assertTrue { nameField?.modifiers?.containsAll(listOf("public", "static")) == true }
 
         assertEquals(1, enum.constructors.size)
         val constructor = enum.constructors.first()

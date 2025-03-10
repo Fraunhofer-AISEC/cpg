@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.codyze
 
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
@@ -104,7 +105,7 @@ private fun Node?.toSarifMessage(): Message? {
  * current function.
  */
 private fun Node.toSarifCallStack(): List<Stack> {
-    val currentFunc = this.firstParentOrNull<FunctionDeclaration>()
+    val currentFunc = if (this is AstNode) this.firstParentOrNull<FunctionDeclaration>() else null
     return listOf(
         Stack(
             message = Message(text = "Stack"),

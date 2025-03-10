@@ -28,11 +28,11 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
-import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.get
-import de.fraunhofer.aisec.cpg.processing.IVisitor
+import de.fraunhofer.aisec.cpg.processing.Visitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.util.stream.Stream
 import kotlin.test.assertNotNull
@@ -52,19 +52,13 @@ class ProgramDependenceGraphPassTest {
 
         main.accept(
             Strategy::AST_FORWARD,
-            object : IVisitor<Node>() {
-                override fun visit(t: Node) {
+            object : Visitor<AstNode>() {
+                override fun visit(t: AstNode) {
                     val expectedPrevEdges =
                         t.prevCDGEdges +
                             t.prevDFGEdges.filter {
-                                if (
-                                    "remove next" in (it.start.comment ?: "") &&
-                                        "remove prev" in (t.comment ?: "")
-                                ) {
-                                    false
-                                } else {
-                                    true
-                                }
+                                !("remove next" in (it.start.comment ?: "") &&
+                                    "remove prev" in (t.comment ?: ""))
                             }
                     assertTrue(
                         "prevPDGEdges did not contain all prevCDGEdges and edges to all prevDFG.\n" +
@@ -77,14 +71,8 @@ class ProgramDependenceGraphPassTest {
                     val expectedNextEdges =
                         t.nextCDGEdges +
                             t.nextDFGEdges.filter {
-                                if (
-                                    "remove next" in (t.comment ?: "") &&
-                                        "remove prev" in (it.end.comment ?: "")
-                                ) {
-                                    false
-                                } else {
-                                    true
-                                }
+                                !("remove next" in (t.comment ?: "") &&
+                                    "remove prev" in (it.end.comment ?: ""))
                             }
                     assertTrue(
                         "nextPDGEdges did not contain all nextCDGEdges and edges to all nextDFG." +

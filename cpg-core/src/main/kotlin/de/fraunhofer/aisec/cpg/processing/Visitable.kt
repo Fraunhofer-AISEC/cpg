@@ -30,14 +30,14 @@ package de.fraunhofer.aisec.cpg.processing
  *
  * @param <V> </V>
  */
-interface IVisitable<V : IVisitable<V>> {
+interface Visitable {
     /**
      * @param strategy Traversal strategy.
      * @param visitor Instance of the visitor to call.
      */
-    fun accept(strategy: IStrategy<V>, visitor: IVisitor<V>) {
+    fun <T : Visitable> accept(strategy: IStrategy<T>, visitor: Visitor<T>) {
         @Suppress("UNCHECKED_CAST")
-        if (visitor.visited.add(this as V)) {
+        if (visitor.visited.add(this as T)) {
             visitor.visit(this)
             val it = strategy.getIterator(this)
             while (it.hasNext()) {

@@ -37,6 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
+import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 
 /**
  * This pass takes care of several things that we need to clean up, once all translation units are
@@ -98,9 +99,9 @@ import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 @DependsOn(TypeResolver::class)
 class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
-    private lateinit var walker: SubgraphWalker.ScopedWalker
+    private lateinit var walker: SubgraphWalker.ScopedWalker<AstNode>
 
-    override val scope: Scope?
+    override val scope: Scope
         get() = scopeManager.currentScope
 
     override fun accept(component: Component) {
@@ -109,7 +110,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
             component.translationUnits += addBuiltIn()
         }
 
-        walker = SubgraphWalker.ScopedWalker(scopeManager)
+        walker = SubgraphWalker.ScopedWalker(scopeManager, Strategy::AST_FORWARD)
         walker.registerHandler { node ->
             when (node) {
                 is RecordDeclaration -> handleRecordDeclaration(node)
@@ -219,6 +220,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
         func.type =
             typeManager.registerType(
                 FunctionType(
+                    ctx,
                     funcTypeName(func.signatureTypes, func.returnTypes),
                     func.signatureTypes,
                     func.returnTypes,
@@ -262,9 +264,9 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 if (init is InitializerListExpression) {
                     init.type = type.elementType
                 } else if (init is KeyValueExpression && init.value is InitializerListExpression) {
-                    init.value?.type = type.elementType
+                    init.value.type = type.elementType
                 } else if (init is KeyValueExpression && init.key is InitializerListExpression) {
-                    init.key?.type = type.elementType
+                    init.key.type = type.elementType
                 }
             }
         } else if (type?.isMap == true) {

@@ -25,9 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
+import de.fraunhofer.aisec.cpg.TranslationContext
+
 /**
  * Default statement of the form `default:` that serves as entry point for switch statements. The
  * statements executed after the entry are on the same AST hierarchy in the parent compound
  * statement.
  */
-class DefaultStatement : Statement()
+class DefaultStatement internal constructor(ctx: TranslationContext) : Statement(ctx)

@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import jep.python.PyObject
 
 class ExpressionHandler(frontend: PythonLanguageFrontend) :
-    PythonHandler<Expression, Python.AST.BaseExpr>(::ProblemExpression, frontend) {
+    PythonHandler<Expression, Python.AST.BaseExpr>(frontend) {
 
     override fun handleNode(node: Python.AST.BaseExpr): Expression {
         return when (node) {
@@ -576,4 +576,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         lambda.function = function
         return lambda
     }
+
+    override val problemConstructor: (String, Python.AST.BaseExpr?) -> Expression
+        get() = { problem, rawNode -> newProblemExpression(problem, rawNode = rawNode) }
 }

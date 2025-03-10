@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.StatementHolder
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdges
@@ -39,7 +40,8 @@ import org.neo4j.ogm.annotation.Relationship
  * A label attached to a statement that is used to change control flow by labeled continue and
  * breaks (Java) or goto(C++).
  */
-class LabelStatement : Statement(), StatementHolder {
+class LabelStatement internal constructor(ctx: TranslationContext) :
+    Statement(ctx), StatementHolder {
     @Relationship(value = "SUB_STATEMENT") var subStatementEdge = astOptionalEdgeOf<Statement>()
 
     /** Statement that the label is attached to. Can be a simple or compound statement. */

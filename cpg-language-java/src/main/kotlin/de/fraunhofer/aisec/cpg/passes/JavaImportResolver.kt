@@ -32,7 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.RequiredFrontend
-import de.fraunhofer.aisec.cpg.processing.IVisitor
+import de.fraunhofer.aisec.cpg.processing.Visitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.util.*
 import java.util.regex.Pattern
@@ -167,8 +167,8 @@ open class JavaImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         // Using a visitor to avoid loops in the AST
         node.accept(
             Strategy::AST_FORWARD,
-            object : IVisitor<Node>() {
-                override fun visit(t: Node) {
+            object : Visitor<AstNode>() {
+                override fun visit(t: AstNode) {
                     if (t is RecordDeclaration) {
                         records.add(t)
                         importables.putIfAbsent(t.name.toString(), t)

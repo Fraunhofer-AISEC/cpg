@@ -33,7 +33,6 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
-import java.util.*
 import org.slf4j.LoggerFactory
 
 /**
@@ -70,17 +69,6 @@ abstract class LanguageFrontend<AstNode, TypeNode>(
     val config: TranslationConfiguration = ctx.config
 
     var currentTU: TranslationUnitDeclaration? = null
-
-    @Throws(TranslationException::class)
-    fun parseAll(): List<TranslationUnitDeclaration> {
-        val units = ArrayList<TranslationUnitDeclaration>()
-        for (componentFiles in config.softwareComponents.values) {
-            for (sourceFile in componentFiles) {
-                units.add(parse(sourceFile))
-            }
-        }
-        return units
-    }
 
     @Throws(TranslationException::class) abstract fun parse(file: File): TranslationUnitDeclaration
 
@@ -134,7 +122,7 @@ abstract class LanguageFrontend<AstNode, TypeNode>(
         val log = LoggerFactory.getLogger(LanguageFrontend::class.java)
     }
 
-    override val scope: Scope?
+    override val scope: Scope
         get() {
             return this.scopeManager.currentScope
         }

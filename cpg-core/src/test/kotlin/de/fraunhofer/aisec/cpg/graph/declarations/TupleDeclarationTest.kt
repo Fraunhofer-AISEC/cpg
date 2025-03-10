@@ -47,12 +47,7 @@ class TupleDeclarationTest {
     fun testTopLevelTuple() {
         with(
             TestLanguageFrontend(
-                ctx =
-                    TranslationContext(
-                        TranslationConfiguration.builder().defaultPasses().build(),
-                        ScopeManager(),
-                        TypeManager(),
-                    )
+                ctx = TranslationContext(TranslationConfiguration.builder().defaultPasses().build())
             )
         ) {
             val result = build {
@@ -134,12 +129,7 @@ class TupleDeclarationTest {
     fun testFunctionLevelTuple() {
         with(
             TestLanguageFrontend(
-                ctx =
-                    TranslationContext(
-                        TranslationConfiguration.builder().defaultPasses().build(),
-                        ScopeManager(),
-                        TypeManager(),
-                    )
+                ctx = TranslationContext(TranslationConfiguration.builder().defaultPasses().build())
             )
         ) {
             val result = build {

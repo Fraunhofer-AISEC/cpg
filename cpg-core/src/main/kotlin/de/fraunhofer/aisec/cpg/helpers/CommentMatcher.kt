@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.helpers
 
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
@@ -43,10 +44,10 @@ class CommentMatcher {
      * region.
      */
     fun getEnclosingChild(
-        node: Node,
+        node: AstNode,
         location: Region,
         artifactLocation: PhysicalLocation.ArtifactLocation?,
-    ): Node {
+    ): AstNode {
         // If there's an ArtifactLocation specified, it should at least be in the same file.
         val children =
             node.astChildren
@@ -86,8 +87,8 @@ class CommentMatcher {
         tu: TranslationUnitDeclaration,
         artifactLocation: PhysicalLocation.ArtifactLocation? = null,
     ) {
-        var enclosingNode: Node = tu
-        var smallestEnclosingNode: Node = getEnclosingChild(tu, location, artifactLocation)
+        var enclosingNode: AstNode = tu
+        var smallestEnclosingNode = getEnclosingChild(tu, location, artifactLocation)
         while (enclosingNode != smallestEnclosingNode) {
             enclosingNode = smallestEnclosingNode
             smallestEnclosingNode =

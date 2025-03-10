@@ -531,7 +531,7 @@ class Application : Callable<Int> {
         return translationConfiguration.build()
     }
 
-    public fun printSchema(filenames: Collection<String>, format: Schema.Format) {
+    fun printSchema(filenames: Collection<String>, format: Schema.Format) {
         val schema = Schema()
         schema.extractSchema()
         filenames.forEach { schema.printToFile(it, format) }

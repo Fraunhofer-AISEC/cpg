@@ -34,7 +34,6 @@ import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.Util
-import java.util.function.Supplier
 import org.eclipse.cdt.core.dom.ast.*
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTCompositeTypeSpecifier
 import org.eclipse.cdt.core.dom.ast.gnu.cpp.GPPLanguage
@@ -47,8 +46,7 @@ import org.eclipse.cdt.internal.core.dom.parser.cpp.*
  *
  * See [DeclarationHandler] for a detailed explanation, why this is split into a dedicated handler.
  */
-class DeclaratorHandler(lang: CXXLanguageFrontend) :
-    CXXHandler<Declaration, IASTNode>(Supplier(::ProblemDeclaration), lang) {
+class DeclaratorHandler(lang: CXXLanguageFrontend) : CXXHandler<Declaration, IASTNode>(lang) {
 
     override fun handleNode(node: IASTNode): Declaration {
         return when (node) {
@@ -94,7 +92,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         // This is just a nested declarator, i.e. () wrapping the real declarator
         if (ctx.initializer == null && ctx.nestedDeclarator is IASTDeclarator) {
             return handle(ctx.nestedDeclarator)
-                ?: ProblemDeclaration("could not parse nested declaration")
+                ?: newProblemDeclaration("could not parse nested declaration")
         }
 
         val name = ctx.name.toString()
@@ -267,7 +265,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         // (probably the global scope), but associate it to the named scope.
         if (parentScope != null && outsideOfScope) {
             // Bypass the scope manager and manually add it to the AST parent
-            val scopeParent = frontend.scopeManager.currentScope?.astNode
+            val scopeParent = frontend.scopeManager.currentScope.astNode
             if (scopeParent != null && scopeParent is DeclarationHolder) {
                 scopeParent.addDeclaration(declaration)
             }
@@ -503,6 +501,9 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             }
         }
     }
+
+    override val problemConstructor: (String, IASTNode?) -> Declaration
+        get() = { problem, rawNode -> newProblemDeclaration(problem, rawNode = rawNode) }
 }
 
 /**

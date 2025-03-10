@@ -47,7 +47,10 @@ class ArgumentHolderTest {
                     newConditionalExpression(newLiteral(true)),
                     newDoStatement(),
                     newInitializerListExpression(),
-                    newKeyValueExpression(key = ProblemExpression(), value = ProblemExpression()),
+                    newKeyValueExpression(
+                        key = ProblemExpression(ctx),
+                        value = ProblemExpression(ctx),
+                    ),
                     newSubscriptExpression(),
                     newWhileStatement(),
                     newAssignExpression(),

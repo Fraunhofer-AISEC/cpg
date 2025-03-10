@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
@@ -39,8 +40,8 @@ import org.neo4j.ogm.annotation.Relationship
 import org.neo4j.ogm.annotation.Transient
 
 /** Represents a C++ union/struct/class or Java class */
-open class RecordDeclaration :
-    Declaration(), DeclarationHolder, StatementHolder, EOGStarterHolder, DeclaresType {
+open class RecordDeclaration internal constructor(ctx: TranslationContext) :
+    Declaration(ctx), DeclarationHolder, StatementHolder, EOGStarterHolder, DeclaresType {
     /** The kind, i.e. struct, class, union or enum. */
     var kind: String? = null
 
@@ -165,9 +166,9 @@ open class RecordDeclaration :
     }
 
     @DoNotPersist
-    override val eogStarters: List<Node>
+    override val eogStarters: List<AstNode>
         get() {
-            val list = mutableListOf<Node>()
+            val list = mutableListOf<AstNode>()
 
             list += fields
             list += methods

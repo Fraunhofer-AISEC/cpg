@@ -38,6 +38,8 @@ import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.IterativeGraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.inference.DFGFunctionSummaries
+import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
+import de.fraunhofer.aisec.cpg.processing.strategy.Strategy.AST_FORWARD
 
 /** Adds the DFG edges for various types of nodes. */
 @DependsOn(SymbolResolver::class)
@@ -51,7 +53,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         )
 
         val inferDfgForUnresolvedCalls = config.inferenceConfiguration.inferDfgForUnresolvedSymbols
-        val walker = IterativeGraphWalker()
+        val walker = IterativeGraphWalker(Strategy::AST_FORWARD)
         walker.registerOnNodeVisit { node, parent ->
             handle(node, parent, inferDfgForUnresolvedCalls, config.functionSummaries)
         }
@@ -552,7 +554,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * - from base (if available) to the CallExpression
      * - from all arguments to the CallExpression
      */
-    protected fun handleUnresolvedCalls(call: CallExpression, dfgTarget: Node) {
+    protected fun handleUnresolvedCalls(call: CallExpression, dfgTarget: DataflowNode) {
         if (call is MemberCallExpression && !call.isStatic) {
             call.base?.let { dfgTarget.prevDFGEdges += it }
         }

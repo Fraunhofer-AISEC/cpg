@@ -26,18 +26,16 @@
 package de.fraunhofer.aisec.cpg.frontends.golang
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.ProblemNode
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.NamespaceScope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.helpers.Util
-import java.util.function.Supplier
 
-abstract class GoHandler<ResultNode : Node?, HandlerNode : GoStandardLibrary.Ast.Node>(
-    configConstructor: Supplier<ResultNode?>,
-    lang: GoLanguageFrontend,
-) : Handler<ResultNode?, HandlerNode, GoLanguageFrontend>(configConstructor, lang) {
+abstract class GoHandler<ResultNode : AstNode?, HandlerNode : GoStandardLibrary.Ast.Node>(
+    frontend: GoLanguageFrontend
+) : Handler<ResultNode, HandlerNode, GoLanguageFrontend>(frontend) {
     /**
      * We intentionally override the logic of [Handler.handle] because we do not want the map-based
      * logic, but rather want to make use of the Kotlin-when syntax.
@@ -73,12 +71,7 @@ abstract class GoHandler<ResultNode : Node?, HandlerNode : GoStandardLibrary.Ast
             "Parsing of type $name is not supported (yet)",
         )
 
-        val cpgNode = this.configConstructor.get()
-        if (cpgNode is ProblemNode) {
-            cpgNode.problem = "Parsing of type $name is not supported (yet)"
-        }
-
-        return cpgNode!!
+        return this.problemConstructor("Parsing of type $name is not supported (yet)", node)
     }
 
     /**
@@ -98,7 +91,7 @@ abstract class GoHandler<ResultNode : Node?, HandlerNode : GoStandardLibrary.Ast
             // might be suitable to look up the specific package in the scope manager. In the
             // future, we might need a better solution.
             val namespace =
-                frontend.scopeManager
+                this@GoHandler.frontend.scopeManager
                     .filterScopes {
                         it is NamespaceScope &&
                             (it.astNode as? NamespaceDeclaration)?.path == filename
@@ -110,7 +103,8 @@ abstract class GoHandler<ResultNode : Node?, HandlerNode : GoStandardLibrary.Ast
                 // We can directly take the "real" namespace name then
                 return namespace.name.localName
             } else {
-                val path = frontend.expressionHandler.handle(this.path) as? Literal<*>
+                val path =
+                    this@GoHandler.frontend.expressionHandler.handle(this.path) as? Literal<*>
                 val paths = (path?.value as? String)?.split("/") ?: listOf()
 
                 // Return the last name in the path as the import name. However, if the last name is

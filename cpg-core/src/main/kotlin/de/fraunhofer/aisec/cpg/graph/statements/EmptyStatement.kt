@@ -25,4 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
-class EmptyStatement : Statement()
+import de.fraunhofer.aisec.cpg.TranslationContext
+
+class EmptyStatement internal constructor(ctx: TranslationContext) : Statement(ctx)

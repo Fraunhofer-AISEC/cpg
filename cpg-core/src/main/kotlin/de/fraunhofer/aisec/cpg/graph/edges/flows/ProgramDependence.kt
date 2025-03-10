@@ -78,21 +78,21 @@ class ProgramDependences<NodeType : Node> :
  * nature of this dependency is defined by [dependence].
  */
 @RelationshipEntity
-open class ProgramDependence(
-    start: Node,
-    end: Node,
+open class ProgramDependence<NodeType : Node>(
+    start: NodeType,
+    end: NodeType,
     /**
      * The type of dependence (e.g. control or data or none). This selection is defined by the class
      * extending this class or in the [ProgramDependenceGraphPass].
      */
     var dependence: DependenceType,
-) : Edge<Node>(start, end) {
+) : Edge<NodeType>(start, end) {
 
     override var labels = setOf("PDG")
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is ProgramDependence) return false
+        if (other !is ProgramDependence<*>) return false
         return super.equals(other) && this.dependence == other.dependence
     }
 

@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import java.math.BigInteger
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
@@ -37,7 +38,7 @@ import org.neo4j.ogm.typeconversion.AttributeConverter
  *
  * @param <T> the literal type. </T>
  */
-class Literal<T> : Expression() {
+class Literal<T> internal constructor(ctx: TranslationContext) : Expression(ctx) {
     @Convert(ValueConverter::class) var value: T? = null
 
     override fun toString(): String {

@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
@@ -32,7 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.Objects
 import org.neo4j.ogm.annotation.Relationship
 
-class SynchronizedStatement : Statement() {
+class SynchronizedStatement internal constructor(ctx: TranslationContext) : Statement(ctx) {
     @Relationship(value = "EXPRESSION") var expressionEdge = astOptionalEdgeOf<Expression>()
     var expression by unwrapping(SynchronizedStatement::expressionEdge)
 

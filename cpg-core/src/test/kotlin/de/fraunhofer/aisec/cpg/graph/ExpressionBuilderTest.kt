@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.builder.plus
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextIn
@@ -40,10 +41,11 @@ import kotlin.test.assertTrue
 class ExpressionBuilderTest {
     @Test
     fun testDuplicateWithDFGProperties() {
-        val node1 = Literal<Int>()
-        val node2 = Reference()
-        val granularity = FieldDataflowGranularity(FieldDeclaration())
-        val callingContextIn = CallingContextIn(CallExpression())
+        val ctx = TranslationContext()
+        val node1 = Literal<Int>(ctx)
+        val node2 = Reference(ctx)
+        val granularity = FieldDataflowGranularity(FieldDeclaration(ctx))
+        val callingContextIn = CallingContextIn(CallExpression(ctx))
         node1.prevDFGEdges.addContextSensitive(node2, granularity, callingContextIn)
 
         val clone = node1.duplicate(false)
@@ -57,10 +59,11 @@ class ExpressionBuilderTest {
 
     @Test
     fun testDuplicateWithDFGProperties2() {
-        val node1 = Literal<Int>()
-        val node2 = Reference()
-        val granularity = FieldDataflowGranularity(FieldDeclaration())
-        val callingContextIn = CallingContextIn(CallExpression())
+        val ctx = TranslationContext()
+        val node1 = Literal<Int>(ctx)
+        val node2 = Reference(ctx)
+        val granularity = FieldDataflowGranularity(FieldDeclaration(ctx))
+        val callingContextIn = CallingContextIn(CallExpression(ctx))
         node1.nextDFGEdges.addContextSensitive(node2, granularity, callingContextIn)
 
         val clone = node1.duplicate(false)

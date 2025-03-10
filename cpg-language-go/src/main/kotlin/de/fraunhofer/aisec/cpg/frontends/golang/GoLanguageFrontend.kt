@@ -70,7 +70,7 @@ class GoLanguageFrontend(ctx: TranslationContext, language: Language<GoLanguageF
     LanguageFrontend<GoStandardLibrary.Ast.Node, GoStandardLibrary.Ast.Expr>(ctx, language) {
 
     private var currentFileSet: GoStandardLibrary.Ast.FileSet? = null
-    private var currentModule: GoStandardLibrary.Modfile.File? = null
+    private var currentModule: Modfile.File? = null
     private var commentMap: GoStandardLibrary.Ast.CommentMap? = null
     var currentFile: GoStandardLibrary.Ast.File? = null
 
@@ -293,7 +293,7 @@ class GoLanguageFrontend(ctx: TranslationContext, language: Language<GoLanguageF
                     val returnTypes = type.results?.list?.map { typeOf(it.type) } ?: listOf()
                     val name = funcTypeName(paramTypes, returnTypes)
 
-                    FunctionType(name, paramTypes, returnTypes, this.language)
+                    FunctionType(ctx, name, paramTypes, returnTypes, this.language)
                 }
                 is GoStandardLibrary.Ast.IndexExpr -> {
                     // A go type constraint, aka generic

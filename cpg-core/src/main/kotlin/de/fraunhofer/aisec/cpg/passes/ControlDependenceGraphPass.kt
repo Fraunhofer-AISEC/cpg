@@ -26,25 +26,22 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.BranchingNode
+import de.fraunhofer.aisec.cpg.graph.DataflowNode
+import de.fraunhofer.aisec.cpg.graph.EvaluatedNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.cyclomaticComplexity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
-import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CollectionComprehension
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ComprehensionExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConditionalExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ShortCircuitOperator
+import de.fraunhofer.aisec.cpg.graph.statements.*
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.functional.Lattice
 import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
-import kotlin.collections.component1
-import kotlin.collections.component2
 
 /** This pass builds the Control Dependence Graph (CDG) by iterating through the EOG. */
 @DependsOn(EvaluationOrderGraphPass::class)
@@ -74,7 +71,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
      *    parent node and the path(s) through which the [BranchingNode] node is reachable. 3.c)
      *    Repeat step 3) until you cannot move the node upwards in the CDG anymore.
      */
-    override fun accept(startNode: Node) {
+    override fun accept(startNode: AstNode) {
         // For now, we only execute this for function declarations, we will support all EOG starters
         // in the future.
         if (startNode !is FunctionDeclaration) {
@@ -90,7 +87,9 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
         }
 
         val prevEOGState =
-            PrevEOGState(innerLattice = PrevEOGLattice(innerLattice = PowersetLattice<Node>()))
+            PrevEOGState(
+                innerLattice = PrevEOGLattice(innerLattice = PowersetLattice<EvaluatedNode>())
+            )
 
         // Maps nodes to their "cdg parent" (i.e. the dominator) and also has the information
         // through which path it is reached. If all outgoing paths of the node's dominator result in
@@ -110,9 +109,26 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
 
         // Collect the information, identify merge points, etc. This is not really efficient yet :(
         for ((node, dominatorPaths) in finalState) {
+            if (node !is DataflowNode) {
+                // The filtering here is necessary since we get an EOG node from the worklist, but
+                // we need to work on dataflow-nodes because the CDG is only available there. In
+                // practice this will always either be a overlay node or an ast node and they
+                // implement both EOG and DFG nodes.
+                continue
+            }
+
             val dominatorsList =
-                dominatorPaths.entries.map { (k, v) -> Pair(k, v.toMutableSet()) }.toMutableList()
-            val finalDominators = mutableListOf<Pair<Node, MutableSet<Node>>>()
+                dominatorPaths.entries
+                    .mapNotNull { (k, v) ->
+                        // Filtering because of the same reason as above
+                        if (k is DataflowNode) {
+                            Pair(k, v.toMutableSet())
+                        } else {
+                            null
+                        }
+                    }
+                    .toMutableList()
+            val finalDominators = mutableListOf<Pair<DataflowNode, MutableSet<EvaluatedNode>>>()
             val conditionKeys =
                 dominatorPaths.entries
                     .filter { (k, _) ->
@@ -128,6 +144,11 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
                 for (k1 in conditionKeys) {
                     dominatorsList.removeIf { k1 == it.first }
                     finalState[k1]?.forEach { (newK, newV) ->
+                        if (newK !is DataflowNode) {
+                            // Filtering because of the same reason as above
+                            return@forEach
+                        }
+
                         val entry = dominatorsList.firstOrNull { it.first == newK }
                         entry?.let {
                             dominatorsList.remove(entry)
@@ -148,6 +169,11 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
                     // entries in finalDominators list and update it (if necessary)
                     val newDominatorMap = finalState[k]
                     newDominatorMap?.forEach { (newK, newV) ->
+                        if (newK !is DataflowNode) {
+                            // Filtering because of the same reason as above
+                            return@forEach
+                        }
+
                         when {
                             dominatorsList.any { it.first == newK } -> {
                                 // Entry exists => update it
@@ -241,7 +267,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
                     functionDeclaration.allChildren<
                         ComprehensionExpression
                     >()) // TODO: May be simplified when resolving issue 2027
-                .filterIsInstance<Node>()
+                .filterIsInstance<EvaluatedNode>()
                 .map { branchingNode ->
                     val mergingPoints =
                         if (branchingNode.nextEOGEdges.any { !it.isConditionalBranch() }) {
@@ -283,16 +309,17 @@ fun handleEdge(
     val lattice = lattice as? PrevEOGState ?: return currentState
     var newState = currentState
 
-    val currentStart = currentEdge.start
+    val currentStart = currentEdge.start as EvaluatedNode
 
     // Check if we start in a branching node and if this edge leads to the conditional
     // branch. In this case, the next node will move "one layer downwards" in the CDG.
     if (
         currentStart is BranchingNode ||
             currentStart is ComprehensionExpression ||
-            currentStart.astParent is
-                ComprehensionExpression && // TODO: May be simplified when resolving issue 2027
-                currentStart == (currentStart.astParent as ComprehensionExpression).iterable
+            (currentStart is AstNode &&
+                currentStart.astParent is
+                    ComprehensionExpression && // TODO: May be simplified when resolving issue 2027
+                currentStart == (currentStart.astParent as ComprehensionExpression).iterable)
     ) { // && currentEdge.isConditionalBranch()) {
         // We start in a branching node and end in one of the branches, so we have the
         // following state:
@@ -342,8 +369,9 @@ private fun EvaluationOrder.isConditionalBranch(): Boolean {
     } else
         (this.start is IfStatement ||
             this.start is ComprehensionExpression ||
-            (this.start.astParent is ComprehensionExpression &&
-                this.start == (this.start.astParent as ComprehensionExpression).iterable) ||
+            ((this.start as? AstNode)?.astParent is ComprehensionExpression &&
+                this.start ==
+                    ((this.start as? AstNode)?.astParent as ComprehensionExpression).iterable) ||
             this.start is ConditionalExpression ||
             this.start is ShortCircuitOperator) && branch == false ||
             (this.start is IfStatement &&
@@ -378,17 +406,18 @@ private fun IfStatement.allBranchesFromMyThenBranchGoThrough(node: Node?): Boole
     return true
 }
 
-typealias PrevEOGLatticeElement = MapLattice.Element<Node, PowersetLattice.Element<Node>>
+typealias PrevEOGLatticeElement =
+    MapLattice.Element<EvaluatedNode, PowersetLattice.Element<EvaluatedNode>>
 
-typealias PrevEOGLattice = MapLattice<Node, PowersetLattice.Element<Node>>
+typealias PrevEOGLattice = MapLattice<EvaluatedNode, PowersetLattice.Element<EvaluatedNode>>
 
-typealias PrevEOGStateElement = MapLattice.Element<Node, PrevEOGLatticeElement>
+typealias PrevEOGStateElement = MapLattice.Element<EvaluatedNode, PrevEOGLatticeElement>
 
-typealias PrevEOGState = MapLattice<Node, PrevEOGLatticeElement>
+typealias PrevEOGState = MapLattice<EvaluatedNode, PrevEOGLatticeElement>
 
 fun PrevEOGState.push(
     currentElement: PrevEOGStateElement,
-    newNode: Node,
+    newNode: EvaluatedNode,
     newEOGLattice: PrevEOGLatticeElement,
 ): PrevEOGStateElement {
     return this.lub(currentElement, PrevEOGStateElement(newNode to newEOGLattice))

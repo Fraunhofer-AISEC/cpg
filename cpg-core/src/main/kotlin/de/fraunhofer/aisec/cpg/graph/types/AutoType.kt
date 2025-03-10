@@ -25,19 +25,21 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.unknownType
 
 /**
  * This type represents a [Type] that uses auto-inference (usually from an initializer) to determine
- * it's actual type. It is commonly used in dynamically typed languages or in languages that have a
+ * its actual type. It is commonly used in dynamically typed languages or in languages that have a
  * special keyword, such as `auto` in C++.
  *
  * Note: This is intentionally a distinct type and not the [UnknownType].
  */
-class AutoType(override var language: Language<*>) : Type("auto", language) {
+class AutoType(ctx: TranslationContext, override var language: Language<*>) :
+    Type(ctx, "auto", language) {
     override fun reference(pointer: PointerType.PointerOrigin?): Type {
-        return PointerType(this, pointer)
+        return PointerType(ctx, this, pointer)
     }
 
     override fun dereference(): Type {

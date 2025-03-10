@@ -33,7 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewArrayExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.SubscriptExpression
-import de.fraunhofer.aisec.cpg.processing.IVisitor
+import de.fraunhofer.aisec.cpg.processing.Visitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import org.jline.utils.AttributedString
@@ -52,7 +52,7 @@ class OutOfBoundsCheck {
         for (tu in result.components.flatMap { it.translationUnits }) {
             tu.accept(
                 Strategy::AST_FORWARD,
-                object : IVisitor<Node>() {
+                object : Visitor<Node>() {
                     fun visit(v: SubscriptExpression) {
                         val evaluator = ValueEvaluator()
                         val resolvedIndex = evaluator.evaluate(v.subscriptExpression)

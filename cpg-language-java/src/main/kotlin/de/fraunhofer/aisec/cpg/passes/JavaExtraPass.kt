@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.codeAndLocationFrom
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.fqn
@@ -38,6 +39,7 @@ import de.fraunhofer.aisec.cpg.helpers.replace
 import de.fraunhofer.aisec.cpg.nameIsType
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
+import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 
 /**
  * This pass is responsible for handling Java-specific cases that are not covered by the general CPG
@@ -48,11 +50,11 @@ import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 @DependsOn(TypeResolver::class)
 @ExecuteBefore(SymbolResolver::class)
 class JavaExtraPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
-    private lateinit var walker: SubgraphWalker.ScopedWalker
+    private lateinit var walker: SubgraphWalker.ScopedWalker<AstNode>
 
     override fun accept(tu: TranslationUnitDeclaration) {
         // Loop through all member expressions
-        walker = SubgraphWalker.ScopedWalker(ctx.scopeManager)
+        walker = SubgraphWalker.ScopedWalker(ctx.scopeManager, Strategy::AST_FORWARD)
         walker.registerHandler { node ->
             when (node) {
                 is MemberExpression -> handleMemberExpression(node)

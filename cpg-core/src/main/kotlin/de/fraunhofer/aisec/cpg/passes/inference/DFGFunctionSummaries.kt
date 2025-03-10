@@ -289,7 +289,7 @@ class DFGFunctionSummaries {
                 } else if (entry.to == "return") {
                     functionDeclaration
                 } else if (entry.to.startsWith("return")) {
-                    val returnIndex = entry.to.removePrefix("param").toInt()
+                    entry.to.removePrefix("param").toInt()
                     // TODO: It would be nice if we could model the index. Not sure how this is done
                     functionDeclaration
                 } else {

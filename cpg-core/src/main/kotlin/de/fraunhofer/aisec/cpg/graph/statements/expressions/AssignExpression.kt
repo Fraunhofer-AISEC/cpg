@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
@@ -54,8 +55,8 @@ import org.slf4j.LoggerFactory
  * [usedAsExpression]. When this property is set to true (it defaults to false), we model a dataflow
  * from the (first) rhs to the [AssignExpression] itself.
  */
-class AssignExpression :
-    Expression(), AssignmentHolder, ArgumentHolder, HasType.TypeObserver, HasOperatorCode {
+class AssignExpression internal constructor(ctx: TranslationContext) :
+    Expression(ctx), AssignmentHolder, ArgumentHolder, HasType.TypeObserver, HasOperatorCode {
 
     override var operatorCode: String = "="
 

@@ -26,17 +26,13 @@
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.ProblemNode
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.helpers.Util
-import java.util.function.Supplier
 import org.eclipse.cdt.core.dom.ast.IASTNode
 import org.eclipse.cdt.internal.core.dom.parser.ASTNode
 
-abstract class CXXHandler<S : Node, T : IASTNode>(
-    configConstructor: Supplier<S>,
-    lang: CXXLanguageFrontend,
-) : Handler<S, T, CXXLanguageFrontend>(configConstructor, lang) {
+abstract class CXXHandler<S : AstNode, T : IASTNode>(frontend: CXXLanguageFrontend) :
+    Handler<S, T, CXXLanguageFrontend>(frontend) {
 
     /**
      * We intentionally override the logic of [Handler.handle] because we do not want the map-based
@@ -44,7 +40,7 @@ abstract class CXXHandler<S : Node, T : IASTNode>(
      */
     override fun handle(ctx: T): S? {
         // If we do not want to load includes into the CPG and the current fileLocation was included
-        if (!frontend.config.loadIncludes && ctx is ASTNode) {
+        if (!this@CXXHandler.frontend.config.loadIncludes && ctx is ASTNode) {
             val astNode = ctx as ASTNode
             if (
                 astNode.fileLocation != null &&
@@ -57,7 +53,7 @@ abstract class CXXHandler<S : Node, T : IASTNode>(
 
         val node = handleNode(ctx)
 
-        frontend.process(ctx, node)
+        this@CXXHandler.frontend.process(ctx, node)
 
         this.lastNode = node
 
@@ -72,17 +68,12 @@ abstract class CXXHandler<S : Node, T : IASTNode>(
      */
     protected fun handleNotSupported(node: T, name: String): S {
         Util.errorWithFileLocation(
-            frontend,
+            this@CXXHandler.frontend,
             node,
             log,
             "Parsing of type $name is not supported (yet)",
         )
 
-        val cpgNode = this.configConstructor.get()
-        if (cpgNode is ProblemNode) {
-            cpgNode.problem = "Parsing of type $name is not supported (yet)"
-        }
-
-        return cpgNode
+        return this.problemConstructor("Parsing of type $name is not supported (yet)", node)
     }
 }

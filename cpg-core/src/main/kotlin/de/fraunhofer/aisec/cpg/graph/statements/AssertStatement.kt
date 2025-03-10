@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
@@ -32,7 +33,7 @@ import java.util.Objects
 import org.neo4j.ogm.annotation.Relationship
 
 /** Represents an assert statement */
-class AssertStatement : Statement() {
+class AssertStatement internal constructor(ctx: TranslationContext) : Statement(ctx) {
     @Relationship(value = "CONDITION") var conditionEdge = astOptionalEdgeOf<Expression>()
     /** The condition to be evaluated. */
     var condition by unwrapping(AssertStatement::conditionEdge)

@@ -33,8 +33,8 @@ import de.fraunhofer.aisec.cpg.frontends.HasGlobalVariables
 import de.fraunhofer.aisec.cpg.frontends.HasImplicitReceiver
 import de.fraunhofer.aisec.cpg.frontends.HasStructs
 import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Name
-import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.calls
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.invoke
@@ -64,7 +64,7 @@ import kotlin.collections.forEach
  * Tries to infer a [NamespaceDeclaration] from a [Name]. This will return `null`, if inference was
  * not possible, or if it was turned off in the [InferenceConfiguration].
  */
-fun Pass<*>.tryNamespaceInference(name: Name, source: Node): NamespaceDeclaration? {
+fun Pass<*>.tryNamespaceInference(name: Name, source: AstNode): NamespaceDeclaration? {
     // Determine the scope where we want to start our inference
     val extractedScope =
         scopeManager.extractScope(name, language = source.language, location = source.location)
@@ -84,7 +84,7 @@ fun Pass<*>.tryNamespaceInference(name: Name, source: Node): NamespaceDeclaratio
     }
 
     return (holder ?: scopeManager.translationUnitForInference<NamespaceDeclaration>(source))
-        ?.startInference(ctx)
+        .startInference(ctx)
         ?.inferNamespaceDeclaration(name, null, source)
 }
 
@@ -92,7 +92,7 @@ fun Pass<*>.tryNamespaceInference(name: Name, source: Node): NamespaceDeclaratio
  * Tries to infer a [RecordDeclaration] from an unresolved [Type]. This will return `null`, if
  * inference was not possible, or if it was turned off in the [InferenceConfiguration].
  */
-internal fun Pass<*>.tryRecordInference(type: Type, source: Node): RecordDeclaration? {
+internal fun Pass<*>.tryRecordInference(type: Type, source: AstNode): RecordDeclaration? {
     val kind =
         if (type.language is HasStructs) {
             "struct"
@@ -105,7 +105,7 @@ internal fun Pass<*>.tryRecordInference(type: Type, source: Node): RecordDeclara
             type.name,
             language = source.language,
             location = source.location,
-            scope = type.scope,
+            scope = type.scope ?: scopeManager.currentScope,
         )
     var scope = extractedScope?.scope
 
@@ -179,7 +179,7 @@ internal fun Pass<*>.tryVariableInference(ref: Reference): VariableDeclaration? 
     } else if (ref.name.isQualified()) {
         // For now, we only infer globals at the top-most global level, i.e., no globals in
         // namespaces
-        val extractedScope = scopeManager.extractScope(ref, ref.language, null)
+        val extractedScope = scopeManager.extractScope(ref, ref.language)
         when (val scope = extractedScope?.scope) {
             is NameScope -> {
                 log.warn(
@@ -317,7 +317,7 @@ internal fun Pass<*>.tryFunctionInference(
             scope = scopeManager.globalScope
         }
         val func =
-            when (val start = scope?.astNode) {
+            when (val start = scope.astNode) {
                 is TranslationUnitDeclaration -> start.inferFunction(call, ctx = this.ctx)
                 is NamespaceDeclaration -> start.inferFunction(call, ctx = this.ctx)
                 else -> null
@@ -400,9 +400,8 @@ internal fun Pass<*>.tryMethodInference(
         }
 
     if (inferGlobalFunction) {
-        var currentTU =
-            scopeManager.currentScope?.globalScope?.astNode as? TranslationUnitDeclaration
-        return listOfNotNull(currentTU?.inferFunction(call, ctx = ctx))
+        var tu = scopeManager.translationUnitForInference<FunctionDeclaration>(call)
+        return listOfNotNull(tu?.inferFunction(call, ctx = ctx))
     }
 
     var records =
@@ -432,7 +431,7 @@ internal fun Pass<*>.tryMethodInference(
  * check will be repeated for `java.lang`, until we are finally ready to infer the
  * [RecordDeclaration] `java.lang.System`.
  */
-internal fun Pass<*>.tryScopeInference(scopeName: Name, source: Node): Declaration? {
+internal fun Pass<*>.tryScopeInference(scopeName: Name, source: AstNode): Declaration? {
     // At this point, we need to check whether we have any type reference to our scope
     // name. If we have (e.g. it is used in a function parameter, variable, etc.), then we
     // have a high chance that this is actually a parent record and not a namespace

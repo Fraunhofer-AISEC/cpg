@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import java.util.*
@@ -54,7 +55,7 @@ import org.neo4j.ogm.annotation.Relationship
  *
  * Individual meaning of the range indices might differ per language.
  */
-class RangeExpression : Expression() {
+class RangeExpression internal constructor(ctx: TranslationContext) : Expression(ctx) {
     @Relationship("FLOOR") var floorEdge = astOptionalEdgeOf<Expression>()
     /** The lower bound ("floor") of the range. This index is usually *inclusive*. */
     var floor by unwrapping(RangeExpression::floorEdge)

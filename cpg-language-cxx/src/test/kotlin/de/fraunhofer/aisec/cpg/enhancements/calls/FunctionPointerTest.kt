@@ -148,8 +148,8 @@ internal class FunctionPointerTest : BaseTest() {
 
     private fun getSourceFunction(variable: VariableDeclaration): FunctionDeclaration {
         val functions: MutableList<FunctionDeclaration> = ArrayList()
-        val worklist: Deque<Node> = ArrayDeque()
-        val seen = Collections.newSetFromMap(IdentityHashMap<Node, Boolean>())
+        val worklist: Deque<DataflowNode> = ArrayDeque()
+        val seen = Collections.newSetFromMap(IdentityHashMap<DataflowNode, Boolean>())
         worklist.push(variable)
         while (!worklist.isEmpty()) {
             val curr = worklist.pop()
@@ -159,10 +159,10 @@ internal class FunctionPointerTest : BaseTest() {
             if (curr is FunctionDeclaration) {
                 functions.add(curr)
             } else {
-                curr.prevDFG.forEach(Consumer { e: Node -> worklist.push(e) })
+                curr.prevDFG.forEach { e -> worklist.push(e) }
             }
         }
-        if (functions.size == 0) {
+        if (functions.isEmpty()) {
             variable.usageEdges
                 .filter { it.access == AccessValues.WRITE }
                 .forEach { worklist.push(it.end) }
@@ -174,7 +174,7 @@ internal class FunctionPointerTest : BaseTest() {
                 if (curr is FunctionDeclaration) {
                     functions.add(curr)
                 } else {
-                    curr.prevDFG.forEach(Consumer { e: Node -> worklist.push(e) })
+                    curr.prevDFG.forEach { e -> worklist.push(e) }
                 }
             }
         }

@@ -80,9 +80,9 @@ abstract class TranslationUnitPass(ctx: TranslationContext) : Pass<TranslationUn
  * If used with [executePass], one [Pass] object is instantiated for each [Node] in a
  * [EOGStarterHolder] in each [TranslationUnitDeclaration] in each [Component].
  */
-abstract class EOGStarterPass(ctx: TranslationContext) : Pass<Node>(ctx)
+abstract class EOGStarterPass(ctx: TranslationContext) : Pass<AstNode>(ctx)
 
-open class PassConfiguration {}
+open class PassConfiguration
 
 /**
  * Represents an abstract class that enhances the graph before it is persisted. Passes can exist at
@@ -95,7 +95,7 @@ open class PassConfiguration {}
  * passes. Instead of directly subclassing this type, one of the types [TranslationResultPass],
  * [ComponentPass] or [TranslationUnitPass] must be used.
  */
-sealed class Pass<T : Node>(final override val ctx: TranslationContext) :
+sealed class Pass<T : AstNode>(final override val ctx: TranslationContext) :
     Consumer<T>, ContextProvider, RawNodeTypeProvider<Nothing>, ScopeProvider {
     var name: String
         protected set
@@ -113,7 +113,7 @@ sealed class Pass<T : Node>(final override val ctx: TranslationContext) :
      * actually setting the correct scope within the [scopeManager], e.g., by using the
      * [ScopedWalker].
      */
-    override val scope: Scope?
+    override val scope: Scope
         get() = scopeManager.currentScope
 
     abstract fun cleanup()
@@ -246,7 +246,7 @@ fun executePassesInParallel(
  */
 @Suppress("USELESS_CAST")
 fun executePass(
-    cls: KClass<out Pass<out Node>>,
+    cls: KClass<out Pass<out AstNode>>,
     ctx: TranslationContext,
     result: TranslationResult,
     executedFrontends: Collection<LanguageFrontend<*, *>>,
@@ -309,7 +309,7 @@ fun executePass(
  * Depending on the configuration of [TranslationConfiguration.useParallelPasses], the individual
  * targets will either be consumed sequentially or in parallel.
  */
-private inline fun <reified T : Node> consumeTargets(
+private inline fun <reified T : AstNode> consumeTargets(
     cls: KClass<out Pass<T>>,
     ctx: TranslationContext,
     targets: Collection<T>,
@@ -333,7 +333,7 @@ private inline fun <reified T : Node> consumeTargets(
  * different instances of the same [Pass] class are executed at the same time (on different [target]
  * nodes) using this function.
  */
-private inline fun <reified T : Node> consumeTarget(
+private inline fun <reified T : AstNode> consumeTarget(
     cls: KClass<out Pass<T>>,
     ctx: TranslationContext,
     target: T,
@@ -361,7 +361,7 @@ private inline fun <reified T : Node> consumeTarget(
  * [language]. Currently, we only allow replacement on translation unit level, as this is the only
  * level which has a single language set.
  */
-fun <T : Node> checkForReplacement(
+fun <T : AstNode> checkForReplacement(
     cls: KClass<out Pass<T>>,
     language: Language<*>?,
     config: TranslationConfiguration,

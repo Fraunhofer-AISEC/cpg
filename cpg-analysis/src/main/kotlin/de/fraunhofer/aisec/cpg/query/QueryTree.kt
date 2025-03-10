@@ -152,7 +152,7 @@ open class QueryTree<T>(
 
     override fun equals(other: Any?): Boolean {
         if (other is QueryTree<*>) {
-            return this.value?.equals(other.value) ?: false
+            return this.value?.equals(other.value) == true
         }
 
         return super.equals(other)

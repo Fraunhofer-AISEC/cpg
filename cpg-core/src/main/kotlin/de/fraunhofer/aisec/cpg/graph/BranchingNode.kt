@@ -28,5 +28,5 @@ package de.fraunhofer.aisec.cpg.graph
 /** A node triggering a conditional execution of other code. */
 interface BranchingNode {
     /** The node which affects the next EOG edge. Typically, this is a condition or similar. */
-    val branchedBy: Node?
+    val branchedBy: AstNode?
 }

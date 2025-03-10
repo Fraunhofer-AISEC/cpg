@@ -25,13 +25,15 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.fqn
 
 /**
  * The declaration of a constructor within a [RecordDeclaration]. Is it essentially a special case
  * of a [MethodDeclaration].
  */
-class ConstructorDeclaration : MethodDeclaration() {
+class ConstructorDeclaration internal constructor(ctx: TranslationContext) :
+    MethodDeclaration(ctx) {
     // constructors always have implicitly the return type of their class
     override var recordDeclaration: RecordDeclaration?
         get() = super.recordDeclaration

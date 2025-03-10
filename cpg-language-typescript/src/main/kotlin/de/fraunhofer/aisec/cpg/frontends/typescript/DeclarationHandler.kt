@@ -29,8 +29,8 @@ import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 
-class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
-    Handler<Declaration, TypeScriptNode, TypeScriptLanguageFrontend>(::ProblemDeclaration, lang) {
+class DeclarationHandler(frontend: TypeScriptLanguageFrontend) :
+    Handler<Declaration, TypeScriptNode, TypeScriptLanguageFrontend>(frontend) {
     init {
         map.put(TypeScriptNode::class.java, ::handleNode)
     }
@@ -51,7 +51,7 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
             "ClassDeclaration" -> return handleClassDeclaration(node)
         }
 
-        return ProblemDeclaration("No handler was implemented for node of type " + node.type)
+        return problemConstructor("No handler was implemented for node of type " + node.type, node)
     }
 
     private fun handlePropertySignature(node: TypeScriptNode): FieldDeclaration {
@@ -208,4 +208,7 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
 
         return declaration
     }
+
+    override val problemConstructor: (String, TypeScriptNode?) -> Declaration
+        get() = { problem, rawNode -> newProblemDeclaration(problem, rawNode = rawNode) }
 }

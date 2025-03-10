@@ -25,8 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
+import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.BranchingNode
-import de.fraunhofer.aisec.cpg.graph.Node
 
 /**
  * A [BinaryOperator] which only evaluates [BinaryOperator.rhs] if [BinaryOperator.lhs] fulfils some
@@ -36,7 +37,8 @@ import de.fraunhofer.aisec.cpg.graph.Node
  * [de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators.disjunctiveOperators], the lhs has to
  * evaluate to "false" (or similar).
  */
-class ShortCircuitOperator : BinaryOperator(), BranchingNode {
-    override val branchedBy: Node
+class ShortCircuitOperator internal constructor(ctx: TranslationContext) :
+    BinaryOperator(ctx), BranchingNode {
+    override val branchedBy: AstNode
         get() = lhs
 }

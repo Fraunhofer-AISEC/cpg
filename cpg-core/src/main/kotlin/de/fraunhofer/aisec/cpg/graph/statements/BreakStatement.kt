@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import java.util.Objects
 
 /**
@@ -32,7 +33,7 @@ import java.util.Objects
  * context. Can have a loop label, e.g. in Java, to specify which of the nested loops should be
  * broken out of.
  */
-class BreakStatement : Statement() {
+class BreakStatement internal constructor(ctx: TranslationContext) : Statement(ctx) {
     /** Specifies the label of the loop in a nested structure that this statement will 'break' */
     var label: String? = null
 

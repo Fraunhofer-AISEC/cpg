@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
@@ -37,7 +38,7 @@ import org.neo4j.ogm.annotation.Relationship
  * choose from. THe statements executed after the entry are on the same AST hierarchy in the parent
  * compound statement.
  */
-class CaseStatement : Statement() {
+class CaseStatement internal constructor(ctx: TranslationContext) : Statement(ctx) {
     @Relationship(value = "CASE_EXPRESSION")
     var caseExpressionEdge = astOptionalEdgeOf<Expression>()
 

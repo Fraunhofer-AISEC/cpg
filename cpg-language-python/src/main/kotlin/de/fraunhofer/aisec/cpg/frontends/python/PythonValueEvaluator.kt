@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.analysis.ValueEvaluator
+import de.fraunhofer.aisec.cpg.graph.DataflowNode
 import de.fraunhofer.aisec.cpg.graph.HasOperatorCode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
@@ -52,7 +53,7 @@ class PythonValueEvaluator : ValueEvaluator() {
             }
         }
 
-    override fun handlePrevDFG(node: Node, depth: Int): Any? {
+    override fun handlePrevDFG(node: DataflowNode, depth: Int): Any? {
         // We need to handle sys.platform and sys.version_info specially, since it is often used in
         // a pre-processor macro-style, and we want to replace this with the actual value (if we
         // have it). This allows us to dynamically prune if-branches based on constant evaluation.

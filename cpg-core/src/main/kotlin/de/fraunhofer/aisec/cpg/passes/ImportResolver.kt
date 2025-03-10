@@ -28,9 +28,9 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Name
-import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.component
 import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
@@ -59,7 +59,8 @@ import java.util.IdentityHashMap
  * symbols and imports ideally. This is stored in [sorted] and is automatically computed the fist
  * time someone accesses the property.
  */
-class ImportDependencies<T : Node>(modules: MutableList<T>) : IdentityHashMap<T, IdentitySet<T>>() {
+class ImportDependencies<T : AstNode>(modules: MutableList<T>) :
+    IdentityHashMap<T, IdentitySet<T>>() {
 
     init {
         // Populate the map with all modules so that we have an entry in our list
@@ -90,7 +91,8 @@ class ImportDependencies<T : Node>(modules: MutableList<T>) : IdentityHashMap<T,
      * A work-list, which contains a local copy of our dependency map, so that we can remove items
      * from it while determining the order.
      */
-    class WorkList<T : Node>(start: ImportDependencies<T>) : IdentityHashMap<T, IdentitySet<T>>() {
+    class WorkList<T : AstNode>(start: ImportDependencies<T>) :
+        IdentityHashMap<T, IdentitySet<T>>() {
 
         init {
             // Populate the work-list with a copy of the import dependency map
@@ -198,7 +200,7 @@ class ImportDependencies<T : Node>(modules: MutableList<T>) : IdentityHashMap<T,
  */
 class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
 
-    lateinit var walker: SubgraphWalker.ScopedWalker
+    lateinit var walker: SubgraphWalker.ScopedWalker<AstNode>
     lateinit var tr: TranslationResult
 
     override fun accept(tr: TranslationResult) {
@@ -210,7 +212,7 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
 
         // In order to resolve imports as good as possible, we need the information which namespace
         // does an import on which other
-        walker = SubgraphWalker.ScopedWalker(scopeManager)
+        walker = SubgraphWalker.ScopedWalker(scopeManager, Strategy::AST_FORWARD)
         walker.registerHandler { node ->
             if (node is Component) {
                 // Create a new import dependency object for the component, to make sure that all
@@ -275,7 +277,7 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
                     part,
                     import.language,
                     import.location,
-                    import.scope,
+                    import.scope ?: scopeManager.currentScope,
                 ) {
                     // We are only interested in "leaf" namespace declarations, meaning that they do
                     // not have sub-declarations. The reason for that is that we usually need to
@@ -403,7 +405,7 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
 fun ScopeManager.updateImportedSymbols(import: ImportDeclaration) {
     // We always need to search at the global scope because we are "importing" something, so by
     // definition, this is not in the scope of the current file.
-    val scope = globalScope ?: return
+    val scope = globalScope
 
     // Let's do some importing. We need to import either a wildcard
     if (import.style == ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE) {

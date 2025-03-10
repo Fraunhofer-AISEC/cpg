@@ -28,7 +28,9 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.IncompatibleSignature
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.AccessValues
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Component
+import de.fraunhofer.aisec.cpg.graph.DataflowNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
@@ -44,6 +46,7 @@ import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.matchesSignature
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
+import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.util.*
 import java.util.function.Consumer
 
@@ -60,12 +63,12 @@ import java.util.function.Consumer
 @DependsOn(DFGPass::class)
 @DependsOn(ControlFlowSensitiveDFGPass::class, softDependency = true)
 class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
-    private lateinit var walker: ScopedWalker
+    private lateinit var walker: ScopedWalker<AstNode>
     private var inferDfgForUnresolvedCalls = false
 
     override fun accept(component: Component) {
         inferDfgForUnresolvedCalls = config.inferenceConfiguration.inferDfgForUnresolvedSymbols
-        walker = ScopedWalker(scopeManager)
+        walker = ScopedWalker(scopeManager, Strategy::AST_FORWARD)
         walker.registerHandler { node -> handle(node) }
 
         for (tu in component.translationUnits) {
@@ -139,8 +142,8 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             }
 
         val invocationCandidates = mutableListOf<FunctionDeclaration>()
-        val work: Deque<Node> = ArrayDeque()
-        val seen = identitySetOf<Node>()
+        val work: Deque<DataflowNode> = ArrayDeque()
+        val seen = identitySetOf<DataflowNode>()
         work.push(expr)
         while (work.isNotEmpty()) {
             val curr = work.pop()
@@ -182,7 +185,7 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             val prevDFGToPush =
                 curr.prevDFGEdges
                     .filter { it.granularity is FullDataflowGranularity }
-                    .map { it.start }
+                    .map { it.start as DataflowNode }
                     .toMutableList()
             if (curr is MemberExpression && prevDFGToPush.isEmpty()) {
                 // TODO: This is only a workaround!

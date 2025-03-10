@@ -47,9 +47,8 @@ fun LanguageFrontend<*, *>.translationResult(
     init: TranslationResult.() -> Unit
 ): TranslationResult {
     val node = TranslationResult(TranslationManager.builder().config(ctx.config).build(), ctx)
-    val component = Component()
+    val component = Component(ctx)
     component.name = Name(DEFAULT_APPLICATION_NAME)
-    component.ctx = this.ctx
     node.addComponent(component)
     init(node)
 

@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.helpers
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
 import de.fraunhofer.aisec.cpg.graph.*
@@ -41,7 +42,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.problems
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CollectionComprehension
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.variables
 import de.fraunhofer.aisec.cpg.test.BaseTest
 import kotlin.test.Test
@@ -65,7 +65,7 @@ internal class ExtensionsTest : BaseTest() {
             translationResult {
                 translationUnit("foo.bar") {
                     function("foo") { body { declare { problemDecl(problemDeclText) } } }
-                        .additionalProblems += ProblemExpression(problemExprText)
+                        .additionalProblems += newProblemExpression(problemExprText)
                 }
             }
         }
@@ -87,11 +87,12 @@ internal class ExtensionsTest : BaseTest() {
 
     @Test
     fun testApplyWithScopeWithoutCtxAndScopeManager() {
+        val ctx = TranslationContext()
         val collectionComprehension =
-            CollectionComprehension().applyWithScope {
-                val varA = VariableDeclaration()
+            CollectionComprehension(ctx).applyWithScope {
+                val varA = VariableDeclaration(ctx)
                 varA.name = Name("a")
-                val declarationStatement = DeclarationStatement()
+                val declarationStatement = DeclarationStatement(ctx)
                 declarationStatement.addDeclaration(varA)
                 this.statement = declarationStatement
             }

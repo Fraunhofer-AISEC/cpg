@@ -79,7 +79,7 @@ class PerformanceRegressionTest {
     @Test
     fun testTraversal() {
         with(TestLanguageFrontend()) {
-            val tu = TranslationUnitDeclaration()
+            val tu = TranslationUnitDeclaration(ctx)
             val decl = VariableDeclaration()
             val list = InitializerListExpression()
 

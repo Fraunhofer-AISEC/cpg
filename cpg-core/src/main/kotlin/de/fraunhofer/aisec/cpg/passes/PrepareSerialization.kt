@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
@@ -50,7 +51,7 @@ class PrepareSerialization(ctx: TranslationContext) : TranslationUnitPass(ctx) {
     }
 
     override fun accept(tr: TranslationUnitDeclaration) {
-        tr.allChildren<Node>().map { node ->
+        tr.allChildren<AstNode>().map { node ->
             // Add explicit AST edge
             node.astChildren = SubgraphWalker.getAstChildren(node)
             // CallExpression overwrites name property and must be copied to JvmField

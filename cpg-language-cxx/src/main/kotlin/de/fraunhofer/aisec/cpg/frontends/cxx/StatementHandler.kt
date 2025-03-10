@@ -37,14 +37,12 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.helpers.Util
 import java.util.*
 import java.util.function.BiConsumer
-import java.util.function.Supplier
 import java.util.stream.Collectors
 import org.eclipse.cdt.core.dom.ast.*
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTCatchHandler
 import org.eclipse.cdt.internal.core.dom.parser.cpp.*
 
-class StatementHandler(lang: CXXLanguageFrontend) :
-    CXXHandler<Statement, IASTStatement>(Supplier(::ProblemExpression), lang) {
+class StatementHandler(lang: CXXLanguageFrontend) : CXXHandler<Statement, IASTStatement>(lang) {
 
     override fun handleNode(node: IASTStatement): Statement {
         return when (node) {
@@ -286,7 +284,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
     private fun handleExpressionStatement(ctx: IASTExpressionStatement): Expression {
         val expression =
             frontend.expressionHandler.handle(ctx.expression)?.codeAndLocationFromOtherRawNode(ctx)
-                ?: ProblemExpression("could not parse expression in statement")
+                ?: newProblemExpression("could not parse expression in statement")
 
         return expression
     }
@@ -377,4 +375,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
     private fun handleDefaultStatement(ctx: IASTDefaultStatement): DefaultStatement {
         return newDefaultStatement(rawNode = ctx)
     }
+
+    override val problemConstructor: (String, IASTStatement?) -> Statement
+        get() = { problem, rawNode -> newProblemExpression(problem, rawNode = rawNode) }
 }

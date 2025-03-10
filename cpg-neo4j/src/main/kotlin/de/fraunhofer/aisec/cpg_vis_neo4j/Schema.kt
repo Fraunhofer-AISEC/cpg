@@ -479,7 +479,7 @@ class Schema {
         }
         val entityNodes =
             hierarchy[classInfo]?.second?.flatMap { entitiesToJson(it) }?.toMutableList()
-                ?: mutableListOf<Schema.SchemaNode>()
+                ?: mutableListOf<SchemaNode>()
         entityNodes.add(
             0,
             SchemaNode(

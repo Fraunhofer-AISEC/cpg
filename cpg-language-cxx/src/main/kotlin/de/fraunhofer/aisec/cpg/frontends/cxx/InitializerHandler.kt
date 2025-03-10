@@ -32,16 +32,14 @@ import de.fraunhofer.aisec.cpg.graph.newInitializerListExpression
 import de.fraunhofer.aisec.cpg.graph.newProblemExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.unknownType
-import java.util.function.Supplier
 import org.eclipse.cdt.core.dom.ast.IASTEqualsInitializer
 import org.eclipse.cdt.core.dom.ast.IASTInitializer
 import org.eclipse.cdt.core.dom.ast.IASTInitializerList
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTConstructorInitializer
 
-class InitializerHandler(lang: CXXLanguageFrontend) :
-    CXXHandler<Expression, IASTInitializer>(Supplier(::ProblemExpression), lang) {
+class InitializerHandler(frontend: CXXLanguageFrontend) :
+    CXXHandler<Expression, IASTInitializer>(frontend) {
 
     override fun handleNode(node: IASTInitializer): Expression {
         return when (node) {
@@ -93,4 +91,7 @@ class InitializerHandler(lang: CXXLanguageFrontend) :
         return frontend.expressionHandler.handle(ctx.initializerClause)
             ?: return newProblemExpression("could not parse initializer clause")
     }
+
+    override val problemConstructor: (String, IASTInitializer?) -> Expression
+        get() = { problem, rawNode -> newProblemExpression(problem, rawNode = rawNode) }
 }

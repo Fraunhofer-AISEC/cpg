@@ -27,26 +27,27 @@ package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
+import de.fraunhofer.aisec.cpg.frontends.UnknownLanguage
 import de.fraunhofer.aisec.cpg.graph.types.*
 
 /**
  * Creates a new [UnknownType] and sets the appropriate language, if this [MetadataProvider]
  * includes a [LanguageProvider].
  */
-fun MetadataProvider?.unknownType(): Type {
+fun ContextProvider.unknownType(): Type {
     return if (this is LanguageProvider) {
         UnknownType.getUnknownType(language)
     } else {
-        UnknownType.getUnknownType(null)
+        UnknownType.getUnknownType(UnknownLanguage(ctx))
     }
 }
 
 fun LanguageProvider.autoType(): Type {
-    return AutoType(this.language)
+    return AutoType(ctx, this.language)
 }
 
 fun LanguageProvider.incompleteType(): Type {
-    return IncompleteType(this.language)
+    return IncompleteType(ctx, this.language)
 }
 
 /** Returns a [PointerType] that describes an array reference to the current type. */
@@ -82,7 +83,7 @@ fun Type.ref(): Type {
             ?: throw TranslationException(
                 "Could not create type: translation context not available"
             )
-    val type = ReferenceType(this)
+    val type = ReferenceType(c, this)
 
     return c.typeManager.registerType(type)
 }
@@ -115,7 +116,7 @@ fun LanguageProvider.objectType(
 
     // Otherwise, we either need to create the type because of the generics or because we do not
     // know the type yet.
-    var type = ObjectType(name, generics, false, language)
+    var type = ObjectType(c, name, generics, false, language)
     // Apply our usual metadata, such as scope, code, location, if we have any. Make sure only
     // to refer by the local name because we will treat types as sort of references when
     // creating them and resolve them later.
@@ -148,5 +149,5 @@ fun LanguageProvider.primitiveType(name: CharSequence): Type {
  * [LanguageProvider].
  */
 fun LanguageProvider.isPrimitive(type: Type): Boolean {
-    return language?.primitiveTypeNames?.contains(type.typeName) == true
+    return language.primitiveTypeNames.contains(type.typeName) == true
 }

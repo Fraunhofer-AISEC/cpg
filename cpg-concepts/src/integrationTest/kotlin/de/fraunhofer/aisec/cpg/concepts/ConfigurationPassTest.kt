@@ -46,6 +46,7 @@ import de.fraunhofer.aisec.cpg.test.analyze
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
@@ -145,6 +146,7 @@ class ConfigurationPassTest {
             .forEach {
                 // Prev DFG should include the option
                 assertNotNull(it)
+                assertIs<DataflowNode>(it)
                 assertTrue(
                     it.prevDFG.any { dfg -> dfg is ConfigurationOption },
                     "Prev DFG of $it should include the option",

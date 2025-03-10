@@ -25,12 +25,14 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
 
 /** Instances of this class represent boolean types. */
 class BooleanType(
+    ctx: TranslationContext,
     typeName: CharSequence = "bool",
     bitWidth: Int? = 1,
     language: Language<*>,
     modifier: Modifier = Modifier.NOT_APPLICABLE,
-) : NumericType(typeName, bitWidth, language, modifier)
+) : NumericType(ctx, typeName, bitWidth, language, modifier)

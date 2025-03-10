@@ -27,9 +27,8 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.ProblemDeclaration
 import de.fraunhofer.aisec.cpg.graph.newParameterDeclaration
-import java.util.function.Supplier
+import de.fraunhofer.aisec.cpg.graph.newProblemDeclaration
 import org.eclipse.cdt.core.dom.ast.IASTDeclSpecifier
 import org.eclipse.cdt.core.dom.ast.IASTParameterDeclaration
 import org.eclipse.cdt.internal.core.dom.parser.c.CASTParameterDeclaration
@@ -37,7 +36,7 @@ import org.eclipse.cdt.internal.core.dom.parser.c.CASTSimpleDeclSpecifier
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTParameterDeclaration
 
 class ParameterDeclarationHandler(lang: CXXLanguageFrontend) :
-    CXXHandler<Declaration, IASTParameterDeclaration>(Supplier(::ProblemDeclaration), lang) {
+    CXXHandler<Declaration, IASTParameterDeclaration>(lang) {
 
     override fun handleNode(node: IASTParameterDeclaration): Declaration {
         return when (node) {
@@ -89,4 +88,7 @@ class ParameterDeclarationHandler(lang: CXXLanguageFrontend) :
 
         return paramVariableDeclaration
     }
+
+    override val problemConstructor: (String, IASTParameterDeclaration?) -> Declaration
+        get() = { problem, rawNode -> newProblemDeclaration(problem, rawNode = rawNode) }
 }

@@ -30,7 +30,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
-import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
@@ -38,7 +37,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.Util
-import java.util.function.Supplier
 import org.eclipse.cdt.core.dom.ast.*
 import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit.IDependencyTree.IASTInclusionNode
 import org.eclipse.cdt.internal.core.dom.parser.cpp.*
@@ -60,8 +58,7 @@ import org.eclipse.cdt.internal.core.dom.parser.cpp.*
  * handler. In fact, in most cases the [DeclaratorHandler] actually creates the CPG [Declaration]
  * and the [DeclarationHandler] modifies the declaration depending on the declaration specifiers.
  */
-class DeclarationHandler(lang: CXXLanguageFrontend) :
-    CXXHandler<Declaration, IASTNode>(Supplier(::ProblemDeclaration), lang) {
+class DeclarationHandler(lang: CXXLanguageFrontend) : CXXHandler<Declaration, IASTNode>(lang) {
 
     override fun handleNode(node: IASTNode): Declaration {
         return when (node) {
@@ -177,7 +174,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         val declaration = frontend.declaratorHandler.handle(ctx.declarator)
 
         if (declaration !is FunctionDeclaration) {
-            return ProblemDeclaration(
+            return newProblemDeclaration(
                 "declarator of function definition is not a function declarator"
             )
         }
@@ -397,6 +394,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 constructor.returnTypes.map { addParameterizedTypesToType(it, parameterizedTypes) }
             constructor.type =
                 FunctionType(
+                    ctx,
                     constructor.type.typeName,
                     (constructor.type as? FunctionType)?.parameters ?: listOf(),
                     constructor.returnTypes,
@@ -426,20 +424,20 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         return type
     }
 
-    private fun handleSimpleDeclaration(ctx: IASTSimpleDeclaration): Declaration {
-        val sequence = DeclarationSequence()
-        val declSpecifier = ctx.declSpecifier
+    private fun handleSimpleDeclaration(simpleDecl: IASTSimpleDeclaration): Declaration {
+        val sequence = DeclarationSequence(ctx)
+        val declSpecifier = simpleDecl.declSpecifier
 
         // check, whether the declaration specifier also contains declarations, e.g. class
         // definitions or enums
         val (primaryDeclaration, useNameOfDeclarator) =
-            handleDeclarationSpecifier(declSpecifier, ctx, sequence)
+            handleDeclarationSpecifier(declSpecifier, simpleDecl, sequence)
 
         // Fill template params, if needed
-        val templateParams = extractTemplateParams(ctx, declSpecifier)
+        val templateParams = extractTemplateParams(simpleDecl, declSpecifier)
 
         // Loop through all declarators, as we can potentially have multiple declarations here
-        for (declarator in ctx.declarators) {
+        for (declarator in simpleDecl.declarators) {
             // If a previous step informed us that we should take the name of the primary
             // declaration, we do so here. This most likely is the case of a typedef struct.
             val declSpecifierToUse =
@@ -453,7 +451,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
             var type: Type
 
-            if (ctx.isTypedef) {
+            if (simpleDecl.isTypedef) {
                 type = frontend.typeOf(declarator, declSpecifierToUse)
 
                 val (nameDecl, _) = declarator.realName()
@@ -483,7 +481,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 declaration.type = type
 
                 // process attributes
-                frontend.processAttributes(declaration, ctx)
+                frontend.processAttributes(declaration, simpleDecl)
                 sequence.addDeclaration(declaration)
 
                 // We want to make sure that we parse the initializer *after* we have set the
@@ -591,13 +589,13 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     private fun extractTemplateParams(
         ctx: IASTSimpleDeclaration,
         declSpecifier: IASTDeclSpecifier,
-    ): MutableList<Node>? {
+    ): MutableList<AstNode>? {
         if (
             !ctx.isTypedef &&
                 declSpecifier is CPPASTNamedTypeSpecifier &&
                 declSpecifier.name is CPPASTTemplateId
         ) {
-            val templateParams = mutableListOf<Node>()
+            val templateParams = mutableListOf<AstNode>()
             val templateId = declSpecifier.name as CPPASTTemplateId
             for (templateArgument in templateId.templateArguments) {
                 if (templateArgument is CPPASTTypeId) {
@@ -633,10 +631,8 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         val (scope, doFqn) =
             if (frontend.scopeManager.currentScope is RecordScope) {
                 Pair(frontend.scopeManager.globalScope, true)
-            } else if (frontend.scopeManager.currentScope is Scope) {
-                Pair(frontend.scopeManager.currentScope as Scope, false)
             } else {
-                TODO()
+                Pair(frontend.scopeManager.currentScope, false)
             }
         // TODO(oxisto): What about namespaces?
 
@@ -688,11 +684,11 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
      * not care about the linkage specification per-se, but we need to parse the declaration(s) it
      * contains.
      */
-    private fun handleLinkageSpecification(ctx: CPPASTLinkageSpecification): Declaration {
-        var sequence = DeclarationSequence()
+    private fun handleLinkageSpecification(linkage: CPPASTLinkageSpecification): Declaration {
+        var sequence = DeclarationSequence(ctx)
 
         // Just forward its declaration(s) to our handler
-        for (decl in ctx.declarations) {
+        for (decl in linkage.declarations) {
             handle(decl)?.let { sequence += it }
         }
 
@@ -820,4 +816,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             }
         }
     }
+
+    override val problemConstructor: (String, IASTNode?) -> Declaration
+        get() = { problem, rawNode -> newProblemDeclaration(problem, rawNode = rawNode) }
 }

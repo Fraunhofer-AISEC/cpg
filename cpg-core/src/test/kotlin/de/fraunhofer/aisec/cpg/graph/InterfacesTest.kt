@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import kotlin.test.Test
@@ -34,8 +35,9 @@ class InterfacesTest {
 
     @Test
     fun testRemoveArgument() {
-        val v: HasInitializer = VariableDeclaration()
-        val lit = Literal<String>()
+        val ctx = TranslationContext()
+        val v: HasInitializer = VariableDeclaration(ctx)
+        val lit = Literal<String>(ctx)
         v.initializer = lit
         assertTrue(v.removeArgument(lit))
     }

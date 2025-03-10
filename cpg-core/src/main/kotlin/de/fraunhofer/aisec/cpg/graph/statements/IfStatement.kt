@@ -25,9 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.BranchingNode
-import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
@@ -38,7 +39,8 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /** Represents a condition control flow statement, usually indicating by `If`. */
-class IfStatement : Statement(), BranchingNode, ArgumentHolder {
+class IfStatement internal constructor(ctx: TranslationContext) :
+    Statement(ctx), BranchingNode, ArgumentHolder {
     @Relationship(value = "INITIALIZER_STATEMENT")
     var initializerStatementEdge = astOptionalEdgeOf<Statement>()
     /** C++ initializer statement. */
@@ -53,7 +55,7 @@ class IfStatement : Statement(), BranchingNode, ArgumentHolder {
     /** The condition to be evaluated. */
     var condition by unwrapping(IfStatement::conditionEdge)
 
-    override val branchedBy: Node?
+    override val branchedBy: AstNode?
         get() = condition ?: conditionDeclaration
 
     /** C++ constexpr construct. */

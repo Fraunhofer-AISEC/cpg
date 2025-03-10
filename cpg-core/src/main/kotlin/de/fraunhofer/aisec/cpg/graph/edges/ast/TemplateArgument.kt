@@ -25,20 +25,20 @@
  */
 package de.fraunhofer.aisec.cpg.graph.edges.ast
 
-import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration.TemplateInitialization
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 
 /** This edge represents a template argument that is attached to a [CallExpression]. */
-class TemplateArgument<NodeType : Node>(
-    start: Node,
+class TemplateArgument<NodeType : AstNode>(
+    start: AstNode,
     end: NodeType,
     var instantiation: TemplateInitialization? = TemplateInitialization.EXPLICIT,
 ) : AstEdge<NodeType>(start, end)
 
 /** A container for [TemplateArgument] edges. */
-class TemplateArguments<NodeType : Node>(thisRef: Node) :
+class TemplateArguments<NodeType : AstNode>(thisRef: AstNode) :
     AstEdges<NodeType, TemplateArgument<NodeType>>(
         thisRef,
-        init = { start, end -> TemplateArgument(start, end) },
+        init = { start, end -> TemplateArgument(start as AstNode, end) },
     )

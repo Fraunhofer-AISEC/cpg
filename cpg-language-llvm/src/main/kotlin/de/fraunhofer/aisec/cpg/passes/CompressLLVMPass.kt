@@ -210,9 +210,9 @@ class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
      */
     private fun getAllChildrenRecursively(node: CatchClause?): Set<Node> {
         if (node == null) return setOf()
-        val worklist: Queue<Node> = LinkedList()
+        val worklist: Queue<AstNode> = LinkedList()
         worklist.add(node.body)
-        val alreadyChecked = LinkedHashSet<Node>()
+        val alreadyChecked = LinkedHashSet<AstNode>()
         while (worklist.isNotEmpty()) {
             val currentNode = worklist.remove()
             alreadyChecked.add(currentNode)

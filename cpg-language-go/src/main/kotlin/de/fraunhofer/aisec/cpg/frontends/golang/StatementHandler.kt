@@ -33,7 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 
 class StatementHandler(frontend: GoLanguageFrontend) :
-    GoHandler<Statement, GoStandardLibrary.Ast.Stmt>(::ProblemExpression, frontend) {
+    GoHandler<Statement, GoStandardLibrary.Ast.Stmt>(frontend) {
 
     override fun handleNode(node: GoStandardLibrary.Ast.Stmt): Statement {
         return when (node) {
@@ -431,4 +431,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
 
         return switch
     }
+
+    override val problemConstructor: (String, GoStandardLibrary.Ast.Stmt?) -> Statement
+        get() = { problem, rawNode -> newProblemExpression(problem, rawNode = rawNode) }
 }

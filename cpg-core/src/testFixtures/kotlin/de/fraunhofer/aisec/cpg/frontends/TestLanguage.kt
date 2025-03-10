@@ -26,15 +26,14 @@
 package de.fraunhofer.aisec.cpg.frontends
 
 import de.fraunhofer.aisec.cpg.*
-import de.fraunhofer.aisec.cpg.TypeManager
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
+import de.fraunhofer.aisec.cpg.graph.newProblemExpression
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
-import java.util.function.Supplier
 import kotlin.reflect.KClass
 import kotlin.test.assertNotNull
 
@@ -60,15 +59,15 @@ open class TestLanguage(ctx: TranslationContext) :
 
     override val builtInTypes: Map<String, Type> =
         mapOf(
-            "boolean" to BooleanType("boolean", 1, this, NumericType.Modifier.SIGNED),
-            "char" to IntegerType("char", 8, this, NumericType.Modifier.NOT_APPLICABLE),
-            "byte" to IntegerType("byte", 8, this, NumericType.Modifier.SIGNED),
-            "short" to IntegerType("short", 16, this, NumericType.Modifier.SIGNED),
-            "int" to IntegerType("int", 32, this, NumericType.Modifier.SIGNED),
-            "long" to IntegerType("long", 64, this, NumericType.Modifier.SIGNED),
-            "float" to FloatingPointType("float", 32, this, NumericType.Modifier.SIGNED),
-            "double" to FloatingPointType("double", 64, this, NumericType.Modifier.SIGNED),
-            "string" to StringType("string", this),
+            "boolean" to BooleanType(ctx, "boolean", 1, this, NumericType.Modifier.SIGNED),
+            "char" to IntegerType(ctx, "char", 8, this, NumericType.Modifier.NOT_APPLICABLE),
+            "byte" to IntegerType(ctx, "byte", 8, this, NumericType.Modifier.SIGNED),
+            "short" to IntegerType(ctx, "short", 16, this, NumericType.Modifier.SIGNED),
+            "int" to IntegerType(ctx, "int", 32, this, NumericType.Modifier.SIGNED),
+            "long" to IntegerType(ctx, "long", 64, this, NumericType.Modifier.SIGNED),
+            "float" to FloatingPointType(ctx, "float", 32, this, NumericType.Modifier.SIGNED),
+            "double" to FloatingPointType(ctx, "double", 64, this, NumericType.Modifier.SIGNED),
+            "string" to StringType(ctx, "string", this),
         )
     override val receiverName: String
         get() = "this"
@@ -98,19 +97,14 @@ fun testFrontend(builder: (TranslationConfiguration.Builder) -> Unit): TestLangu
  * chance to configure a specific subclass of it, e.g., [TestLanguageWithColon].
  */
 fun testFrontend(config: TranslationConfiguration): TestLanguageFrontend {
-    val ctx = TranslationContext(config, ScopeManager(), TypeManager())
+    val ctx = TranslationContext(config)
     val language = ctx.availableLanguage<TestLanguage>()
     assertNotNull(language)
     return TestLanguageFrontend(ctx, language)
 }
 
 open class TestLanguageFrontend(
-    ctx: TranslationContext =
-        TranslationContext(
-            TranslationConfiguration.builder().build(),
-            ScopeManager(),
-            TypeManager(),
-        ),
+    ctx: TranslationContext = TranslationContext(TranslationConfiguration.builder().build()),
     language: Language<TestLanguageFrontend> = TestLanguage(ctx),
 ) : LanguageFrontend<Any, Any>(ctx, language) {
     override fun parse(file: File): TranslationUnitDeclaration {
@@ -136,4 +130,7 @@ open class TestLanguageFrontend(
 }
 
 class TestHandler(frontend: TestLanguageFrontend) :
-    Handler<Node, Any, TestLanguageFrontend>(Supplier { ProblemExpression() }, frontend)
+    Handler<AstNode, Any, TestLanguageFrontend>(frontend) {
+    override val problemConstructor: (String, Any?) -> AstNode
+        get() = { problem, rawNode -> newProblemExpression(problem, rawNode = rawNode) }
+}

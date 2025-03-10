@@ -178,7 +178,7 @@ class DFGTest {
     fun testCompoundOperatorDFG() {
         val result = GraphExamples.getCompoundOperator()
 
-        val rwCompoundOperator = findByUniqueName(result.allChildren(), "+=")
+        val rwCompoundOperator = findByUniqueName<AstNode>(result.allChildren(), "+=")
         assertNotNull(rwCompoundOperator)
 
         val expression = findByUniqueName(result.refs, "i")
@@ -241,7 +241,7 @@ class DFGTest {
      *
      * @return A set of nodes that are part of the data-flow
      */
-    private fun flattenDFGGraph(node: Node?, outgoing: Boolean): Set<Node?> {
+    private fun flattenDFGGraph(node: DataflowNode?, outgoing: Boolean): Set<Node?> {
         if (node == null) {
             return setOf()
         }
@@ -249,7 +249,7 @@ class DFGTest {
         val dfgNodes = mutableSetOf<Node>()
 
         dfgNodes.add(node)
-        val worklist = LinkedHashSet<Node>()
+        val worklist = LinkedHashSet<DataflowNode>()
         worklist.add(node)
 
         while (worklist.isNotEmpty()) {

@@ -27,9 +27,9 @@ package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.*
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
 import de.fraunhofer.aisec.cpg.graph.Name
-import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.autoType
 import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
@@ -131,9 +131,10 @@ class PythonLanguage(ctx: TranslationContext) :
     @Transient
     override val builtInTypes =
         mapOf(
-            "bool" to BooleanType("bool", language = this),
+            "bool" to BooleanType(ctx, "bool", language = this),
             "int" to
                 IntegerType(
+                    ctx,
                     "int",
                     Integer.MAX_VALUE,
                     this,
@@ -141,6 +142,7 @@ class PythonLanguage(ctx: TranslationContext) :
                 ), // Unlimited precision
             "float" to
                 FloatingPointType(
+                    ctx,
                     "float",
                     32,
                     this,
@@ -148,34 +150,39 @@ class PythonLanguage(ctx: TranslationContext) :
                 ), // This depends on the implementation
             "complex" to
                 NumericType(
+                    ctx,
                     "complex",
                     null,
                     this,
                     NumericType.Modifier.NOT_APPLICABLE,
                 ), // It's two floats
-            "str" to StringType("str", this, listOf()),
+            "str" to StringType(ctx, "str", this, listOf()),
             "list" to
                 ListType(
+                    ctx,
                     typeName = "list",
-                    elementType = ObjectType("object", listOf(), false, this),
+                    elementType = ObjectType(ctx, "object", listOf(), false, this),
                     language = this,
                 ),
             "tuple" to
                 ListType(
+                    ctx,
                     typeName = "tuple",
-                    elementType = ObjectType("object", listOf(), false, this),
+                    elementType = ObjectType(ctx, "object", listOf(), false, this),
                     language = this,
                 ),
             "dict" to
                 MapType(
+                    ctx,
                     typeName = "dict",
-                    elementType = ObjectType("object", listOf(), false, this),
+                    elementType = ObjectType(ctx, "object", listOf(), false, this),
                     language = this,
                 ),
             "set" to
                 SetType(
+                    ctx,
                     typeName = "set",
-                    elementType = ObjectType("object", listOf(), false, this),
+                    elementType = ObjectType(ctx, "object", listOf(), false, this),
                     language = this,
                 ),
         )
@@ -220,9 +227,9 @@ class PythonLanguage(ctx: TranslationContext) :
             // would not match
             if (hint != null && targetType !is UnknownType && targetType !is AutoType) {
                 val match = super.tryCast(type, targetType, hint, targetHint)
-                if (match == CastNotPossible) {
+                if (match == CastNotPossible && hint is AstNode) {
                     warnWithFileLocation(
-                        hint as Node,
+                        hint,
                         log,
                         "Argument type of call to {} ({}) does not match type annotation on the function parameter ({}), but since Python does have runtime checks, we ignore this",
                         hint.astParent?.name,
