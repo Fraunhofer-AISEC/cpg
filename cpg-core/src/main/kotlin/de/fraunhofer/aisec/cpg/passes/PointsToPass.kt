@@ -278,13 +278,42 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             // with a set of properties
             // Let's start with fetch the addresses
             if (key is HasMemoryAddress) {
-                key.memoryAddresses.clear()
+                // key.memoryAddresses.clear()
                 key.memoryAddresses += value.first.filterIsInstance<MemoryAddress>()
             }
 
             // Then the memoryValues
             if (key is HasMemoryValue && value.second.isNotEmpty()) {
-                value.second.forEach { v -> key.memoryValues += v }
+                value.second.forEach { v ->
+                    val properties = edgePropertiesMap[Pair(key, v)]
+
+                    var context: CallingContext? = null
+                    var granularity = default()
+                    var functionSummary = false
+
+                    // the properties can contain a lot of things. A granularity, a
+                    // callingcontext, or a boolean indicating if this is a functionSummary edge or
+                    // not
+                    properties?.forEach { property ->
+                        when (property) {
+                            is Granularity -> granularity = property
+                            is CallingContext -> context = property
+                            is Boolean -> functionSummary = property
+                        }
+                    }
+
+                    if (context == null) // TODO: add functionSummary flag for contextSensitive DFs
+                     key.memoryValueEdges += Dataflow(v, key, granularity, functionSummary)
+                    else
+                        key.memoryValueEdges.addContextSensitive(
+                            v,
+                            granularity,
+                            context,
+                            functionSummary,
+                        )
+
+                    // key.memoryValues += v
+                }
             }
 
             // And now the prevDFGs. These are pairs, where the second item is a with a set of
@@ -542,63 +571,71 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         )
                     // Also draw the edges for the (deref)derefvalues if we have any and are
                     // dealing with a pointer parameter (AKA memoryValue is not null)
-                    memVal.memoryValues.forEach { derefPMV ->
-                        doubleState
-                            .getNestedValues(
-                                arg,
-                                2,
-                                fetchFields = false,
-                                onlyFetchExistingEntries = true,
-                                excludeShortFSValues = true,
-                            )
-                            .forEach { derefValue ->
-                                addEntryToEdgePropertiesMap(
-                                    Pair(derefPMV, derefValue),
-                                    identitySetOf(CallingContextIn(callExpression)),
+                    memVal.memoryValueEdges
+                        .filter {
+                            it !is ContextSensitiveDataflow ||
+                                it.callingContext.call == callExpression
+                        }
+                        .map { it.start }
+                        .forEach { derefPMV ->
+                            doubleState
+                                .getNestedValues(
+                                    arg,
+                                    2,
+                                    fetchFields = false,
+                                    onlyFetchExistingEntries = true,
+                                    excludeShortFSValues = true,
                                 )
-                                doubleState =
-                                    lattice.push(
-                                        doubleState,
-                                        derefPMV,
-                                        GeneralStateEntryElement(
-                                            PowersetLattice.Element(derefPMV),
-                                            PowersetLattice.Element(derefValue),
-                                            PowersetLattice.Element(),
-                                        ),
+                                .forEach { derefValue ->
+                                    addEntryToEdgePropertiesMap(
+                                        Pair(derefPMV, derefValue),
+                                        identitySetOf(CallingContextIn(callExpression)),
                                     )
-                                // The same for the derefderef values
-                                (derefPMV as? HasMemoryValue)?.memoryValues?.forEach { derefderefPMV
-                                    ->
-                                    // probably iterate through everything???
-                                    doubleState
-                                        .getNestedValues(
-                                            derefValue,
-                                            1,
-                                            fetchFields = false,
-                                            onlyFetchExistingEntries = true,
-                                            excludeShortFSValues = true,
+                                    doubleState =
+                                        lattice.push(
+                                            doubleState,
+                                            derefPMV,
+                                            GeneralStateEntryElement(
+                                                PowersetLattice.Element(derefPMV),
+                                                PowersetLattice.Element(derefValue),
+                                                PowersetLattice.Element(),
+                                            ),
                                         )
-                                        .forEach { derefderefValue ->
-                                            addEntryToEdgePropertiesMap(
-                                                Pair(derefderefPMV, derefderefValue),
-                                                identitySetOf(CallingContextIn(callExpression)),
+                                    // The same for the derefderef values
+                                    (derefPMV as? HasMemoryValue)?.memoryValues?.forEach {
+                                        derefderefPMV ->
+                                        // probably iterate through everything???
+                                        doubleState
+                                            .getNestedValues(
+                                                derefValue,
+                                                1,
+                                                fetchFields = false,
+                                                onlyFetchExistingEntries = true,
+                                                excludeShortFSValues = true,
                                             )
-                                            doubleState =
-                                                lattice.push(
-                                                    doubleState,
-                                                    derefderefPMV,
-                                                    //
-                                                    //      TripleLattice.Element(
-                                                    GeneralStateEntryElement(
-                                                        PowersetLattice.Element(derefderefPMV),
-                                                        PowersetLattice.Element(derefderefValue),
-                                                        PowersetLattice.Element(),
-                                                    ),
+                                            .forEach { derefderefValue ->
+                                                addEntryToEdgePropertiesMap(
+                                                    Pair(derefderefPMV, derefderefValue),
+                                                    identitySetOf(CallingContextIn(callExpression)),
                                                 )
-                                        }
+                                                doubleState =
+                                                    lattice.push(
+                                                        doubleState,
+                                                        derefderefPMV,
+                                                        //
+                                                        //      TripleLattice.Element(
+                                                        GeneralStateEntryElement(
+                                                            PowersetLattice.Element(derefderefPMV),
+                                                            PowersetLattice.Element(
+                                                                derefderefValue
+                                                            ),
+                                                            PowersetLattice.Element(),
+                                                        ),
+                                                    )
+                                            }
+                                    }
                                 }
-                            }
-                    }
+                        }
                 }
             }
         }
@@ -993,7 +1030,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             val values = doubleState.getValues(currentNode)
             val lastWrites = doubleState.getLastWrites(currentNode)
 
-            /*// If we have any information from the dereferenced value, we also fetch that
+            // If we have any information from the dereferenced value, we also fetch that
             values
                 .filterTo(identitySetOf()) { doubleState.hasDeclarationStateEntry(it, true) }
                 .flatMap {
@@ -1027,7 +1064,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 )
                             }
                     }
-                }*/
+                }
 
             doubleState =
                 lattice.push(

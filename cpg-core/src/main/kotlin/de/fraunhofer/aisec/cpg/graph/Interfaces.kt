@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.declarations.OperatorDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.MemoryAddressEdges
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflows
+import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.HasType
@@ -56,6 +57,13 @@ interface HasMemoryValue {
 
     var memoryValueUsageEdges: Dataflows<Node>
     var memoryValueUsages: MutableSet<Node>
+
+    val fullMemoryValues: Set<Node>
+        get() =
+            memoryValueEdges
+                .filter { it.granularity is FullDataflowGranularity }
+                .map { it.start }
+                .toSet()
 }
 
 /** A simple interface that a node has [language]. */
