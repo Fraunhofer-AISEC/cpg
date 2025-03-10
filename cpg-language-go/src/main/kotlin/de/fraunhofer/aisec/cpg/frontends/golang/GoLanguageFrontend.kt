@@ -65,8 +65,8 @@ import java.net.URI
     with = GoEvaluationOrderGraphPass::class,
 )
 @SupportsParallelParsing(false)
-class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: TranslationContext) :
-    LanguageFrontend<GoStandardLibrary.Ast.Node, GoStandardLibrary.Ast.Expr>(language, ctx) {
+class GoLanguageFrontend(ctx: TranslationContext, language: Language<GoLanguageFrontend>) :
+    LanguageFrontend<GoStandardLibrary.Ast.Node, GoStandardLibrary.Ast.Expr>(ctx, language) {
 
     private var currentFileSet: GoStandardLibrary.Ast.FileSet? = null
     private var currentModule: GoStandardLibrary.Modfile.File? = null

@@ -2,7 +2,7 @@
 kotlin = "2.0.20"
 kotlin19 = "1.9.10"
 neo4j = "4.0.10"
-neo4j5 = "5.28.0"
+neo4j5 = "5.28.2"
 log4j = "2.24.0"
 spotless = "7.0.1"
 nexus-publish = "2.0.0"
@@ -11,7 +11,6 @@ slf4j = "2.0.16"
 clikt = "5.0.2"
 kaml = "0.72.0"
 sarif4k = "0.6.0"
-netty = "4.1.118.Final"
 
 [libraries]
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin"}
@@ -34,7 +33,6 @@ apache-commons-lang3 = { module = "org.apache.commons:commons-lang3", version = 
 neo4j-ogm-core = { module = "org.neo4j:neo4j-ogm-core", version.ref = "neo4j"}
 neo4j-ogm-bolt-driver = { module = "org.neo4j:neo4j-ogm-bolt-driver", version.ref = "neo4j"}
 neo4j-driver = { module = "org.neo4j.driver:neo4j-java-driver", version.ref = "neo4j5"}
-netty-handler = { module = "io.netty:netty-handler", version.ref = "netty"}
 
 javaparser = { module = "com.github.javaparser:javaparser-symbol-solver-core", version = "3.26.0"}
 jackson = { module = "com.fasterxml.jackson.module:jackson-module-kotlin", version = "2.18.0"}
@@ -59,7 +57,7 @@ sarif4k = { module = "io.github.detekt.sarif4k:sarif4k", version.ref = "sarif4k"
 
 # test
 junit-params = { module = "org.junit.jupiter:junit-jupiter-params", version = "5.12.0"}
-mockito = { module = "org.mockito:mockito-core", version = "5.15.2"}
+mockito = { module = "org.mockito:mockito-core", version = "5.16.0"}
 
 # plugins needed for build.gradle.kts in buildSrc
 kotlin-gradle = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }

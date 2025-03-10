@@ -154,8 +154,6 @@ testing {
                 }
             }
 
-            testType = TestSuiteType.INTEGRATION_TEST
-
             targets {
                 all {
                     testTask.configure {
@@ -173,7 +171,6 @@ testing {
                 implementation(testFixtures(project(":cpg-core")))
             }
 
-            testType = TestSuiteType.PERFORMANCE_TEST
             targets {
                 all {
                     testTask.configure {

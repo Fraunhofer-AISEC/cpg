@@ -81,8 +81,8 @@ import kotlin.jvm.optionals.getOrNull
 ) // this pass is always required for Java
 @RegisterExtraPass(JavaImportResolver::class)
 @RegisterExtraPass(JavaExtraPass::class)
-open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: TranslationContext) :
-    LanguageFrontend<Node, Type>(language, ctx) {
+open class JavaLanguageFrontend(ctx: TranslationContext, language: Language<JavaLanguageFrontend>) :
+    LanguageFrontend<Node, Type>(ctx, language) {
 
     var context: CompilationUnit? = null
     var javaSymbolResolver: JavaSymbolSolver?

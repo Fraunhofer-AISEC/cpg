@@ -139,7 +139,6 @@ private constructor(
         result: TranslationResult,
     ): Set<LanguageFrontend<*, *>> {
         val usedFrontends = mutableSetOf<LanguageFrontend<*, *>>()
-        val usedLanguages = mutableSetOf<Language<*>>()
 
         // If loadIncludes is active, the files stored in the include paths are made available for
         // conditional analysis by providing them to the frontends over the
@@ -181,13 +180,14 @@ private constructor(
                                 .toList()
                         files
                     } else {
-                        val frontendClass = file.language?.frontend
-
+                        // Retrieve the file's language based on the available languages of the
+                        // result
+                        val language = with(ctx) { file.language }
+                        val frontendClass = language?.frontend
                         val supportsParallelParsing =
-                            file.language
-                                ?.frontend
-                                ?.findAnnotation<SupportsParallelParsing>()
-                                ?.supported ?: true
+                            frontendClass?.findAnnotation<SupportsParallelParsing>()?.supported !=
+                                false
+
                         // By default, the frontends support parallel parsing. But the
                         // SupportsParallelParsing annotation can be set to false and force
                         // to disable it.
@@ -261,8 +261,6 @@ private constructor(
                     parseSequentially(component, result, ctx, sourceLocations)
                 }
             )
-            // Collects all used languages used in the main analysis code
-            usedLanguages.addAll(sourceLocations.mapNotNull { it.language }.toSet())
         }
 
         // Adds all languages provided as additional sources that may be relevant in the main code
@@ -276,6 +274,7 @@ private constructor(
                 .filter { builtinsCandidates.contains(it.relative) }
                 .forEach { ctx.importedSources.add(it) }
         }
+
 
         // A set of processed files from [TranslationContext.additionalSources] that is used as
         // negative to the
@@ -381,7 +380,7 @@ private constructor(
             val future =
                 CompletableFuture.supplyAsync {
                     try {
-                        return@supplyAsync parse(component, ctx, sourceLocation)
+                        return@supplyAsync parse(component, ctx, globalCtx, sourceLocation)
                     } catch (e: TranslationException) {
                         throw RuntimeException("Error parsing $sourceLocation", e)
                     }
@@ -445,7 +444,7 @@ private constructor(
 
         for (sourceLocation in sourceLocations) {
             ctx.currentComponent = component
-            val f = parse(component, ctx, sourceLocation)
+            val f = parse(component, ctx, ctx, sourceLocation)
             if (f != null) {
                 handleCompletion(result, usedFrontends, sourceLocation, f)
             }
@@ -474,13 +473,14 @@ private constructor(
     private fun parse(
         component: Component,
         ctx: TranslationContext,
+        globalCtx: TranslationContext,
         sourceLocation: File,
     ): LanguageFrontend<*, *>? {
         log.info("Parsing {}", sourceLocation.absolutePath)
 
         var frontend: LanguageFrontend<*, *>? = null
         try {
-            frontend = getFrontend(sourceLocation, ctx)
+            frontend = getFrontend(sourceLocation, ctx, globalCtx)
 
             if (frontend == null) {
                 log.error("Found no parser frontend for ${sourceLocation.name}")
@@ -502,8 +502,17 @@ private constructor(
         return frontend
     }
 
-    private fun getFrontend(file: File, ctx: TranslationContext): LanguageFrontend<*, *>? {
-        val language = file.language
+    private fun getFrontend(
+        file: File,
+        ctx: TranslationContext,
+        globalCtx: TranslationContext,
+    ): LanguageFrontend<*, *>? {
+        // Retrieve the languages based on the global ctx, so that all frontends share the same
+        // language instances.
+        //
+        // Once we address https://github.com/Fraunhofer-AISEC/cpg/issues/2109 we can remove the
+        // globalCtx parameter
+        val language = with(globalCtx) { file.language }
 
         return if (language != null) {
             try {
@@ -530,23 +539,6 @@ private constructor(
             }
         } else null
     }
-
-    /**
-     * This extension function returns an appropriate [Language] for this [File] based on the
-     * registered file extensions of [TranslationConfiguration.languages]. It will emit a warning if
-     * multiple languages are registered for the same extension (and the first one that was
-     * registered will be returned).
-     */
-    private val File.language: Language<*>?
-        get() {
-            val languages = config.languages.filter { it.handlesFile(this) }
-            if (languages.size > 1) {
-                log.warn(
-                    "Multiple languages match for file extension ${this.extension}, the first registered language will be used."
-                )
-            }
-            return languages.firstOrNull()
-        }
 
     /**
      * An additional source file that was originally part of [TranslationConfiguration.includePaths]
@@ -579,7 +571,7 @@ private constructor(
     }
 
     companion object {
-        private val log = LoggerFactory.getLogger(TranslationManager::class.java)
+        internal val log = LoggerFactory.getLogger(TranslationManager::class.java)
 
         @JvmStatic
         fun builder(): Builder {

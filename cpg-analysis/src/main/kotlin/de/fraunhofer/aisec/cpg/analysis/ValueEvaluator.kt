@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.HasOperatorCode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
+import de.fraunhofer.aisec.cpg.helpers.Util
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -66,7 +66,7 @@ open class ValueEvaluator(
         }
     }
 ) {
-    protected open val log: Logger
+    open val log: Logger
         get() = LoggerFactory.getLogger(ValueEvaluator::class.java)
 
     /** This property contains the path of the latest execution of [evaluateInternal]. */
@@ -78,12 +78,32 @@ open class ValueEvaluator(
         return evaluateInternal(node, 0)
     }
 
+    /**
+     * Tries to evaluate this node and returns the result as the specified type [T]. If the
+     * evaluation fails, the result is "null".
+     */
+    inline fun <reified T> evaluateAs(node: Node?): T? {
+        val result = evaluateInternal(node, 0)
+        return if (result !is T) {
+            Util.errorWithFileLocation(
+                node,
+                log,
+                "Evaluated the node to type \"{}\". Expected type \"{}\". Returning \"null\".",
+                result?.let { it::class.simpleName },
+                T::class.simpleName,
+            )
+            null
+        } else {
+            result
+        }
+    }
+
     fun clearPath() {
         path.clear()
     }
 
     /** Tries to evaluate this node. Anything can happen. */
-    protected open fun evaluateInternal(node: Node?, depth: Int): Any? {
+    open fun evaluateInternal(node: Node?, depth: Int): Any? {
         if (node == null) {
             return null
         }
