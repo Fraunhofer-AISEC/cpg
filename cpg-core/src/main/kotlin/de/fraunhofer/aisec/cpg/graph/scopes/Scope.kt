@@ -215,7 +215,7 @@ sealed class Scope(
 
         // If the symbol was still not resolved, and we are performing an unqualified resolution, we
         // search in the
-        // language's builtin scope for the symbol
+        // language's builtins scope for the symbol
         val scopeManager = (ctx ?: this.astNode?.ctx)?.scopeManager
         if (
             list.isNullOrEmpty() &&
@@ -224,15 +224,15 @@ sealed class Scope(
                 scopeManager != null
         ) {
             // If the language has builtins we can search there for the symbol
-            val builtinNamespace = languageOnly.builtinsNamespace
+            val builtinsNamespace = languageOnly.builtinsNamespace
             // Retrieve the builtins scope from the builtins namespace
-            val builtinScope = scopeManager.lookupScope(builtinNamespace)
-            if (builtinScope != null) {
+            val builtinsScope = scopeManager.lookupScope(builtinsNamespace)
+            if (builtinsScope != null) {
                 // Obviously we don't want to search in the builtins scope if we already failed
                 // finding the symbol in the builtins scope
-                if (builtinScope != this) {
+                if (builtinsScope != this) {
                     list =
-                        builtinScope
+                        builtinsScope
                             .lookupSymbol(
                                 symbol,
                                 languageOnly = languageOnly,

@@ -141,7 +141,7 @@ private constructor(
     ): Set<LanguageFrontend<*, *>> {
         val usedFrontends = mutableSetOf<LanguageFrontend<*, *>>()
 
-        // Contains all languages used in this frontend run, used to load additional builtin files
+        // Contains all languages used in this frontend run, used to load additional builtins files
         val usedLanguages = mutableSetOf<Language<*>>()
 
         // If loadIncludes is active, the files stored in the include paths are made available for
