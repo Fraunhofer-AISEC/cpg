@@ -51,9 +51,9 @@ import sootup.jimple.parser.JimpleView
 typealias SootType = sootup.core.types.Type
 
 class JVMLanguageFrontend(
-    language: Language<out LanguageFrontend<Any, SootType>>,
     ctx: TranslationContext,
-) : LanguageFrontend<Any, SootType>(language, ctx) {
+    language: Language<out LanguageFrontend<Any, SootType>>,
+) : LanguageFrontend<Any, SootType>(ctx, language) {
 
     val declarationHandler = DeclarationHandler(this)
     val statementHandler = StatementHandler(this)

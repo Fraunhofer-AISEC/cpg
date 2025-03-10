@@ -63,8 +63,8 @@ import kotlin.math.min
  */
 @RegisterExtraPass(PythonAddDeclarationsPass::class)
 @SupportsParallelParsing(false) // https://github.com/Fraunhofer-AISEC/cpg/issues/2026
-class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: TranslationContext) :
-    LanguageFrontend<Python.AST.AST, Python.AST.AST?>(language, ctx) {
+class PythonLanguageFrontend(ctx: TranslationContext, language: Language<PythonLanguageFrontend>) :
+    LanguageFrontend<Python.AST.AST, Python.AST.AST?>(ctx, language) {
     val lineSeparator = "\n" // TODO
     private val tokenTypeIndex = 0
     private val jep = JepSingleton // configure Jep
