@@ -523,8 +523,19 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             )
         val language = source.language
 
-        // Set the start scope. This can either be the call's scope or a scope specified in an FQN
-        val extractedScope = ctx.scopeManager.extractScope(source, language, source.scope)
+        // Set the start scope. This can either be the call's scope or a scope specified in an FQN.
+        // If our base is a dynamic or unknown type, we can skip the scope extraction because it
+        // will always
+        // fail
+        val extractedScope =
+            if (
+                source is MemberCallExpression &&
+                    (source.base?.type is DynamicType || source.base?.type is UnknownType)
+            ) {
+                ctx.scopeManager.extractScope(source, language, source.scope)
+            } else {
+                null
+            }
 
         // If we could not extract the scope (even though one was specified), we can only return an
         // empty result

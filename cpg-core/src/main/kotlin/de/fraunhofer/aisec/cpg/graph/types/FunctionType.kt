@@ -28,6 +28,10 @@ package de.fraunhofer.aisec.cpg.graph.types
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration.Companion.BRACKET_LEFT
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration.Companion.BRACKET_RIGHT
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration.Companion.COMMA
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration.Companion.WHITESPACE
 import de.fraunhofer.aisec.cpg.graph.unknownType
 
 /**
@@ -67,16 +71,29 @@ constructor(
          * This helper function computes a [FunctionType] out of an existing [FunctionDeclaration].
          */
         @JvmStatic
-        fun ContextProvider.computeType(func: FunctionDeclaration): FunctionType {
+        fun computeType(func: FunctionDeclaration, returnTypes: List<Type> = func.returnTypes.toList()): FunctionType {
             val type =
                 FunctionType(
-                    func.signature,
+                    buildSignature(func, returnTypes),
                     func.parameters.map { it.type },
-                    func.returnTypes.toList(),
+                    returnTypes,
                     func.language,
                 )
 
             return type
         }
+
+        fun buildSignature(func: FunctionDeclaration, returnTypes: List<Type>): String =
+            func.name.localName +
+                func.parameters.joinToString(COMMA + WHITESPACE, BRACKET_LEFT, BRACKET_RIGHT) {
+                    it.type.typeName
+                } +
+                (if (returnTypes.size == 1) {
+                    returnTypes.first().typeName
+                } else {
+                    returnTypes.joinToString(COMMA + WHITESPACE, BRACKET_LEFT, BRACKET_RIGHT) {
+                        it.typeName
+                    }
+                })
     }
 }
