@@ -30,12 +30,34 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.newConcept
 import de.fraunhofer.aisec.cpg.graph.concepts.newOperation
 
+/**
+ * Creates a new [TokenBasedAuth] concept.
+ *
+ * @param underlyingNode The underlying node representing this concept.
+ * @param token The authentication token, which may be an opaque token.
+ * @return The created [TokenBasedAuth] concept.
+ */
 fun MetadataProvider.newTokenBasedAuth(underlyingNode: Node, token: Node) =
     newConcept({ TokenBasedAuth(it, token = token) }, underlyingNode = underlyingNode)
 
+/**
+ * Creates a new [JwtAuth] concept.
+ *
+ * @param underlyingNode The underlying node representing this concept.
+ * @param jwt The JWT containing encoded authentication information.
+ * @param payload The payload.
+ * @return The created [JwtAuth] concept.
+ */
 fun MetadataProvider.newJwtAuth(underlyingNode: Node, jwt: Node, payload: Node) =
     newConcept({ JwtAuth(it, jwt = jwt, payload = payload) }, underlyingNode = underlyingNode)
 
+/**
+ * Creates a new [Authenticate] operation belonging to a certain [Authentication] concept.
+ *
+ * @param underlyingNode The underlying node representing this concept.
+ * @param credential The credential can be a call (e.g., a function call that reads a header) or a
+ *   variable that holds the value, e.g. the token * @return The created [Authenticate] operation.
+ */
 fun Authentication.newAuthenticate(underlyingNode: Node, credential: Node) =
     newOperation(
         { underlyingNode, concept ->
