@@ -36,7 +36,9 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.helpers.Util
+import de.fraunhofer.aisec.cpg.passes.DFGPass
 import de.fraunhofer.aisec.cpg.passes.concepts.ConceptPass
+import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLate
 import de.fraunhofer.aisec.cpg.query.QueryTree
 import de.fraunhofer.aisec.cpg.query.dataFlow
@@ -48,6 +50,7 @@ import de.fraunhofer.aisec.cpg.query.dataFlow
  */
 @ExecuteLate
 // TODO @RequiredFrontend(PythonLanguageFrontend::class)
+@DependsOn(DFGPass::class)
 class PythonFileConceptPass(ctx: TranslationContext) : ConceptPass(ctx) {
 
     /** The file name used if we fail to find it. */
