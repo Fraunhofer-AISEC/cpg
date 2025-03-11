@@ -25,9 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.typescript
 
-import de.fraunhofer.aisec.cpg.graph.types.*
+import de.fraunhofer.aisec.cpg.TranslationContext
 
 /** The TypeScript language. */
-class TypeScriptLanguage : JavaScriptLanguage() {
+class TypeScriptLanguage(ctx: TranslationContext) : JavaScriptLanguage(ctx) {
     override val fileExtensions = listOf("ts", "tsx")
 }

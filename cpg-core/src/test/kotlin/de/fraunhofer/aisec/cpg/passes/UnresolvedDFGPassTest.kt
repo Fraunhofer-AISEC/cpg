@@ -25,11 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.GraphExamples.Companion.testFrontend
 import de.fraunhofer.aisec.cpg.InferenceConfiguration
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
+import de.fraunhofer.aisec.cpg.frontends.testFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
@@ -147,7 +147,7 @@ class UnresolvedDFGPassTest {
             val config =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerLanguage(TestLanguage("."))
+                    .registerLanguage<TestLanguage>()
                     .inferenceConfiguration(
                         InferenceConfiguration.builder()
                             .inferDfgForUnresolvedCalls(inferUnresolved)

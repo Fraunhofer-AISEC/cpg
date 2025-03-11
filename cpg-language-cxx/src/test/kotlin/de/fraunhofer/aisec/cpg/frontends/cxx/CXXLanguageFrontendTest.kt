@@ -684,6 +684,9 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
             }
+        val language = tu.ctx?.availableLanguage<CPPLanguage>()
+        assertNotNull(language)
+        assertEquals(language, tu.language)
 
         val recordDeclaration = tu.records.firstOrNull()
         assertNotNull(recordDeclaration)
@@ -720,7 +723,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                 "(int)void*",
                 listOf(tu.primitiveType("int")),
                 listOf(tu.incompleteType().reference(POINTER)),
-                CPPLanguage(),
+                language,
             ),
             methodWithParam.type,
         )
@@ -739,7 +742,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                 "()void*",
                 listOf(),
                 listOf(tu.incompleteType().reference(POINTER)),
-                CPPLanguage(),
+                language,
             ),
             inlineMethod.type,
         )
@@ -748,12 +751,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val inlineConstructor = recordDeclaration.constructors[0]
         assertEquals(recordDeclaration.name.localName, inlineConstructor.name.localName)
         assertEquals(
-            FunctionType(
-                "()SomeClass",
-                listOf(),
-                listOf(tu.objectType("SomeClass")),
-                CPPLanguage(),
-            ),
+            FunctionType("()SomeClass", listOf(), listOf(tu.objectType("SomeClass")), language),
             inlineConstructor.type,
         )
         assertTrue(inlineConstructor.hasBody())
@@ -767,7 +765,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                 "(int)SomeClass",
                 listOf(tu.primitiveType("int")),
                 listOf(tu.objectType("SomeClass")),
-                CPPLanguage(),
+                language,
             ),
             constructorDefinition.type,
         )
