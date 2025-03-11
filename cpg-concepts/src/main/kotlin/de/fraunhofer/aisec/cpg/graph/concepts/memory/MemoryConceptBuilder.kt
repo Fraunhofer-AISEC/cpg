@@ -35,12 +35,32 @@ import de.fraunhofer.aisec.cpg.graph.concepts.newConcept
 import de.fraunhofer.aisec.cpg.graph.concepts.newOperation
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 
+/**
+ * Creates a new [Memory] concept.
+ *
+ * @param underlyingNode The underlying node representing this concept.
+ * @param mode The [MemoryManagementMode] which is used to manage the memory.
+ * @return The created [Memory] concept.
+ */
 fun MetadataProvider.newMemory(underlyingNode: Node, mode: MemoryManagementMode) =
     newConcept({ Memory(it, mode = mode) }, underlyingNode = underlyingNode)
 
+/**
+ * Creates a new [DynamicLoading] concept.
+ *
+ * @param underlyingNode The underlying node representing this concept.
+ * @return The created [DynamicLoading] concept.
+ */
 fun MetadataProvider.newDynamicLoading(underlyingNode: Node) =
     newConcept(::DynamicLoading, underlyingNode = underlyingNode)
 
+/**
+ * Creates a new [Allocate] operation.
+ *
+ * @param underlyingNode The underlying node representing this concept.
+ * @param what Defines the object whose memory is allocated.
+ * @return The created [Allocate] concept.
+ */
 fun Concept.newAllocate(underlyingNode: Node, what: Node?) =
     newOperation(
         { underlyingNode, concept ->
@@ -50,6 +70,13 @@ fun Concept.newAllocate(underlyingNode: Node, what: Node?) =
         concept = this,
     )
 
+/**
+ * Creates a new [DeAllocate] operation.
+ *
+ * @param underlyingNode The underlying node representing this concept.
+ * @param what Defines the object whose memory is deallocated.
+ * @return The created [DeAllocate] concept.
+ */
 fun Concept.newDeallocate(underlyingNode: Node, what: Node?) =
     newOperation(
         { underlyingNode, concept ->
@@ -59,6 +86,15 @@ fun Concept.newDeallocate(underlyingNode: Node, what: Node?) =
         concept = this,
     )
 
+/**
+ * Creates a new [LoadLibrary] operation.
+ *
+ * @param underlyingNode The underlying node representing this concept.
+ * @param what Defines which component is loaded.
+ * @param entryPoints A list of the entry points of the library.
+ * @param os The operating system architecture. Can be `null`.
+ * @return The created [LoadLibrary] concept.
+ */
 fun Concept.newLoadLibrary(
     underlyingNode: Node,
     what: Component?,
@@ -79,6 +115,16 @@ fun Concept.newLoadLibrary(
         concept = this,
     )
 
+/**
+ * Creates a new [LoadSymbol] operation.
+ *
+ * @param underlyingNode The underlying node representing this concept.
+ * @param what Defines which symbol is loaded.
+ * @param loader If we are loading a symbol from an external library, this points to the
+ *   [LoadLibrary] operation that loaded the library. Can be `null`.
+ * @param os The operating system architecture. Can be `null`.
+ * @return The created [LoadSymbol] concept.
+ */
 fun <T : Declaration> Concept.newLoadSymbol(
     underlyingNode: Node,
     what: T?,
