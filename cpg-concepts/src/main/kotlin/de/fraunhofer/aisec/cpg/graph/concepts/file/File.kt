@@ -101,6 +101,10 @@ class OpenFile(underlyingNode: Node, override val concept: File) :
 class ReadFile(underlyingNode: Node, override val concept: File) :
     Operation(underlyingNode = underlyingNode, concept = concept), IsFile
 
-/** Represents writing to a file. */
-class WriteFile(underlyingNode: Node, override val concept: File, val what: List<Node>) :
+/**
+ * Represents writing to a file.
+ *
+ * @param what The node being written to the file.
+ */
+class WriteFile(underlyingNode: Node, override val concept: File, val what: Node) :
     Operation(underlyingNode = underlyingNode, concept = concept), IsFile

@@ -152,16 +152,15 @@ fun MetadataProvider.newFileRead(underlyingNode: Node, file: File): ReadFile {
  *
  * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
  * @param file The [File] this operation is writing to.
- * @param what A list of nodes being written to the [file] (usually the arguments to a `write`
- *   call).
+ * @param what A node being written to the [file] (usually the argument of a `write` call).
  * @return The new [WriteFile] node.
  */
-fun MetadataProvider.newFileWrite(underlyingNode: Node, file: File, what: List<Node>): WriteFile {
+fun MetadataProvider.newFileWrite(underlyingNode: Node, file: File, what: Node): WriteFile {
     val node = WriteFile(underlyingNode = underlyingNode, concept = file, what = what)
     node.codeAndLocationFrom(underlyingNode)
 
     // add DFG
-    what.forEach { it.nextDFG += node }
+    what.nextDFG += node
     node.nextDFG += file
 
     NodeBuilder.log(node)

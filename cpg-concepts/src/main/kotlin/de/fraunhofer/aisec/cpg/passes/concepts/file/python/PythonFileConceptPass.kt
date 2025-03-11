@@ -108,12 +108,22 @@ class PythonFileConceptPass(ctx: TranslationContext) : ConceptPass(ctx) {
                         }
                         "__exit__" -> newFileClose(underlyingNode = callExpression, file = fileNode)
                         "read" -> newFileRead(underlyingNode = callExpression, file = fileNode)
-                        "write" ->
+                        "write" -> {
+                            val arg = callExpression.arguments.getOrNull(0)
+                            if (callExpression.arguments.size != 1 || arg == null) {
+                                Util.errorWithFileLocation(
+                                    callExpression,
+                                    log,
+                                    "Failed to identify the write argument. Ignoring the `write` call.",
+                                )
+                                return
+                            }
                             newFileWrite(
                                 underlyingNode = callExpression,
                                 file = fileNode,
-                                what = callExpression.arguments,
+                                what = arg,
                             )
+                        }
                         else ->
                             Util.warnWithFileLocation(
                                 node = callExpression,
