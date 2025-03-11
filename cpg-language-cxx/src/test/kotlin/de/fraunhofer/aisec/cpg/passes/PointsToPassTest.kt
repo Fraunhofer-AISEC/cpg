@@ -418,17 +418,15 @@ class PointsToPassTest {
         assertEquals(3, aPointerDerefLine37.fullMemoryValues.size)
         assertTrue(aPointerDerefLine37.fullMemoryValues.contains(iDecl.fullMemoryValues.first()))
         assertTrue(aPointerDerefLine37.fullMemoryValues.contains(jDecl.fullMemoryValues.first()))
-        assertTrue(aPointerDerefLine37.fullMemoryValues.contains(iUO.input))
+        assertTrue(aPointerDerefLine37.fullMemoryValues.contains(iUO))
     }
 
     @Test
     fun testStructs() {
         val file = File("src/test/resources/pointsto.cpp")
-        // val file = File("/tmp/pointsto.c")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
-                // it.registerLanguage<CLanguage>()
                 it.registerPass<PointsToPass>()
                 it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
             }
@@ -494,44 +492,77 @@ class PointsToPassTest {
         assertEquals(1, saLine53.memoryAddresses.size)
         assertEquals(1, saLine53.fullMemoryValues.size)
         assertEquals(literal1, saLine53.fullMemoryValues.firstOrNull())
+        assertEquals(saLine51, saLine53.prevFullDFG.firstOrNull())
+        assertEquals(
+            saLine53.base,
+            saLine53.prevDFGEdges.first { it.granularity is FieldDataflowGranularity }.start,
+        )
 
         assertEquals(1, sbLine53.memoryAddresses.size)
         assertEquals(1, sbLine53.fullMemoryValues.size)
         assertEquals(literal2, sbLine53.fullMemoryValues.firstOrNull())
+        assertEquals(sbLine52, sbLine53.prevFullDFG.firstOrNull())
+        assertEquals(
+            sbLine53.base,
+            sbLine53.prevDFGEdges.first { it.granularity is FieldDataflowGranularity }.start,
+        )
 
         // Line 55
         assertEquals(1, paLine55.memoryAddresses.size)
         assertEquals(saLine51.memoryAddresses.first(), paLine55.memoryAddresses.first())
         assertEquals(1, paLine55.fullMemoryValues.size)
         assertEquals(literal1, paLine55.fullMemoryValues.first())
+        assertEquals(saLine51, paLine55.prevFullDFG.firstOrNull())
+        assertEquals(
+            paLine55.base,
+            paLine55.prevDFGEdges.first { it.granularity is FieldDataflowGranularity }.start,
+        )
 
         assertEquals(1, pbLine55.memoryAddresses.size)
         assertEquals(sbLine52.memoryAddresses.first(), pbLine55.memoryAddresses.first())
         assertEquals(1, pbLine55.fullMemoryValues.size)
         assertEquals(literal2, pbLine55.fullMemoryValues.first())
+        assertEquals(literal2, pbLine55.fullMemoryValues.first())
+        assertEquals(sbLine52, pbLine55.prevFullDFG.firstOrNull())
+        assertEquals(
+            pbLine55.base,
+            pbLine55.prevDFGEdges.first { it.granularity is FieldDataflowGranularity }.start,
+        )
 
         // Line 56
         assertEquals(1, paLine56.memoryAddresses.size)
         assertEquals(saLine51.memoryAddresses.first(), paLine56.memoryAddresses.first())
         assertEquals(1, paLine56.fullMemoryValues.size)
         assertEquals(literal3, paLine56.fullMemoryValues.first())
+        assertEquals(literal3, paLine56.prevDFG.singleOrNull())
 
         // Line 57
         assertEquals(1, pbLine57.memoryAddresses.size)
         assertEquals(sbLine52.memoryAddresses.first(), pbLine57.memoryAddresses.first())
         assertEquals(1, pbLine57.fullMemoryValues.size)
         assertEquals(literal4, pbLine57.fullMemoryValues.first())
+        assertEquals(literal4, pbLine57.prevDFG.singleOrNull())
 
         // Line 59
         assertEquals(1, paLine59.memoryAddresses.size)
         assertEquals(saLine51.memoryAddresses.first(), paLine59.memoryAddresses.first())
         assertEquals(1, paLine59.fullMemoryValues.size)
         assertEquals(literal3, paLine59.fullMemoryValues.first())
+        assertEquals(paLine56, paLine59.prevFullDFG.singleOrNull())
+        assertEquals(
+            paLine59.base,
+            paLine59.prevDFGEdges.first { it.granularity is FieldDataflowGranularity }.start,
+        )
 
         assertEquals(1, pbLine59.memoryAddresses.size)
         assertEquals(sbLine52.memoryAddresses.first(), pbLine59.memoryAddresses.first())
         assertEquals(1, pbLine59.fullMemoryValues.size)
         assertEquals(literal4, pbLine59.fullMemoryValues.first())
+        assertEquals(pbLine57, pbLine59.prevFullDFG.singleOrNull())
+        assertEquals(
+            pbLine59.base,
+            pbLine59.prevDFGEdges.first { it.granularity is FieldDataflowGranularity }.start,
+        )
     }
 
     @Test

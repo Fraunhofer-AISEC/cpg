@@ -1705,7 +1705,7 @@ fun PointsToStateElement.updateValues(
                 // TODO: To we also need to fetch some properties here?
                 destinations.mapTo(IdentitySet()) { Pair(it, false) }
             newDeclState[destAddr] =
-                TripleLattice.Element(
+                DeclarationStateEntryElement(
                     PowersetLattice.Element(currentEntries),
                     PowersetLattice.Element(newSources),
                     PowersetLattice.Element(newPrevDFG),
