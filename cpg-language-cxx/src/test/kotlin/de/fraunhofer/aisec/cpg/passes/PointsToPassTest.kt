@@ -598,55 +598,34 @@ class PointsToPassTest {
             tu.allChildren<BinaryOperator> { it.location?.region?.startLine == 71 }.first()
 
         // Line 66
-        // TODO
         assertEquals(1, n0Line66.memoryAddresses.size)
-        /*        assertEquals(
-            n0Line66.arrayExpression.fullMemoryValues.first().fieldAddresses.get("0")?.first() as Node,
-            n0Line66.memoryAddresses.first()
-        )*/
         assertEquals(1, n0Line66.fullMemoryValues.size)
         assertTrue(n0Line66.fullMemoryValues.first() is UnknownMemoryValue)
 
         // Line 67
         assertEquals(1, n0Line67.memoryAddresses.size)
-        // TODO
-        /*        assertEquals(
-            n0Line67.base.fullMemoryValues.first(),
-            (n0Line67.memoryAddresses.first())?.memoryParent
-        )*/
         assertEquals(1, n0Line67.fullMemoryValues.size)
         assertEquals(literal1, n0Line67.fullMemoryValues.firstOrNull())
+        assertEquals(literal1, n0Line67.prevDFG.singleOrNull())
 
         // Line 68
         assertEquals(1, n0Line68.memoryAddresses.size)
-        // TODO
-        /*        assertEquals(
-            n0Line68.base.fullMemoryValues.first(),
-            (n0Line68.memoryAddresses.first())?.memoryParent
-        )*/
         assertEquals(1, n0Line68.fullMemoryValues.size)
         assertEquals(literal1, n0Line68.fullMemoryValues.firstOrNull())
+        assertEquals(n0Line67, n0Line68.prevDFG.singleOrNull())
 
         // Line 71
         assertEquals(1, niLine71.memoryAddresses.size)
-        // TODO
-        /*        assertEquals(
-            niLine71.base.fullMemoryValues.first(),
-            (niLine71.memoryAddresses.first())?.memoryParent
-        )*/
         assertEquals(1, niLine71.fullMemoryValues.size)
         assertEquals(exprLine71, niLine71.fullMemoryValues.firstOrNull())
+        assertEquals(exprLine71, niLine71.prevDFG.singleOrNull())
 
         // Line 75
         assertEquals(1, njLine75.memoryAddresses.size)
-        // TODO
-        /*        assertEquals(
-            njLine75.base.fullMemoryValues.first(),
-            (njLine75.memoryAddresses.first())?.memoryParent
-        )*/
         assertEquals(1, njLine75.fullMemoryValues.size)
         assertTrue(njLine75.fullMemoryValues.first() is UnknownMemoryValue)
         assertLocalName("j", njLine75.fullMemoryValues.first())
+        assertEquals(0, njLine75.prevDFG.size)
     }
 
     @Test
