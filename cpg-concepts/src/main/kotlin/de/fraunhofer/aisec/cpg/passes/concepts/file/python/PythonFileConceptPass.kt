@@ -45,7 +45,6 @@ import de.fraunhofer.aisec.cpg.query.QueryTree
  * corresponding reading and writing functions.
  */
 @ExecuteLate
-// TODO @RequiredFrontend(PythonLanguageFrontend::class)
 @DependsOn(DFGPass::class)
 class PythonFileConceptPass(ctx: TranslationContext) : ConceptPass(ctx) {
 
@@ -66,6 +65,12 @@ class PythonFileConceptPass(ctx: TranslationContext) : ConceptPass(ctx) {
     internal val fileCache = mutableMapOf<String, File>()
 
     override fun handleNode(node: Node, tu: TranslationUnitDeclaration) {
+        // Since we cannot directly depend on the Python frontend, we have to check the language
+        // here
+        // based on the node's language.
+        if (node.language.name.localName != "PythonLanguage") {
+            return
+        }
         when (node) {
             is CallExpression -> handleCall(node)
         }
