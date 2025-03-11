@@ -69,7 +69,7 @@ class PythonStdLibConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) 
      */
     private fun handleConstructExpression(expr: ConstructExpression): Configuration? {
         if (expr.name.toString() == "configparser.ConfigParser") {
-            val conf = Configuration(underlyingNode = expr)
+            val conf = newConfiguration(underlyingNode = expr)
             expr.prevDFG += conf
             return conf
         }
@@ -91,7 +91,7 @@ class PythonStdLibConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) 
                 }
             paths?.fulfilled?.map {
                 val conf = it.last() as Configuration
-                val op = LoadConfiguration(call, conf, fileExpression = firstArgument)
+                val op = conf.newLoadConfiguration(call, fileExpression = firstArgument)
                 op
             }
         }
@@ -147,12 +147,12 @@ class PythonStdLibConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) 
         var group = conf.groups.find { it.name.localName == name }
         if (group == null) {
             // If it does not exist, we create it and implicitly add a registration operation
-            group = ConfigurationGroup(sub, conf = conf).also { it.name = Name(name) }.implicit()
-            val op = RegisterConfigurationGroup(sub, group = group).implicit()
+            group = conf.newConfigurationGroup(sub).also { it.name = Name(name) }.implicit()
+            val op = group.newRegisterConfigurationGroup(sub).implicit()
             ops += op
         }
 
-        val op = ReadConfigurationGroup(sub, group = group)
+        val op = group.newReadConfigurationGroup(sub)
         ops += op
 
         // Add an incoming DFG from the option group
@@ -163,7 +163,7 @@ class PythonStdLibConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) 
 
     /**
      * Translates an option access (`config["group"]["option"]`) into a [ReadConfigurationOption]
-     * opertion.
+     * operation.
      */
     private fun handleOptionAccess(
         group: ConfigurationGroup,
@@ -186,14 +186,15 @@ class PythonStdLibConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) 
         if (option == null) {
             // If it does not exist, we create it and implicitly add a registration operation
             option =
-                ConfigurationOption(sub, group = group, key = sub)
+                group
+                    .newConfigurationOption(sub, key = sub, value = null)
                     .also { it.name = group.name.fqn(name) }
                     .implicit()
-            val op = RegisterConfigurationOption(sub, option = option).implicit()
+            val op = option.newRegisterConfigurationOption(sub, defaultValue = null).implicit()
             ops += op
         }
 
-        val op = ReadConfigurationOption(sub, option = option)
+        val op = option.newReadConfigurationOption(sub)
         ops += op
 
         // Add an incoming DFG from the option

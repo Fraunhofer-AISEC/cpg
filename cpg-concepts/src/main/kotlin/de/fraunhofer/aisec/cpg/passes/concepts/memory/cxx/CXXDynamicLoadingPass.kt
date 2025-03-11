@@ -35,6 +35,8 @@ import de.fraunhofer.aisec.cpg.graph.concepts.flows.LibraryEntryPoint
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.DynamicLoading
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.LoadLibrary
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.LoadSymbol
+import de.fraunhofer.aisec.cpg.graph.concepts.memory.newLoadLibrary
+import de.fraunhofer.aisec.cpg.graph.concepts.memory.newLoadSymbol
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
@@ -111,19 +113,19 @@ class CXXDynamicLoadingPass(ctx: TranslationContext) : ConceptPass(ctx) {
             val op =
                 if (assignee.type is FunctionPointerType) {
                     candidates = candidates?.filterIsInstance<FunctionDeclaration>()
-                    LoadSymbol(
+                    concept.newLoadSymbol(
                         underlyingNode = call,
-                        concept = concept,
                         what = candidates?.singleOrNull(),
                         loader = loadLibrary,
+                        os = null,
                     )
                 } else {
                     candidates = candidates?.filterIsInstance<VariableDeclaration>()
-                    LoadSymbol(
+                    concept.newLoadSymbol(
                         underlyingNode = call,
-                        concept = concept,
                         what = candidates?.singleOrNull(),
                         loader = loadLibrary,
+                        os = null,
                     )
                 }
 
@@ -165,9 +167,8 @@ class CXXDynamicLoadingPass(ctx: TranslationContext) : ConceptPass(ctx) {
 
         // Create the op
         val op =
-            LoadLibrary(
+            concept.newLoadLibrary(
                 underlyingNode = call,
-                concept = concept,
                 what = component,
                 entryPoints = entryPoints,
                 os = os,

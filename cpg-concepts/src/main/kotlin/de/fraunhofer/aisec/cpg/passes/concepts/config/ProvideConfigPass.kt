@@ -36,8 +36,9 @@ import de.fraunhofer.aisec.cpg.graph.concepts.config.ConfigurationOptionSource
 import de.fraunhofer.aisec.cpg.graph.concepts.config.ConfigurationSource
 import de.fraunhofer.aisec.cpg.graph.concepts.config.LoadConfiguration
 import de.fraunhofer.aisec.cpg.graph.concepts.config.ProvideConfiguration
-import de.fraunhofer.aisec.cpg.graph.concepts.config.ProvideConfigurationGroup
-import de.fraunhofer.aisec.cpg.graph.concepts.config.ProvideConfigurationOption
+import de.fraunhofer.aisec.cpg.graph.concepts.config.newProvideConfiguration
+import de.fraunhofer.aisec.cpg.graph.concepts.config.newProvideConfigurationGroup
+import de.fraunhofer.aisec.cpg.graph.concepts.config.newProvideConfigurationOption
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.operationNodes
 import de.fraunhofer.aisec.cpg.graph.translationResult
@@ -89,8 +90,9 @@ class ProvideConfigPass(ctx: TranslationContext) : ConceptPass(ctx) {
         ops += source.groups.mapNotNull { handleConfigurationGroup(conf, it) }.flatten()
 
         ops +=
-            ProvideConfiguration(underlyingNode = tu, conf = configuration.conf, source = source)
-                .also { it.name = source.name }
+            configuration.conf.newProvideConfiguration(underlyingNode = tu, source = source).also {
+                it.name = source.name
+            }
 
         return ops
     }
@@ -114,11 +116,8 @@ class ProvideConfigPass(ctx: TranslationContext) : ConceptPass(ctx) {
         }
 
         val op =
-            ProvideConfigurationGroup(
-                    underlyingNode = sourceUnderlying,
-                    group = group,
-                    source = source,
-                )
+            group
+                .newProvideConfigurationGroup(underlyingNode = sourceUnderlying, source = source)
                 .also { it.name = source.name }
         ops += op
 
@@ -149,9 +148,9 @@ class ProvideConfigPass(ctx: TranslationContext) : ConceptPass(ctx) {
         }
 
         val op =
-            ProvideConfigurationOption(
+            option
+                .newProvideConfigurationOption(
                     underlyingNode = sourceUnderlying,
-                    option = option,
                     value = sourceUnderlying,
                     source = source,
                 )

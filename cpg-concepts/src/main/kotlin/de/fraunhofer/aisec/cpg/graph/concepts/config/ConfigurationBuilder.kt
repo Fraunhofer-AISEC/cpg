@@ -150,6 +150,22 @@ fun ConfigurationGroup.newRegisterConfigurationGroup(underlyingNode: Node) =
     )
 
 /**
+ * Creates a new [ProvideConfiguration] operation.
+ *
+ * @param underlyingNode The underlying node representing this operation.
+ * @param source The source of the configuration.
+ * @return The created [ProvideConfiguration] operation.
+ */
+fun Configuration.newProvideConfiguration(underlyingNode: Node, source: ConfigurationSource) =
+    newOperation(
+        { underlyingNode, concept ->
+            ProvideConfiguration(underlyingNode = underlyingNode, source = source, conf = concept)
+        },
+        underlyingNode = underlyingNode,
+        concept = this,
+    )
+
+/**
  * Creates a new [ProvideConfigurationGroup] operation.
  *
  * @param underlyingNode The underlying node representing this operation.
