@@ -400,10 +400,9 @@ class PointsToPassTest {
         assertEquals(2, aPointerDerefLine32.memoryAddresses.size)
         assertNotNull(iDecl.memoryAddresses.singleOrNull())
         assertNotNull(jDecl.memoryAddresses.singleOrNull())
-        assertTrue(
-            aPointerDerefLine32.memoryAddresses.containsAll(
-                setOf(iDecl.memoryAddresses.single(), jDecl.memoryAddresses.single())
-            )
+        assertEquals(
+            setOf(iDecl.memoryAddresses.single(), jDecl.memoryAddresses.single()),
+            aPointerDerefLine32.memoryAddresses,
         )
         assertEquals(2, aPointerDerefLine32.fullMemoryValues.size)
         assertTrue(aPointerDerefLine32.fullMemoryValues.contains(iDecl.fullMemoryValues.first()))
