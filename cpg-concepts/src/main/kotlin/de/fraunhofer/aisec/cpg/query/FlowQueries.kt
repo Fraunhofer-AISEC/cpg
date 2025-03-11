@@ -23,12 +23,13 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.query
+package de.fraunhofer.aisec.cpg.query.concepts
 
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend.Companion.log
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.helpers.Util
+import de.fraunhofer.aisec.cpg.query.*
 
 /**
  * A helper function to check for execution order from one [OverlayNode] to another. These nodes are

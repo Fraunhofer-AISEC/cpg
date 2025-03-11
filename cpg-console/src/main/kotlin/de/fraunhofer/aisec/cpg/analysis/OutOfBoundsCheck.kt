@@ -54,7 +54,7 @@ class OutOfBoundsCheck {
                 Strategy::AST_FORWARD,
                 object : IVisitor<Node>() {
                     fun visit(v: SubscriptExpression) {
-                        val evaluator = ValueEvaluator()
+                        val evaluator = v.language.evaluator
                         val resolvedIndex = evaluator.evaluate(v.subscriptExpression)
 
                         if (resolvedIndex !is Int) {

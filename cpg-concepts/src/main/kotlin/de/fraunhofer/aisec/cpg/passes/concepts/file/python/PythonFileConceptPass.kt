@@ -159,7 +159,6 @@ class PythonFileConceptPass(ctx: TranslationContext) : ConceptPass(ctx) {
                         callExpression.argumentValueByNameOrPosition<String>(
                             name = "path",
                             position = 0,
-                            evaluator = evaluator,
                         )
                     if (fileName == null) {
                         Util.errorWithFileLocation(
@@ -176,7 +175,6 @@ class PythonFileConceptPass(ctx: TranslationContext) : ConceptPass(ctx) {
                         callExpression.argumentValueByNameOrPosition<Long>(
                             name = "mode",
                             position = 1,
-                            evaluator = evaluator,
                         )
                     if (mode == null) {
                         Util.errorWithFileLocation(
@@ -193,7 +191,6 @@ class PythonFileConceptPass(ctx: TranslationContext) : ConceptPass(ctx) {
                         callExpression.argumentValueByNameOrPosition<String>(
                             name = "path",
                             position = 0,
-                            evaluator = evaluator,
                         )
                     if (fileName == null) {
                         Util.errorWithFileLocation(
@@ -267,12 +264,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : ConceptPass(ctx) {
      * @return The name or [DEFAULT_FILE_NAME] if no name could be found.
      */
     private fun getFileName(call: CallExpression, argumentName: String): String {
-        val name =
-            call.argumentValueByNameOrPosition<String>(
-                name = argumentName,
-                position = 0,
-                evaluator = evaluator,
-            )
+        val name = call.argumentValueByNameOrPosition<String>(name = argumentName, position = 0)
         return if (name != null) {
             name
         } else {
@@ -297,11 +289,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : ConceptPass(ctx) {
      * ```
      */
     internal fun getBuiltinOpenMode(call: CallExpression): String? {
-        return call.argumentValueByNameOrPosition<String>(
-            name = "mode",
-            position = 1,
-            evaluator = evaluator,
-        )
+        return call.argumentValueByNameOrPosition<String>(name = "mode", position = 1)
     }
 
     /**
@@ -318,11 +306,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : ConceptPass(ctx) {
      * @return The `mode`
      */
     internal fun getOsOpenMode(call: CallExpression): Long? {
-        return call.argumentValueByNameOrPosition<Long>(
-            name = "mode",
-            position = 2,
-            evaluator = evaluator,
-        )
+        return call.argumentValueByNameOrPosition<Long>(name = "mode", position = 2)
     }
 
     /**
@@ -334,11 +318,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : ConceptPass(ctx) {
      * ```
      */
     internal fun getOsOpenFlags(call: CallExpression): Long? {
-        return call.argumentValueByNameOrPosition<Long>(
-            name = "flags",
-            position = 1,
-            evaluator = evaluator,
-        )
+        return call.argumentValueByNameOrPosition<Long>(name = "flags", position = 1)
     }
 
     /**
