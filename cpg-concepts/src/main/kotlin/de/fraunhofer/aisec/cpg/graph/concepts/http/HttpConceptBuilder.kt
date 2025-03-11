@@ -32,6 +32,14 @@ import de.fraunhofer.aisec.cpg.graph.concepts.newConcept
 import de.fraunhofer.aisec.cpg.graph.concepts.newOperation
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 
+/**
+ * Creates a new [HttpClient] concept.
+ *
+ * @param underlyingNode The underlying node representing this concept.
+ * @param isTLS Whether the client uses TLS.
+ * @param authentication The [Authentication] method used by the client.
+ * @return The created [HttpClient] concept.
+ */
 fun MetadataProvider.newHttpClient(
     underlyingNode: Node,
     isTLS: Boolean?,
@@ -42,6 +50,14 @@ fun MetadataProvider.newHttpClient(
         underlyingNode = underlyingNode,
     )
 
+/**
+ * Creates a new [HttpRequestHandler] concept.
+ *
+ * @param underlyingNode The underlying node representing this concept.
+ * @param basePath The base path of the [HttpRequestHandler].
+ * @param endpoints A list of the [HttpEndpoint]s exposed by the [HttpRequestHandler].
+ * @return The created [HttpRequestHandler] concept.
+ */
 fun MetadataProvider.newHttpRequestHandler(
     underlyingNode: Node,
     basePath: String,
@@ -52,6 +68,16 @@ fun MetadataProvider.newHttpRequestHandler(
         underlyingNode = underlyingNode,
     )
 
+/**
+ * Creates a new [HttpEndpoint] concept.
+ *
+ * @param underlyingNode The underlying node representing this concept.
+ * @param httpMethod The [HttpMethod] the created [HttpEndpoint] listens to.
+ * @param path The path of the created [HttpEndpoint].
+ * @param arguments A list of the [Node]s representing the arguments passed to the [HttpEndpoint].
+ * @param authentication The [Authentication] method used by the [HttpEndpoint].
+ * @return The created [HttpEndpoint] concept.
+ */
 fun MetadataProvider.newHttpEndpoint(
     underlyingNode: FunctionDeclaration,
     httpMethod: HttpMethod,
@@ -72,6 +98,12 @@ fun MetadataProvider.newHttpEndpoint(
         underlyingNode = underlyingNode,
     )
 
+/**
+ * Creates a new [HttpRequest] operation for the given [HttpEndpoint].
+ *
+ * @param underlyingNode The underlying [Node] representing the request.
+ * @return The created [HttpRequest] concept.
+ */
 fun HttpClient.newHttpRequest(
     underlyingNode: Node,
     url: String,
@@ -92,6 +124,12 @@ fun HttpClient.newHttpRequest(
         concept = this,
     )
 
+/**
+ * Creates a new [RegisterHttpEndpoint] operation for the given [HttpEndpoint].
+ *
+ * @param underlyingNode The underlying [Node] registering the endpoint method.
+ * @return The created [RegisterHttpEndpoint] concept.
+ */
 fun HttpEndpoint.newHttpRegisterHttpEndpoint(underlyingNode: Node) =
     newOperation(
         { underlyingNode, concept ->
