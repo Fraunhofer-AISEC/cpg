@@ -506,8 +506,9 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * of a de-referenced pointer in C like `*a = 1`.
      */
     private fun handleStore(instr: LLVMValueRef): Statement {
-        val dereference = newUnaryOperator("*", postfix = false, prefix = true, rawNode = instr)
-        dereference.input = frontend.getOperandValueAtIndex(instr, 1)
+        val input = frontend.getOperandValueAtIndex(instr, 1)
+        val dereference = newPointerDereference(input.name, rawNode = instr)
+        dereference.input = input
 
         return newAssignExpression(
             "=",
@@ -522,8 +523,9 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * is basically just a pointer de-reference.
      */
     private fun handleLoad(instr: LLVMValueRef): Statement {
-        val ref = newUnaryOperator("*", postfix = false, prefix = true, rawNode = instr)
-        ref.input = frontend.getOperandValueAtIndex(instr, 0)
+        val input = frontend.getOperandValueAtIndex(instr, 0)
+        val ref = newPointerDereference(input.name, rawNode = instr)
+        ref.input = input
 
         return declarationOrNot(ref, instr)
     }
@@ -797,7 +799,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val cmp = frontend.getOperandValueAtIndex(instr, 1)
         val value = frontend.getOperandValueAtIndex(instr, 2)
 
-        val ptrDerefCmp = newUnaryOperator("*", postfix = false, prefix = true, rawNode = instr)
+        val ptrDerefCmp = newPointerDereference(ptr.name, rawNode = instr)
         ptrDerefCmp.input = ptr
 
         val cmpExpr = newBinaryOperator("==", rawNode = instr)
@@ -813,13 +815,15 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             val construct = newConstructExpression("")
             construct.instantiates = (targetType as? ObjectType)?.recordDeclaration
 
+            val ptrDerefConstructInput = frontend.getOperandValueAtIndex(instr, 0)
             val ptrDerefConstruct =
-                newUnaryOperator("*", postfix = false, prefix = true, rawNode = instr)
-            ptrDerefConstruct.input = frontend.getOperandValueAtIndex(instr, 0)
+                newPointerDereference(ptrDerefConstructInput.name, rawNode = instr)
+            ptrDerefConstruct.input = ptrDerefConstructInput
 
+            val ptrDerefCmpConstructInput = frontend.getOperandValueAtIndex(instr, 0)
             val ptrDerefCmpConstruct =
-                newUnaryOperator("*", postfix = false, prefix = true, rawNode = instr)
-            ptrDerefCmpConstruct.input = frontend.getOperandValueAtIndex(instr, 0)
+                newPointerDereference(ptrDerefCmpConstructInput.name, rawNode = instr)
+            ptrDerefCmpConstruct.input = ptrDerefCmpConstructInput
 
             val cmpExprConstruct = newBinaryOperator("==", rawNode = instr)
             cmpExprConstruct.lhs = ptrDerefCmpConstruct
@@ -832,8 +836,9 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             compoundStatement.statements += decl
         }
 
-        val ptrDerefAssign = newUnaryOperator("*", false, true, rawNode = instr)
-        ptrDerefAssign.input = frontend.getOperandValueAtIndex(instr, 0)
+        val ptrDerefAssignInput = frontend.getOperandValueAtIndex(instr, 0)
+        val ptrDerefAssign = newPointerDereference(ptrDerefAssignInput.name, rawNode = instr)
+        ptrDerefAssign.input = ptrDerefAssignInput
 
         val assignment =
             newAssignExpression("=", listOf(ptrDerefAssign), listOf(value), rawNode = instr)
@@ -860,11 +865,12 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val exchOp = newAssignExpression("=", rawNode = instr)
         exchOp.name = Name("atomicrmw")
 
-        val ptrDeref = newUnaryOperator("*", postfix = false, prefix = true, rawNode = instr)
+        val ptrDeref = newPointerDereference(ptr.name, rawNode = instr)
         ptrDeref.input = ptr
 
-        val ptrDerefExch = newUnaryOperator("*", postfix = false, prefix = true, rawNode = instr)
-        ptrDerefExch.input = frontend.getOperandValueAtIndex(instr, 0)
+        val ptrDerefExchInput = frontend.getOperandValueAtIndex(instr, 0)
+        val ptrDerefExch = newPointerDereference(ptrDerefExchInput.name, rawNode = instr)
+        ptrDerefExch.input = ptrDerefExchInput
         exchOp.lhs = mutableListOf(ptrDerefExch)
 
         when (operation) {
@@ -923,8 +929,10 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 condition.lhs = ptrDeref
                 condition.rhs = value
 
-                val ptrDerefConditional = newUnaryOperator("*", false, true, rawNode = instr)
-                ptrDerefConditional.input = frontend.getOperandValueAtIndex(instr, 0)
+                val ptrDerefConditionalInput = frontend.getOperandValueAtIndex(instr, 0)
+                val ptrDerefConditional =
+                    newPointerDereference(ptrDerefConditionalInput.name, rawNode = instr)
+                ptrDerefConditional.input = ptrDerefConditionalInput
                 val conditional =
                     newConditionalExpression(condition, ptrDerefConditional, value, ty)
                 exchOp.rhs = mutableListOf(conditional)
@@ -948,8 +956,10 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 castExprRhs.expression = value
                 condition.rhs = castExprRhs
 
-                val ptrDerefConditional = newUnaryOperator("*", false, true, rawNode = instr)
-                ptrDerefConditional.input = frontend.getOperandValueAtIndex(instr, 0)
+                val ptrDerefConditionalInput = frontend.getOperandValueAtIndex(instr, 0)
+                val ptrDerefConditional =
+                    newPointerDereference(ptrDerefConditionalInput.name, rawNode = instr)
+                ptrDerefConditional.input = ptrDerefConditionalInput
                 val conditional =
                     newConditionalExpression(condition, ptrDerefConditional, value, ty)
                 exchOp.rhs = mutableListOf(conditional)
@@ -967,9 +977,10 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             // set lhs = *ptr, then perform the replacement
             val compoundStatement = newBlock(rawNode = instr)
 
+            val ptrDerefAssignmentInput = frontend.getOperandValueAtIndex(instr, 0)
             val ptrDerefAssignment =
-                newUnaryOperator("*", postfix = false, prefix = true, rawNode = instr)
-            ptrDerefAssignment.input = frontend.getOperandValueAtIndex(instr, 0)
+                newPointerDereference(ptrDerefAssignmentInput.name, rawNode = instr)
+            ptrDerefAssignment.input = ptrDerefAssignmentInput
 
             compoundStatement.statements =
                 mutableListOf(declarationOrNot(ptrDerefAssignment, instr), exchOp)
