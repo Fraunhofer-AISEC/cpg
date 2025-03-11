@@ -30,13 +30,13 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.newConcept
 
 fun MetadataProvider.newAgnosticOS(underlyingNode: Node) =
-    newConcept({ Agnostic(it) }, underlyingNode = underlyingNode)
+    newConcept(::Agnostic, underlyingNode = underlyingNode)
 
 fun MetadataProvider.newWin32OS(underlyingNode: Node) =
-    newConcept({ Win32(it) }, underlyingNode = underlyingNode)
+    newConcept(::Win32, underlyingNode = underlyingNode)
 
 fun MetadataProvider.newPosixOS(underlyingNode: Node) =
-    newConcept({ POSIX(it) }, underlyingNode = underlyingNode)
+    newConcept(::POSIX, underlyingNode = underlyingNode)
 
 fun MetadataProvider.newDarwinOS(underlyingNode: Node) =
-    newConcept({ Darwin(it) }, underlyingNode = underlyingNode)
+    newConcept(::Darwin, underlyingNode = underlyingNode)
