@@ -44,7 +44,7 @@ import org.slf4j.LoggerFactory
  * performance and reduce memory usage when interacting with the Neo4j database. Specifically, it
  * determines the maximum size of each chunk of edges to be persisted in one batch operation.
  */
-const val edgeChunkSize = 2000
+const val edgeChunkSize = 10000
 
 /**
  * Specifies the maximum number of nodes to be processed in a single chunk during persistence
