@@ -47,13 +47,12 @@ class ImportResolverTest {
     fun testImportOrderResolve() {
         val frontend =
             TestLanguageFrontend(
-                namespaceDelimiter = ".",
                 ctx =
                     TranslationContext(
                         TranslationConfiguration.builder().defaultPasses().build(),
                         ScopeManager(),
                         TypeManager(),
-                    ),
+                    )
             )
         var result =
             frontend.build {
@@ -65,8 +64,11 @@ class ImportResolverTest {
                             // create them in reverse order
                             var tuB = newTranslationUnitDeclaration("file.b")
                             scopeManager.resetToGlobal(tuB)
+
                             var pkgB = newNamespaceDeclaration("b")
                             scopeManager.addDeclaration(pkgB)
+                            tuB.declarations += pkgB
+
                             scopeManager.enterScope(pkgB)
                             var import =
                                 newImportDeclaration(
@@ -74,12 +76,16 @@ class ImportResolverTest {
                                     style = ImportStyle.IMPORT_NAMESPACE,
                                 )
                             scopeManager.addDeclaration(import)
+                            pkgB.declarations += import
+
                             import =
                                 newImportDeclaration(
                                     parseName("c.bar"),
                                     style = ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE,
                                 )
                             scopeManager.addDeclaration(import)
+                            pkgB.declarations += import
+
                             scopeManager.leaveScope(pkgB)
                             tuB
                         }
@@ -88,11 +94,16 @@ class ImportResolverTest {
                     with(frontend) {
                             var tuA = newTranslationUnitDeclaration("file.a")
                             scopeManager.resetToGlobal(tuA)
+
                             var pkgA = newNamespaceDeclaration("a")
                             scopeManager.addDeclaration(pkgA)
+                            tuA.declarations += pkgA
+
                             scopeManager.enterScope(pkgA)
                             var foo = newVariableDeclaration(parseName("a.foo"))
                             scopeManager.addDeclaration(foo)
+                            pkgA.declarations += foo
+
                             scopeManager.leaveScope(pkgA)
                             tuA
                         }
@@ -101,11 +112,16 @@ class ImportResolverTest {
                     with(frontend) {
                             var tuA = newTranslationUnitDeclaration("file.c")
                             scopeManager.resetToGlobal(tuA)
+
                             var pkgA = newNamespaceDeclaration("c")
                             scopeManager.addDeclaration(pkgA)
+                            tuA.declarations += pkgA
+
                             scopeManager.enterScope(pkgA)
                             var foo = newVariableDeclaration(parseName("c.bar"))
                             scopeManager.addDeclaration(foo)
+                            pkgA.declarations += foo
+
                             scopeManager.leaveScope(pkgA)
                             tuA
                         }

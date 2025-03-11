@@ -154,7 +154,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
         for (method in record.embeddedStructs.flatMap { it.methods }) {
             // Add it to the scope, but do NOT add it to the underlying AST field (methods),
             // otherwise we would duplicate the method in the AST
-            scopeManager.addDeclaration(method, addToAST = false)
+            scopeManager.addDeclaration(method)
         }
 
         scopeManager.leaveScope(record)
@@ -162,7 +162,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
     private fun addBuiltIn(): TranslationUnitDeclaration {
         val builtin = newTranslationUnitDeclaration("builtin.go")
-        builtin.language = GoLanguage()
+        builtin.language = GoLanguage(TranslationContext())
         scopeManager.resetToGlobal(builtin)
 
         return with(builtin) {
@@ -215,7 +215,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
         }
     }
 
-    private fun addBuiltInFunction(func: FunctionDeclaration) {
+    private fun TranslationUnitDeclaration.addBuiltInFunction(func: FunctionDeclaration) {
         func.type =
             typeManager.registerType(
                 FunctionType(
@@ -226,6 +226,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 )
             )
         scopeManager.addDeclaration(func)
+        this.declarations += func
     }
 
     /**
@@ -364,10 +365,9 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
                         assign.rhs[idx].registerTypeObserver(InitializerTypePropagation(decl))
                     }
 
-                    assign.declarations += decl
-
                     // Add it to the scope, so other assignments / references can "see" it.
                     scopeManager.addDeclaration(decl)
+                    assign.declarations += decl
                 }
             }
         }
