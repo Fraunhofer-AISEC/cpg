@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.InferenceConfiguration.Companion.builder
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
@@ -595,7 +596,15 @@ internal class CXXLanguageFrontendTest : BaseTest() {
 
         val literal7 = cAssignment.rhs<Literal<Int>>()
         assertNotNull(literal7)
-        assertEquals(3, literal7.nextFullDFG.size)
+        // DFG to the lhs, memory values to lhs, and line 17
+        assertEquals(
+            3,
+            literal7.memoryValueUsageEdges.filter { it.granularity is FullDataflowGranularity }.size,
+        )
+        assertEquals(1, literal7.nextFullDFG.size)
+        assertEquals(cDeref, literal7.nextFullDFG.singleOrNull())
+        // The lhs flows to the usage in line 17
+        assertEquals(1, cDeref.nextFullDFG.size)
 
         val cNextUsageStmt = statements[++line] as AssignExpression
         val cNextUsage = cNextUsageStmt.rhs<PointerDereference>()
@@ -607,7 +616,10 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                 cDeref as PointerDereference,
                 ptrDeref as PointerDereference,
             ),
-            literal7.nextFullDFG.toSet(),
+            literal7.memoryValueUsageEdges
+                .filter { it.granularity is FullDataflowGranularity }
+                .map { it.end }
+                .toSet(),
         )
     }
 
