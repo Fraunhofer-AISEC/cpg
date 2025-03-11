@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.file.*
 import de.fraunhofer.aisec.cpg.passes.concepts.file.python.PythonFileConceptPass
+import de.fraunhofer.aisec.cpg.query.concepts.executionPathHelper
 import de.fraunhofer.aisec.cpg.query.dataFlow
 import de.fraunhofer.aisec.cpg.query.executionPath
 import de.fraunhofer.aisec.cpg.test.BaseTest
@@ -400,16 +401,5 @@ class FileConceptTest : BaseTest() {
             executionPathHelper(startNode = fileDelete, endNode = fileWrite),
             "Expected to find an execution path from remove to write.",
         )
-    }
-
-    internal fun executionPathHelper(startNode: OverlayNode?, endNode: OverlayNode?): Boolean {
-        assertNotNull(startNode, "Expected a start node.")
-        assertNotNull(endNode, "Expected an end node.")
-        val startUnderlyingNode = startNode.underlyingNode
-        assertNotNull(startUnderlyingNode, "Expected to find an underlying node.")
-        return executionPath(startNode = startUnderlyingNode) { node ->
-                node.overlays.any { overlay -> overlay == endNode }
-            }
-            .value
     }
 }
