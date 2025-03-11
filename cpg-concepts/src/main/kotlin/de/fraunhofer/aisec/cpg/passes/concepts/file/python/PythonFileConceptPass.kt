@@ -26,8 +26,6 @@
 package de.fraunhofer.aisec.cpg.passes.concepts.file.python
 
 import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend
-import de.fraunhofer.aisec.cpg.frontends.python.PythonValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.Backward
 import de.fraunhofer.aisec.cpg.graph.GraphToFollow
 import de.fraunhofer.aisec.cpg.graph.Node
@@ -40,7 +38,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.concepts.ConceptPass
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLate
-import de.fraunhofer.aisec.cpg.passes.configuration.RequiredFrontend
 import de.fraunhofer.aisec.cpg.query.QueryTree
 import de.fraunhofer.aisec.cpg.query.dataFlow
 
@@ -50,7 +47,7 @@ import de.fraunhofer.aisec.cpg.query.dataFlow
  * corresponding reading and writing functions.
  */
 @ExecuteLate
-@RequiredFrontend(PythonLanguageFrontend::class)
+// TODO @RequiredFrontend(PythonLanguageFrontend::class)
 class PythonFileConceptPass(ctx: TranslationContext) : ConceptPass(ctx) {
 
     /** The file name used if we fail to find it. */
@@ -148,7 +145,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : ConceptPass(ctx) {
                         callExpression.argumentValueByNameOrPosition<String>(
                             name = "path",
                             position = 0,
-                            evaluator = PythonValueEvaluator(),
+                            evaluator = evaluator,
                         ) as? String
                     if (fileName == null) {
                         Util.errorWithFileLocation(
@@ -165,7 +162,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : ConceptPass(ctx) {
                         callExpression.argumentValueByNameOrPosition<Long>(
                             name = "mode",
                             position = 1,
-                            evaluator = PythonValueEvaluator(),
+                            evaluator = evaluator,
                         )
                     if (mode == null) {
                         Util.errorWithFileLocation(
@@ -232,7 +229,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : ConceptPass(ctx) {
             call.argumentValueByNameOrPosition<String>(
                 name = argumentName,
                 position = 0,
-                evaluator = PythonValueEvaluator(),
+                evaluator = evaluator,
             )
         return if (name != null) {
             name
@@ -261,7 +258,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : ConceptPass(ctx) {
         return call.argumentValueByNameOrPosition<String>(
             name = "mode",
             position = 1,
-            evaluator = PythonValueEvaluator(),
+            evaluator = evaluator,
         )
     }
 
@@ -282,7 +279,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : ConceptPass(ctx) {
         return call.argumentValueByNameOrPosition<Long>(
             name = "mode",
             position = 2,
-            evaluator = PythonValueEvaluator(),
+            evaluator = evaluator,
         )
     }
 
@@ -298,7 +295,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : ConceptPass(ctx) {
         return call.argumentValueByNameOrPosition<Long>(
             name = "flags",
             position = 1,
-            evaluator = PythonValueEvaluator(),
+            evaluator = evaluator,
         )
     }
 

@@ -26,8 +26,10 @@
 package de.fraunhofer.aisec.cpg.concepts.file
 
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
+import de.fraunhofer.aisec.cpg.frontends.python.PythonValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.file.*
+import de.fraunhofer.aisec.cpg.passes.concepts.ConceptPass
 import de.fraunhofer.aisec.cpg.passes.concepts.file.python.PythonFileConceptPass
 import de.fraunhofer.aisec.cpg.query.dataFlow
 import de.fraunhofer.aisec.cpg.query.executionPath
@@ -54,6 +56,9 @@ class FileConceptTest : BaseTest() {
                 it.registerLanguage<PythonLanguage>()
                 it.registerPass<PythonFileConceptPass>()
                 it.symbols(mapOf("PYTHON_PLATFORM" to "linux"))
+                it.configurePass<PythonFileConceptPass>(
+                    ConceptPass.Config(evaluator = PythonValueEvaluator())
+                )
             }
         assertNotNull(result)
 
@@ -133,6 +138,9 @@ class FileConceptTest : BaseTest() {
                 it.registerLanguage<PythonLanguage>()
                 it.registerPass<PythonFileConceptPass>()
                 it.symbols(mapOf("PYTHON_PLATFORM" to "linux"))
+                it.configurePass<PythonFileConceptPass>(
+                    ConceptPass.Config(evaluator = PythonValueEvaluator())
+                )
             }
         assertNotNull(result)
 
@@ -190,6 +198,9 @@ class FileConceptTest : BaseTest() {
                 it.registerLanguage<PythonLanguage>()
                 it.registerPass<PythonFileConceptPass>()
                 it.symbols(mapOf("PYTHON_PLATFORM" to "linux"))
+                it.configurePass<PythonFileConceptPass>(
+                    ConceptPass.Config(evaluator = PythonValueEvaluator())
+                )
             }
         assertNotNull(result)
 
@@ -247,7 +258,13 @@ class FileConceptTest : BaseTest() {
             ) {
                 it.registerLanguage<PythonLanguage>()
                 it.registerPass<PythonFileConceptPass>()
+                it.configurePass<PythonFileConceptPass>(
+                    ConceptPass.Config(evaluator = PythonValueEvaluator())
+                )
                 it.symbols(mapOf("PYTHON_PLATFORM" to "linux"))
+                it.configurePass<PythonFileConceptPass>(
+                    ConceptPass.Config(evaluator = PythonValueEvaluator())
+                )
             }
         assertNotNull(result)
 
@@ -287,6 +304,9 @@ class FileConceptTest : BaseTest() {
                 it.registerLanguage<PythonLanguage>()
                 it.registerPass<PythonFileConceptPass>()
                 it.symbols(mapOf("PYTHON_PLATFORM" to "linux"))
+                it.configurePass<PythonFileConceptPass>(
+                    ConceptPass.Config(evaluator = PythonValueEvaluator())
+                )
             }
         assertNotNull(result)
 
@@ -332,6 +352,9 @@ class FileConceptTest : BaseTest() {
                 it.registerLanguage<PythonLanguage>()
                 it.registerPass<PythonFileConceptPass>()
                 it.symbols(mapOf("PYTHON_PLATFORM" to "linux"))
+                it.configurePass<PythonFileConceptPass>(
+                    ConceptPass.Config(evaluator = PythonValueEvaluator())
+                )
             }
         assertNotNull(result)
 

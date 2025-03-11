@@ -55,7 +55,4 @@ dependencies {
         integrationTestImplementation(it)
     }
     integrationTestImplementation(projects.cpgAnalysis)
-
-    // Required for the [PythonFileConceptPass]
-    implementation(projects.cpgLanguagePython)
 }
