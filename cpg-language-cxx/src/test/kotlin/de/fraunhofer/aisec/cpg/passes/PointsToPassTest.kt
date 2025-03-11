@@ -127,6 +127,8 @@ class PointsToPassTest {
                 }
                 .first()
         assertNotNull(iRefRightLine11)
+        val iRefLine13 = tu.allChildren<Reference> { it.location?.region?.startLine == 13 }.first()
+        assertNotNull(iRefLine13)
 
         val aRefLine7 =
             tu.allChildren<Reference> {
@@ -142,6 +144,14 @@ class PointsToPassTest {
                 }
                 .first()
         assertNotNull(aRefLine12)
+        val aRefLine14 =
+            tu.allChildren<Reference> {
+                    it.location?.region?.startLine == 14 &&
+                        it.name.localName == "a" &&
+                        it.location?.region?.startColumn == 19
+                }
+                .first()
+        assertNotNull(aRefLine14)
         val aRefLine15 =
             tu.allChildren<Reference> {
                     it.location?.region?.startLine == 15 && it.name.localName == "a"
@@ -225,8 +235,7 @@ class PointsToPassTest {
 
         assertEquals(2, binOp.prevDFG.size)
         assertEquals(setOf<Node>(iRefRightLine11, literal1Line11), binOp.prevDFG)
-        // TODO: What do we expect here?
-        // assertEquals(2, binOp.memoryValues.size)
+        assertEquals(binOp, binOp.memoryValues.firstOrNull())
 
         // Line 12
         assertEquals(1, aPointerDerefLine12.memoryAddresses.size)
@@ -244,7 +253,12 @@ class PointsToPassTest {
                 .start,
         )
 
-        // Line 13 should only update the DeclarationState, not much here to test
+        // Line 13
+        assertEquals(iRefLine13, iUO.prevDFG.singleOrNull())
+        assertEquals(iUO, iUO.memoryValues.singleOrNull())
+        assertEquals(mutableSetOf<Node>(iRefLeftLine11, iUO), iRefLine13.prevDFG)
+        assertEquals(binOp, iRefLine13.memoryValues.singleOrNull())
+
         // Line 14
         assertEquals(1, aPointerDerefLine14.memoryAddresses.size)
         assertEquals(
@@ -252,7 +266,14 @@ class PointsToPassTest {
             aPointerDerefLine14.memoryAddresses.first(),
         )
         assertEquals(1, aPointerDerefLine14.fullMemoryValues.size)
-        assertEquals(iUO.input, aPointerDerefLine14.fullMemoryValues.first())
+        assertEquals(iUO, aPointerDerefLine14.fullMemoryValues.first())
+        assertEquals(iUO.input, aPointerDerefLine14.prevFullDFG.singleOrNull())
+        assertEquals(
+            aRefLine14,
+            aPointerDerefLine14.prevDFGEdges
+                .first { it.granularity is PartialDataflowGranularity<*> }
+                .start,
+        )
 
         // Line 15
         assertTrue(jPointerRef.memoryAddresses.isEmpty())
@@ -262,6 +283,12 @@ class PointsToPassTest {
         assertEquals(aDecl.memoryAddresses.singleOrNull(), aRefLine15.memoryAddresses.first())
         assertEquals(1, aRefLine15.fullMemoryValues.size)
         assertEquals(jDecl.memoryAddresses.single(), aRefLine15.fullMemoryValues.first())
+        assertEquals(jPointerRef, aRefLine15.prevFullDFG.singleOrNull())
+        assertEquals(jDecl.memoryAddresses.singleOrNull(), jPointerRef.prevFullDFG.singleOrNull())
+        assertEquals(
+            jPointerRef.input,
+            jPointerRef.prevDFGEdges.first { it.granularity is PartialDataflowGranularity<*> }.start,
+        )
 
         // Line 16
         assertEquals(1, aPointerDerefLine16.memoryAddresses.size)
@@ -271,6 +298,13 @@ class PointsToPassTest {
         )
         assertEquals(1, aPointerDerefLine16.fullMemoryValues.size)
         assertEquals(literal1, aPointerDerefLine16.fullMemoryValues.first())
+        assertEquals(jDecl, aPointerDerefLine16.prevFullDFG.singleOrNull())
+        assertEquals(
+            aPointerDerefLine16.input,
+            aPointerDerefLine16.prevDFGEdges
+                .first { it.granularity is PartialDataflowGranularity<*> }
+                .start,
+        )
 
         // Line 17
         assertEquals(1, aPointerDerefLine17.memoryAddresses.size)
@@ -280,6 +314,13 @@ class PointsToPassTest {
         )
         assertEquals(1, aPointerDerefLine17.fullMemoryValues.size)
         assertEquals(literal3, aPointerDerefLine17.fullMemoryValues.first())
+        assertEquals(literal3, aPointerDerefLine17.prevFullDFG.singleOrNull())
+        assertEquals(
+            aPointerDerefLine17.input,
+            aPointerDerefLine17.prevDFGEdges
+                .first { it.granularity is PartialDataflowGranularity<*> }
+                .start,
+        )
 
         // Line 18
         assertEquals(1, bPointerDerefLine18.memoryAddresses.size)
@@ -288,7 +329,14 @@ class PointsToPassTest {
             bPointerDerefLine18.memoryAddresses.first(),
         )
         assertEquals(1, bPointerDerefLine18.fullMemoryValues.size)
-        assertEquals(iUO.input, bPointerDerefLine18.fullMemoryValues.first())
+        assertEquals(iUO, bPointerDerefLine18.fullMemoryValues.first())
+        assertEquals(iRefLine13, bPointerDerefLine18.prevFullDFG.singleOrNull())
+        assertEquals(
+            bPointerDerefLine18.input,
+            bPointerDerefLine18.prevDFGEdges
+                .first { it.granularity is PartialDataflowGranularity<*> }
+                .start,
+        )
     }
 
     @Test

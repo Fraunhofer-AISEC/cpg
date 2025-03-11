@@ -250,8 +250,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 SingleGeneralState(
                     GeneralStateEntry(PowersetLattice(), PowersetLattice(), PowersetLattice())
                 ),
-                // SingleDeclarationState(DeclarationStateEntry(PowersetLattice<Node>(),
-                // PowersetLattice<Pair<Node, Boolean>())),
                 SingleDeclarationState(
                     DeclarationStateEntry(PowersetLattice(), PowersetLattice(), PowersetLattice())
                 ),
@@ -962,7 +960,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             val newDeclState = doubleState.declarationsState
             /* Update the declarationState for the refersTo */
             doubleState.getAddresses(currentNode.input).forEach { addr ->
-                var newEntry = Pair<Node, Boolean>(currentNode.input, false)
+                var newEntry = Pair<Node, Boolean>(currentNode, false)
                 // If we already have exactly that entry, no need to re-write it, otherwise we might
                 // confuse the iterateEOG function
 
@@ -972,16 +970,28 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     } ?: newEntry
                 newDeclState.replace(
                     addr,
-                    TripleLattice.Element(
+                    DeclarationStateEntryElement(
                         PowersetLattice.Element(addr),
                         PowersetLattice.Element(newEntry),
-                        PowersetLattice.Element(),
+                        PowersetLattice.Element(Pair(currentNode.input, false)),
                     ),
                 )
             }
             doubleState =
                 PointsToStateElement(doubleState.generalState, MapLattice.Element(newDeclState))
         }
+
+        doubleState =
+            lattice.push(
+                doubleState,
+                currentNode,
+                GeneralStateEntryElement(
+                    PowersetLattice.Element(doubleState.getAddresses(currentNode)),
+                    PowersetLattice.Element(doubleState.getValues(currentNode)),
+                    PowersetLattice.Element(),
+                ),
+            )
+
         return doubleState
     }
 
@@ -1023,7 +1033,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             else if (currentNode is SubscriptExpression && currentNode.arrayExpression is Reference)
                 (currentNode.arrayExpression as Reference).access
             else null
-        if (access == AccessValues.READ) {
+        if (access in setOf(AccessValues.READ, AccessValues.READWRITE)) {
             val addresses = doubleState.getAddresses(currentNode)
             val values = doubleState.getValues(currentNode)
             val lastWrites = doubleState.getLastWrites(currentNode)
@@ -1087,13 +1097,12 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         } else {
             // We write to this node, but maybe we probably want to store the memory address which
             // it has right now
-            val addresses = doubleState.getAddresses(currentNode)
             doubleState =
                 lattice.push(
                     doubleState,
                     currentNode,
                     GeneralStateEntryElement(
-                        PowersetLattice.Element(addresses),
+                        PowersetLattice.Element(doubleState.getAddresses(currentNode)),
                         PowersetLattice.Element(),
                         PowersetLattice.Element(),
                     ),
@@ -1485,9 +1494,6 @@ fun PointsToStateElement.getValues(node: Node): IdentitySet<Node> {
         }
         is SubscriptExpression -> {
             this.getAddresses(node).flatMap { this.getValues(it) }.toIdentitySet()
-        }
-        is BinaryOperator -> {
-            (this.getValues(node.rhs) + this.getValues(node.lhs)).toIdentitySet()
         }
         /* In these cases, we simply have to fetch the current value for the MemoryAddress from the DeclarationState */
         else -> identitySetOf(node)
