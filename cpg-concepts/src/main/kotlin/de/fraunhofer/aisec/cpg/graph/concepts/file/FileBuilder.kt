@@ -30,6 +30,13 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import de.fraunhofer.aisec.cpg.graph.codeAndLocationFrom
 
+/**
+ * Creates a new [File] node. This node represents a file on a hard-disk somewhere.
+ *
+ * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
+ * @param fileName The name of the file e.g. `foo/bar/example.txt`
+ * @return The new [File] node.
+ */
 fun MetadataProvider.newFile(underlyingNode: Node, fileName: String): File {
     val node = File(underlyingNode = underlyingNode, fileName = fileName)
     node.codeAndLocationFrom(underlyingNode)
@@ -38,6 +45,13 @@ fun MetadataProvider.newFile(underlyingNode: Node, fileName: String): File {
     return node
 }
 
+/**
+ * Creates a new [OpenFile] node. This node represents opening a file.
+ *
+ * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
+ * @param file The [File] this operation is opening.
+ * @return The new [OpenFile] node.
+ */
 fun MetadataProvider.newFileOpen(underlyingNode: Node, file: File): OpenFile {
     val node = OpenFile(underlyingNode = underlyingNode, concept = file)
     node.codeAndLocationFrom(underlyingNode)
@@ -46,6 +60,14 @@ fun MetadataProvider.newFileOpen(underlyingNode: Node, file: File): OpenFile {
     return node
 }
 
+/**
+ * Creates a new [SetFileMask] node. This node represents changing a files permissions.
+ *
+ * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
+ * @param file The [File] this operation is modifying.
+ * @param mask The file mask to set (in UNIX notation).
+ * @return The new [SetFileMask] node.
+ */
 fun MetadataProvider.newFileSetMask(underlyingNode: Node, file: File, mask: Long): SetFileMask {
     val node = SetFileMask(underlyingNode = underlyingNode, concept = file, mask = mask)
     node.codeAndLocationFrom(underlyingNode)
@@ -54,6 +76,14 @@ fun MetadataProvider.newFileSetMask(underlyingNode: Node, file: File, mask: Long
     return node
 }
 
+/**
+ * Creates a new [SetFileFlags] node.
+ *
+ * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
+ * @param file The [File] this operation is working on.
+ * @param flags The file flags to set (in UNIX notation).
+ * @return The new [SetFileFlags] node.
+ */
 fun MetadataProvider.newFileSetFlags(
     underlyingNode: Node,
     file: File,
@@ -66,6 +96,13 @@ fun MetadataProvider.newFileSetFlags(
     return node
 }
 
+/**
+ * Creates a new [CloseFile] node.
+ *
+ * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
+ * @param file The [File] this operation is closing.
+ * @return The new [CloseFile] node.
+ */
 fun MetadataProvider.newFileClose(underlyingNode: Node, file: File): CloseFile {
     val node = CloseFile(underlyingNode = underlyingNode, concept = file)
     node.codeAndLocationFrom(underlyingNode)
@@ -74,6 +111,13 @@ fun MetadataProvider.newFileClose(underlyingNode: Node, file: File): CloseFile {
     return node
 }
 
+/**
+ * Creates a new [DeleteFile] node.
+ *
+ * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
+ * @param file The [File] this operation is deleting.
+ * @return The new [DeleteFile] node.
+ */
 fun MetadataProvider.newFileDelete(underlyingNode: Node, file: File): DeleteFile {
     val node = DeleteFile(underlyingNode = underlyingNode, concept = file)
     node.codeAndLocationFrom(underlyingNode)
@@ -83,8 +127,8 @@ fun MetadataProvider.newFileDelete(underlyingNode: Node, file: File): DeleteFile
 }
 
 /**
- * Creates a new [ReadFile] node and attaches the DFG from the corresponding [file] to [this] and
- * then from [this] to the created node.
+ * Creates a new [ReadFile] node and attaches the DFG from the corresponding [file] to the new node
+ * and then from [this] to the created node.
  *
  * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
  * @param file The [File] this operation is reading from.
@@ -104,8 +148,8 @@ fun MetadataProvider.newFileRead(underlyingNode: Node, file: File): ReadFile {
 }
 
 /**
- * Creates a new [WriteFile] node and attaches the DFG from [what] to [this] and then from [this] to
- * the [file].
+ * Creates a new [WriteFile] node and attaches the DFG from [what] to [this] and then from the new
+ * node to the [file].
  *
  * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
  * @param file The [File] this operation is writing to.
