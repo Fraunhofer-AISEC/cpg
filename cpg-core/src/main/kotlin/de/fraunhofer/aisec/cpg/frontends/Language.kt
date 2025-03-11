@@ -56,9 +56,11 @@ import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.passes.inference.Inference
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import java.io.File
 import kotlin.reflect.KClass
 import kotlin.reflect.full.primaryConstructor
+import org.neo4j.ogm.annotation.Transient
 
 /**
  * [CastResult] is the result of the function [Language.tryCast] and describes whether a cast of one
@@ -125,7 +127,7 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node {
     open val simpleAssignmentOperators: Set<String> = setOf("=")
 
     /** The standard evaluator to be used with this language. */
-    open val evaluator: ValueEvaluator = ValueEvaluator()
+    @Transient @DoNotPersist open val evaluator: ValueEvaluator = ValueEvaluator()
 
     constructor(ctx: TranslationContext? = null) : super() {
         this.ctx = ctx

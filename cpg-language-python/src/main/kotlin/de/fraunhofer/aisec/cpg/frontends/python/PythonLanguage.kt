@@ -40,6 +40,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation
 import de.fraunhofer.aisec.cpg.helpers.neo4j.SimpleNameConverter
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import java.io.File
 import kotlin.reflect.KClass
 import org.neo4j.ogm.annotation.Transient
@@ -181,6 +182,7 @@ class PythonLanguage(ctx: TranslationContext) :
                 ),
         )
 
+    @DoNotPersist
     override val evaluator: ValueEvaluator
         get() = PythonValueEvaluator()
 
