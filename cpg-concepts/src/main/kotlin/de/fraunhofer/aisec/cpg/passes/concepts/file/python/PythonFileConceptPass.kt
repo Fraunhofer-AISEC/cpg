@@ -26,10 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes.concepts.file.python
 
 import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.graph.Backward
-import de.fraunhofer.aisec.cpg.graph.GraphToFollow
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.argumentValueByNameOrPosition
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.file.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
@@ -41,7 +38,6 @@ import de.fraunhofer.aisec.cpg.passes.concepts.ConceptPass
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLate
 import de.fraunhofer.aisec.cpg.query.QueryTree
-import de.fraunhofer.aisec.cpg.query.dataFlow
 
 /**
  * This pass implements the creating of [Concept] and [Operation] nodes for Python file
@@ -204,15 +200,23 @@ class PythonFileConceptPass(ctx: TranslationContext) : ConceptPass(ctx) {
      * @return A list of all [File] nodes found.
      */
     internal fun findFile(expression: Expression): List<File> {
-        val openFilePaths =
-            dataFlow(startNode = expression, direction = Backward(GraphToFollow.DFG)) {
-                it.overlays.any { overlay -> overlay is OpenFile }
-            }
+        // find all nodes on a prev DFG path which have an [OpenFile] overlay node and return the
+        // last node on said path (i.e. the one with the [OpenFile] overlay)
+        val nodesWithOpenFileOverlay =
+            expression
+                .followDFGEdgesUntilHit(
+                    collectFailedPaths = false,
+                    findAllPossiblePaths = true,
+                    direction = Backward(GraphToFollow.DFG),
+                ) { node ->
+                    node.overlays.any { overlay -> overlay is OpenFile }
+                }
+                .fulfilled
+                .map { it.last() }
 
         val files =
-            openFilePaths
-                .successfulLastNodes()
-                .flatMap { it.overlays } // move to the "overlays" world
+            nodesWithOpenFileOverlay
+                .flatMap { it.overlays } // collect all "overlay" nodes
                 .filterIsInstance<OpenFile>() // discard not-relevant overlays
                 .map { it.concept } // move from [OpenFile] to the corresponding [File] concept node
 
