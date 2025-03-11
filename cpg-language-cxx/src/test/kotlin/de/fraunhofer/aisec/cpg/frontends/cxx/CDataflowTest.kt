@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
 import de.fraunhofer.aisec.cpg.graph.edges.flows.FieldDataflowGranularity
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ParameterMemoryValue
 import de.fraunhofer.aisec.cpg.test.*
 import java.io.File
 import kotlin.test.Test
@@ -59,17 +60,20 @@ class CDataflowTest {
         // The start variable is the deref value of the parameter, so we use
         // .memoryValue.memoryValue
         val startVariable =
-            startFunction.parameters["ctx"]?.memoryValue?.memoryValues?.singleOrNull()
+            startFunction.parameters["ctx"]
+                ?.memoryValue
+                ?.memoryValues
+                ?.filterIsInstance<ParameterMemoryValue>()
+                ?.singleOrNull()
         assertNotNull(startVariable)
 
         // In this example we want to have the list of all fields of "ctx" that
         // are written to in the start function itself. For this to achieve we can follow the
         // "FULL" dfg flow until the end and collect partial writes on the way.
-        val result = startVariable.followNextFullDFGEdgesUntilHit { it.nextDFG.isEmpty() }
-        val flowPoints = result.fulfilled.flatten().toSet()
-        assertNotNull(flowPoints)
+        val result = startVariable.collectAllNextFullDFGPaths().flatten().toSet()
+        assertNotNull(result)
         val fields =
-            flowPoints
+            result
                 .flatMap {
                     it.prevDFGEdges
                         .map(Dataflow::granularity)

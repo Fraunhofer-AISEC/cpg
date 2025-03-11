@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
+import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.declarations.OperatorDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.MemoryAddressEdges
@@ -34,7 +35,10 @@ import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.passes.DFGPass
+import de.fraunhofer.aisec.cpg.passes.PointsToPass
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 
 /**
@@ -44,7 +48,8 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 interface HasMemoryAddress {
 
     /** The memory addresses which this node uses e.g. to load or store data. */
-    var memoryAddressEdges: MemoryAddressEdges
+    @PopulatedByPass(DFGPass::class, PointsToPass::class) var memoryAddressEdges: MemoryAddressEdges
+    @PopulatedByPass(DFGPass::class, PointsToPass::class)
     var memoryAddresses: MutableSet<MemoryAddress>
 }
 
@@ -52,12 +57,14 @@ interface HasMemoryAddress {
 interface HasMemoryValue {
 
     /** The value(s)/data the node holds. */
-    var memoryValueEdges: Dataflows<Node>
-    var memoryValues: MutableSet<Node>
+    @PopulatedByPass(DFGPass::class, PointsToPass::class) var memoryValueEdges: Dataflows<Node>
+    @PopulatedByPass(DFGPass::class, PointsToPass::class) var memoryValues: MutableSet<Node>
 
-    var memoryValueUsageEdges: Dataflows<Node>
-    var memoryValueUsages: MutableSet<Node>
+    @PopulatedByPass(DFGPass::class, PointsToPass::class) var memoryValueUsageEdges: Dataflows<Node>
+    @PopulatedByPass(DFGPass::class, PointsToPass::class) var memoryValueUsages: MutableSet<Node>
 
+    @DoNotPersist
+    @PopulatedByPass(DFGPass::class, PointsToPass::class)
     val fullMemoryValues: Set<Node>
         get() =
             memoryValueEdges

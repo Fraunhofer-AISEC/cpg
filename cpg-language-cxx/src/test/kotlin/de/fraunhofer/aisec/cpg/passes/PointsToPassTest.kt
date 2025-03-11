@@ -965,9 +965,16 @@ class PointsToPassTest {
         )
         assertEquals(1, bPointerDerefLine138.fullMemoryValues.size)
         assertEquals(literal10, bPointerDerefLine138.fullMemoryValues.first())
-        // TODO: Should it be the rhs or the last write of the rhs?
-        assertEquals(1, bPointerDerefLine138.prevDFG.size)
-        assertEquals(aDecl, bPointerDerefLine138.prevDFG.first())
+        // Full DFG to the declaration of a and partial DFG to the input
+        assertEquals(2, bPointerDerefLine138.prevDFG.size)
+        assertEquals(aDecl, bPointerDerefLine138.prevFullDFG.singleOrNull())
+        assertEquals(
+            bPointerDerefLine138.input,
+            bPointerDerefLine138.prevDFGEdges
+                .filter { it.granularity != FullDataflowGranularity }
+                .map { it.start }
+                .singleOrNull(),
+        )
 
         // Line 139
         assertEquals(1, bRefLine139.memoryAddresses.size)
