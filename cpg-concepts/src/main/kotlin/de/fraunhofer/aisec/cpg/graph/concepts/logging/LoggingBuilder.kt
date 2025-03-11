@@ -27,8 +27,8 @@ package de.fraunhofer.aisec.cpg.graph.concepts.logging
 
 import de.fraunhofer.aisec.cpg.graph.MetadataProvider
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder
-import de.fraunhofer.aisec.cpg.graph.codeAndLocationFrom
+import de.fraunhofer.aisec.cpg.graph.concepts.newConcept
+import de.fraunhofer.aisec.cpg.graph.concepts.newOperation
 
 /**
  * Creates a [Log] with the same metadata as the [underlyingNode].
@@ -37,13 +37,10 @@ import de.fraunhofer.aisec.cpg.graph.codeAndLocationFrom
  * @param name The name of the logger.
  * @return The new [Log].
  */
-fun MetadataProvider.newLog(underlyingNode: Node, name: String): Log {
-    val node = Log(underlyingNode = underlyingNode)
-    node.codeAndLocationFrom(underlyingNode)
-
-    NodeBuilder.log(node)
-    return node
-}
+fun MetadataProvider.newLog(underlyingNode: Node, name: String) =
+    newConcept({ Log(underlyingNode = underlyingNode) }, underlyingNode).apply {
+        this.logName = name
+    }
 
 /**
  * Creates a [LogWrite] node with the same metadata as the [underlyingNode].
@@ -54,47 +51,37 @@ fun MetadataProvider.newLog(underlyingNode: Node, name: String): Log {
  *
  * @param underlyingNode The underlying CPG node (e.g. a call expression writing to a log).
  * @param level The [LogLevel] used for this write operation.
- * @param logger The corresponding [Log], i.e. the log where the underlying nodes is writing to.
  * @param logArguments The underlying CPG nodes of the logging arguments, i.e. what is written to
  *   the log.
  * @return The new [Log].
  */
-fun MetadataProvider.newLogWrite(
-    underlyingNode: Node,
-    level: LogLevel,
-    logger: Log,
-    logArguments: List<Node>,
-): LogWrite {
-    val node =
-        LogWrite(
+fun Log.newLogWrite(underlyingNode: Node, level: LogLevel, logArguments: List<Node>) =
+    newOperation(
+            { node, concept ->
+                LogWrite(
+                    underlyingNode = underlyingNode,
+                    concept = concept,
+                    logArguments = logArguments,
+                    logLevel = level,
+                )
+            },
             underlyingNode = underlyingNode,
-            concept = logger,
-            logArguments = logArguments,
-            logLevel = level,
+            concept = this,
         )
-    node.codeAndLocationFrom(underlyingNode)
-
-    logger.ops += node
-
-    // connect DFG
-    logArguments.forEach { cpgArgNode -> cpgArgNode.nextDFG += node }
-    node.nextDFG += logger
-
-    NodeBuilder.log(node)
-    return node
-}
+        .apply {
+            this.nextDFG += this@newLogWrite
+            this.prevDFG += logArguments
+        }
 
 /**
  * Creates a [LogGet] node with the same metadata as the [underlyingNode].
  *
  * @param underlyingNode The underlying CPG node (e.g. a call expression writing to a log).
- * @param logger The corresponding [Log], i.e. the log where the underlying nodes is writing to.
  * @return The new [LogGet].
  */
-fun MetadataProvider.newLogGet(underlyingNode: Node, logger: Log): LogGet {
-    val node = LogGet(underlyingNode = underlyingNode, concept = logger)
-    node.codeAndLocationFrom(underlyingNode)
-
-    NodeBuilder.log(node)
-    return node
-}
+fun Log.newLogGet(underlyingNode: Node) =
+    newOperation(
+        { node, concept -> LogGet(underlyingNode = underlyingNode, concept = concept) },
+        underlyingNode = underlyingNode,
+        concept = this,
+    )
