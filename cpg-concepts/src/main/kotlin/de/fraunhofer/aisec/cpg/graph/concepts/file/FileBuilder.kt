@@ -135,8 +135,7 @@ fun MetadataProvider.newFileDelete(underlyingNode: Node, file: File): DeleteFile
  * @return The new [ReadFile] node.
  */
 fun MetadataProvider.newFileRead(underlyingNode: Node, file: File): ReadFile {
-    val node =
-        ReadFile(underlyingNode = underlyingNode, concept = file, target = underlyingNode.nextDFG)
+    val node = ReadFile(underlyingNode = underlyingNode, concept = file)
     node.codeAndLocationFrom(underlyingNode)
 
     // add DFG

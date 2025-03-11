@@ -98,7 +98,7 @@ class OpenFile(underlyingNode: Node, override val concept: File) :
     Operation(underlyingNode = underlyingNode, concept = concept), IsFile
 
 /** Represents reading from a file. */
-class ReadFile(underlyingNode: Node, override val concept: File, val target: Set<Node>) :
+class ReadFile(underlyingNode: Node, override val concept: File) :
     Operation(underlyingNode = underlyingNode, concept = concept), IsFile
 
 /** Represents writing to a file. */
