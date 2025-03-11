@@ -133,6 +133,11 @@ testing {
                 all {
                     testTask.configure {
                         maxHeapSize = "4048m"
+                        reports {
+                            junitXml.apply {
+                                isOutputPerTestCase = false
+                            }
+                        }
                     }
                 }
             }
