@@ -1014,6 +1014,7 @@ class PointsToPassTest {
         assertEquals(bDecl.memoryAddresses.singleOrNull(), bRefLine138.memoryAddresses.first())
         assertEquals(1, bRefLine138.fullMemoryValues.size)
         assertEquals(aDecl.memoryAddresses.single(), bRefLine138.fullMemoryValues.first())
+        assertEquals(bDecl, bRefLine138.prevDFG.singleOrNull())
 
         assertEquals(1, bPointerDerefLine138.memoryAddresses.size)
         assertEquals(
@@ -1045,6 +1046,7 @@ class PointsToPassTest {
         assertEquals(cDecl.memoryAddresses.singleOrNull(), cRefLine139.memoryAddresses.first())
         assertEquals(1, cRefLine139.fullMemoryValues.size)
         assertEquals(bDecl.memoryAddresses.single(), cRefLine139.fullMemoryValues.first())
+        assertEquals(cDecl, cRefLine139.prevDFG.singleOrNull())
 
         assertEquals(1, cPointerDerefLine139.memoryAddresses.size)
         assertEquals(
@@ -1053,6 +1055,15 @@ class PointsToPassTest {
         )
         assertEquals(1, cPointerDerefLine139.fullMemoryValues.size)
         assertEquals(aDecl.memoryAddresses.single(), cPointerDerefLine139.fullMemoryValues.first())
+        assertEquals(2, cPointerDerefLine139.prevDFG.size)
+        assertEquals(bDecl, cPointerDerefLine139.prevFullDFG.singleOrNull())
+        assertEquals(
+            cPointerDerefLine139.input,
+            cPointerDerefLine139.prevDFGEdges
+                .filter { it.granularity != FullDataflowGranularity }
+                .map { it.start }
+                .singleOrNull(),
+        )
 
         // Line 140
         assertEquals(1, cPointerDerefLine140.memoryAddresses.size)
@@ -1062,6 +1073,15 @@ class PointsToPassTest {
         )
         assertEquals(1, cPointerDerefLine140.fullMemoryValues.size)
         assertEquals(literal10, cPointerDerefLine140.fullMemoryValues.first())
+        assertEquals(2, cPointerDerefLine140.prevDFG.size)
+        assertEquals(aDecl, cPointerDerefLine140.prevFullDFG.singleOrNull())
+        assertEquals(
+            cPointerDerefLine140.input,
+            cPointerDerefLine140.prevDFGEdges
+                .filter { it.granularity != FullDataflowGranularity }
+                .map { it.start }
+                .singleOrNull(),
+        )
     }
 
     @Test
