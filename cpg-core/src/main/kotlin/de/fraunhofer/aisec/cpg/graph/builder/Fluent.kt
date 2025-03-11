@@ -99,6 +99,8 @@ fun LanguageFrontend<*, *>.namespace(
     init(node)
     scopeManager.leaveScope(node)
     scopeManager.addDeclaration(node)
+    addDeclaration(node)
+
     return node
 }
 
@@ -119,6 +121,7 @@ fun LanguageFrontend<*, *>.record(
     init(node)
     scopeManager.leaveScope(node)
     scopeManager.addDeclaration(node)
+    addDeclaration(node)
 
     return node
 }
@@ -142,6 +145,7 @@ fun LanguageFrontend<*, *>.field(
     }
 
     scopeManager.addDeclaration(node)
+    addDeclaration(node)
 
     return node
 }
@@ -184,6 +188,7 @@ fun LanguageFrontend<*, *>.function(
     scopeManager.leaveScope(node)
 
     scopeManager.addDeclaration(node)
+    addDeclaration(node)
 
     return node
 }
@@ -283,6 +288,7 @@ fun LanguageFrontend<*, *>.param(
     init?.let { it(node) }
 
     scopeManager.addDeclaration(node)
+    this@FunctionDeclaration.parameters += node
 
     return node
 }
@@ -411,8 +417,7 @@ fun LanguageFrontend<*, *>.variable(
     val node = newVariableDeclaration(name, type)
     if (init != null) init(node)
 
-    declarationEdges += node
-
+    declarations += node
     scopeManager.addDeclaration(node)
 
     return node
@@ -432,8 +437,7 @@ fun LanguageFrontend<*, *>.problemDecl(
     val node = newProblemDeclaration(problem = description, problemType = type)
     if (init != null) init(node)
 
-    declarationEdges += node
-
+    declarations += node
     scopeManager.addDeclaration(node)
 
     return node
@@ -667,9 +671,9 @@ fun LanguageFrontend<*, *>.forInitializer(
 
     initializerStatement = node
 
-    if (node.isSingleDeclaration()) {
-
-        scopeManager.addDeclaration(node.singleDeclaration, false)
+    val single = node.singleDeclaration
+    if (single != null) {
+        scopeManager.addDeclaration(single)
     }
 
     return node

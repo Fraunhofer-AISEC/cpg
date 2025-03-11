@@ -59,6 +59,7 @@ class StatementBuilderTest {
 
                             var globalA = newVariableDeclaration("a")
                             scopeManager.addDeclaration(globalA)
+                            tu.declarations += globalA
 
                             var func = newFunctionDeclaration("main")
                             scopeManager.enterScope(func)
@@ -80,6 +81,8 @@ class StatementBuilderTest {
                             scopeManager.leaveScope(func)
 
                             scopeManager.addDeclaration(func)
+                            tu.declarations += func
+
                             scopeManager.leaveScope(tu)
                             tu
                         }
