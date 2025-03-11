@@ -39,7 +39,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.graph.types.FunctionType
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import java.util.function.Supplier
 import kotlin.collections.set
@@ -65,7 +65,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
 
         // TODO: We cannot easily identify the signature of the lambda
         // val type = lambdaExpr.calculateResolvedType()
-        val functionType = FunctionType.computeType(anonymousFunction)
+        val functionType = computeType(anonymousFunction)
         anonymousFunction.type = functionType
         anonymousFunction.body = frontend.statementHandler.handle(lambdaExpr.body)
         frontend.scopeManager.leaveScope(anonymousFunction)

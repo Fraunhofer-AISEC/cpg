@@ -97,13 +97,13 @@ class PythonFrontendTest : BaseTest() {
     @Test
     fun testLiteral() {
         val topLevel = Path.of("src", "test", "resources", "python")
-        val tu =
-            analyzeAndGetFirstTU(listOf(topLevel.resolve("literal.py").toFile()), topLevel, true) {
+        val result =
+            analyze(listOf(topLevel.resolve("literal.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
             }
-        assertNotNull(tu)
-        with(tu) {
-            val p = tu.namespaces["literal"]
+        assertNotNull(result)
+        with(result) {
+            val p = namespaces["literal"]
             assertNotNull(p)
             assertLocalName("literal", p)
 
@@ -1928,7 +1928,7 @@ class PythonFrontendTest : BaseTest() {
             }
         assertNotNull(result)
 
-        var myClass = result.finalCtx.typeManager.firstOrderTypes["MyClass"]
+        var myClass = result.finalCtx.typeManager.resolvedTypes["MyClass"]
         assertNotNull(myClass)
         assertNotNull(myClass.ancestors)
     }

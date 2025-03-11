@@ -148,7 +148,7 @@ class GoLanguageFrontend(ctx: TranslationContext, language: Language<GoLanguageF
                     isDependency = true
                     dependency.toFile()
                 }
-                ctx.currentComponent?.topLevel != null -> ctx.currentComponent?.topLevel
+                ctx.currentComponent?.topLevel() != null -> ctx.currentComponent?.topLevel()
                 else -> file.parentFile
             }!!
 
@@ -383,7 +383,7 @@ class GoLanguageFrontend(ctx: TranslationContext, language: Language<GoLanguageF
                 }
             }
 
-        return typeManager.registerType(typeManager.resolvePossibleTypedef(cpgType, scopeManager))
+        return typeManager.resolvePossibleTypedef(cpgType, scopeManager)
     }
 
     /**

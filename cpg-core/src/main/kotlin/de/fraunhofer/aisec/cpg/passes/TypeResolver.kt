@@ -23,6 +23,8 @@
  *                    \______/ \__|       \______/
  *
  */
+@file:Suppress("CONTEXT_RECEIVERS_DEPRECATED")
+
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.ScopeManager
@@ -30,12 +32,16 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.TypeManager
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.types.DeclaresType
+import de.fraunhofer.aisec.cpg.graph.types.HasSecondaryTypeEdge
+import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.recordDeclaration
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.inference.tryRecordInference
 
@@ -50,8 +56,7 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
     override fun accept(component: Component) {
         ctx.currentComponent = component
-        resolveFirstOrderTypes()
-        refreshNames()
+        resolveFirstOrderTypes(component)
 
         val b =
             Benchmark(
@@ -59,12 +64,6 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 "Updating imported symbols for ${component.imports.size} imports",
             )
         b.stop()
-    }
-
-    private fun refreshNames() {
-        for (type in typeManager.secondOrderTypes) {
-            type.refreshNames()
-        }
     }
 
     /**
@@ -88,6 +87,10 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
      *   [Type.typeOrigin] to [Type.Origin.RESOLVED].
      */
     fun resolveType(type: Type): Boolean {
+        // Because we still have multiple "global scopes" (one per parallel context), we need to
+        // make sure they all point to the final global scope
+        type.updateGlobalScope()
+
         // Check for a possible typedef
         var target = scopeManager.typedefFor(type.name, type.scope)
         if (target != null) {
@@ -102,6 +105,8 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             type.declaredFrom = originDeclares
             type.recordDeclaration = originDeclares
             type.typeOrigin = Type.Origin.RESOLVED
+            typeManager.resolvedTypes += type
+
             return true
         }
 
@@ -130,6 +135,8 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             type.declaredFrom = declares
             type.recordDeclaration = declares as? RecordDeclaration
             type.typeOrigin = Type.Origin.RESOLVED
+            typeManager.resolvedTypes += type
+
             if (declaredType.superTypes.contains(type))
                 log.warn(
                     "Removing type {} from the list of its own supertypes. This would create a type cycle that is not allowed.",
@@ -148,6 +155,7 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                     }
                 }
             )
+
             return true
         }
 
@@ -158,9 +166,30 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         // Nothing to do
     }
 
-    /** Resolves all types in [TypeManager.firstOrderTypes] using [resolveType]. */
-    fun resolveFirstOrderTypes() {
-        for (type in typeManager.firstOrderTypes.sortedBy { it.name }) {
+    /** Resolves all types in [TypeManager.resolvedTypes] using [resolveType]. */
+    fun resolveFirstOrderTypes(comp: Component) {
+        // Let's find all of our types!
+        val allTypes = identitySetOf<Type>()
+        comp.nodes.forEach {
+            if (it is HasType) {
+                var type = it.type.root
+                if (type is HasSecondaryTypeEdge) {
+                    allTypes += type.secondaryTypes.map { it.root }
+                }
+                allTypes += type
+            } else if (it is DeclaresType) {
+                allTypes += it.declaredType
+            }
+
+            if (it is HasSecondaryTypeEdge) {
+                allTypes += it.secondaryTypes.map { it.root }
+            }
+        }
+
+        // Gather them in the type manager, just so we have them
+        typeManager.allFirstOrderTypes += allTypes
+
+        for (type in allTypes) {
             if (
                 type is ObjectType && type.typeOrigin == Type.Origin.UNRESOLVED ||
                     type.typeOrigin == Type.Origin.GUESSED
@@ -168,5 +197,17 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 resolveType(type)
             }
         }
+    }
+}
+
+/**
+ * This helper function sets the [Type.scope] to the current [ScopeManager.globalScope] if it has a
+ * [GlobalScope]. This is necessary because the parallel parsing introduces multiple global scopes.
+ */
+context(ContextProvider)
+private fun Type.updateGlobalScope() {
+    if (scope is GlobalScope) {
+        scope = ctx.scopeManager.globalScope
+        secondOrderTypes.forEach { it.updateGlobalScope() }
     }
 }

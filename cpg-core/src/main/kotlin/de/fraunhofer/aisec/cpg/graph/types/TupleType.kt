@@ -32,7 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.unknownType
  * Represents a tuple of types. Primarily used in resolving function calls with multiple return
  * values.
  */
-class TupleType(types: List<Type>) : Type() {
+class TupleType(types: List<Type>) : Type(), HasSecondaryTypeEdge {
     var types: List<Type> = listOf()
         set(value) {
             field = value
@@ -50,4 +50,7 @@ class TupleType(types: List<Type>) : Type() {
     override fun dereference(): Type {
         return unknownType()
     }
+
+    override val secondaryTypes: List<Type>
+        get() = types
 }

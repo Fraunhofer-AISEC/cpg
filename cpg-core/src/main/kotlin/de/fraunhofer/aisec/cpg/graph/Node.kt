@@ -28,8 +28,6 @@ package de.fraunhofer.aisec.cpg.graph
 import com.fasterxml.jackson.annotation.JsonBackReference
 import com.fasterxml.jackson.annotation.JsonIgnore
 import de.fraunhofer.aisec.cpg.PopulatedByPass
-import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.TypeManager
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.UnknownLanguage
@@ -63,21 +61,8 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 /** The base class for all graph objects that are going to be persisted in the database. */
-abstract class Node :
-    IVisitable<Node>,
-    Persistable,
-    LanguageProvider,
-    ScopeProvider,
-    ContextProvider,
-    HasNameAndLocation,
-    HasScope {
-    /**
-     * Because we are updating type information in the properties of the node, we need a reference
-     * to managers such as the [TypeManager] instance which is responsible for this particular node.
-     * All managers are bundled in [TranslationContext]. It is set in [Node.applyMetadata] when a
-     * [ContextProvider] is provided.
-     */
-    @get:JsonIgnore @Transient override var ctx: TranslationContext? = null
+abstract class Node() :
+    IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider, HasNameAndLocation, HasScope {
 
     /** This property holds the full name using our new [Name] class. */
     @Convert(NameConverter::class) override var name: Name = Name(EMPTY_NAME)
@@ -366,10 +351,11 @@ abstract class Node :
  * Works similar to [apply] but before executing [block], it enters the scope for this object and
  * afterward leaves the scope again.
  */
+context(ContextProvider)
 inline fun <reified T : Node> T.applyWithScope(block: T.() -> Unit): T {
     return this.apply {
-        ctx?.scopeManager?.enterScope(this)
+        (this@ContextProvider).ctx.scopeManager.enterScope(this)
         block()
-        ctx?.scopeManager?.leaveScope(this)
+        (this@ContextProvider).ctx.scopeManager.leaveScope(this)
     }
 }

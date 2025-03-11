@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types
 
-import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.graph.LanguageProvider
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
@@ -42,7 +41,7 @@ import de.fraunhofer.aisec.cpg.graph.unknownType
  * implementations of this class, an [Expression] and a [ValueDeclaration]. All other nodes with
  * types should derive from these two base classes.
  */
-interface HasType : ContextProvider, LanguageProvider {
+interface HasType : LanguageProvider {
 
     /**
      * This property refers to the *definite* [Type] that the [Node] has. If you are unsure about

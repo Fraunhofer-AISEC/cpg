@@ -74,7 +74,7 @@ private constructor(
         var executedFrontends = setOf<LanguageFrontend<*, *>>()
 
         // Build a new global translation context
-        val ctx = TranslationContext(config, ScopeManager(), TypeManager())
+        val ctx = TranslationContext(config)
 
         // Build a new translation result
         val result = TranslationResult(this, ctx)
@@ -153,7 +153,6 @@ private constructor(
 
         for (sc in ctx.config.softwareComponents.keys) {
             val component = Component()
-            component.ctx = ctx
             component.name = Name(sc)
             result.addComponent(component)
 
@@ -304,7 +303,6 @@ private constructor(
                     var component = result.components.firstOrNull { it.name == compName }
                     if (component == null) {
                         component = Component()
-                        component.ctx = ctx
                         component.name = compName
                         result.addComponent(component)
                         ctx.config.topLevels.put(includePath.name, includePath.toFile())
@@ -374,13 +372,7 @@ private constructor(
             // Build a new translation context for this parallel parsing process. We need to do this
             // until we can use a single scope manager concurrently. We can re-use the global
             // configuration and type manager.
-            val ctx =
-                TranslationContext(
-                    globalCtx.config,
-                    ScopeManager(),
-                    globalCtx.typeManager,
-                    component,
-                )
+            val ctx = TranslationContext(globalCtx.config, globalCtx.typeManager, component)
             parallelContexts.add(ctx)
 
             val future =
@@ -424,14 +416,6 @@ private constructor(
 
         // We want to merge everything into the final scope manager of the result
         globalCtx.scopeManager.mergeFrom(parallelContexts.map { it.scopeManager })
-
-        // We also need to update all types that point to one of the "old" global scopes
-        // TODO(oxisto): This is really messy and instead we should have ONE global scope
-        //  and individual file scopes beneath it
-        var newGlobalScope = globalCtx.scopeManager.globalScope
-        globalCtx.typeManager.firstOrderTypes.updateGlobalScope(newGlobalScope)
-        globalCtx.typeManager.secondOrderTypes.updateGlobalScope(newGlobalScope)
-
         b.stop()
 
         log.info("Parallel parsing completed")
@@ -522,9 +506,6 @@ private constructor(
 
         return if (language != null) {
             try {
-                // Make sure, that our simple types are also known to the type manager
-                language.builtInTypes.values.forEach { ctx.typeManager.registerType(it) }
-
                 // Return a new language frontend
                 language.newFrontend(ctx)
             } catch (e: Exception) {
@@ -598,5 +579,7 @@ private fun MutableList<Type>.updateGlobalScope(newGlobalScope: GlobalScope?) {
         if (type.scope is GlobalScope) {
             type.scope = newGlobalScope
         }
+
+        type.secondOrderTypes.updateGlobalScope(newGlobalScope)
     }
 }

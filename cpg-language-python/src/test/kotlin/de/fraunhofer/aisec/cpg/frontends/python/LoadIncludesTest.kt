@@ -57,7 +57,7 @@ class LoadIncludesTest {
 
         val jsonEncoder = result.memberExpressions("item_separator").firstOrNull()
         assertNotNull(jsonEncoder)
-        assertTrue(jsonEncoder.refersTo?.let { !it.isInferred && stdlib.contains(it) } ?: false)
+        assertTrue(jsonEncoder.refersTo?.let { !it.isInferred && stdlib.contains(it) } == true)
 
         val str = result.calls("str").firstOrNull()
         assertNotNull(str)

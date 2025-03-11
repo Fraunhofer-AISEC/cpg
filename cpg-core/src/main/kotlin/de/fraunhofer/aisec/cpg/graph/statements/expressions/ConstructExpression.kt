@@ -81,7 +81,7 @@ class ConstructExpression : CallExpression() {
         set(value) {
             field = value
             if (value != null && this.type is UnknownType) {
-                type = objectType(value.name)
+                // type = objectType(value.name)
             }
         }
 

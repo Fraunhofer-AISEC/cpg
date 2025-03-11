@@ -433,7 +433,6 @@ fun SubgraphWalker.ScopedWalker.replace(parent: Node?, old: Expression, new: Exp
 }
 
 private fun CallExpression.duplicateTo(call: CallExpression, callee: Reference) {
-    call.ctx = this.ctx
     call.language = this.language
     call.scope = this.scope
     call.argumentEdges.clear()

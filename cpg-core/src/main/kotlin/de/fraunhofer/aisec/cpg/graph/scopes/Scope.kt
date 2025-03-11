@@ -28,8 +28,10 @@ package de.fraunhofer.aisec.cpg.graph.scopes
 import com.fasterxml.jackson.annotation.JsonBackReference
 import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.frontends.HasBuiltins
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.HasImplicitReceiver
 import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
@@ -62,9 +64,10 @@ typealias SymbolMap = MutableMap<Symbol, MutableList<Declaration>>
  */
 @NodeEntity
 sealed class Scope(
+    ctx: TranslationContext,
     @Relationship(value = "SCOPE", direction = Relationship.Direction.INCOMING)
     @JsonBackReference
-    open var astNode: Node?
+    open var astNode: Node?,
 ) : Node() {
 
     /** FQN Name currently valid */
@@ -132,6 +135,7 @@ sealed class Scope(
     }
 
     /** Adds a [declaration] with the defined [symbol]. */
+    context(ContextProvider)
     open fun addSymbol(symbol: Symbol, declaration: Declaration) {
         if (
             declaration is ImportDeclaration &&
@@ -166,6 +170,7 @@ sealed class Scope(
      *   wildcards should be replaced with their actual nodes
      * @param predicate An optional predicate which should be used in the lookup.
      */
+    context(ContextProvider)
     fun lookupSymbol(
         symbol: Symbol,
         languageOnly: Language<*>? = null,
@@ -232,7 +237,7 @@ sealed class Scope(
         // If the symbol was still not resolved, and we are performing an unqualified resolution, we
         // search in the
         // language's builtins scope for the symbol
-        val scopeManager = (ctx ?: this.astNode?.ctx)?.scopeManager
+        val scopeManager = ctx.scopeManager
         if (
             list.isNullOrEmpty() &&
                 !qualifiedLookup &&

@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.golang
 
-import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.primitiveType
@@ -36,8 +35,8 @@ import de.fraunhofer.aisec.cpg.graph.unknownType
 import org.neo4j.ogm.annotation.Transient
 
 /** The Go language. */
-class GoLanguage(ctx: TranslationContext) :
-    Language<GoLanguageFrontend>(ctx),
+class GoLanguage :
+    Language<GoLanguageFrontend>(),
     HasShortCircuitOperators,
     HasGenerics,
     HasStructs,

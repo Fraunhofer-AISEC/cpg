@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.concepts.memory
 
 import de.fraunhofer.aisec.cpg.graph.Component
+import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.arch.OperatingSystemArchitecture
@@ -71,6 +72,7 @@ abstract class DynamicLoadingOperation<T : Node>(
  * The [underlyingNode] is most likely a function call and [what] can point to a [Component]
  * representing the library.
  */
+@Suppress("CONTEXT_RECEIVERS_DEPRECATED")
 class LoadLibrary(
     underlyingNode: Node,
     concept: Concept,
@@ -94,6 +96,7 @@ class LoadLibrary(
         os = os,
     ) {
 
+    context(ContextProvider)
     /** Looks up symbol candidates for [symbol] in the [LoadLibrary.what]. */
     fun findSymbol(symbol: Symbol?): List<Declaration> {
         if (symbol == null) {

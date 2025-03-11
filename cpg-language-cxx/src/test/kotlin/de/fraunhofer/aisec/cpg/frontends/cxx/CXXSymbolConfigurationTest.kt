@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.*
-import de.fraunhofer.aisec.cpg.TypeManager
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
@@ -43,16 +42,11 @@ internal class CXXSymbolConfigurationTest : BaseTest() {
     @Test
     @Throws(TranslationException::class)
     fun testWithoutSymbols() {
-        val ctx =
-            TranslationContext(
-                TranslationConfiguration.builder().build(),
-                ScopeManager(),
-                TypeManager(),
-            )
+        val ctx = TranslationContext()
 
         // parse without symbols
         val tu =
-            CXXLanguageFrontend(ctx, CPPLanguage(ctx)).parse(File("src/test/resources/symbols.cpp"))
+            CXXLanguageFrontend(ctx, CPPLanguage()).parse(File("src/test/resources/symbols.cpp"))
         val main = tu.functions["main"]
         assertNotNull(main)
 
@@ -86,9 +80,9 @@ internal class CXXSymbolConfigurationTest : BaseTest() {
                 .build()
 
         // let's try with symbol definitions
-        val ctx = TranslationContext(config, ScopeManager(), TypeManager())
+        val ctx = TranslationContext(config)
         val tu =
-            CXXLanguageFrontend(ctx, CPPLanguage(ctx)).parse(File("src/test/resources/symbols.cpp"))
+            CXXLanguageFrontend(ctx, CPPLanguage()).parse(File("src/test/resources/symbols.cpp"))
         val main = tu.functions["main"]
         assertNotNull(main)
 
