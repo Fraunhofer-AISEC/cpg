@@ -139,7 +139,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-function-scope/index.html">FunctionScope</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">var </span>astNode<span class="token operator">: </span><a href="../de.fraunhofer.aisec.cpg.graph.declarations/-function-declaration/index.html">FunctionDeclaration</a></span></span><span class="token punctuation">)</span> : <a href="-value-declaration-scope/index.html">ValueDeclarationScope</a></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-function-scope/index.html">FunctionScope</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">var </span>astNode<span class="token operator">: </span><a href="../de.fraunhofer.aisec.cpg.graph.declarations/-function-declaration/index.html">FunctionDeclaration</a></span></span><span class="token punctuation">)</span> : <a href="-scope/index.html">Scope</a></div></div></div>
                 </div>
               </div>
             </div>
@@ -154,7 +154,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-global-scope/index.html">GlobalScope</a> : <a href="-structure-declaration-scope/index.html">StructureDeclarationScope</a></div><div class="brief "><p class="paragraph">This should ideally only be called once. It constructs a new global scope, which is not associated to any AST node. However, depending on the language, a language frontend can explicitly set the ast node using <a href="../de.fraunhofer.aisec.cpg/-scope-manager/reset-to-global.html">ScopeManager.resetToGlobal</a> if the language needs a global scope that is restricted to a translation unit, i.e. C++ while still maintaining a unique list of global variables.</p></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-global-scope/index.html">GlobalScope</a> : <a href="-scope/index.html">Scope</a></div><div class="brief "><p class="paragraph">This should ideally only be called once. It constructs a new global scope, which is not associated to any AST node. However, depending on the language, a language frontend can explicitly set the ast node using <a href="../de.fraunhofer.aisec.cpg/-scope-manager/reset-to-global.html">ScopeManager.resetToGlobal</a> if the language needs a global scope that is restricted to a translation unit, i.e. C++ while still maintaining a unique list of global variables.</p></div></div></div>
                 </div>
               </div>
             </div>
@@ -169,7 +169,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-local-scope/index.html">LocalScope</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">var </span>astNode<span class="token operator">: </span><a href="../de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a></span></span><span class="token punctuation">)</span> : <a href="-value-declaration-scope/index.html">ValueDeclarationScope</a></div><div class="brief "><p class="paragraph">Scope of validity associated to the local statement. Variables declared inside this statement are not visible outside.</p></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-local-scope/index.html">LocalScope</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">var </span>astNode<span class="token operator">: </span><a href="../de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a></span></span><span class="token punctuation">)</span> : <a href="-scope/index.html">Scope</a></div><div class="brief "><p class="paragraph">Scope of validity associated to the local statement. Variables declared inside this statement are not visible outside.</p></div></div></div>
                 </div>
               </div>
             </div>
@@ -184,7 +184,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">sealed </span><span class="token keyword">class </span><a href="-name-scope/index.html">NameScope</a> : <a href="-structure-declaration-scope/index.html">StructureDeclarationScope</a></div><div class="brief "><p class="paragraph">A scope which acts as a namespace with a certain name, which is prefixed to all local names declared in it. This could be a package or other structural elements, like a class. In the first case, the derived <a href="-namespace-scope/index.html">NamespaceScope</a>, in the latter case, the derived <a href="-record-scope/index.html">RecordScope</a> should be used.</p></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">sealed </span><span class="token keyword">class </span><a href="-name-scope/index.html">NameScope</a> : <a href="-scope/index.html">Scope</a></div><div class="brief "><p class="paragraph">A scope which acts as a namespace with a certain name, which is prefixed to all local names declared in it. This could be a package or other structural elements, like a class. In the first case, the derived <a href="-namespace-scope/index.html">NamespaceScope</a>, in the latter case, the derived <a href="-record-scope/index.html">RecordScope</a> should be used.</p></div></div></div>
                 </div>
               </div>
             </div>
@@ -234,21 +234,6 @@
               </div>
             </div>
           </div>
-<a data-name="-1475681928%2FClasslikes%2F1556141526" anchor-label="StructureDeclarationScope" id="-1475681928%2FClasslikes%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
-          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
-            <div class="main-subrow keyValue ">
-              <div class=""><span class="inline-flex">
-                  <div><a href="-structure-declaration-scope/index.html"><span>Structure</span><wbr><span>Declaration</span><wbr><span><span>Scope</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1475681928%2FClasslikes%2F1556141526"></span>
-                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                  </span></span></div>
-              <div>
-                <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">sealed </span><span class="token keyword">class </span><a href="-structure-declaration-scope/index.html">StructureDeclarationScope</a> : <a href="-value-declaration-scope/index.html">ValueDeclarationScope</a></div><div class="brief "><p class="paragraph">This sealed (and abstract) class represents a <a href="-scope/index.html">Scope</a> that in addition to declare variables also defines structures, such as classes, namespaces, etc.</p></div></div></div>
-                </div>
-              </div>
-            </div>
-          </div>
 <a data-name="-258163483%2FClasslikes%2F1556141526" anchor-label="Symbol" id="-258163483%2FClasslikes%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
           <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
             <div class="main-subrow keyValue ">
@@ -289,22 +274,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-template-scope/index.html">TemplateScope</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">node<span class="token operator">: </span><a href="../de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a></span></span><span class="token punctuation">)</span> : <a href="-structure-declaration-scope/index.html">StructureDeclarationScope</a></div></div></div>
-                </div>
-              </div>
-            </div>
-          </div>
-<a data-name="2024492346%2FClasslikes%2F1556141526" anchor-label="ValueDeclarationScope" id="2024492346%2FClasslikes%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
-          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
-            <div class="main-subrow keyValue ">
-              <div class=""><span class="inline-flex">
-                  <div><a href="-value-declaration-scope/index.html"><span>Value</span><wbr><span>Declaration</span><wbr><span><span>Scope</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="2024492346%2FClasslikes%2F1556141526"></span>
-                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                  </span></span></div>
-              <div>
-                <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">sealed </span><span class="token keyword">class </span><a href="-value-declaration-scope/index.html">ValueDeclarationScope</a> : <a href="-scope/index.html">Scope</a></div><div class="brief "><p class="paragraph">Is a scope where local variables can be declared and independent of specific language constructs. Works for if, for, and extends to the block scope</p></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-template-scope/index.html">TemplateScope</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">node<span class="token operator">: </span><a href="../de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a></span></span><span class="token punctuation">)</span> : <a href="-scope/index.html">Scope</a></div></div></div>
                 </div>
               </div>
             </div>
