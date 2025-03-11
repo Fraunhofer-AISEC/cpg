@@ -334,6 +334,7 @@ class FileConceptTest : BaseTest() {
     }
 
     @Test
+    // Needs other traversal of EOG. See #2123
     fun testBranching() {
         val topLevel = Path.of("src", "integrationTest", "resources", "python", "file")
 
@@ -371,6 +372,7 @@ class FileConceptTest : BaseTest() {
     }
 
     @Test
+    // Needs #2121.
     fun testDelete() {
         val topLevel = Path.of("src", "integrationTest", "resources", "python", "file")
 
