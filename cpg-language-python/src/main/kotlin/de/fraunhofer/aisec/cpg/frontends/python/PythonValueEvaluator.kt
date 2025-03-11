@@ -40,16 +40,18 @@ import kotlin.math.pow
 /** An extended version of the [ValueEvaluator] that supports Python-specific operations. */
 class PythonValueEvaluator : ValueEvaluator() {
     /**
-     * The values of the corresponding symbols as defined on a linux environment. Must match
-     * [File.FileAccessModeFlags].
+     * The values of the corresponding symbols as defined on per platform level. Maps the symbol to
+     * a map of platform -> value.
+     *
+     * The file constants (`os.O_...` have to match those defined in the file concept.
      */
-    internal val linuxMap =
+    internal val symbolsMap: Map<String, Map<String, Any>> =
         mapOf(
-            "os.O_RDONLY" to 0L,
-            "os.O_WRONLY" to 1L,
-            "os.O_RDWR" to 2L,
-            "os.O_CREAT" to 64L,
-            "os.O_TRUNC" to 512L,
+            "os.O_RDONLY" to mapOf("linux" to 0L),
+            "os.O_WRONLY" to mapOf("linux" to 1L),
+            "os.O_RDWR" to mapOf("linux" to 2L),
+            "os.O_CREAT" to mapOf("linux" to 64L),
+            "os.O_TRUNC" to mapOf("linux" to 512L),
         )
 
     override val cannotEvaluate: (Node?, ValueEvaluator) -> Any?
@@ -68,10 +70,9 @@ class PythonValueEvaluator : ValueEvaluator() {
         }
 
     override fun handleReference(node: Reference, depth: Int): Any? {
-        return when (node.reconstructedImportName.toString()) {
-            in linuxMap.keys ->
-                if (supportedPlatform(node)) linuxMap[node.reconstructedImportName.toString()]
-                else super.handlePrevDFG(node, depth)
+        return when (val recName = node.reconstructedImportName.toString()) {
+            in symbolsMap.keys ->
+                resolveSymbolViaLookup(node, recName) ?: super.handlePrevDFG(node, depth)
 
             // We need to handle sys.platform and sys.version_info specially, since it is often used
             // in a pre-processor macro-style, and we want to replace this with the actual value (if
@@ -170,18 +171,19 @@ class PythonValueEvaluator : ValueEvaluator() {
         }
     }
 
-    internal fun supportedPlatform(node: Reference): Boolean {
+    /**
+     * Fetches a symbols value from the [symbolsMap] by looking at the [SystemInformation.platform]
+     * stored in the [node]. Creates a warning, if no platform is specified.
+     *
+     * @param node The node being evaluated (used for platform lookup).
+     * @param symbol The symbol to evaluate.
+     * @return The evaluated symbol or null if it is not specified in the [symbolsMap].
+     */
+    internal fun resolveSymbolViaLookup(node: Reference, symbol: String): Any? {
         val platform = node.translationUnit?.sysInfo?.platform
-        return if (platform != "linux") {
-            Util.warnWithFileLocation(
-                node = node,
-                log = log,
-                format = "Didn't find a supported platform. Cannot evaluate the symbol \"{}\".",
-                node.reconstructedImportName.toString(),
-            )
-            false
-        } else {
-            true
+        if (platform == null) {
+            Util.warnWithFileLocation(node, log, "No platform found. Cannot evaluate symbol.")
         }
+        return symbolsMap[symbol]?.get(platform)
     }
 }
