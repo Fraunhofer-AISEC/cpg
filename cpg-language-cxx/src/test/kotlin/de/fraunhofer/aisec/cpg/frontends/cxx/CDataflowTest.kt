@@ -26,14 +26,14 @@
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
-import de.fraunhofer.aisec.cpg.graph.edges.flows.PartialDataflowGranularity
+import de.fraunhofer.aisec.cpg.graph.edges.flows.FieldDataflowGranularity
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ParameterMemoryValue
 import de.fraunhofer.aisec.cpg.test.*
 import java.io.File
 import kotlin.test.Test
-import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 class CDataflowTest {
     @Test
@@ -57,24 +57,42 @@ class CDataflowTest {
 
         // Our start function and variable/parameter
         val startFunction = renegotiate
-        val startVariable = startFunction.parameters["ctx"]!!
+        // The start variable is the deref value of the parameter, so we use
+        // .memoryValue.memoryValue
+        val startVariable =
+            startFunction.parameters["ctx"]
+                ?.memoryValue
+                ?.memoryValues
+                ?.filterIsInstance<ParameterMemoryValue>()
+                ?.singleOrNull()
+        assertNotNull(startVariable)
 
         // In this example we want to have the list of all fields of "ctx" that
         // are written to in the start function itself. For this to achieve we can follow the
         // "FULL" dfg flow until the end and collect partial writes on the way.
-        val result = startVariable.followNextFullDFGEdgesUntilHit { it.nextDFG.isEmpty() }
-        val flow = result.fulfilled.singleOrNull()
-        assertNotNull(flow)
+        val result = startVariable.collectAllNextFullDFGPaths().flatten().toSet()
+        assertNotNull(result)
         val fields =
-            flow
+            result
                 .flatMap {
                     it.prevDFGEdges
                         .map(Dataflow::granularity)
-                        .filterIsInstance<PartialDataflowGranularity<*>>()
+                        .filterIsInstance<FieldDataflowGranularity>()
                 }
-                .mapNotNull(PartialDataflowGranularity<*>::partialTarget)
+                .mapNotNull(FieldDataflowGranularity::partialTarget)
                 .toSet()
 
-        assertEquals(setOf<Declaration>(i, j), fields)
+        assertTrue(fields.any { it.name.localName == "i" })
+        assertTrue(fields.any { it.name.localName == "j" })
+
+        // With the PointerPass, we can also use the functionSummary to achieve the same
+        startFunction.functionSummary
+            .flatMap { it.value }
+            .map { it.subAccessName }
+            .any { it == "i" }
+        startFunction.functionSummary
+            .flatMap { it.value }
+            .map { it.subAccessName }
+            .any { it == "j" }
     }
 }

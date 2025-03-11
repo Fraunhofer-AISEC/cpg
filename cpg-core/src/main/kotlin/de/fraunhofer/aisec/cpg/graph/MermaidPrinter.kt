@@ -25,48 +25,120 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
+import de.fraunhofer.aisec.cpg.graph.PrintDFGDirection.*
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.edges.flows.FieldDataflowGranularity
+import de.fraunhofer.aisec.cpg.graph.edges.flows.PointerDataflowGranularity
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
+
+/**
+ * Indicates the direction when building the DFG.
+ * - [FORWARD] build the DFG starting from the given node.
+ * - [BACKWARD] build the DFG ending at the given node.
+ * - [BOTH] build the DFG from and to the given node.
+ */
+enum class PrintDFGDirection {
+    FORWARD,
+    BACKWARD,
+    BOTH,
+}
 
 /** Utility function to print the DFG using [printGraph]. */
 fun Node.printDFG(
     maxConnections: Int = 25,
+    selector: (Node) -> Boolean = { true },
     vararg strategies: (Node) -> Iterator<Dataflow> =
         arrayOf<(Node) -> Iterator<Dataflow>>(
             Strategy::DFG_EDGES_FORWARD,
             Strategy::DFG_EDGES_BACKWARD,
         ),
 ): String {
-    return this.printGraph(maxConnections = maxConnections, *strategies)
+    return this.printGraph(maxConnections = maxConnections, selector, *strategies)
 }
 
 /** Utility function to print the EOG using [printGraph]. */
 fun Node.printEOG(
     maxConnections: Int = 25,
+    selector: (Node) -> Boolean = { true },
     vararg strategies: (Node) -> Iterator<EvaluationOrder> =
         arrayOf<(Node) -> Iterator<EvaluationOrder>>(
             Strategy::EOG_EDGES_FORWARD,
             Strategy::EOG_EDGES_BACKWARD,
         ),
 ): String {
-    return this.printGraph(maxConnections, *strategies)
+    return this.printGraph(maxConnections, selector, *strategies)
 }
 
 /** Utility function to print the AST using [printGraph]. */
 fun Node.printAST(
     maxConnections: Int = 25,
+    selector: (Node) -> Boolean = { true },
     vararg strategies: (Node) -> Iterator<AstEdge<out Node>> =
         arrayOf<(Node) -> Iterator<AstEdge<out Node>>>(
             Strategy::AST_EDGES_FORWARD,
             Strategy::AST_EDGES_BACKWARD,
         ),
 ): String {
-    return this.printGraph(maxConnections, *strategies)
+    return this.printGraph(maxConnections, selector, *strategies)
+}
+
+data class Quadtuple(
+    val start: Node,
+    val end: Node,
+    val nextRelevant: Node,
+    val relevantEdge: Boolean,
+) {
+    val component1: Node
+        get() = start
+
+    val component2: Node
+        get() = end
+
+    val component3: Node
+        get() = nextRelevant
+
+    val component4: Boolean
+        get() = relevantEdge
+}
+
+fun <EdgeType : Edge<out Node>> nextStep(
+    edge: EdgeType,
+    lastRelevant: Node?,
+    selector: (Node) -> Boolean = { true },
+    strategy: (Node) -> Iterator<EdgeType>,
+): Quadtuple {
+    val isForward = strategy(edge.start).asSequence().firstOrNull()?.end == edge.end
+    var start: Node
+    var end: Node
+    var nextRelevant: Node
+    var relevantEdge = false
+    if (isForward) {
+        start = lastRelevant ?: edge.start
+        end = edge.end
+        nextRelevant =
+            if (selector(end)) {
+                relevantEdge = true
+                end
+            } else {
+                lastRelevant ?: edge.start
+            }
+    } else {
+        start = edge.start
+        end = lastRelevant ?: edge.end
+        nextRelevant =
+            if (selector(start)) {
+                relevantEdge = true
+                start
+            } else {
+                // TODO: Might be useful to propagate/configure edge labels.
+                lastRelevant ?: edge.end
+            }
+    }
+    return Quadtuple(start, end, nextRelevant, relevantEdge)
 }
 
 /**
@@ -82,6 +154,7 @@ fun Node.printAST(
  */
 fun <EdgeType : Edge<out Node>> Node.printGraph(
     maxConnections: Int = 25,
+    selector: (Node) -> Boolean = { true },
     vararg strategies: (Node) -> Iterator<EdgeType>,
 ): String {
     val builder = StringBuilder()
@@ -91,19 +164,33 @@ fun <EdgeType : Edge<out Node>> Node.printGraph(
 
     // We use a set with a defined ordering to hold our work-list to have a somewhat consistent
     // ordering of statements in the mermaid file.
-    val worklist = LinkedHashSet<EdgeType>()
+    val worklist = LinkedHashSet<Pair<EdgeType, MutableMap<(Node) -> Iterator<EdgeType>, Node>>>()
     val alreadySeen = identitySetOf<EdgeType>()
     var conns = 0
 
     strategies.forEach { strategy ->
-        worklist +=
+        val nextSteps =
             strategy(this).asSequence().filter { it !in alreadySeen }.sortedBy { it.end.name }
+
+        worklist +=
+            nextSteps.map {
+                it to
+                    mutableMapOf(
+                        *strategies
+                            .map { str ->
+                                val nextStep = nextStep(it, this, selector, strategy)
+                                str to nextStep.nextRelevant
+                            }
+                            .toTypedArray()
+                    )
+            }
     }
 
     while (worklist.isNotEmpty() && conns < maxConnections) {
         // Take one edge out of the work-list
-        val edge = worklist.first()
-        worklist.remove(edge)
+        val currentElement = worklist.first()
+        val (edge, lastRelevantMap) = currentElement
+        worklist.remove(currentElement)
 
         if (edge in alreadySeen) {
             continue
@@ -112,17 +199,61 @@ fun <EdgeType : Edge<out Node>> Node.printGraph(
         // Add it to the seen-list
         alreadySeen += edge
 
-        val start = edge.start
-        val end = edge.end
-        builder.append(
-            "${start.hashCode()}[\"${start.nodeLabel}\"]-->|${edge.label()}|${end.hashCode()}[\"${end.nodeLabel}\"]\n"
-        )
-        conns++
+        for (strategy in strategies) {
+            val lastRelevant = lastRelevantMap[strategy]
+            val (start, end, nextRelevant, relevantEdge) =
+                nextStep(edge, lastRelevant, selector, strategy)
 
-        // Add start and edges to the work-list.
-        strategies.forEach { strategy ->
-            worklist += strategy(end).asSequence().sortedBy { it.end.name }
-            worklist += strategy(start).asSequence().sortedBy { it.end.name }
+            if (relevantEdge) {
+                builder.append(
+                    "${start.hashCode()}[\"${start.nodeLabel}\"]-->|${edge.label()}|${end.hashCode()}[\"${end.nodeLabel}\"]\n"
+                )
+                conns++
+            }
+
+            // Add start and edges to the work-list.
+            worklist +=
+                strategy(end)
+                    .asSequence()
+                    .sortedBy { it.end.name }
+                    .map {
+                        it to
+                            mutableMapOf(
+                                *strategies
+                                    .map { str ->
+                                        val nextStep =
+                                            nextStep(
+                                                it,
+                                                lastRelevantMap[strategy],
+                                                selector,
+                                                strategy,
+                                            )
+                                        str to nextStep.nextRelevant
+                                    }
+                                    .toTypedArray()
+                            )
+                    } // TODO: Also make the map in both directions here.
+            worklist +=
+                strategy(start)
+                    .asSequence()
+                    .sortedBy { it.end.name }
+                    .map {
+                        it to
+                            mutableMapOf(
+                                *strategies
+                                    .map { str ->
+                                        val nextStep =
+                                            nextStep(
+                                                it,
+                                                lastRelevantMap[strategy],
+                                                selector,
+                                                strategy,
+                                            )
+                                        str to nextStep.nextRelevant
+                                    }
+                                    .toTypedArray()
+                            )
+                    } // TODO: Also make the map in both directions here.
         }
     }
 
@@ -139,7 +270,9 @@ private fun Edge<out Node>.label(): String {
     if (this is Dataflow) {
         var granularity = this.granularity
         if (granularity is FieldDataflowGranularity) {
-            builder.append(" (partial, ${granularity.partialTarget.name})")
+            builder.append(" (partial, ${granularity.partialTarget?.name})")
+        } else if (granularity is PointerDataflowGranularity) {
+            builder.append(" (pointer, ${granularity.pointerTarget.name})")
         } else {
             builder.append(" (full)")
         }

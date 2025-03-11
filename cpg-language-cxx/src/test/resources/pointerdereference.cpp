@@ -11,4 +11,8 @@ int main() {
   int* ptr = 0;
 
   b = *ptr;
+
+  int* c;
+  *c = 7;
+  *ptr = *c;
 }
