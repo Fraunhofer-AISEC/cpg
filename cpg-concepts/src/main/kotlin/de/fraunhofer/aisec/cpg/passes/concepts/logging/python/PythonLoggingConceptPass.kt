@@ -133,9 +133,11 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     -> DEFAULT_LOGGER_NAME
                     else -> loggerName
                 }
-            loggers.computeIfAbsent(normalizedLoggerName) {
-                newLog(underlyingNode = callExpression, name = normalizedLoggerName)
-            }
+            loggers
+                .computeIfAbsent(normalizedLoggerName) {
+                    newLog(underlyingNode = callExpression, name = normalizedLoggerName)
+                }
+                .newLogGet(underlyingNode = callExpression)
         } else if (callee.name.toString().startsWith("logging.")) {
             loggers[DEFAULT_LOGGER_NAME]?.let { logOpHelper(callExpression, it) }
         } else {
