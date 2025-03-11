@@ -74,6 +74,14 @@ fun MetadataProvider.newFileClose(underlyingNode: Node, file: File): CloseFile {
     return node
 }
 
+fun MetadataProvider.newFileDelete(underlyingNode: Node, file: File): DeleteFile {
+    val node = DeleteFile(underlyingNode = underlyingNode, concept = file)
+    node.codeAndLocationFrom(underlyingNode)
+
+    NodeBuilder.log(node)
+    return node
+}
+
 /**
  * Creates a new [ReadFile] node and attaches the DFG from the corresponding [file] to [this] and
  * then from [this] to the created node.

@@ -104,23 +104,19 @@ class FileConceptTest : BaseTest() {
 
         // follow the EOG from open -> read -> close
         // tested in two steps: open -> read and read -> close
-        val openFileCallExpression =
-            fileNodes.filterIsInstance<OpenFile>().singleOrNull()?.underlyingNode
-        assertNotNull(openFileCallExpression)
+        val fileOpen = fileNodes.filterIsInstance<OpenFile>().singleOrNull()
+        assertNotNull(fileOpen)
         assertTrue(
-            executionPath(startNode = openFileCallExpression) { it == readFile.underlyingNode }
-                .value,
+            executionPathHelper(startNode = fileOpen, endNode = readFile),
             "Expected to find an execution path from open to read.",
         )
 
-        val readFileCallExpression =
-            fileNodes.filterIsInstance<ReadFile>().singleOrNull()?.underlyingNode
-        assertNotNull(readFileCallExpression)
+        val fileRead = fileNodes.filterIsInstance<ReadFile>().singleOrNull()
+        assertNotNull(fileRead)
+        val closeFile = fileNodes.filterIsInstance<CloseFile>().singleOrNull()
+        assertNotNull(closeFile)
         assertTrue(
-            executionPath(startNode = readFileCallExpression) {
-                    it.overlays.any { it is CloseFile }
-                }
-                .value,
+            executionPathHelper(startNode = fileRead, endNode = closeFile),
             "Expected to find an execution path from read to close.",
         )
     }
@@ -331,10 +327,8 @@ class FileConceptTest : BaseTest() {
         assertEquals(file, chmod.concept, "Expected the chmod to operate on our file node.")
 
         // Let's find our bad example
-        val start = write.underlyingNode
-        assertNotNull(start, "Expected the operation to have a underlying node.")
         assertTrue(
-            executionPath(startNode = start) { it == chmod.underlyingNode }.value,
+            executionPathHelper(startNode = write, endNode = chmod),
             "Expected to find a violating execution path from write to chmod.",
         )
     }
@@ -374,5 +368,70 @@ class FileConceptTest : BaseTest() {
                 "Expected to find a dataflow to `file.read()`.",
             )
         }
+    }
+
+    @Test
+    fun testDelete() {
+        val topLevel = Path.of("src", "integrationTest", "resources", "python", "file")
+
+        val result =
+            analyze(
+                files = listOf(topLevel.resolve("file_delete.py").toFile()),
+                topLevel = topLevel,
+                usePasses = true,
+            ) {
+                it.registerLanguage<PythonLanguage>()
+                it.registerPass<PythonFileConceptPass>()
+                it.symbols(mapOf("PYTHON_PLATFORM" to "linux"))
+                it.configurePass<PythonFileConceptPass>(
+                    ConceptPass.Config(evaluator = PythonValueEvaluator())
+                )
+            }
+        assertNotNull(result)
+
+        val conceptNodes =
+            result.conceptNodes.filterIsInstance<IsFile>() +
+                result.operationNodes.filterIsInstance<
+                    IsFile
+                >() // TODO why can't I use `overlays`? It's empty.
+        assertTrue(conceptNodes.isNotEmpty())
+
+        val file = conceptNodes.filterIsInstance<File>().singleOrNull()
+        assertNotNull(file, "Expected to find exactly one `File` node (\"example.txt\").")
+
+        val fileRead = conceptNodes.filterIsInstance<ReadFile>().singleOrNull()
+        assertNotNull(fileRead, "Expected to find a file read operation.")
+
+        val fileDelete = conceptNodes.filterIsInstance<DeleteFile>().singleOrNull()
+        assertNotNull(fileDelete, "Expected to find a file delete operation.")
+
+        val fileWrite = conceptNodes.filterIsInstance<WriteFile>().singleOrNull()
+        assertNotNull(fileWrite, "Expected to find a file write operation.")
+
+        assertTrue(
+            dataFlow(startNode = fileRead) { it == fileWrite }.value,
+            "Expected to find a dataflow from the file read to the file write operation.",
+        )
+
+        assertTrue(
+            executionPathHelper(startNode = fileRead, endNode = fileDelete),
+            "Expected to find an execution path from read to remove.",
+        )
+
+        assertTrue(
+            executionPathHelper(startNode = fileDelete, endNode = fileWrite),
+            "Expected to find an execution path from remove to write.",
+        )
+    }
+
+    internal fun executionPathHelper(startNode: OverlayNode?, endNode: OverlayNode?): Boolean {
+        assertNotNull(startNode, "Expected a start node.")
+        assertNotNull(endNode, "Expected an end node.")
+        val startUnderlyingNode = startNode.underlyingNode
+        assertNotNull(startUnderlyingNode, "Expected to find an underlying node.")
+        return executionPath(startNode = startUnderlyingNode) { node ->
+                node.overlays.any { overlay -> overlay == endNode }
+            }
+            .value
     }
 }

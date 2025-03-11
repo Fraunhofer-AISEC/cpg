@@ -150,7 +150,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : ConceptPass(ctx) {
                             name = "path",
                             position = 0,
                             evaluator = evaluator,
-                        ) as? String
+                        )
                     if (fileName == null) {
                         Util.errorWithFileLocation(
                             callExpression,
@@ -177,6 +177,26 @@ class PythonFileConceptPass(ctx: TranslationContext) : ConceptPass(ctx) {
                         return
                     }
                     newFileSetMask(underlyingNode = callExpression, file = file, mask = mode)
+                }
+                "os.remove" -> {
+                    val fileName =
+                        callExpression.argumentValueByNameOrPosition<String>(
+                            name = "path",
+                            position = 0,
+                            evaluator = evaluator,
+                        )
+                    if (fileName == null) {
+                        Util.errorWithFileLocation(
+                            callExpression,
+                            log,
+                            "Failed to parse the `path` argument. Ignoring the entire `os.remove` call.",
+                        )
+                        return
+                    }
+
+                    val file = getOrCreateFile(fileName, callExpression)
+
+                    newFileDelete(underlyingNode = callExpression, file = file)
                 }
             }
         }
