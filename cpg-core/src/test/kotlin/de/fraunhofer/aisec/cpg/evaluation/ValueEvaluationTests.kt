@@ -37,7 +37,7 @@ class ValueEvaluationTests {
     companion object {
         fun getSizeExample(
             config: TranslationConfiguration =
-                TranslationConfiguration.Companion.builder()
+                TranslationConfiguration.builder()
                     .defaultPasses()
                     .registerLanguage<TestLanguage>()
                     .build()
@@ -98,7 +98,7 @@ class ValueEvaluationTests {
 
         fun getComplexExample(
             config: TranslationConfiguration =
-                TranslationConfiguration.Companion.builder()
+                TranslationConfiguration.builder()
                     .defaultPasses()
                     .registerLanguage<TestLanguage>()
                     .build()
@@ -139,7 +139,7 @@ class ValueEvaluationTests {
 
         fun getExample(
             config: TranslationConfiguration =
-                TranslationConfiguration.Companion.builder()
+                TranslationConfiguration.builder()
                     .defaultPasses()
                     .registerLanguage<TestLanguage>()
                     .build()
@@ -243,7 +243,7 @@ class ValueEvaluationTests {
 
         fun getCfExample(
             config: TranslationConfiguration =
-                TranslationConfiguration.Companion.builder()
+                TranslationConfiguration.builder()
                     .defaultPasses()
                     .registerLanguage<TestLanguage>()
                     .build()
