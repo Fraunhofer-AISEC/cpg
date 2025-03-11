@@ -23,16 +23,14 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.analysis
+package de.fraunhofer.aisec.cpg.evaluation
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.bodyOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.SubscriptExpression
-import de.fraunhofer.aisec.cpg.testcases.ValueEvaluationTests
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull

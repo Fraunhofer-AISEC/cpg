@@ -23,7 +23,7 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.analysis
+package de.fraunhofer.aisec.cpg.evaluation
 
 internal operator fun Number.plus(other: Number): Number =
     when (this) {
