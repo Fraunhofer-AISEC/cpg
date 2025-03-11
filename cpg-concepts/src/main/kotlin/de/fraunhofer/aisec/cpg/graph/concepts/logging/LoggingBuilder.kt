@@ -38,9 +38,7 @@ import de.fraunhofer.aisec.cpg.graph.concepts.newOperation
  * @return The new [Log].
  */
 fun MetadataProvider.newLog(underlyingNode: Node, name: String) =
-    newConcept({ Log(underlyingNode = underlyingNode) }, underlyingNode).apply {
-        this.logName = name
-    }
+    newConcept(::Log, underlyingNode).apply { this.logName = name }
 
 /**
  * Creates a [LogWrite] node with the same metadata as the [underlyingNode].
@@ -80,8 +78,4 @@ fun Log.newLogWrite(underlyingNode: Node, level: LogLevel, logArguments: List<No
  * @return The new [LogGet].
  */
 fun Log.newLogGet(underlyingNode: Node) =
-    newOperation(
-        { node, concept -> LogGet(underlyingNode = underlyingNode, concept = concept) },
-        underlyingNode = underlyingNode,
-        concept = this,
-    )
+    newOperation(::LogGet, underlyingNode = underlyingNode, concept = this)

@@ -42,13 +42,13 @@ fun MetadataProvider.newDiskEncryption(underlyingNode: Node, cipher: Cipher?, ke
     )
 
 fun MetadataProvider.newCipher(underlyingNode: Node) =
-    newConcept({ Cipher(underlyingNode = underlyingNode) }, underlyingNode = underlyingNode)
+    newConcept(::Cipher, underlyingNode = underlyingNode)
 
 fun MetadataProvider.newSecret(underlyingNode: Node) =
-    newConcept({ Secret(underlyingNode = underlyingNode) }, underlyingNode = underlyingNode)
+    newConcept(::Secret, underlyingNode = underlyingNode)
 
 fun MetadataProvider.newBlockStorage(underlyingNode: Node) =
-    newConcept({ BlockStorage(underlyingNode = underlyingNode) }, underlyingNode = underlyingNode)
+    newConcept(::BlockStorage, underlyingNode = underlyingNode)
 
 fun Cipher.newEncryptOperation(underlyingNode: Node, key: Secret) =
     newOperation(
@@ -58,29 +58,13 @@ fun Cipher.newEncryptOperation(underlyingNode: Node, key: Secret) =
     )
 
 fun DiskEncryption.newCreateEncryptedDisk(underlyingNode: Node) =
-    newOperation(
-        { node, concept -> CreateEncryptedDisk(underlyingNode, concept) },
-        underlyingNode = underlyingNode,
-        concept = this,
-    )
+    newOperation(::CreateEncryptedDisk, underlyingNode = underlyingNode, concept = this)
 
 fun DiskEncryption.newUnlockEncryptedDisk(underlyingNode: Node) =
-    newOperation(
-        { node, concept -> UnlockEncryptedDisk(underlyingNode, concept) },
-        underlyingNode = underlyingNode,
-        concept = this,
-    )
+    newOperation(::UnlockEncryptedDisk, underlyingNode = underlyingNode, concept = this)
 
 fun Secret.newCreateSecret(underlyingNode: Node) =
-    newOperation(
-        { node, concept -> CreateSecret(underlyingNode, concept) },
-        underlyingNode = underlyingNode,
-        concept = this,
-    )
+    newOperation(::CreateSecret, underlyingNode = underlyingNode, concept = this)
 
 fun Secret.newGetSecret(underlyingNode: Node) =
-    newOperation(
-        { node, concept -> GetSecret(underlyingNode, concept) },
-        underlyingNode = underlyingNode,
-        concept = this,
-    )
+    newOperation(::GetSecret, underlyingNode = underlyingNode, concept = this)
