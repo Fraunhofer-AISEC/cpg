@@ -37,33 +37,33 @@ import kotlin.test.*
 internal class TypeTests : BaseTest() {
     @Test
     fun reference() {
-        val language =
-            CPPLanguage(
-                TranslationContext(
-                    TranslationConfiguration.builder().build(),
-                    ScopeManager(),
-                    TypeManager(),
-                )
-            )
+        val language = CPPLanguage(TranslationContext())
+        val ctx = language.ctx
+        assertNotNull(ctx)
 
-        val objectType: Type = IntegerType("int", 32, language, NumericType.Modifier.SIGNED)
-        val pointerType: Type = PointerType(objectType, PointerType.PointerOrigin.POINTER)
+        val objectType: Type = IntegerType(ctx, "int", 32, language, NumericType.Modifier.SIGNED)
+        val pointerType: Type = PointerType(ctx, objectType, PointerType.PointerOrigin.POINTER)
         val unknownType: Type = UnknownType.getUnknownType(language)
-        val incompleteType: Type = IncompleteType(language)
+        val incompleteType: Type = IncompleteType(ctx, language)
         val parameterList =
-            listOf<Type>(IntegerType("int", 32, language, NumericType.Modifier.SIGNED))
+            listOf<Type>(IntegerType(ctx, "int", 32, language, NumericType.Modifier.SIGNED))
         val functionPointerType: Type =
-            FunctionPointerType(parameterList, language, IncompleteType(language))
+            FunctionPointerType(
+                language.ctx,
+                parameterList,
+                language,
+                IncompleteType(ctx, language),
+            )
 
         // Test 1: ObjectType becomes PointerType containing the original ObjectType as ElementType
         assertEquals(
-            PointerType(objectType, PointerType.PointerOrigin.POINTER),
+            PointerType(ctx, objectType, PointerType.PointerOrigin.POINTER),
             objectType.reference(PointerType.PointerOrigin.POINTER),
         )
 
         // Test 2: Existing PointerType adds one level more of references as ElementType
         assertEquals(
-            PointerType(pointerType, PointerType.PointerOrigin.POINTER),
+            PointerType(ctx, pointerType, PointerType.PointerOrigin.POINTER),
             pointerType.reference(PointerType.PointerOrigin.POINTER),
         )
 
@@ -72,36 +72,36 @@ internal class TypeTests : BaseTest() {
 
         // Test 4: IncompleteType can be refereced e.g. void*
         assertEquals(
-            PointerType(incompleteType, PointerType.PointerOrigin.POINTER),
+            PointerType(ctx, incompleteType, PointerType.PointerOrigin.POINTER),
             incompleteType.reference(PointerType.PointerOrigin.POINTER),
         )
 
         // Test 5: Create reference to function pointer = pointer to function pointer
         assertEquals(
-            PointerType(functionPointerType, PointerType.PointerOrigin.POINTER),
+            PointerType(ctx, functionPointerType, PointerType.PointerOrigin.POINTER),
             functionPointerType.reference(PointerType.PointerOrigin.POINTER),
         )
     }
 
     @Test
     fun dereference() {
-        val language =
-            CPPLanguage(
-                TranslationContext(
-                    TranslationConfiguration.builder().build(),
-                    ScopeManager(),
-                    TypeManager(),
-                )
-            )
+        val language = CPPLanguage(TranslationContext())
+        val ctx = language.ctx
+        assertNotNull(ctx)
 
-        val objectType: Type = IntegerType("int", 32, language, NumericType.Modifier.SIGNED)
-        val pointerType: Type = PointerType(objectType, PointerType.PointerOrigin.POINTER)
+        val objectType: Type = IntegerType(ctx, "int", 32, language, NumericType.Modifier.SIGNED)
+        val pointerType: Type = PointerType(ctx, objectType, PointerType.PointerOrigin.POINTER)
         val unknownType: Type = UnknownType.getUnknownType(language)
-        val incompleteType: Type = IncompleteType(language)
+        val incompleteType: Type = IncompleteType(ctx, language)
         val parameterList =
-            listOf<Type>(IntegerType("int", 32, language, NumericType.Modifier.SIGNED))
+            listOf<Type>(IntegerType(ctx, "int", 32, language, NumericType.Modifier.SIGNED))
         val functionPointerType: Type =
-            FunctionPointerType(parameterList, language, IncompleteType(language))
+            FunctionPointerType(
+                language.ctx,
+                parameterList,
+                language,
+                IncompleteType(ctx, language),
+            )
 
         // Test 1: Dereferencing an ObjectType results in an UnknownType, since we cannot track the
         // type
@@ -138,21 +138,27 @@ internal class TypeTests : BaseTest() {
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val language = tu.ctx?.availableLanguage<CPPLanguage>()
+        val language = tu.ctx.availableLanguage<CPPLanguage>()
         assertNotNull(language)
 
-        val noParamType = FunctionPointerType(emptyList(), language, IncompleteType(language))
+        val ctx = language.ctx
+        assertNotNull(ctx)
+
+        val noParamType =
+            FunctionPointerType(language.ctx, emptyList(), language, IncompleteType(ctx, language))
         val oneParamType =
             FunctionPointerType(
+                language.ctx,
                 listOf<Type>(tu.primitiveType("int")),
                 language,
-                IncompleteType(language),
+                IncompleteType(ctx, language),
             )
         val twoParamType =
             FunctionPointerType(
+                language.ctx,
                 listOf(tu.primitiveType("int"), tu.primitiveType("unsigned long int")),
                 language,
-                IntegerType("int", 32, language, NumericType.Modifier.SIGNED),
+                IntegerType(ctx, "int", 32, language, NumericType.Modifier.SIGNED),
             )
         val variables = tu.variables
         val localTwoParam = findByUniqueName(variables, "local_two_param")
@@ -183,12 +189,7 @@ internal class TypeTests : BaseTest() {
     @Throws(Exception::class)
     @Test
     fun testCommonTypeTestCpp() {
-        val ctx =
-            TranslationContext(
-                TranslationConfiguration.builder().build(),
-                ScopeManager(),
-                TypeManager(),
-            )
+        val ctx = TranslationContext()
 
         with(CXXLanguageFrontend(ctx, CPPLanguage(ctx))) {
             val topLevel =

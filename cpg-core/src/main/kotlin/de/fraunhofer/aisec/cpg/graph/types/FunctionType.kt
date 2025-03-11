@@ -25,8 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.unknownType
 
@@ -39,16 +39,18 @@ import de.fraunhofer.aisec.cpg.graph.unknownType
 class FunctionType
 @JvmOverloads
 constructor(
+    ctx: TranslationContext?,
     typeName: String = "",
     var parameters: List<Type> = listOf(),
     var returnTypes: List<Type> = listOf(),
     language: Language<*>,
-) : Type(typeName, language) {
+) : Type(ctx, typeName, language) {
 
     override fun reference(pointer: PointerType.PointerOrigin?): Type {
         // TODO(oxisto): In the future, we actually could just remove the FunctionPointerType
         //  and just have a regular PointerType here
         return FunctionPointerType(
+            ctx,
             parameters.toList(),
             language,
             returnTypes.firstOrNull() ?: unknownType(),
@@ -67,14 +69,14 @@ constructor(
         fun computeType(func: FunctionDeclaration): FunctionType {
             val type =
                 FunctionType(
+                    func.ctx,
                     func.signature,
                     func.parameters.map { it.type },
                     func.returnTypes.toList(),
                     func.language,
                 )
 
-            val c = func.ctx ?: throw TranslationException("context not available")
-            return c.typeManager.registerType(type)
+            return func.ctx.typeManager.registerType(type)
         }
     }
 }

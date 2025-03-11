@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.types
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import de.fraunhofer.aisec.cpg.PopulatedByPass
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
@@ -81,21 +82,15 @@ abstract class Type : Node {
      */
     @PopulatedByPass(TypeResolver::class) var declaredFrom: DeclaresType? = null
 
-    constructor() {
+    constructor(ctx: TranslationContext? = null) : super(ctx) {
         name = Name(EMPTY_NAME, null, language)
     }
 
-    constructor(typeName: String?) {
-        name = language.parseName(typeName ?: UNKNOWN_TYPE_STRING)
-        typeOrigin = Origin.UNRESOLVED
-    }
-
-    constructor(type: Type?) {
-        type?.name?.let { name = it.clone() }
-        typeOrigin = type?.typeOrigin
-    }
-
-    constructor(typeName: CharSequence, language: Language<*>) {
+    constructor(
+        ctx: TranslationContext?,
+        typeName: CharSequence,
+        language: Language<*>,
+    ) : this(ctx) {
         name =
             if (this is FunctionType) {
                 Name(typeName.toString(), null, language)
@@ -104,12 +99,6 @@ abstract class Type : Node {
             }
         this.language = language
         typeOrigin = Origin.UNRESOLVED
-    }
-
-    constructor(fullTypeName: Name, language: Language<*>) {
-        name = fullTypeName.clone()
-        typeOrigin = Origin.UNRESOLVED
-        this.language = language
     }
 
     /** Type Origin describes where the Type information came from */

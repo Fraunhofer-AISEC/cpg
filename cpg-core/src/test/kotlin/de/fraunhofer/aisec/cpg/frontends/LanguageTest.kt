@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.frontends
 
-import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.TranslationManager
@@ -79,7 +78,6 @@ class LanguageTest {
         val ctx =
             TranslationContext(
                 config = TranslationConfiguration.builder().build(),
-                scopeManager = ScopeManager(),
                 typeManager = TypeManager(),
             )
 

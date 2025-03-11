@@ -63,7 +63,6 @@ abstract class LanguageFrontend<AstNode, TypeNode>(
     LanguageProvider,
     ScopeProvider,
     NamespaceProvider,
-    ContextProvider,
     RawNodeTypeProvider<AstNode> {
     val scopeManager: ScopeManager = ctx.scopeManager
     val typeManager: TypeManager = ctx.typeManager

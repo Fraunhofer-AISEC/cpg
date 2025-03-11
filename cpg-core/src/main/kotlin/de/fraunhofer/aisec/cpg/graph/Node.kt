@@ -71,13 +71,22 @@ abstract class Node :
     ContextProvider,
     HasNameAndLocation,
     HasScope {
+
+    constructor() {}
+
+    constructor(ctx: TranslationContext?) {
+        if (ctx != null) {
+            this.ctx = ctx
+        }
+    }
+
     /**
      * Because we are updating type information in the properties of the node, we need a reference
      * to managers such as the [TypeManager] instance which is responsible for this particular node.
      * All managers are bundled in [TranslationContext]. It is set in [Node.applyMetadata] when a
      * [ContextProvider] is provided.
      */
-    @get:JsonIgnore @Transient override var ctx: TranslationContext? = null
+    @get:JsonIgnore @Transient override lateinit var ctx: TranslationContext
 
     /** This property holds the full name using our new [Name] class. */
     @Convert(NameConverter::class) override var name: Name = Name(EMPTY_NAME)
@@ -374,8 +383,8 @@ abstract class Node :
  */
 inline fun <reified T : Node> T.applyWithScope(block: T.() -> Unit): T {
     return this.apply {
-        ctx?.scopeManager?.enterScope(this)
+        ctx.scopeManager.enterScope(this)
         block()
-        ctx?.scopeManager?.leaveScope(this)
+        ctx.scopeManager.leaveScope(this)
     }
 }

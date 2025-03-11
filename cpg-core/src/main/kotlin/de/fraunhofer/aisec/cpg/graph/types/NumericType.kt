@@ -25,16 +25,18 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
 import java.util.*
 
 /** This type collects all kind of numeric types. */
 open class NumericType(
+    ctx: TranslationContext?,
     typeName: CharSequence = "",
     val bitWidth: Int? = null,
     language: Language<*>,
     val modifier: Modifier = Modifier.SIGNED,
-) : ObjectType(typeName, listOf(), true, language) {
+) : ObjectType(ctx, typeName, listOf(), true, language) {
 
     init {
         // Built-in types are always resolved

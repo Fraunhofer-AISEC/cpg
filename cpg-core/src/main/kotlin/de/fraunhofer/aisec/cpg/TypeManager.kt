@@ -187,7 +187,7 @@ class TypeManager {
     ): ParameterizedType {
         var parameterizedType = getTypeParameter(templateDeclaration, typeName)
         if (parameterizedType == null) {
-            parameterizedType = ParameterizedType(typeName, language)
+            parameterizedType = ParameterizedType(templateDeclaration.ctx, typeName, language)
             addTypeParameter(templateDeclaration, parameterizedType)
         }
         return parameterizedType

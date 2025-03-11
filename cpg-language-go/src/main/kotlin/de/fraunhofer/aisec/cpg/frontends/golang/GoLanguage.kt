@@ -71,61 +71,64 @@ class GoLanguage(ctx: TranslationContext) :
         mapOf(
             // https://pkg.go.dev/builtin#any
             // TODO: Actually, this should be a type alias to interface{}
-            "any" to ObjectType("any", listOf(), false, this),
+            "any" to ObjectType(ctx, "any", listOf(), false, this),
             // https://pkg.go.dev/builtin#error
             // TODO: Actually, this is an interface{ Error() string } type.
-            "error" to ObjectType("error", listOf(), false, this),
+            "error" to ObjectType(ctx, "error", listOf(), false, this),
             // https://pkg.go.dev/builtin#bool
-            "bool" to BooleanType("bool", language = this),
+            "bool" to BooleanType(ctx, "bool", language = this),
             // https://pkg.go.dev/builtin#int
-            "int" to IntegerType("int", 32, this, NumericType.Modifier.SIGNED),
+            "int" to IntegerType(ctx, "int", 32, this, NumericType.Modifier.SIGNED),
             // // https://pkg.go.dev/builtin#int8
-            "int8" to IntegerType("int8", 8, this, NumericType.Modifier.SIGNED),
+            "int8" to IntegerType(ctx, "int8", 8, this, NumericType.Modifier.SIGNED),
             // https://pkg.go.dev/builtin#int16
-            "int16" to IntegerType("int16", 16, this, NumericType.Modifier.SIGNED),
+            "int16" to IntegerType(ctx, "int16", 16, this, NumericType.Modifier.SIGNED),
             // https://pkg.go.dev/builtin#int32
-            "int32" to IntegerType("int32", 32, this, NumericType.Modifier.SIGNED),
+            "int32" to IntegerType(ctx, "int32", 32, this, NumericType.Modifier.SIGNED),
             // https://pkg.go.dev/builtin#int64
-            "int64" to IntegerType("int64", 64, this, NumericType.Modifier.SIGNED),
+            "int64" to IntegerType(ctx, "int64", 64, this, NumericType.Modifier.SIGNED),
             // https://pkg.go.dev/builtin#uint
-            "uint" to IntegerType("uint", 32, this, NumericType.Modifier.UNSIGNED),
+            "uint" to IntegerType(ctx, "uint", 32, this, NumericType.Modifier.UNSIGNED),
             // https://pkg.go.dev/builtin#uint8
-            "uint8" to IntegerType("uint8", 8, this, NumericType.Modifier.UNSIGNED),
+            "uint8" to IntegerType(ctx, "uint8", 8, this, NumericType.Modifier.UNSIGNED),
             // https://pkg.go.dev/builtin#uint16
-            "uint16" to IntegerType("uint16", 16, this, NumericType.Modifier.UNSIGNED),
+            "uint16" to IntegerType(ctx, "uint16", 16, this, NumericType.Modifier.UNSIGNED),
             // https://pkg.go.dev/builtin#uint32
-            "uint32" to IntegerType("uint32", 32, this, NumericType.Modifier.UNSIGNED),
+            "uint32" to IntegerType(ctx, "uint32", 32, this, NumericType.Modifier.UNSIGNED),
             // https://pkg.go.dev/builtin#uint64
-            "uint64" to IntegerType("uint64", 64, this, NumericType.Modifier.UNSIGNED),
+            "uint64" to IntegerType(ctx, "uint64", 64, this, NumericType.Modifier.UNSIGNED),
             // https://pkg.go.dev/builtin#uintptr
             "uintptr" to
                 IntegerType(
+                    ctx,
                     "uintptr",
                     null /* depends on the architecture, so we don't know */,
                     this,
                     NumericType.Modifier.UNSIGNED,
                 ),
             // https://pkg.go.dev/builtin#float32
-            "float32" to FloatingPointType("float32", 32, this, NumericType.Modifier.SIGNED),
+            "float32" to FloatingPointType(ctx, "float32", 32, this, NumericType.Modifier.SIGNED),
             // https://pkg.go.dev/builtin#float64
-            "float64" to FloatingPointType("float64", 64, this, NumericType.Modifier.SIGNED),
+            "float64" to FloatingPointType(ctx, "float64", 64, this, NumericType.Modifier.SIGNED),
             // https://pkg.go.dev/builtin#complex64
-            "complex64" to NumericType("complex64", 64, this, NumericType.Modifier.NOT_APPLICABLE),
+            "complex64" to
+                NumericType(ctx, "complex64", 64, this, NumericType.Modifier.NOT_APPLICABLE),
             // https://pkg.go.dev/builtin#complex128
             "complex128" to
-                NumericType("complex128", 128, this, NumericType.Modifier.NOT_APPLICABLE),
+                NumericType(ctx, "complex128", 128, this, NumericType.Modifier.NOT_APPLICABLE),
             // https://pkg.go.dev/builtin#rune
             // TODO: Actually, this should be a type alias to int32
-            "rune" to IntegerType("int32", 32, this, NumericType.Modifier.SIGNED),
+            "rune" to IntegerType(ctx, "int32", 32, this, NumericType.Modifier.SIGNED),
             // https://pkg.go.dev/builtin#byte
             // TODO: Actually, this should be a type alias to uint8
-            "byte" to IntegerType("uint8", 8, this, NumericType.Modifier.UNSIGNED),
+            "byte" to IntegerType(ctx, "uint8", 8, this, NumericType.Modifier.UNSIGNED),
             // https://pkg.go.dev/builtin#string
-            "string" to StringType("string", this),
+            "string" to StringType(ctx, "string", this),
             // https://go.dev/ref/spec#Package_unsafe
-            "unsafe.ArbitraryType" to ObjectType("unsafe.ArbitraryType", listOf(), false, this),
+            "unsafe.ArbitraryType" to
+                ObjectType(ctx, "unsafe.ArbitraryType", listOf(), false, this),
             // https://go.dev/ref/spec#Package_unsafe
-            "unsafe.IntegerType" to ObjectType("unsafe.IntegerType", listOf(), false, this),
+            "unsafe.IntegerType" to ObjectType(ctx, "unsafe.IntegerType", listOf(), false, this),
         )
 
     override fun tryCast(

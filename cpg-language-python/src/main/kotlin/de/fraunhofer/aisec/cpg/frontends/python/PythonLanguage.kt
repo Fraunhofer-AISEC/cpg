@@ -133,9 +133,10 @@ class PythonLanguage(ctx: TranslationContext) :
     @Transient
     override val builtInTypes =
         mapOf(
-            "bool" to BooleanType("bool", language = this),
+            "bool" to BooleanType(ctx, "bool", language = this),
             "int" to
                 IntegerType(
+                    ctx,
                     "int",
                     Integer.MAX_VALUE,
                     this,
@@ -143,6 +144,7 @@ class PythonLanguage(ctx: TranslationContext) :
                 ), // Unlimited precision
             "float" to
                 FloatingPointType(
+                    ctx,
                     "float",
                     32,
                     this,
@@ -150,34 +152,39 @@ class PythonLanguage(ctx: TranslationContext) :
                 ), // This depends on the implementation
             "complex" to
                 NumericType(
+                    ctx,
                     "complex",
                     null,
                     this,
                     NumericType.Modifier.NOT_APPLICABLE,
                 ), // It's two floats
-            "str" to StringType("str", this, listOf()),
+            "str" to StringType(ctx, "str", this, listOf()),
             "list" to
                 ListType(
+                    ctx,
                     typeName = "list",
-                    elementType = ObjectType("object", listOf(), false, this),
+                    elementType = ObjectType(ctx, "object", listOf(), false, this),
                     language = this,
                 ),
             "tuple" to
                 ListType(
+                    ctx,
                     typeName = "tuple",
-                    elementType = ObjectType("object", listOf(), false, this),
+                    elementType = ObjectType(ctx, "object", listOf(), false, this),
                     language = this,
                 ),
             "dict" to
                 MapType(
+                    ctx,
                     typeName = "dict",
-                    elementType = ObjectType("object", listOf(), false, this),
+                    elementType = ObjectType(ctx, "object", listOf(), false, this),
                     language = this,
                 ),
             "set" to
                 SetType(
+                    ctx,
                     typeName = "set",
-                    elementType = ObjectType("object", listOf(), false, this),
+                    elementType = ObjectType(ctx, "object", listOf(), false, this),
                     language = this,
                 ),
         )

@@ -45,6 +45,6 @@ class LoadIncludesTest {
                 )
             }
 
-        assertEquals(result.ctx?.importedSources?.size, 2)
+        assertEquals(result.ctx.importedSources.size, 2)
     }
 }

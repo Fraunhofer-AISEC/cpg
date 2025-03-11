@@ -92,7 +92,7 @@ data class ImplicitCast(override var depthDistance: Int) : CastResult(depthDista
  * persisted in the final graph (database) and each node links to its corresponding language using
  * the [Node.language] property.
  */
-abstract class Language<T : LanguageFrontend<*, *>> : Node {
+abstract class Language<T : LanguageFrontend<*, *>>(ctx: TranslationContext?) : Node(ctx) {
 
     /** The file extensions without the dot */
     abstract val fileExtensions: List<String>
@@ -128,10 +128,6 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node {
 
     /** The standard evaluator to be used with this language. */
     @Transient @DoNotPersist open val evaluator: ValueEvaluator = ValueEvaluator()
-
-    constructor(ctx: TranslationContext? = null) : super() {
-        this.ctx = ctx
-    }
 
     /**
      * Creates a new [LanguageFrontend] object to parse the language. It requires the
@@ -353,7 +349,7 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node {
                     null,
                     source,
                     false,
-                    source.ctx!!,
+                    source.ctx,
                     null,
                     needsExactMatch = true,
                 )
@@ -434,7 +430,14 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node {
         // connection to the AST. We add several fallbacks here to make sure that we have a
         // component.
         val component =
-            source.scope?.astNode?.component ?: source.component ?: source.ctx?.currentComponent
+            if (source !is Type) {
+                source.component
+                    ?: source.ctx.currentComponent
+                    ?: source.scope?.astNode?.component
+                    ?: source.ctx.currentComponent
+            } else {
+                source.ctx.currentComponent ?: source.scope?.astNode?.component
+            }
         if (component == null) {
             val msg =
                 "No suitable component found that should be used for inference. " +
@@ -470,7 +473,7 @@ internal class KClassSerializer : JsonSerializer<KClass<*>>() {
  * Represents a language definition with no known implementation or specifics. The class is used as
  * a placeholder or to handle cases where the language is not explicitly defined or supported.
  */
-object UnknownLanguage : Language<Nothing>() {
+object UnknownLanguage : Language<Nothing>(null) {
     override val fileExtensions: List<String>
         get() = listOf()
 
@@ -483,7 +486,7 @@ object UnknownLanguage : Language<Nothing>() {
  * Represents a "language" that is not really a language. The class is used in cases where the
  * language is not explicitly defined or supported, for example in an [OverlayNode].
  */
-object NoLanguage : Language<Nothing>() {
+object NoLanguage : Language<Nothing>(null) {
     override val fileExtensions = listOf<String>()
     override val frontend: KClass<out Nothing> = Nothing::class
     override val builtInTypes: Map<String, Type> = mapOf()
@@ -512,7 +515,7 @@ fun Node.multiLanguage(): Language<*> {
     return if (languages.size == 1) {
         languages.single()
     } else if (languages.size > 1) {
-        MultipleLanguages(ctx!!, languages = languages)
+        MultipleLanguages(ctx, languages = languages)
     } else {
         UnknownLanguage
     }

@@ -219,6 +219,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
         func.type =
             typeManager.registerType(
                 FunctionType(
+                    ctx,
                     funcTypeName(func.signatureTypes, func.returnTypes),
                     func.signatureTypes,
                     func.returnTypes,

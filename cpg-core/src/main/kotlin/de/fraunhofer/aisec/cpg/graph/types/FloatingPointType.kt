@@ -25,12 +25,14 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
 
 /** Instances of this class represent floating point types. */
 class FloatingPointType(
+    ctx: TranslationContext?,
     typeName: CharSequence = "",
     bitWidth: Int? = null,
     language: Language<*>,
     modifier: Modifier = Modifier.SIGNED,
-) : NumericType(typeName, bitWidth, language, modifier)
+) : NumericType(ctx, typeName, bitWidth, language, modifier)

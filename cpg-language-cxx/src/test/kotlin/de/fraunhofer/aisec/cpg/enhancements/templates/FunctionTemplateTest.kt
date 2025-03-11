@@ -96,6 +96,9 @@ internal class FunctionTemplateTest : BaseTest() {
         val language = result.finalCtx.availableLanguage<CPPLanguage>()
         assertNotNull(language)
 
+        val ctx = result.finalCtx
+        assertNotNull(ctx)
+
         // This test checks the structure of FunctionTemplates without the TemplateExpansionPass
         val functionTemplateDecl = result.allChildren<FunctionTemplateDeclaration>()[0]
 
@@ -106,9 +109,9 @@ internal class FunctionTemplateTest : BaseTest() {
         val typeParamDeclaration = typeParamDecls[0]
         assertEquals(typeParamDeclaration, functionTemplateDecl.parameters[0])
 
-        val typeT = ParameterizedType("T", language)
-        val intType = IntegerType("int", 32, language, NumericType.Modifier.SIGNED)
-        val floatType = FloatingPointType("float", 32, language, NumericType.Modifier.SIGNED)
+        val typeT = ParameterizedType(ctx, "T", language)
+        val intType = IntegerType(ctx, "int", 32, language, NumericType.Modifier.SIGNED)
+        val floatType = FloatingPointType(ctx, "float", 32, language, NumericType.Modifier.SIGNED)
         assertEquals(typeT, typeParamDeclaration.type)
         assertEquals(intType, typeParamDeclaration.default)
 
@@ -199,6 +202,9 @@ internal class FunctionTemplateTest : BaseTest() {
         val language = result.finalCtx.availableLanguage<CPPLanguage>()
         assertNotNull(language)
 
+        val ctx = result.finalCtx
+        assertNotNull(ctx)
+
         val templateDeclaration =
             findByUniquePredicate(result.allChildren<FunctionTemplateDeclaration>()) {
                 t: FunctionTemplateDeclaration ->
@@ -223,7 +229,7 @@ internal class FunctionTemplateTest : BaseTest() {
         assertEquals(fixedMultiply, call.invokes[0])
 
         // Check template parameters
-        val doubleType = FloatingPointType("double", 64, language, NumericType.Modifier.SIGNED)
+        val doubleType = FloatingPointType(ctx, "double", 64, language, NumericType.Modifier.SIGNED)
         val literal5 = findByUniquePredicate(result.literals) { l: Literal<*> -> l.value == 5 }
         assertEquals(2, call.templateArguments.size)
         assertEquals(doubleType, (call.templateArguments[0] as TypeExpression).type)
@@ -339,6 +345,9 @@ internal class FunctionTemplateTest : BaseTest() {
         val language = result.finalCtx.availableLanguage<CPPLanguage>()
         assertNotNull(language)
 
+        val ctx = result.finalCtx
+        assertNotNull(ctx)
+
         val templateDeclaration =
             findByUniquePredicate(result.allChildren<FunctionTemplateDeclaration>()) {
                 t: FunctionTemplateDeclaration ->
@@ -363,7 +372,7 @@ internal class FunctionTemplateTest : BaseTest() {
         assertEquals(fixedMultiply, call.invokes[0])
 
         // Check template parameters
-        val doubleType = FloatingPointType("double", 64, language, NumericType.Modifier.SIGNED)
+        val doubleType = FloatingPointType(ctx, "double", 64, language, NumericType.Modifier.SIGNED)
         val literal5 = findByUniquePredicate(result.literals) { l: Literal<*> -> l.value == 5 }
         assertEquals(2, call.templateArguments.size)
         assertEquals(doubleType, (call.templateArguments[0] as TypeExpression).type)

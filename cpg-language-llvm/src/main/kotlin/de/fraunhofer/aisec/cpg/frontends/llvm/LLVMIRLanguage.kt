@@ -46,24 +46,25 @@ class LLVMIRLanguage(ctx: TranslationContext) : Language<LLVMIRLanguageFrontend>
     @Transient
     override val builtInTypes =
         mapOf(
-            "i1" to IntegerType("i1", 1, this, NumericType.Modifier.NOT_APPLICABLE),
-            "i8" to IntegerType("i8", 8, this, NumericType.Modifier.NOT_APPLICABLE),
-            "i32" to IntegerType("i32", 32, this, NumericType.Modifier.NOT_APPLICABLE),
-            "i64" to IntegerType("i64", 64, this, NumericType.Modifier.NOT_APPLICABLE),
-            "i128" to IntegerType("i128", 128, this, NumericType.Modifier.NOT_APPLICABLE),
-            "half" to FloatingPointType("half", 16, this, NumericType.Modifier.SIGNED),
-            "bfloat" to FloatingPointType("bfloat", 16, this, NumericType.Modifier.SIGNED),
-            "float" to FloatingPointType("float", 32, this, NumericType.Modifier.SIGNED),
-            "double" to FloatingPointType("double", 64, this, NumericType.Modifier.SIGNED),
-            "fp128" to FloatingPointType("fp128", 128, this, NumericType.Modifier.SIGNED),
-            "x86_fp80" to FloatingPointType("x86_fp80", 80, this, NumericType.Modifier.SIGNED),
-            "ppc_fp128" to FloatingPointType("ppc_fp128", 128, this, NumericType.Modifier.SIGNED),
+            "i1" to IntegerType(ctx, "i1", 1, this, NumericType.Modifier.NOT_APPLICABLE),
+            "i8" to IntegerType(ctx, "i8", 8, this, NumericType.Modifier.NOT_APPLICABLE),
+            "i32" to IntegerType(ctx, "i32", 32, this, NumericType.Modifier.NOT_APPLICABLE),
+            "i64" to IntegerType(ctx, "i64", 64, this, NumericType.Modifier.NOT_APPLICABLE),
+            "i128" to IntegerType(ctx, "i128", 128, this, NumericType.Modifier.NOT_APPLICABLE),
+            "half" to FloatingPointType(ctx, "half", 16, this, NumericType.Modifier.SIGNED),
+            "bfloat" to FloatingPointType(ctx, "bfloat", 16, this, NumericType.Modifier.SIGNED),
+            "float" to FloatingPointType(ctx, "float", 32, this, NumericType.Modifier.SIGNED),
+            "double" to FloatingPointType(ctx, "double", 64, this, NumericType.Modifier.SIGNED),
+            "fp128" to FloatingPointType(ctx, "fp128", 128, this, NumericType.Modifier.SIGNED),
+            "x86_fp80" to FloatingPointType(ctx, "x86_fp80", 80, this, NumericType.Modifier.SIGNED),
+            "ppc_fp128" to
+                FloatingPointType(ctx, "ppc_fp128", 128, this, NumericType.Modifier.SIGNED),
 
             // these are not real LLVM-IR types, but we use them to differentiate unsigned types
-            "ui1" to IntegerType("ui1", 1, this, NumericType.Modifier.UNSIGNED),
-            "ui8" to IntegerType("ui8", 8, this, NumericType.Modifier.UNSIGNED),
-            "ui32" to IntegerType("ui32", 32, this, NumericType.Modifier.UNSIGNED),
-            "ui64" to IntegerType("ui64", 64, this, NumericType.Modifier.UNSIGNED),
-            "ui128" to IntegerType("ui128", 128, this, NumericType.Modifier.UNSIGNED),
+            "ui1" to IntegerType(ctx, "ui1", 1, this, NumericType.Modifier.UNSIGNED),
+            "ui8" to IntegerType(ctx, "ui8", 8, this, NumericType.Modifier.UNSIGNED),
+            "ui32" to IntegerType(ctx, "ui32", 32, this, NumericType.Modifier.UNSIGNED),
+            "ui64" to IntegerType(ctx, "ui64", 64, this, NumericType.Modifier.UNSIGNED),
+            "ui128" to IntegerType(ctx, "ui128", 128, this, NumericType.Modifier.UNSIGNED),
         )
 }

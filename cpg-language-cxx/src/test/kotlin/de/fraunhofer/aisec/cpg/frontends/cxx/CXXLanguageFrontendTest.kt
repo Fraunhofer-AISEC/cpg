@@ -660,9 +660,12 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val language = tu.ctx?.availableLanguage<CPPLanguage>()
+        val language = tu.ctx.availableLanguage<CPPLanguage>()
         assertNotNull(language)
         assertEquals(language, tu.language)
+
+        val ctx = language.ctx
+        assertNotNull(ctx)
 
         val recordDeclaration = tu.records.firstOrNull()
         assertNotNull(recordDeclaration)
@@ -696,6 +699,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertEquals(tu.primitiveType("int"), methodWithParam.parameters[0].type)
         assertEquals(
             FunctionType(
+                ctx,
                 "(int)void*",
                 listOf(tu.primitiveType("int")),
                 listOf(tu.incompleteType().reference(POINTER)),
@@ -715,6 +719,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertLocalName("inlineMethod", inlineMethod)
         assertEquals(
             FunctionType(
+                ctx,
                 "()void*",
                 listOf(),
                 listOf(tu.incompleteType().reference(POINTER)),
@@ -727,7 +732,13 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val inlineConstructor = recordDeclaration.constructors[0]
         assertEquals(recordDeclaration.name.localName, inlineConstructor.name.localName)
         assertEquals(
-            FunctionType("()SomeClass", listOf(), listOf(tu.objectType("SomeClass")), language),
+            FunctionType(
+                ctx,
+                "()SomeClass",
+                listOf(),
+                listOf(tu.objectType("SomeClass")),
+                language,
+            ),
             inlineConstructor.type,
         )
         assertTrue(inlineConstructor.hasBody())
@@ -738,6 +749,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertEquals(tu.primitiveType("int"), constructorDefinition.parameters[0].type)
         assertEquals(
             FunctionType(
+                ctx,
                 "(int)SomeClass",
                 listOf(tu.primitiveType("int")),
                 listOf(tu.objectType("SomeClass")),
@@ -1407,7 +1419,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                 it.registerLanguage<CLanguage>()
             }
         with(tu) {
-            val typedefs = tu.ctx?.scopeManager?.typedefFor(Name("MyStruct"))
+            val typedefs = tu.ctx.scopeManager.typedefFor(Name("MyStruct"))
             assertLocalName("__myStruct", typedefs)
 
             val main = tu.functions["main"]

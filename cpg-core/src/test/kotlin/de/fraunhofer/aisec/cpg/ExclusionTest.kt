@@ -50,12 +50,7 @@ class TestFileLanguage(ctx: TranslationContext) : TestLanguage(ctx) {
 
 /** Just a test frontend that "reads" a file and returns an empty [TranslationUnitDeclaration]. */
 class TestFileLanguageFrontend(
-    ctx: TranslationContext =
-        TranslationContext(
-            TranslationConfiguration.builder().build(),
-            ScopeManager(),
-            TypeManager(),
-        ),
+    ctx: TranslationContext = TranslationContext(TranslationConfiguration.builder().build()),
     language: Language<TestLanguageFrontend> = TestFileLanguage(ctx),
 ) : TestLanguageFrontend(ctx, language) {
     override fun parse(file: File): TranslationUnitDeclaration {

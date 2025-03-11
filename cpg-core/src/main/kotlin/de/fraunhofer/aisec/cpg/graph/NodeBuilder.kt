@@ -58,7 +58,7 @@ interface MetadataProvider
  * A simple interface that everything, that supplies a language, should implement. Examples include
  * each [Node], but also transformation steps, such as [Handler].
  */
-interface LanguageProvider : MetadataProvider {
+interface LanguageProvider : ContextProvider {
     val language: Language<*>
 }
 
@@ -378,7 +378,7 @@ private fun <AstNode> Node.setCodeAndLocation(
     provider: CodeAndLocationProvider<AstNode>,
     rawNode: AstNode,
 ) {
-    if (this.ctx?.config?.codeInNodes == true) {
+    if (this.ctx.config.codeInNodes == true) {
         // only set code, if it's not already set or empty
         val code = provider.codeOf(rawNode)
         if (code != null) {

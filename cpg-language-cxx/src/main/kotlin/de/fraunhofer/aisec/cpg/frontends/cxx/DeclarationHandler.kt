@@ -397,6 +397,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 constructor.returnTypes.map { addParameterizedTypesToType(it, parameterizedTypes) }
             constructor.type =
                 FunctionType(
+                    ctx,
                     constructor.type.typeName,
                     (constructor.type as? FunctionType)?.parameters ?: listOf(),
                     constructor.returnTypes,

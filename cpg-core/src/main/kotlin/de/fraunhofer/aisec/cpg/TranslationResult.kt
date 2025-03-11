@@ -57,7 +57,7 @@ class TranslationResult(
      * dedicated [ScopeManager] each). This property will contain the final, merged context.
      */
     var finalCtx: TranslationContext,
-) : Node(), StatisticsHolder {
+) : Node(finalCtx), StatisticsHolder {
 
     @Relationship("COMPONENTS") val componentEdges = astEdgesOf<Component>()
     /**
@@ -92,11 +92,6 @@ class TranslationResult(
 
     val isCancelled: Boolean
         get() = translationManager.isCancelled()
-
-    override var ctx: TranslationContext? = null
-        get() {
-            return finalCtx
-        }
 
     /**
      * Checks if only a single software component has been analyzed and returns its translation

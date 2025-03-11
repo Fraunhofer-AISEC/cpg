@@ -73,7 +73,7 @@ open class Component : Node() {
     @DoNotPersist
     val topLevel: File?
         get() {
-            return ctx?.config?.topLevels?.get(this.name.localName)
+            return ctx.config.topLevels[this.name.localName]
         }
 
     /**

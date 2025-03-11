@@ -47,17 +47,11 @@ class ReferenceType : Type, SecondOrderType {
         this.elementType = reference
     }
 
-    constructor(type: Type, reference: Type) : super(type) {
-        language = reference.language
-        name = reference.name.append("&")
-        this.elementType = reference
-    }
-
     /**
      * @return Referencing a ReferenceType results in a PointerType to the original ReferenceType
      */
     override fun reference(pointer: PointerOrigin?): Type {
-        return PointerType(this, pointer)
+        return PointerType(ctx, this, pointer)
     }
 
     /**

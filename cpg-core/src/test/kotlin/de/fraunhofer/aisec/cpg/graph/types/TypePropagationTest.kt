@@ -42,14 +42,8 @@ class TypePropagationTest {
     fun testBinopTypePropagation() {
         val frontend =
             TestLanguageFrontend(
-                ctx =
-                    TranslationContext(
-                        TranslationConfiguration.builder().defaultPasses().build(),
-                        ScopeManager(),
-                        TypeManager(),
-                    )
+                ctx = TranslationContext(TranslationConfiguration.builder().defaultPasses().build())
             )
-
         val result =
             frontend.build {
                 translationResult {
@@ -93,12 +87,7 @@ class TypePropagationTest {
     fun testAssignTypePropagation() {
         val frontend =
             TestLanguageFrontend(
-                ctx =
-                    TranslationContext(
-                        TranslationConfiguration.builder().defaultPasses().build(),
-                        ScopeManager(),
-                        TypeManager(),
-                    )
+                ctx = TranslationContext(TranslationConfiguration.builder().defaultPasses().build())
             )
 
         /**
@@ -175,12 +164,7 @@ class TypePropagationTest {
     fun testNewPropagation() {
         val frontend =
             TestLanguageFrontend(
-                ctx =
-                    TranslationContext(
-                        TranslationConfiguration.builder().defaultPasses().build(),
-                        ScopeManager(),
-                        TypeManager(),
-                    )
+                ctx = TranslationContext(TranslationConfiguration.builder().defaultPasses().build())
             )
 
         /**
@@ -239,12 +223,7 @@ class TypePropagationTest {
     fun testComplexPropagation() {
         val frontend =
             TestLanguageFrontend(
-                ctx =
-                    TranslationContext(
-                        TranslationConfiguration.builder().defaultPasses().build(),
-                        ScopeManager(),
-                        TypeManager(),
-                    )
+                ctx = TranslationContext(TranslationConfiguration.builder().defaultPasses().build())
             )
 
         /**

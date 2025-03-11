@@ -293,7 +293,7 @@ class GoLanguageFrontend(ctx: TranslationContext, language: Language<GoLanguageF
                     val returnTypes = type.results?.list?.map { typeOf(it.type) } ?: listOf()
                     val name = funcTypeName(paramTypes, returnTypes)
 
-                    FunctionType(name, paramTypes, returnTypes, this.language)
+                    FunctionType(ctx, name, paramTypes, returnTypes, this.language)
                 }
                 is GoStandardLibrary.Ast.IndexExpr -> {
                     // A go type constraint, aka generic

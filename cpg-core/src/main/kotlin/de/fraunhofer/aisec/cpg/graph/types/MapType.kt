@@ -25,8 +25,13 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
 
 /** Represents a [Map] type with key-value pairs. */
-class MapType(typeName: CharSequence, override var elementType: Type, language: Language<*>) :
-    ObjectType(typeName, listOf(elementType), false, language), SecondOrderType
+class MapType(
+    ctx: TranslationContext?,
+    typeName: CharSequence,
+    override var elementType: Type,
+    language: Language<*>,
+) : ObjectType(ctx, typeName, listOf(elementType), false, language), SecondOrderType

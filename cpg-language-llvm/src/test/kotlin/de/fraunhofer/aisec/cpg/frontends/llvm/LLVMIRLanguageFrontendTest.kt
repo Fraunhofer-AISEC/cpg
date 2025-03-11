@@ -25,10 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.llvm
 
-import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.TypeManager
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
@@ -45,12 +43,7 @@ class LLVMIRLanguageFrontendTest {
     fun testExceptionBrokenFile() {
         val topLevel = Path.of("src", "test", "resources", "llvm")
 
-        val ctx =
-            TranslationContext(
-                TranslationConfiguration.builder().build(),
-                ScopeManager(),
-                TypeManager(),
-            )
+        val ctx = TranslationContext(TranslationConfiguration.builder().build())
         val frontend = LLVMIRLanguageFrontend(ctx, LLVMIRLanguage(ctx))
         val exception =
             assertThrows<TranslationException> {
@@ -63,12 +56,7 @@ class LLVMIRLanguageFrontendTest {
     fun test1() {
         val topLevel = Path.of("src", "test", "resources", "llvm")
 
-        val ctx =
-            TranslationContext(
-                TranslationConfiguration.builder().build(),
-                ScopeManager(),
-                TypeManager(),
-            )
+        val ctx = TranslationContext(TranslationConfiguration.builder().build())
         val frontend = LLVMIRLanguageFrontend(ctx, LLVMIRLanguage(ctx))
         frontend.parse(topLevel.resolve("main.ll").toFile())
     }

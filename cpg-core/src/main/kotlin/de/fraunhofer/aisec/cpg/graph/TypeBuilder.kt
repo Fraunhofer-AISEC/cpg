@@ -42,11 +42,11 @@ fun MetadataProvider?.unknownType(): Type {
 }
 
 fun LanguageProvider.autoType(): Type {
-    return AutoType(this.language)
+    return AutoType(ctx, this.language)
 }
 
 fun LanguageProvider.incompleteType(): Type {
-    return IncompleteType(this.language)
+    return IncompleteType(ctx, this.language)
 }
 
 /** Returns a [PointerType] that describes an array reference to the current type. */
@@ -115,7 +115,7 @@ fun LanguageProvider.objectType(
 
     // Otherwise, we either need to create the type because of the generics or because we do not
     // know the type yet.
-    var type = ObjectType(name, generics, false, language)
+    var type = ObjectType(ctx, name, generics, false, language)
     // Apply our usual metadata, such as scope, code, location, if we have any. Make sure only
     // to refer by the local name because we will treat types as sort of references when
     // creating them and resolve them later.

@@ -42,14 +42,6 @@ open class TranslationContext(
     val config: TranslationConfiguration = TranslationConfiguration.builder().build(),
 
     /**
-     * The scope manager which comprises the complete translation result. In case of sequential
-     * parsing, this scope manager is passed to the individual frontends one after another. In case
-     * of sequential parsing, individual scope managers will be passed to each language frontend
-     * (through individual contexts) and then finally merged into a final one.
-     */
-    val scopeManager: ScopeManager = ScopeManager(),
-
-    /**
      * The type manager is responsible for managing type information. Currently, we have one
      * instance of a [TypeManager] for the overall [TranslationResult].
      */
@@ -60,6 +52,14 @@ open class TranslationContext(
      * the [TranslationResult.finalCtx] this may either be null or the last component analyzed.
      */
     var currentComponent: Component? = null,
+) {
+    /**
+     * The scope manager which comprises the complete translation result. In case of sequential
+     * parsing, this scope manager is passed to the individual frontends one after another. In case
+     * of sequential parsing, individual scope managers will be passed to each language frontend
+     * (through individual contexts) and then finally merged into a final one.
+     */
+    val scopeManager: ScopeManager = ScopeManager(this)
 
     /**
      * Set of files, that are available for additional analysis. They are not the primary subjects
@@ -70,15 +70,15 @@ open class TranslationContext(
      * The frontend can decide to add some of the contained files to [importedSources] which will
      * get them translated into the final graph by the [TranslationManager].
      */
-    var additionalSources: MutableSet<AdditionalSource> = mutableSetOf(),
+    var additionalSources: MutableSet<AdditionalSource> = mutableSetOf()
 
     /**
      * The additional sources from the [additionalSources] chosen to be analyzed along with the code
      * under analysis. The language frontends are supposed to fill this list, e.g. by analyzing the
      * import statements of the analyzed code and deciding which sources contain relevant symbols.
      */
-    var importedSources: MutableSet<AdditionalSource> = mutableSetOf(),
-) {
+    var importedSources: MutableSet<AdditionalSource> = mutableSetOf()
+
     /**
      * The set of languages available in this translation context. We store this information here
      * because we want to ensure that we only have one instance of a language per

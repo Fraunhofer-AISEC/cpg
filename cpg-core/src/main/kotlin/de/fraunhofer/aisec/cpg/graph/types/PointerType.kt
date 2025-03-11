@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.Name
 import java.util.*
 import org.neo4j.ogm.annotation.Relationship
@@ -35,7 +36,7 @@ import org.neo4j.ogm.annotation.Relationship
  * is no such pointer concept.
  */
 class PointerType : Type, SecondOrderType {
-    @Relationship(value = "ELEMENT_TYPE") override lateinit var elementType: Type
+    @Relationship(value = "ELEMENT_TYPE") override var elementType: Type
 
     enum class PointerOrigin {
         POINTER,
@@ -45,28 +46,19 @@ class PointerType : Type, SecondOrderType {
     var pointerOrigin: PointerOrigin? = null
         private set
 
-    constructor() : super()
-
-    constructor(elementType: Type, pointerOrigin: PointerOrigin?) : super() {
-        language = elementType.language
-        name =
-            if (pointerOrigin == PointerOrigin.ARRAY) {
-                elementType.name.append("[]")
-            } else {
-                elementType.name.append("*")
-            }
-        this.pointerOrigin = pointerOrigin
-        this.elementType = elementType
-    }
-
-    constructor(type: Type?, elementType: Type, pointerOrigin: PointerOrigin?) : super(type) {
-        language = elementType.language
-        name =
-            if (pointerOrigin == PointerOrigin.ARRAY) {
-                elementType.name.append("[]")
-            } else {
-                elementType.name.append("*")
-            }
+    constructor(
+        ctx: TranslationContext?,
+        elementType: Type,
+        pointerOrigin: PointerOrigin?,
+    ) : super(
+        ctx,
+        if (pointerOrigin == PointerOrigin.ARRAY) {
+            elementType.name.append("[]")
+        } else {
+            elementType.name.append("*")
+        },
+        elementType.language,
+    ) {
         this.pointerOrigin = pointerOrigin
         this.elementType = elementType
     }
@@ -80,7 +72,7 @@ class PointerType : Type, SecondOrderType {
         if (origin == null) {
             origin = PointerOrigin.ARRAY
         }
-        return PointerType(this, origin)
+        return PointerType(ctx, this, origin)
     }
 
     /** @return dereferencing a PointerType yields the type the pointer was pointing towards */

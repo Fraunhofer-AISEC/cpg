@@ -45,7 +45,7 @@ class IniFileLanguage(ctx: TranslationContext) : Language<IniFileFrontend>(ctx) 
 
     @Transient override val frontend: KClass<out IniFileFrontend> = IniFileFrontend::class
     override val builtInTypes: Map<String, Type> =
-        mapOf("string" to StringType("string", language = this)) // everything is a string
+        mapOf("string" to StringType(ctx, "string", language = this)) // everything is a string
 
     override val compoundAssignmentOperators: Set<String> = emptySet() // no such thing
 }

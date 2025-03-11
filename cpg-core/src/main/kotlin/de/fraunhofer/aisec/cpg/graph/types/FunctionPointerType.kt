@@ -25,8 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.frontends.UnknownLanguage
+import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
@@ -48,27 +49,17 @@ class FunctionPointerType : Type {
     var returnType: Type
 
     constructor(
+        ctx: TranslationContext?,
         parameters: List<Type> = listOf(),
         language: Language<*>,
         returnType: Type = UnknownType.getUnknownType(language),
-    ) : super(EMPTY_NAME, language) {
+    ) : super(ctx, Name(EMPTY_NAME), language) {
         this.parameters = parameters
         this.returnType = returnType
-    }
-
-    constructor(
-        type: Type,
-        parameters: List<Type> = listOf(),
-        language: Language<*> = UnknownLanguage,
-        returnType: Type = UnknownType.getUnknownType(language),
-    ) : super(type) {
-        this.parameters = parameters
-        this.returnType = returnType
-        this.language = language
     }
 
     override fun reference(pointer: PointerOrigin?): PointerType {
-        return PointerType(this, pointer)
+        return PointerType(ctx, this, pointer)
     }
 
     override fun dereference(): Type {

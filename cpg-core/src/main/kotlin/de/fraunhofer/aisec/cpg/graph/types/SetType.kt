@@ -25,8 +25,13 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
 
 /** Represents a [Set] type that contains unique elements. */
-class SetType(typeName: CharSequence, override var elementType: Type, language: Language<*>) :
-    ObjectType(typeName, listOf(elementType), false, language), SecondOrderType
+class SetType(
+    ctx: TranslationContext?,
+    typeName: CharSequence,
+    override var elementType: Type,
+    language: Language<*>,
+) : ObjectType(ctx, typeName, listOf(elementType), false, language), SecondOrderType
