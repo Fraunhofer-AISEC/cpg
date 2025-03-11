@@ -23,7 +23,7 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.analysis
+package de.fraunhofer.aisec.cpg.evaluation
 
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
@@ -45,10 +45,14 @@ class MultiValueEvaluator : ValueEvaluator() {
         get() = LoggerFactory.getLogger(MultiValueEvaluator::class.java)
 
     override fun evaluate(node: Any?): Any? {
+        clearPath()
+
         val result = evaluateInternal(node as? Node, 0)
-        return if (result is Collection<*> && result.all { r -> r is Number })
+        return if (result is Collection<*> && result.all { r -> r is Number }) {
             ConcreteNumberSet(result.map { r -> (r as Number).toLong() }.toMutableSet())
-        else result
+        } else {
+            result
+        }
     }
 
     /** Tries to evaluate this node. Anything can happen. */

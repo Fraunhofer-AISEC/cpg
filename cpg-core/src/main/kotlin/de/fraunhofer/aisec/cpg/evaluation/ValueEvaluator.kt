@@ -23,7 +23,7 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.analysis
+package de.fraunhofer.aisec.cpg.evaluation
 
 import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.HasInitializer
@@ -74,6 +74,7 @@ open class ValueEvaluator(
 
     open fun evaluate(node: Any?): Any? {
         if (node !is Node) return node
+        clearPath()
 
         return evaluateInternal(node, 0)
     }

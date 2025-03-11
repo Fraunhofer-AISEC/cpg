@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,12 +25,12 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.analysis.ValueEvaluator
-import de.fraunhofer.aisec.cpg.graph.edges.get
+import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
+import de.fraunhofer.aisec.cpg.graph.edges.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewArrayExpression
 
-fun Node.evaluate(evaluator: ValueEvaluator = ValueEvaluator()): Any? {
+fun Node.evaluate(evaluator: ValueEvaluator = this.language.evaluator): Any? {
     return evaluator.evaluate(this)
 }
 
