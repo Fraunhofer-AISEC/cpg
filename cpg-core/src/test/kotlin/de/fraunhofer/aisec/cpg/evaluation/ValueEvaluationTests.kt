@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,14 +23,15 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.testcases
+package de.fraunhofer.aisec.cpg.evaluation
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
-import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.array
 import de.fraunhofer.aisec.cpg.graph.builder.*
-import de.fraunhofer.aisec.cpg.passes.UnreachableEOGPass
+import de.fraunhofer.aisec.cpg.graph.newConditionalExpression
+import de.fraunhofer.aisec.cpg.graph.newNewArrayExpression
 
 class ValueEvaluationTests {
     companion object {
@@ -39,7 +40,6 @@ class ValueEvaluationTests {
                 TranslationConfiguration.builder()
                     .defaultPasses()
                     .registerLanguage<TestLanguage>()
-                    .registerPass<UnreachableEOGPass>()
                     .build()
         ) =
             testFrontend(config).build {
@@ -101,7 +101,6 @@ class ValueEvaluationTests {
                 TranslationConfiguration.builder()
                     .defaultPasses()
                     .registerLanguage<TestLanguage>()
-                    .registerPass<UnreachableEOGPass>()
                     .build()
         ) =
             testFrontend(config).build {
@@ -143,7 +142,6 @@ class ValueEvaluationTests {
                 TranslationConfiguration.builder()
                     .defaultPasses()
                     .registerLanguage<TestLanguage>()
-                    .registerPass<UnreachableEOGPass>()
                     .build()
         ) =
             testFrontend(config).build {
@@ -248,7 +246,6 @@ class ValueEvaluationTests {
                 TranslationConfiguration.builder()
                     .defaultPasses()
                     .registerLanguage<TestLanguage>()
-                    .registerPass<UnreachableEOGPass>()
                     .build()
         ) =
             testFrontend(config).build {
