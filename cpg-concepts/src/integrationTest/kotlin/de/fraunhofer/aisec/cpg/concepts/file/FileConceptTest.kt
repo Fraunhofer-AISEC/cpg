@@ -318,4 +318,38 @@ class FileConceptTest : BaseTest() {
             "Expected to find a violating execution path from write to chmod.",
         )
     }
+
+    @Test
+    fun testBranching() {
+        val topLevel = Path.of("src", "integrationTest", "resources", "python", "file")
+
+        val result =
+            analyze(
+                files = listOf(topLevel.resolve("file_with_branching.py").toFile()),
+                topLevel = topLevel,
+                usePasses = true,
+            ) {
+                it.registerLanguage<PythonLanguage>()
+                it.registerPass<PythonFileConceptPass>()
+                it.symbols(mapOf("PYTHON_PLATFORM" to "linux"))
+            }
+        assertNotNull(result)
+
+        val conceptNodes =
+            result.conceptNodes.filterIsInstance<IsFile>() +
+                result.operationNodes.filterIsInstance<
+                    IsFile
+                >() // TODO why can't I use `overlays`? It's empty.
+        assertTrue(conceptNodes.isNotEmpty())
+
+        val files = conceptNodes.filterIsInstance<File>()
+        assertEquals(2, files.size, "Expected to find two `File` nodes (\"foo\" and \"bar\").")
+
+        files.forEach { file ->
+            assertTrue(
+                dataFlow(startNode = file) { it is ReadFile }.value,
+                "Expected to find a dataflow to `file.read()`.",
+            )
+        }
+    }
 }

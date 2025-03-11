@@ -100,7 +100,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : ConceptPass(ctx) {
         } else if (callExpression is MemberCallExpression) {
             callExpression.base
                 ?.let { findFile(it) }
-                ?.let { fileNode ->
+                ?.forEach { fileNode ->
                     when (callExpression.name.localName) {
                         "__enter__" -> {
                             /* TODO: what about this? we handle __exit__ and create a CloseFile. However, we already have a OpenFile attached at the `open` */
@@ -200,32 +200,23 @@ class PythonFileConceptPass(ctx: TranslationContext) : ConceptPass(ctx) {
     /**
      * Walks the DFG backwards until a [OpenFile] node is found.
      *
-     * Note: If multiple [File] nodes are found on different paths, one is selected a random and a
-     * warning is logged.
-     *
      * @param expression The start node.
-     * @return The [File] node if one is found.
+     * @return A list of all [File] nodes found.
      */
-    internal fun findFile(expression: Expression): File? {
+    internal fun findFile(expression: Expression): List<File> {
         val openFilePaths =
             dataFlow(startNode = expression, direction = Backward(GraphToFollow.DFG)) {
                 it.overlays.any { overlay -> overlay is OpenFile }
             }
 
-        val fileCandidates =
+        val files =
             openFilePaths
                 .successfulLastNodes()
                 .flatMap { it.overlays } // move to the "overlays" world
                 .filterIsInstance<OpenFile>() // discard not-relevant overlays
                 .map { it.concept } // move from [OpenFile] to the corresponding [File] concept node
-        if (fileCandidates.size > 1) {
-            Util.errorWithFileLocation(
-                expression,
-                log,
-                "Found multiple files. Selecting one at random.",
-            )
-        }
-        return fileCandidates.firstOrNull()
+
+        return files
     }
 
     /**
