@@ -30,9 +30,25 @@ import de.fraunhofer.aisec.cpg.graph.concepts.arch.OperatingSystemArchitecture
 import de.fraunhofer.aisec.cpg.graph.concepts.newConcept
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 
+/**
+ * Creates a new [Main] concept.
+ *
+ * @param underlyingNode The underlying [FunctionDeclaration] representing the main method.
+ * @param os If this entry point is specifically designed to be invoked on a certain
+ *   [OperatingSystemArchitecture], it can be specified here.
+ * @return The created [Main] concept.
+ */
 fun MetadataProvider.newMain(underlyingNode: FunctionDeclaration, os: OperatingSystemArchitecture) =
     newConcept({ Main(underlyingNode = underlyingNode, os = os) }, underlyingNode = underlyingNode)
 
+/**
+ * Creates a new [LibraryEntryPoint] concept.
+ *
+ * @param underlyingNode The underlying [FunctionDeclaration] representing the main method.
+ * @param os If this entry point is specifically designed to be invoked on a certain
+ *   [OperatingSystemArchitecture], it can be specified here.
+ * @return The created [LibraryEntryPoint] concept.
+ */
 fun MetadataProvider.newLibraryEntryPoint(
     underlyingNode: FunctionDeclaration,
     os: OperatingSystemArchitecture,
