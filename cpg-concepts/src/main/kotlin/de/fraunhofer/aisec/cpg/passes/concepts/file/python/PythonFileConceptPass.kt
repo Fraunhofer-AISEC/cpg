@@ -49,7 +49,7 @@ import de.fraunhofer.aisec.cpg.query.QueryTree
 class PythonFileConceptPass(ctx: TranslationContext) : ConceptPass(ctx) {
 
     /** The file name used if we fail to find it. */
-    internal val DEFAULT_FILE_NAME = "DEFAULT_FILE_NAME"
+    internal val UNKNOWN_FILE_NAME = "FILE_NOT_RESOLVED_UNKNOWN_FILE_NAME"
 
     /**
      * Maps file names to [File] nodes. This is required to prevent the creation of multiple [File]
@@ -261,7 +261,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : ConceptPass(ctx) {
      * arguments is analyzed.
      *
      * @param call The [CallExpression] (builtin-`open` or `os.open`) to be analyzed.
-     * @return The name or [DEFAULT_FILE_NAME] if no name could be found.
+     * @return The name or [UNKNOWN_FILE_NAME] if no name could be found.
      */
     private fun getFileName(call: CallExpression, argumentName: String): String {
         val name = call.argumentValueByNameOrPosition<String>(name = argumentName, position = 0)
@@ -271,9 +271,9 @@ class PythonFileConceptPass(ctx: TranslationContext) : ConceptPass(ctx) {
             Util.errorWithFileLocation(
                 call,
                 log,
-                "Couldn't evaluate the file name. Using \"$DEFAULT_FILE_NAME\" instead. Expect errors.",
+                "Couldn't evaluate the file name. Using \"$UNKNOWN_FILE_NAME\" instead. Expect errors.",
             )
-            DEFAULT_FILE_NAME
+            UNKNOWN_FILE_NAME
         }
     }
 
