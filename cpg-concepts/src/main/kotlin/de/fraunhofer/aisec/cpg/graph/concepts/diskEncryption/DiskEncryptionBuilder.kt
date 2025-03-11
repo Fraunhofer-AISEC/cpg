@@ -30,6 +30,14 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.newConcept
 import de.fraunhofer.aisec.cpg.graph.concepts.newOperation
 
+/**
+ * Creates a new [DiskEncryption] concept.
+ *
+ * @param underlyingNode The underlying node representing this concept.
+ * @param cipher The cipher used for encryption.
+ * @param key The secret key used for encryption.
+ * @return The created [DiskEncryption] concept.
+ */
 fun MetadataProvider.newDiskEncryption(underlyingNode: Node, cipher: Cipher?, key: Secret?) =
     newConcept(
         {
@@ -41,15 +49,40 @@ fun MetadataProvider.newDiskEncryption(underlyingNode: Node, cipher: Cipher?, ke
         underlyingNode = underlyingNode,
     )
 
+/**
+ * Creates a new [Cipher] concept.
+ *
+ * @param underlyingNode The underlying node representing this concept.
+ * @return The created [Cipher] concept.
+ */
 fun MetadataProvider.newCipher(underlyingNode: Node) =
     newConcept(::Cipher, underlyingNode = underlyingNode)
 
+/**
+ * Creates a new [Secret] concept.
+ *
+ * @param underlyingNode The underlying node representing this concept.
+ * @return The created [Secret] concept.
+ */
 fun MetadataProvider.newSecret(underlyingNode: Node) =
     newConcept(::Secret, underlyingNode = underlyingNode)
 
+/**
+ * Creates a new [BlockStorage] concept.
+ *
+ * @param underlyingNode The underlying node representing this concept.
+ * @return The created [BlockStorage] concept.
+ */
 fun MetadataProvider.newBlockStorage(underlyingNode: Node) =
     newConcept(::BlockStorage, underlyingNode = underlyingNode)
 
+/**
+ * Creates a new [Encrypt] operation.
+ *
+ * @param underlyingNode The underlying node representing this operation.
+ * @param key The secret key used for encryption.
+ * @return The created [Encrypt] operation.
+ */
 fun Cipher.newEncryptOperation(underlyingNode: Node, key: Secret) =
     newOperation(
         { node, concept -> Encrypt(underlyingNode, concept, key) },
@@ -57,14 +90,38 @@ fun Cipher.newEncryptOperation(underlyingNode: Node, key: Secret) =
         concept = this,
     )
 
+/**
+ * Creates a new [CreateEncryptedDisk] operation.
+ *
+ * @param underlyingNode The underlying node representing this operation.
+ * @return The created [CreateEncryptedDisk] operation.
+ */
 fun DiskEncryption.newCreateEncryptedDisk(underlyingNode: Node) =
     newOperation(::CreateEncryptedDisk, underlyingNode = underlyingNode, concept = this)
 
+/**
+ * Creates a new [UnlockEncryptedDisk] operation.
+ *
+ * @param underlyingNode The underlying node representing this operation.
+ * @return The created [UnlockEncryptedDisk] operation.
+ */
 fun DiskEncryption.newUnlockEncryptedDisk(underlyingNode: Node) =
     newOperation(::UnlockEncryptedDisk, underlyingNode = underlyingNode, concept = this)
 
+/**
+ * Creates a new [CreateSecret] operation.
+ *
+ * @param underlyingNode The underlying node representing this operation.
+ * @return The created [CreateSecret] operation.
+ */
 fun Secret.newCreateSecret(underlyingNode: Node) =
     newOperation(::CreateSecret, underlyingNode = underlyingNode, concept = this)
 
+/**
+ * Creates a new [GetSecret] operation.
+ *
+ * @param underlyingNode The underlying node representing this operation.
+ * @return The created [GetSecret] operation.
+ */
 fun Secret.newGetSecret(underlyingNode: Node) =
     newOperation(::GetSecret, underlyingNode = underlyingNode, concept = this)
