@@ -8,9 +8,7 @@ de.fraunhofer.aisec.codyze.compliance
 module:codyze-core
 de.fraunhofer.aisec.codyze
 module:cpg-analysis
-de.fraunhofer.aisec.cpg.analysis
 de.fraunhofer.aisec.cpg.analysis.fsm
-de.fraunhofer.aisec.cpg.graph
 de.fraunhofer.aisec.cpg.passes
 de.fraunhofer.aisec.cpg.query
 module:cpg-concepts
@@ -36,6 +34,7 @@ de.fraunhofer.aisec.cpg.analysis
 de.fraunhofer.aisec.cpg.console
 module:cpg-core
 de.fraunhofer.aisec.cpg
+de.fraunhofer.aisec.cpg.evaluation
 de.fraunhofer.aisec.cpg.frontends
 de.fraunhofer.aisec.cpg.graph
 de.fraunhofer.aisec.cpg.graph.builder
