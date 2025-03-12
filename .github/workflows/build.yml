@@ -99,7 +99,7 @@ jobs:
           name: reports
           path: reports.zip
       - name: Publish to Maven Central
-        if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, 'beta') && !contains(github.ref, 'alpha')
+        if: startsWith(github.ref, 'refs/tags/v')
         run: |
           export ORG_GRADLE_PROJECT_signingKey=`echo ${{ secrets.GPG_PRIVATE_KEY }} | base64 -d`
           ./gradlew --no-daemon -Dorg.gradle.internal.publish.checksums.insecure=true --parallel -Pversion=$VERSION -PenableJavaFrontend=true  -PenableCXXFrontend=true -PenableGoFrontend=true -PenablePythonFrontend=true -PenableLLVMFrontend=true -PenableTypeScriptFrontend=true -PenableRubyFrontend=true publishToSonatype closeSonatypeStagingRepository
@@ -109,7 +109,7 @@ jobs:
           ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
           ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
       - name: Download old dokka versions (version)
-        if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, 'beta') && !contains(github.ref, 'alpha')
+        if: startsWith(github.ref, 'refs/tags/v')
         run: |
           # make sure the previousDocs folder exists
           mkdir -p previousDocs && cd previousDocs
@@ -125,19 +125,19 @@ jobs:
           # in order to avoid duplicate mains, remove the "main" version from the previous versions
           rm -rf main
       - name: Build JavaDoc
-        if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, 'beta') && !contains(github.ref, 'alpha') || github.ref == 'refs/heads/main'
+        if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main'
         run: |
           ./gradlew --no-daemon -Pversion=$VERSION dokkaHtmlMultiModule
         env:
           VERSION: ${{ env.version }}
       - name: Publish JavaDoc (version)
-        if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, 'beta') && !contains(github.ref, 'alpha')
+        if: startsWith(github.ref, 'refs/tags/v')
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           folder: build/dokkaCustomMultiModuleOutput/${{ env.version }}
           target-folder: dokka/${{ env.version }}
       - name: Publish JavaDoc (version as main)
-        if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, 'beta') && !contains(github.ref, 'alpha')
+        if: startsWith(github.ref, 'refs/tags/v')
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           folder: build/dokkaCustomMultiModuleOutput/${{ env.version }}
@@ -162,7 +162,7 @@ jobs:
       #  env:
       #    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Create Release
-        if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, 'beta') && !contains(github.ref, 'alpha')
+        if: startsWith(github.ref, 'refs/tags/v')
         id: create_release
         uses: softprops/action-gh-release@v2
         with:
