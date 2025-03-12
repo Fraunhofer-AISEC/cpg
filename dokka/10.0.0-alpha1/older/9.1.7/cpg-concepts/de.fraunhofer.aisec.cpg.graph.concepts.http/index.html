@@ -1,0 +1,273 @@
+<!doctype html>
+<html class="no-js">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
+    <title>de.fraunhofer.aisec.cpg.graph.concepts.http</title>
+<link href="../../images/logo-icon.svg" rel="icon" type="image/svg">    <script>var pathToRoot = "../../";</script>
+    <script>document.documentElement.classList.replace("no-js","js");</script>
+    <script>const storage = localStorage.getItem("dokka-dark-mode")
+    if (storage == null) {
+        const osDarkSchemePreferred = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+        if (osDarkSchemePreferred === true) {
+            document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+    } else {
+        const savedDarkMode = JSON.parse(storage)
+        if(savedDarkMode === true) {
+            document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+    }
+    </script>
+<script type="text/javascript" src="https://unpkg.com/kotlin-playground@1/dist/playground.min.js" async></script>
+<script type="text/javascript" src="../../scripts/sourceset_dependencies.js" async></script>
+<link href="../../styles/style.css" rel="Stylesheet">
+<link href="../../styles/main.css" rel="Stylesheet">
+<link href="../../styles/prism.css" rel="Stylesheet">
+<link href="../../styles/logo-styles.css" rel="Stylesheet">
+<link href="../../styles/font-jb-sans-auto.css" rel="Stylesheet">
+<link href="../../ui-kit/ui-kit.min.css" rel="Stylesheet">
+<script type="text/javascript" src="../../scripts/clipboard.js" async></script>
+<script type="text/javascript" src="../../scripts/navigation-loader.js" async></script>
+<script type="text/javascript" src="../../scripts/platform-content-handler.js" async></script>
+<script type="text/javascript" src="../../scripts/main.js" defer></script>
+<script type="text/javascript" src="../../scripts/prism.js" async></script>
+<script type="text/javascript" src="../../ui-kit/ui-kit.min.js" defer></script>
+<script type="text/javascript" src="../../scripts/symbol-parameters-wrapper_deferred.js" defer></script>
+<link href="../../styles/multimodule.css" rel="Stylesheet"></head>
+<body>
+    <div class="root">
+    <nav class="navigation theme-dark" id="navigation-wrapper">
+<a class="library-name--link" href="../../index.html">
+                    cpg
+            </a>        <button class="navigation-controls--btn navigation-controls--btn_toc ui-kit_mobile-only" id="toc-toggle" type="button">Toggle table of contents
+        </button>
+        <div class="navigation-controls--break ui-kit_mobile-only"></div>
+        <div class="library-version" id="library-version">
+<dokka-template-command data="{&quot;@class&quot;:&quot;org.jetbrains.dokka.base.templating.ReplaceVersionsCommand&quot;,&quot;location&quot;:&quot;de.fraunhofer.aisec.cpg.graph.concepts.http/index.html&quot;}"><div class="dropdown versions-dropdown" data-role="dropdown">
+  <div class="button button_dropdown versions-dropdown-button" role="combobox" data-role="dropdown-toggle" aria-controls="versions-listbox" aria-haspopup="listbox" aria-expanded="false" aria-label="Select version" tabindex="0">9.1.7</div>
+  <div class="dropdown--list dropdown--list_positioned_left versions-dropdown-data" role="listbox" data-role="dropdown-listbox" aria-label="Versions" id="versions-listbox">
+    <div class="dropdown--header" data-remove-style="true" style="display: none"><span>Select version</span><button class="button" data-role="dropdown-toggle" aria-label="Close versions selection"><i class="ui-kit-icon ui-kit-icon_cross"></i></button></div>
+    <div><a href="../../../../cpg-concepts/de.fraunhofer.aisec.cpg.graph.concepts.http/index.html" class="dropdown--option dropdown--option-link" style="display: block; padding: 5px; color: #fff" data-remove-style="true" role="option">10.0.0-alpha1</a></div>
+    <div><a href="../../../9.3.0/cpg-concepts/de.fraunhofer.aisec.cpg.graph.concepts.http/index.html" class="dropdown--option dropdown--option-link" style="display: block; padding: 5px; color: #fff" data-remove-style="true" role="option">9.3.0</a></div>
+    <div><a href="../../../9.2.2/cpg-concepts/de.fraunhofer.aisec.cpg.graph.concepts.http/index.html" class="dropdown--option dropdown--option-link" style="display: block; padding: 5px; color: #fff" data-remove-style="true" role="option">9.2.2</a></div>
+    <div><a href="../../../9.2.1/cpg-concepts/de.fraunhofer.aisec.cpg.graph.concepts.http/index.html" class="dropdown--option dropdown--option-link" style="display: block; padding: 5px; color: #fff" data-remove-style="true" role="option">9.2.1</a></div>
+    <div><a href="../../../9.2.0/cpg-concepts/de.fraunhofer.aisec.cpg.graph.concepts.http/index.html" class="dropdown--option dropdown--option-link" style="display: block; padding: 5px; color: #fff" data-remove-style="true" role="option">9.2.0</a></div>
+    <div><a href="index.html" class="dropdown--option dropdown--option-link" style="display: block; padding: 5px; color: #fff" data-remove-style="true" role="option">9.1.7</a></div>
+    <div><a href="../../../main-SNAPSHOT/cpg-concepts/de.fraunhofer.aisec.cpg.graph.concepts.http/index.html" class="dropdown--option dropdown--option-link" style="display: block; padding: 5px; color: #fff" data-remove-style="true" role="option">main-SNAPSHOT</a></div>
+  </div>
+  <div class="dropdown--overlay"></div>
+</div>
+</dokka-template-command>        </div>
+        <div class="navigation-controls">
+        <div class="filter-section filter-section_loading" id="filter-section">
+                <button class="platform-tag platform-selector jvm-like" data-active="" data-filter=":cpg-concepts:dokkaHtmlPartial/main">jvm</button>
+            <div class="dropdown filter-section--dropdown" data-role="dropdown" id="filter-section-dropdown">
+                <button class="button button_dropdown filter-section--dropdown-toggle" role="combobox" data-role="dropdown-toggle" aria-controls="platform-tags-listbox" aria-haspopup="listbox" aria-expanded="false" aria-label="Toggle source sets"></button>
+                <ul role="listbox" id="platform-tags-listbox" class="dropdown--list" data-role="dropdown-listbox">
+                    <div class="dropdown--header"><span>Platform filter</span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close platform filter">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                        <li role="option" class="dropdown--option platform-selector-option jvm-like" tabindex="0">
+                            <label class="checkbox">
+                                <input type="checkbox" class="checkbox--input" id=":cpg-concepts:dokkaHtmlPartial/main" data-filter=":cpg-concepts:dokkaHtmlPartial/main">
+                                <span class="checkbox--icon"></span>
+                                jvm
+                            </label>
+                        </li>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
+        </div>
+            <button class="navigation-controls--btn navigation-controls--btn_theme" id="theme-toggle-button" type="button">Switch theme
+            </button>
+            <div class="navigation-controls--btn navigation-controls--btn_search" id="searchBar" role="button">Search in
+                API
+            </div>
+        </div>
+    </nav>
+        <div id="container">
+            <div class="sidebar" id="leftColumn">
+                <div class="dropdown theme-dark_mobile" data-role="dropdown" id="toc-dropdown">
+                    <ul role="listbox" id="toc-listbox" class="dropdown--list dropdown--list_toc-list" data-role="dropdown-listbox">
+                        <div class="dropdown--header">
+                            <span>
+                                    cpg
+                            </span>
+                            <button class="button" data-role="dropdown-toggle" aria-label="Close table of contents">
+                                <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                            </button>
+                        </div>
+                        <div class="sidebar--inner" id="sideMenu"></div>
+                    </ul>
+                    <div class="dropdown--overlay"></div>
+                </div>
+            </div>
+            <div id="main">
+<div class="main-content" data-page-type="package" id="content" pageids="cpg-concepts::de.fraunhofer.aisec.cpg.graph.concepts.http////PointingToDeclaration//-374014486">
+  <div class="breadcrumbs"><a href="../index.html">cpg-concepts</a><span class="delimiter">/</span><span class="current">de.fraunhofer.aisec.cpg.graph.concepts.http</span></div>
+  <div class="cover ">
+    <h1 class="cover"><span><span>Package-level</span></span> <span><span>declarations</span></span></h1>
+  </div>
+  <div class="tabbedcontent">
+    <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="TYPE">Types</button></div>
+    <div class="tabs-section-body">
+      <div data-togglable="TYPE">
+        <h2 class="">Types</h2>
+        <div class="table"><a data-name="1536253982%2FClasslikes%2F-374014486" anchor-label="HttpClient" id="1536253982%2FClasslikes%2F-374014486" data-filterable-set=":cpg-concepts:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-concepts:dokkaHtmlPartial/main" data-filterable-set=":cpg-concepts:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-http-client/index.html"><span>Http</span><wbr><span><span>Client</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1536253982%2FClasslikes%2F-374014486"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-concepts:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-http-client/index.html">HttpClient</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">underlyingNode<span class="token operator">: </span><a href="../../cpg-core/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>isTLS<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a></span></span><span class="token punctuation">)</span> : <a href="../de.fraunhofer.aisec.cpg.graph.concepts/-concept/index.html">Concept</a></div><div class="brief "><p class="paragraph">Represents an <a href="-http-client/index.html">HttpClient</a>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="199352189%2FClasslikes%2F-374014486" anchor-label="HttpClientOperation" id="199352189%2FClasslikes%2F-374014486" data-filterable-set=":cpg-concepts:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-concepts:dokkaHtmlPartial/main" data-filterable-set=":cpg-concepts:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-http-client-operation/index.html"><span>Http</span><wbr><span>Client</span><wbr><span><span>Operation</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="199352189%2FClasslikes%2F-374014486"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-concepts:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">class </span><a href="-http-client-operation/index.html">HttpClientOperation</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">underlyingNode<span class="token operator">: </span><a href="../../cpg-core/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">, </span></span><span class="parameter ">concept<span class="token operator">: </span><a href="../de.fraunhofer.aisec.cpg.graph.concepts/-concept/index.html">Concept</a></span></span><span class="token punctuation">)</span> : <a href="../de.fraunhofer.aisec.cpg.graph.concepts/-operation/index.html">Operation</a></div><div class="brief "><p class="paragraph">Base class for operations on an <a href="-http-client/index.html">HttpClient</a>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-2138474604%2FClasslikes%2F-374014486" anchor-label="HttpEndpoint" id="-2138474604%2FClasslikes%2F-374014486" data-filterable-set=":cpg-concepts:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-concepts:dokkaHtmlPartial/main" data-filterable-set=":cpg-concepts:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-http-endpoint/index.html"><span>Http</span><wbr><span><span>Endpoint</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-2138474604%2FClasslikes%2F-374014486"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-concepts:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-http-endpoint/index.html">HttpEndpoint</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">underlyingNode<span class="token operator">: </span><a href="../../cpg-core/de.fraunhofer.aisec.cpg.graph.declarations/-function-declaration/index.html">FunctionDeclaration</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>httpMethod<span class="token operator">: </span><a href="-http-method/index.html">HttpMethod</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>path<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>arguments<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><a href="../../cpg-core/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>supportedAuthentications<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-mutable-list/index.html">MutableList</a><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span> : <a href="../de.fraunhofer.aisec.cpg.graph.concepts.flows/-remote-entry-point/index.html">RemoteEntryPoint</a></div><div class="brief "><p class="paragraph">Represents a single <a href="-http-endpoint/index.html">HttpEndpoint</a> on the server</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="820890823%2FClasslikes%2F-374014486" anchor-label="HttpEndpointOperation" id="820890823%2FClasslikes%2F-374014486" data-filterable-set=":cpg-concepts:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-concepts:dokkaHtmlPartial/main" data-filterable-set=":cpg-concepts:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-http-endpoint-operation/index.html"><span>Http</span><wbr><span>Endpoint</span><wbr><span><span>Operation</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="820890823%2FClasslikes%2F-374014486"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-concepts:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">class </span><a href="-http-endpoint-operation/index.html">HttpEndpointOperation</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">underlyingNode<span class="token operator">: </span><a href="../../cpg-core/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">, </span></span><span class="parameter ">concept<span class="token operator">: </span><a href="../de.fraunhofer.aisec.cpg.graph.concepts/-concept/index.html">Concept</a></span></span><span class="token punctuation">)</span> : <a href="../de.fraunhofer.aisec.cpg.graph.concepts/-operation/index.html">Operation</a></div><div class="brief "><p class="paragraph">Base class for operations on an <a href="-http-endpoint/index.html">HttpEndpoint</a>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-594655288%2FClasslikes%2F-374014486" anchor-label="HttpMethod" id="-594655288%2FClasslikes%2F-374014486" data-filterable-set=":cpg-concepts:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-concepts:dokkaHtmlPartial/main" data-filterable-set=":cpg-concepts:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-http-method/index.html"><span>Http</span><wbr><span><span>Method</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-594655288%2FClasslikes%2F-374014486"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-concepts:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">enum </span><a href="-http-method/index.html">HttpMethod</a> : <a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-enum/index.html">Enum</a><span class="token operator">&lt;</span><a href="-http-method/index.html">HttpMethod</a><span class="token operator">&gt; </span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1707985450%2FClasslikes%2F-374014486" anchor-label="HttpRequest" id="1707985450%2FClasslikes%2F-374014486" data-filterable-set=":cpg-concepts:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-concepts:dokkaHtmlPartial/main" data-filterable-set=":cpg-concepts:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-http-request/index.html"><span>Http</span><wbr><span><span>Request</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1707985450%2FClasslikes%2F-374014486"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-concepts:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-http-request/index.html">HttpRequest</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">underlyingNode<span class="token operator">: </span><a href="../../cpg-core/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>url<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>arguments<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><a href="../../cpg-core/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>httpMethod<span class="token operator">: </span><a href="-http-method/index.html">HttpMethod</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>concept<span class="token operator">: </span><a href="-http-client/index.html">HttpClient</a></span></span><span class="token punctuation">)</span> : <a href="-http-client-operation/index.html">HttpClientOperation</a></div><div class="brief "><p class="paragraph">Represents an <a href="-http-request/index.html">HttpRequest</a> from the <a href="-http-client/index.html">HttpClient</a>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1223867438%2FClasslikes%2F-374014486" anchor-label="HttpRequestHandler" id="1223867438%2FClasslikes%2F-374014486" data-filterable-set=":cpg-concepts:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-concepts:dokkaHtmlPartial/main" data-filterable-set=":cpg-concepts:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-http-request-handler/index.html"><span>Http</span><wbr><span>Request</span><wbr><span><span>Handler</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1223867438%2FClasslikes%2F-374014486"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-concepts:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-http-request-handler/index.html">HttpRequestHandler</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">underlyingNode<span class="token operator">: </span><a href="../../cpg-core/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>basePath<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>endpoints<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-mutable-list/index.html">MutableList</a><span class="token operator">&lt;</span><a href="-http-endpoint/index.html">HttpEndpoint</a><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span> : <a href="../de.fraunhofer.aisec.cpg.graph.concepts/-concept/index.html">Concept</a></div><div class="brief "><p class="paragraph">Represents a group of <a href="-http-endpoint/index.html">HttpEndpoint</a>'s, commonly known as a Controller in some frameworks.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1155470701%2FClasslikes%2F-374014486" anchor-label="HttpRequestHandlerOperation" id="1155470701%2FClasslikes%2F-374014486" data-filterable-set=":cpg-concepts:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-concepts:dokkaHtmlPartial/main" data-filterable-set=":cpg-concepts:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-http-request-handler-operation/index.html"><span>Http</span><wbr><span>Request</span><wbr><span>Handler</span><wbr><span><span>Operation</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1155470701%2FClasslikes%2F-374014486"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-concepts:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">class </span><a href="-http-request-handler-operation/index.html">HttpRequestHandlerOperation</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">underlyingNode<span class="token operator">: </span><a href="../../cpg-core/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">, </span></span><span class="parameter ">concept<span class="token operator">: </span><a href="../de.fraunhofer.aisec.cpg.graph.concepts/-concept/index.html">Concept</a></span></span><span class="token punctuation">)</span> : <a href="../de.fraunhofer.aisec.cpg.graph.concepts/-operation/index.html">Operation</a></div><div class="brief "><p class="paragraph">Base class for Http operations.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1114877263%2FClasslikes%2F-374014486" anchor-label="RegisterHttpEndpoint" id="-1114877263%2FClasslikes%2F-374014486" data-filterable-set=":cpg-concepts:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-concepts:dokkaHtmlPartial/main" data-filterable-set=":cpg-concepts:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-register-http-endpoint/index.html"><span>Register</span><wbr><span>Http</span><wbr><span><span>Endpoint</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1114877263%2FClasslikes%2F-374014486"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-concepts:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-register-http-endpoint/index.html">RegisterHttpEndpoint</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">underlyingNode<span class="token operator">: </span><a href="../../cpg-core/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">, </span></span><span class="parameter ">concept<span class="token operator">: </span><a href="../de.fraunhofer.aisec.cpg.graph.concepts/-concept/index.html">Concept</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>httpEndpoint<span class="token operator">: </span><a href="-http-endpoint/index.html">HttpEndpoint</a></span></span><span class="token punctuation">)</span> : <a href="-http-request-handler-operation/index.html">HttpRequestHandlerOperation</a></div><div class="brief "><p class="paragraph">Registers an <a href="-http-endpoint/index.html">HttpEndpoint</a>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    <div class="footer">
+        <a href="#content" id="go-to-top-link" class="footer--button footer--button_go-to-top"></a>
+        <span>© 2025 Copyright</span>
+        <span class="pull-right">
+            <span>Generated by </span>
+            <a class="footer--link footer--link_external" href="https://github.com/Kotlin/dokka">
+                <span>dokka</span>
+            </a>
+        </span>
+    </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+

@@ -1,0 +1,591 @@
+<!doctype html>
+<html class="no-js">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
+    <title>de.fraunhofer.aisec.cpg.graph.edges.flows</title>
+<link href="../../images/logo-icon.svg" rel="icon" type="image/svg">    <script>var pathToRoot = "../../";</script>
+    <script>document.documentElement.classList.replace("no-js","js");</script>
+    <script>const storage = localStorage.getItem("dokka-dark-mode")
+    if (storage == null) {
+        const osDarkSchemePreferred = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+        if (osDarkSchemePreferred === true) {
+            document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+    } else {
+        const savedDarkMode = JSON.parse(storage)
+        if(savedDarkMode === true) {
+            document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+    }
+    </script>
+<script type="text/javascript" src="https://unpkg.com/kotlin-playground@1/dist/playground.min.js" async></script>
+<script type="text/javascript" src="../../scripts/sourceset_dependencies.js" async></script>
+<link href="../../styles/style.css" rel="Stylesheet">
+<link href="../../styles/main.css" rel="Stylesheet">
+<link href="../../styles/prism.css" rel="Stylesheet">
+<link href="../../styles/logo-styles.css" rel="Stylesheet">
+<link href="../../styles/font-jb-sans-auto.css" rel="Stylesheet">
+<link href="../../ui-kit/ui-kit.min.css" rel="Stylesheet">
+<script type="text/javascript" src="../../scripts/clipboard.js" async></script>
+<script type="text/javascript" src="../../scripts/navigation-loader.js" async></script>
+<script type="text/javascript" src="../../scripts/platform-content-handler.js" async></script>
+<script type="text/javascript" src="../../scripts/main.js" defer></script>
+<script type="text/javascript" src="../../scripts/prism.js" async></script>
+<script type="text/javascript" src="../../ui-kit/ui-kit.min.js" defer></script>
+<script type="text/javascript" src="../../scripts/symbol-parameters-wrapper_deferred.js" defer></script>
+<link href="../../styles/multimodule.css" rel="Stylesheet"></head>
+<body>
+    <div class="root">
+    <nav class="navigation theme-dark" id="navigation-wrapper">
+<a class="library-name--link" href="../../index.html">
+                    cpg
+            </a>        <button class="navigation-controls--btn navigation-controls--btn_toc ui-kit_mobile-only" id="toc-toggle" type="button">Toggle table of contents
+        </button>
+        <div class="navigation-controls--break ui-kit_mobile-only"></div>
+        <div class="library-version" id="library-version">
+<dokka-template-command data="{&quot;@class&quot;:&quot;org.jetbrains.dokka.base.templating.ReplaceVersionsCommand&quot;,&quot;location&quot;:&quot;de.fraunhofer.aisec.cpg.graph.edges.flows/index.html&quot;}"><div class="dropdown versions-dropdown" data-role="dropdown">
+  <div class="button button_dropdown versions-dropdown-button" role="combobox" data-role="dropdown-toggle" aria-controls="versions-listbox" aria-haspopup="listbox" aria-expanded="false" aria-label="Select version" tabindex="0">10.0.0-alpha1</div>
+  <div class="dropdown--list dropdown--list_positioned_left versions-dropdown-data" role="listbox" data-role="dropdown-listbox" aria-label="Versions" id="versions-listbox">
+    <div class="dropdown--header" data-remove-style="true" style="display: none"><span>Select version</span><button class="button" data-role="dropdown-toggle" aria-label="Close versions selection"><i class="ui-kit-icon ui-kit-icon_cross"></i></button></div>
+    <div><a href="index.html" class="dropdown--option dropdown--option-link" style="display: block; padding: 5px; color: #fff" data-remove-style="true" role="option">10.0.0-alpha1</a></div>
+    <div><a href="../../older/9.3.0/cpg-core/de.fraunhofer.aisec.cpg.graph.edges.flows/index.html" class="dropdown--option dropdown--option-link" style="display: block; padding: 5px; color: #fff" data-remove-style="true" role="option">9.3.0</a></div>
+    <div><a href="../../older/9.2.2/cpg-core/de.fraunhofer.aisec.cpg.graph.edges.flows/index.html" class="dropdown--option dropdown--option-link" style="display: block; padding: 5px; color: #fff" data-remove-style="true" role="option">9.2.2</a></div>
+    <div><a href="../../older/9.2.1/cpg-core/de.fraunhofer.aisec.cpg.graph.edges.flows/index.html" class="dropdown--option dropdown--option-link" style="display: block; padding: 5px; color: #fff" data-remove-style="true" role="option">9.2.1</a></div>
+    <div><a href="../../older/9.2.0/cpg-core/de.fraunhofer.aisec.cpg.graph.edges.flows/index.html" class="dropdown--option dropdown--option-link" style="display: block; padding: 5px; color: #fff" data-remove-style="true" role="option">9.2.0</a></div>
+    <div><a href="../../older/9.1.7/cpg-core/de.fraunhofer.aisec.cpg.graph.edges.flows/index.html" class="dropdown--option dropdown--option-link" style="display: block; padding: 5px; color: #fff" data-remove-style="true" role="option">9.1.7</a></div>
+    <div><a href="../../older/main-SNAPSHOT/cpg-core/de.fraunhofer.aisec.cpg.graph.edges.flows/index.html" class="dropdown--option dropdown--option-link" style="display: block; padding: 5px; color: #fff" data-remove-style="true" role="option">main-SNAPSHOT</a></div>
+  </div>
+  <div class="dropdown--overlay"></div>
+</div>
+</dokka-template-command>        </div>
+        <div class="navigation-controls">
+        <div class="filter-section filter-section_loading" id="filter-section">
+                <button class="platform-tag platform-selector jvm-like" data-active="" data-filter=":cpg-core:dokkaHtmlPartial/main">jvm</button>
+            <div class="dropdown filter-section--dropdown" data-role="dropdown" id="filter-section-dropdown">
+                <button class="button button_dropdown filter-section--dropdown-toggle" role="combobox" data-role="dropdown-toggle" aria-controls="platform-tags-listbox" aria-haspopup="listbox" aria-expanded="false" aria-label="Toggle source sets"></button>
+                <ul role="listbox" id="platform-tags-listbox" class="dropdown--list" data-role="dropdown-listbox">
+                    <div class="dropdown--header"><span>Platform filter</span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close platform filter">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                        <li role="option" class="dropdown--option platform-selector-option jvm-like" tabindex="0">
+                            <label class="checkbox">
+                                <input type="checkbox" class="checkbox--input" id=":cpg-core:dokkaHtmlPartial/main" data-filter=":cpg-core:dokkaHtmlPartial/main">
+                                <span class="checkbox--icon"></span>
+                                jvm
+                            </label>
+                        </li>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
+        </div>
+            <button class="navigation-controls--btn navigation-controls--btn_theme" id="theme-toggle-button" type="button">Switch theme
+            </button>
+            <div class="navigation-controls--btn navigation-controls--btn_search" id="searchBar" role="button">Search in
+                API
+            </div>
+        </div>
+    </nav>
+        <div id="container">
+            <div class="sidebar" id="leftColumn">
+                <div class="dropdown theme-dark_mobile" data-role="dropdown" id="toc-dropdown">
+                    <ul role="listbox" id="toc-listbox" class="dropdown--list dropdown--list_toc-list" data-role="dropdown-listbox">
+                        <div class="dropdown--header">
+                            <span>
+                                    cpg
+                            </span>
+                            <button class="button" data-role="dropdown-toggle" aria-label="Close table of contents">
+                                <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                            </button>
+                        </div>
+                        <div class="sidebar--inner" id="sideMenu"></div>
+                    </ul>
+                    <div class="dropdown--overlay"></div>
+                </div>
+            </div>
+            <div id="main">
+<div class="main-content" data-page-type="package" id="content" pageids="cpg-core::de.fraunhofer.aisec.cpg.graph.edges.flows////PointingToDeclaration//1556141526">
+  <div class="breadcrumbs"><a href="../index.html">cpg-core</a><span class="delimiter">/</span><span class="current">de.fraunhofer.aisec.cpg.graph.edges.flows</span></div>
+  <div class="cover ">
+    <h1 class="cover"><span><span>Package-level</span></span> <span><span>declarations</span></span></h1>
+  </div>
+  <div class="tabbedcontent">
+    <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="TYPE">Types</button><button class="section-tab" data-togglable="FUNCTION,EXTENSION_FUNCTION">Functions</button></div>
+    <div class="tabs-section-body">
+      <div data-togglable="TYPE">
+        <h2 class="">Types</h2>
+        <div class="table"><a data-name="2018224680%2FClasslikes%2F1556141526" anchor-label="CallingContext" id="2018224680%2FClasslikes%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-calling-context/index.html"><span>Calling</span><wbr><span><span>Context</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="2018224680%2FClasslikes%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">sealed </span><span class="token keyword">interface </span><a href="-calling-context/index.html">CallingContext</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-2000288061%2FClasslikes%2F1556141526" anchor-label="CallingContextIn" id="-2000288061%2FClasslikes%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-calling-context-in/index.html"><span>Calling</span><wbr><span>Context</span><wbr><span><span>In</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-2000288061%2FClasslikes%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-calling-context-in/index.html">CallingContextIn</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">val </span>call<span class="token operator">: </span><a href="../de.fraunhofer.aisec.cpg.graph.statements.expressions/-call-expression/index.html">CallExpression</a></span></span><span class="token punctuation">)</span> : <a href="-calling-context/index.html">CallingContext</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1021574292%2FClasslikes%2F1556141526" anchor-label="CallingContextOut" id="-1021574292%2FClasslikes%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-calling-context-out/index.html"><span>Calling</span><wbr><span>Context</span><wbr><span><span>Out</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1021574292%2FClasslikes%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-calling-context-out/index.html">CallingContextOut</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">val </span>call<span class="token operator">: </span><a href="../de.fraunhofer.aisec.cpg.graph.statements.expressions/-call-expression/index.html">CallExpression</a></span></span><span class="token punctuation">)</span> : <a href="-calling-context/index.html">CallingContext</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1415788588%2FClasslikes%2F1556141526" anchor-label="ContextSensitiveDataflow" id="-1415788588%2FClasslikes%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-context-sensitive-dataflow/index.html"><span>Context</span><wbr><span>Sensitive</span><wbr><span><span>Dataflow</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1415788588%2FClasslikes%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-context-sensitive-dataflow/index.html">ContextSensitiveDataflow</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">start<span class="token operator">: </span><a href="../de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">, </span></span><span class="parameter ">end<span class="token operator">: </span><a href="../de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">var </span>granularity<span class="token operator">: </span><a href="-granularity/index.html">Granularity</a><span class="token operator"> = </span>default()<span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>callingContext<span class="token operator">: </span><a href="-calling-context/index.html">CallingContext</a></span></span><span class="token punctuation">)</span> : <a href="-dataflow/index.html">Dataflow</a></div><div class="brief "><p class="paragraph">This edge class defines a flow of data between <a href="../../cpg-core/de.fraunhofer.aisec.cpg.graph.edges.flows/-context-sensitive-dataflow/start.html">start</a> and <a href="../../cpg-core/de.fraunhofer.aisec.cpg.graph.edges.flows/-context-sensitive-dataflow/end.html">end</a>. The flow must have a <a href="-context-sensitive-dataflow/calling-context.html">callingContext</a> which allows for a context-sensitive dataflow analysis. This edge can also have a certain <a href="../../cpg-core/de.fraunhofer.aisec.cpg.graph.edges.flows/-context-sensitive-dataflow/granularity.html">granularity</a>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="2085113627%2FClasslikes%2F1556141526" anchor-label="ControlDependence" id="2085113627%2FClasslikes%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-control-dependence/index.html"><span>Control</span><wbr><span><span>Dependence</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="2085113627%2FClasslikes%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-control-dependence/index.html">ControlDependence</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">start<span class="token operator">: </span><a href="../de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">, </span></span><span class="parameter ">end<span class="token operator">: </span><a href="../de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">var </span>branches<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-set/index.html">Set</a><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a><span class="token operator">&gt;</span><span class="token operator"> = </span>setOf()</span></span><span class="token punctuation">)</span> : <a href="-program-dependence/index.html">ProgramDependence</a></div><div class="brief "><p class="paragraph">An edge in a Control Dependence Graph (CDG). Denotes that the <a href="../../cpg-core/de.fraunhofer.aisec.cpg.graph.edges.flows/-control-dependence/start.html">start</a> node exercises control dependence on the <a href="../../cpg-core/de.fraunhofer.aisec.cpg.graph.edges.flows/-control-dependence/end.html">end</a> node. See <a href="../de.fraunhofer.aisec.cpg.passes/-control-dependence-graph-pass/index.html">ControlDependenceGraphPass</a>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="132895092%2FClasslikes%2F1556141526" anchor-label="ControlDependences" id="132895092%2FClasslikes%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-control-dependences/index.html"><span>Control</span><wbr><span><span>Dependences</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="132895092%2FClasslikes%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-control-dependences/index.html">ControlDependences</a><span class="token operator">&lt;</span><a href="-control-dependences/index.html">NodeType</a><span class="token operator"> : </span><a href="../de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">&gt;</span> : <a href="../de.fraunhofer.aisec.cpg.graph.edges.collections/-edge-list/index.html">EdgeList</a><span class="token operator">&lt;</span><a href="../de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">, </span><a href="-control-dependence/index.html">ControlDependence</a><span class="token operator">&gt; </span>, <a href="../de.fraunhofer.aisec.cpg.graph.edges.collections/-mirrored-edge-collection/index.html">MirroredEdgeCollection</a><span class="token operator">&lt;</span><a href="../de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">, </span><a href="-control-dependence/index.html">ControlDependence</a><span class="token operator">&gt; </span></div><div class="brief "><p class="paragraph">A container of <a href="-control-dependence/index.html">ControlDependence</a> edges. <a href="-control-dependences/index.html">NodeType</a> is necessary because of the Neo4J OGM.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="602466491%2FClasslikes%2F1556141526" anchor-label="Dataflow" id="602466491%2FClasslikes%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-dataflow/index.html"><span><span>Dataflow</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="602466491%2FClasslikes%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-dataflow/index.html">Dataflow</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">start<span class="token operator">: </span><a href="../de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">, </span></span><span class="parameter ">end<span class="token operator">: </span><a href="../de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">var </span>granularity<span class="token operator">: </span><a href="-granularity/index.html">Granularity</a><span class="token operator"> = </span>default()</span></span><span class="token punctuation">)</span> : <a href="-program-dependence/index.html">ProgramDependence</a></div><div class="brief "><p class="paragraph">This edge class defines a flow of data between <a href="../../cpg-core/de.fraunhofer.aisec.cpg.graph.edges.flows/-dataflow/start.html">start</a> and <a href="../../cpg-core/de.fraunhofer.aisec.cpg.graph.edges.flows/-dataflow/end.html">end</a>. The flow can have a certain <a href="-dataflow/granularity.html">granularity</a>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1415474132%2FClasslikes%2F1556141526" anchor-label="Dataflows" id="1415474132%2FClasslikes%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-dataflows/index.html"><span><span>Dataflows</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1415474132%2FClasslikes%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-dataflows/index.html">Dataflows</a><span class="token operator">&lt;</span><a href="-dataflows/index.html">T</a><span class="token operator"> : </span><a href="../de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">&gt;</span><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">thisRef<span class="token operator">: </span><a href="../de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">var </span>mirrorProperty<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.reflect/-k-property/index.html">KProperty</a><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-mutable-collection/index.html">MutableCollection</a><span class="token operator">&lt;</span><a href="-dataflow/index.html">Dataflow</a><span class="token operator">&gt;</span><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">outgoing<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a></span></span><span class="token punctuation">)</span> : <a href="../de.fraunhofer.aisec.cpg.graph.edges.collections/-edge-set/index.html">EdgeSet</a><span class="token operator">&lt;</span><a href="../de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">, </span><a href="-dataflow/index.html">Dataflow</a><span class="token operator">&gt; </span>, <a href="../de.fraunhofer.aisec.cpg.graph.edges.collections/-mirrored-edge-collection/index.html">MirroredEdgeCollection</a><span class="token operator">&lt;</span><a href="../de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">, </span><a href="-dataflow/index.html">Dataflow</a><span class="token operator">&gt; </span></div><div class="brief "><p class="paragraph">This class represents a container of <a href="-dataflow/index.html">Dataflow</a> property edges in a <a href="../../cpg-core/de.fraunhofer.aisec.cpg.graph.edges.flows/-dataflows/this-ref.html">thisRef</a>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="704471586%2FClasslikes%2F1556141526" anchor-label="DependenceType" id="704471586%2FClasslikes%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-dependence-type/index.html"><span>Dependence</span><wbr><span><span>Type</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="704471586%2FClasslikes%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">enum </span><a href="-dependence-type/index.html">DependenceType</a> : <a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-enum/index.html">Enum</a><span class="token operator">&lt;</span><a href="-dependence-type/index.html">DependenceType</a><span class="token operator">&gt; </span></div><div class="brief "><p class="paragraph">The types of dependences that might be represented in the CPG</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1574631261%2FClasslikes%2F1556141526" anchor-label="EvaluationOrder" id="1574631261%2FClasslikes%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-evaluation-order/index.html"><span>Evaluation</span><wbr><span><span>Order</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1574631261%2FClasslikes%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-evaluation-order/index.html">EvaluationOrder</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">start<span class="token operator">: </span><a href="../de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">, </span></span><span class="parameter ">end<span class="token operator">: </span><a href="../de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">var </span>unreachable<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a><span class="token operator"> = </span><span class="token boolean">false</span><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">var </span>branch<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a><span class="token operator">?</span><span class="token operator"> = </span>null</span></span><span class="token punctuation">)</span> : <a href="../de.fraunhofer.aisec.cpg.graph.edges/-edge/index.html">Edge</a><span class="token operator">&lt;</span><a href="../de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">&gt; </span></div><div class="brief "><p class="paragraph">An edge in our Evaluation Order Graph (EOG). It considers the order in which our AST statements would be "evaluated" (e.g. by a compiler or interpreter). See <a href="../de.fraunhofer.aisec.cpg.passes/-evaluation-order-graph-pass/index.html">EvaluationOrderGraphPass</a> for more details.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1487810930%2FClasslikes%2F1556141526" anchor-label="EvaluationOrders" id="1487810930%2FClasslikes%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-evaluation-orders/index.html"><span>Evaluation</span><wbr><span><span>Orders</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1487810930%2FClasslikes%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-evaluation-orders/index.html">EvaluationOrders</a><span class="token operator">&lt;</span><a href="-evaluation-orders/index.html">NodeType</a><span class="token operator"> : </span><a href="../de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">&gt;</span><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">thisRef<span class="token operator">: </span><a href="../de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">var </span>mirrorProperty<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.reflect/-k-property/index.html">KProperty</a><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-mutable-collection/index.html">MutableCollection</a><span class="token operator">&lt;</span><a href="-evaluation-order/index.html">EvaluationOrder</a><span class="token operator">&gt;</span><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">outgoing<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a><span class="token operator"> = </span><span class="token boolean">true</span></span></span><span class="token punctuation">)</span> : <a href="../de.fraunhofer.aisec.cpg.graph.edges.collections/-edge-list/index.html">EdgeList</a><span class="token operator">&lt;</span><a href="../de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">, </span><a href="-evaluation-order/index.html">EvaluationOrder</a><span class="token operator">&gt; </span>, <a href="../de.fraunhofer.aisec.cpg.graph.edges.collections/-mirrored-edge-collection/index.html">MirroredEdgeCollection</a><span class="token operator">&lt;</span><a href="../de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">, </span><a href="-evaluation-order/index.html">EvaluationOrder</a><span class="token operator">&gt; </span></div><div class="brief "><p class="paragraph">Holds a container of <a href="-evaluation-order/index.html">EvaluationOrder</a> edges. The canonical version of this lives in <a href="../de.fraunhofer.aisec.cpg.graph/-node/prev-e-o-g-edges.html">Node.prevEOGEdges</a> / <a href="../de.fraunhofer.aisec.cpg.graph/-node/next-e-o-g-edges.html">Node.nextEOGEdges</a> and is populated by the <a href="../de.fraunhofer.aisec.cpg.passes/-evaluation-order-graph-pass/index.html">EvaluationOrderGraphPass</a>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="429674007%2FClasslikes%2F1556141526" anchor-label="FieldDataflowGranularity" id="429674007%2FClasslikes%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-field-dataflow-granularity/index.html"><span>Field</span><wbr><span>Dataflow</span><wbr><span><span>Granularity</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="429674007%2FClasslikes%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-field-dataflow-granularity/index.html">FieldDataflowGranularity</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">partialTarget<span class="token operator">: </span><a href="../de.fraunhofer.aisec.cpg.graph.declarations/-field-declaration/index.html">FieldDeclaration</a></span></span><span class="token punctuation">)</span> : <a href="-partial-dataflow-granularity/index.html">PartialDataflowGranularity</a><span class="token operator">&lt;</span><a href="../de.fraunhofer.aisec.cpg.graph.declarations/-field-declaration/index.html">FieldDeclaration</a><span class="token operator">&gt; </span></div><div class="brief "><p class="paragraph">This dataflow granularity denotes that not the "whole" object is flowing from <a href="../../cpg-core/de.fraunhofer.aisec.cpg.graph.edges.flows/-dataflow/start.html">Dataflow.start</a> to <a href="../../cpg-core/de.fraunhofer.aisec.cpg.graph.edges.flows/-dataflow/end.html">Dataflow.end</a> but only parts of it, where the part is identified by a (known) <a href="../de.fraunhofer.aisec.cpg.graph.declarations/-field-declaration/index.html">FieldDeclaration</a>. Common examples include <a href="../de.fraunhofer.aisec.cpg.graph.statements.expressions/-member-expression/index.html">MemberExpression</a> nodes, where we model a dataflow to the base, but only partially scoped to a particular field.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1292624168%2FClasslikes%2F1556141526" anchor-label="FullDataflowGranularity" id="1292624168%2FClasslikes%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-full-dataflow-granularity/index.html"><span>Full</span><wbr><span>Dataflow</span><wbr><span><span>Granularity</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1292624168%2FClasslikes%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">data </span><span class="token keyword">object </span><a href="-full-dataflow-granularity/index.html">FullDataflowGranularity</a> : <a href="-granularity/index.html">Granularity</a></div><div class="brief "><p class="paragraph">This dataflow granularity is the default. The "whole" object is flowing from <a href="../../cpg-core/de.fraunhofer.aisec.cpg.graph.edges.flows/-dataflow/start.html">Dataflow.start</a> to <a href="../../cpg-core/de.fraunhofer.aisec.cpg.graph.edges.flows/-dataflow/end.html">Dataflow.end</a>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="646409729%2FClasslikes%2F1556141526" anchor-label="Granularity" id="646409729%2FClasslikes%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-granularity/index.html"><span><span>Granularity</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="646409729%2FClasslikes%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">sealed </span><span class="token keyword">interface </span><a href="-granularity/index.html">Granularity</a></div><div class="brief "><p class="paragraph">The granularity of the data-flow, e.g., whether the flow contains the whole object, or just a part of it, for example a record (class/struct) member.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="435605262%2FClasslikes%2F1556141526" anchor-label="IndexedDataflowGranularity" id="435605262%2FClasslikes%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-indexed-dataflow-granularity/index.html"><span>Indexed</span><wbr><span>Dataflow</span><wbr><span><span>Granularity</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="435605262%2FClasslikes%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-indexed-dataflow-granularity/index.html">IndexedDataflowGranularity</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">partialTarget<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-number/index.html">Number</a></span></span><span class="token punctuation">)</span> : <a href="-partial-dataflow-granularity/index.html">PartialDataflowGranularity</a><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-number/index.html">Number</a><span class="token operator">&gt; </span></div><div class="brief "><p class="paragraph">This dataflow granularity denotes that not the "whole" object is flowing from <a href="../../cpg-core/de.fraunhofer.aisec.cpg.graph.edges.flows/-dataflow/start.html">Dataflow.start</a> to <a href="../../cpg-core/de.fraunhofer.aisec.cpg.graph.edges.flows/-dataflow/end.html">Dataflow.end</a> but only parts of it, where the part is identified by a (constant) integer. Common examples include tuples or array indices.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="100144283%2FClasslikes%2F1556141526" anchor-label="Invoke" id="100144283%2FClasslikes%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-invoke/index.html"><span><span>Invoke</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="100144283%2FClasslikes%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-invoke/index.html">Invoke</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">start<span class="token operator">: </span><a href="../de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">, </span></span><span class="parameter ">end<span class="token operator">: </span><a href="../de.fraunhofer.aisec.cpg.graph.declarations/-function-declaration/index.html">FunctionDeclaration</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">var </span>dynamicInvoke<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a><span class="token operator"> = </span><span class="token boolean">false</span></span></span><span class="token punctuation">)</span> : <a href="../de.fraunhofer.aisec.cpg.graph.edges/-edge/index.html">Edge</a><span class="token operator">&lt;</span><a href="../de.fraunhofer.aisec.cpg.graph.declarations/-function-declaration/index.html">FunctionDeclaration</a><span class="token operator">&gt; </span></div><div class="brief "><p class="paragraph">This edge class denotes the invocation of a <a href="../de.fraunhofer.aisec.cpg.graph.declarations/-function-declaration/index.html">FunctionDeclaration</a> by a <a href="../de.fraunhofer.aisec.cpg.graph.statements.expressions/-call-expression/index.html">CallExpression</a>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1271612428%2FClasslikes%2F1556141526" anchor-label="Invokes" id="-1271612428%2FClasslikes%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-invokes/index.html"><span><span>Invokes</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1271612428%2FClasslikes%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-invokes/index.html">Invokes</a><span class="token operator">&lt;</span><a href="-invokes/index.html">NodeType</a><span class="token operator"> : </span><a href="../de.fraunhofer.aisec.cpg.graph.declarations/-function-declaration/index.html">FunctionDeclaration</a><span class="token operator">&gt;</span><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">thisRef<span class="token operator">: </span><a href="../de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">var </span>mirrorProperty<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.reflect/-k-property/index.html">KProperty</a><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-mutable-collection/index.html">MutableCollection</a><span class="token operator">&lt;</span><a href="-invoke/index.html">Invoke</a><span class="token operator">&gt;</span><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">outgoing<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a><span class="token operator"> = </span><span class="token boolean">true</span></span></span><span class="token punctuation">)</span> : <a href="../de.fraunhofer.aisec.cpg.graph.edges.collections/-edge-list/index.html">EdgeList</a><span class="token operator">&lt;</span><a href="../de.fraunhofer.aisec.cpg.graph.declarations/-function-declaration/index.html">FunctionDeclaration</a><span class="token punctuation">, </span><a href="-invoke/index.html">Invoke</a><span class="token operator">&gt; </span>, <a href="../de.fraunhofer.aisec.cpg.graph.edges.collections/-mirrored-edge-collection/index.html">MirroredEdgeCollection</a><span class="token operator">&lt;</span><a href="../de.fraunhofer.aisec.cpg.graph.declarations/-function-declaration/index.html">FunctionDeclaration</a><span class="token punctuation">, </span><a href="-invoke/index.html">Invoke</a><span class="token operator">&gt; </span></div><div class="brief "><p class="paragraph">A container for <a href="-usage/index.html">Usage</a> edges. <a href="-invokes/index.html">NodeType</a> is necessary because of the Neo4J OGM.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="378320798%2FClasslikes%2F1556141526" anchor-label="PartialDataflowGranularity" id="378320798%2FClasslikes%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-partial-dataflow-granularity/index.html"><span>Partial</span><wbr><span>Dataflow</span><wbr><span><span>Granularity</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="378320798%2FClasslikes%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-partial-dataflow-granularity/index.html">PartialDataflowGranularity</a><span class="token operator">&lt;</span><a href="-partial-dataflow-granularity/index.html">T</a><span class="token operator">&gt;</span><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">val </span>partialTarget<span class="token operator">: </span><a href="-partial-dataflow-granularity/index.html">T</a></span></span><span class="token punctuation">)</span> : <a href="-granularity/index.html">Granularity</a></div><div class="brief "><p class="paragraph">This dataflow granularity denotes that not the "whole" object is flowing from <a href="../../cpg-core/de.fraunhofer.aisec.cpg.graph.edges.flows/-dataflow/start.html">Dataflow.start</a> to <a href="../../cpg-core/de.fraunhofer.aisec.cpg.graph.edges.flows/-dataflow/end.html">Dataflow.end</a> but only parts of it. Common examples include <a href="../de.fraunhofer.aisec.cpg.graph.statements.expressions/-member-expression/index.html">MemberExpression</a>s, array or tuple accesses. This class should allow</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="91196564%2FClasslikes%2F1556141526" anchor-label="ProgramDependence" id="91196564%2FClasslikes%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-program-dependence/index.html"><span>Program</span><wbr><span><span>Dependence</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="91196564%2FClasslikes%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-program-dependence/index.html">ProgramDependence</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">start<span class="token operator">: </span><a href="../de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">, </span></span><span class="parameter ">end<span class="token operator">: </span><a href="../de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">var </span>dependence<span class="token operator">: </span><a href="-dependence-type/index.html">DependenceType</a></span></span><span class="token punctuation">)</span> : <a href="../de.fraunhofer.aisec.cpg.graph.edges/-edge/index.html">Edge</a><span class="token operator">&lt;</span><a href="../de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">&gt; </span></div><div class="brief "><p class="paragraph">This edge class defines that there's some kind of dependency between <a href="../../cpg-core/de.fraunhofer.aisec.cpg.graph.edges.flows/-program-dependence/start.html">start</a> and <a href="../../cpg-core/de.fraunhofer.aisec.cpg.graph.edges.flows/-program-dependence/end.html">end</a>. The nature of this dependency is defined by <a href="-program-dependence/dependence.html">dependence</a>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1548991717%2FClasslikes%2F1556141526" anchor-label="ProgramDependences" id="-1548991717%2FClasslikes%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-program-dependences/index.html"><span>Program</span><wbr><span><span>Dependences</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1548991717%2FClasslikes%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-program-dependences/index.html">ProgramDependences</a><span class="token operator">&lt;</span><a href="-program-dependences/index.html">NodeType</a><span class="token operator"> : </span><a href="../de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">&gt;</span> : <a href="../de.fraunhofer.aisec.cpg.graph.edges.collections/-edge-set/index.html">EdgeSet</a><span class="token operator">&lt;</span><a href="-program-dependences/index.html">NodeType</a><span class="token punctuation">, </span><a href="../de.fraunhofer.aisec.cpg.graph.edges/-edge/index.html">Edge</a><span class="token operator">&lt;</span><a href="-program-dependences/index.html">NodeType</a><span class="token operator">&gt;</span><span class="token operator">&gt; </span>, <a href="../de.fraunhofer.aisec.cpg.graph.edges.collections/-mirrored-edge-collection/index.html">MirroredEdgeCollection</a><span class="token operator">&lt;</span><a href="-program-dependences/index.html">NodeType</a><span class="token punctuation">, </span><a href="../de.fraunhofer.aisec.cpg.graph.edges/-edge/index.html">Edge</a><span class="token operator">&lt;</span><a href="-program-dependences/index.html">NodeType</a><span class="token operator">&gt;</span><span class="token operator">&gt; </span></div><div class="brief "><p class="paragraph">A container of <a href="../de.fraunhofer.aisec.cpg.graph.edges/-edge/index.html">Edge</a> edges that act as a program dependence graph (PDG). The canonical version of this lives in <a href="../de.fraunhofer.aisec.cpg.graph/-node/prev-p-d-g-edges.html">Node.prevPDGEdges</a> / <a href="../de.fraunhofer.aisec.cpg.graph/-node/next-p-d-g-edges.html">Node.nextPDGEdges</a> and is populated by the <a href="../de.fraunhofer.aisec.cpg.passes/-program-dependence-graph-pass/index.html">ProgramDependenceGraphPass</a>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="490194365%2FClasslikes%2F1556141526" anchor-label="StringIndexedDataflowGranularity" id="490194365%2FClasslikes%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-string-indexed-dataflow-granularity/index.html"><span>String</span><wbr><span>Indexed</span><wbr><span>Dataflow</span><wbr><span><span>Granularity</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="490194365%2FClasslikes%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-string-indexed-dataflow-granularity/index.html">StringIndexedDataflowGranularity</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">partialTarget<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></span></span><span class="token punctuation">)</span> : <a href="-partial-dataflow-granularity/index.html">PartialDataflowGranularity</a><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt; </span></div><div class="brief "><p class="paragraph">This dataflow granularity denotes that not the "whole" object is flowing from <a href="../../cpg-core/de.fraunhofer.aisec.cpg.graph.edges.flows/-dataflow/start.html">Dataflow.start</a> to <a href="../../cpg-core/de.fraunhofer.aisec.cpg.graph.edges.flows/-dataflow/end.html">Dataflow.end</a> but only parts of it, where the part is identified by a (constant) String. Common examples include access to map entries or similar.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1540804722%2FClasslikes%2F1556141526" anchor-label="Usage" id="-1540804722%2FClasslikes%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-usage/index.html"><span><span>Usage</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1540804722%2FClasslikes%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-usage/index.html">Usage</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">start<span class="token operator">: </span><a href="../de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">, </span></span><span class="parameter ">end<span class="token operator">: </span><a href="../de.fraunhofer.aisec.cpg.graph.statements.expressions/-reference/index.html">Reference</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">var </span>access<span class="token operator">: </span><a href="../de.fraunhofer.aisec.cpg.graph/-access-values/index.html">AccessValues</a><span class="token operator">?</span><span class="token operator"> = </span>null</span></span><span class="token punctuation">)</span> : <a href="../de.fraunhofer.aisec.cpg.graph.edges/-edge/index.html">Edge</a><span class="token operator">&lt;</span><a href="../de.fraunhofer.aisec.cpg.graph.statements.expressions/-reference/index.html">Reference</a><span class="token operator">&gt; </span></div><div class="brief "><p class="paragraph">This edge class denotes the usage of a <a href="../de.fraunhofer.aisec.cpg.graph.declarations/-value-declaration/index.html">ValueDeclaration</a> in a <a href="../de.fraunhofer.aisec.cpg.graph.statements.expressions/-reference/index.html">Reference</a>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-601424031%2FClasslikes%2F1556141526" anchor-label="Usages" id="-601424031%2FClasslikes%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-usages/index.html"><span><span>Usages</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-601424031%2FClasslikes%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-usages/index.html">Usages</a><span class="token operator">&lt;</span><a href="-usages/index.html">NodeType</a><span class="token operator"> : </span><a href="../de.fraunhofer.aisec.cpg.graph.statements.expressions/-reference/index.html">Reference</a><span class="token operator">&gt;</span><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">thisRef<span class="token operator">: </span><a href="../de.fraunhofer.aisec.cpg.graph.declarations/-value-declaration/index.html">ValueDeclaration</a></span></span><span class="token punctuation">)</span> : <a href="../de.fraunhofer.aisec.cpg.graph.edges.collections/-edge-list/index.html">EdgeList</a><span class="token operator">&lt;</span><a href="../de.fraunhofer.aisec.cpg.graph.statements.expressions/-reference/index.html">Reference</a><span class="token punctuation">, </span><a href="-usage/index.html">Usage</a><span class="token operator">&gt; </span></div><div class="brief "><p class="paragraph">A container for <a href="-usage/index.html">Usage</a> edges. <a href="-usages/index.html">NodeType</a> is necessary because of the Neo4J OGM.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-togglable="FUNCTION">
+        <h2 class="">Functions</h2>
+        <div class="table"><a data-name="1522190413%2FFunctions%2F1556141526" anchor-label="default" id="1522190413%2FFunctions%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="default.html"><span><span>default</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1522190413%2FFunctions%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="default.html"><span class="token function">default</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">: </span><a href="-granularity/index.html">Granularity</a></div><div class="brief "><p class="paragraph">Creates a new default <a href="-granularity/index.html">Granularity</a>. Currently, this defaults to <a href="-full-dataflow-granularity/index.html">FullDataflowGranularity</a>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-401368779%2FFunctions%2F1556141526" anchor-label="field" id="-401368779%2FFunctions%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="field.html"><span><span>field</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-401368779%2FFunctions%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="field.html"><span class="token function">field</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">target<span class="token operator">: </span><a href="../de.fraunhofer.aisec.cpg.graph.declarations/-field-declaration/index.html">FieldDeclaration</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="-field-dataflow-granularity/index.html">FieldDataflowGranularity</a></div><div class="brief "><p class="paragraph">Creates a new <a href="-field-dataflow-granularity/index.html">FieldDataflowGranularity</a>. The <a href="field.html">target</a> is the <a href="../de.fraunhofer.aisec.cpg.graph.declarations/-declaration/index.html">Declaration</a> that is affected by the partial dataflow. Examples include a <a href="../de.fraunhofer.aisec.cpg.graph.declarations/-field-declaration/index.html">FieldDeclaration</a> for a <a href="../de.fraunhofer.aisec.cpg.graph.statements.expressions/-member-expression/index.html">MemberExpression</a>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1656646147%2FFunctions%2F1556141526" anchor-label="full" id="-1656646147%2FFunctions%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="full.html"><span><span>full</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1656646147%2FFunctions%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="full.html"><span class="token function">full</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">: </span><a href="-granularity/index.html">Granularity</a></div><div class="brief "><p class="paragraph">Creates a new <a href="-full-dataflow-granularity/index.html">FullDataflowGranularity</a>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1709499510%2FFunctions%2F1556141526" anchor-label="indexed" id="-1709499510%2FFunctions%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="indexed.html"><span><span>indexed</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1709499510%2FFunctions%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="indexed.html"><span class="token function">indexed</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">idx<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-number/index.html">Number</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="-indexed-dataflow-granularity/index.html">IndexedDataflowGranularity</a></div><div class="brief "><p class="paragraph">Creates a new <a href="-indexed-dataflow-granularity/index.html">IndexedDataflowGranularity</a>. The <a href="indexed.html">idx</a> is the index that is used for the partial dataflow. An example is the access to an array or tuple element, or a <a href="../de.fraunhofer.aisec.cpg.graph.declarations/-variable-declaration/index.html">VariableDeclaration</a> for a <a href="../de.fraunhofer.aisec.cpg.graph.declarations/-tuple-declaration/index.html">TupleDeclaration</a>.</p></div><div class="symbol monospace"><span class="token keyword">fun </span><a href="indexed.html"><span class="token function">indexed</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">idx<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="-string-indexed-dataflow-granularity/index.html">StringIndexedDataflowGranularity</a></div><div class="brief "><p class="paragraph">Creates a new <a href="-indexed-dataflow-granularity/index.html">IndexedDataflowGranularity</a>. The <a href="indexed.html">idx</a> is the index that is used for the partial dataflow. An example is the access to a map entry.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="491381181%2FFunctions%2F1556141526" anchor-label="insertNodeAfterwardInEOGPath" id="491381181%2FFunctions%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-togglable="EXTENSION_FUNCTION" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="insert-node-afterward-in-e-o-g-path.html"><span>insert</span><wbr><span>Node</span><wbr><span>Afterward</span><wbr><span>In</span><wbr><span><span>EOGPath</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="491381181%2FFunctions%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="../de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">.</span><a href="insert-node-afterward-in-e-o-g-path.html"><span class="token function">insertNodeAfterwardInEOGPath</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">newNode<span class="token operator">: </span><a href="../de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">, </span></span><span class="parameter ">builder<span class="token operator">: </span><span class="token punctuation">(</span><a href="-evaluation-order/index.html">EvaluationOrder</a><span class="token punctuation">)</span><span class="token operator"> -&gt; </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-unit/index.html">Unit</a><span class="token operator"> = </span>{}</span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a></div><div class="brief "><p class="paragraph">This function inserts the given <a href="insert-node-afterward-in-e-o-g-path.html">newNode</a> after the current node (<a href="../../cpg-core/de.fraunhofer.aisec.cpg.graph.edges.flows/index.html">this</a>) in its existing EOG path.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="2036225532%2FFunctions%2F1556141526" anchor-label="insertNodeBeforeInEOGPath" id="2036225532%2FFunctions%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-togglable="EXTENSION_FUNCTION" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="insert-node-before-in-e-o-g-path.html"><span>insert</span><wbr><span>Node</span><wbr><span>Before</span><wbr><span>In</span><wbr><span><span>EOGPath</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="2036225532%2FFunctions%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="../de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">.</span><a href="insert-node-before-in-e-o-g-path.html"><span class="token function">insertNodeBeforeInEOGPath</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">newNode<span class="token operator">: </span><a href="../de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token punctuation">, </span></span><span class="parameter ">builder<span class="token operator">: </span><span class="token punctuation">(</span><a href="-evaluation-order/index.html">EvaluationOrder</a><span class="token punctuation">)</span><span class="token operator"> -&gt; </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-unit/index.html">Unit</a><span class="token operator"> = </span>{}</span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a></div><div class="brief "><p class="paragraph">This function inserts the given <a href="insert-node-before-in-e-o-g-path.html">newNode</a> before the current node (<a href="../../cpg-core/de.fraunhofer.aisec.cpg.graph.edges.flows/index.html">this</a>) in its existing EOG path.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1003045039%2FFunctions%2F1556141526" anchor-label="partial" id="-1003045039%2FFunctions%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="partial.html"><span><span>partial</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1003045039%2FFunctions%2F1556141526"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">fun </span><span class="token operator">&lt;</span><a href="partial.html">T</a><span class="token operator">&gt; </span><a href="partial.html"><span class="token function">partial</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">identifier<span class="token operator">: </span><a href="partial.html">T</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="-partial-dataflow-granularity/index.html">PartialDataflowGranularity</a><span class="token operator">&lt;</span><a href="partial.html">T</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Creates a new <a href="-partial-dataflow-granularity/index.html">PartialDataflowGranularity</a>. The <a href="partial.html">identifier</a> is used to access the specific part of the whole object.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    <div class="footer">
+        <a href="#content" id="go-to-top-link" class="footer--button footer--button_go-to-top"></a>
+        <span>© 2025 Copyright</span>
+        <span class="pull-right">
+            <span>Generated by </span>
+            <a class="footer--link footer--link_external" href="https://github.com/Kotlin/dokka">
+                <span>dokka</span>
+            </a>
+        </span>
+    </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,286 @@
+<!doctype html>
+<html class="no-js">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
+    <title>AnalysisProject</title>
+<link href="../../../images/logo-icon.svg" rel="icon" type="image/svg">    <script>var pathToRoot = "../../../";</script>
+    <script>document.documentElement.classList.replace("no-js","js");</script>
+    <script>const storage = localStorage.getItem("dokka-dark-mode")
+    if (storage == null) {
+        const osDarkSchemePreferred = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+        if (osDarkSchemePreferred === true) {
+            document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+    } else {
+        const savedDarkMode = JSON.parse(storage)
+        if(savedDarkMode === true) {
+            document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+    }
+    </script>
+<script type="text/javascript" src="https://unpkg.com/kotlin-playground@1/dist/playground.min.js" async></script>
+<script type="text/javascript" src="../../../scripts/sourceset_dependencies.js" async></script>
+<link href="../../../styles/style.css" rel="Stylesheet">
+<link href="../../../styles/main.css" rel="Stylesheet">
+<link href="../../../styles/prism.css" rel="Stylesheet">
+<link href="../../../styles/logo-styles.css" rel="Stylesheet">
+<link href="../../../styles/font-jb-sans-auto.css" rel="Stylesheet">
+<link href="../../../ui-kit/ui-kit.min.css" rel="Stylesheet">
+<script type="text/javascript" src="../../../scripts/clipboard.js" async></script>
+<script type="text/javascript" src="../../../scripts/navigation-loader.js" async></script>
+<script type="text/javascript" src="../../../scripts/platform-content-handler.js" async></script>
+<script type="text/javascript" src="../../../scripts/main.js" defer></script>
+<script type="text/javascript" src="../../../scripts/prism.js" async></script>
+<script type="text/javascript" src="../../../ui-kit/ui-kit.min.js" defer></script>
+<script type="text/javascript" src="../../../scripts/symbol-parameters-wrapper_deferred.js" defer></script>
+<link href="../../../styles/multimodule.css" rel="Stylesheet"></head>
+<body>
+    <div class="root">
+    <nav class="navigation theme-dark" id="navigation-wrapper">
+<a class="library-name--link" href="../../../index.html">
+                    cpg
+            </a>        <button class="navigation-controls--btn navigation-controls--btn_toc ui-kit_mobile-only" id="toc-toggle" type="button">Toggle table of contents
+        </button>
+        <div class="navigation-controls--break ui-kit_mobile-only"></div>
+        <div class="library-version" id="library-version">
+<dokka-template-command data="{&quot;@class&quot;:&quot;org.jetbrains.dokka.base.templating.ReplaceVersionsCommand&quot;,&quot;location&quot;:&quot;de.fraunhofer.aisec.codyze/-analysis-project/index.html&quot;}"><div class="dropdown versions-dropdown" data-role="dropdown">
+  <div class="button button_dropdown versions-dropdown-button" role="combobox" data-role="dropdown-toggle" aria-controls="versions-listbox" aria-haspopup="listbox" aria-expanded="false" aria-label="Select version" tabindex="0">9.2.0</div>
+  <div class="dropdown--list dropdown--list_positioned_left versions-dropdown-data" role="listbox" data-role="dropdown-listbox" aria-label="Versions" id="versions-listbox">
+    <div class="dropdown--header" data-remove-style="true" style="display: none"><span>Select version</span><button class="button" data-role="dropdown-toggle" aria-label="Close versions selection"><i class="ui-kit-icon ui-kit-icon_cross"></i></button></div>
+    <div><a href="../../../../../codyze-core/de.fraunhofer.aisec.codyze/-analysis-project/index.html" class="dropdown--option dropdown--option-link" style="display: block; padding: 5px; color: #fff" data-remove-style="true" role="option">10.0.0-alpha1</a></div>
+    <div><a href="../../../../9.3.0/codyze-core/de.fraunhofer.aisec.codyze/-analysis-project/index.html" class="dropdown--option dropdown--option-link" style="display: block; padding: 5px; color: #fff" data-remove-style="true" role="option">9.3.0</a></div>
+    <div><a href="../../../../9.2.2/codyze-core/de.fraunhofer.aisec.codyze/-analysis-project/index.html" class="dropdown--option dropdown--option-link" style="display: block; padding: 5px; color: #fff" data-remove-style="true" role="option">9.2.2</a></div>
+    <div><a href="../../../../9.2.1/codyze-core/de.fraunhofer.aisec.codyze/-analysis-project/index.html" class="dropdown--option dropdown--option-link" style="display: block; padding: 5px; color: #fff" data-remove-style="true" role="option">9.2.1</a></div>
+    <div><a href="index.html" class="dropdown--option dropdown--option-link" style="display: block; padding: 5px; color: #fff" data-remove-style="true" role="option">9.2.0</a></div>
+    <div><a href="../../../../9.1.7/codyze-core/de.fraunhofer.aisec.codyze/-analysis-project/index.html" class="dropdown--option dropdown--option-link" style="display: block; padding: 5px; color: #fff" data-remove-style="true" role="option">9.1.7</a></div>
+    <div><a href="../../../../main-SNAPSHOT/codyze-core/de.fraunhofer.aisec.codyze/-analysis-project/index.html" class="dropdown--option dropdown--option-link" style="display: block; padding: 5px; color: #fff" data-remove-style="true" role="option">main-SNAPSHOT</a></div>
+  </div>
+  <div class="dropdown--overlay"></div>
+</div>
+</dokka-template-command>        </div>
+        <div class="navigation-controls">
+        <div class="filter-section filter-section_loading" id="filter-section">
+                <button class="platform-tag platform-selector jvm-like" data-active="" data-filter=":codyze-core:dokkaHtmlPartial/main">jvm</button>
+            <div class="dropdown filter-section--dropdown" data-role="dropdown" id="filter-section-dropdown">
+                <button class="button button_dropdown filter-section--dropdown-toggle" role="combobox" data-role="dropdown-toggle" aria-controls="platform-tags-listbox" aria-haspopup="listbox" aria-expanded="false" aria-label="Toggle source sets"></button>
+                <ul role="listbox" id="platform-tags-listbox" class="dropdown--list" data-role="dropdown-listbox">
+                    <div class="dropdown--header"><span>Platform filter</span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close platform filter">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                        <li role="option" class="dropdown--option platform-selector-option jvm-like" tabindex="0">
+                            <label class="checkbox">
+                                <input type="checkbox" class="checkbox--input" id=":codyze-core:dokkaHtmlPartial/main" data-filter=":codyze-core:dokkaHtmlPartial/main">
+                                <span class="checkbox--icon"></span>
+                                jvm
+                            </label>
+                        </li>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
+        </div>
+            <button class="navigation-controls--btn navigation-controls--btn_theme" id="theme-toggle-button" type="button">Switch theme
+            </button>
+            <div class="navigation-controls--btn navigation-controls--btn_search" id="searchBar" role="button">Search in
+                API
+            </div>
+        </div>
+    </nav>
+        <div id="container">
+            <div class="sidebar" id="leftColumn">
+                <div class="dropdown theme-dark_mobile" data-role="dropdown" id="toc-dropdown">
+                    <ul role="listbox" id="toc-listbox" class="dropdown--list dropdown--list_toc-list" data-role="dropdown-listbox">
+                        <div class="dropdown--header">
+                            <span>
+                                    cpg
+                            </span>
+                            <button class="button" data-role="dropdown-toggle" aria-label="Close table of contents">
+                                <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                            </button>
+                        </div>
+                        <div class="sidebar--inner" id="sideMenu"></div>
+                    </ul>
+                    <div class="dropdown--overlay"></div>
+                </div>
+            </div>
+            <div id="main">
+<div class="main-content" data-page-type="classlike" id="content" pageids="codyze-core::de.fraunhofer.aisec.codyze/AnalysisProject///PointingToDeclaration//1606678074">
+  <div class="breadcrumbs"><a href="../../index.html">codyze-core</a><span class="delimiter">/</span><a href="../index.html">de.fraunhofer.aisec.codyze</a><span class="delimiter">/</span><span class="current">AnalysisProject</span></div>
+  <div class="cover ">
+    <h1 class="cover"><span>Analysis</span><wbr><span><span>Project</span></span></h1>
+    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":codyze-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="index.html">AnalysisProject</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">var </span>name<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">var </span>projectDir<span class="token operator">: </span><a href="https://docs.oracle.com/javase/8/docs/api/java/nio/file/Path.html">Path</a><span class="token operator">?</span><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">var </span>queriesFolder<span class="token operator">: </span><a href="https://docs.oracle.com/javase/8/docs/api/java/nio/file/Path.html">Path</a><span class="token operator">?</span><span class="token operator"> = </span>projectDir?.resolve("queries")<span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">var </span>securityGoalsFolder<span class="token operator">: </span><a href="https://docs.oracle.com/javase/8/docs/api/java/nio/file/Path.html">Path</a><span class="token operator">?</span><span class="token operator"> = </span>projectDir?.resolve("security-goals")<span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">var </span>componentsFolder<span class="token operator">: </span><a href="https://docs.oracle.com/javase/8/docs/api/java/nio/file/Path.html">Path</a><span class="token operator">?</span><span class="token operator"> = </span>projectDir?.resolve("components")<span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">var </span>config<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg/-translation-configuration/index.html">TranslationConfiguration</a></span></span><span class="token punctuation">)</span></div><p class="paragraph">Represents an analysis project. This class is responsible for translating the project to a CPG and analyzing it.</p><p class="paragraph">This class is the base for all commands that analyze a project. It can either be represented by a directory structure or as an ad-hoc project, if we only analyze single source files. In any case, the project is the central entity for the analysis.</p></div></div>
+  </div>
+  <div class="tabbedcontent">
+    <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="CONSTRUCTOR,TYPE,PROPERTY,FUNCTION">Members</button></div>
+    <div class="tabs-section-body">
+      <div data-togglable="CONSTRUCTOR">
+        <h2 class="">Constructors</h2>
+        <div class="table"><a data-name="1891409075%2FConstructors%2F1606678074" anchor-label="AnalysisProject" id="1891409075%2FConstructors%2F1606678074" data-filterable-set=":codyze-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-togglable="CONSTRUCTOR" data-filterable-current=":codyze-core:dokkaHtmlPartial/main" data-filterable-set=":codyze-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-analysis-project.html"><span>Analysis</span><wbr><span><span>Project</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1891409075%2FConstructors%2F1606678074"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":codyze-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">constructor</span><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">name<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span></span><span class="parameter ">projectDir<span class="token operator">: </span><a href="https://docs.oracle.com/javase/8/docs/api/java/nio/file/Path.html">Path</a><span class="token operator">?</span><span class="token punctuation">, </span></span><span class="parameter ">queriesFolder<span class="token operator">: </span><a href="https://docs.oracle.com/javase/8/docs/api/java/nio/file/Path.html">Path</a><span class="token operator">?</span><span class="token operator"> = </span>projectDir?.resolve("queries")<span class="token punctuation">, </span></span><span class="parameter ">securityGoalsFolder<span class="token operator">: </span><a href="https://docs.oracle.com/javase/8/docs/api/java/nio/file/Path.html">Path</a><span class="token operator">?</span><span class="token operator"> = </span>projectDir?.resolve("security-goals")<span class="token punctuation">, </span></span><span class="parameter ">componentsFolder<span class="token operator">: </span><a href="https://docs.oracle.com/javase/8/docs/api/java/nio/file/Path.html">Path</a><span class="token operator">?</span><span class="token operator"> = </span>projectDir?.resolve("components")<span class="token punctuation">, </span></span><span class="parameter ">config<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg/-translation-configuration/index.html">TranslationConfiguration</a></span></span><span class="token punctuation">)</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-togglable="TYPE">
+        <h2 class="">Types</h2>
+        <div class="table"><a data-name="-1919252367%2FClasslikes%2F1606678074" anchor-label="Companion" id="-1919252367%2FClasslikes%2F1606678074" data-filterable-set=":codyze-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":codyze-core:dokkaHtmlPartial/main" data-filterable-set=":codyze-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-companion/index.html"><span><span>Companion</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1919252367%2FClasslikes%2F1606678074"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":codyze-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">object </span><a href="-companion/index.html">Companion</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-togglable="PROPERTY">
+        <h2 class="">Properties</h2>
+        <div class="table"><a data-name="1537865996%2FProperties%2F1606678074" anchor-label="componentsFolder" id="1537865996%2FProperties%2F1606678074" data-filterable-set=":codyze-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":codyze-core:dokkaHtmlPartial/main" data-filterable-set=":codyze-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="components-folder.html"><span>components</span><wbr><span><span>Folder</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1537865996%2FProperties%2F1606678074"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":codyze-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">var </span><a href="components-folder.html">componentsFolder</a><span class="token operator">: </span><a href="https://docs.oracle.com/javase/8/docs/api/java/nio/file/Path.html">Path</a><span class="token operator">?</span></div><div class="brief "><p class="paragraph">The folder where the components are located.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-833070482%2FProperties%2F1606678074" anchor-label="config" id="-833070482%2FProperties%2F1606678074" data-filterable-set=":codyze-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":codyze-core:dokkaHtmlPartial/main" data-filterable-set=":codyze-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="config.html"><span><span>config</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-833070482%2FProperties%2F1606678074"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":codyze-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">var </span><a href="config.html">config</a><span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg/-translation-configuration/index.html">TranslationConfiguration</a></div><div class="brief "><p class="paragraph">The translation configuration for the project.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1261324293%2FProperties%2F1606678074" anchor-label="name" id="1261324293%2FProperties%2F1606678074" data-filterable-set=":codyze-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":codyze-core:dokkaHtmlPartial/main" data-filterable-set=":codyze-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="name.html"><span><span>name</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1261324293%2FProperties%2F1606678074"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":codyze-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">var </span><a href="name.html">name</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></div><div class="brief "><p class="paragraph">The project name.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-634392132%2FProperties%2F1606678074" anchor-label="projectDir" id="-634392132%2FProperties%2F1606678074" data-filterable-set=":codyze-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":codyze-core:dokkaHtmlPartial/main" data-filterable-set=":codyze-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="project-dir.html"><span>project</span><wbr><span><span>Dir</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-634392132%2FProperties%2F1606678074"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":codyze-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">var </span><a href="project-dir.html">projectDir</a><span class="token operator">: </span><a href="https://docs.oracle.com/javase/8/docs/api/java/nio/file/Path.html">Path</a><span class="token operator">?</span></div><div class="brief "><p class="paragraph">The project directory, if it exists on file. Null if the project is an ad-hoc project.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1978795958%2FProperties%2F1606678074" anchor-label="queriesFolder" id="1978795958%2FProperties%2F1606678074" data-filterable-set=":codyze-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":codyze-core:dokkaHtmlPartial/main" data-filterable-set=":codyze-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="queries-folder.html"><span>queries</span><wbr><span><span>Folder</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1978795958%2FProperties%2F1606678074"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":codyze-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">var </span><a href="queries-folder.html">queriesFolder</a><span class="token operator">: </span><a href="https://docs.oracle.com/javase/8/docs/api/java/nio/file/Path.html">Path</a><span class="token operator">?</span></div><div class="brief "><p class="paragraph">The folder where the queries are located.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="2113541564%2FProperties%2F1606678074" anchor-label="securityGoalsFolder" id="2113541564%2FProperties%2F1606678074" data-filterable-set=":codyze-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":codyze-core:dokkaHtmlPartial/main" data-filterable-set=":codyze-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="security-goals-folder.html"><span>security</span><wbr><span>Goals</span><wbr><span><span>Folder</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="2113541564%2FProperties%2F1606678074"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":codyze-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">var </span><a href="security-goals-folder.html">securityGoalsFolder</a><span class="token operator">: </span><a href="https://docs.oracle.com/javase/8/docs/api/java/nio/file/Path.html">Path</a><span class="token operator">?</span></div><div class="brief "><p class="paragraph">The folder where the security goals are located.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-togglable="FUNCTION">
+        <h2 class="">Functions</h2>
+        <div class="table"><a data-name="1859956330%2FFunctions%2F1606678074" anchor-label="analyze" id="1859956330%2FFunctions%2F1606678074" data-filterable-set=":codyze-core:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":codyze-core:dokkaHtmlPartial/main" data-filterable-set=":codyze-core:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="analyze.html"><span><span>analyze</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1859956330%2FFunctions%2F1606678074"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":codyze-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="analyze.html"><span class="token function">analyze</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">postProcess<span class="token operator">: </span><span class="token punctuation">(</span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg/-translation-result/index.html">TranslationResult</a><span class="token punctuation">)</span><span class="token operator"> -&gt; </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-pair/index.html">Pair</a><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><span data-unresolved-link="io.github.detekt.sarif4k/ReportingDescriptor///PointingToDeclaration/">ReportingDescriptor</span><span class="token operator">&gt;</span><span class="token punctuation">, </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><span data-unresolved-link="io.github.detekt.sarif4k/Result///PointingToDeclaration/">Result</span><span class="token operator">&gt;</span><span class="token operator">&gt;</span><span class="token operator">?</span><span class="token operator"> = </span>null</span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../-analysis-result/index.html">AnalysisResult</a></div><div class="brief "><p class="paragraph">Analyzes the project and returns the result.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    <div class="footer">
+        <a href="#content" id="go-to-top-link" class="footer--button footer--button_go-to-top"></a>
+        <span>© 2025 Copyright</span>
+        <span class="pull-right">
+            <span>Generated by </span>
+            <a class="footer--link footer--link_external" href="https://github.com/Kotlin/dokka">
+                <span>dokka</span>
+            </a>
+        </span>
+    </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+

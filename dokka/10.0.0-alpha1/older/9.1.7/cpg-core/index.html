@@ -1,0 +1,599 @@
+<!doctype html>
+<html class="no-js">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
+    <title>cpg-core</title>
+<link href="../images/logo-icon.svg" rel="icon" type="image/svg">    <script>var pathToRoot = "../";</script>
+    <script>document.documentElement.classList.replace("no-js","js");</script>
+    <script>const storage = localStorage.getItem("dokka-dark-mode")
+    if (storage == null) {
+        const osDarkSchemePreferred = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+        if (osDarkSchemePreferred === true) {
+            document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+    } else {
+        const savedDarkMode = JSON.parse(storage)
+        if(savedDarkMode === true) {
+            document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+    }
+    </script>
+<script type="text/javascript" src="https://unpkg.com/kotlin-playground@1/dist/playground.min.js" async></script>
+<script type="text/javascript" src="../scripts/sourceset_dependencies.js" async></script>
+<link href="../styles/style.css" rel="Stylesheet">
+<link href="../styles/main.css" rel="Stylesheet">
+<link href="../styles/prism.css" rel="Stylesheet">
+<link href="../styles/logo-styles.css" rel="Stylesheet">
+<link href="../styles/font-jb-sans-auto.css" rel="Stylesheet">
+<link href="../ui-kit/ui-kit.min.css" rel="Stylesheet">
+<script type="text/javascript" src="../scripts/clipboard.js" async></script>
+<script type="text/javascript" src="../scripts/navigation-loader.js" async></script>
+<script type="text/javascript" src="../scripts/platform-content-handler.js" async></script>
+<script type="text/javascript" src="../scripts/main.js" defer></script>
+<script type="text/javascript" src="../scripts/prism.js" async></script>
+<script type="text/javascript" src="../ui-kit/ui-kit.min.js" defer></script>
+<script type="text/javascript" src="../scripts/symbol-parameters-wrapper_deferred.js" defer></script>
+<link href="../styles/multimodule.css" rel="Stylesheet"></head>
+<body>
+    <div class="root">
+    <nav class="navigation theme-dark" id="navigation-wrapper">
+<a class="library-name--link" href="../index.html">
+                    cpg
+            </a>        <button class="navigation-controls--btn navigation-controls--btn_toc ui-kit_mobile-only" id="toc-toggle" type="button">Toggle table of contents
+        </button>
+        <div class="navigation-controls--break ui-kit_mobile-only"></div>
+        <div class="library-version" id="library-version">
+<dokka-template-command data="{&quot;@class&quot;:&quot;org.jetbrains.dokka.base.templating.ReplaceVersionsCommand&quot;,&quot;location&quot;:&quot;index.html&quot;}"><div class="dropdown versions-dropdown" data-role="dropdown">
+  <div class="button button_dropdown versions-dropdown-button" role="combobox" data-role="dropdown-toggle" aria-controls="versions-listbox" aria-haspopup="listbox" aria-expanded="false" aria-label="Select version" tabindex="0">9.1.7</div>
+  <div class="dropdown--list dropdown--list_positioned_left versions-dropdown-data" role="listbox" data-role="dropdown-listbox" aria-label="Versions" id="versions-listbox">
+    <div class="dropdown--header" data-remove-style="true" style="display: none"><span>Select version</span><button class="button" data-role="dropdown-toggle" aria-label="Close versions selection"><i class="ui-kit-icon ui-kit-icon_cross"></i></button></div>
+    <div><a href="../../../cpg-core/index.html" class="dropdown--option dropdown--option-link" style="display: block; padding: 5px; color: #fff" data-remove-style="true" role="option">10.0.0-alpha1</a></div>
+    <div><a href="../../9.3.0/cpg-core/index.html" class="dropdown--option dropdown--option-link" style="display: block; padding: 5px; color: #fff" data-remove-style="true" role="option">9.3.0</a></div>
+    <div><a href="../../9.2.2/cpg-core/index.html" class="dropdown--option dropdown--option-link" style="display: block; padding: 5px; color: #fff" data-remove-style="true" role="option">9.2.2</a></div>
+    <div><a href="../../9.2.1/cpg-core/index.html" class="dropdown--option dropdown--option-link" style="display: block; padding: 5px; color: #fff" data-remove-style="true" role="option">9.2.1</a></div>
+    <div><a href="../../9.2.0/cpg-core/index.html" class="dropdown--option dropdown--option-link" style="display: block; padding: 5px; color: #fff" data-remove-style="true" role="option">9.2.0</a></div>
+    <div><a href="index.html" class="dropdown--option dropdown--option-link" style="display: block; padding: 5px; color: #fff" data-remove-style="true" role="option">9.1.7</a></div>
+    <div><a href="../../main-SNAPSHOT/cpg-core/index.html" class="dropdown--option dropdown--option-link" style="display: block; padding: 5px; color: #fff" data-remove-style="true" role="option">main-SNAPSHOT</a></div>
+  </div>
+  <div class="dropdown--overlay"></div>
+</div>
+</dokka-template-command>        </div>
+        <div class="navigation-controls">
+        <div class="filter-section filter-section_loading" id="filter-section">
+                <button class="platform-tag platform-selector jvm-like" data-active="" data-filter=":cpg-core:dokkaHtmlPartial/main">jvm</button>
+            <div class="dropdown filter-section--dropdown" data-role="dropdown" id="filter-section-dropdown">
+                <button class="button button_dropdown filter-section--dropdown-toggle" role="combobox" data-role="dropdown-toggle" aria-controls="platform-tags-listbox" aria-haspopup="listbox" aria-expanded="false" aria-label="Toggle source sets"></button>
+                <ul role="listbox" id="platform-tags-listbox" class="dropdown--list" data-role="dropdown-listbox">
+                    <div class="dropdown--header"><span>Platform filter</span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close platform filter">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                        <li role="option" class="dropdown--option platform-selector-option jvm-like" tabindex="0">
+                            <label class="checkbox">
+                                <input type="checkbox" class="checkbox--input" id=":cpg-core:dokkaHtmlPartial/main" data-filter=":cpg-core:dokkaHtmlPartial/main">
+                                <span class="checkbox--icon"></span>
+                                jvm
+                            </label>
+                        </li>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
+        </div>
+            <button class="navigation-controls--btn navigation-controls--btn_theme" id="theme-toggle-button" type="button">Switch theme
+            </button>
+            <div class="navigation-controls--btn navigation-controls--btn_search" id="searchBar" role="button">Search in
+                API
+            </div>
+        </div>
+    </nav>
+        <div id="container">
+            <div class="sidebar" id="leftColumn">
+                <div class="dropdown theme-dark_mobile" data-role="dropdown" id="toc-dropdown">
+                    <ul role="listbox" id="toc-listbox" class="dropdown--list dropdown--list_toc-list" data-role="dropdown-listbox">
+                        <div class="dropdown--header">
+                            <span>
+                                    cpg
+                            </span>
+                            <button class="button" data-role="dropdown-toggle" aria-label="Close table of contents">
+                                <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                            </button>
+                        </div>
+                        <div class="sidebar--inner" id="sideMenu"></div>
+                    </ul>
+                    <div class="dropdown--overlay"></div>
+                </div>
+            </div>
+            <div id="main">
+<div class="main-content" id="content" pageids="cpg-core::////PointingToDeclaration//1556141526">
+  <div class="breadcrumbs"></div>
+  <div class="cover ">
+    <h1 class="cover"><span><span>cpg-core</span></span></h1>
+  </div>
+  <h2 class="">Packages</h2>
+  <div class="table"><a data-name="-1025258348%2FPackages%2F1556141526" anchor-label="de.fraunhofer.aisec.cpg" id="-1025258348%2FPackages%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+    <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+      <div>
+        <div class="main-subrow ">
+          <div class=""><span class="inline-flex">
+              <div><a href="de.fraunhofer.aisec.cpg/index.html">de.fraunhofer.aisec.cpg</a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1025258348%2FPackages%2F1556141526"></span>
+                <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+              </span></span></div>
+          <div class="pull-right">
+            <div class="platform-tags no-gutters">
+              <div class="platform-tag jvm-like">jvm</div>
+            </div>
+          </div>
+        </div>
+        <div></div>
+      </div>
+    </div>
+<a data-name="401093767%2FPackages%2F1556141526" anchor-label="de.fraunhofer.aisec.cpg.frontends" id="401093767%2FPackages%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+    <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+      <div>
+        <div class="main-subrow ">
+          <div class=""><span class="inline-flex">
+              <div><a href="de.fraunhofer.aisec.cpg.frontends/index.html">de.fraunhofer.aisec.cpg.frontends</a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="401093767%2FPackages%2F1556141526"></span>
+                <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+              </span></span></div>
+          <div class="pull-right">
+            <div class="platform-tags no-gutters">
+              <div class="platform-tag jvm-like">jvm</div>
+            </div>
+          </div>
+        </div>
+        <div></div>
+      </div>
+    </div>
+<a data-name="-916007692%2FPackages%2F1556141526" anchor-label="de.fraunhofer.aisec.cpg.graph" id="-916007692%2FPackages%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+    <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+      <div>
+        <div class="main-subrow ">
+          <div class=""><span class="inline-flex">
+              <div><a href="de.fraunhofer.aisec.cpg.graph/index.html">de.fraunhofer.aisec.cpg.graph</a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-916007692%2FPackages%2F1556141526"></span>
+                <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+              </span></span></div>
+          <div class="pull-right">
+            <div class="platform-tags no-gutters">
+              <div class="platform-tag jvm-like">jvm</div>
+            </div>
+          </div>
+        </div>
+        <div></div>
+      </div>
+    </div>
+<a data-name="950809697%2FPackages%2F1556141526" anchor-label="de.fraunhofer.aisec.cpg.graph.builder" id="950809697%2FPackages%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+    <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+      <div>
+        <div class="main-subrow ">
+          <div class=""><span class="inline-flex">
+              <div><a href="de.fraunhofer.aisec.cpg.graph.builder/index.html">de.fraunhofer.aisec.cpg.graph.builder</a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="950809697%2FPackages%2F1556141526"></span>
+                <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+              </span></span></div>
+          <div class="pull-right">
+            <div class="platform-tags no-gutters">
+              <div class="platform-tag jvm-like">jvm</div>
+            </div>
+          </div>
+        </div>
+        <div></div>
+      </div>
+    </div>
+<a data-name="888138935%2FPackages%2F1556141526" anchor-label="de.fraunhofer.aisec.cpg.graph.declarations" id="888138935%2FPackages%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+    <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+      <div>
+        <div class="main-subrow ">
+          <div class=""><span class="inline-flex">
+              <div><a href="de.fraunhofer.aisec.cpg.graph.declarations/index.html">de.fraunhofer.aisec.cpg.graph.declarations</a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="888138935%2FPackages%2F1556141526"></span>
+                <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+              </span></span></div>
+          <div class="pull-right">
+            <div class="platform-tags no-gutters">
+              <div class="platform-tag jvm-like">jvm</div>
+            </div>
+          </div>
+        </div>
+        <div></div>
+      </div>
+    </div>
+<a data-name="-1946753956%2FPackages%2F1556141526" anchor-label="de.fraunhofer.aisec.cpg.graph.edges" id="-1946753956%2FPackages%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+    <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+      <div>
+        <div class="main-subrow ">
+          <div class=""><span class="inline-flex">
+              <div><a href="de.fraunhofer.aisec.cpg.graph.edges/index.html">de.fraunhofer.aisec.cpg.graph.edges</a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1946753956%2FPackages%2F1556141526"></span>
+                <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+              </span></span></div>
+          <div class="pull-right">
+            <div class="platform-tags no-gutters">
+              <div class="platform-tag jvm-like">jvm</div>
+            </div>
+          </div>
+        </div>
+        <div></div>
+      </div>
+    </div>
+<a data-name="-1652626960%2FPackages%2F1556141526" anchor-label="de.fraunhofer.aisec.cpg.graph.edges.ast" id="-1652626960%2FPackages%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+    <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+      <div>
+        <div class="main-subrow ">
+          <div class=""><span class="inline-flex">
+              <div><a href="de.fraunhofer.aisec.cpg.graph.edges.ast/index.html">de.fraunhofer.aisec.cpg.graph.edges.ast</a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1652626960%2FPackages%2F1556141526"></span>
+                <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+              </span></span></div>
+          <div class="pull-right">
+            <div class="platform-tags no-gutters">
+              <div class="platform-tag jvm-like">jvm</div>
+            </div>
+          </div>
+        </div>
+        <div></div>
+      </div>
+    </div>
+<a data-name="-280869053%2FPackages%2F1556141526" anchor-label="de.fraunhofer.aisec.cpg.graph.edges.collections" id="-280869053%2FPackages%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+    <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+      <div>
+        <div class="main-subrow ">
+          <div class=""><span class="inline-flex">
+              <div><a href="de.fraunhofer.aisec.cpg.graph.edges.collections/index.html">de.fraunhofer.aisec.cpg.graph.edges.collections</a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-280869053%2FPackages%2F1556141526"></span>
+                <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+              </span></span></div>
+          <div class="pull-right">
+            <div class="platform-tags no-gutters">
+              <div class="platform-tag jvm-like">jvm</div>
+            </div>
+          </div>
+        </div>
+        <div></div>
+      </div>
+    </div>
+<a data-name="1896321971%2FPackages%2F1556141526" anchor-label="de.fraunhofer.aisec.cpg.graph.edges.flows" id="1896321971%2FPackages%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+    <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+      <div>
+        <div class="main-subrow ">
+          <div class=""><span class="inline-flex">
+              <div><a href="de.fraunhofer.aisec.cpg.graph.edges.flows/index.html">de.fraunhofer.aisec.cpg.graph.edges.flows</a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1896321971%2FPackages%2F1556141526"></span>
+                <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+              </span></span></div>
+          <div class="pull-right">
+            <div class="platform-tags no-gutters">
+              <div class="platform-tag jvm-like">jvm</div>
+            </div>
+          </div>
+        </div>
+        <div></div>
+      </div>
+    </div>
+<a data-name="1586137150%2FPackages%2F1556141526" anchor-label="de.fraunhofer.aisec.cpg.graph.edges.overlay" id="1586137150%2FPackages%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+    <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+      <div>
+        <div class="main-subrow ">
+          <div class=""><span class="inline-flex">
+              <div><a href="de.fraunhofer.aisec.cpg.graph.edges.overlay/index.html">de.fraunhofer.aisec.cpg.graph.edges.overlay</a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1586137150%2FPackages%2F1556141526"></span>
+                <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+              </span></span></div>
+          <div class="pull-right">
+            <div class="platform-tags no-gutters">
+              <div class="platform-tag jvm-like">jvm</div>
+            </div>
+          </div>
+        </div>
+        <div></div>
+      </div>
+    </div>
+<a data-name="1217006645%2FPackages%2F1556141526" anchor-label="de.fraunhofer.aisec.cpg.graph.edges.scopes" id="1217006645%2FPackages%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+    <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+      <div>
+        <div class="main-subrow ">
+          <div class=""><span class="inline-flex">
+              <div><a href="de.fraunhofer.aisec.cpg.graph.edges.scopes/index.html">de.fraunhofer.aisec.cpg.graph.edges.scopes</a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1217006645%2FPackages%2F1556141526"></span>
+                <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+              </span></span></div>
+          <div class="pull-right">
+            <div class="platform-tags no-gutters">
+              <div class="platform-tag jvm-like">jvm</div>
+            </div>
+          </div>
+        </div>
+        <div></div>
+      </div>
+    </div>
+<a data-name="-1476476771%2FPackages%2F1556141526" anchor-label="de.fraunhofer.aisec.cpg.graph.scopes" id="-1476476771%2FPackages%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+    <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+      <div>
+        <div class="main-subrow ">
+          <div class=""><span class="inline-flex">
+              <div><a href="de.fraunhofer.aisec.cpg.graph.scopes/index.html">de.fraunhofer.aisec.cpg.graph.scopes</a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1476476771%2FPackages%2F1556141526"></span>
+                <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+              </span></span></div>
+          <div class="pull-right">
+            <div class="platform-tags no-gutters">
+              <div class="platform-tag jvm-like">jvm</div>
+            </div>
+          </div>
+        </div>
+        <div></div>
+      </div>
+    </div>
+<a data-name="1778806434%2FPackages%2F1556141526" anchor-label="de.fraunhofer.aisec.cpg.graph.statements" id="1778806434%2FPackages%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+    <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+      <div>
+        <div class="main-subrow ">
+          <div class=""><span class="inline-flex">
+              <div><a href="de.fraunhofer.aisec.cpg.graph.statements/index.html">de.fraunhofer.aisec.cpg.graph.statements</a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1778806434%2FPackages%2F1556141526"></span>
+                <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+              </span></span></div>
+          <div class="pull-right">
+            <div class="platform-tags no-gutters">
+              <div class="platform-tag jvm-like">jvm</div>
+            </div>
+          </div>
+        </div>
+        <div></div>
+      </div>
+    </div>
+<a data-name="-1108604849%2FPackages%2F1556141526" anchor-label="de.fraunhofer.aisec.cpg.graph.statements.expressions" id="-1108604849%2FPackages%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+    <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+      <div>
+        <div class="main-subrow ">
+          <div class=""><span class="inline-flex">
+              <div><a href="de.fraunhofer.aisec.cpg.graph.statements.expressions/index.html">de.fraunhofer.aisec.cpg.graph.statements.expressions</a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1108604849%2FPackages%2F1556141526"></span>
+                <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+              </span></span></div>
+          <div class="pull-right">
+            <div class="platform-tags no-gutters">
+              <div class="platform-tag jvm-like">jvm</div>
+            </div>
+          </div>
+        </div>
+        <div></div>
+      </div>
+    </div>
+<a data-name="1200864447%2FPackages%2F1556141526" anchor-label="de.fraunhofer.aisec.cpg.graph.types" id="1200864447%2FPackages%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+    <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+      <div>
+        <div class="main-subrow ">
+          <div class=""><span class="inline-flex">
+              <div><a href="de.fraunhofer.aisec.cpg.graph.types/index.html">de.fraunhofer.aisec.cpg.graph.types</a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1200864447%2FPackages%2F1556141526"></span>
+                <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+              </span></span></div>
+          <div class="pull-right">
+            <div class="platform-tags no-gutters">
+              <div class="platform-tag jvm-like">jvm</div>
+            </div>
+          </div>
+        </div>
+        <div></div>
+      </div>
+    </div>
+<a data-name="-155364757%2FPackages%2F1556141526" anchor-label="de.fraunhofer.aisec.cpg.helpers" id="-155364757%2FPackages%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+    <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+      <div>
+        <div class="main-subrow ">
+          <div class=""><span class="inline-flex">
+              <div><a href="de.fraunhofer.aisec.cpg.helpers/index.html">de.fraunhofer.aisec.cpg.helpers</a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-155364757%2FPackages%2F1556141526"></span>
+                <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+              </span></span></div>
+          <div class="pull-right">
+            <div class="platform-tags no-gutters">
+              <div class="platform-tag jvm-like">jvm</div>
+            </div>
+          </div>
+        </div>
+        <div></div>
+      </div>
+    </div>
+<a data-name="-532248671%2FPackages%2F1556141526" anchor-label="de.fraunhofer.aisec.cpg.helpers.annotations" id="-532248671%2FPackages%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+    <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+      <div>
+        <div class="main-subrow ">
+          <div class=""><span class="inline-flex">
+              <div><a href="de.fraunhofer.aisec.cpg.helpers.annotations/index.html">de.fraunhofer.aisec.cpg.helpers.annotations</a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-532248671%2FPackages%2F1556141526"></span>
+                <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+              </span></span></div>
+          <div class="pull-right">
+            <div class="platform-tags no-gutters">
+              <div class="platform-tag jvm-like">jvm</div>
+            </div>
+          </div>
+        </div>
+        <div></div>
+      </div>
+    </div>
+<a data-name="2019843370%2FPackages%2F1556141526" anchor-label="de.fraunhofer.aisec.cpg.helpers.functional" id="2019843370%2FPackages%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+    <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+      <div>
+        <div class="main-subrow ">
+          <div class=""><span class="inline-flex">
+              <div><a href="de.fraunhofer.aisec.cpg.helpers.functional/index.html">de.fraunhofer.aisec.cpg.helpers.functional</a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="2019843370%2FPackages%2F1556141526"></span>
+                <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+              </span></span></div>
+          <div class="pull-right">
+            <div class="platform-tags no-gutters">
+              <div class="platform-tag jvm-like">jvm</div>
+            </div>
+          </div>
+        </div>
+        <div></div>
+      </div>
+    </div>
+<a data-name="-834664821%2FPackages%2F1556141526" anchor-label="de.fraunhofer.aisec.cpg.helpers.neo4j" id="-834664821%2FPackages%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+    <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+      <div>
+        <div class="main-subrow ">
+          <div class=""><span class="inline-flex">
+              <div><a href="de.fraunhofer.aisec.cpg.helpers.neo4j/index.html">de.fraunhofer.aisec.cpg.helpers.neo4j</a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-834664821%2FPackages%2F1556141526"></span>
+                <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+              </span></span></div>
+          <div class="pull-right">
+            <div class="platform-tags no-gutters">
+              <div class="platform-tag jvm-like">jvm</div>
+            </div>
+          </div>
+        </div>
+        <div></div>
+      </div>
+    </div>
+<a data-name="910819549%2FPackages%2F1556141526" anchor-label="de.fraunhofer.aisec.cpg.passes" id="910819549%2FPackages%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+    <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+      <div>
+        <div class="main-subrow ">
+          <div class=""><span class="inline-flex">
+              <div><a href="de.fraunhofer.aisec.cpg.passes/index.html">de.fraunhofer.aisec.cpg.passes</a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="910819549%2FPackages%2F1556141526"></span>
+                <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+              </span></span></div>
+          <div class="pull-right">
+            <div class="platform-tags no-gutters">
+              <div class="platform-tag jvm-like">jvm</div>
+            </div>
+          </div>
+        </div>
+        <div></div>
+      </div>
+    </div>
+<a data-name="-1866677467%2FPackages%2F1556141526" anchor-label="de.fraunhofer.aisec.cpg.passes.configuration" id="-1866677467%2FPackages%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+    <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+      <div>
+        <div class="main-subrow ">
+          <div class=""><span class="inline-flex">
+              <div><a href="de.fraunhofer.aisec.cpg.passes.configuration/index.html">de.fraunhofer.aisec.cpg.passes.configuration</a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1866677467%2FPackages%2F1556141526"></span>
+                <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+              </span></span></div>
+          <div class="pull-right">
+            <div class="platform-tags no-gutters">
+              <div class="platform-tag jvm-like">jvm</div>
+            </div>
+          </div>
+        </div>
+        <div></div>
+      </div>
+    </div>
+<a data-name="-1173998840%2FPackages%2F1556141526" anchor-label="de.fraunhofer.aisec.cpg.passes.inference" id="-1173998840%2FPackages%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+    <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+      <div>
+        <div class="main-subrow ">
+          <div class=""><span class="inline-flex">
+              <div><a href="de.fraunhofer.aisec.cpg.passes.inference/index.html">de.fraunhofer.aisec.cpg.passes.inference</a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1173998840%2FPackages%2F1556141526"></span>
+                <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+              </span></span></div>
+          <div class="pull-right">
+            <div class="platform-tags no-gutters">
+              <div class="platform-tag jvm-like">jvm</div>
+            </div>
+          </div>
+        </div>
+        <div></div>
+      </div>
+    </div>
+<a data-name="1806901253%2FPackages%2F1556141526" anchor-label="de.fraunhofer.aisec.cpg.persistence" id="1806901253%2FPackages%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+    <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+      <div>
+        <div class="main-subrow ">
+          <div class=""><span class="inline-flex">
+              <div><a href="de.fraunhofer.aisec.cpg.persistence/index.html">de.fraunhofer.aisec.cpg.persistence</a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1806901253%2FPackages%2F1556141526"></span>
+                <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+              </span></span></div>
+          <div class="pull-right">
+            <div class="platform-tags no-gutters">
+              <div class="platform-tag jvm-like">jvm</div>
+            </div>
+          </div>
+        </div>
+        <div></div>
+      </div>
+    </div>
+<a data-name="1446916209%2FPackages%2F1556141526" anchor-label="de.fraunhofer.aisec.cpg.processing" id="1446916209%2FPackages%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+    <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+      <div>
+        <div class="main-subrow ">
+          <div class=""><span class="inline-flex">
+              <div><a href="de.fraunhofer.aisec.cpg.processing/index.html">de.fraunhofer.aisec.cpg.processing</a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1446916209%2FPackages%2F1556141526"></span>
+                <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+              </span></span></div>
+          <div class="pull-right">
+            <div class="platform-tags no-gutters">
+              <div class="platform-tag jvm-like">jvm</div>
+            </div>
+          </div>
+        </div>
+        <div></div>
+      </div>
+    </div>
+<a data-name="1788473492%2FPackages%2F1556141526" anchor-label="de.fraunhofer.aisec.cpg.processing.strategy" id="1788473492%2FPackages%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+    <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+      <div>
+        <div class="main-subrow ">
+          <div class=""><span class="inline-flex">
+              <div><a href="de.fraunhofer.aisec.cpg.processing.strategy/index.html">de.fraunhofer.aisec.cpg.processing.strategy</a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1788473492%2FPackages%2F1556141526"></span>
+                <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+              </span></span></div>
+          <div class="pull-right">
+            <div class="platform-tags no-gutters">
+              <div class="platform-tag jvm-like">jvm</div>
+            </div>
+          </div>
+        </div>
+        <div></div>
+      </div>
+    </div>
+<a data-name="1858972135%2FPackages%2F1556141526" anchor-label="de.fraunhofer.aisec.cpg.sarif" id="1858972135%2FPackages%2F1556141526" data-filterable-set=":cpg-core:dokkaHtmlPartial/main"></a>
+    <div class="table-row" data-filterable-current=":cpg-core:dokkaHtmlPartial/main" data-filterable-set=":cpg-core:dokkaHtmlPartial/main">
+      <div>
+        <div class="main-subrow ">
+          <div class=""><span class="inline-flex">
+              <div><a href="de.fraunhofer.aisec.cpg.sarif/index.html">de.fraunhofer.aisec.cpg.sarif</a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1858972135%2FPackages%2F1556141526"></span>
+                <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+              </span></span></div>
+          <div class="pull-right">
+            <div class="platform-tags no-gutters">
+              <div class="platform-tag jvm-like">jvm</div>
+            </div>
+          </div>
+        </div>
+        <div></div>
+      </div>
+    </div>
+  </div>
+</div>
+    <div class="footer">
+        <a href="#content" id="go-to-top-link" class="footer--button footer--button_go-to-top"></a>
+        <span>© 2025 Copyright</span>
+        <span class="pull-right">
+            <span>Generated by </span>
+            <a class="footer--link footer--link_external" href="https://github.com/Kotlin/dokka">
+                <span>dokka</span>
+            </a>
+        </span>
+    </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+
