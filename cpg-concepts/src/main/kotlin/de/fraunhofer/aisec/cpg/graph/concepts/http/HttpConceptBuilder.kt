@@ -102,10 +102,12 @@ fun MetadataProvider.newHttpEndpoint(
  * Creates a new [HttpRequest] operation for the given [HttpEndpoint].
  *
  * @param underlyingNode The underlying [Node] representing the request.
+ * @param concept The [HttpClient] concept this operation belongs to.
  * @return The created [HttpRequest] concept.
  */
-fun HttpClient.newHttpRequest(
+fun MetadataProvider.newHttpRequest(
     underlyingNode: Node,
+    concept: HttpClient,
     url: String,
     arguments: List<Node>,
     httpMethod: HttpMethod,
@@ -121,16 +123,17 @@ fun HttpClient.newHttpRequest(
             )
         },
         underlyingNode = underlyingNode,
-        concept = this,
+        concept = concept,
     )
 
 /**
  * Creates a new [RegisterHttpEndpoint] operation for the given [HttpEndpoint].
  *
  * @param underlyingNode The underlying [Node] registering the endpoint method.
+ * @param concept The [HttpEndpoint] concept this operation belongs to.
  * @return The created [RegisterHttpEndpoint] concept.
  */
-fun HttpEndpoint.newHttpRegisterHttpEndpoint(underlyingNode: Node) =
+fun MetadataProvider.newHttpRegisterHttpEndpoint(underlyingNode: Node, concept: HttpEndpoint) =
     newOperation(
         { underlyingNode, concept ->
             RegisterHttpEndpoint(
@@ -140,5 +143,5 @@ fun HttpEndpoint.newHttpRegisterHttpEndpoint(underlyingNode: Node) =
             )
         },
         underlyingNode = underlyingNode,
-        concept = this,
+        concept = concept,
     )
