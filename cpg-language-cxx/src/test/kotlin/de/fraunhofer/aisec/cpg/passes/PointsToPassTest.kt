@@ -1273,6 +1273,10 @@ class PointsToPassTest {
             tu.allChildren<CallExpression> { it.location?.region?.startLine == 172 }.first()
         assertNotNull(ceLine172)
 
+        val ceLine177 =
+            tu.allChildren<CallExpression> { it.location?.region?.startLine == 177 }.first()
+        assertNotNull(ceLine177)
+
         val ceLine201 =
             tu.allChildren<CallExpression> { it.location?.region?.startLine == 201 }.first()
         assertNotNull(ceLine201)
@@ -1326,33 +1330,43 @@ class PointsToPassTest {
         // Line 172
         assertEquals(1, local_28Line172.fullMemoryValues.size)
         assertEquals(ceLine172, local_28Line172.fullMemoryValues.firstOrNull())
+        assertEquals(ceLine172, local_28Line172.prevDFG.singleOrNull())
 
         // Line 179
         assertEquals(2, local_28Line179.fullMemoryValues.size)
         assertTrue(local_28Line179.fullMemoryValues.contains(literal0Line167))
         assertTrue(local_28Line179.fullMemoryValues.contains(ceLine172))
+        assertEquals(setOf<Node>(local_28Line167, local_28Line172), local_28Line179.prevDFG)
 
         assertEquals(2, local_28DerefLine179.fullMemoryValues.size)
         assertTrue(local_28DerefLine179.fullMemoryValues.contains(literal0Line177))
         assertEquals(
             1,
-            local_28DerefLine179.prevDFG
+            local_28DerefLine179.fullMemoryValues
                 .filterIsInstance<UnknownMemoryValue>()
                 .filter { it.name.localName == "0" }
                 .size,
         )
-        assertTrue(local_28DerefLine179.fullMemoryValues.contains(literal0Line177))
+
+        assertEquals(3, local_28DerefLine179.prevDFG.size)
+        assertEquals(ceLine177, local_28DerefLine179.prevFullDFG.first { it is CallExpression })
+        assertLocalName(
+            "0.derefvalue",
+            local_28DerefLine179.prevFullDFG.first { it is UnknownMemoryValue },
+        )
         assertEquals(
-            2,
-            local_28DerefLine179.fullMemoryValues.size,
-        ) // TODO: We used memoryAddresses here. Why?
-        assertTrue(local_28DerefLine179.fullMemoryValues.contains(literal0Line167))
-        assertTrue(local_28DerefLine179.fullMemoryValues.contains(ceLine172))
+            local_28DerefLine179.input,
+            local_28DerefLine179.prevDFGEdges
+                .firstOrNull { it.granularity !is FullDataflowGranularity }
+                ?.start,
+        )
 
         // Line 180
-        assertEquals(2, local_28Line180.fullMemoryValues.size)
-        assertTrue(local_28Line180.fullMemoryValues.contains(literal0Line167))
-        assertTrue(local_28Line180.fullMemoryValues.contains(ceLine172))
+        assertEquals(
+            mutableSetOf<Node>(literal0Line167, ceLine172),
+            local_28Line180.fullMemoryValues,
+        )
+        assertEquals(mutableSetOf<Node>(local_28Line167, local_28Line172), local_28Line180.prevDFG)
 
         // Line 181
         assertEquals(2, local_28DerefLine181.fullMemoryValues.size)

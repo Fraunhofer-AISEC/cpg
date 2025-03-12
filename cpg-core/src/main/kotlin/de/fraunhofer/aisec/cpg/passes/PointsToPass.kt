@@ -40,7 +40,6 @@ import de.fraunhofer.aisec.cpg.helpers.functional.*
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
-import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.Pair
 import kotlin.collections.filter
@@ -933,11 +932,25 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             // If the values of the destination are the same as the destination (e.g. if dst is a
             // CallExpression), we also add destinations to update the generalState, otherwise, the
             // destinationAddresses for the DeclarationState are enough
-            val dstValues = doubleState.getValues(dst).mapTo(IdentitySet()) { it.first }
+            //            val dstValues = doubleState.getValues(dst).mapTo(IdentitySet()) { it.first
+            // }
             doubleState =
-                if (dstValues.all { it == dst })
-                    doubleState.updateValues(lattice, values, dstValues, identitySetOf(dst))
-                else doubleState.updateValues(lattice, values, identitySetOf(), identitySetOf(dst))
+                /*                if (dstValues.all { it == dst })
+                    doubleState.updateValues(
+                        lattice,
+                        values,
+                        dstValues,
+                        identitySetOf(dst ),
+                        identitySetOf(currentNode),
+                    )
+                else*/
+                doubleState.updateValues(
+                    lattice,
+                    values,
+                    identitySetOf(),
+                    identitySetOf(dst),
+                    identitySetOf(currentNode),
+                )
 
             // Add the callingContextOut to the edgePropertiesMap and check if we also need the
             // shortFS flag
@@ -1028,7 +1041,13 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             val destinationsAddresses =
                 destinations.flatMap { doubleState.getAddresses(it) }.toIdentitySet()
             doubleState =
-                doubleState.updateValues(lattice, sources, destinations, destinationsAddresses)
+                doubleState.updateValues(
+                    lattice,
+                    sources,
+                    destinations,
+                    destinationsAddresses,
+                    destinations,
+                )
         }
 
         return doubleState
@@ -1421,6 +1440,31 @@ fun PointsToStateElement.getLastWrites(node: Node): IdentitySet<Pair<Node, Set<A
                 Pair<Node, Set<Any>>(it, setOf())
             } ?: identitySetOf(Pair(node, setOf()))
         }
+        is PointerDereference -> {
+            val ret = identitySetOf<Pair<Node, Set<Any>>>()
+            this.getAddresses(node).forEach { addr ->
+                val lastWrite = this.declarationsState[addr]?.third
+                // Usually, we should have a lastwrite, so we take that
+                if (lastWrite?.isNotEmpty() == true)
+                    lastWrite.mapTo(IdentitySet()) {
+                        ret.add(Pair(it.first, setOf<Any>(it.second)))
+                    }
+                // However, there might be cases were we don't yet have written to the dereferenced
+                // value, in this case we return an UnknownMemoryValue
+                else {
+                    val newName = Name(nodeNameToString(addr).localName + ".derefvalue")
+                    ret.add(
+                        Pair(
+                            nodesCreatingUnknownValues.computeIfAbsent(Pair(addr, newName)) {
+                                UnknownMemoryValue(newName)
+                            },
+                            setOf(),
+                        )
+                    )
+                }
+            }
+            return ret
+        }
         else ->
             // For the rest, we read the declarationState to determine when the memoryAddress of the
             // node was last written to
@@ -1677,6 +1721,7 @@ fun PointsToStateElement.updateValues(
     sources: IdentitySet<Pair<Node, Boolean>>,
     destinations: IdentitySet<Node>,
     destinationAddresses: IdentitySet<Node>,
+    lastWrites: IdentitySet<Node>,
 ): PointsToStateElement {
     val newDeclState = this.declarationsState.duplicate()
     val newGenState = this.generalState.duplicate()
@@ -1703,7 +1748,7 @@ fun PointsToStateElement.updateValues(
                 }
             val newPrevDFG =
                 // TODO: To we also need to fetch some properties here?
-                destinations.mapTo(IdentitySet()) { Pair(it, false) }
+                lastWrites.mapTo(IdentitySet()) { Pair(it, false) }
             newDeclState[destAddr] =
                 DeclarationStateEntryElement(
                     PowersetLattice.Element(currentEntries),
