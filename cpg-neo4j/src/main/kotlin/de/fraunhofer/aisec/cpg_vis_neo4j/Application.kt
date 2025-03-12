@@ -278,7 +278,6 @@ class Application : Callable<Int> {
             EvaluationOrderGraphPass::class,
             TypeResolver::class,
             ControlFlowSensitiveDFGPass::class,
-            FilenameMapper::class,
             ControlDependenceGraphPass::class,
             ProgramDependenceGraphPass::class,
         )

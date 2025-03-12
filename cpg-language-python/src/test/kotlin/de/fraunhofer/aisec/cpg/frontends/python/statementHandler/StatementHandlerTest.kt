@@ -105,18 +105,18 @@ class StatementHandlerTest : BaseTest() {
         // All entries to the else block must come from the try block
         assertTrue(
             Util.eogConnect(
-                n = tryAll.elseBlock,
-                en = Util.Edge.ENTRIES,
-                refs = listOf(tryAll.tryBlock),
+                startNode = tryAll.elseBlock,
+                edgeDirection = Util.Edge.ENTRIES,
+                endNodes = listOf(tryAll.tryBlock),
             )
         )
 
         // All exits from the else block must go to the entries of the non-empty finals block
         assertTrue(
             Util.eogConnect(
-                n = tryAll.elseBlock,
-                en = Util.Edge.EXITS,
-                refs = listOf(tryAll.finallyBlock),
+                startNode = tryAll.elseBlock,
+                edgeDirection = Util.Edge.EXITS,
+                endNodes = listOf(tryAll.finallyBlock),
             )
         )
     }
@@ -296,21 +296,27 @@ class StatementHandlerTest : BaseTest() {
         val result = analyze(listOf(file), topLevel, true) { it.registerLanguage<PythonLanguage>() }
         assertNotNull(result)
 
-        val block = result.statements.first()
+        val block = result.statements.firstOrNull()
         assertNotNull(block)
-        val withStatement = result.trys.first()
+        val withStatement = result.trys.firstOrNull()
         assertNotNull(withStatement)
-        val printStatement = result.calls("print").first()
+        val printStatement = result.calls("print").firstOrNull()
         assertNotNull(printStatement)
         assertTrue(
             Util.eogConnect(
-                q = Util.Quantifier.ANY,
-                n = withStatement,
-                en = Util.Edge.EXITS,
-                cr = Util.Connect.NODE,
-                refs = listOf(block),
+                quantifier = Util.Quantifier.ANY,
+                startNode = withStatement,
+                edgeDirection = Util.Edge.EXITS,
+                connectEnd = Util.Connect.NODE,
+                endNodes = listOf(block),
             )
         )
-        assertTrue(Util.eogConnect(n = block, en = Util.Edge.EXITS, refs = listOf(printStatement)))
+        assertTrue(
+            Util.eogConnect(
+                startNode = block,
+                edgeDirection = Util.Edge.EXITS,
+                endNodes = listOf(printStatement),
+            )
+        )
     }
 }
