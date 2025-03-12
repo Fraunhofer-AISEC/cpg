@@ -53,11 +53,13 @@ fun Node.printDFG2(
     selector: (Node) -> Boolean = { true },
     vararg strategies: (Node) -> Iterator<Dataflow> =
         arrayOf<(Node) -> Iterator<Dataflow>>(
+            Strategy::DFG_EDGES_FORWARD,
+            Strategy::DFG_EDGES_BACKWARD,
             Strategy::MEMORY_VALUES_FORWARD,
             Strategy::MEMORY_VALUES_BACKWARD,
         ),
 ): String {
-    return this.printGraph(maxConnections = maxConnections, selector, *strategies)
+    return this.printGraphNew(maxConnections = maxConnections, selector, *strategies)
 }
 
 /** Utility function to print the DFG using [printGraph]. */
@@ -203,27 +205,45 @@ fun <EdgeType : Edge<out Node>> Node.printGraphNew(
         // Add it to the seen-list
         alreadySeen += edge
 
-        val start = edge.start
-        val end = edge.end
-        builder.append(
-            "${start.hashCode()}[\"${start.nodeLabel}\"]-->|${edge.label()}|${end.hashCode()}[\"${end.nodeLabel}\"]\n"
-        )
-        conns++
+        // val start = edge.start
+        // val end = edge.end
+        val isForward = endNode == edge.end
+        if (
+            ((isForward && (selector(endNode) || endNode == this)) ||
+                (!isForward && (selector(startNode) || startNode == this))) && startNode != endNode
+        ) {
+            builder.append(
+                "${startNode.hashCode()}[\"${startNode.nodeLabel}\"]-->|${edge.label()}|${endNode.hashCode()}[\"${endNode.nodeLabel}\"]\n"
+            )
+            conns++
+        }
 
         // Add start and edges to the work-list.
         strategies.forEach { strategy ->
             if (strategy(edge.start).asSequence().firstOrNull()?.end == edge.end) {
                 // Is forward strategy
                 worklist +=
-                    strategy(end)
+                    strategy(edge.end)
                         .asSequence()
                         .sortedBy { it.end.name }
-                        .map { Triple(it, it.start, it.end) }
+                        .map { Triple(it, if (selector(it.start)) it.start else startNode, it.end) }
                 worklist +=
-                    strategy(start)
+                    strategy(edge.start)
                         .asSequence()
                         .sortedBy { it.end.name }
-                        .map { Triple(it, it.start, it.end) }
+                        .map { Triple(it, if (selector(it.start)) it.start else startNode, it.end) }
+            } else {
+                // Is backward strategy
+                worklist +=
+                    strategy(edge.end)
+                        .asSequence()
+                        .sortedBy { it.end.name }
+                        .map { Triple(it, it.start, if (selector(it.end)) it.end else endNode) }
+                worklist +=
+                    strategy(edge.start)
+                        .asSequence()
+                        .sortedBy { it.end.name }
+                        .map { Triple(it, it.start, if (selector(it.end)) it.end else endNode) }
             }
         }
     }
