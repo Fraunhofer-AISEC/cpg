@@ -30,9 +30,11 @@ import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.frontends.HasBuiltins
 import de.fraunhofer.aisec.cpg.frontends.HasImplicitReceiver
 import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.Import
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.Imports
@@ -115,8 +117,22 @@ sealed class Scope(
      */
     @Transient var predefinedLookupScopes: MutableMap<Symbol, LookupScopeStatement> = mutableMapOf()
 
+    /**
+     * A map of typedefs keyed by their alias name. This is still needed as a bridge until we
+     * completely redesign the alias / typedef system.
+     */
+    @Transient val typedefs = mutableMapOf<Name, TypedefDeclaration>()
+
+    /**
+     * Adds a [typedef] declaration to the scope. This is used to store typedefs in the scope, so
+     * that they can be resolved later on.
+     */
+    fun addTypedef(typedef: TypedefDeclaration) {
+        typedefs[typedef.alias.name] = typedef
+    }
+
     /** Adds a [declaration] with the defined [symbol]. */
-    fun addSymbol(symbol: Symbol, declaration: Declaration) {
+    open fun addSymbol(symbol: Symbol, declaration: Declaration) {
         if (
             declaration is ImportDeclaration &&
                 declaration.style == ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE
@@ -263,7 +279,7 @@ sealed class Scope(
 
     override fun hashCode(): Int {
         var result = astNode?.hashCode() ?: 0
-        result = 31 * result + (name?.hashCode() ?: 0)
+        result = 31 * result + name.hashCode()
         return result
     }
 
@@ -285,18 +301,11 @@ sealed class Scope(
     override fun toString(): String {
         val builder = ToStringBuilder(this, TO_STRING_STYLE)
 
-        if (name?.isNotEmpty() == true) {
+        if (name.isNotEmpty() == true) {
             builder.append("name", name)
         }
 
         return builder.toString()
-    }
-
-    fun addSymbols(other: MutableMap<Symbol, MutableSet<Declaration>>) {
-        for ((key, value) in other.entries) {
-            val list = this.symbols.computeIfAbsent(key) { mutableListOf() }
-            list += value
-        }
     }
 }
 

@@ -455,15 +455,10 @@ fun MetadataProvider.newImportDeclaration(
     rawNode: Any? = null,
 ): ImportDeclaration {
     val node = ImportDeclaration()
-    node.applyMetadata(this, "", rawNode)
+    node.applyMetadata(this, alias ?: import, rawNode, doNotPrependNamespace = true)
     node.import = import
     node.alias = alias
     node.style = style
-    if (alias != null) {
-        node.name = alias
-    } else {
-        node.name = import
-    }
 
     log(node)
     return node

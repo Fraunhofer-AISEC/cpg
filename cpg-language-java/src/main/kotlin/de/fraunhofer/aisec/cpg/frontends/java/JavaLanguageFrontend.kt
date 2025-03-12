@@ -119,14 +119,15 @@ open class JavaLanguageFrontend(ctx: TranslationContext, language: Language<Java
             context?.setData(Node.SYMBOL_RESOLVER_KEY, javaSymbolResolver)
 
             // starting point is always a translation declaration
-            val fileDeclaration = newTranslationUnitDeclaration(file.toString(), rawNode = context)
-            currentTU = fileDeclaration
-            scopeManager.resetToGlobal(fileDeclaration)
+            val tud = newTranslationUnitDeclaration(file.toString(), rawNode = context)
+            currentTU = tud
+            scopeManager.resetToGlobal(tud)
             val packDecl = context?.packageDeclaration?.orElse(null)
 
-            // We need to create nested namespace so that we have correct symbols on the global
-            // scope
-            val lastNamespace =
+            // We need to create nested namespace (if we have a package declaration) so that we have
+            // correct symbols on the global scope. Otherwise, we put everything directly into the
+            // translation unit
+            val holder =
                 packDecl?.name?.toString()?.split(language.namespaceDelimiter)?.fold(null) {
                     previous: NamespaceDeclaration?,
                     path ->
@@ -134,20 +135,30 @@ open class JavaLanguageFrontend(ctx: TranslationContext, language: Language<Java
 
                     val nsd = newNamespaceDeclaration(fqn, rawNode = packDecl)
                     scopeManager.addDeclaration(nsd)
+                    val holder = previous ?: tud
+                    holder.addDeclaration(nsd)
+
                     scopeManager.enterScope(nsd)
                     nsd
-                }
+                } ?: tud
 
             for (type in context?.types ?: listOf()) {
                 // handle each type. all declaration in this type will be added by the scope manager
                 // along the way
                 val declaration = declarationHandler.handle(type)
-                scopeManager.addDeclaration(declaration)
+                if (declaration != null) {
+                    scopeManager.addDeclaration(declaration)
+                    holder.addDeclaration(declaration)
+                }
             }
 
+            // We put imports and includes directly into the file scope, because otherwise the
+            // import would be visible as symbols in the whole namespace
+            scopeManager.enterScope(tud)
             for (anImport in context?.imports ?: listOf()) {
                 val incl = newIncludeDeclaration(anImport.nameAsString)
                 scopeManager.addDeclaration(incl)
+                tud.addDeclaration(incl)
             }
 
             // We create an implicit import for "java.lang.*"
@@ -158,14 +169,16 @@ open class JavaLanguageFrontend(ctx: TranslationContext, language: Language<Java
                     )
                     .implicit("import java.lang.*")
             scopeManager.addDeclaration(decl)
+            tud.addDeclaration(decl)
+            scopeManager.leaveScope(tud)
 
-            if (lastNamespace != null) {
-                fileDeclaration.allChildren<NamespaceDeclaration>().reversed().forEach {
+            if (holder is NamespaceDeclaration) {
+                tud.allChildren<NamespaceDeclaration>().reversed().forEach {
                     scopeManager.leaveScope(it)
                 }
             }
             bench.addMeasurement()
-            fileDeclaration
+            tud
         } catch (ex: IOException) {
             throw TranslationException(ex)
         }

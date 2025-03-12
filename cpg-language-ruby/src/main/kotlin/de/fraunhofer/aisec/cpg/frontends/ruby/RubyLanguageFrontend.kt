@@ -69,6 +69,7 @@ class RubyLanguageFrontend(ctx: TranslationContext, language: RubyLanguage) :
         if (node.bodyNode is MethodDefNode) {
             val decl = declarationHandler.handle(node.bodyNode)
             scopeManager.addDeclaration(decl)
+            tu.declarations += decl
         } else if (node.bodyNode is BlockNode) {
             // Otherwise, we need to loop over the block
             val block = node.bodyNode as BlockNode
@@ -76,6 +77,7 @@ class RubyLanguageFrontend(ctx: TranslationContext, language: RubyLanguage) :
                 if (innerNode is MethodDefNode) {
                     val decl = declarationHandler.handle(innerNode)
                     scopeManager.addDeclaration(decl)
+                    tu.declarations += decl
                 } else {
                     val stmt = statementHandler.handle(innerNode)
                     tu += stmt

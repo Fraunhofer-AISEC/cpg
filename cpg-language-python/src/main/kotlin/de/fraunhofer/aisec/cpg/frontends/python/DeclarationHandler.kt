@@ -33,7 +33,6 @@ import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage.Companion.MODIFIE
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.scopes.FunctionScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
@@ -76,14 +75,17 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
             when (s) {
                 // In order to be as compatible as possible with existing languages, we try to add
                 // declarations directly to the class
-                is Python.AST.Def -> handle(s)
+                is Python.AST.Def -> {
+                    val decl = handle(s)
+                    frontend.scopeManager.addDeclaration(decl)
+                    cls.addDeclaration(decl)
+                }
                 // All other statements are added to the statements block of the class
                 else -> cls.statements += frontend.statementHandler.handle(s)
             }
         }
 
         frontend.scopeManager.leaveScope(cls)
-        frontend.scopeManager.addDeclaration(cls)
 
         return cls
     }
@@ -103,7 +105,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
         var recordDeclaration =
             (frontend.scopeManager.currentScope as? RecordScope)?.astNode as? RecordDeclaration
         val language = language
-        val result =
+        val func =
             if (recordDeclaration != null) {
                 if (s.name == IDENTIFIER_INIT) {
                     newConstructorDeclaration(
@@ -139,47 +141,37 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
             } else {
                 newFunctionDeclaration(name = s.name, rawNode = s)
             }
-        frontend.scopeManager.enterScope(result)
+        frontend.scopeManager.enterScope(func)
 
-        frontend.statementHandler.addAsyncWarning(s, result)
+        frontend.statementHandler.addAsyncWarning(s, func)
 
         // Handle decorators (which are translated into CPG "annotations")
-        result.annotations += handleAnnotations(s)
+        func.annotations += handleAnnotations(s)
 
         // Handle return type and calculate function type
-        if (result is ConstructorDeclaration) {
+        if (func is ConstructorDeclaration) {
             // Return type of the constructor is always its record declaration type
-            result.returnTypes = listOf(recordDeclaration?.toType() ?: unknownType())
+            func.returnTypes = listOf(recordDeclaration?.toType() ?: unknownType())
         } else {
-            result.returnTypes = listOf(frontend.typeOf(s.returns))
+            func.returnTypes = listOf(frontend.typeOf(s.returns))
         }
-        result.type = FunctionType.computeType(result)
+        func.type = FunctionType.computeType(func)
 
-        handleArguments(s.args, result, recordDeclaration)
+        handleArguments(s.args, func, recordDeclaration)
 
         if (s.body.isNotEmpty()) {
-            result.body = frontend.statementHandler.makeBlock(s.body, parentNode = s)
+            func.body = frontend.statementHandler.makeBlock(s.body, parentNode = s)
         }
 
-        frontend.scopeManager.leaveScope(result)
+        frontend.scopeManager.leaveScope(func)
 
-        // We want functions inside functions to be wrapped in a declaration statement, so we are
-        // not adding them to scope's AST
-        if (frontend.scopeManager.currentScope is FunctionScope) {
-            frontend.scopeManager.addDeclaration(result, addToAST = false)
-        } else {
-            // In any other cases, we add them to the "declarations", otherwise we will not
-            // correctly resolve them.
-            frontend.scopeManager.addDeclaration(result)
-        }
-
-        return result
+        return func
     }
 
-    /** Adds the arguments to [result] which might be located in a [recordDeclaration]. */
+    /** Adds the arguments to [func] which might be located in a [recordDeclaration]. */
     private fun handleArguments(
         args: Python.AST.arguments,
-        result: FunctionDeclaration,
+        func: FunctionDeclaration,
         recordDeclaration: RecordDeclaration?,
     ) {
         // We can merge posonlyargs and args because both are positional arguments. We do not
@@ -190,27 +182,30 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
         // Handle receiver if it exists and if it is not a static method
         if (
             recordDeclaration != null &&
-                result.annotations.none { it.name.localName == "staticmethod" }
+                func.annotations.none { it.name.localName == "staticmethod" }
         ) {
-            handleReceiverArgument(positionalArguments, args, result, recordDeclaration)
+            handleReceiverArgument(positionalArguments, args, func, recordDeclaration)
             // Skip the receiver argument for further processing
             positionalArguments = positionalArguments.drop(1)
         }
 
         // Handle remaining arguments
-        handlePositionalArguments(positionalArguments, args)
+        handlePositionalArguments(func, positionalArguments, args)
 
-        args.vararg?.let { handleArgument(it, isPosOnly = false, isVariadic = true) }
-        args.kwarg?.let { handleArgument(it, isPosOnly = false, isVariadic = true) }
+        args.vararg?.let { handleArgument(func, it, isPosOnly = false, isVariadic = true) }
+        args.kwarg?.let { handleArgument(func, it, isPosOnly = false, isVariadic = true) }
 
-        handleKeywordOnlyArguments(args)
+        handleKeywordOnlyArguments(func, args)
     }
 
     /**
      * This function creates a [newParameterDeclaration] for the argument, setting any modifiers
      * (like positional-only or keyword-only) and [defaultValue] if applicable.
+     *
+     * This also adds the [ParameterDeclaration] to the [FunctionDeclaration.parameters].
      */
     internal fun handleArgument(
+        func: FunctionDeclaration,
         node: Python.AST.arg,
         isPosOnly: Boolean = false,
         isVariadic: Boolean = false,
@@ -235,6 +230,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
         }
 
         frontend.scopeManager.addDeclaration(arg)
+        func.parameters += arg
 
         return arg
     }
@@ -308,6 +304,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
      * From the Python docs: "If there are fewer defaults, they correspond to the last n arguments."
      */
     private fun handlePositionalArguments(
+        func: FunctionDeclaration,
         positionalArguments: List<Python.AST.arg>,
         args: Python.AST.arguments,
     ) {
@@ -324,7 +321,12 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
                 } else {
                     null
                 }
-            handleArgument(arg, isPosOnly = arg in args.posonlyargs, defaultValue = defaultValue)
+            handleArgument(
+                func,
+                arg,
+                isPosOnly = arg in args.posonlyargs,
+                defaultValue = defaultValue,
+            )
         }
     }
 
@@ -332,11 +334,12 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
      * This method extracts the keyword-only arguments from [args] and maps them to the
      * corresponding function parameters.
      */
-    private fun handleKeywordOnlyArguments(args: Python.AST.arguments) {
+    private fun handleKeywordOnlyArguments(func: FunctionDeclaration, args: Python.AST.arguments) {
         for (idx in args.kwonlyargs.indices) {
             val arg = args.kwonlyargs[idx]
             val default = args.kw_defaults.getOrNull(idx)
             handleArgument(
+                func,
                 arg,
                 isPosOnly = false,
                 isKwoOnly = true,
