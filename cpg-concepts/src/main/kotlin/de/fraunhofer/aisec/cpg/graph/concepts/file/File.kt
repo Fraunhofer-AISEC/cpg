@@ -41,15 +41,10 @@ interface IsFile
  *
  * ```
  * The <fcntl.h> header shall define the following symbolic constants for use as the  file access  modes  for  open(),  openat(), and fcntl().  The values shall be unique, except that O_EXEC and O_SEARCH may have equal values. The values shall be suitable for use in #if preprocessing directives.
- *
  * O_EXEC      Open for execute only (non-directory files). The result is  unspecified  if this flag is applied to a directory.
- *
  * O_RDONLY    Open for reading only.
- *
  * O_RDWR      Open for reading and writing.
- *
  * O_SEARCH    Open  directory  for search only. The result is unspecified if this flag is applied to a non-directory file.
- *
  * O_WRONLY    Open for writing only.
  * ```
  */
@@ -64,11 +59,22 @@ enum class FileAccessModeFlags(val value: Long) : IsFile {
 /** The bit-mask to be used to get the [FileAccessModeFlags] from an entire flags value. */
 val O_ACCMODE_MODE_MASK = 3L
 
-/** Represents a file. */
+/**
+ * Represents a file.
+ *
+ * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
+ * @param fileName The name of the file e.g. `foo/bar/example.txt`
+ */
 class File(underlyingNode: Node, val fileName: String) :
     Concept(underlyingNode = underlyingNode), IsFile
 
-/** Represents setting flags on a file. For example when opening the file. */
+/**
+ * Represents setting flags on a file. For example when opening the file.
+ *
+ * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
+ * @param concept The corresponding [File] node.
+ * @param flags A set of file flags (see [FileAccessModeFlags]).
+ */
 class SetFileFlags(
     underlyingNode: Node,
     override val concept: File,
@@ -78,32 +84,56 @@ class SetFileFlags(
 /**
  * Represents setting the umask, for example with the `mode` parameter in a Python `os.open` call or
  * a `chmod` call.
+ *
+ * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
+ * @param concept The corresponding [File] node.
+ * @param mask The file mask in UNIX notation (i.e. 0o644)
  */
 class SetFileMask(underlyingNode: Node, override val concept: File, val mask: Long) :
     Operation(underlyingNode = underlyingNode, concept = concept), IsFile
 
-/** Represents closing a file. */
+/**
+ * Represents closing a file.
+ *
+ * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
+ * @param concept The corresponding [File] node.
+ */
 class CloseFile(underlyingNode: Node, override val concept: File) :
     Operation(underlyingNode = underlyingNode, concept = concept), IsFile
 
-/** Represents deleting a file. */
+/**
+ * Represents deleting a file.
+ *
+ * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
+ * @param concept The corresponding [File] node.
+ */
 class DeleteFile(underlyingNode: Node, override val concept: File) :
     Operation(underlyingNode = underlyingNode, concept = concept), IsFile
 
 /**
  * Represents opening a file. This is usually done with the same underlying node the [concept] field
  * is attached to.
+ *
+ * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
+ * @param concept The corresponding [File] node.
  */
 class OpenFile(underlyingNode: Node, override val concept: File) :
     Operation(underlyingNode = underlyingNode, concept = concept), IsFile
 
-/** Represents reading from a file. */
+/**
+ * Represents reading from a file.
+ *
+ * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
+ * @param concept The corresponding [File] node.
+ */
 class ReadFile(underlyingNode: Node, override val concept: File) :
     Operation(underlyingNode = underlyingNode, concept = concept), IsFile
 
 /**
  * Represents writing to a file.
  *
+ * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
+ * @param concept The corresponding [File] node.
  * @param what The node being written to the file.
  */
 class WriteFile(underlyingNode: Node, override val concept: File, val what: Node) :

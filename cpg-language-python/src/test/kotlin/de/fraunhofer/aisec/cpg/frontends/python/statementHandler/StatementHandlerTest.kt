@@ -26,15 +26,14 @@
 package de.fraunhofer.aisec.cpg.frontends.python.statementHandler
 
 import de.fraunhofer.aisec.cpg.TranslationResult
-import de.fraunhofer.aisec.cpg.frontends.python.*
+import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.statements.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.statements.AssertStatement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeleteExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.SubscriptExpression
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.test.*
-import de.fraunhofer.aisec.cpg.test.analyze
-import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
-import de.fraunhofer.aisec.cpg.test.assertResolvedType
 import java.nio.file.Path
 import kotlin.test.*
 import org.junit.jupiter.api.BeforeAll
@@ -303,12 +302,14 @@ class StatementHandlerTest : BaseTest() {
         assertNotNull(withStatement)
         val printStatement = result.calls("print").first()
         assertNotNull(printStatement)
-        Util.eogConnect(
-            q = Util.Quantifier.ANY,
-            n = withStatement,
-            en = Util.Edge.EXITS,
-            cr = Util.Connect.NODE,
-            refs = listOf(block),
+        assertTrue(
+            Util.eogConnect(
+                q = Util.Quantifier.ANY,
+                n = withStatement,
+                en = Util.Edge.EXITS,
+                cr = Util.Connect.NODE,
+                refs = listOf(block),
+            )
         )
         assertTrue(Util.eogConnect(n = block, en = Util.Edge.EXITS, refs = listOf(printStatement)))
     }
