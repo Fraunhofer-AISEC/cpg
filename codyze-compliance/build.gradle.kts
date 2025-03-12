@@ -27,15 +27,10 @@ plugins {
     id("codyze.module-conventions")
 }
 
-publishing {
-    publications {
-        named<MavenPublication>("codyze-compliance") {
-            pom {
-                artifactId = "codyze-compliance"
-                name.set("Codyze - Compliance Module")
-                description.set("The compliance module of Codyze")
-            }
-        }
+mavenPublishing {
+    pom {
+        name.set("Codyze - Compliance Module")
+        description.set("The compliance module of Codyze")
     }
 }
 

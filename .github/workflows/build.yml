@@ -101,11 +101,11 @@ jobs:
       - name: Publish to Maven Central
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
-          export ORG_GRADLE_PROJECT_signingKey=`echo ${{ secrets.GPG_PRIVATE_KEY }} | base64 -d`
-          ./gradlew --no-daemon -Dorg.gradle.internal.publish.checksums.insecure=true --parallel -Pversion=$VERSION -PenableJavaFrontend=true  -PenableCXXFrontend=true -PenableGoFrontend=true -PenablePythonFrontend=true -PenableLLVMFrontend=true -PenableTypeScriptFrontend=true -PenableRubyFrontend=true publishToSonatype closeSonatypeStagingRepository
+          export ORG_GRADLE_PROJECT_signingInMemoryKey=`echo ${{ secrets.GPG_PRIVATE_KEY }} | base64 -d`
+          ./gradlew --no-daemon --parallel -Pversion=$VERSION -PenableJavaFrontend=true -PRELEASE_SIGNING_ENABLED=true -PenableCXXFrontend=true -PenableGoFrontend=true -PenablePythonFrontend=true -PenableLLVMFrontend=true -PenableTypeScriptFrontend=true -PenableRubyFrontend=true publishAllPublicationsToMavenCentralRepository
         env:
           VERSION: ${{ env.version }}
-          ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.GPG_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.GPG_PASSWORD }}
           ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
           ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
       - name: Download old dokka versions (version)
@@ -151,10 +151,11 @@ jobs:
       - name: Publish to GitHub Packages (as snapshot)
         if: github.ref == 'refs/heads/main' || contains(github.event.pull_request.labels.*.name, 'publish-to-github-packages')
         run: |
-          ./gradlew --parallel -Pversion=$VERSION publishAllPublicationsToGitHubPackagesRepository
+          ./gradlew --parallel -Pversion=$VERSION publishAllPublicationsToGithubPackagesRepository
         env:
           VERSION: ${{ env.version }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ORG_GRADLE_PROJECT_githubPackagesUsername: ${{ env.GITHUB_ACTOR }}
+          ORG_GRADLE_PROJECT_githubPackagesPassword: ${{ secrets.GITHUB_TOKEN }}
       #- name: Publish to GitHub Packages (as commit SHA)
       #  if: github.ref == 'refs/heads/main' || contains(github.event.pull_request.labels.*.name, 'publish-to-github-packages')
       #  run: |

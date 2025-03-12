@@ -25,17 +25,13 @@
  */
 plugins {
     id("cpg.common-conventions")
+    id("cpg.publishing-conventions")
 }
 
-publishing {
-    publications {
-        named<MavenPublication>("codyze-core") {
-            pom {
-                artifactId = "codyze-core"
-                name.set("Codyze - Core")
-                description.set("Core module of the Codyze static analysis tool.")
-            }
-        }
+mavenPublishing {
+    pom {
+        name.set("Codyze - Core")
+        description.set("Core module of the Codyze static analysis tool")
     }
 }
 

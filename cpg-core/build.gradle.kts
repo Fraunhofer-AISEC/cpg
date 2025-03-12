@@ -28,18 +28,10 @@ plugins {
     id("cpg.library-conventions")
 }
 
-publishing {
-    publications {
-        named<MavenPublication>("cpg-core") {
-            pom {
-                artifactId = "cpg-core"
-                name.set("Code Property Graph - Core")
-                description.set("A simple library to extract a code property graph out of source code. It has support for multiple passes that can extend the analysis after the graph is constructed.")
-            }
-
-            suppressPomMetadataWarningsFor("testFixturesApiElements")
-            suppressPomMetadataWarningsFor("testFixturesRuntimeElements")
-        }
+mavenPublishing {
+    pom {
+        name.set("Code Property Graph - Core")
+        description.set("A simple library to extract a code property graph out of source code. It has support for multiple passes that can extend the analysis after the graph is constructed.")
     }
 }
 

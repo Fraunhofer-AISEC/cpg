@@ -43,7 +43,7 @@ publishing {
 }
 
 node {
-    download.set(findProperty("nodeDownload")?.toString()?.toBoolean() ?: false)
+    download.set(true)
     version.set("20.11.1")
     nodeProjectDir.set(file("${project.projectDir.resolve("src/main/nodejs")}"))
 }

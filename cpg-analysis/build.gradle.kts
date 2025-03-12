@@ -27,16 +27,10 @@ plugins {
     id("cpg.library-conventions")
 }
 
-
-publishing {
-    publications {
-        named<MavenPublication>("cpg-analysis") {
-            pom {
-                artifactId = "cpg-analysis"
-                name.set("Code Property Graph - Analysis Modules")
-                description.set("Analysis modules for the CPG")
-            }
-        }
+mavenPublishing {
+    pom {
+        name.set("Code Property Graph - Analysis Modules")
+        description.set("Analysis modules for the CPG")
     }
 }
 

@@ -29,7 +29,6 @@
 //
 plugins {
     id("org.jetbrains.dokka")
-    id("io.github.gradle-nexus.publish-plugin")
     id("test-report-aggregation")
 }
 
@@ -76,34 +75,9 @@ fun generateDokkaWithVersionTag(dokkaMultiModuleTask: org.jetbrains.dokka.gradle
     dokkaMultiModuleTask.pluginsMapConfiguration.set(mapOf)
 }
 
-
-/**
- * Publishing to maven central
- */
-nexusPublishing {
-    repositories {
-        sonatype {
-            val mavenCentralUsername: String? by project
-            val mavenCentralPassword: String? by project
-
-            username.set(mavenCentralUsername)
-            password.set(mavenCentralPassword)
-        }
-    }
-}
-
 dependencies {
     testReportAggregation(project(":cpg-core"))
 }
-
-reporting {
-    reports {
-        @Suppress("UnstableApiUsage") val testAggregateTestReport by creating(AggregateTestReport::class) {
-            testSuiteName = "test"
-        }
-    }
-}
-
 
 //
 // Load the properties that define which frontends to include
