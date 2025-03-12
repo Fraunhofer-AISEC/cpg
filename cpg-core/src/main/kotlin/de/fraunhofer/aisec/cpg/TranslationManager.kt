@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg
 
-import de.fraunhofer.aisec.cpg.TranslationContext.EmptyTranslationContext.language
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Name
@@ -267,11 +266,13 @@ private constructor(
             )
 
             // Collects all used languages used in the main analysis code
-            usedLanguages.addAll(sourceLocations.mapNotNull { it.language }.toSet())
+            usedLanguages.addAll(sourceLocations.mapNotNull { with(ctx) { it.language } }.toSet())
         }
 
         // Adds all languages provided as additional sources that may be relevant in the main code
-        usedLanguages.addAll(ctx.additionalSources.mapNotNull { it.relative.language }.toSet())
+        usedLanguages.addAll(
+            ctx.additionalSources.mapNotNull { with(ctx) { it.relative.language } }.toSet()
+        )
 
         usedLanguages.filterIsInstance<HasBuiltins>().forEach { hasBuiltins ->
             // Includes a file in the analysis, if relative to its rootpath it matches the name of
