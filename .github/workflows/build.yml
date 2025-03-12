@@ -152,7 +152,7 @@ jobs:
       - name: Publish to GitHub Packages (as snapshot)
         if: github.ref == 'refs/heads/main' || contains(github.event.pull_request.labels.*.name, 'publish-to-github-packages')
         run: |
-          ./gradlew --parallel -Pversion=$VERSION publishAllPublicationsToGithubPackagesRepository
+          ./gradlew --parallel publishAllPublicationsToGithubPackagesRepository
         env:
           ORG_GRADLE_PROJECT_version: ${{ env.version }}
           ORG_GRADLE_PROJECT_includeJavadoc: false
