@@ -55,10 +55,15 @@ fun MetadataProvider.newJwtAuth(underlyingNode: Node, jwt: Node, payload: Node) 
  * Creates a new [Authenticate] operation belonging to a certain [Authentication] concept.
  *
  * @param underlyingNode The underlying node representing this concept.
+ * @param concept The [Authentication] concept to which the operation belongs.
  * @param credential The credential can be a call (e.g., a function call that reads a header) or a
  *   variable that holds the value, e.g. the token * @return The created [Authenticate] operation.
  */
-fun Authentication.newAuthenticate(underlyingNode: Node, credential: Node) =
+fun MetadataProvider.newAuthenticate(
+    underlyingNode: Node,
+    concept: Authentication,
+    credential: Node,
+) =
     newOperation(
         { underlyingNode, concept ->
             Authenticate(
@@ -68,5 +73,5 @@ fun Authentication.newAuthenticate(underlyingNode: Node, credential: Node) =
             )
         },
         underlyingNode = underlyingNode,
-        concept = this,
+        concept = concept,
     )
