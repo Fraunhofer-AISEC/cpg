@@ -296,18 +296,20 @@ class StatementHandlerTest : BaseTest() {
         val result = analyze(listOf(file), topLevel, true) { it.registerLanguage<PythonLanguage>() }
         assertNotNull(result)
 
-        val block = result.statements.first()
+        val block = result.statements.firstOrNull()
         assertNotNull(block)
-        val withStatement = result.trys.first()
+        val withStatement = result.trys.firstOrNull()
         assertNotNull(withStatement)
-        val printStatement = result.calls("print").first()
+        val printStatement = result.calls("print").firstOrNull()
         assertNotNull(printStatement)
-        Util.eogConnect(
-            quantifier = Util.Quantifier.ANY,
-            startNode = withStatement,
-            edgeDirection = Util.Edge.EXITS,
-            connectEnd = Util.Connect.NODE,
-            endNodes = listOf(block),
+        assertTrue(
+            Util.eogConnect(
+                quantifier = Util.Quantifier.ANY,
+                startNode = withStatement,
+                edgeDirection = Util.Edge.EXITS,
+                connectEnd = Util.Connect.NODE,
+                endNodes = listOf(block),
+            )
         )
         assertTrue(
             Util.eogConnect(
