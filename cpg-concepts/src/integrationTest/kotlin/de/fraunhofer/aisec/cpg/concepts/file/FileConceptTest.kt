@@ -351,8 +351,6 @@ class FileConceptTest : BaseTest() {
     }
 
     @Test
-    // Needs #2121.
-    @Ignore
     fun testDelete() {
         val topLevel = Path.of("src", "integrationTest", "resources", "python", "file")
 
