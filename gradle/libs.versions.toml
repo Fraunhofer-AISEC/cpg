@@ -37,7 +37,7 @@ neo4j-driver = { module = "org.neo4j.driver:neo4j-java-driver", version.ref = "n
 javaparser = { module = "com.github.javaparser:javaparser-symbol-solver-core", version = "3.26.0"}
 jackson = { module = "com.fasterxml.jackson.module:jackson-module-kotlin", version = "2.18.0"}
 jacksonyml = { module = "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml", version = "2.18.0"}
-eclipse-runtime = { module = "org.eclipse.platform:org.eclipse.core.runtime", version = "3.32.0"}
+eclipse-runtime = { module = "org.eclipse.platform:org.eclipse.core.runtime", version = "3.33.0"}
 osgi-service = { module = "org.osgi:org.osgi.service.prefs", version = "1.1.2"}
 icu4j = { module = "com.ibm.icu:icu4j", version = "76.1"}
 # Note: This "module" intentionally looks very weird, because the CDT version is actually part of the path of the CDT external
