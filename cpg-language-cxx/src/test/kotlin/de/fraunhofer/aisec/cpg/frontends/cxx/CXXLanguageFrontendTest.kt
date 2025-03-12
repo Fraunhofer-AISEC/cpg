@@ -1506,7 +1506,6 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                 it.registerPass<TypeResolver>()
                 it.registerPass<ControlFlowSensitiveDFGPass>()
                 it.registerPass<DynamicInvokeResolver>()
-                it.registerPass<FilenameMapper>()
             }
 
         val target = tu.functions["target"]
@@ -1551,7 +1550,6 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                 it.registerPass<TypeResolver>()
                 it.registerPass<DynamicInvokeResolver>()
                 it.registerPass<ControlFlowSensitiveDFGPass>()
-                it.registerPass<FilenameMapper>()
             }
 
         val target = tu.functions["target"]
