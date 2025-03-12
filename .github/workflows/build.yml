@@ -63,10 +63,10 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
       - name: Build ${{ env.version }}
         run: |
-          ./gradlew --parallel -Pversion=$VERSION spotlessCheck -x spotlessApply build -x distZip -x distTar koverXmlReport koverHtmlReport performanceTest integrationTest
+          ./gradlew --parallel spotlessCheck -x spotlessApply build -x distZip -x distTar koverXmlReport koverHtmlReport performanceTest integrationTest
         id: build
         env:
-          VERSION: ${{ env.version }}
+          ORG_GRADLE_PROJECT_version: ${{ env.version }}
       - name: Prepare report.xml for Codecov
         run: |
           # this is needed because codecov incorrectly reports lines that have no coverage information (good or bad) as a miss
@@ -102,9 +102,10 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
           export ORG_GRADLE_PROJECT_signingInMemoryKey=`echo ${{ secrets.GPG_PRIVATE_KEY }} | base64 -d`
-          ./gradlew --no-daemon --parallel -Pversion=$VERSION -PenableJavaFrontend=true -PRELEASE_SIGNING_ENABLED=true -PenableCXXFrontend=true -PenableGoFrontend=true -PenablePythonFrontend=true -PenableLLVMFrontend=true -PenableTypeScriptFrontend=true -PenableRubyFrontend=true publishAllPublicationsToMavenCentralRepository
+          ./gradlew --no-daemon --parallel publishAllPublicationsToMavenCentralRepository
         env:
-          VERSION: ${{ env.version }}
+          ORG_GRADLE_PROJECT_version: ${{ env.version }}
+          ORG_GRADLE_PROJECT_includeJavadoc: true
           ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.GPG_PASSWORD }}
           ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
           ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
@@ -153,7 +154,8 @@ jobs:
         run: |
           ./gradlew --parallel -Pversion=$VERSION publishAllPublicationsToGithubPackagesRepository
         env:
-          VERSION: ${{ env.version }}
+          ORG_GRADLE_PROJECT_version: ${{ env.version }}
+          ORG_GRADLE_PROJECT_includeJavadoc: false
           ORG_GRADLE_PROJECT_githubPackagesUsername: ${{ env.GITHUB_ACTOR }}
           ORG_GRADLE_PROJECT_githubPackagesPassword: ${{ secrets.GITHUB_TOKEN }}
       #- name: Publish to GitHub Packages (as commit SHA)

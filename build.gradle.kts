@@ -1,3 +1,6 @@
+import com.vanniktech.maven.publish.JavadocJar
+import com.vanniktech.maven.publish.MavenPublishBaseExtension
+
 /*
  * Copyright (c) 2019-2021, Fraunhofer AISEC. All rights reserved.
  *

@@ -23,9 +23,7 @@
  *                    \______/ \__|       \______/
  *
  */
-plugins {
-    id("cpg.library-conventions")
-}
+plugins { id("cpg.library-conventions") }
 
 mavenPublishing {
     pom {

@@ -1,17 +1,9 @@
-import com.vanniktech.maven.publish.JavadocJar
-import com.vanniktech.maven.publish.KotlinJvm
-import com.vanniktech.maven.publish.SonatypeHost
+import com.vanniktech.maven.publish.*
 
 plugins {
     id("org.jetbrains.dokka")
     id("com.vanniktech.maven.publish")
     id("signing")
-}
-
-tasks.whenTaskAdded {
-    if (name == "generate") {
-        dependsOn(tasks.named("jvmSourcesJar"))
-    }
 }
 
 publishing {
@@ -28,22 +20,18 @@ publishing {
     }
 }
 
-signing {
-    setRequired({
-        gradle.taskGraph.hasTask("publishAllPublicationsToMavenCentralRepository")
-    })
-
-    val signingInMemoryKey: String? by project
-    val signingInMemoryKeyPassword: String? by project
-    useInMemoryPgpKeys(signingInMemoryKey, signingInMemoryKeyPassword)
-
-    sign(publishing.publications[name])
+// Only include javadoc if the includeJavadoc property is set to true (required for maven central)
+val includeJavadoc: String? by project
+val javadocJar = if(includeJavadoc.toBoolean()) {
+    JavadocJar.Dokka("dokkaHtml")
+} else {
+    JavadocJar.Empty()
 }
 
 // Publication settings for maven central
 mavenPublishing {
     configure(KotlinJvm(
-        javadocJar = JavadocJar.Dokka("dokkaHtml"),
+        javadocJar = javadocJar,
         sourcesJar = true,
     ))
     coordinates(project.group.toString(), project.name, version.toString())
@@ -70,4 +58,17 @@ mavenPublishing {
     }
 
     publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
+}
+
+
+signing {
+    setRequired({
+        gradle.taskGraph.hasTask("publishAllPublicationsToMavenCentralRepository")
+    })
+
+    val signingInMemoryKey: String? by project
+    val signingInMemoryKeyPassword: String? by project
+    useInMemoryPgpKeys(signingInMemoryKey, signingInMemoryKeyPassword)
+
+    sign(publishing.publications["maven"])
 }

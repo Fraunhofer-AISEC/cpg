@@ -23,19 +23,12 @@
  *                    \______/ \__|       \______/
  *
  */
-plugins {
-    id("cpg.frontend-conventions")
-}
+plugins { id("cpg.frontend-conventions") }
 
-publishing {
-    publications {
-        named<MavenPublication>("cpg-language-llvm") {
-            pom {
-                artifactId = "cpg-language-llvm"
-                name.set("Code Property Graph - LLVM Frontend")
-                description.set("A LLVM language frontend for the CPG")
-            }
-        }
+mavenPublishing {
+    pom {
+        name.set("Code Property Graph - LLVM Frontend")
+        description.set("A LLVM language frontend for the CPG")
     }
 }
 

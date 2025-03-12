@@ -30,15 +30,10 @@ plugins {
     alias(libs.plugins.node)
 }
 
-publishing {
-    publications {
-        named<MavenPublication>("cpg-language-typescript") {
-            pom {
-                artifactId = "cpg-language-typescript"
-                name.set("Code Property Graph - JavaScript/TypeScript Frontend")
-                description.set("A JavaScript/TypeScript language frontend for the CPG")
-            }
-        }
+mavenPublishing {
+    pom {
+        name.set("Code Property Graph - JavaScript/TypeScript Frontend")
+        description.set("A JavaScript/TypeScript language frontend for the CPG")
     }
 }
 
@@ -48,18 +43,19 @@ node {
     nodeProjectDir.set(file("${project.projectDir.resolve("src/main/nodejs")}"))
 }
 
-val npmBuild by tasks.registering(NpmTask::class) {
-    inputs.file("src/main/nodejs/package.json").withPathSensitivity(PathSensitivity.RELATIVE)
-    inputs.file("src/main/nodejs/package-lock.json").withPathSensitivity(PathSensitivity.RELATIVE)
-    inputs.dir("src/main/nodejs/src").withPathSensitivity(PathSensitivity.RELATIVE)
-    outputs.dir("build/resources/main/nodejs")
-    outputs.cacheIf { true }
+val npmBuild by
+    tasks.registering(NpmTask::class) {
+        inputs.file("src/main/nodejs/package.json").withPathSensitivity(PathSensitivity.RELATIVE)
+        inputs
+            .file("src/main/nodejs/package-lock.json")
+            .withPathSensitivity(PathSensitivity.RELATIVE)
+        inputs.dir("src/main/nodejs/src").withPathSensitivity(PathSensitivity.RELATIVE)
+        outputs.dir("build/resources/main/nodejs")
+        outputs.cacheIf { true }
 
-    workingDir.set(file("src/main/nodejs"))
-    npmCommand.set(listOf("run", "bundle"))
-    dependsOn(tasks.getByName("npmInstall"))
-}
+        workingDir.set(file("src/main/nodejs"))
+        npmCommand.set(listOf("run", "bundle"))
+        dependsOn(tasks.getByName("npmInstall"))
+    }
 
-tasks.processResources {
-    dependsOn(npmBuild)
-}
+tasks.processResources { dependsOn(npmBuild) }
