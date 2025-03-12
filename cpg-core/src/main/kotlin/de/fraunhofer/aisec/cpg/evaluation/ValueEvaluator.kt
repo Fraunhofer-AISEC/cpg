@@ -126,12 +126,24 @@ open class ValueEvaluator(
             // easily be partly path-sensitive in a conditional expression
             is ConditionalExpression -> return handleConditionalExpression(node, depth)
             is AssignExpression -> return handleAssignExpression(node, depth)
+            is Reference -> return handleReference(node, depth)
+            is CallExpression -> return handleCallExpression(node, depth)
             else -> return handlePrevDFG(node, depth)
         }
 
         // At this point, we cannot evaluate, and we are calling our [cannotEvaluate] hook, maybe
         // this helps
         return cannotEvaluate(node, this)
+    }
+
+    /** Handles a [CallExpression]. Default behaviour is to call [handlePrevDFG] */
+    protected open fun handleCallExpression(node: CallExpression, depth: Int): Any? {
+        return handlePrevDFG(node, depth)
+    }
+
+    /** Handles a [Reference]. Default behaviour is to call [handlePrevDFG] */
+    protected open fun handleReference(node: Reference, depth: Int): Any? {
+        return handlePrevDFG(node, depth)
     }
 
     /**
