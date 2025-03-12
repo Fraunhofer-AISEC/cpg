@@ -290,4 +290,26 @@ class StatementHandlerTest : BaseTest() {
         var cVariables = result.variables("c")
         assertEquals(3, cVariables.size)
     }
+
+    @Test
+    fun testToplevelCode() {
+        var file = topLevel.resolve("toplevel_code.py").toFile()
+        val result = analyze(listOf(file), topLevel, true) { it.registerLanguage<PythonLanguage>() }
+        assertNotNull(result)
+
+        val block = result.statements.first()
+        assertNotNull(block)
+        val withStatement = result.trys.first()
+        assertNotNull(withStatement)
+        val printStatement = result.calls("print").first()
+        assertNotNull(printStatement)
+        Util.eogConnect(
+            q = Util.Quantifier.ANY,
+            n = withStatement,
+            en = Util.Edge.EXITS,
+            cr = Util.Connect.NODE,
+            refs = listOf(block),
+        )
+        assertTrue(Util.eogConnect(n = block, en = Util.Edge.EXITS, refs = listOf(printStatement)))
+    }
 }

@@ -83,7 +83,7 @@ class NamespaceDeclaration : Declaration(), DeclarationHolder, StatementHolder, 
             // Add all top-level declarations
             list += declarations
             // Add all top-level statements
-            list += statements
+            list += this
 
             return list
         }
