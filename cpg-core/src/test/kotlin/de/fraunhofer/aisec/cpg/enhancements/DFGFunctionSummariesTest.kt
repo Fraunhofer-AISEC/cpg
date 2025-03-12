@@ -35,8 +35,6 @@ import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextIn
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
 import de.fraunhofer.aisec.cpg.graph.edges.flows.ContextSensitiveDataflow
-import de.fraunhofer.aisec.cpg.graph.functions
-import de.fraunhofer.aisec.cpg.graph.pointer
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.recordDeclaration
@@ -300,7 +298,6 @@ class DFGFunctionSummariesTest {
             registerPass<DynamicInvokeResolver>()
             registerPass<EvaluationOrderGraphPass>()
             registerPass<TypeResolver>()
-            registerPass<FilenameMapper>()
         }
         assertNotNull(dfgTest)
 
