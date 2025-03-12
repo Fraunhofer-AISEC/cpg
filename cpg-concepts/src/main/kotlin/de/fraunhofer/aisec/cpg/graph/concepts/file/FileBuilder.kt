@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,8 +27,8 @@ package de.fraunhofer.aisec.cpg.graph.concepts.file
 
 import de.fraunhofer.aisec.cpg.graph.MetadataProvider
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder
-import de.fraunhofer.aisec.cpg.graph.codeAndLocationFrom
+import de.fraunhofer.aisec.cpg.graph.concepts.newConcept
+import de.fraunhofer.aisec.cpg.graph.concepts.newOperation
 
 /**
  * Creates a new [File] node. This node represents a file on a hard-disk somewhere.
@@ -37,13 +37,11 @@ import de.fraunhofer.aisec.cpg.graph.codeAndLocationFrom
  * @param fileName The name of the file e.g. `foo/bar/example.txt`
  * @return The new [File] node.
  */
-fun MetadataProvider.newFile(underlyingNode: Node, fileName: String): File {
-    val node = File(underlyingNode = underlyingNode, fileName = fileName)
-    node.codeAndLocationFrom(underlyingNode)
-
-    NodeBuilder.log(node)
-    return node
-}
+fun MetadataProvider.newFile(underlyingNode: Node, fileName: String) =
+    newConcept(
+        { File(underlyingNode = underlyingNode, fileName = fileName) },
+        underlyingNode = underlyingNode,
+    )
 
 /**
  * Creates a new [OpenFile] node. This node represents opening a file.
@@ -52,13 +50,12 @@ fun MetadataProvider.newFile(underlyingNode: Node, fileName: String): File {
  * @param file The [File] this operation is opening.
  * @return The new [OpenFile] node.
  */
-fun MetadataProvider.newFileOpen(underlyingNode: Node, file: File): OpenFile {
-    val node = OpenFile(underlyingNode = underlyingNode, concept = file)
-    node.codeAndLocationFrom(underlyingNode)
-
-    NodeBuilder.log(node)
-    return node
-}
+fun MetadataProvider.newFileOpen(underlyingNode: Node, file: File) =
+    newOperation(
+        { underlyingNode, concept -> OpenFile(underlyingNode = underlyingNode, concept = file) },
+        underlyingNode = underlyingNode,
+        concept = file,
+    )
 
 /**
  * Creates a new [SetFileMask] node. This node represents changing a files permissions.
@@ -68,13 +65,14 @@ fun MetadataProvider.newFileOpen(underlyingNode: Node, file: File): OpenFile {
  * @param mask The file mask to set (in UNIX notation).
  * @return The new [SetFileMask] node.
  */
-fun MetadataProvider.newFileSetMask(underlyingNode: Node, file: File, mask: Long): SetFileMask {
-    val node = SetFileMask(underlyingNode = underlyingNode, concept = file, mask = mask)
-    node.codeAndLocationFrom(underlyingNode)
-
-    NodeBuilder.log(node)
-    return node
-}
+fun MetadataProvider.newFileSetMask(underlyingNode: Node, file: File, mask: Long) =
+    newOperation(
+        { underlyingNode, concept ->
+            SetFileMask(underlyingNode = underlyingNode, concept = concept, mask = mask)
+        },
+        underlyingNode = underlyingNode,
+        concept = file,
+    )
 
 /**
  * Creates a new [SetFileFlags] node.
@@ -88,13 +86,14 @@ fun MetadataProvider.newFileSetFlags(
     underlyingNode: Node,
     file: File,
     flags: Set<FileAccessModeFlags>,
-): SetFileFlags {
-    val node = SetFileFlags(underlyingNode = underlyingNode, concept = file, flags = flags)
-    node.codeAndLocationFrom(underlyingNode)
-
-    NodeBuilder.log(node)
-    return node
-}
+) =
+    newOperation(
+        { underlyingNode, concept ->
+            SetFileFlags(underlyingNode = underlyingNode, concept = file, flags = flags)
+        },
+        underlyingNode = underlyingNode,
+        concept = file,
+    )
 
 /**
  * Creates a new [CloseFile] node.
@@ -103,13 +102,12 @@ fun MetadataProvider.newFileSetFlags(
  * @param file The [File] this operation is closing.
  * @return The new [CloseFile] node.
  */
-fun MetadataProvider.newFileClose(underlyingNode: Node, file: File): CloseFile {
-    val node = CloseFile(underlyingNode = underlyingNode, concept = file)
-    node.codeAndLocationFrom(underlyingNode)
-
-    NodeBuilder.log(node)
-    return node
-}
+fun MetadataProvider.newFileClose(underlyingNode: Node, file: File) =
+    newOperation(
+        { underlyingNode, concept -> CloseFile(underlyingNode = underlyingNode, concept = file) },
+        underlyingNode = underlyingNode,
+        concept = file,
+    )
 
 /**
  * Creates a new [DeleteFile] node.
@@ -118,13 +116,12 @@ fun MetadataProvider.newFileClose(underlyingNode: Node, file: File): CloseFile {
  * @param file The [File] this operation is deleting.
  * @return The new [DeleteFile] node.
  */
-fun MetadataProvider.newFileDelete(underlyingNode: Node, file: File): DeleteFile {
-    val node = DeleteFile(underlyingNode = underlyingNode, concept = file)
-    node.codeAndLocationFrom(underlyingNode)
-
-    NodeBuilder.log(node)
-    return node
-}
+fun MetadataProvider.newFileDelete(underlyingNode: Node, file: File) =
+    newOperation(
+        { underlyingNode, concept -> DeleteFile(underlyingNode = underlyingNode, concept = file) },
+        underlyingNode = underlyingNode,
+        concept = file,
+    )
 
 /**
  * Creates a new [ReadFile] node and attaches the DFG from the corresponding [file] to the new node
@@ -134,17 +131,18 @@ fun MetadataProvider.newFileDelete(underlyingNode: Node, file: File): DeleteFile
  * @param file The [File] this operation is reading from.
  * @return The new [ReadFile] node.
  */
-fun MetadataProvider.newFileRead(underlyingNode: Node, file: File): ReadFile {
-    val node = ReadFile(underlyingNode = underlyingNode, concept = file)
-    node.codeAndLocationFrom(underlyingNode)
-
-    // add DFG
-    file.nextDFG += node
-    node.nextDFG += underlyingNode
-
-    NodeBuilder.log(node)
-    return node
-}
+fun MetadataProvider.newFileRead(underlyingNode: Node, file: File) =
+    newOperation(
+            { underlyingNode, concept ->
+                ReadFile(underlyingNode = underlyingNode, concept = file)
+            },
+            underlyingNode = underlyingNode,
+            concept = file,
+        )
+        .apply {
+            file.nextDFG += this
+            this.nextDFG += underlyingNode
+        }
 
 /**
  * Creates a new [WriteFile] node and attaches the DFG from [what] to [this] and then from the new
@@ -155,14 +153,15 @@ fun MetadataProvider.newFileRead(underlyingNode: Node, file: File): ReadFile {
  * @param what A node being written to the [file] (usually the argument of a `write` call).
  * @return The new [WriteFile] node.
  */
-fun MetadataProvider.newFileWrite(underlyingNode: Node, file: File, what: Node): WriteFile {
-    val node = WriteFile(underlyingNode = underlyingNode, concept = file, what = what)
-    node.codeAndLocationFrom(underlyingNode)
-
-    // add DFG
-    what.nextDFG += node
-    node.nextDFG += file
-
-    NodeBuilder.log(node)
-    return node
-}
+fun MetadataProvider.newFileWrite(underlyingNode: Node, file: File, what: Node) =
+    newOperation(
+            { underlyingNode, concept ->
+                WriteFile(underlyingNode = underlyingNode, concept = file, what = what)
+            },
+            underlyingNode = underlyingNode,
+            concept = file,
+        )
+        .apply {
+            what.nextDFG += this
+            this.nextDFG += file
+        }
