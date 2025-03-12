@@ -87,6 +87,7 @@ jobs:
         uses: codecov/test-results-action@v1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          os: linux-arm64
       - name: Prepare test and coverage reports
         if: ${{ always() }}
         run: |
