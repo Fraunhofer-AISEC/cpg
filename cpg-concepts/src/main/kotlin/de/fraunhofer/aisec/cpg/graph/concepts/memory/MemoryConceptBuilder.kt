@@ -57,46 +57,53 @@ fun MetadataProvider.newDynamicLoading(underlyingNode: Node) =
 /**
  * Creates a new [Allocate] operation.
  *
- * @param underlyingNode The underlying node representing this concept.
+ * @param underlyingNode The underlying node representing this operation.
+ *     * @param concept The [Concept] concept this operation belongs to.
+ *
  * @param what Defines the object whose memory is allocated.
  * @return The created [Allocate] concept.
  */
-fun Concept.newAllocate(underlyingNode: Node, what: Node?) =
+fun MetadataProvider.newAllocate(underlyingNode: Node, concept: Concept, what: Node?) =
     newOperation(
         { underlyingNode, concept ->
             Allocate(underlyingNode = underlyingNode, concept = concept, what = what)
         },
         underlyingNode = underlyingNode,
-        concept = this,
+        concept = concept,
     )
 
 /**
  * Creates a new [DeAllocate] operation.
  *
- * @param underlyingNode The underlying node representing this concept.
+ * @param underlyingNode The underlying node representing this operation.
+ *     * @param concept The [Concept] concept this operation belongs to.
+ *
  * @param what Defines the object whose memory is deallocated.
  * @return The created [DeAllocate] concept.
  */
-fun Concept.newDeallocate(underlyingNode: Node, what: Node?) =
+fun MetadataProvider.newDeallocate(underlyingNode: Node, concept: Concept, what: Node?) =
     newOperation(
         { underlyingNode, concept ->
             DeAllocate(underlyingNode = underlyingNode, concept = concept, what = what)
         },
         underlyingNode = underlyingNode,
-        concept = this,
+        concept = concept,
     )
 
 /**
  * Creates a new [LoadLibrary] operation.
  *
- * @param underlyingNode The underlying node representing this concept.
+ * @param underlyingNode The underlying node representing this operation.
+ *     * @param concept The [Concept] concept this operation belongs to.
+ *
  * @param what Defines which component is loaded.
  * @param entryPoints A list of the entry points of the library.
  * @param os The operating system architecture. Can be `null`.
  * @return The created [LoadLibrary] concept.
  */
-fun Concept.newLoadLibrary(
+fun MetadataProvider.newLoadLibrary(
     underlyingNode: Node,
+    concept: Concept,
     what: Component?,
     entryPoints: List<LibraryEntryPoint>,
     os: OperatingSystemArchitecture?,
@@ -112,21 +119,23 @@ fun Concept.newLoadLibrary(
             )
         },
         underlyingNode = underlyingNode,
-        concept = this,
+        concept = concept,
     )
 
 /**
  * Creates a new [LoadSymbol] operation.
  *
- * @param underlyingNode The underlying node representing this concept.
+ * @param underlyingNode The underlying node representing this operation.
+ * @param concept The [Concept] concept this operation belongs to.
  * @param what Defines which symbol is loaded.
  * @param loader If we are loading a symbol from an external library, this points to the
  *   [LoadLibrary] operation that loaded the library. Can be `null`.
  * @param os The operating system architecture. Can be `null`.
  * @return The created [LoadSymbol] concept.
  */
-fun <T : Declaration> Concept.newLoadSymbol(
+fun <T : Declaration> MetadataProvider.newLoadSymbol(
     underlyingNode: Node,
+    concept: Concept,
     what: T?,
     loader: LoadLibrary?,
     os: OperatingSystemArchitecture?,
@@ -142,5 +151,5 @@ fun <T : Declaration> Concept.newLoadSymbol(
             )
         },
         underlyingNode = underlyingNode,
-        concept = this,
+        concept = concept,
     )

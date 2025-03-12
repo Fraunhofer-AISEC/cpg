@@ -113,16 +113,18 @@ class CXXDynamicLoadingPass(ctx: TranslationContext) : ConceptPass(ctx) {
             val op =
                 if (assignee.type is FunctionPointerType) {
                     candidates = candidates?.filterIsInstance<FunctionDeclaration>()
-                    concept.newLoadSymbol(
+                    newLoadSymbol(
                         underlyingNode = call,
+                        concept = concept,
                         what = candidates?.singleOrNull(),
                         loader = loadLibrary,
                         os = null,
                     )
                 } else {
                     candidates = candidates?.filterIsInstance<VariableDeclaration>()
-                    concept.newLoadSymbol(
+                    newLoadSymbol(
                         underlyingNode = call,
+                        concept = concept,
                         what = candidates?.singleOrNull(),
                         loader = loadLibrary,
                         os = null,
@@ -167,8 +169,9 @@ class CXXDynamicLoadingPass(ctx: TranslationContext) : ConceptPass(ctx) {
 
         // Create the op
         val op =
-            concept.newLoadLibrary(
+            newLoadLibrary(
                 underlyingNode = call,
+                concept = concept,
                 what = component,
                 entryPoints = entryPoints,
                 os = os,

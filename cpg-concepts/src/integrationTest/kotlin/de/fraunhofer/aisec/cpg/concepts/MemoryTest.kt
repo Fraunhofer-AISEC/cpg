@@ -79,8 +79,9 @@ class MemoryTest {
         assertEquals("AES", cipher.cipherName)
         assertEquals(256, cipher.blockSize)
         val encrypt =
-            cipher.newEncryptOperation(
+            result.newEncryptOperation(
                 underlyingNode = assertNotNull(result.functions["encrypt"]),
+                concept = cipher,
                 key = key,
             )
         cipher.ops += encrypt
@@ -93,7 +94,9 @@ class MemoryTest {
             )
         val ops =
             result.allChildren<DeleteExpression>().flatMap { delete ->
-                delete.operands.map { memory.newDeallocate(underlyingNode = delete, what = it) }
+                delete.operands.map {
+                    result.newDeallocate(underlyingNode = delete, concept = memory, what = it)
+                }
             }
         memory.ops += ops
 
