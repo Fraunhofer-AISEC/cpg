@@ -18,6 +18,7 @@ de.fraunhofer.aisec.cpg.graph.concepts.arch
 de.fraunhofer.aisec.cpg.graph.concepts.auth
 de.fraunhofer.aisec.cpg.graph.concepts.config
 de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption
+de.fraunhofer.aisec.cpg.graph.concepts.file
 de.fraunhofer.aisec.cpg.graph.concepts.flows
 de.fraunhofer.aisec.cpg.graph.concepts.http
 de.fraunhofer.aisec.cpg.graph.concepts.logging
@@ -26,9 +27,11 @@ de.fraunhofer.aisec.cpg.passes.concepts
 de.fraunhofer.aisec.cpg.passes.concepts.config
 de.fraunhofer.aisec.cpg.passes.concepts.config.ini
 de.fraunhofer.aisec.cpg.passes.concepts.config.python
+de.fraunhofer.aisec.cpg.passes.concepts.file.python
 de.fraunhofer.aisec.cpg.passes.concepts.flows.cxx
 de.fraunhofer.aisec.cpg.passes.concepts.logging.python
 de.fraunhofer.aisec.cpg.passes.concepts.memory.cxx
+de.fraunhofer.aisec.cpg.query
 module:cpg-console
 de.fraunhofer.aisec.cpg.analysis
 de.fraunhofer.aisec.cpg.console
