@@ -82,6 +82,12 @@ jobs:
           files: ./build/reports/kover/report-codecov.xml
           token: ${{ secrets.CODECOV_TOKEN }}
           verbose: true
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/test-results-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          os: linux-arm64
       - name: Prepare test and coverage reports
         if: ${{ always() }}
         run: |

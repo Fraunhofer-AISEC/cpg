@@ -30,6 +30,7 @@
 plugins {
     id("org.jetbrains.dokka")
     id("io.github.gradle-nexus.publish-plugin")
+    id("test-report-aggregation")
 }
 
 // this is needed for the plugins block
@@ -87,6 +88,18 @@ nexusPublishing {
 
             username.set(mavenCentralUsername)
             password.set(mavenCentralPassword)
+        }
+    }
+}
+
+dependencies {
+    testReportAggregation(project(":cpg-core"))
+}
+
+reporting {
+    reports {
+        @Suppress("UnstableApiUsage") val testAggregateTestReport by creating(AggregateTestReport::class) {
+            testSuiteName = "test"
         }
     }
 }
