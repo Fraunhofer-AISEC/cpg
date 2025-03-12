@@ -60,11 +60,11 @@ mavenPublishing {
     publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
 }
 
+// Sign the artifacts if the signingRequired property is set to true
+val signingRequired: String? by project
 
 signing {
-    setRequired({
-        gradle.taskGraph.hasTask("publishAllPublicationsToMavenCentralRepository")
-    })
+    isRequired = signingRequired.toBoolean()
 
     val signingInMemoryKey: String? by project
     val signingInMemoryKeyPassword: String? by project
