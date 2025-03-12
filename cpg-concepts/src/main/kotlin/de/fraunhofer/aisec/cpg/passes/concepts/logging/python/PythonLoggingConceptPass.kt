@@ -68,7 +68,7 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
      */
     private val loggers = mutableMapOf<String, Log>()
 
-    private val DEFAULT_LOGGER_NAME = ""
+    private val defaultLoggerName = ""
 
     /** The global `import logging` node. */
     private var loggingLogger: ImportDeclaration? = null
@@ -103,11 +103,11 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
         if (importDeclaration.import.toString() == "logging") {
             // Add the GetLog operation to the existing Log concept or generate a new one if there
             // is nothing available yet.
-            loggers
-                .computeIfAbsent(DEFAULT_LOGGER_NAME) {
-                    newLog(underlyingNode = importDeclaration, name = DEFAULT_LOGGER_NAME)
+            val logger =
+                loggers.computeIfAbsent(defaultLoggerName) {
+                    newLog(underlyingNode = importDeclaration, name = defaultLoggerName)
                 }
-                .newLogGet(underlyingNode = importDeclaration)
+            newLogGet(underlyingNode = importDeclaration, concept = logger)
         }
     }
 
@@ -130,16 +130,16 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 when (loggerName) {
                     "",
                     "null" // Pythons `None` is translated to a Kotlin `null`
-                    -> DEFAULT_LOGGER_NAME
+                    -> defaultLoggerName
                     else -> loggerName
                 }
-            loggers
-                .computeIfAbsent(normalizedLoggerName) {
+            val logger =
+                loggers.computeIfAbsent(normalizedLoggerName) {
                     newLog(underlyingNode = callExpression, name = normalizedLoggerName)
                 }
-                .newLogGet(underlyingNode = callExpression)
+            newLogGet(underlyingNode = callExpression, concept = logger)
         } else if (callee.name.toString().startsWith("logging.")) {
-            loggers[DEFAULT_LOGGER_NAME]?.let { logOpHelper(callExpression, it) }
+            loggers[defaultLoggerName]?.let { logOpHelper(callExpression, it) }
         } else {
             // might be a call like `logger.error`
             val logger = findLogger(callExpression)
@@ -210,8 +210,9 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
             "debug" -> {
                 val name = callExpression.name.localName.toString()
                 val lvl = logLevelStringToEnum(name)
-                logger.newLogWrite(
+                newLogWrite(
                     underlyingNode = callExpression,
+                    concept = logger,
                     logArguments = callExpression.arguments,
                     level = lvl,
                 )

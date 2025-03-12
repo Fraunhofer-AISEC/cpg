@@ -48,12 +48,18 @@ fun MetadataProvider.newLog(underlyingNode: Node, name: String) =
  * given log" or "is the sensitive data flowing to a log".
  *
  * @param underlyingNode The underlying CPG node (e.g. a call expression writing to a log).
+ * @param concept The [Log] concept this operation belongs to.
  * @param level The [LogLevel] used for this write operation.
  * @param logArguments The underlying CPG nodes of the logging arguments, i.e. what is written to
  *   the log.
  * @return The new [Log].
  */
-fun Log.newLogWrite(underlyingNode: Node, level: LogLevel, logArguments: List<Node>) =
+fun MetadataProvider.newLogWrite(
+    underlyingNode: Node,
+    concept: Log,
+    level: LogLevel,
+    logArguments: List<Node>,
+) =
     newOperation(
             { node, concept ->
                 LogWrite(
@@ -64,10 +70,10 @@ fun Log.newLogWrite(underlyingNode: Node, level: LogLevel, logArguments: List<No
                 )
             },
             underlyingNode = underlyingNode,
-            concept = this,
+            concept = concept,
         )
         .apply {
-            this.nextDFG += this@newLogWrite
+            this.nextDFG += concept
             this.prevDFG += logArguments
         }
 
@@ -75,7 +81,8 @@ fun Log.newLogWrite(underlyingNode: Node, level: LogLevel, logArguments: List<No
  * Creates a [LogGet] node with the same metadata as the [underlyingNode].
  *
  * @param underlyingNode The underlying CPG node (e.g. a call expression writing to a log).
+ * @param concept The [Log] concept this operation belongs to.
  * @return The new [LogGet].
  */
-fun Log.newLogGet(underlyingNode: Node) =
-    newOperation(::LogGet, underlyingNode = underlyingNode, concept = this)
+fun MetadataProvider.newLogGet(underlyingNode: Node, concept: Log) =
+    newOperation(::LogGet, underlyingNode = underlyingNode, concept = concept)
