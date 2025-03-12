@@ -48,6 +48,19 @@ enum class PrintDFGDirection {
 }
 
 /** Utility function to print the DFG using [printGraph]. */
+fun Node.printDFG2(
+    maxConnections: Int = 25,
+    selector: (Node) -> Boolean = { true },
+    vararg strategies: (Node) -> Iterator<Dataflow> =
+        arrayOf<(Node) -> Iterator<Dataflow>>(
+            Strategy::MEMORY_VALUES_FORWARD,
+            Strategy::MEMORY_VALUES_BACKWARD,
+        ),
+): String {
+    return this.printGraph(maxConnections = maxConnections, selector, *strategies)
+}
+
+/** Utility function to print the DFG using [printGraph]. */
 fun Node.printDFG(
     maxConnections: Int = 25,
     selector: (Node) -> Boolean = { true },
@@ -139,6 +152,85 @@ fun <EdgeType : Edge<out Node>> nextStep(
             }
     }
     return Quadtuple(start, end, nextRelevant, relevantEdge)
+}
+
+/**
+ * This function prints a partial graph, limited to a particular set of edges, starting with the
+ * current [Node] as Markdown, with an embedded [Mermaid](https://mermaid.js.org) graph. The output
+ * can either be pasted into a Markdown document (and then rendered) or directly pasted into GitHub
+ * issues, discussions or pull requests (see
+ * https://github.blog/2022-02-14-include-diagrams-markdown-files-mermaid/).
+ *
+ * @param strategies The strategies to use when iterating the graph. See [Strategy] for
+ *   implementations.
+ * @return The Mermaid graph as a string encapsulated in triple-backticks.
+ */
+fun <EdgeType : Edge<out Node>> Node.printGraphNew(
+    maxConnections: Int = 25,
+    selector: (Node) -> Boolean = { true },
+    vararg strategies: (Node) -> Iterator<EdgeType>,
+): String {
+    val builder = StringBuilder()
+
+    builder.append("```mermaid\n")
+    builder.append("flowchart TD\n")
+
+    // We use a set with a defined ordering to hold our work-list to have a somewhat consistent
+    // ordering of statements in the mermaid file.
+    val worklist = LinkedHashSet<Triple<EdgeType, Node, Node>>()
+    val alreadySeen = identitySetOf<EdgeType>()
+    var conns = 0
+
+    strategies.forEach { strategy ->
+        worklist +=
+            strategy(this)
+                .asSequence()
+                .filter { it !in alreadySeen }
+                .sortedBy { it.end.name }
+                .map { Triple(it, it.start, it.end) }
+    }
+
+    while (worklist.isNotEmpty() && conns < maxConnections) {
+        // Take one edge out of the work-list
+        val item = worklist.first()
+        val (edge, startNode, endNode) = worklist.first()
+        worklist.remove(item)
+
+        if (edge in alreadySeen) {
+            continue
+        }
+
+        // Add it to the seen-list
+        alreadySeen += edge
+
+        val start = edge.start
+        val end = edge.end
+        builder.append(
+            "${start.hashCode()}[\"${start.nodeLabel}\"]-->|${edge.label()}|${end.hashCode()}[\"${end.nodeLabel}\"]\n"
+        )
+        conns++
+
+        // Add start and edges to the work-list.
+        strategies.forEach { strategy ->
+            if (strategy(edge.start).asSequence().firstOrNull()?.end == edge.end) {
+                // Is forward strategy
+                worklist +=
+                    strategy(end)
+                        .asSequence()
+                        .sortedBy { it.end.name }
+                        .map { Triple(it, it.start, it.end) }
+                worklist +=
+                    strategy(start)
+                        .asSequence()
+                        .sortedBy { it.end.name }
+                        .map { Triple(it, it.start, it.end) }
+            }
+        }
+    }
+
+    builder.append("```")
+
+    return builder.toString()
 }
 
 /**
