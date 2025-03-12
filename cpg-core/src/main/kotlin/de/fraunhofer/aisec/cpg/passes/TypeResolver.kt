@@ -39,11 +39,12 @@ import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.recordDeclaration
-import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.inference.tryRecordInference
+import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
+import kotlin.collections.plusAssign
 
 /**
  * The purpose of this [Pass] is to establish a relationship between [Type] nodes (more specifically
@@ -56,14 +57,49 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
     override fun accept(component: Component) {
         ctx.currentComponent = component
-        resolveFirstOrderTypes(component)
+        walker = SubgraphWalker.ScopedWalker(scopeManager, strategy = Strategy::AST_FORWARD)
+        walker.registerHandler { handleNode(it) }
+        walker.iterate(component)
+    }
 
-        val b =
-            Benchmark(
-                TypeResolver::class.java,
-                "Updating imported symbols for ${component.imports.size} imports",
-            )
-        b.stop()
+    /**
+     * This function is called for each [Node] in the component. It checks if the node has a type or
+     * declares a type. If so, it tries to resolve the type using [resolveType]. It also checks for
+     * secondary type edges (see [HasSecondaryTypeEdge] and resolves them as well.
+     *
+     * @param node The node to handle.
+     */
+    private fun handleNode(node: Node) {
+        if (node is HasType) {
+            var type = node.type.root
+            handleType(type)
+        } else if (node is DeclaresType) {
+            handleType(node.declaredType)
+        }
+
+        if (node is HasSecondaryTypeEdge) {
+            node.secondaryTypes.forEach { handleType(it) }
+        }
+    }
+
+    /**
+     * This function is called for each [Type] in the component. It checks if the type is
+     * unresolved. If so, it tries to resolve the type using [resolveType]. It also checks for
+     * secondary type edges (see [HasSecondaryTypeEdge] and resolves them as well.
+     *
+     * @param type The type to handle.
+     */
+    private fun handleType(type: Type) {
+        if (
+            type is ObjectType && type.typeOrigin == Type.Origin.UNRESOLVED ||
+                type.typeOrigin == Type.Origin.GUESSED
+        ) {
+            resolveType(type)
+        }
+
+        if (type is HasSecondaryTypeEdge) {
+            type.secondaryTypes.forEach { handleType(it.root) }
+        }
     }
 
     /**

@@ -134,7 +134,7 @@ internal fun Pass<*>.tryRecordInference(type: Type, source: Node): RecordDeclara
 
     val record =
         (holder ?: scopeManager.translationUnitForInference<RecordDeclaration>(source))
-            ?.startInference(ctx)
+            .startInference(ctx)
             ?.inferRecordDeclaration(type, kind, source)
 
     // Update the type's record. Because types are only unique per scope, we potentially need to
