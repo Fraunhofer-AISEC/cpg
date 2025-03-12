@@ -648,7 +648,11 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
             .singleOrNull()
     }
 
-    fun typedefFor(alias: Name, scope: Scope? = currentScope): Type? {
+    fun typedefFor(
+        alias: Name,
+        scope: Scope? = currentScope,
+        prefix: Name? = currentNamespace,
+    ): Type? {
         var current: Scope? = scope
 
         // We need to build a path from the current scope to the top most one. This ensures us that
@@ -662,16 +666,8 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
             // all this happens.
             //
             // This process has several steps:
-            // First, do a quick local lookup, to see if we have a typedef our current scope
-            // (only do this if the name is not qualified)
-            if (!alias.isQualified() && current == scope) {
-                val decl = current.typedefs[alias]
-                if (decl != null) {
-                    return decl.type
-                }
-            }
 
-            // Next, try to look up the name either by its FQN (if it is qualified) or make it
+            // First, try to look up the name either by its FQN (if it is qualified) or make it
             // qualified based on the current namespace
             val key =
                 current.typedefs.keys.firstOrNull {
@@ -684,13 +680,22 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
                         } else {
                             // Otherwise, we want to make an FQN out of it using the current
                             // namespace
-                            currentNamespace?.fqn(lookupName.localName) ?: lookupName
+                            prefix?.fqn(lookupName.localName) ?: lookupName
                         }
 
                     it.lastPartsMatch(lookupName)
                 }
             if (key != null) {
                 return current.typedefs[key]?.type
+            }
+
+            // Next, do a local lookup, to see if we have a typedef our current scope
+            // (only do this if the name is not qualified)
+            if (!alias.isQualified()) {
+                val decl = current.typedefs[alias]
+                if (decl != null) {
+                    return decl.type
+                }
             }
 
             current = current.parent
