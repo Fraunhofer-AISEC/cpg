@@ -42,6 +42,7 @@ import de.fraunhofer.aisec.cpg.helpers.Util
  * @return True, if an execution path was found. False if no pass was found or an error occurred
  *   (check the log).
  */
+// TODO remove once #2124 is merged
 fun executionPathHelper(startNode: OverlayNode, endNode: OverlayNode): Boolean {
     val startUnderlyingNode = startNode.underlyingNode
     if (startUnderlyingNode == null) {

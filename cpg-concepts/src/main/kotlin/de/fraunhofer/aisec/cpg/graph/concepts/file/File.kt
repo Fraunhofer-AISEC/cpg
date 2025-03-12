@@ -79,7 +79,7 @@ class SetFileFlags(
     underlyingNode: Node,
     override val concept: File,
     val flags: Set<FileAccessModeFlags>,
-) : Operation(underlyingNode = underlyingNode, concept = concept), IsFile
+) : FileOperation(underlyingNode = underlyingNode, file = concept), IsFile
 
 /**
  * Represents setting the umask, for example with the `mode` parameter in a Python `os.open` call or
@@ -90,7 +90,7 @@ class SetFileFlags(
  * @param mask The file mask in UNIX notation (i.e. 0o644)
  */
 class SetFileMask(underlyingNode: Node, override val concept: File, val mask: Long) :
-    Operation(underlyingNode = underlyingNode, concept = concept), IsFile
+    FileOperation(underlyingNode = underlyingNode, file = concept), IsFile
 
 /**
  * Represents closing a file.
@@ -99,7 +99,7 @@ class SetFileMask(underlyingNode: Node, override val concept: File, val mask: Lo
  * @param concept The corresponding [File] node.
  */
 class CloseFile(underlyingNode: Node, override val concept: File) :
-    Operation(underlyingNode = underlyingNode, concept = concept), IsFile
+    FileOperation(underlyingNode = underlyingNode, file = concept), IsFile
 
 /**
  * Represents deleting a file.
@@ -108,7 +108,7 @@ class CloseFile(underlyingNode: Node, override val concept: File) :
  * @param concept The corresponding [File] node.
  */
 class DeleteFile(underlyingNode: Node, override val concept: File) :
-    Operation(underlyingNode = underlyingNode, concept = concept), IsFile
+    FileOperation(underlyingNode = underlyingNode, file = concept), IsFile
 
 /**
  * Represents opening a file. This is usually done with the same underlying node the [concept] field
@@ -118,7 +118,7 @@ class DeleteFile(underlyingNode: Node, override val concept: File) :
  * @param concept The corresponding [File] node.
  */
 class OpenFile(underlyingNode: Node, override val concept: File) :
-    Operation(underlyingNode = underlyingNode, concept = concept), IsFile
+    FileOperation(underlyingNode = underlyingNode, file = concept), IsFile
 
 /**
  * Represents reading from a file.
@@ -127,7 +127,7 @@ class OpenFile(underlyingNode: Node, override val concept: File) :
  * @param concept The corresponding [File] node.
  */
 class ReadFile(underlyingNode: Node, override val concept: File) :
-    Operation(underlyingNode = underlyingNode, concept = concept), IsFile
+    FileOperation(underlyingNode = underlyingNode, file = concept), IsFile
 
 /**
  * Represents writing to a file.
@@ -137,4 +137,23 @@ class ReadFile(underlyingNode: Node, override val concept: File) :
  * @param what The node being written to the file.
  */
 class WriteFile(underlyingNode: Node, override val concept: File, val what: Node) :
-    Operation(underlyingNode = underlyingNode, concept = concept), IsFile
+    FileOperation(underlyingNode = underlyingNode, file = concept), IsFile
+
+/**
+ * All [File] [Operation]s inherit from this class. This makes the [fileConcept] field available for
+ * [FileOperation], resulting in easier to read queries (one can use [FileOperation.fileConcept]
+ * insted of [Operation.concept]. There is no logic involved - just a simple forwarding of the
+ * field.
+ *
+ * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
+ * @param file The corresponding [File] node.
+ */
+abstract class FileOperation(underlyingNode: Node, file: File) :
+    Operation(underlyingNode = underlyingNode, concept = file) {
+    /**
+     * The corresponding [File] [Concept] node. This is a convenience field and has the same effect
+     * as using [Operation.concept].
+     */
+    val fileConcept: File
+        get() = this.concept as File
+}

@@ -72,21 +72,19 @@ class PythonValueEvaluator : ValueEvaluator() {
     override fun handleReference(node: Reference, depth: Int): Any? {
         return when (val recName = node.reconstructedImportName.toString()) {
             in symbolsMap.keys ->
-                resolveSymbolViaLookup(node, recName) ?: super.handlePrevDFG(node, depth)
+                resolveSymbolViaLookup(node, recName) ?: super.handleReference(node, depth)
 
             // We need to handle sys.platform and sys.version_info specially, since it is often used
             // in a pre-processor macro-style, and we want to replace this with the actual value (if
             // we have it). This allows us to dynamically prune if-branches based on constant
             // evaluation.
             "sys.platform" ->
-                node.translationUnit?.sysInfo?.platform ?: super.handlePrevDFG(node, depth)
-
+                node.translationUnit?.sysInfo?.platform ?: super.handleReference(node, depth)
             "sys.version_info" -> {
                 return node.translationUnit?.sysInfo?.versionInfo?.toList()
-                    ?: super.handlePrevDFG(node, depth)
+                    ?: super.handleReference(node, depth)
             }
-
-            else -> super.handlePrevDFG(node, depth)
+            else -> super.handleReference(node, depth)
         }
     }
 

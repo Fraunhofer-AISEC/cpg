@@ -37,7 +37,6 @@ import de.fraunhofer.aisec.cpg.passes.DFGPass
 import de.fraunhofer.aisec.cpg.passes.concepts.ConceptPass
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLate
-import de.fraunhofer.aisec.cpg.query.QueryTree
 
 /**
  * This pass implements the creating of [Concept] and [Operation] nodes for Python file
@@ -262,7 +261,9 @@ class PythonFileConceptPass(ctx: TranslationContext) : ConceptPass(ctx) {
             nodesWithOpenFileOverlay
                 .flatMap { it.overlays } // collect all "overlay" nodes
                 .filterIsInstance<OpenFile>() // discard not-relevant overlays
-                .map { it.concept } // move from [OpenFile] to the corresponding [File] concept node
+                .map {
+                    it.fileConcept
+                } // move from [OpenFile] to the corresponding [File] concept node
 
         return files
     }
@@ -363,19 +364,6 @@ class PythonFileConceptPass(ctx: TranslationContext) : ConceptPass(ctx) {
                 )
                 emptySet()
             }
-        }
-    }
-
-    companion object {
-        // Replace once #2105 is merged
-        fun QueryTree<*>.successfulLastNodes(): List<Node> {
-            val successfulPaths = this.children.filter { it.value == true }
-            val innerPath = successfulPaths.flatMap { it.children }
-            val finallyTheEntirePaths = innerPath.map { it.value }
-
-            return finallyTheEntirePaths
-                .mapNotNull { (it as? List<*>)?.last() }
-                .filterIsInstance<Node>()
         }
     }
 }
