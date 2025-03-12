@@ -52,7 +52,6 @@ fun LanguageProvider.incompleteType(): Type {
 /** Returns a [PointerType] that describes an array reference to the current type. */
 fun Type.array(): Type {
     val type = this.reference(PointerType.PointerOrigin.ARRAY)
-    this.secondOrderTypes += type
 
     return type
 }
@@ -60,15 +59,12 @@ fun Type.array(): Type {
 /** Returns a [PointerType] that describes a pointer reference to the current type. */
 fun Type.pointer(): Type {
     val type = this.reference(PointerType.PointerOrigin.POINTER)
-    this.secondOrderTypes += type
 
     return type
 }
 
 fun Type.ref(): Type {
     val type = ReferenceType(this)
-
-    this.secondOrderTypes += type
 
     return type
 }

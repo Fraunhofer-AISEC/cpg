@@ -519,6 +519,13 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
 
         // First, we need to check, whether we have some kind of scoping.
         if (scopeName != null) {
+            // This is a rather ugly hack, but we need to check whether the scopeName is the same as
+            // the current scope. This is unfortunately necessary since "toType()" returns a type
+            // with an FQN that is scoped to the current scope and we need to change that :(
+            if (scopeName == scope?.name) {
+                return ScopeExtraction(scope, name)
+            }
+
             // We need to check, whether we have an alias for the name's parent in this file
             val scope = lookupScopeByName(scopeName, language, scope)
 

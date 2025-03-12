@@ -98,7 +98,7 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         }
 
         if (type is HasSecondaryTypeEdge) {
-            type.secondaryTypes.forEach { handleType(it.root) }
+            type.secondaryTypes.filter { it.root != type }.forEach { handleType(it.root) }
         }
     }
 
@@ -168,6 +168,7 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 declaredType.name,
             )
             type.name = declaredType.name
+            type.refreshNames()
             type.declaredFrom = declares
             type.recordDeclaration = declares as? RecordDeclaration
             type.typeOrigin = Type.Origin.RESOLVED

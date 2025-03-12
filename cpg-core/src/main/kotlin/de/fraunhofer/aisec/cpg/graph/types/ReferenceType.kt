@@ -45,6 +45,7 @@ class ReferenceType : Type, SecondOrderType {
         language = reference.language
         name = reference.name.append("&")
         this.elementType = reference
+        this.elementType.secondOrderTypes += this
     }
 
     /**

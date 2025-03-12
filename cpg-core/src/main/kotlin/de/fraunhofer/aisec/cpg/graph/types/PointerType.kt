@@ -58,6 +58,7 @@ class PointerType : Type, SecondOrderType {
     ) {
         this.pointerOrigin = pointerOrigin
         this.elementType = elementType
+        this.elementType.secondOrderTypes += this
     }
 
     /**
@@ -90,8 +91,6 @@ class PointerType : Type, SecondOrderType {
             }
         val fullTypeName = Name(localName, elementType.name.parent, elementType.name.delimiter)
         name = fullTypeName
-
-        super.refreshNames()
     }
 
     val isArray: Boolean

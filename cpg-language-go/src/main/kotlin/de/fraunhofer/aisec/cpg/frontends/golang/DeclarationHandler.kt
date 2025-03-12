@@ -51,12 +51,13 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
             if (recv != null) {
                 val recvField = recv.list.firstOrNull()
                 val recordType = recvField?.type?.let { frontend.typeOf(it) } ?: unknownType()
+                // The record type be an unqualified type, so we need to use the current
+                // namespace to make a FQN out of it
+                val fqnRecord =
+                    frontend.scopeManager.currentNamespace.fqn(recordType.root.name.localName)
 
                 val method =
-                    newMethodDeclaration(
-                        Name(funcDecl.name.name, recordType.root.name),
-                        rawNode = funcDecl,
-                    )
+                    newMethodDeclaration(Name(funcDecl.name.name, fqnRecord), rawNode = funcDecl)
 
                 // The name of the Go receiver is optional. In fact, if the name is not
                 // specified we probably do not need any receiver variable at all,
@@ -72,12 +73,10 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
                 }
 
                 if (recordType !is UnknownType) {
-                    val recordName = recordType.root.name
-
                     // TODO: this will only find methods within the current translation unit.
                     //  this is a limitation that we have for C++ as well
                     val record =
-                        frontend.scopeManager.lookupScope(recordName)?.astNode as? RecordDeclaration
+                        frontend.scopeManager.lookupScope(fqnRecord)?.astNode as? RecordDeclaration
 
                     // now this gets a little bit hacky, we will add it to the record declaration
                     // this is strictly speaking not 100 % true, since the method property edge is
