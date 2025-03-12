@@ -178,7 +178,7 @@ class PythonStdLibConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) 
             warnWithFileLocation(
                 sub,
                 log,
-                "We could not evaluate the configuration group name to a string",
+                "We could not evaluate the configuration option name to a string",
             )
             return ops
         }
