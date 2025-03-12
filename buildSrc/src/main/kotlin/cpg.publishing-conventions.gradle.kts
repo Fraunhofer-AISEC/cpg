@@ -10,7 +10,7 @@ publishing {
     repositories {
         maven {
             name = "githubPackages"
-            url = uri("https://maven.pkg.github.com/your-org/your-project")
+            url = uri("https://maven.pkg.github.com/Fraunhofer-AISEC/cpg")
             // username and password (a personal Github access token) should be specified as
             // `githubPackagesUsername` and `githubPackagesPassword` Gradle properties or alternatively
             // as `ORG_GRADLE_PROJECT_githubPackagesUsername` and `ORG_GRADLE_PROJECT_githubPackagesPassword`
