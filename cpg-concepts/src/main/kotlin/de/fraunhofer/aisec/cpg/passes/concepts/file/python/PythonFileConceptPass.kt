@@ -273,7 +273,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : ConceptPass(ctx) {
      * arguments is analyzed.
      *
      * @param call The [CallExpression] (builtin-`open` or `os.open`) to be analyzed.
-     * @return The name or [UNKNOWN_FILE_NAME] if no name could be found.
+     * @return The name or null if no name could be found.
      */
     private fun getFileName(call: CallExpression, argumentName: String): String? {
         val name = call.argumentValueByNameOrPosition<String>(name = argumentName, position = 0)
