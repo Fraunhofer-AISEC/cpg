@@ -84,7 +84,9 @@ class IniFileConfigurationSourcePass(ctx: TranslationContext) : ConceptPass(ctx)
         }
 
         val group =
-            conf.newConfigurationGroupSource(underlyingNode = record).also { it.name = record.name }
+            newConfigurationGroupSource(underlyingNode = record, concept = conf).also {
+                it.name = record.name
+            }
 
         // Add an incoming DFG edge from the record
         group.prevDFGEdges.add(record)
@@ -114,7 +116,9 @@ class IniFileConfigurationSourcePass(ctx: TranslationContext) : ConceptPass(ctx)
         }
 
         val option =
-            group.newConfigurationOptionSource(underlyingNode = field).also { it.name = field.name }
+            newConfigurationOptionSource(underlyingNode = field, concept = group).also {
+                it.name = field.name
+            }
 
         // Add an incoming DFG edge from the field
         option.prevDFGEdges.add(field)

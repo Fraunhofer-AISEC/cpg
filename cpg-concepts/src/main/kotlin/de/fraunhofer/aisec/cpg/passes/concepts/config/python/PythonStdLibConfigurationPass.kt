@@ -91,7 +91,7 @@ class PythonStdLibConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) 
                 }
             paths?.fulfilled?.map {
                 val conf = it.last() as Configuration
-                val op = conf.newLoadConfiguration(call, fileExpression = firstArgument)
+                val op = newLoadConfiguration(call, concept = conf, fileExpression = firstArgument)
                 op
             }
         }
@@ -147,12 +147,13 @@ class PythonStdLibConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) 
         var group = conf.groups.find { it.name.localName == name }
         if (group == null) {
             // If it does not exist, we create it and implicitly add a registration operation
-            group = conf.newConfigurationGroup(sub).also { it.name = Name(name) }.implicit()
-            val op = group.newRegisterConfigurationGroup(sub).implicit()
+            group =
+                newConfigurationGroup(sub, concept = conf).also { it.name = Name(name) }.implicit()
+            val op = newRegisterConfigurationGroup(sub, concept = group).implicit()
             ops += op
         }
 
-        val op = group.newReadConfigurationGroup(sub)
+        val op = newReadConfigurationGroup(sub, concept = group)
         ops += op
 
         // Add an incoming DFG from the option group
@@ -186,15 +187,16 @@ class PythonStdLibConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) 
         if (option == null) {
             // If it does not exist, we create it and implicitly add a registration operation
             option =
-                group
-                    .newConfigurationOption(sub, key = sub, value = null)
+                newConfigurationOption(sub, key = sub, concept = group, value = null)
                     .also { it.name = group.name.fqn(name) }
                     .implicit()
-            val op = option.newRegisterConfigurationOption(sub, defaultValue = null).implicit()
+            val op =
+                newRegisterConfigurationOption(sub, concept = option, defaultValue = null)
+                    .implicit()
             ops += op
         }
 
-        val op = option.newReadConfigurationOption(sub)
+        val op = newReadConfigurationOption(sub, concept = option)
         ops += op
 
         // Add an incoming DFG from the option

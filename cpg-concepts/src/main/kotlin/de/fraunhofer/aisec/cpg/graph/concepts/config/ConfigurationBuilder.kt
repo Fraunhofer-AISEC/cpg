@@ -53,35 +53,36 @@ fun MetadataProvider.newConfigurationSource(underlyingNode: Node) =
  * Creates a new [ConfigurationGroupSource] concept.
  *
  * @param underlyingNode The underlying node representing this concept.
+ * @param concept The [ConfigurationSource] concept to which the group belongs.
  * @return The created [ConfigurationGroupSource] concept.
  */
-fun ConfigurationSource.newConfigurationGroupSource(underlyingNode: Node) =
-    newConcept(
-        { ConfigurationGroupSource(it, this@newConfigurationGroupSource) },
-        underlyingNode = underlyingNode,
-    )
+fun MetadataProvider.newConfigurationGroupSource(
+    underlyingNode: Node,
+    concept: ConfigurationSource,
+) = newConcept({ ConfigurationGroupSource(it, concept) }, underlyingNode = underlyingNode)
 
 /**
  * Creates a new [ConfigurationOptionSource] concept.
  *
  * @param underlyingNode The underlying node representing this concept.
+ * @param concept The [ConfigurationGroupSource] concept to which the operation belongs.
  * @return The created [ConfigurationOptionSource] concept.
  */
-fun ConfigurationGroupSource.newConfigurationOptionSource(underlyingNode: Node) =
-    newConcept(
-        { ConfigurationOptionSource(it, this@newConfigurationOptionSource) },
-        underlyingNode = underlyingNode,
-    )
+fun MetadataProvider.newConfigurationOptionSource(
+    underlyingNode: Node,
+    concept: ConfigurationGroupSource,
+) = newConcept({ ConfigurationOptionSource(it, concept) }, underlyingNode = underlyingNode)
 
 /**
  * Creates a new [ConfigurationGroup] concept.
  *
  * @param underlyingNode The underlying node representing this concept.
+ * @param concept The [Configuration] concept to which the group belongs.
  * @return The created [ConfigurationGroup] concept.
  */
-fun Configuration.newConfigurationGroup(underlyingNode: Node) =
+fun MetadataProvider.newConfigurationGroup(underlyingNode: Node, concept: Configuration) =
     newConcept(
-        { ConfigurationGroup(underlyingNode = it, conf = this) },
+        { ConfigurationGroup(underlyingNode = it, conf = concept) },
         underlyingNode = underlyingNode,
     )
 
@@ -89,13 +90,19 @@ fun Configuration.newConfigurationGroup(underlyingNode: Node) =
  * Creates a new [ConfigurationOption] concept.
  *
  * @param underlyingNode The underlying node representing this concept.
+ * @param concept The [ConfigurationGroup] concept to which the option belongs.
  * @param key The key node for the configuration option.
  * @param value The value node for the configuration option.
  * @return The created [ConfigurationOption] concept.
  */
-fun ConfigurationGroup.newConfigurationOption(underlyingNode: Node, key: Node, value: Node?) =
+fun MetadataProvider.newConfigurationOption(
+    underlyingNode: Node,
+    concept: ConfigurationGroup,
+    key: Node,
+    value: Node?,
+) =
     newConcept(
-        { ConfigurationOption(underlyingNode = it, group = this, key = key, value = value) },
+        { ConfigurationOption(underlyingNode = it, group = concept, key = key, value = value) },
         underlyingNode = underlyingNode,
     )
 
@@ -103,10 +110,15 @@ fun ConfigurationGroup.newConfigurationOption(underlyingNode: Node, key: Node, v
  * Creates a new [LoadConfiguration] operation.
  *
  * @param underlyingNode The underlying node representing this operation.
+ * @param concept The [Configuration] concept to which the load operation belongs.
  * @param fileExpression The expression representing the file to load.
  * @return The created [LoadConfiguration] operation.
  */
-fun Configuration.newLoadConfiguration(underlyingNode: Node, fileExpression: Expression) =
+fun MetadataProvider.newLoadConfiguration(
+    underlyingNode: Node,
+    concept: Configuration,
+    fileExpression: Expression,
+) =
     newOperation(
         { underlyingNode, concept ->
             LoadConfiguration(
@@ -116,64 +128,76 @@ fun Configuration.newLoadConfiguration(underlyingNode: Node, fileExpression: Exp
             )
         },
         underlyingNode = underlyingNode,
-        concept = this,
+        concept = concept,
     )
 
 /**
  * Creates a new [ReadConfigurationGroup] operation.
  *
  * @param underlyingNode The underlying node representing this operation.
+ * @param concept The [ConfigurationGroup] concept to which the read operation belongs.
  * @return The created [ReadConfigurationGroup] operation.
  */
-fun ConfigurationGroup.newReadConfigurationGroup(underlyingNode: Node) =
+fun MetadataProvider.newReadConfigurationGroup(underlyingNode: Node, concept: ConfigurationGroup) =
     newOperation(
         { underlyingNode, concept ->
             ReadConfigurationGroup(underlyingNode = underlyingNode, group = concept)
         },
         underlyingNode = underlyingNode,
-        concept = this,
+        concept = concept,
     )
 
 /**
  * Creates a new [RegisterConfigurationGroup] operation.
  *
  * @param underlyingNode The underlying node representing this operation.
+ * @param concept The [ConfigurationGroup] concept to which the register operation belongs.
  * @return The created [RegisterConfigurationGroup] operation.
  */
-fun ConfigurationGroup.newRegisterConfigurationGroup(underlyingNode: Node) =
+fun MetadataProvider.newRegisterConfigurationGroup(
+    underlyingNode: Node,
+    concept: ConfigurationGroup,
+) =
     newOperation(
         { underlyingNode, concept ->
             RegisterConfigurationGroup(underlyingNode = underlyingNode, group = concept)
         },
         underlyingNode = underlyingNode,
-        concept = this,
+        concept = concept,
     )
 
 /**
  * Creates a new [ProvideConfiguration] operation.
  *
  * @param underlyingNode The underlying node representing this operation.
+ * @param concept The [Configuration] concept to which the provide operation belongs.
  * @param source The source of the configuration.
  * @return The created [ProvideConfiguration] operation.
  */
-fun Configuration.newProvideConfiguration(underlyingNode: Node, source: ConfigurationSource) =
+fun MetadataProvider.newProvideConfiguration(
+    underlyingNode: Node,
+    concept: Configuration,
+    source: ConfigurationSource,
+) =
     newOperation(
         { underlyingNode, concept ->
             ProvideConfiguration(underlyingNode = underlyingNode, source = source, conf = concept)
         },
         underlyingNode = underlyingNode,
-        concept = this,
+        concept = concept,
     )
 
 /**
  * Creates a new [ProvideConfigurationGroup] operation.
  *
  * @param underlyingNode The underlying node representing this operation.
+ * @param concept The [ConfigurationGroup] concept to which the provide operation belongs.
  * @param source The source of the configuration group.
  * @return The created [ProvideConfigurationGroup] operation.
  */
-fun ConfigurationGroup.newProvideConfigurationGroup(
+fun MetadataProvider.newProvideConfigurationGroup(
     underlyingNode: Node,
+    concept: ConfigurationGroup,
     source: ConfigurationGroupSource,
 ) =
     newOperation(
@@ -185,32 +209,41 @@ fun ConfigurationGroup.newProvideConfigurationGroup(
             )
         },
         underlyingNode = underlyingNode,
-        concept = this,
+        concept = concept,
     )
 
 /**
  * Creates a new [ReadConfigurationOption] operation.
  *
  * @param underlyingNode The underlying node representing this operation.
+ * @param concept The [ConfigurationOption] concept to which the read operation belongs.
  * @return The created [ReadConfigurationOption] operation.
  */
-fun ConfigurationOption.newReadConfigurationOption(underlyingNode: Node) =
+fun MetadataProvider.newReadConfigurationOption(
+    underlyingNode: Node,
+    concept: ConfigurationOption,
+) =
     newOperation(
         { underlyingNode, concept ->
             ReadConfigurationOption(underlyingNode = underlyingNode, option = concept)
         },
         underlyingNode = underlyingNode,
-        concept = this,
+        concept = concept,
     )
 
 /**
  * Creates a new [RegisterConfigurationOption] operation.
  *
  * @param underlyingNode The underlying node representing this operation.
+ * @param concept The [ConfigurationOption] concept to which the register operation belongs.
  * @param defaultValue The default value for the configuration option.
  * @return The created [RegisterConfigurationOption] operation.
  */
-fun ConfigurationOption.newRegisterConfigurationOption(underlyingNode: Node, defaultValue: Node?) =
+fun MetadataProvider.newRegisterConfigurationOption(
+    underlyingNode: Node,
+    concept: ConfigurationOption,
+    defaultValue: Node?,
+) =
     newOperation(
         { underlyingNode, concept ->
             RegisterConfigurationOption(
@@ -220,19 +253,21 @@ fun ConfigurationOption.newRegisterConfigurationOption(underlyingNode: Node, def
             )
         },
         underlyingNode = underlyingNode,
-        concept = this,
+        concept = concept,
     )
 
 /**
  * Creates a new [ProvideConfigurationOption] operation.
  *
  * @param underlyingNode The underlying node representing this operation.
+ * @param concept The [ConfigurationOption] concept to which the provide operation belongs.
  * @param source The source of the configuration option.
  * @param value The value of the configuration option.
  * @return The created [ProvideConfigurationOption] operation.
  */
-fun ConfigurationOption.newProvideConfigurationOption(
+fun MetadataProvider.newProvideConfigurationOption(
     underlyingNode: Node,
+    concept: ConfigurationOption,
     source: ConfigurationOptionSource,
     value: Node?,
 ) =
@@ -246,5 +281,5 @@ fun ConfigurationOption.newProvideConfigurationOption(
             )
         },
         underlyingNode = underlyingNode,
-        concept = this,
+        concept = concept,
     )
