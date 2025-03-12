@@ -222,7 +222,7 @@ class FileConceptTest : BaseTest() {
                             ?: return@none true // fail if there is no underlyingNode
                     executionPath(startNode = startNode, direction = Forward(GraphToFollow.EOG)) {
                             it.overlays.any { overlay ->
-                                overlay is SetFileMask && write.fileConcept == overlay.fileConcept
+                                overlay is SetFileMask && write.file == overlay.file
                             }
                         }
                         .value == true
@@ -261,7 +261,7 @@ class FileConceptTest : BaseTest() {
                             ?: return@none true // fail if there is no underlyingNode
                     executionPath(startNode = startNode, direction = Forward(GraphToFollow.EOG)) {
                             it.overlays.any { overlay ->
-                                overlay is SetFileMask && write.fileConcept == overlay.fileConcept
+                                overlay is SetFileMask && write.file == overlay.file
                             }
                         }
                         .value == true
@@ -301,11 +301,11 @@ class FileConceptTest : BaseTest() {
 
         val write = conceptNodes.filterIsInstance<WriteFile>().singleOrNull()
         assertNotNull(write, "Expected to find a file write operation.")
-        assertEquals(file, write.fileConcept, "Expected the write to write to our file node.")
+        assertEquals(file, write.file, "Expected the write to write to our file node.")
 
         val chmod = conceptNodes.filterIsInstance<SetFileMask>().singleOrNull()
         assertNotNull(chmod, "Expected to find a file chmod operation.")
-        assertEquals(file, chmod.fileConcept, "Expected the chmod to operate on our file node.")
+        assertEquals(file, chmod.file, "Expected the chmod to operate on our file node.")
 
         // Let's find our bad example
         assertTrue(

@@ -57,7 +57,7 @@ enum class FileAccessModeFlags(val value: Long) : IsFile {
 }
 
 /** The bit-mask to be used to get the [FileAccessModeFlags] from an entire flags value. */
-val O_ACCMODE_MODE_MASK = 3L
+const val O_ACCMODE_MODE_MASK = 3L
 
 /**
  * Represents a file.
@@ -140,10 +140,9 @@ class WriteFile(underlyingNode: Node, override val concept: File, val what: Node
     FileOperation(underlyingNode = underlyingNode, file = concept), IsFile
 
 /**
- * All [File] [Operation]s inherit from this class. This makes the [fileConcept] field available for
- * [FileOperation], resulting in easier to read queries (one can use [FileOperation.fileConcept]
- * insted of [Operation.concept]. There is no logic involved - just a simple forwarding of the
- * field.
+ * All [File] [Operation]s inherit from this class. This makes the [file] field available for
+ * [FileOperation], resulting in easier to read queries (one can use [FileOperation.file] instead of
+ * [Operation.concept]). There is no logic involved - just a simple forwarding of the field.
  *
  * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
  * @param file The corresponding [File] node.
@@ -154,6 +153,6 @@ abstract class FileOperation(underlyingNode: Node, file: File) :
      * The corresponding [File] [Concept] node. This is a convenience field and has the same effect
      * as using [Operation.concept].
      */
-    val fileConcept: File
+    val file: File
         get() = this.concept as File
 }

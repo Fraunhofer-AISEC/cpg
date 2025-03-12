@@ -261,9 +261,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : ConceptPass(ctx) {
             nodesWithOpenFileOverlay
                 .flatMap { it.overlays } // collect all "overlay" nodes
                 .filterIsInstance<OpenFile>() // discard not-relevant overlays
-                .map {
-                    it.fileConcept
-                } // move from [OpenFile] to the corresponding [File] concept node
+                .map { it.file } // move from [OpenFile] to the corresponding [File] concept node
 
         return files
     }
