@@ -80,48 +80,53 @@ fun MetadataProvider.newBlockStorage(underlyingNode: Node) =
  * Creates a new [Encrypt] operation.
  *
  * @param underlyingNode The underlying node representing this operation.
+ * @param concept The [Cipher] concept to which the operation belongs.
  * @param key The secret key used for encryption.
  * @return The created [Encrypt] operation.
  */
-fun Cipher.newEncryptOperation(underlyingNode: Node, key: Secret) =
+fun MetadataProvider.newEncryptOperation(underlyingNode: Node, concept: Cipher, key: Secret) =
     newOperation(
         { node, concept -> Encrypt(underlyingNode, concept, key) },
         underlyingNode = underlyingNode,
-        concept = this,
+        concept = concept,
     )
 
 /**
  * Creates a new [CreateEncryptedDisk] operation.
  *
  * @param underlyingNode The underlying node representing this operation.
+ * @param concept The [DiskEncryption] concept to which the operation belongs.
  * @return The created [CreateEncryptedDisk] operation.
  */
-fun DiskEncryption.newCreateEncryptedDisk(underlyingNode: Node) =
-    newOperation(::CreateEncryptedDisk, underlyingNode = underlyingNode, concept = this)
+fun MetadataProvider.newCreateEncryptedDisk(underlyingNode: Node, concept: DiskEncryption) =
+    newOperation(::CreateEncryptedDisk, underlyingNode = underlyingNode, concept = concept)
 
 /**
  * Creates a new [UnlockEncryptedDisk] operation.
  *
  * @param underlyingNode The underlying node representing this operation.
+ * @param concept The [DiskEncryption] concept to which the operation belongs.
  * @return The created [UnlockEncryptedDisk] operation.
  */
-fun DiskEncryption.newUnlockEncryptedDisk(underlyingNode: Node) =
-    newOperation(::UnlockEncryptedDisk, underlyingNode = underlyingNode, concept = this)
+fun MetadataProvider.newUnlockEncryptedDisk(underlyingNode: Node, concept: DiskEncryption) =
+    newOperation(::UnlockEncryptedDisk, underlyingNode = underlyingNode, concept = concept)
 
 /**
  * Creates a new [CreateSecret] operation.
  *
  * @param underlyingNode The underlying node representing this operation.
+ * @param concept The [Secret] concept to which the operation belongs.
  * @return The created [CreateSecret] operation.
  */
-fun Secret.newCreateSecret(underlyingNode: Node) =
-    newOperation(::CreateSecret, underlyingNode = underlyingNode, concept = this)
+fun MetadataProvider.newCreateSecret(underlyingNode: Node, concept: Secret) =
+    newOperation(::CreateSecret, underlyingNode = underlyingNode, concept = concept)
 
 /**
  * Creates a new [GetSecret] operation.
  *
  * @param underlyingNode The underlying node representing this operation.
+ * @param concept The [Secret] concept to which the operation belongs.
  * @return The created [GetSecret] operation.
  */
-fun Secret.newGetSecret(underlyingNode: Node) =
-    newOperation(::GetSecret, underlyingNode = underlyingNode, concept = this)
+fun MetadataProvider.newGetSecret(underlyingNode: Node, concept: Secret) =
+    newOperation(::GetSecret, underlyingNode = underlyingNode, concept = concept)
