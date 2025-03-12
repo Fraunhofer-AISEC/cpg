@@ -97,9 +97,9 @@ internal class EOGTest : BaseTest() {
         // Assert: Condition of simple if is preceded by print
         assertTrue(
             Util.eogConnect(
-                en = Util.Edge.ENTRIES,
-                n = ifSimple.condition,
-                refs = listOf(prints[0]),
+                edgeDirection = Util.Edge.ENTRIES,
+                startNode = ifSimple.condition,
+                endNodes = listOf(prints[0]),
             )
         )
 
@@ -107,38 +107,38 @@ internal class EOGTest : BaseTest() {
         // IfStatement
         assertTrue(
             Util.eogConnect(
-                en = Util.Edge.ENTRIES,
-                n = ifSimple.thenStatement,
-                cr = Connect.NODE,
+                edgeDirection = Util.Edge.ENTRIES,
+                startNode = ifSimple.thenStatement,
+                connectEnd = Connect.NODE,
                 predicate = { it.branch == true },
-                refs = listOf(ifSimple),
+                endNodes = listOf(ifSimple),
             )
         )
         // Assert: The EOGs going into the second print come either from the then branch or the
         // IfStatement
         assertTrue(
             Util.eogConnect(
-                cn = Connect.NODE,
-                en = Util.Edge.EXITS,
-                n = ifSimple,
-                refs = listOf(prints[1]),
+                connectStart = Connect.NODE,
+                edgeDirection = Util.Edge.EXITS,
+                startNode = ifSimple,
+                endNodes = listOf(prints[1]),
             )
         )
         assertTrue(
             Util.eogConnect(
-                cn = Connect.NODE,
-                en = Util.Edge.EXITS,
-                n = ifSimple,
+                connectStart = Connect.NODE,
+                edgeDirection = Util.Edge.EXITS,
+                startNode = ifSimple,
                 predicate = { it.branch == true },
-                refs = listOf(ifSimple.thenStatement),
+                endNodes = listOf(ifSimple.thenStatement),
             )
         )
         assertTrue(
             Util.eogConnect(
-                cn = Connect.NODE,
-                en = Util.Edge.EXITS,
-                n = ifSimple.thenStatement,
-                refs = listOf(prints[1]),
+                connectStart = Connect.NODE,
+                edgeDirection = Util.Edge.EXITS,
+                startNode = ifSimple.thenStatement,
+                endNodes = listOf(prints[1]),
             )
         )
         conditionEOG = SubgraphWalker.getEOGPathEdges(ifBranched.condition)
@@ -152,26 +152,30 @@ internal class EOGTest : BaseTest() {
 
         // Assert: Branched if is preceded by the second print
         assertTrue(
-            Util.eogConnect(en = Util.Edge.ENTRIES, n = ifBranched, refs = listOf(prints[1]))
+            Util.eogConnect(
+                edgeDirection = Util.Edge.ENTRIES,
+                startNode = ifBranched,
+                endNodes = listOf(prints[1]),
+            )
         )
 
         // IfStatement has exactly 2 outgoing EOGS: true (then) and false (else) branch
         assertTrue(
             Util.eogConnect(
-                cn = Connect.NODE,
-                en = Util.Edge.EXITS,
-                n = ifBranched,
+                connectStart = Connect.NODE,
+                edgeDirection = Util.Edge.EXITS,
+                startNode = ifBranched,
                 predicate = { it.branch == true },
-                refs = listOf(ifBranched.thenStatement),
+                endNodes = listOf(ifBranched.thenStatement),
             )
         )
         assertTrue(
             Util.eogConnect(
-                cn = Connect.NODE,
-                en = Util.Edge.EXITS,
-                n = ifBranched,
+                connectStart = Connect.NODE,
+                edgeDirection = Util.Edge.EXITS,
+                startNode = ifBranched,
                 predicate = { it.branch == false },
-                refs = listOf(ifBranched.elseStatement),
+                endNodes = listOf(ifBranched.elseStatement),
             )
         )
         val ifBranchedEOG = SubgraphWalker.getEOGPathEdges(ifBranched)
@@ -180,42 +184,42 @@ internal class EOGTest : BaseTest() {
         // Assert: EOG going into then branch comes from the condition branch
         assertTrue(
             Util.eogConnect(
-                en = Util.Edge.ENTRIES,
-                n = ifBranched.thenStatement,
-                cr = Connect.NODE,
+                edgeDirection = Util.Edge.ENTRIES,
+                startNode = ifBranched.thenStatement,
+                connectEnd = Connect.NODE,
                 predicate = { it.branch == true },
-                refs = listOf(ifBranched),
+                endNodes = listOf(ifBranched),
             )
         )
 
         // Assert: EOG going into else branch comes from the condition branch
         assertTrue(
             Util.eogConnect(
-                en = Util.Edge.ENTRIES,
-                n = ifBranched.elseStatement,
-                cr = Connect.NODE,
+                edgeDirection = Util.Edge.ENTRIES,
+                startNode = ifBranched.elseStatement,
+                connectEnd = Connect.NODE,
                 predicate = { it.branch == false },
-                refs = listOf(ifBranched),
+                endNodes = listOf(ifBranched),
             )
         )
 
         // Assert: EOG edges going into the third print either come from the then or else branch
         assertTrue(
             Util.eogConnect(
-                cn = Connect.SUBTREE,
-                en = Util.Edge.EXITS,
-                n = ifBranched,
-                refs = listOf(prints[2]),
+                connectStart = Connect.SUBTREE,
+                edgeDirection = Util.Edge.EXITS,
+                startNode = ifBranched,
+                endNodes = listOf(prints[2]),
             )
         )
         // Assert: EOG edges going into the branch root node either come from the then or else
         // branch
         assertTrue(
             Util.eogConnect(
-                cn = Connect.NODE,
-                en = Util.Edge.ENTRIES,
-                n = ifBranched,
-                refs = listOf(ifBranched.condition),
+                connectStart = Connect.NODE,
+                edgeDirection = Util.Edge.ENTRIES,
+                startNode = ifBranched,
+                endNodes = listOf(ifBranched.condition),
             )
         )
     }
@@ -229,184 +233,184 @@ internal class EOGTest : BaseTest() {
         var fs = fstat[0]
         assertTrue(
             Util.eogConnect(
-                cn = Connect.NODE,
-                en = Util.Edge.EXITS,
-                n = prints[0],
-                cr = Connect.SUBTREE,
-                refs = listOf(fs),
+                connectStart = Connect.NODE,
+                edgeDirection = Util.Edge.EXITS,
+                startNode = prints[0],
+                connectEnd = Connect.SUBTREE,
+                endNodes = listOf(fs),
             )
         )
         assertTrue(
             Util.eogConnect(
-                cn = Connect.NODE,
-                en = Util.Edge.EXITS,
-                n = prints[0],
-                cr = Connect.SUBTREE,
-                refs = listOfNotNull(fs.initializerStatement),
+                connectStart = Connect.NODE,
+                edgeDirection = Util.Edge.EXITS,
+                startNode = prints[0],
+                connectEnd = Connect.SUBTREE,
+                endNodes = listOfNotNull(fs.initializerStatement),
             )
         )
         assertTrue(
             Util.eogConnect(
-                en = Util.Edge.EXITS,
-                n = fs.initializerStatement,
-                cr = Connect.SUBTREE,
-                refs = listOfNotNull(fs.conditionDeclaration),
+                edgeDirection = Util.Edge.EXITS,
+                startNode = fs.initializerStatement,
+                connectEnd = Connect.SUBTREE,
+                endNodes = listOfNotNull(fs.conditionDeclaration),
             )
         )
         assertTrue(
             Util.eogConnect(
-                en = Util.Edge.EXITS,
-                n = fs.conditionDeclaration,
-                cr = Connect.NODE,
-                refs = listOf(fs),
+                edgeDirection = Util.Edge.EXITS,
+                startNode = fs.conditionDeclaration,
+                connectEnd = Connect.NODE,
+                endNodes = listOf(fs),
             )
         )
         assertTrue(
             Util.eogConnect(
-                en = Util.Edge.EXITS,
-                n = fs.statement,
-                cr = Connect.SUBTREE,
-                refs = listOfNotNull(fs.iterationStatement),
+                edgeDirection = Util.Edge.EXITS,
+                startNode = fs.statement,
+                connectEnd = Connect.SUBTREE,
+                endNodes = listOfNotNull(fs.iterationStatement),
             )
         )
         assertTrue(
             Util.eogConnect(
-                en = Util.Edge.EXITS,
-                n = fs.iterationStatement,
-                cr = Connect.SUBTREE,
-                refs = listOfNotNull(fs.conditionDeclaration),
+                edgeDirection = Util.Edge.EXITS,
+                startNode = fs.iterationStatement,
+                connectEnd = Connect.SUBTREE,
+                endNodes = listOfNotNull(fs.conditionDeclaration),
             )
         )
         assertTrue(
             Util.eogConnect(
-                cn = Connect.SUBTREE,
-                en = Util.Edge.EXITS,
-                n = fs,
-                cr = Connect.SUBTREE,
+                connectStart = Connect.SUBTREE,
+                edgeDirection = Util.Edge.EXITS,
+                startNode = fs,
+                connectEnd = Connect.SUBTREE,
                 predicate = { it.branch == false },
-                refs = listOf(prints[1]),
+                endNodes = listOf(prints[1]),
             )
         )
         fs = fstat[1]
         assertTrue(
             Util.eogConnect(
-                cn = Connect.NODE,
-                en = Util.Edge.EXITS,
-                n = prints[1],
-                cr = Connect.SUBTREE,
-                refs = listOf(fs),
+                connectStart = Connect.NODE,
+                edgeDirection = Util.Edge.EXITS,
+                startNode = prints[1],
+                connectEnd = Connect.SUBTREE,
+                endNodes = listOf(fs),
             )
         )
         assertTrue(
             Util.eogConnect(
-                cn = Connect.NODE,
-                en = Util.Edge.EXITS,
-                n = prints[1],
-                cr = Connect.SUBTREE,
-                refs = listOfNotNull(fs.initializerStatement),
+                connectStart = Connect.NODE,
+                edgeDirection = Util.Edge.EXITS,
+                startNode = prints[1],
+                connectEnd = Connect.SUBTREE,
+                endNodes = listOfNotNull(fs.initializerStatement),
             )
         )
         assertTrue(
             Util.eogConnect(
-                en = Util.Edge.EXITS,
-                n = fs.initializerStatement,
-                cr = Connect.SUBTREE,
-                refs = listOfNotNull(fs.condition),
+                edgeDirection = Util.Edge.EXITS,
+                startNode = fs.initializerStatement,
+                connectEnd = Connect.SUBTREE,
+                endNodes = listOfNotNull(fs.condition),
             )
         )
         assertTrue(
             Util.eogConnect(
-                en = Util.Edge.EXITS,
-                n = fs.condition,
-                cr = Connect.NODE,
-                refs = listOf(fs),
+                edgeDirection = Util.Edge.EXITS,
+                startNode = fs.condition,
+                connectEnd = Connect.NODE,
+                endNodes = listOf(fs),
             )
         )
         assertTrue(
             Util.eogConnect(
-                en = Util.Edge.EXITS,
-                n = fs.statement,
-                cr = Connect.SUBTREE,
-                refs = listOfNotNull(fs.iterationStatement),
+                edgeDirection = Util.Edge.EXITS,
+                startNode = fs.statement,
+                connectEnd = Connect.SUBTREE,
+                endNodes = listOfNotNull(fs.iterationStatement),
             )
         )
         assertTrue(
             Util.eogConnect(
-                en = Util.Edge.EXITS,
-                n = fs.iterationStatement,
-                cr = Connect.SUBTREE,
-                refs = listOfNotNull(fs.condition),
+                edgeDirection = Util.Edge.EXITS,
+                startNode = fs.iterationStatement,
+                connectEnd = Connect.SUBTREE,
+                endNodes = listOfNotNull(fs.condition),
             )
         )
         assertTrue(
             Util.eogConnect(
-                cn = Connect.SUBTREE,
-                en = Util.Edge.EXITS,
-                n = fs,
-                cr = Connect.SUBTREE,
+                connectStart = Connect.SUBTREE,
+                edgeDirection = Util.Edge.EXITS,
+                startNode = fs,
+                connectEnd = Connect.SUBTREE,
                 predicate = { it.branch == false },
-                refs = listOf(prints[2]),
+                endNodes = listOf(prints[2]),
             )
         )
         fs = fstat[2]
         assertTrue(
             Util.eogConnect(
-                cn = Connect.NODE,
-                en = Util.Edge.EXITS,
-                n = prints[3],
-                cr = Connect.SUBTREE,
-                refs = listOf(fs),
+                connectStart = Connect.NODE,
+                edgeDirection = Util.Edge.EXITS,
+                startNode = prints[3],
+                connectEnd = Connect.SUBTREE,
+                endNodes = listOf(fs),
             )
         )
         assertTrue(
             Util.eogConnect(
-                cn = Connect.NODE,
-                en = Util.Edge.EXITS,
-                n = prints[3],
-                cr = Connect.SUBTREE,
-                refs = listOfNotNull(fs.initializerStatement),
+                connectStart = Connect.NODE,
+                edgeDirection = Util.Edge.EXITS,
+                startNode = prints[3],
+                connectEnd = Connect.SUBTREE,
+                endNodes = listOfNotNull(fs.initializerStatement),
             )
         )
         assertTrue(
             Util.eogConnect(
-                en = Util.Edge.EXITS,
-                n = fs.initializerStatement,
-                cr = Connect.SUBTREE,
-                refs = listOfNotNull(fs.condition),
+                edgeDirection = Util.Edge.EXITS,
+                startNode = fs.initializerStatement,
+                connectEnd = Connect.SUBTREE,
+                endNodes = listOfNotNull(fs.condition),
             )
         )
         assertTrue(
             Util.eogConnect(
-                en = Util.Edge.EXITS,
-                n = fs.condition,
-                cr = Connect.NODE,
-                refs = listOf(fs),
+                edgeDirection = Util.Edge.EXITS,
+                startNode = fs.condition,
+                connectEnd = Connect.NODE,
+                endNodes = listOf(fs),
             )
         )
         assertTrue(
             Util.eogConnect(
-                en = Util.Edge.EXITS,
-                n = fs.statement,
-                cr = Connect.SUBTREE,
-                refs = listOfNotNull(fs.iterationStatement),
+                edgeDirection = Util.Edge.EXITS,
+                startNode = fs.statement,
+                connectEnd = Connect.SUBTREE,
+                endNodes = listOfNotNull(fs.iterationStatement),
             )
         )
         assertTrue(
             Util.eogConnect(
-                en = Util.Edge.EXITS,
-                n = fs.iterationStatement,
-                cr = Connect.SUBTREE,
-                refs = listOfNotNull(fs.condition),
+                edgeDirection = Util.Edge.EXITS,
+                startNode = fs.iterationStatement,
+                connectEnd = Connect.SUBTREE,
+                endNodes = listOfNotNull(fs.condition),
             )
         )
         assertTrue(
             Util.eogConnect(
-                cn = Connect.SUBTREE,
-                en = Util.Edge.EXITS,
-                n = fs,
-                cr = Connect.SUBTREE,
+                connectStart = Connect.SUBTREE,
+                edgeDirection = Util.Edge.EXITS,
+                startNode = fs,
+                connectEnd = Connect.SUBTREE,
                 predicate = { it.branch == false },
-                refs = listOf(prints[4]),
+                endNodes = listOf(prints[4]),
             )
         )
     }
@@ -489,29 +493,29 @@ internal class EOGTest : BaseTest() {
         // Assert: While is preceded by a specific printf("\n")
         assertTrue(
             Util.eogConnect(
-                cn = Connect.NODE,
-                en = Util.Edge.ENTRIES,
-                n = wstat,
-                refs = listOfNotNull(wstat.condition),
+                connectStart = Connect.NODE,
+                edgeDirection = Util.Edge.ENTRIES,
+                startNode = wstat,
+                endNodes = listOfNotNull(wstat.condition),
             )
         )
         // Assert: Condition is preceded by print or block of the loop itself
         assertTrue(
             Util.eogConnect(
-                en = Util.Edge.ENTRIES,
-                n = wstat.condition,
-                refs = listOfNotNull(prints[0], wstat.statement),
+                edgeDirection = Util.Edge.ENTRIES,
+                startNode = wstat.condition,
+                endNodes = listOfNotNull(prints[0], wstat.statement),
             )
         )
 
         // Assert: All EOGs going into the loop branch come from the condition
         assertTrue(
             Util.eogConnect(
-                en = Util.Edge.ENTRIES,
-                n = wstat.statement,
-                cr = Connect.NODE,
+                edgeDirection = Util.Edge.ENTRIES,
+                startNode = wstat.statement,
+                connectEnd = Connect.NODE,
                 predicate = { it.branch == true },
-                refs = listOf(wstat),
+                endNodes = listOf(wstat),
             )
         )
 
@@ -519,11 +523,11 @@ internal class EOGTest : BaseTest() {
         // condition
         assertTrue(
             Util.eogConnect(
-                cn = Connect.SUBTREE,
-                en = Util.Edge.EXITS,
-                n = wstat,
+                connectStart = Connect.SUBTREE,
+                edgeDirection = Util.Edge.EXITS,
+                startNode = wstat,
                 predicate = { it.branch == false },
-                refs = listOf(prints[1]),
+                endNodes = listOf(prints[1]),
             )
         )
         val dostat = nodes.filterIsInstance<DoStatement>().firstOrNull()
@@ -539,33 +543,37 @@ internal class EOGTest : BaseTest() {
         // Assert: do is preceded by its condition
         assertTrue(
             Util.eogConnect(
-                cn = Connect.NODE,
-                en = Util.Edge.ENTRIES,
-                n = dostat,
-                refs = listOf(dostat.condition),
+                connectStart = Connect.NODE,
+                edgeDirection = Util.Edge.ENTRIES,
+                startNode = dostat,
+                endNodes = listOf(dostat.condition),
             )
         )
         // Assert: All EOGs going into the loop branch come from the condition
         assertTrue(
-            Util.eogConnect(en = Util.Edge.EXITS, n = prints[1], refs = listOf(dostat.statement))
+            Util.eogConnect(
+                edgeDirection = Util.Edge.EXITS,
+                startNode = prints[1],
+                endNodes = listOf(dostat.statement),
+            )
         )
         assertTrue(
             Util.eogConnect(
-                q = Util.Quantifier.ANY,
-                cn = Connect.NODE,
-                en = Util.Edge.EXITS,
-                n = dostat,
+                quantifier = Util.Quantifier.ANY,
+                connectStart = Connect.NODE,
+                edgeDirection = Util.Edge.EXITS,
+                startNode = dostat,
                 predicate = { it.branch == true },
-                refs = listOf(dostat.statement),
+                endNodes = listOf(dostat.statement),
             )
         )
 
         // Assert: Condition is preceded by the loop branch
         assertTrue(
             Util.eogConnect(
-                en = Util.Edge.ENTRIES,
-                n = dostat.condition,
-                refs = listOf(dostat.statement),
+                edgeDirection = Util.Edge.ENTRIES,
+                startNode = dostat.condition,
+                endNodes = listOf(dostat.statement),
             )
         )
 
@@ -573,11 +581,11 @@ internal class EOGTest : BaseTest() {
         // condition
         assertTrue(
             Util.eogConnect(
-                cn = Connect.SUBTREE,
-                en = Util.Edge.EXITS,
-                n = dostat,
+                connectStart = Connect.SUBTREE,
+                edgeDirection = Util.Edge.EXITS,
+                startNode = dostat,
                 predicate = { it.branch == false },
-                refs = listOf(prints[2]),
+                endNodes = listOf(prints[2]),
             )
         )
     }
@@ -595,36 +603,36 @@ internal class EOGTest : BaseTest() {
         var defaults = swch.allChildren<DefaultStatement>()
         assertTrue(
             Util.eogConnect(
-                en = Util.Edge.EXITS,
-                n = prints[0],
-                cr = Connect.SUBTREE,
-                refs = listOf(swch.selector),
+                edgeDirection = Util.Edge.EXITS,
+                startNode = prints[0],
+                connectEnd = Connect.SUBTREE,
+                endNodes = listOf(swch.selector),
             )
         )
         assertTrue(
             Util.eogConnect(
-                cn = Connect.SUBTREE,
-                en = Util.Edge.EXITS,
-                n = swch,
-                refs = listOf(prints[1]),
+                connectStart = Connect.SUBTREE,
+                edgeDirection = Util.Edge.EXITS,
+                startNode = swch,
+                endNodes = listOf(prints[1]),
             )
         )
 
         // Assert: Selector exits connect to the switch root node
         assertTrue(
             Util.eogConnect(
-                cn = Connect.NODE,
-                en = Util.Edge.EXITS,
-                n = swch,
-                refs = cases + defaults,
+                connectStart = Connect.NODE,
+                edgeDirection = Util.Edge.EXITS,
+                startNode = swch,
+                endNodes = cases + defaults,
             )
         )
         assertTrue(
             Util.eogConnect(
-                en = Util.Edge.EXITS,
-                n = swch.selector,
-                cr = Connect.NODE,
-                refs = listOf(swch),
+                edgeDirection = Util.Edge.EXITS,
+                startNode = swch.selector,
+                connectEnd = Connect.NODE,
+                endNodes = listOf(swch),
             )
         )
 
@@ -635,11 +643,11 @@ internal class EOGTest : BaseTest() {
                 .collect(Collectors.toList())) {
             assertTrue(
                 Util.eogConnect(
-                    q = Util.Quantifier.ANY,
-                    en = Util.Edge.ENTRIES,
-                    n = s,
-                    cr = Connect.NODE,
-                    refs = listOf(swch),
+                    quantifier = Util.Quantifier.ANY,
+                    edgeDirection = Util.Edge.ENTRIES,
+                    startNode = s,
+                    connectEnd = Connect.NODE,
+                    endNodes = listOf(swch),
                 )
             )
         }
@@ -652,7 +660,7 @@ internal class EOGTest : BaseTest() {
                 Util.Edge.EXITS,
                 b,
                 Connect.SUBTREE,
-                refs = listOf(prints[1]),
+                endNodes = listOf(prints[1]),
             )
         )
 
@@ -663,47 +671,65 @@ internal class EOGTest : BaseTest() {
         defaults = swch.allChildren<DefaultStatement>()
         val wstat = functions[1].allChildren<WhileStatement>().firstOrNull()
         assertNotNull(wstat)
-        assertTrue(Util.eogConnect(en = Util.Edge.EXITS, n = prints[0], refs = listOf(wstat)))
         assertTrue(
             Util.eogConnect(
-                cn = Connect.NODE,
-                en = Util.Edge.EXITS,
-                n = wstat,
-                refs = listOf(prints[2]),
+                edgeDirection = Util.Edge.EXITS,
+                startNode = prints[0],
+                endNodes = listOf(wstat),
+            )
+        )
+        assertTrue(
+            Util.eogConnect(
+                connectStart = Connect.NODE,
+                edgeDirection = Util.Edge.EXITS,
+                startNode = wstat,
+                endNodes = listOf(prints[2]),
             )
         )
         // Assert: switch root node exits connect to either case or default statements entries
         assertTrue(
             Util.eogConnect(
-                cn = Connect.NODE,
-                en = Util.Edge.EXITS,
-                n = swch,
-                refs = cases + defaults,
+                connectStart = Connect.NODE,
+                edgeDirection = Util.Edge.EXITS,
+                startNode = swch,
+                endNodes = cases + defaults,
             )
         )
         // Assert: Selector exits connect to the switch root node
         assertTrue(
             Util.eogConnect(
-                cn = Connect.SUBTREE,
-                en = Util.Edge.EXITS,
-                n = swch.selector,
-                cr = Connect.NODE,
-                refs = listOf(swch),
+                connectStart = Connect.SUBTREE,
+                edgeDirection = Util.Edge.EXITS,
+                startNode = swch.selector,
+                connectEnd = Connect.NODE,
+                endNodes = listOf(swch),
             )
         )
 
         // switch-while
         swch = functions[2].allChildren<SwitchStatement>()[0]
         prints = Util.subnodesOfCode(functions[2], refNodeString)
-        assertTrue(Util.eogConnect(en = Util.Edge.EXITS, n = prints[0], refs = listOf(swch)))
-        assertTrue(Util.eogConnect(en = Util.Edge.EXITS, n = swch, refs = listOf(prints[2])))
+        assertTrue(
+            Util.eogConnect(
+                edgeDirection = Util.Edge.EXITS,
+                startNode = prints[0],
+                endNodes = listOf(swch),
+            )
+        )
+        assertTrue(
+            Util.eogConnect(
+                edgeDirection = Util.Edge.EXITS,
+                startNode = swch,
+                endNodes = listOf(prints[2]),
+            )
+        )
         // Assert: Selector exits connect to either case or default statements entries
         assertTrue(
             Util.eogConnect(
-                en = Util.Edge.EXITS,
-                n = swch.selector,
-                cr = Connect.NODE,
-                refs = listOf(swch),
+                edgeDirection = Util.Edge.EXITS,
+                startNode = swch.selector,
+                connectEnd = Connect.NODE,
+                endNodes = listOf(swch),
             )
         )
         swch = functions[1].allChildren<SwitchStatement>()[0]
@@ -716,19 +742,19 @@ internal class EOGTest : BaseTest() {
             if (b.label != null && b.label!!.isNotEmpty()) {
                 assertTrue(
                     Util.eogConnect(
-                        en = Util.Edge.EXITS,
-                        n = b,
-                        cr = Connect.SUBTREE,
-                        refs = listOf(prints[2]),
+                        edgeDirection = Util.Edge.EXITS,
+                        startNode = b,
+                        connectEnd = Connect.SUBTREE,
+                        endNodes = listOf(prints[2]),
                     )
                 )
             } else {
                 assertTrue(
                     Util.eogConnect(
-                        en = Util.Edge.EXITS,
-                        n = b,
-                        cr = Connect.SUBTREE,
-                        refs = listOf(prints[1]),
+                        edgeDirection = Util.Edge.EXITS,
+                        startNode = b,
+                        connectEnd = Connect.SUBTREE,
+                        endNodes = listOf(prints[1]),
                     )
                 )
             }
@@ -742,19 +768,19 @@ internal class EOGTest : BaseTest() {
         for (b in breaks) if (b.label != null && b.label!!.isNotEmpty())
             assertTrue(
                 Util.eogConnect(
-                    en = Util.Edge.EXITS,
-                    n = b,
-                    cr = Connect.SUBTREE,
-                    refs = listOf(prints[2]),
+                    edgeDirection = Util.Edge.EXITS,
+                    startNode = b,
+                    connectEnd = Connect.SUBTREE,
+                    endNodes = listOf(prints[2]),
                 )
             )
         else
             assertTrue(
                 Util.eogConnect(
-                    en = Util.Edge.EXITS,
-                    n = b,
-                    cr = Connect.SUBTREE,
-                    refs = listOf(prints[1]),
+                    edgeDirection = Util.Edge.EXITS,
+                    startNode = b,
+                    connectEnd = Connect.SUBTREE,
+                    endNodes = listOf(prints[1]),
                 )
             )
     }
@@ -797,9 +823,9 @@ internal class EOGTest : BaseTest() {
         // Assert: Print is only followed by first nodes in condition
         assertTrue(
             Util.eogConnect(
-                en = Util.Edge.EXITS,
-                n = prints[0],
-                refs = listOfNotNull(wstat.condition),
+                edgeDirection = Util.Edge.EXITS,
+                startNode = prints[0],
+                endNodes = listOfNotNull(wstat.condition),
             )
         )
 
@@ -807,36 +833,40 @@ internal class EOGTest : BaseTest() {
         // nodes in print
         assertTrue(
             Util.eogConnect(
-                en = Util.Edge.ENTRIES,
-                n = wstat.condition,
-                refs = listOfNotNull(prints[0], wstat.statement),
+                edgeDirection = Util.Edge.ENTRIES,
+                startNode = wstat.condition,
+                endNodes = listOfNotNull(prints[0], wstat.statement),
             ) ||
                 Util.eogConnect(
-                    cn = Connect.NODE,
-                    en = Util.Edge.EXITS,
-                    n = continues[0],
-                    refs = listOfNotNull(wstat.condition),
+                    connectStart = Connect.NODE,
+                    edgeDirection = Util.Edge.EXITS,
+                    startNode = continues[0],
+                    endNodes = listOfNotNull(wstat.condition),
                 )
         )
 
         // Assert: All EOGs going into the loop branch come from the Loop root node
         assertTrue(
-            Util.eogConnect(en = Util.Edge.ENTRIES, n = wstat.statement, refs = listOf(wstat))
+            Util.eogConnect(
+                edgeDirection = Util.Edge.ENTRIES,
+                startNode = wstat.statement,
+                endNodes = listOf(wstat),
+            )
         )
 
         // Assert: The EOGs going into the second print come either from the while root or break
         assertTrue(
             Util.eogConnect(
-                cn = Connect.NODE,
-                en = Util.Edge.EXITS,
-                n = wstat,
-                refs = listOf(prints[1]),
+                connectStart = Connect.NODE,
+                edgeDirection = Util.Edge.EXITS,
+                startNode = wstat,
+                endNodes = listOf(prints[1]),
             ) ||
                 Util.eogConnect(
-                    cn = Connect.NODE,
-                    en = Util.Edge.EXITS,
-                    n = breaks[0],
-                    refs = listOf(prints[1]),
+                    connectStart = Connect.NODE,
+                    edgeDirection = Util.Edge.EXITS,
+                    startNode = breaks[0],
+                    endNodes = listOf(prints[1]),
                 )
         )
         val dostat = nodes.filterIsInstance<DoStatement>().firstOrNull()
@@ -851,7 +881,11 @@ internal class EOGTest : BaseTest() {
 
         // Assert: All EOGs going into the loop branch come from the condition
         assertTrue(
-            Util.eogConnect(en = Util.Edge.EXITS, n = prints[1], refs = listOf(dostat.statement))
+            Util.eogConnect(
+                edgeDirection = Util.Edge.EXITS,
+                startNode = prints[1],
+                endNodes = listOf(dostat.statement),
+            )
         )
         assertTrue(
             Util.eogConnect(
@@ -860,11 +894,15 @@ internal class EOGTest : BaseTest() {
                 Util.Edge.EXITS,
                 dostat,
                 Connect.SUBTREE,
-                refs = listOf(dostat.statement),
+                endNodes = listOf(dostat.statement),
             )
         )
         assertTrue(
-            Util.eogConnect(en = Util.Edge.EXITS, n = prints[1], refs = listOf(dostat.statement))
+            Util.eogConnect(
+                edgeDirection = Util.Edge.EXITS,
+                startNode = prints[1],
+                endNodes = listOf(dostat.statement),
+            )
         )
         assertTrue(
             Util.eogConnect(
@@ -872,32 +910,32 @@ internal class EOGTest : BaseTest() {
                 Connect.NODE,
                 Util.Edge.EXITS,
                 dostat,
-                refs = listOf(dostat.statement),
+                endNodes = listOf(dostat.statement),
             )
         )
 
         // Assert: Condition is preceded by the loop branch
         assertTrue(
             Util.eogConnect(
-                en = Util.Edge.ENTRIES,
-                n = dostat.condition,
-                refs = listOf(dostat.statement),
+                edgeDirection = Util.Edge.ENTRIES,
+                startNode = dostat.condition,
+                endNodes = listOf(dostat.statement),
             ) ||
                 Util.eogConnect(
-                    cn = Connect.NODE,
-                    en = Util.Edge.EXITS,
-                    n = continues[1],
-                    refs = listOf(dostat.condition),
+                    connectStart = Connect.NODE,
+                    edgeDirection = Util.Edge.EXITS,
+                    startNode = continues[1],
+                    endNodes = listOf(dostat.condition),
                 )
         )
 
         // Assert: The EOGs going into the third print come  from the loop root
         assertTrue(
             Util.eogConnect(
-                cn = Connect.NODE,
-                en = Util.Edge.EXITS,
-                n = dostat,
-                refs = listOf(prints[2]),
+                connectStart = Connect.NODE,
+                edgeDirection = Util.Edge.EXITS,
+                startNode = dostat,
+                endNodes = listOf(prints[2]),
             )
         )
     }
