@@ -148,12 +148,13 @@ fun MetadataProvider.newLoadConfiguration(
  */
 fun MetadataProvider.newReadConfigurationGroup(underlyingNode: Node, concept: ConfigurationGroup) =
     newOperation(
-        { underlyingNode, concept ->
-            ReadConfigurationGroup(underlyingNode = underlyingNode, group = concept)
-        },
-        underlyingNode = underlyingNode,
-        concept = concept,
-    )
+            { underlyingNode, concept ->
+                ReadConfigurationGroup(underlyingNode = underlyingNode, group = concept)
+            },
+            underlyingNode = underlyingNode,
+            concept = concept,
+        )
+        .apply { name = group.name }
 
 /**
  * Creates a new [RegisterConfigurationGroup] operation.
@@ -167,12 +168,13 @@ fun MetadataProvider.newRegisterConfigurationGroup(
     concept: ConfigurationGroup,
 ) =
     newOperation(
-        { underlyingNode, concept ->
-            RegisterConfigurationGroup(underlyingNode = underlyingNode, group = concept)
-        },
-        underlyingNode = underlyingNode,
-        concept = concept,
-    )
+            { underlyingNode, concept ->
+                RegisterConfigurationGroup(underlyingNode = underlyingNode, group = concept)
+            },
+            underlyingNode = underlyingNode,
+            concept = concept,
+        )
+        .apply { name = group.name }
 
 /**
  * Creates a new [ProvideConfiguration] operation.
@@ -209,16 +211,17 @@ fun MetadataProvider.newProvideConfigurationGroup(
     source: ConfigurationGroupSource,
 ) =
     newOperation(
-        { underlyingNode, concept ->
-            ProvideConfigurationGroup(
-                underlyingNode = underlyingNode,
-                source = source,
-                group = concept,
-            )
-        },
-        underlyingNode = underlyingNode,
-        concept = concept,
-    )
+            { underlyingNode, concept ->
+                ProvideConfigurationGroup(
+                    underlyingNode = underlyingNode,
+                    source = source,
+                    group = concept,
+                )
+            },
+            underlyingNode = underlyingNode,
+            concept = concept,
+        )
+        .apply { name = concept.name }
 
 /**
  * Creates a new [ReadConfigurationOption] operation.
@@ -232,12 +235,13 @@ fun MetadataProvider.newReadConfigurationOption(
     concept: ConfigurationOption,
 ) =
     newOperation(
-        { underlyingNode, concept ->
-            ReadConfigurationOption(underlyingNode = underlyingNode, option = concept)
-        },
-        underlyingNode = underlyingNode,
-        concept = concept,
-    )
+            { underlyingNode, concept ->
+                ReadConfigurationOption(underlyingNode = underlyingNode, option = concept)
+            },
+            underlyingNode = underlyingNode,
+            concept = concept,
+        )
+        .apply { name = option.name }
 
 /**
  * Creates a new [RegisterConfigurationOption] operation.
@@ -253,16 +257,17 @@ fun MetadataProvider.newRegisterConfigurationOption(
     defaultValue: Node?,
 ) =
     newOperation(
-        { underlyingNode, concept ->
-            RegisterConfigurationOption(
-                underlyingNode = underlyingNode,
-                option = concept,
-                defaultValue = defaultValue,
-            )
-        },
-        underlyingNode = underlyingNode,
-        concept = concept,
-    )
+            { underlyingNode, concept ->
+                RegisterConfigurationOption(
+                    underlyingNode = underlyingNode,
+                    option = concept,
+                    defaultValue = defaultValue,
+                )
+            },
+            underlyingNode = underlyingNode,
+            concept = concept,
+        )
+        .apply { name = option.name }
 
 /**
  * Creates a new [ProvideConfigurationOption] operation.
@@ -280,14 +285,15 @@ fun MetadataProvider.newProvideConfigurationOption(
     value: Node?,
 ) =
     newOperation(
-        { underlyingNode, concept ->
-            ProvideConfigurationOption(
-                underlyingNode = underlyingNode,
-                source = source,
-                option = concept,
-                value = value,
-            )
-        },
-        underlyingNode = underlyingNode,
-        concept = concept,
-    )
+            { underlyingNode, concept ->
+                ProvideConfigurationOption(
+                    underlyingNode = underlyingNode,
+                    source = source,
+                    option = concept,
+                    value = value,
+                )
+            },
+            underlyingNode = underlyingNode,
+            concept = concept,
+        )
+        .apply { name = concept.name }

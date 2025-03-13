@@ -116,11 +116,7 @@ class ReadConfigurationGroup(
     underlyingNode: Node,
     /** The config group that is being read with this operation. */
     var group: ConfigurationGroup,
-) : ConfigurationOperation(underlyingNode = underlyingNode, concept = group) {
-    init {
-        name = group.name
-    }
-}
+) : ConfigurationOperation(underlyingNode = underlyingNode, concept = group)
 
 /**
  * Represents an operation to read a specific configuration option. Often this is done with a member
@@ -130,11 +126,7 @@ class ReadConfigurationOption(
     underlyingNode: Node,
     /** The config option that is being read with this operation. */
     var option: ConfigurationOption,
-) : ConfigurationOperation(underlyingNode = underlyingNode, concept = option) {
-    init {
-        name = option.name
-    }
-}
+) : ConfigurationOperation(underlyingNode = underlyingNode, concept = option)
 
 /**
  * Represents an operation to register a new [ConfigurationGroup]. This is often done with a call,
@@ -150,11 +142,7 @@ class RegisterConfigurationGroup(
     underlyingNode: Node,
     /** The config group that is being registered with this operation. */
     var group: ConfigurationGroup,
-) : ConfigurationOperation(underlyingNode = underlyingNode, concept = group) {
-    init {
-        name = group.name
-    }
-}
+) : ConfigurationOperation(underlyingNode = underlyingNode, concept = group)
 
 /**
  * Represents an operation to register a new [ConfigurationOption]. This is often done with a call,
@@ -172,11 +160,7 @@ class RegisterConfigurationOption(
     var option: ConfigurationOption,
     /** An optional default value of the option. */
     var defaultValue: Node? = null,
-) : ConfigurationOperation(underlyingNode = underlyingNode, concept = option) {
-    init {
-        name = option.name
-    }
-}
+) : ConfigurationOperation(underlyingNode = underlyingNode, concept = option)
 
 /**
  * Represents an operation to provide a [Configuration], e.g., in the form of a configuration file
@@ -205,12 +189,8 @@ class ProvideConfiguration(
 class ProvideConfigurationGroup(
     underlyingNode: Node,
     var source: ConfigurationGroupSource,
-    var group: ConfigurationGroup,
-) : ConfigurationOperation(underlyingNode = underlyingNode, concept = source) {
-    init {
-        name = group.name
-    }
-}
+    var group: ConfigurationGroup, // TODO: Remove?
+) : ConfigurationOperation(underlyingNode = underlyingNode, concept = source)
 
 /**
  * Represents an operation to provide a [ConfigurationOption]. It connects a
@@ -219,13 +199,9 @@ class ProvideConfigurationGroup(
 class ProvideConfigurationOption(
     underlyingNode: Node,
     var source: ConfigurationOptionSource,
-    var option: ConfigurationOption,
+    var option: ConfigurationOption, // TODO: Remove?
     var value: Node?,
-) : ConfigurationOperation(underlyingNode = underlyingNode, concept = source) {
-    init {
-        name = option.name
-    }
-}
+) : ConfigurationOperation(underlyingNode = underlyingNode, concept = source)
 
 /**
  * Represents a possible source for a configuration. For example, when loading an INI file with our
