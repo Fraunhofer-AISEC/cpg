@@ -43,4 +43,8 @@ abstract class Operation(
         this.underlyingNode = underlyingNode
         this::class.simpleName?.let { name = Name(it) }
     }
+
+    override fun equals(other: Any?): Boolean {
+        return other is Operation && super.equals(other) && other.concept == this.concept
+    }
 }

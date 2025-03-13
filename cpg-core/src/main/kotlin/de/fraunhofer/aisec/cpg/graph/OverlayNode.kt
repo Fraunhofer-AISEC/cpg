@@ -46,4 +46,10 @@ abstract class OverlayNode() : Node() {
         OverlaySingleEdge(this, of = null, mirrorProperty = Node::overlayEdges, outgoing = false)
 
     var underlyingNode by unwrapping(OverlayNode::underlyingNodeEdge)
+
+    override fun equals(other: Any?): Boolean {
+        return other is OverlayNode &&
+            super.equals(other) &&
+            other.underlyingNode == this.underlyingNode
+    }
 }
