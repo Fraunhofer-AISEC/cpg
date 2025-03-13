@@ -248,8 +248,8 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         // although they can be placed in the same enclosing declaration.
         val code = statementHolder.statements
 
-        val staticCode = code.filter { (it as? Block)?.isStaticBlock == true }
-        val nonStaticCode = code.filter { it !in staticCode }
+        val nonStaticCode = code.filter { (it as? Block)?.isStaticBlock == false }
+        val staticCode = code.filter { it !in nonStaticCode }
 
         attachToEOG(statementHolder as Node)
         for (staticStatement in staticCode) {
@@ -1366,7 +1366,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
                 val toProcess = workList[0]
                 workList.remove(toProcess)
                 passedBy.add(toProcess)
-                if (toProcess is EOGStarterHolder) {
+                if (toProcess is FunctionDeclaration) {
                     return true
                 }
                 for (pred in toProcess.prevEOG) {
