@@ -56,7 +56,14 @@ class BenchmarkResults(val entries: List<List<Any>>) {
     }
 }
 
-/** Interface definition to hold different statistics about the translation process. */
+/**
+ * This interface is used to hold the statistics of a translation run. It contains the
+ * [translatedFiles], the [benchmarks] and the [config].
+ *
+ * The [translatedFiles] are the files that were translated during the run. The [benchmarks] are the
+ * measurements that were taken during the run. The [config] is the configuration that was used for
+ * the run.
+ */
 interface StatisticsHolder {
     val translatedFiles: List<String>
     val benchmarks: Set<MeasurementHolder>
