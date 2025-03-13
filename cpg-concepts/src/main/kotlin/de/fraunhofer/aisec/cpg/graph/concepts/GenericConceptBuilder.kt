@@ -41,7 +41,7 @@ internal inline fun <reified ConceptClass : Concept> MetadataProvider.newConcept
     underlyingNode: Node,
 ): ConceptClass =
     constructor(underlyingNode).apply {
-      this.codeAndLocationFrom(underlyingNode)
+        this.codeAndLocationFrom(underlyingNode)
         this.name = Name("${ConceptClass::class.simpleName}", underlyingNode.name)
         NodeBuilder.log(this)
     }
@@ -57,7 +57,7 @@ inline fun <reified OperationClass : Operation, ConceptClass : Concept> Metadata
     concept: ConceptClass,
 ): OperationClass =
     constructor(underlyingNode, concept).apply {
-      this.codeAndLocationFrom(underlyingNode)
+        this.codeAndLocationFrom(underlyingNode)
         this.name =
             Name(
                 "${OperationClass::class.simpleName}".replaceFirstChar { it.lowercaseChar() },
