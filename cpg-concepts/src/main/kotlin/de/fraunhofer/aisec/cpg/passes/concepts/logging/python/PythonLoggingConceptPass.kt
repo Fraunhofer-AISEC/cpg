@@ -144,9 +144,10 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ConceptPass(ctx) {
                 }
             val logger = loggers[normalizedLoggerName]
             if (logger == null) { // only add it once
-                val newNode = newLog(underlyingNode = call, name = normalizedLoggerName)
-                loggers += normalizedLoggerName to newNode
-                newLogGet(underlyingNode = call, logger = newNode)
+                newLog(underlyingNode = call, name = normalizedLoggerName).also {
+                    loggers += normalizedLoggerName to it
+                    newLogGet(underlyingNode = call, logger = it)
+                }
             } else {
                 // the logger is already present -> only add a [LogGet] node
                 newLogGet(underlyingNode = call, logger = logger)
