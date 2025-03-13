@@ -25,41 +25,29 @@
  */
 package de.fraunhofer.aisec.cpg.webconsole
 
-import io.ktor.serialization.kotlinx.json.*
-import io.ktor.server.application.*
-import io.ktor.server.engine.*
-import io.ktor.server.netty.*
-import io.ktor.server.plugins.contentnegotiation.*
-import io.ktor.server.plugins.cors.routing.*
-import io.ktor.server.routing.*
-import kotlinx.serialization.json.Json
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 
-fun main() {
-    embeddedServer(Netty, port = 8080) { configureWebconsole() }.start(wait = true)
-}
+@Serializable
+data class TranslationResult(
+    val components: List<ComponentJSON>,
+    val totalNodes: Int,
+    @Transient val cpgResult: de.fraunhofer.aisec.cpg.TranslationResult? = null,
+)
 
-fun Application.configureWebconsole() {
-    install(CORS) {
-        anyHost()
-        allowHeader(io.ktor.http.HttpHeaders.ContentType)
-    }
+@Serializable
+data class ComponentJSON(val name: String, val translationUnits: List<TranslationUnit>)
 
-    install(ContentNegotiation) {
-        json(
-            Json {
-                prettyPrint = true
-                isLenient = true
-            }
-        )
-    }
+@Serializable data class TranslationUnit(val name: String, val path: String, val code: String)
 
-    configureRouting()
-}
-
-fun Application.configureRouting() {
-    routing {
-        // We'll add routes here
-        cpgRoutes()
-        staticResources()
-    }
-}
+@Serializable
+data class NodeInfo(
+    val id: String,
+    val type: String,
+    val startLine: Int,
+    val startColumn: Int,
+    val endLine: Int,
+    val endColumn: Int,
+    val code: String,
+    val name: String,
+)

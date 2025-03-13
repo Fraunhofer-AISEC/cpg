@@ -10,10 +10,10 @@ const getColorForNodeType = (type: string): string => {
     const colorMap: Record<string, string> = {
         FunctionDeclaration: 'rgba(255, 99, 132, 0.3)',  // Red
         VariableDeclaration: 'rgba(54, 162, 235, 0.3)',  // Blue
-        ClassDeclaration: 'rgba(255, 206, 86, 0.3)',     // Yellow
-        Statement: 'rgba(75, 192, 192, 0.3)',           // Green
-        Expression: 'rgba(153, 102, 255, 0.3)',         // Purple
-        Literal: 'rgba(255, 159, 64, 0.3)',             // Orange
+        RecordDeclaration: 'rgba(255, 206, 86, 0.3)',    // Yellow
+        Statement: 'rgba(75, 192, 192, 0.3)',            // Green
+        Expression: 'rgba(153, 102, 255, 0.3)',          // Purple
+        Literal: 'rgba(255, 159, 64, 0.3)',              // Orange
     };
 
     // Return a color from the map or a default color
@@ -32,8 +32,10 @@ const TranslationUnitPage: React.FC = () => {
     const [highlightedNode, setHighlightedNode] = useState<NodeInfo | null>(null);
 
     // Constants for rendering node overlays
-    const lineHeight = 21; // Adjust based on your actual line height
-    const charWidth = 8;   // Adjust based on your actual character width
+    const lineHeight = 24; // Adjust based on your actual line height
+    const charWidth = 10;   // Adjust based on your actual character width
+    const offsetLeft = 33;
+    const offsetTop = 8;
 
     useEffect(() => {
         const fetchData = async () => {
@@ -105,8 +107,8 @@ const TranslationUnitPage: React.FC = () => {
                                 key={node.id}
                                 className="absolute transition-all duration-200 cursor-pointer"
                                 style={{
-                                    top: `${(node.startLine - 1) * lineHeight}px`,
-                                    left: `${node.startColumn * charWidth}px`,
+                                    top: `${(node.startLine - 1) * lineHeight + offsetTop}px`,
+                                    left: `${node.startColumn * charWidth + offsetLeft}px`,
                                     height: `${(node.endLine - node.startLine + 1) * lineHeight}px`,
                                     width: `${(node.endColumn - node.startColumn) * charWidth}px`,
                                     backgroundColor: getColorForNodeType(node.type),
@@ -127,8 +129,8 @@ const TranslationUnitPage: React.FC = () => {
                         <div
                             className="absolute bg-white p-2 shadow-md rounded z-30 text-xs border border-gray-300"
                             style={{
-                                top: `${(highlightedNode.endLine) * lineHeight}px`,
-                                left: `${highlightedNode.startColumn * charWidth}px`,
+                                top: `${(highlightedNode.endLine) * lineHeight + offsetTop}px`,
+                                left: `${highlightedNode.startColumn * charWidth + offsetLeft}px`,
                                 maxWidth: '300px'
                             }}
                         >

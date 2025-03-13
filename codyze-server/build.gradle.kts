@@ -6,6 +6,7 @@ plugins {
 
 dependencies {
     // CPG modules
+    implementation(project(":codyze-core"))
     implementation(project(":cpg-core"))
     implementation(project(":cpg-language-python"))
 

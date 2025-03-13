@@ -33,6 +33,7 @@ mavenPublishing {
 }
 
 dependencies {
+    implementation(project(":codyze-server"))
     implementation(libs.kaml)
 
     // We depend on the Python frontend for the integration tests, but the frontend is only
