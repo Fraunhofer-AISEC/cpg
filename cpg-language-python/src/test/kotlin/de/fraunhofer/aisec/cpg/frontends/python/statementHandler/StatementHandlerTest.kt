@@ -289,5 +289,4 @@ class StatementHandlerTest : BaseTest() {
         var cVariables = result.variables("c")
         assertEquals(3, cVariables.size)
     }
-
 }
