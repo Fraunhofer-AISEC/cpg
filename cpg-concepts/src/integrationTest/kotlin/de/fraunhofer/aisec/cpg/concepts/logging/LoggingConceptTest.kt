@@ -26,15 +26,19 @@
 package de.fraunhofer.aisec.cpg.concepts.logging
 
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
-import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.calls
+import de.fraunhofer.aisec.cpg.graph.conceptNodes
 import de.fraunhofer.aisec.cpg.graph.concepts.logging.IsLogging
 import de.fraunhofer.aisec.cpg.graph.concepts.logging.Log
 import de.fraunhofer.aisec.cpg.graph.concepts.logging.LogLevel
 import de.fraunhofer.aisec.cpg.graph.concepts.logging.LogWrite
 import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
+import de.fraunhofer.aisec.cpg.graph.invoke
+import de.fraunhofer.aisec.cpg.graph.literals
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.passes.concepts.logging.python.PythonLoggingConceptPass
 import de.fraunhofer.aisec.cpg.query.dataFlow
+import de.fraunhofer.aisec.cpg.query.successfulLastNodes
 import de.fraunhofer.aisec.cpg.test.BaseTest
 import de.fraunhofer.aisec.cpg.test.analyze
 import de.fraunhofer.aisec.cpg.test.assertLiteralValue
@@ -68,16 +72,13 @@ class LoggingConceptTest : BaseTest() {
         val warnLiteral = result.literals.singleOrNull { it.value.toString() == "WARN" }
         assertLiteralValue("WARN", warnLiteral)
 
-        val logDFG =
-            warnLiteral.followNextFullDFGEdgesUntilHit(collectFailedPaths = false) {
-                it is LogWrite
-            }
+        val logDFG = dataFlow(startNode = warnLiteral) { it is LogWrite }
         assertTrue(
-            logDFG.fulfilled.isNotEmpty(),
+            logDFG.value,
             "Expected to find a dataflow from the literal \"WARN\" to a logging node.",
         )
+        val logOp = logDFG.successfulLastNodes().singleOrNull()
 
-        val logOp = logDFG.fulfilled.lastOrNull()?.lastOrNull()
         assertIs<LogWrite>(logOp)
         assertEquals(LogLevel.WARN, logOp.logLevel)
 
@@ -85,9 +86,13 @@ class LoggingConceptTest : BaseTest() {
         assertIs<CallExpression>(getSecretCall)
         val nextDFG = getSecretCall.nextDFG
         assertTrue(nextDFG.isNotEmpty())
-        val secretDFG = getSecretCall.followNextFullDFGEdgesUntilHit { it is LogWrite }
         assertTrue(
-            secretDFG.fulfilled.isNotEmpty(),
+            dataFlow(startNode = getSecretCall) { it is LogWrite }.value,
+            "Expected to find a dataflow from the CallExpression[get_secret] to a logging node.",
+        )
+
+        assertTrue(
+            dataFlow(startNode = getSecretCall) { it is Log }.value,
             "Expected to find a dataflow from the CallExpression[get_secret] to a logging node.",
         )
     }
