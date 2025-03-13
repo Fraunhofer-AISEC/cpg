@@ -28,6 +28,8 @@ package de.fraunhofer.aisec.cpg.graph.concepts.file
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import java.util.Objects
 
 /**
  * This interface indicates that the corresponding node is connected to a file concept or operation.
@@ -66,7 +68,13 @@ const val O_ACCMODE_MODE_MASK = 3L
  * @param fileName The name of the file e.g. `foo/bar/example.txt`
  */
 class File(underlyingNode: Node, val fileName: String) :
-    Concept(underlyingNode = underlyingNode), IsFile
+    Concept(underlyingNode = underlyingNode), IsFile {
+    override fun equals(other: Any?): Boolean {
+        return other is File && super.equals(other) && other.fileName == this.fileName
+    }
+
+    override fun hashCode() = Objects.hash(super.hashCode(), fileName)
+}
 
 /**
  * Represents setting flags on a file. For example when opening the file.
@@ -75,11 +83,14 @@ class File(underlyingNode: Node, val fileName: String) :
  * @param concept The corresponding [File] node.
  * @param flags A set of file flags (see [FileAccessModeFlags]).
  */
-class SetFileFlags(
-    underlyingNode: Node,
-    override val concept: File,
-    val flags: Set<FileAccessModeFlags>,
-) : FileOperation(underlyingNode = underlyingNode, file = concept), IsFile
+class SetFileFlags(underlyingNode: Node, concept: File, val flags: Set<FileAccessModeFlags>) :
+    FileOperation(underlyingNode = underlyingNode, file = concept), IsFile {
+    override fun equals(other: Any?): Boolean {
+        return other is SetFileFlags && super.equals(other) && other.flags == this.flags
+    }
+
+    override fun hashCode() = Objects.hash(super.hashCode(), flags)
+}
 
 /**
  * Represents setting the umask, for example with the `mode` parameter in a Python `os.open` call or
@@ -89,8 +100,14 @@ class SetFileFlags(
  * @param concept The corresponding [File] node.
  * @param mask The file mask in UNIX notation (i.e. 0o644)
  */
-class SetFileMask(underlyingNode: Node, override val concept: File, val mask: Long) :
-    FileOperation(underlyingNode = underlyingNode, file = concept), IsFile
+class SetFileMask(underlyingNode: Node, concept: File, val mask: Long) :
+    FileOperation(underlyingNode = underlyingNode, file = concept), IsFile {
+    override fun equals(other: Any?): Boolean {
+        return other is SetFileMask && super.equals(other) && other.mask == this.mask
+    }
+
+    override fun hashCode() = Objects.hash(super.hashCode(), mask)
+}
 
 /**
  * Represents closing a file.
@@ -98,7 +115,7 @@ class SetFileMask(underlyingNode: Node, override val concept: File, val mask: Lo
  * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
  * @param concept The corresponding [File] node.
  */
-class CloseFile(underlyingNode: Node, override val concept: File) :
+class CloseFile(underlyingNode: Node, concept: File) :
     FileOperation(underlyingNode = underlyingNode, file = concept), IsFile
 
 /**
@@ -107,7 +124,7 @@ class CloseFile(underlyingNode: Node, override val concept: File) :
  * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
  * @param concept The corresponding [File] node.
  */
-class DeleteFile(underlyingNode: Node, override val concept: File) :
+class DeleteFile(underlyingNode: Node, concept: File) :
     FileOperation(underlyingNode = underlyingNode, file = concept), IsFile
 
 /**
@@ -117,7 +134,7 @@ class DeleteFile(underlyingNode: Node, override val concept: File) :
  * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
  * @param concept The corresponding [File] node.
  */
-class OpenFile(underlyingNode: Node, override val concept: File) :
+class OpenFile(underlyingNode: Node, concept: File) :
     FileOperation(underlyingNode = underlyingNode, file = concept), IsFile
 
 /**
@@ -126,7 +143,7 @@ class OpenFile(underlyingNode: Node, override val concept: File) :
  * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
  * @param concept The corresponding [File] node.
  */
-class ReadFile(underlyingNode: Node, override val concept: File) :
+class ReadFile(underlyingNode: Node, concept: File) :
     FileOperation(underlyingNode = underlyingNode, file = concept), IsFile
 
 /**
@@ -136,8 +153,14 @@ class ReadFile(underlyingNode: Node, override val concept: File) :
  * @param concept The corresponding [File] node.
  * @param what The node being written to the file.
  */
-class WriteFile(underlyingNode: Node, override val concept: File, val what: Node) :
-    FileOperation(underlyingNode = underlyingNode, file = concept), IsFile
+class WriteFile(underlyingNode: Node, concept: File, val what: Node) :
+    FileOperation(underlyingNode = underlyingNode, file = concept), IsFile {
+    override fun equals(other: Any?): Boolean {
+        return other is WriteFile && super.equals(other) && other.what == this.what
+    }
+
+    override fun hashCode() = Objects.hash(super.hashCode(), what)
+}
 
 /**
  * All [File] [Operation]s inherit from this class. This makes the [file] field available for

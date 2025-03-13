@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.concepts.flows.LibraryEntryPoint
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
+import java.util.Objects
 
 /**
  * Represents an entity that loads a piece of code dynamically during runtime. Examples include a
@@ -52,7 +53,16 @@ abstract class DynamicLoadingOperation<T : Node>(
      * here.
      */
     var os: OperatingSystemArchitecture? = null,
-) : MemoryOperation(underlyingNode = underlyingNode, concept = concept), IsMemory
+) : MemoryOperation(underlyingNode = underlyingNode, concept = concept), IsMemory {
+    override fun equals(other: Any?): Boolean {
+        return other is DynamicLoadingOperation<*> &&
+            super.equals(other) &&
+            other.what == this.what &&
+            other.os == this.os
+    }
+
+    override fun hashCode() = Objects.hash(super.hashCode(), what, os)
+}
 
 /**
  * Represents an operation that loads a shared library during runtime. A common example would be a
@@ -93,6 +103,12 @@ class LoadLibrary(
         return this.what?.translationUnits?.flatMap { it.scope?.lookupSymbol(symbol) ?: listOf() }
             ?: listOf()
     }
+
+    override fun equals(other: Any?): Boolean {
+        return other is LoadLibrary && super.equals(other) && other.entryPoints == this.entryPoints
+    }
+
+    override fun hashCode() = Objects.hash(super.hashCode(), entryPoints)
 }
 
 /**
@@ -127,4 +143,10 @@ class LoadSymbol<T : Declaration>(
         concept = concept,
         what = what,
         os = os,
-    )
+    ) {
+    override fun equals(other: Any?): Boolean {
+        return other is LoadSymbol<*> && super.equals(other) && other.loader == this.loader
+    }
+
+    override fun hashCode() = Objects.hash(super.hashCode(), loader)
+}

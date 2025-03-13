@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.concepts.memory
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
+import java.util.Objects
 
 /** The memory management mode of a memory concept. */
 enum class MemoryManagementMode {
@@ -70,7 +71,15 @@ class Allocate(
     concept: Concept,
     /** A reference to [what] is allocated, e.g., a variable. */
     var what: Node?,
-) : MemoryOperation(underlyingNode = underlyingNode, concept = concept)
+) : MemoryOperation(underlyingNode = underlyingNode, concept = concept) {
+    override fun equals(other: Any?): Boolean {
+        return other is Allocate && super.equals(other) && other.what == this.what
+    }
+
+    override fun hashCode(): Int {
+        return Objects.hash(super.hashCode(), what)
+    }
+}
 
 /**
  * Represents a memory de-allocation operation. This can be done using `free` in C or `delete` in
@@ -81,4 +90,12 @@ class DeAllocate(
     concept: Concept,
     /** A reference to [what] is de-allocated, e.g., a variable. */
     var what: Node?,
-) : MemoryOperation(underlyingNode = underlyingNode, concept = concept)
+) : MemoryOperation(underlyingNode = underlyingNode, concept = concept) {
+    override fun equals(other: Any?): Boolean {
+        return other is Allocate && super.equals(other) && other.what == this.what
+    }
+
+    override fun hashCode(): Int {
+        return Objects.hash(super.hashCode(), what)
+    }
+}
