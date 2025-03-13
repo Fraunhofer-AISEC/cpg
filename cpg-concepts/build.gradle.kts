@@ -23,36 +23,26 @@
  *                    \______/ \__|       \______/
  *
  */
-plugins {
-    id("cpg.frontend-conventions")
-}
+plugins { id("cpg.frontend-conventions") }
 
-publishing {
-    publications {
-        named<MavenPublication>("cpg-concepts") {
-            pom {
-                artifactId = "cpg-concepts"
-                name.set("Code Property Graph - Concepts")
-                description.set("A 'concepts' extension for the CPG")
-            }
-        }
+mavenPublishing {
+    pom {
+        name.set("Code Property Graph - Concepts")
+        description.set("A 'concepts' extension for the CPG")
     }
 }
 
 dependencies {
     implementation(projects.cpgAnalysis)
 
-    // We depend on the Python and C/C++ frontend for the integration tests, but the frontend is only available if enabled.
-    // If it's not available, the integration tests fail (which is ok). But if we would directly reference the
-    // project here, the build system would fail any task since it will not find a non-enabled project.
-    findProject(":cpg-language-python")?.also {
-        integrationTestImplementation(it)
-    }
-    findProject(":cpg-language-cxx")?.also {
-        integrationTestImplementation(it)
-    }
-    findProject(":cpg-language-ini")?.also {
-        integrationTestImplementation(it)
-    }
+    // We depend on the Python and C/C++ frontend for the integration tests, but the frontend is
+    // only available if enabled.
+    // If it's not available, the integration tests fail (which is ok). But if we would directly
+    // reference the
+    // project here, the build system would fail any task since it will not find a non-enabled
+    // project.
+    findProject(":cpg-language-python")?.also { integrationTestImplementation(it) }
+    findProject(":cpg-language-cxx")?.also { integrationTestImplementation(it) }
+    findProject(":cpg-language-ini")?.also { integrationTestImplementation(it) }
     integrationTestImplementation(projects.cpgAnalysis)
 }
