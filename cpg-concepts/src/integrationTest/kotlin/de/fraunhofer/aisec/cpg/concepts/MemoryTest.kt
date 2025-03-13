@@ -78,7 +78,7 @@ class MemoryTest {
         assertEquals("AES", cipher.cipherName)
         assertEquals(256, cipher.blockSize)
         result.newEncryptOperation(
-            underlyingNode = assertNotNull(result.functions["encrypt"]),
+            underlyingNode = assertNotNull(result.calls["encrypt"]),
             concept = cipher,
             key = key,
         )

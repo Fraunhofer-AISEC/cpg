@@ -70,10 +70,6 @@ class Configuration(underlyingNode: Node) : Concept(underlyingNode = underlyingN
 class ConfigurationGroup(underlyingNode: Node, var conf: Configuration) :
     Concept(underlyingNode = underlyingNode) {
     var options: MutableList<ConfigurationOption> = mutableListOf()
-
-    init {
-        conf.groups.add(this)
-    }
 }
 
 /**
@@ -95,11 +91,7 @@ class ConfigurationOption(
      * Since initializers could potentially be empty, we make this nullable.
      */
     var value: Node? = null,
-) : Concept(underlyingNode = underlyingNode) {
-    init {
-        group.options.add(this)
-    }
-}
+) : Concept(underlyingNode = underlyingNode)
 
 /**
  * A common abstract class for configuration operations, such as reading options or a whole file.
@@ -260,23 +252,16 @@ class ConfigurationSource(underlyingNode: Node) : Concept(underlyingNode = under
  * file with our INI file frontend, each section is presented as a [RecordDeclaration]. This record
  * declaration would be the source of the configuration group.
  */
-class ConfigurationGroupSource(underlyingNode: Node, conf: ConfigurationSource) :
-    Concept(underlyingNode = underlyingNode) {
+class ConfigurationGroupSource(underlyingNode: Node) : Concept(underlyingNode = underlyingNode) {
     val options: MutableList<ConfigurationOptionSource> = mutableListOf()
-
-    init {
-        conf.groups += this
-    }
 }
 
 /**
  * Represents a possible option source for a configuration option. For example, when loading an INI
  * file with our INI file frontend, each key-value pair is presented as a [FieldDeclaration]. This
  * field declaration would be the source to the configuration option.
+ *
+ * TODO: Can we remove group here?
  */
 class ConfigurationOptionSource(underlyingNode: Node, var group: ConfigurationGroupSource) :
-    Concept(underlyingNode = underlyingNode) {
-    init {
-        group.options += this
-    }
-}
+    Concept(underlyingNode = underlyingNode)

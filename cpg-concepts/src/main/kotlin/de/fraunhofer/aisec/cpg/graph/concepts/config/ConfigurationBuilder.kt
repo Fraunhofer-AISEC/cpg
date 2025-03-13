@@ -59,7 +59,10 @@ fun MetadataProvider.newConfigurationSource(underlyingNode: Node) =
 fun MetadataProvider.newConfigurationGroupSource(
     underlyingNode: Node,
     concept: ConfigurationSource,
-) = newConcept({ ConfigurationGroupSource(it, concept) }, underlyingNode = underlyingNode)
+) =
+    newConcept({ ConfigurationGroupSource(it) }, underlyingNode = underlyingNode).apply {
+        concept.groups += this
+    }
 
 /**
  * Creates a new [ConfigurationOptionSource] concept.
@@ -71,7 +74,10 @@ fun MetadataProvider.newConfigurationGroupSource(
 fun MetadataProvider.newConfigurationOptionSource(
     underlyingNode: Node,
     concept: ConfigurationGroupSource,
-) = newConcept({ ConfigurationOptionSource(it, concept) }, underlyingNode = underlyingNode)
+) =
+    newConcept({ ConfigurationOptionSource(it, concept) }, underlyingNode = underlyingNode).apply {
+        concept.options += this
+    }
 
 /**
  * Creates a new [ConfigurationGroup] concept.
@@ -82,9 +88,10 @@ fun MetadataProvider.newConfigurationOptionSource(
  */
 fun MetadataProvider.newConfigurationGroup(underlyingNode: Node, concept: Configuration) =
     newConcept(
-        { ConfigurationGroup(underlyingNode = it, conf = concept) },
-        underlyingNode = underlyingNode,
-    )
+            { ConfigurationGroup(underlyingNode = it, conf = concept) },
+            underlyingNode = underlyingNode,
+        )
+        .apply { concept.groups += this }
 
 /**
  * Creates a new [ConfigurationOption] concept.
@@ -102,9 +109,10 @@ fun MetadataProvider.newConfigurationOption(
     value: Node?,
 ) =
     newConcept(
-        { ConfigurationOption(underlyingNode = it, group = concept, key = key, value = value) },
-        underlyingNode = underlyingNode,
-    )
+            { ConfigurationOption(underlyingNode = it, group = concept, key = key, value = value) },
+            underlyingNode = underlyingNode,
+        )
+        .apply { concept.options += this }
 
 /**
  * Creates a new [LoadConfiguration] operation.
