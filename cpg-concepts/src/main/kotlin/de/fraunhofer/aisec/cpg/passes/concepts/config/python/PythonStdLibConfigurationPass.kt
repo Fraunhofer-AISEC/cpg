@@ -89,11 +89,13 @@ class PythonStdLibConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) 
                 call.base?.followDFGEdgesUntilHit(direction = Backward(GraphToFollow.DFG)) {
                     it is Configuration
                 }
-            paths?.fulfilled?.map {
-                val conf = it.last() as Configuration
-                val op = newLoadConfiguration(call, concept = conf, fileExpression = firstArgument)
-                op
-            }
+            paths
+                ?.fulfilled
+                ?.mapNotNull { it.lastOrNull() as? Configuration }
+                ?.toSet()
+                ?.forEach { conf ->
+                    newLoadConfiguration(call, concept = conf, fileExpression = firstArgument)
+                }
         }
 
         return null
@@ -149,12 +151,10 @@ class PythonStdLibConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) 
             // If it does not exist, we create it and implicitly add a registration operation
             group =
                 newConfigurationGroup(sub, concept = conf).also { it.name = Name(name) }.implicit()
-            val op = newRegisterConfigurationGroup(sub, concept = group).implicit()
-            ops += op
+            newRegisterConfigurationGroup(sub, concept = group).implicit()
         }
 
-        val op = newReadConfigurationGroup(sub, concept = group)
-        ops += op
+        newReadConfigurationGroup(sub, concept = group)
 
         // Add an incoming DFG from the option group
         sub.prevDFGEdges.add(group)
@@ -190,14 +190,10 @@ class PythonStdLibConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) 
                 newConfigurationOption(sub, key = sub, concept = group, value = null)
                     .also { it.name = group.name.fqn(name) }
                     .implicit()
-            val op =
-                newRegisterConfigurationOption(sub, concept = option, defaultValue = null)
-                    .implicit()
-            ops += op
+            newRegisterConfigurationOption(sub, concept = option, defaultValue = null).implicit()
         }
 
-        val op = newReadConfigurationOption(sub, concept = option)
-        ops += op
+        newReadConfigurationOption(sub, concept = option)
 
         // Add an incoming DFG from the option
         sub.prevDFGEdges.add(option)

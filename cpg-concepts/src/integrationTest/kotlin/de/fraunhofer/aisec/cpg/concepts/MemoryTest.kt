@@ -63,7 +63,6 @@ class MemoryTest {
                 underlyingNode = assertNotNull(result.functions["get_secret_from_server"]),
                 concept = key,
             )
-        key.ops += getSecret
 
         // Cipher (encryption) concepts
         val cipher =
@@ -78,13 +77,11 @@ class MemoryTest {
         cipher.blockSize = cipherAndSize?.get(1)?.toIntOrNull()
         assertEquals("AES", cipher.cipherName)
         assertEquals(256, cipher.blockSize)
-        val encrypt =
-            result.newEncryptOperation(
-                underlyingNode = assertNotNull(result.functions["encrypt"]),
-                concept = cipher,
-                key = key,
-            )
-        cipher.ops += encrypt
+        result.newEncryptOperation(
+            underlyingNode = assertNotNull(result.functions["encrypt"]),
+            concept = cipher,
+            key = key,
+        )
 
         // Memory concepts
         val memory =
@@ -92,13 +89,11 @@ class MemoryTest {
                 underlyingNode = assertNotNull(result.components[DEFAULT_APPLICATION_NAME]),
                 mode = MemoryManagementMode.MANAGED_WITH_GARBAGE_COLLECTION,
             )
-        val ops =
-            result.allChildren<DeleteExpression>().flatMap { delete ->
-                delete.operands.map {
-                    result.newDeallocate(underlyingNode = delete, concept = memory, what = it)
-                }
+        result.allChildren<DeleteExpression>().flatMap { delete ->
+            delete.operands.map {
+                result.newDeallocate(underlyingNode = delete, concept = memory, what = it)
             }
-        memory.ops += ops
+        }
 
         // Key is used in encryption
         var tree =
@@ -113,9 +108,7 @@ class MemoryTest {
             key.underlyingNode?.let {
                 executionPath(
                     startNode = it,
-                    predicate = { node ->
-                        node.overlayEdges.any { edge -> edge.end is DeAllocate }
-                    },
+                    predicate = { node -> node is DeAllocate },
                     direction = Forward(GraphToFollow.EOG),
                     type = Must,
                     scope = Interprocedural(),

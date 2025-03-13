@@ -73,7 +73,8 @@ class ProvideConfigPass(ctx: TranslationContext) : ConceptPass(ctx) {
                     }
 
             // And create a ProvideConfiguration node for each of them
-            loadConfigOps?.flatMap { handleConfiguration(source, it.conf, tu, it) } ?: listOf()
+            loadConfigOps?.forEach { handleConfiguration(source, it.conf, tu, it) }
+            listOf()
         }
     }
 
@@ -87,15 +88,10 @@ class ProvideConfigPass(ctx: TranslationContext) : ConceptPass(ctx) {
 
         // Loop through all groups and options and create ProvideConfigurationGroup and
         // ProvideConfigurationOption nodes
-        ops += source.groups.mapNotNull { handleConfigurationGroup(conf, it) }.flatten()
+        source.groups.mapNotNull { handleConfigurationGroup(conf, it) }.flatten()
 
-        ops +=
-            newProvideConfiguration(
-                    underlyingNode = tu,
-                    concept = configuration.conf,
-                    source = source,
-                )
-                .also { it.name = source.name }
+        newProvideConfiguration(underlyingNode = tu, concept = configuration.conf, source = source)
+            .also { it.name = source.name }
 
         return ops
     }
@@ -118,20 +114,18 @@ class ProvideConfigPass(ctx: TranslationContext) : ConceptPass(ctx) {
             return null
         }
 
-        val op =
-            newProvideConfigurationGroup(
-                    underlyingNode = sourceUnderlying,
-                    concept = group,
-                    source = source,
-                )
-                .also { it.name = source.name }
-        ops += op
+        newProvideConfigurationGroup(
+                underlyingNode = sourceUnderlying,
+                concept = group,
+                source = source,
+            )
+            .also { it.name = source.name }
 
         // Add an incoming DFG edge from the source
         group.prevDFGEdges.add(source)
 
         // Continue with the options
-        ops += source.options.mapNotNull { handleConfigurationOption(group, it) }
+        source.options.forEach { handleConfigurationOption(group, it) }
 
         return ops
     }
@@ -139,8 +133,8 @@ class ProvideConfigPass(ctx: TranslationContext) : ConceptPass(ctx) {
     private fun handleConfigurationOption(
         group: ConfigurationGroup,
         source: ConfigurationOptionSource,
-    ): ConfigurationOperation? {
-        val sourceUnderlying = source.underlyingNode ?: return null
+    ) {
+        val sourceUnderlying = source.underlyingNode ?: return
         val option = group.options.singleOrNull { it.name.localName == source.name.localName }
 
         if (option == null) {
@@ -150,21 +144,18 @@ class ProvideConfigPass(ctx: TranslationContext) : ConceptPass(ctx) {
                 "Could not find configuration option for source {}",
                 sourceUnderlying.name.localName,
             )
-            return null
+            return
         }
 
-        val op =
-            newProvideConfigurationOption(
-                    underlyingNode = sourceUnderlying,
-                    concept = option,
-                    value = sourceUnderlying,
-                    source = source,
-                )
-                .also { it.name = source.name }
+        newProvideConfigurationOption(
+                underlyingNode = sourceUnderlying,
+                concept = option,
+                value = sourceUnderlying,
+                source = source,
+            )
+            .also { it.name = source.name }
 
         // Add an incoming DFG edge from the source
         option.prevDFGEdges.add(source)
-
-        return op
     }
 }

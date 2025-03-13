@@ -81,8 +81,6 @@ class CXXDynamicLoadingPass(ctx: TranslationContext) : ConceptPass(ctx) {
                 "dlsym" -> handleLoadFunction(call, concept)
                 else -> return
             }
-
-        concept.ops += ops
     }
 
     /**
@@ -109,35 +107,34 @@ class CXXDynamicLoadingPass(ctx: TranslationContext) : ConceptPass(ctx) {
 
         // We need to create one operation for each nextDFG (hopefully there is only one). This
         // helps us to determine the type of the operation.
-        return call.nextFullDFG.filterIsInstance<Expression>().map { assignee ->
-            val op =
-                if (assignee.type is FunctionPointerType) {
-                    candidates = candidates?.filterIsInstance<FunctionDeclaration>()
-                    newLoadSymbol(
-                        underlyingNode = call,
-                        concept = concept,
-                        what = candidates?.singleOrNull(),
-                        loader = loadLibrary,
-                        os = null,
-                    )
-                } else {
-                    candidates = candidates?.filterIsInstance<VariableDeclaration>()
-                    newLoadSymbol(
-                        underlyingNode = call,
-                        concept = concept,
-                        what = candidates?.singleOrNull(),
-                        loader = loadLibrary,
-                        os = null,
-                    )
-                }
+        call.nextFullDFG.filterIsInstance<Expression>().forEach { assignee ->
+            if (assignee.type is FunctionPointerType) {
+                candidates = candidates?.filterIsInstance<FunctionDeclaration>()
+                newLoadSymbol(
+                    underlyingNode = call,
+                    concept = concept,
+                    what = candidates?.singleOrNull(),
+                    loader = loadLibrary,
+                    os = null,
+                )
+            } else {
+                candidates = candidates?.filterIsInstance<VariableDeclaration>()
+                newLoadSymbol(
+                    underlyingNode = call,
+                    concept = concept,
+                    what = candidates?.singleOrNull(),
+                    loader = loadLibrary,
+                    os = null,
+                )
+            }
 
             // We can help the dynamic invoke resolver by adding a DFG path from the declaration to
             // the "return value" of dlsym
             candidates?.forEach {
                 call.prevDFGEdges.addContextSensitive(it, callingContext = CallingContextOut(call))
             }
-            op
         }
+        return listOf()
     }
 
     /**
@@ -168,16 +165,15 @@ class CXXDynamicLoadingPass(ctx: TranslationContext) : ConceptPass(ctx) {
                 ?: emptyList()
 
         // Create the op
-        val op =
-            newLoadLibrary(
-                underlyingNode = call,
-                concept = concept,
-                what = component,
-                entryPoints = entryPoints,
-                os = os,
-            )
+        newLoadLibrary(
+            underlyingNode = call,
+            concept = concept,
+            what = component,
+            entryPoints = entryPoints,
+            os = os,
+        )
 
-        return listOf(op)
+        return listOf()
     }
 
     fun TranslationResult.findComponentForLibrary(libraryName: String): Component? {
