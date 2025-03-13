@@ -40,13 +40,14 @@ internal inline fun <reified ConceptClass : Concept> MetadataProvider.newConcept
     constructor: (underlyingNode: Node) -> (ConceptClass),
     underlyingNode: Node,
 ): ConceptClass =
-    constructor(underlyingNode).codeAndLocationFrom(underlyingNode).apply {
+    constructor(underlyingNode).apply {
+      this.codeAndLocationFrom(underlyingNode)
         this.name = Name("${ConceptClass::class.simpleName}", underlyingNode.name)
         NodeBuilder.log(this)
     }
 
 /**
- * This function creates a new [Operation] node based on [OperationClass]. It is inserted int he EOG
+ * This function creates a new [Operation] node based on [OperationClass]. It is inserted in the EOG
  * after the [underlyingNode] but it is not connected by the DFG.
  */
 inline fun <reified OperationClass : Operation, ConceptClass : Concept> MetadataProvider
@@ -55,7 +56,8 @@ inline fun <reified OperationClass : Operation, ConceptClass : Concept> Metadata
     underlyingNode: Node,
     concept: ConceptClass,
 ): OperationClass =
-    constructor(underlyingNode, concept).codeAndLocationFrom(underlyingNode).apply {
+    constructor(underlyingNode, concept).apply {
+      this.codeAndLocationFrom(underlyingNode)
         this.name =
             Name(
                 "${OperationClass::class.simpleName}".replaceFirstChar { it.lowercaseChar() },
