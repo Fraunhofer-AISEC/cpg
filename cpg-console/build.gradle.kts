@@ -28,15 +28,12 @@ plugins {
     id("cpg.frontend-dependency-conventions")
 }
 
-publishing {
-    publications {
-        named<MavenPublication>("cpg-console") {
-            pom {
-                artifactId = "cpg-console"
-                name.set("Code Property Graph - Console")
-                description.set("An Application to translate source code into a Code Property Graph and perform different types of analysis on the resulting graph.")
-            }
-        }
+mavenPublishing {
+    pom {
+        name.set("Code Property Graph - Console")
+        description.set(
+            "An Application to translate source code into a Code Property Graph and perform different types of analysis on the resulting graph."
+        )
     }
 }
 
@@ -45,11 +42,7 @@ application {
     applicationDefaultJvmArgs = listOf("-Xss515m", "-Xmx8g")
 }
 
-repositories {
-    maven {
-        setUrl("https://jitpack.io")
-    }
-}
+repositories { maven { setUrl("https://jitpack.io") } }
 
 dependencies {
     // CPG
@@ -59,7 +52,8 @@ dependencies {
 
     implementation(libs.kotlin.ki.shell)
 
-    // ki-shell dependencies, that we need to specify manually because we are using the JitPack "release"
+    // ki-shell dependencies, that we need to specify manually because we are using the JitPack
+    // "release"
     implementation(libs.kotlin.script.runtime)
     implementation(libs.bundles.kotlin.scripting)
     implementation(libs.antlr.runtime)

@@ -42,7 +42,6 @@ class TestCommon {
                 "argumentIndex",
                 "code",
                 "comment",
-                "file",
                 "id",
                 "isImplicit",
                 "isInferred",
