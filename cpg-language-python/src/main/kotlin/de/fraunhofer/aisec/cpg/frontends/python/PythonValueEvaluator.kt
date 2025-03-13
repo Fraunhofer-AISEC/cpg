@@ -25,18 +25,35 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.python
 
-import de.fraunhofer.aisec.cpg.analysis.ValueEvaluator
+import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.HasOperatorCode
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.translationUnit
+import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.reconstructedImportName
 import kotlin.math.pow
 
 /** An extended version of the [ValueEvaluator] that supports Python-specific operations. */
 class PythonValueEvaluator : ValueEvaluator() {
+    /**
+     * The values of the corresponding symbols as defined on per platform level. Maps the symbol to
+     * a map of platform -> value.
+     *
+     * The file constants (`os.O_...` have to match those defined in the file concept.
+     */
+    internal val symbolsMap: Map<String, Map<String, Any>> =
+        mapOf(
+            "os.O_RDONLY" to mapOf("linux" to 0L),
+            "os.O_WRONLY" to mapOf("linux" to 1L),
+            "os.O_RDWR" to mapOf("linux" to 2L),
+            "os.O_CREAT" to mapOf("linux" to 64L),
+            "os.O_TRUNC" to mapOf("linux" to 512L),
+        )
+
     override val cannotEvaluate: (Node?, ValueEvaluator) -> Any?
         get() = { node, evaluator ->
             if (node is InitializerListExpression) {
@@ -52,19 +69,39 @@ class PythonValueEvaluator : ValueEvaluator() {
             }
         }
 
-    override fun handlePrevDFG(node: Node, depth: Int): Any? {
-        // We need to handle sys.platform and sys.version_info specially, since it is often used in
-        // a pre-processor macro-style, and we want to replace this with the actual value (if we
-        // have it). This allows us to dynamically prune if-branches based on constant evaluation.
-        return when {
-            node is Reference && node.reconstructedImportName.toString() == "sys.platform" ->
-                node.translationUnit?.sysInfo?.platform ?: super.handlePrevDFG(node, depth)
-            node is Reference && node.reconstructedImportName.toString() == "sys.version_info" -> {
+    override fun handleReference(node: Reference, depth: Int): Any? {
+        return when (val recName = node.reconstructedImportName.toString()) {
+            in symbolsMap.keys ->
+                resolveSymbolViaLookup(node, recName) ?: super.handleReference(node, depth)
+
+            // We need to handle sys.platform and sys.version_info specially, since it is often used
+            // in a pre-processor macro-style, and we want to replace this with the actual value (if
+            // we have it). This allows us to dynamically prune if-branches based on constant
+            // evaluation.
+            "sys.platform" ->
+                node.translationUnit?.sysInfo?.platform ?: super.handleReference(node, depth)
+            "sys.version_info" -> {
                 return node.translationUnit?.sysInfo?.versionInfo?.toList()
-                    ?: super.handlePrevDFG(node, depth)
+                    ?: super.handleReference(node, depth)
             }
-            else -> super.handlePrevDFG(node, depth)
+            else -> super.handleReference(node, depth)
         }
+    }
+
+    override fun handleCallExpression(call: CallExpression, depth: Int): Any? {
+        return when (call.reconstructedImportName.toString()) {
+            "os.path.join" -> {
+                call.arguments.joinToString(separator = "/") { // TODO separator
+                arg ->
+                    super.evaluate(arg).toString()
+                }
+            }
+            else -> super.handleCallExpression(call, depth)
+        }
+    }
+
+    override fun handlePrevDFG(node: Node, depth: Int): Any? {
+        return super.handlePrevDFG(node, depth)
     }
 
     override fun computeBinaryOpEffect(
@@ -130,5 +167,21 @@ class PythonValueEvaluator : ValueEvaluator() {
         } else {
             null
         }
+    }
+
+    /**
+     * Fetches a symbols value from the [symbolsMap] by looking at the [SystemInformation.platform]
+     * stored in the [node]. Creates a warning, if no platform is specified.
+     *
+     * @param node The node being evaluated (used for platform lookup).
+     * @param symbol The symbol to evaluate.
+     * @return The evaluated symbol or null if it is not specified in the [symbolsMap].
+     */
+    internal fun resolveSymbolViaLookup(node: Reference, symbol: String): Any? {
+        val platform = node.translationUnit?.sysInfo?.platform
+        if (platform == null) {
+            Util.warnWithFileLocation(node, log, "No platform found. Cannot evaluate symbol.")
+        }
+        return symbolsMap[symbol]?.get(platform)
     }
 }

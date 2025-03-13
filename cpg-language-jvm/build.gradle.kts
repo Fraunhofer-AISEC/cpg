@@ -23,28 +23,17 @@
  *                    \______/ \__|       \______/
  *
  */
-plugins {
-    id("cpg.frontend-conventions")
-}
+plugins { id("cpg.frontend-conventions") }
 
-publishing {
-    publications {
-        named<MavenPublication>("cpg-language-jvm") {
-            pom {
-                artifactId = "cpg-language-jvm"
-                name.set("Code Property Graph - JVM bytecode Frontend")
-                description.set("A JVM bytecode frontend for the CPG")
-            }
-        }
+mavenPublishing {
+    pom {
+        name.set("Code Property Graph - JVM bytecode Frontend")
+        description.set("A JVM bytecode frontend for the CPG")
     }
 }
 
 dependencies {
     implementation(libs.bundles.sootup)
     // needed until https://github.com/antlr/antlr4/issues/3895 is fixed
-    runtimeOnly("org.antlr:antlr4-runtime") {
-        version {
-            strictly("4.9.3")
-        }
-    }
+    runtimeOnly("org.antlr:antlr4-runtime") { version { strictly("4.9.3") } }
 }

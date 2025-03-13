@@ -82,7 +82,9 @@ fun Node.fancyCode(linesAhead: Int = 0, showNumbers: Boolean): String? {
             // update the start line
             startLine = region.startLine
 
-            this.file?.let { file -> code = getCode(file, region) }
+            this.location?.let { location ->
+                code = getCode(location.artifactLocation.uri.path, region)
+            }
         }
 
         // split it into lines

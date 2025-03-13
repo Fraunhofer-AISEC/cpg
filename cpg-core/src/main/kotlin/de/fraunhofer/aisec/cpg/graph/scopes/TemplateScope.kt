@@ -27,4 +27,4 @@ package de.fraunhofer.aisec.cpg.graph.scopes
 
 import de.fraunhofer.aisec.cpg.graph.Node
 
-class TemplateScope(node: Node) : StructureDeclarationScope(node)
+class TemplateScope(node: Node) : Scope(node)

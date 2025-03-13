@@ -64,10 +64,9 @@ class StatementHandler(lang: TypeScriptLanguageFrontend) :
         val decl = this.frontend.declarationHandler.handle(node)
 
         if (decl != null) {
-            statement.declarationEdges += decl
+            this.frontend.scopeManager.addDeclaration(decl)
+            statement.declarations += decl
         }
-
-        this.frontend.scopeManager.addDeclaration(decl)
 
         return statement
     }
@@ -108,10 +107,9 @@ class StatementHandler(lang: TypeScriptLanguageFrontend) :
             val decl = this.frontend.declarationHandler.handle(variableNode)
 
             if (decl != null) {
-                statement.declarationEdges += decl
+                this.frontend.scopeManager.addDeclaration(decl)
+                statement.declarations += decl
             }
-
-            this.frontend.scopeManager.addDeclaration(decl)
         }
 
         return statement

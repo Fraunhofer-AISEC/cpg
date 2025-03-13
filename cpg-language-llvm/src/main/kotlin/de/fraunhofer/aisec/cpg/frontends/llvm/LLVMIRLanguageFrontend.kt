@@ -54,8 +54,8 @@ import org.bytedeco.llvm.global.LLVM.*
  * resort to use [Pointer] as the AST node type here.
  */
 @RegisterExtraPass(CompressLLVMPass::class)
-class LLVMIRLanguageFrontend(language: Language<LLVMIRLanguageFrontend>, ctx: TranslationContext) :
-    LanguageFrontend<Pointer, LLVMTypeRef>(language, ctx) {
+class LLVMIRLanguageFrontend(ctx: TranslationContext, language: Language<LLVMIRLanguageFrontend>) :
+    LanguageFrontend<Pointer, LLVMTypeRef>(ctx, language) {
 
     val statementHandler = StatementHandler(this)
     val declarationHandler = DeclarationHandler(this)
@@ -118,6 +118,7 @@ class LLVMIRLanguageFrontend(language: Language<LLVMIRLanguageFrontend>, ctx: Tr
         bench = Benchmark(this.javaClass, "Transform to CPG")
 
         val tu = newTranslationUnitDeclaration(file.name)
+        currentTU = tu
 
         // we need to set our translation unit as the global scope
         scopeManager.resetToGlobal(tu)
@@ -127,8 +128,10 @@ class LLVMIRLanguageFrontend(language: Language<LLVMIRLanguageFrontend>, ctx: Tr
         while (global != null) {
             // try to parse the variable (declaration)
             val declaration = declarationHandler.handle(global)
-
-            scopeManager.addDeclaration(declaration)
+            if (declaration != null) {
+                scopeManager.addDeclaration(declaration)
+                tu.declarations += declaration
+            }
 
             global = LLVMGetNextGlobal(global)
         }
@@ -138,8 +141,10 @@ class LLVMIRLanguageFrontend(language: Language<LLVMIRLanguageFrontend>, ctx: Tr
         while (func != null) {
             // try to parse the function (declaration)
             val declaration = declarationHandler.handle(func)
-
-            scopeManager.addDeclaration(declaration)
+            if (declaration != null) {
+                scopeManager.addDeclaration(declaration)
+                tu.declarations += declaration
+            }
 
             func = LLVMGetNextFunction(func)
         }

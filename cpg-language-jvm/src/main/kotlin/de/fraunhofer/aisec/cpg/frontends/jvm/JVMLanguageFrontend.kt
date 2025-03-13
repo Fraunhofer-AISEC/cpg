@@ -51,9 +51,9 @@ import sootup.jimple.parser.JimpleView
 typealias SootType = sootup.core.types.Type
 
 class JVMLanguageFrontend(
-    language: Language<out LanguageFrontend<Any, SootType>>,
     ctx: TranslationContext,
-) : LanguageFrontend<Any, SootType>(language, ctx) {
+    language: Language<out LanguageFrontend<Any, SootType>>,
+) : LanguageFrontend<Any, SootType>(ctx, language) {
 
     val declarationHandler = DeclarationHandler(this)
     val statementHandler = StatementHandler(this)
@@ -139,6 +139,7 @@ class JVMLanguageFrontend(
                 packages.computeIfAbsent(sootClass.type.packageName.name) {
                     val pkg = newNamespaceDeclaration(it)
                     scopeManager.addDeclaration(pkg)
+                    tu.addDeclaration(pkg)
                     pkg
                 }
 
@@ -146,7 +147,10 @@ class JVMLanguageFrontend(
             scopeManager.enterScope(pkg)
 
             val decl = declarationHandler.handle(sootClass)
-            scopeManager.addDeclaration(decl)
+            if (decl != null) {
+                scopeManager.addDeclaration(decl)
+                pkg.addDeclaration(decl)
+            }
 
             // Leave namespace scope
             scopeManager.leaveScope(pkg)

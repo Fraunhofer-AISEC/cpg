@@ -25,7 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.golang
 
-import de.fraunhofer.aisec.cpg.analysis.MultiValueEvaluator
+import de.fraunhofer.aisec.cpg.evaluation.MultiValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.*
@@ -1126,6 +1126,9 @@ class GoLanguageFrontendTest : BaseTest() {
             }
         assertNotNull(result)
 
+        val language = result.finalCtx.availableLanguage<GoLanguage>()
+        assertNotNull(language)
+
         val meter = result.variables["util.Meter"]
         assertNotNull(meter)
         assertLocalName("Length", meter.type)
@@ -1147,7 +1150,7 @@ class GoLanguageFrontendTest : BaseTest() {
         // We should be able to resolve the call from our stored "do" function to funcy
         assertInvokes(funcy, result.functions["do"])
 
-        val refs = result.refs.filter { it.name.localName != GoLanguage().anonymousIdentifier }
+        val refs = result.refs.filter { it.name.localName != language.anonymousIdentifier }
         refs.forEach { assertNotNull(it.refersTo, "${it.name}'s referTo is empty") }
     }
 

@@ -248,8 +248,8 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         // although they can be placed in the same enclosing declaration.
         val code = statementHolder.statements
 
-        val nonStaticCode = code.filter { (it as? Block)?.isStaticBlock == false }
-        val staticCode = code.filter { it !in nonStaticCode }
+        val staticCode = code.filter { (it as? Block)?.isStaticBlock == true }
+        val nonStaticCode = code.filter { it !in staticCode }
 
         attachToEOG(statementHolder as Node)
         for (staticStatement in staticCode) {
@@ -392,6 +392,9 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             is LambdaExpression -> handleLambdaExpression(node)
             is LookupScopeStatement -> handleLookupScopeStatement(node)
             is ThrowExpression -> handleThrowExpression(node)
+            // For templates, we will just handle the declarations and not the realizations (for
+            // now)
+            is TemplateDeclaration -> handleTemplate(node)
             // These nodes will be added to the eog graph but no children will be handled
             is EmptyStatement -> handleDefault(node)
             is Literal<*> -> handleDefault(node)
@@ -403,6 +406,16 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             is IncludeDeclaration -> doNothing()
             else -> LOGGER.info("Parsing of type ${node.javaClass} is not supported (yet)")
         }
+    }
+
+    protected fun handleTemplate(template: TemplateDeclaration) {
+        // Handle the declarations
+        for (decl in template.declarations) {
+            handleEOG(decl)
+        }
+
+        // Finally the template itself
+        attachToEOG(template)
     }
 
     /**
@@ -1353,7 +1366,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
                 val toProcess = workList[0]
                 workList.remove(toProcess)
                 passedBy.add(toProcess)
-                if (toProcess is FunctionDeclaration) {
+                if (toProcess is EOGStarterHolder) {
                     return true
                 }
                 for (pred in toProcess.prevEOG) {

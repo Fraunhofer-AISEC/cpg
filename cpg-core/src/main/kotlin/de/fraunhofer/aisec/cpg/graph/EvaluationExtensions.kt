@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,12 +25,12 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.analysis.ValueEvaluator
+import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.edges.get
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewArrayExpression
 
-fun Node.evaluate(evaluator: ValueEvaluator = ValueEvaluator()): Any? {
+fun Node.evaluate(evaluator: ValueEvaluator = this.language.evaluator): Any? {
     return evaluator.evaluate(this)
 }
 
@@ -47,16 +47,14 @@ val NewArrayExpression.capacity: Int
  * @param this The [CallExpression] to analyze.
  * @param name Optionally: the [CallExpression.arguments] name.
  * @param position Optionally: the [CallExpression.arguments] position.
- * @param evaluator The [ValueEvaluator] to use for evaluation of the argument.
  * @return The evaluated result (of type [T]) or `null`.
  */
 inline fun <reified T> CallExpression.argumentValueByNameOrPosition(
     name: String? = null,
     position: Int? = null,
-    evaluator: ValueEvaluator = ValueEvaluator(),
 ): T? {
     val arg =
         name?.let { this.argumentEdges[it]?.end } ?: position?.let { this.arguments.getOrNull(it) }
-    val value = evaluator.evaluateAs<T>(arg)
+    val value = this.language.evaluator.evaluateAs<T>(arg)
     return value
 }

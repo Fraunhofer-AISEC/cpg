@@ -122,6 +122,9 @@ spotless {
         ktfmt().kotlinlangStyle()
         licenseHeader(headerWithStars).yearSeparator(" - ")
     }
+    kotlinGradle {
+        ktfmt().kotlinlangStyle()
+    }
 
     format("golang") {
         target("src/main/golang/**/*.go")
