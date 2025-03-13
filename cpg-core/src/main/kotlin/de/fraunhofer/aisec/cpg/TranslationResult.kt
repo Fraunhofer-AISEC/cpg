@@ -47,6 +47,9 @@ import org.neo4j.ogm.annotation.Transient
 /**
  * The global (intermediate) result of the translation. A [LanguageFrontend] will initially populate
  * it and a [Pass] can extend it.
+ *
+ * This class is not thread-safe. It is the responsibility of the caller to ensure that only one
+ * thread. Max one thread can modify the translation result at a time.
  */
 class TranslationResult(
     /** A reference to our [TranslationManager]. */
@@ -58,6 +61,9 @@ class TranslationResult(
      */
     var finalCtx: TranslationContext,
 ) : Node(), StatisticsHolder, ContextProvider {
+
+    /** This variable has some staticiss */
+    var statisticsHolder: StatisticsHolder? = null
 
     @Relationship("COMPONENTS") val componentEdges = astEdgesOf<Component>()
     /**

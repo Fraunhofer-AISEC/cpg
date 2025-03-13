@@ -11,6 +11,7 @@ include(":cpg-analysis")
 include(":cpg-neo4j")
 include(":cpg-console")
 include(":cpg-concepts")
+include(":cpg-webconsole")
 
 include(":codyze")
 include(":codyze-core")
