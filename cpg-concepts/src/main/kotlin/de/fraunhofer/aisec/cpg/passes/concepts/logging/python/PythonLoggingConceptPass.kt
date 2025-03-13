@@ -76,6 +76,12 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ConceptPass(ctx) {
     private val DEFAULT_LOGGER_NAME = "logging"
 
     override fun handleNode(node: Node, tu: TranslationUnitDeclaration) {
+        // Since we cannot directly depend on the Python frontend, we have to check the language
+        // here
+        // based on the node's language.
+        if (node.language.name.localName != "PythonLanguage") {
+            return
+        }
         when (node) {
             is ImportDeclaration -> {
                 handleImport(node)
