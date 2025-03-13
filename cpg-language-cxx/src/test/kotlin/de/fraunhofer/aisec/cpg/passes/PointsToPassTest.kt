@@ -1287,10 +1287,11 @@ class PointsToPassTest {
         assertNotNull(sseLine181)
 
         // FunctionSummaries
-        val fsecallkeytoout =
-            tu.allChildren<FunctionDeclaration> { it.name.localName == "ecall_key_to_out" }
-                .first()
-                .functionSummary
+        val fdecallkeytoout =
+            tu.allChildren<FunctionDeclaration> { it.name.localName == "ecall_key_to_out" }.first()
+        assertNotNull(fdecallkeytoout)
+
+        val fsecallkeytoout = fdecallkeytoout.functionSummary
         assertNotNull(fsecallkeytoout)
 
         val fssgxecallkeytoout =
@@ -1348,11 +1349,16 @@ class PointsToPassTest {
                 .size,
         )
 
+        // ATM, we don't have short function Summaries for functions w/o body
         assertEquals(3, local_28DerefLine179.prevDFG.size)
-        assertEquals(ceLine177, local_28DerefLine179.prevFullDFG.first { it is CallExpression })
+        assertEquals(2, local_28DerefLine179.prevFullDFG.size)
+        assertEquals(
+            literal0Line177,
+            local_28DerefLine179.prevFullDFG.firstOrNull { it is Literal<*> },
+        )
         assertLocalName(
             "0.derefvalue",
-            local_28DerefLine179.prevFullDFG.first { it is UnknownMemoryValue },
+            local_28DerefLine179.prevFullDFG.firstOrNull { it is UnknownMemoryValue },
         )
         assertEquals(
             local_28DerefLine179.input,
@@ -1373,10 +1379,14 @@ class PointsToPassTest {
         assertTrue(local_28DerefLine181.fullMemoryValues.contains(ceLine201))
         assertEquals(
             1,
-            local_28DerefLine181.prevDFG
+            local_28DerefLine181.fullMemoryValues
                 .filter { it is UnknownMemoryValue && it.name.localName == "DAT_0011b1c8" }
                 .size,
         )
+        assertEquals(4, local_28DerefLine181.prevDFG.size)
+        assertEquals(ceLine201, local_28DerefLine181.prevFullDFG.singleOrNull())
+        assertEquals(fdecallkeytoout, local_28DerefLine181.prevFunctionSummaryDFG.singleOrNull())
+
         assertEquals(1, sseLine181.fullMemoryValues.size)
         assertEquals(
             1,

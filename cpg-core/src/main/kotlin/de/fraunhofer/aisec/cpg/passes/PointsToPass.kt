@@ -60,7 +60,7 @@ typealias DeclarationStateEntry =
     TripleLattice<
         PowersetLattice.Element<Node>,
         PowersetLattice.Element<Pair<Node, Boolean>>,
-        PowersetLattice.Element<Pair<Node, Boolean>>,
+        PowersetLattice.Element<Pair<Node, Set<Any>>>,
     >
 
 typealias GeneralStateEntryElement =
@@ -77,10 +77,10 @@ typealias DeclarationStateEntryElement =
     TripleLattice.Element<
         // Address
         PowersetLattice.Element<Node>,
-        // Values
+        // Values (Node, shortFS yes or no)
         PowersetLattice.Element<Pair<Node, Boolean>>,
-        // LastWrites
-        PowersetLattice.Element<Pair<Node, Boolean>>,
+        // LastWrites (Node, Properties(shortFS yes or no, Granularity, ...))
+        PowersetLattice.Element<Pair<Node, Set<Any>>>,
     >
 
 typealias SingleGeneralStateElement =
@@ -103,7 +103,7 @@ typealias SingleDeclarationState =
         TripleLattice.Element<
             PowersetLattice.Element<Node>,
             PowersetLattice.Element<Pair<Node, Boolean>>,
-            PowersetLattice.Element<Pair<Node, Boolean>>,
+            PowersetLattice.Element<Pair<Node, Set<Any>>>,
         >,
     >
 
@@ -643,7 +643,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         doubleState: PointsToStateElement,
     ): PointsToStateElement {
         var doubleState = doubleState
-        val mapDstToSrc = mutableMapOf<Node, IdentitySet<Pair<Node, Boolean>>>()
+        val mapDstToSrc = mutableMapOf<Node, IdentitySet<Pair<Node, Set<Any>>>>()
 
         // First, check if there are missing FunctionSummaries
         /*currentNode.language?.let { language ->
@@ -765,6 +765,16 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                         }
                                     }
                                 }
+                            // Collect the properties for the  DeclarationStateEntry
+                            val propertySet: MutableSet<Any> =
+                                if (subAccessName.isNotEmpty()) {
+                                    mutableSetOf(
+                                        PartialDataflowGranularity(
+                                            FieldDeclaration().apply { name = Name(subAccessName) }
+                                        )
+                                    )
+                                } else mutableSetOf()
+
                             // If this is a short FunctionSummary, store this info in the
                             // edgePropertiesMap
                             if (shortFS) {
@@ -773,7 +783,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                         ?: currentNode.arguments[srcNode.argumentIndex]
                                 addEntryToEdgePropertiesMap(
                                     Pair(argument, prev),
-                                    identitySetOf(true),
+                                    identitySetOf(shortFS),
                                 )
                             }
                             when (srcNode) {
@@ -819,7 +829,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                                 // The extracted value might come from a state we
                                                 // created for a shortfunctionSummary. If so, we
                                                 // have to store that info in the map
-                                                val shortFSEntry =
+                                                val updatedPropertySet = propertySet
+                                                updatedPropertySet.add(
                                                     edgePropertiesMap[
                                                             Pair(
                                                                 currentNode.arguments[
@@ -828,6 +839,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                                             )]
                                                         ?.filterIsInstance<Boolean>()
                                                         ?.any { it } == true || shortFS
+                                                )
                                                 val currentSet =
                                                     mapDstToSrc.computeIfAbsent(d) {
                                                         identitySetOf()
@@ -835,10 +847,10 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                                 if (
                                                     currentSet.none {
                                                         it.first === value &&
-                                                            it.second == shortFSEntry
+                                                            it.second == updatedPropertySet
                                                     }
                                                 ) {
-                                                    currentSet += Pair(value, shortFSEntry)
+                                                    currentSet += Pair(value, updatedPropertySet)
                                                 }
                                             }
                                         }
@@ -858,6 +870,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                             if (it.argumentIndex < currentNode.arguments.size) {
                                                 val arg = currentNode.arguments[it.argumentIndex]
                                                 destination.forEach { d ->
+                                                    val updatedPropertySet = propertySet
+                                                    updatedPropertySet.add(shortFS)
                                                     val currentSet =
                                                         mapDstToSrc.computeIfAbsent(d) {
                                                             identitySetOf()
@@ -868,10 +882,12 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                                             if (
                                                                 currentSet.none {
                                                                     it.first === value &&
-                                                                        it.second == shortFS
+                                                                        it.second ==
+                                                                            updatedPropertySet
                                                                 }
                                                             ) {
-                                                                currentSet += Pair(value, shortFS)
+                                                                currentSet +=
+                                                                    Pair(value, updatedPropertySet)
                                                             }
                                                         }
                                                 }
@@ -884,12 +900,15 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                     destination.forEach { d ->
                                         val currentSet =
                                             mapDstToSrc.computeIfAbsent(d) { identitySetOf() }
+                                        val updatedPropertySet = propertySet
+                                        updatedPropertySet.add(shortFS)
                                         if (
                                             currentSet.none {
-                                                it.first === srcNode && it.second == shortFS
+                                                it.first === srcNode &&
+                                                    it.second == updatedPropertySet
                                             }
                                         ) {
-                                            currentSet += Pair(srcNode, shortFS)
+                                            currentSet += Pair(srcNode, updatedPropertySet)
                                         }
                                     }
                                 }
@@ -912,10 +931,12 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                             if (
                                                 currentSet.none {
                                                     it.first === pair.first &&
-                                                        it.second == pair.second
+                                                        pair.second in it.second
                                                 }
                                             ) {
-                                                currentSet += pair
+                                                val updatedPropertySet = propertySet
+                                                updatedPropertySet.add(shortFS)
+                                                currentSet += Pair(pair.first, updatedPropertySet)
                                             }
                                         }
                                     }
@@ -934,6 +955,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             // destinationAddresses for the DeclarationState are enough
             //            val dstValues = doubleState.getValues(dst).mapTo(IdentitySet()) { it.first
             // }
+            val sources = values.mapTo(IdentitySet()) { Pair(it.first, true in it.second) }
+            val lastWrites: IdentitySet<Pair<Node, Set<Any>>> =
+                (values /*+ Pair(currentNode, true)*/).toIdentitySet()
             doubleState =
                 /*                if (dstValues.all { it == dst })
                     doubleState.updateValues(
@@ -946,16 +970,16 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 else*/
                 doubleState.updateValues(
                     lattice,
-                    values,
+                    sources,
                     identitySetOf(),
                     identitySetOf(dst),
-                    identitySetOf(currentNode),
+                    lastWrites,
                 )
 
             // Add the callingContextOut to the edgePropertiesMap and check if we also need the
             // shortFS flag
-            // TODO: Do we still need this?
-            values.forEach { v ->
+            // TODO
+            /*            values.forEach { v ->
                 if (v.second)
                 // a shortFunctionSummary + the callingContextOut
                 addEntryToEdgePropertiesMap(
@@ -968,7 +992,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         Pair(dst, v.first),
                         identitySetOf(CallingContextOut(currentNode)),
                     )
-            }
+            }*/
         }
 
         return doubleState
@@ -987,20 +1011,26 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             val newDeclState = doubleState.declarationsState
             /* Update the declarationState for the refersTo */
             doubleState.getAddresses(currentNode.input).forEach { addr ->
-                var newEntry = Pair<Node, Boolean>(currentNode, false)
+                var newValueEntry = Pair<Node, Boolean>(currentNode, false)
+                var newLastWriteEntry = Pair<Node, Set<Any>>(currentNode.input, setOf(false))
                 // If we already have exactly that entry, no need to re-write it, otherwise we might
                 // confuse the iterateEOG function
-
-                newEntry =
+                newValueEntry =
                     newDeclState[addr]?.second?.firstOrNull {
-                        it.first === newEntry.first && it.second == newEntry.second
-                    } ?: newEntry
+                        it.first === newValueEntry.first && it.second == newValueEntry.second
+                    } ?: newValueEntry
+                newLastWriteEntry =
+                    newDeclState[addr]?.third?.firstOrNull {
+                        it.first === newLastWriteEntry.first &&
+                            it.second == newLastWriteEntry.second
+                    } ?: newLastWriteEntry
+
                 newDeclState.replace(
                     addr,
                     DeclarationStateEntryElement(
                         PowersetLattice.Element(addr),
-                        PowersetLattice.Element(newEntry),
-                        PowersetLattice.Element(Pair(currentNode.input, false)),
+                        PowersetLattice.Element(newValueEntry),
+                        PowersetLattice.Element(newLastWriteEntry),
                     ),
                 )
             }
@@ -1040,13 +1070,14 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             val destinations: IdentitySet<Node> = currentNode.lhs.toIdentitySet()
             val destinationsAddresses =
                 destinations.flatMap { doubleState.getAddresses(it) }.toIdentitySet()
+            val lastWrites = destinations.mapTo(IdentitySet()) { Pair(it, setOf<Any>(false)) }
             doubleState =
                 doubleState.updateValues(
                     lattice,
                     sources,
                     destinations,
                     destinationsAddresses,
-                    destinations,
+                    lastWrites,
                 )
         }
 
@@ -1068,7 +1099,14 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             else null
         if (access in setOf(AccessValues.READ, AccessValues.READWRITE)) {
             val addresses = doubleState.getAddresses(currentNode)
-            val values = doubleState.getValues(currentNode).mapTo(IdentitySet()) { it.first }
+            val values =
+                doubleState
+                    .getValues(currentNode)
+                    // Filter only the values that are not stored for short FunctionSummaries (aka
+                    // it.second
+                    // set to true)
+                    .filter { !it.second }
+                    .mapTo(IdentitySet()) { it.first }
             val lastWrites = doubleState.getLastWrites(currentNode)
 
             // If we have any information from the dereferenced value, we also fetch that
@@ -1179,7 +1217,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     DeclarationStateEntryElement(
                         PowersetLattice.Element(addresses),
                         PowersetLattice.Element(values.map { Pair(it, false) }.toIdentitySet()),
-                        PowersetLattice.Element(Pair(currentNode, false)),
+                        PowersetLattice.Element(Pair(currentNode, setOf<Any>(false))),
                     ),
                 )
         }
@@ -1336,6 +1374,11 @@ fun PointsToState.pushToDeclarationsState(
     val newLatticeCopy = newLatticeElement.duplicate()
     newLatticeCopy.second.removeAll { pair ->
         currentState.declarationsState[newNode]?.second?.any {
+            it.first === pair.first && it.second == pair.second
+        } == true
+    }
+    newLatticeCopy.third.removeAll { pair ->
+        currentState.declarationsState[newNode]?.third?.any {
             it.first === pair.first && it.second == pair.second
         } == true
     }
@@ -1721,7 +1764,8 @@ fun PointsToStateElement.updateValues(
     sources: IdentitySet<Pair<Node, Boolean>>,
     destinations: IdentitySet<Node>,
     destinationAddresses: IdentitySet<Node>,
-    lastWrites: IdentitySet<Node>,
+    // Node and short FS yes or no
+    lastWrites: IdentitySet<Pair<Node, Set<Any>>>,
 ): PointsToStateElement {
     val newDeclState = this.declarationsState.duplicate()
     val newGenState = this.generalState.duplicate()
@@ -1746,14 +1790,26 @@ fun PointsToStateElement.updateValues(
                         it.first === pair.first && it.second == pair.second
                     } ?: pair
                 }
-            val newPrevDFG =
-                // TODO: To we also need to fetch some properties here?
-                lastWrites.mapTo(IdentitySet()) { Pair(it, false) }
+            /* val newPrevDFG =
+            // TODO: To we also need to fetch some properties here?
+            lastWrites.mapTo(IdentitySet()) { Pair(it, false) }*/
+            // If we already have exactly this value in the state for the prevDFGs, we take that in
+            // order not to confuse the iterateEOG function
+            val prevDFG = identitySetOf<Pair<Node, Set<Any>>>()
+            lastWrites.forEach { lw ->
+                val existingEntries =
+                    newDeclState[destAddr]?.third?.filter {
+                        it.first == lw.first && it.second == lw.second
+                    }
+                if (existingEntries?.isNotEmpty() == true) prevDFG.addAll(existingEntries)
+                else prevDFG.add(lw)
+            }
+
             newDeclState[destAddr] =
                 DeclarationStateEntryElement(
                     PowersetLattice.Element(currentEntries),
                     PowersetLattice.Element(newSources),
-                    PowersetLattice.Element(newPrevDFG),
+                    PowersetLattice.Element(prevDFG),
                 )
         } else {
             // TODO: We basically do the same as above, but currently we don't get the destinations
