@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.concepts.http
 
 import de.fraunhofer.aisec.cpg.graph.MetadataProvider
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.auth.Authentication
 import de.fraunhofer.aisec.cpg.graph.concepts.newConcept
 import de.fraunhofer.aisec.cpg.graph.concepts.newOperation
@@ -130,16 +131,21 @@ fun MetadataProvider.newHttpRequest(
  * Creates a new [RegisterHttpEndpoint] operation for the given [HttpEndpoint].
  *
  * @param underlyingNode The underlying [Node] registering the endpoint method.
- * @param concept The [HttpEndpoint] concept this operation belongs to.
+ * @param concept The [Concept] to which this operation belongs.
+ * @param httpEndpoint The [HttpEndpoint] which is registered by this operation.
  * @return The created [RegisterHttpEndpoint] concept.
  */
-fun MetadataProvider.newHttpRegisterHttpEndpoint(underlyingNode: Node, concept: HttpEndpoint) =
+fun MetadataProvider.newRegisterHttpEndpoint(
+    underlyingNode: Node,
+    concept: Concept,
+    httpEndpoint: HttpEndpoint,
+) =
     newOperation(
         { underlyingNode, concept ->
             RegisterHttpEndpoint(
                 underlyingNode = underlyingNode,
                 concept = concept,
-                httpEndpoint = concept,
+                httpEndpoint = httpEndpoint,
             )
         },
         underlyingNode = underlyingNode,
