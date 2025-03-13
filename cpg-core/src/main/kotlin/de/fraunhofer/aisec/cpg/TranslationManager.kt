@@ -140,9 +140,6 @@ private constructor(
     ): Set<LanguageFrontend<*, *>> {
         val usedFrontends = mutableSetOf<LanguageFrontend<*, *>>()
 
-        // Contains all languages used in this frontend run, used to load additional builtins files
-        val usedLanguages = mutableSetOf<Language<*>>()
-
         // If loadIncludes is active, the files stored in the include paths are made available for
         // conditional analysis by providing them to the frontends over the
         // [TranslationContext.additionalSources] list.
@@ -266,15 +263,17 @@ private constructor(
             )
 
             // Collects all used languages used in the main analysis code
-            usedLanguages.addAll(sourceLocations.mapNotNull { with(ctx) { it.language } }.toSet())
+            result.usedLanguages.addAll(
+                sourceLocations.mapNotNull { with(ctx) { it.language } }.toSet()
+            )
         }
 
         // Adds all languages provided as additional sources that may be relevant in the main code
-        usedLanguages.addAll(
+        result.usedLanguages.addAll(
             ctx.additionalSources.mapNotNull { with(ctx) { it.relative.language } }.toSet()
         )
 
-        usedLanguages.filterIsInstance<HasBuiltins>().forEach { hasBuiltins ->
+        result.usedLanguages.filterIsInstance<HasBuiltins>().forEach { hasBuiltins ->
             // Includes a file in the analysis, if relative to its rootpath it matches the name of
             // a builtins file candidate.
             val builtinsCandidates = hasBuiltins.builtinsFileCandidates
