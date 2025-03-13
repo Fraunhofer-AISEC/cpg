@@ -189,7 +189,7 @@ class ProvideConfiguration(
 class ProvideConfigurationGroup(
     underlyingNode: Node,
     var source: ConfigurationGroupSource,
-    var group: ConfigurationGroup, // TODO: Remove?
+    var group: ConfigurationGroup,
 ) : ConfigurationOperation(underlyingNode = underlyingNode, concept = source)
 
 /**
@@ -199,7 +199,7 @@ class ProvideConfigurationGroup(
 class ProvideConfigurationOption(
     underlyingNode: Node,
     var source: ConfigurationOptionSource,
-    var option: ConfigurationOption, // TODO: Remove?
+    var option: ConfigurationOption,
     var value: Node?,
 ) : ConfigurationOperation(underlyingNode = underlyingNode, concept = source)
 
@@ -236,8 +236,6 @@ class ConfigurationGroupSource(underlyingNode: Node) : Concept(underlyingNode = 
  * Represents a possible option source for a configuration option. For example, when loading an INI
  * file with our INI file frontend, each key-value pair is presented as a [FieldDeclaration]. This
  * field declaration would be the source to the configuration option.
- *
- * TODO: Can we remove group here?
  */
 class ConfigurationOptionSource(underlyingNode: Node, var group: ConfigurationGroupSource) :
     Concept(underlyingNode = underlyingNode)
