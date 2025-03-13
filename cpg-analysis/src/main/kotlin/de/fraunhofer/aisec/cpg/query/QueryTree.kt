@@ -315,4 +315,45 @@ fun <T> const(n: T): QueryTree<T> {
     return QueryTree(n, stringRepresentation = "$n")
 }
 
+/**
+ * This is a helper function to extract all the final nodes visited on successful [dataFlow]
+ * traversals. The helper filters for successful traversals only and maps all those paths to the
+ * last node (i.e. the node that made the traversal stop).
+ *
+ * Use-case to find the terminating nodes (i.e. the `SpecialNodeType` nodes) of the [dataFlow] call
+ * below:
+ * ```
+ * val specialNodes = dataFlow(foo) { it is SpecialNodeType }.successfulLastNodes()
+ * ```
+ *
+ * @return A list of all terminating nodes for successful queries.
+ */
+// TODO: Use the SinglePathResult instead?
+fun QueryTree<*>.successfulLastNodes(): List<Node> {
+    val successfulPaths = this.children.filter { it.value == true }
+    val innerPath = successfulPaths.flatMap { it.children }
+    val finallyTheEntirePaths = innerPath.map { it.value }
+    return finallyTheEntirePaths.mapNotNull { (it as? List<*>)?.last() }.filterIsInstance<Node>()
+}
+
+sealed interface TerminationReason {
+    val endNode: Node
+}
+
+data class Success(override val endNode: Node) : TerminationReason
+
+data class PathEnded(override val endNode: Node) : TerminationReason
+
+data class StepsExceeded(override val endNode: Node) : TerminationReason
+
+data class HitEarlyTermination(override val endNode: Node) : TerminationReason
+
+class SinglePathResult(
+    override var value: Boolean,
+    override val children: MutableList<QueryTree<*>> = mutableListOf(),
+    override var stringRepresentation: String = "",
+    override var node: Node? = null,
+    val terminationReason: TerminationReason,
+) : QueryTree<Boolean>(value, children, stringRepresentation, node)
+
 class QueryException(override val message: String) : Exception(message)
