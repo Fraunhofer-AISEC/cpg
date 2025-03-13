@@ -25,28 +25,45 @@
  */
 package de.fraunhofer.aisec.cpg.webconsole
 
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.Transient
+import io.ktor.serialization.kotlinx.json.*
+import io.ktor.server.application.*
+import io.ktor.server.engine.*
+import io.ktor.server.netty.*
+import io.ktor.server.plugins.contentnegotiation.*
+import io.ktor.server.plugins.cors.routing.*
+import io.ktor.server.routing.*
+import kotlinx.serialization.json.Json
 
-@Serializable
-data class TranslationResult(
-    val components: List<Component>,
-    val totalNodes: Int,
-    @Transient val cpgResult: de.fraunhofer.aisec.cpg.TranslationResult? = null,
-)
+fun main() {
+    CPGService().startServer()
+}
 
-@Serializable data class Component(val name: String, val translationUnits: List<TranslationUnit>)
+fun CPGService.startServer() {
+    embeddedServer(Netty, port = 8080) { configureWebconsole(this@startServer) }.start(wait = true)
+}
 
-@Serializable data class TranslationUnit(val name: String, val path: String, val code: String)
+fun Application.configureWebconsole(service: CPGService) {
+    install(CORS) {
+        anyHost()
+        allowHeader(io.ktor.http.HttpHeaders.ContentType)
+    }
 
-@Serializable
-data class NodeInfo(
-    val id: String,
-    val type: String,
-    val startLine: Int,
-    val startColumn: Int,
-    val endLine: Int,
-    val endColumn: Int,
-    val code: String,
-    val name: String,
-)
+    install(ContentNegotiation) {
+        json(
+            Json {
+                prettyPrint = true
+                isLenient = true
+            }
+        )
+    }
+
+    configureRouting(service)
+}
+
+fun Application.configureRouting(service: CPGService) {
+    routing {
+        // We'll add routes here
+        cpgRoutes(service)
+        staticResources()
+    }
+}

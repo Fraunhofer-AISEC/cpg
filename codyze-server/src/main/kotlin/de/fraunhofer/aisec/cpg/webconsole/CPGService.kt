@@ -25,13 +25,15 @@
  */
 package de.fraunhofer.aisec.cpg.webconsole
 
+import de.fraunhofer.aisec.codyze.AnalysisResult
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
+import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Name
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.nodes
-import java.io.File
 import java.nio.file.Path
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -54,25 +56,9 @@ class CPGService {
 
             val result = translationManager.analyze().get()
 
-            // Convert to our simplified model
-            val components =
-                result.components.map { component ->
-                    Component(
-                        name = component.name.toString(),
-                        translationUnits =
-                            component.translationUnits.map { tu ->
-                                TranslationUnit(
-                                    name = tu.name.toString(),
-                                    path = sourceDir,
-                                    code = loadSourceCode(tu, sourceDir),
-                                )
-                            },
-                    )
-                }
-
             val translationResult =
                 TranslationResult(
-                    components = components,
+                    components = result.components.map { it.toServerNode() },
                     totalNodes = result.nodes.size,
                     cpgResult = result,
                 )
@@ -85,7 +71,7 @@ class CPGService {
         return translationResult
     }
 
-    fun getComponent(componentName: String): Component? {
+    fun getComponent(componentName: String): ComponentJSON? {
         return translationResult?.components?.find { it.name == componentName }
     }
 
@@ -101,45 +87,55 @@ class CPGService {
             cpgResult.components
                 .find { it.name == Name(componentName) }
                 ?.translationUnits
-                ?.find { it.name.toString() == unitPath } ?: return emptyList()
+                ?.find { it.location?.artifactLocation?.uri.toString() == unitPath }
+                ?: return emptyList()
 
         return extractNodes(tu)
     }
 
     private fun extractNodes(tu: TranslationUnitDeclaration): List<NodeInfo> {
-        val nodes = mutableListOf<NodeInfo>()
+        return tu.nodes.map { it.toServerNode() }
+    }
 
-        // Extract nodes with location information
-        fun traverse(node: de.fraunhofer.aisec.cpg.graph.Node) {
-            val location = node.location
-            if (location != null && location.region != null) {
-                nodes.add(
-                    NodeInfo(
-                        id = node.id.toString(),
-                        type = node.javaClass.simpleName,
-                        startLine = location.region.startLine,
-                        startColumn = location.region.startColumn,
-                        endLine = location.region.endLine,
-                        endColumn = location.region.endColumn,
-                        code = node.code ?: "",
-                        name = node.name.toString(),
-                    )
+    companion object {
+        fun fromAnalysisResult(result: AnalysisResult): CPGService {
+            val tr = result.translationResult
+
+            val service = CPGService()
+            service.translationResult =
+                TranslationResult(
+                    components = tr.components.map { it.toServerNode() },
+                    totalNodes = tr.nodes.size,
+                    cpgResult = tr,
                 )
-            }
-
-            node.astChildren.forEach { traverse(it) }
-        }
-
-        traverse(tu)
-        return nodes
-    }
-
-    private fun loadSourceCode(tu: TranslationUnitDeclaration, sourceDir: String): String {
-        val path = sourceDir
-        return try {
-            File(path).readText()
-        } catch (e: Exception) {
-            ""
+            return service
         }
     }
+}
+
+private fun Node.toServerNode(): NodeInfo {
+    return NodeInfo(
+        id = this.id.toString(),
+        type = this.javaClass.simpleName,
+        startLine = location?.region?.startLine ?: -1,
+        startColumn = location?.region?.startColumn ?: -1,
+        endLine = location?.region?.endLine ?: -1,
+        endColumn = location?.region?.endColumn ?: -1,
+        code = this.code ?: "",
+        name = this.name.toString(),
+    )
+}
+
+fun Component.toServerNode(): ComponentJSON {
+    return ComponentJSON(
+        name = this.name.toString(),
+        translationUnits =
+            this.translationUnits.map { tu ->
+                TranslationUnit(
+                    name = tu.name.toString(),
+                    path = tu.location?.artifactLocation?.uri.toString(),
+                    code = tu.code ?: "",
+                )
+            },
+    )
 }

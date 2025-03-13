@@ -29,6 +29,7 @@ import com.github.ajalt.clikt.parameters.groups.OptionGroup
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.multiple
 import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.types.boolean
 import com.github.ajalt.clikt.parameters.types.path
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
@@ -43,6 +44,11 @@ import kotlin.io.path.isDirectory
 class ProjectOptions : OptionGroup("Project Options") {
     val directory by
         option("--project-dir", help = "The project directory").path().default(Path("."))
+
+    val startServer by
+        option("--server", help = "Starts the Codyze server after the analysis")
+            .boolean()
+            .default(false)
 }
 
 /** Options common to all subcommands dealing with CPG translation. */

@@ -27,24 +27,21 @@ package de.fraunhofer.aisec.cpg.webconsole
 
 import io.ktor.http.*
 import io.ktor.server.application.*
-import io.ktor.server.http.content.defaultResource
-import io.ktor.server.http.content.resources
-import io.ktor.server.http.content.static
+import io.ktor.server.http.content.staticFiles
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import java.io.File
 import kotlinx.serialization.Serializable
 
 @Serializable data class GenerateCPGRequest(val sourceDir: String)
 
-private val cpgService = CPGService()
-
-fun Routing.cpgRoutes() {
+fun Routing.cpgRoutes(service: CPGService) {
     route("/api") {
         post("/generate") {
             val request = call.receive<GenerateCPGRequest>()
             try {
-                val result = cpgService.generateCPG(request.sourceDir)
+                val result = service.generateCPG(request.sourceDir)
                 call.respond(result)
             } catch (e: Exception) {
                 call.respond(HttpStatusCode.InternalServerError, mapOf("error" to e.message))
@@ -52,7 +49,7 @@ fun Routing.cpgRoutes() {
         }
 
         get("/result") {
-            val result = cpgService.getTranslationResult()
+            val result = service.getTranslationResult()
             if (result != null) {
                 call.respond(result)
             } else {
@@ -65,7 +62,7 @@ fun Routing.cpgRoutes() {
 
         get("/component/{name}") {
             val name = call.parameters["name"] ?: return@get call.respond(HttpStatusCode.BadRequest)
-            val component = cpgService.getComponent(name)
+            val component = service.getComponent(name)
 
             if (component != null) {
                 call.respond(component)
@@ -82,7 +79,7 @@ fun Routing.cpgRoutes() {
                 call.request.queryParameters["path"]
                     ?: return@get call.respond(HttpStatusCode.BadRequest)
 
-            val tu = cpgService.getTranslationUnit(componentName, path)
+            val tu = service.getTranslationUnit(componentName, path)
             if (tu != null) {
                 call.respond(tu)
             } else {
@@ -101,15 +98,16 @@ fun Routing.cpgRoutes() {
                 call.request.queryParameters["path"]
                     ?: return@get call.respond(HttpStatusCode.BadRequest)
 
-            val nodes = cpgService.getNodesForTranslationUnit(componentName, path)
+            val nodes = service.getNodesForTranslationUnit(componentName, path)
             call.respond(nodes)
         }
     }
 }
 
 fun Routing.staticResources() {
-    static("/") {
+    staticFiles("/", File("static").absoluteFile)
+    /*static("/") {
         resources("static")
         defaultResource("static/index.html")
-    }
+    }*/
 }

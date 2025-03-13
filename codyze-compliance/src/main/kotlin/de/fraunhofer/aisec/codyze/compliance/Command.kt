@@ -29,6 +29,8 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.subcommands
 import com.github.ajalt.clikt.parameters.groups.provideDelegate
 import de.fraunhofer.aisec.codyze.*
+import de.fraunhofer.aisec.cpg.webconsole.CPGService
+import de.fraunhofer.aisec.cpg.webconsole.startServer
 
 /** The main `compliance` command. */
 class ComplianceCommand : CliktCommand() {
@@ -56,6 +58,10 @@ open class ScanCommand : ProjectCommand() {
 
         result.sarif.runs.forEach { run ->
             run.results?.forEach { result -> echo(result.message.toString()) }
+        }
+
+        if (projectOptions.startServer) {
+            CPGService.fromAnalysisResult(result).startServer()
         }
     }
 }
