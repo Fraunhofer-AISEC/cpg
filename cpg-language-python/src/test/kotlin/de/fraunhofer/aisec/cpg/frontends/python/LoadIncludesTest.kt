@@ -47,7 +47,7 @@ class LoadIncludesTest {
                 )
             }
 
-        assertEquals(result.ctx?.importedSources?.size, 3)
+        assertEquals(result.finalCtx.importedSources?.size, 3)
 
         val stdlib = result.components("stdlib").flatMap { it.allChildren<Node>() }
 
