@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph
 import de.fraunhofer.aisec.cpg.frontends.NoLanguage
 import de.fraunhofer.aisec.cpg.graph.edges.overlay.OverlaySingleEdge
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import java.util.Objects
 import org.neo4j.ogm.annotation.Relationship
 
 /**
@@ -52,4 +53,6 @@ abstract class OverlayNode() : Node() {
             super.equals(other) &&
             other.underlyingNode == this.underlyingNode
     }
+
+    override fun hashCode() = Objects.hash(super.hashCode(), underlyingNode)
 }
