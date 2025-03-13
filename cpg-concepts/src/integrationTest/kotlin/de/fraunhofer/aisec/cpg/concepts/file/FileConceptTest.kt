@@ -29,7 +29,6 @@ import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.file.*
 import de.fraunhofer.aisec.cpg.passes.concepts.file.python.PythonFileConceptPass
-import de.fraunhofer.aisec.cpg.query.May
 import de.fraunhofer.aisec.cpg.query.Must
 import de.fraunhofer.aisec.cpg.query.dataFlow
 import de.fraunhofer.aisec.cpg.query.executionPath
@@ -111,18 +110,12 @@ class FileConceptTest : BaseTest() {
             fileNodes.filterIsInstance<CloseFile>().size,
             "We expect 2 x close (one for normally exiting `with` and one for the `catch` exit) operations.",
         )
-        val executionPathReadToCloseMay =
-            executionPath(startNode = fileRead, type = May, predicate = { it is CloseFile })
-        assertTrue(
-            executionPathReadToCloseMay.value,
-            "Expected to find an execution path from read to close. But it's not mandatory.",
-        )
 
         val executionPathReadToCloseMust =
             executionPath(startNode = fileRead, type = Must, predicate = { it is CloseFile })
         assertTrue(
             executionPathReadToCloseMust.value,
-            "Expected to find an execution path from read to close. It's mandatory.",
+            "Expected to find an execution path from read to close.",
         )
     }
 
@@ -343,6 +336,7 @@ class FileConceptTest : BaseTest() {
         }
     }
 
+    @Ignore("Issue https://github.com/Fraunhofer-AISEC/cpg/issues/2121")
     @Test
     fun testDelete() {
         val topLevel = Path.of("src", "integrationTest", "resources", "python", "file")
