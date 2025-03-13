@@ -180,34 +180,34 @@ fun MetadataProvider.newRegisterConfigurationGroup(
  * Creates a new [ProvideConfiguration] operation.
  *
  * @param underlyingNode The underlying node representing this operation.
- * @param concept The [Configuration] concept to which the provide operation belongs.
+ * @param conf The [Configuration] concept to which the provide operation belongs.
  * @param source The source of the configuration.
  * @return The created [ProvideConfiguration] operation.
  */
 fun MetadataProvider.newProvideConfiguration(
     underlyingNode: Node,
-    concept: Configuration,
+    conf: Configuration,
     source: ConfigurationSource,
 ) =
     newOperation(
         { underlyingNode, concept ->
-            ProvideConfiguration(underlyingNode = underlyingNode, source = source, conf = concept)
+            ProvideConfiguration(underlyingNode = underlyingNode, source = source, conf = conf)
         },
         underlyingNode = underlyingNode,
-        concept = concept,
+        concept = source,
     )
 
 /**
  * Creates a new [ProvideConfigurationGroup] operation.
  *
  * @param underlyingNode The underlying node representing this operation.
- * @param concept The [ConfigurationGroup] concept to which the provide operation belongs.
+ * @param group The [ConfigurationGroup] concept to which the provide operation belongs.
  * @param source The source of the configuration group.
  * @return The created [ProvideConfigurationGroup] operation.
  */
 fun MetadataProvider.newProvideConfigurationGroup(
     underlyingNode: Node,
-    concept: ConfigurationGroup,
+    group: ConfigurationGroup,
     source: ConfigurationGroupSource,
 ) =
     newOperation(
@@ -215,11 +215,11 @@ fun MetadataProvider.newProvideConfigurationGroup(
                 ProvideConfigurationGroup(
                     underlyingNode = underlyingNode,
                     source = source,
-                    group = concept,
+                    group = group,
                 )
             },
             underlyingNode = underlyingNode,
-            concept = concept,
+            concept = source,
         )
         .apply { name = concept.name }
 
@@ -273,14 +273,14 @@ fun MetadataProvider.newRegisterConfigurationOption(
  * Creates a new [ProvideConfigurationOption] operation.
  *
  * @param underlyingNode The underlying node representing this operation.
- * @param concept The [ConfigurationOption] concept to which the provide operation belongs.
+ * @param option The [ConfigurationOption] concept to which the provide operation belongs.
  * @param source The source of the configuration option.
  * @param value The value of the configuration option.
  * @return The created [ProvideConfigurationOption] operation.
  */
 fun MetadataProvider.newProvideConfigurationOption(
     underlyingNode: Node,
-    concept: ConfigurationOption,
+    option: ConfigurationOption,
     source: ConfigurationOptionSource,
     value: Node?,
 ) =
@@ -289,11 +289,11 @@ fun MetadataProvider.newProvideConfigurationOption(
                 ProvideConfigurationOption(
                     underlyingNode = underlyingNode,
                     source = source,
-                    option = concept,
+                    option = option,
                     value = value,
                 )
             },
             underlyingNode = underlyingNode,
-            concept = concept,
+            concept = source,
         )
         .apply { name = concept.name }

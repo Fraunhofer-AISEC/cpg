@@ -90,7 +90,7 @@ class ProvideConfigPass(ctx: TranslationContext) : ConceptPass(ctx) {
         // ProvideConfigurationOption nodes
         source.groups.mapNotNull { handleConfigurationGroup(conf, it) }.flatten()
 
-        newProvideConfiguration(underlyingNode = tu, concept = configuration.conf, source = source)
+        newProvideConfiguration(underlyingNode = tu, conf = configuration.conf, source = source)
             .also { it.name = source.name }
 
         return ops
@@ -116,7 +116,7 @@ class ProvideConfigPass(ctx: TranslationContext) : ConceptPass(ctx) {
 
         newProvideConfigurationGroup(
                 underlyingNode = sourceUnderlying,
-                concept = group,
+                group = group,
                 source = source,
             )
             .also { it.name = source.name }
@@ -149,7 +149,7 @@ class ProvideConfigPass(ctx: TranslationContext) : ConceptPass(ctx) {
 
         newProvideConfigurationOption(
                 underlyingNode = sourceUnderlying,
-                concept = option,
+                option = option,
                 value = sourceUnderlying,
                 source = source,
             )
