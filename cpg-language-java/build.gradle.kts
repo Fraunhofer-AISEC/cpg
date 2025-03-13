@@ -23,22 +23,13 @@
  *                    \______/ \__|       \______/
  *
  */
-plugins {
-    id("cpg.frontend-conventions")
-}
+plugins { id("cpg.frontend-conventions") }
 
-publishing {
-    publications {
-        named<MavenPublication>("cpg-language-java") {
-            pom {
-                artifactId = "cpg-language-java"
-                name.set("Code Property Graph - Java Frontend")
-                description.set("A Java language frontend for the CPG")
-            }
-        }
+mavenPublishing {
+    pom {
+        name.set("Code Property Graph - Java Frontend")
+        description.set("A Java language frontend for the CPG")
     }
 }
 
-dependencies {
-    implementation(libs.javaparser)
-}
+dependencies { implementation(libs.javaparser) }

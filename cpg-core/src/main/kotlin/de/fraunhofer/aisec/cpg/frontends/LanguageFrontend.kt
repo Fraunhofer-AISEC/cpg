@@ -45,15 +45,18 @@ import org.slf4j.LoggerFactory
  * [GitHub wiki page](https://github.com/Fraunhofer-AISEC/cpg/wiki/Language-Frontends).
  */
 abstract class LanguageFrontend<AstNode, TypeNode>(
-    /** The language this frontend works for. */
-    override val language: Language<out LanguageFrontend<AstNode, TypeNode>>,
-
     /**
      * The translation context, which contains all necessary managers used in this frontend parsing
-     * process. Note, that different contexts could passed to frontends, e.g., in parallel parsing
-     * to supply different managers to different frontends.
+     * process. Note, that different contexts could be passed to frontends, e.g., in parallel
+     * parsing to supply different managers to different frontends.
+     *
+     * TODO(oxisto): once we address https://github.com/Fraunhofer-AISEC/cpg/issues/2109 we can
+     *   remove this parameter and use the context from the language
      */
     final override var ctx: TranslationContext,
+
+    /** The language this frontend works for. */
+    override val language: Language<out LanguageFrontend<AstNode, TypeNode>>,
 ) :
     ProcessedListener(),
     CodeAndLocationProvider<AstNode>,

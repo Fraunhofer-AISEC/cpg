@@ -23,7 +23,7 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.analysis
+package de.fraunhofer.aisec.cpg.evaluation
 
 import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.HasInitializer
@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.HasOperatorCode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
+import de.fraunhofer.aisec.cpg.helpers.Util
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -66,7 +66,7 @@ open class ValueEvaluator(
         }
     }
 ) {
-    protected open val log: Logger
+    open val log: Logger
         get() = LoggerFactory.getLogger(ValueEvaluator::class.java)
 
     /** This property contains the path of the latest execution of [evaluateInternal]. */
@@ -74,8 +74,29 @@ open class ValueEvaluator(
 
     open fun evaluate(node: Any?): Any? {
         if (node !is Node) return node
+        clearPath()
 
         return evaluateInternal(node, 0)
+    }
+
+    /**
+     * Tries to evaluate this node and returns the result as the specified type [T]. If the
+     * evaluation fails, the result is "null".
+     */
+    inline fun <reified T> evaluateAs(node: Node?): T? {
+        val result = evaluateInternal(node, 0)
+        return if (result !is T) {
+            Util.errorWithFileLocation(
+                node,
+                log,
+                "Evaluated the node to type \"{}\". Expected type \"{}\". Returning \"null\".",
+                result?.let { it::class.simpleName },
+                T::class.simpleName,
+            )
+            null
+        } else {
+            result
+        }
     }
 
     fun clearPath() {
@@ -83,7 +104,7 @@ open class ValueEvaluator(
     }
 
     /** Tries to evaluate this node. Anything can happen. */
-    protected open fun evaluateInternal(node: Node?, depth: Int): Any? {
+    open fun evaluateInternal(node: Node?, depth: Int): Any? {
         if (node == null) {
             return null
         }
@@ -105,12 +126,24 @@ open class ValueEvaluator(
             // easily be partly path-sensitive in a conditional expression
             is ConditionalExpression -> return handleConditionalExpression(node, depth)
             is AssignExpression -> return handleAssignExpression(node, depth)
+            is Reference -> return handleReference(node, depth)
+            is CallExpression -> return handleCallExpression(node, depth)
             else -> return handlePrevDFG(node, depth)
         }
 
         // At this point, we cannot evaluate, and we are calling our [cannotEvaluate] hook, maybe
         // this helps
         return cannotEvaluate(node, this)
+    }
+
+    /** Handles a [CallExpression]. Default behaviour is to call [handlePrevDFG] */
+    protected open fun handleCallExpression(node: CallExpression, depth: Int): Any? {
+        return handlePrevDFG(node, depth)
+    }
+
+    /** Handles a [Reference]. Default behaviour is to call [handlePrevDFG] */
+    protected open fun handleReference(node: Reference, depth: Int): Any? {
+        return handlePrevDFG(node, depth)
     }
 
     /**

@@ -38,7 +38,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.flows.*
-import de.fraunhofer.aisec.cpg.graph.edges.overlay.*
+import de.fraunhofer.aisec.cpg.graph.edges.overlay.Overlays
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
@@ -113,12 +113,6 @@ abstract class Node :
     var comment: String? = null
 
     @Convert(LocationConverter::class) override var location: PhysicalLocation? = null
-
-    /**
-     * Name of the containing file. It can be null for artificially created nodes or if just
-     * analyzing snippets of code without an associated file name.
-     */
-    @PopulatedByPass(FilenameMapper::class) var file: String? = null
 
     /** Incoming control flow edges. */
     @Relationship(value = "EOG", direction = Relationship.Direction.INCOMING)

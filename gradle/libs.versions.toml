@@ -2,16 +2,15 @@
 kotlin = "2.0.20"
 kotlin19 = "1.9.10"
 neo4j = "4.0.10"
-neo4j5 = "5.28.0"
+neo4j5 = "5.28.2"
 log4j = "2.24.0"
 spotless = "7.0.1"
-nexus-publish = "2.0.0"
+publish = "0.31.0"
 sootup = "1.3.0"
 slf4j = "2.0.16"
 clikt = "5.0.2"
 kaml = "0.72.0"
 sarif4k = "0.6.0"
-netty = "4.1.118.Final"
 
 [libraries]
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin"}
@@ -34,12 +33,11 @@ apache-commons-lang3 = { module = "org.apache.commons:commons-lang3", version = 
 neo4j-ogm-core = { module = "org.neo4j:neo4j-ogm-core", version.ref = "neo4j"}
 neo4j-ogm-bolt-driver = { module = "org.neo4j:neo4j-ogm-bolt-driver", version.ref = "neo4j"}
 neo4j-driver = { module = "org.neo4j.driver:neo4j-java-driver", version.ref = "neo4j5"}
-netty-handler = { module = "io.netty:netty-handler", version.ref = "netty"}
 
 javaparser = { module = "com.github.javaparser:javaparser-symbol-solver-core", version = "3.26.0"}
 jackson = { module = "com.fasterxml.jackson.module:jackson-module-kotlin", version = "2.18.0"}
 jacksonyml = { module = "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml", version = "2.18.0"}
-eclipse-runtime = { module = "org.eclipse.platform:org.eclipse.core.runtime", version = "3.32.0"}
+eclipse-runtime = { module = "org.eclipse.platform:org.eclipse.core.runtime", version = "3.33.0"}
 osgi-service = { module = "org.osgi:org.osgi.service.prefs", version = "1.1.2"}
 icu4j = { module = "com.ibm.icu:icu4j", version = "76.1"}
 # Note: This "module" intentionally looks very weird, because the CDT version is actually part of the path of the CDT external
@@ -59,16 +57,16 @@ sarif4k = { module = "io.github.detekt.sarif4k:sarif4k", version.ref = "sarif4k"
 
 # test
 junit-params = { module = "org.junit.jupiter:junit-jupiter-params", version = "5.12.0"}
-mockito = { module = "org.mockito:mockito-core", version = "5.15.2"}
+mockito = { module = "org.mockito:mockito-core", version = "5.16.0"}
 
 # plugins needed for build.gradle.kts in buildSrc
+publish-central = { module = "com.vanniktech:gradle-maven-publish-plugin", version.ref = "publish" }
 kotlin-gradle = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
 kotlin-serialization = { module = "org.jetbrains.kotlin:kotlin-serialization", version.ref = "kotlin" }
 dokka-gradle = { module = "org.jetbrains.dokka:dokka-gradle-plugin", version = "2.0.0" } # the dokka plugin is slightly behind the main Kotlin release cycle
 dokka-versioning = { module = "org.jetbrains.dokka:versioning-plugin", version = "2.0.0"}
 kover-gradle = { module = "org.jetbrains.kotlinx:kover-gradle-plugin", version = "0.9.0" }
 spotless-gradle = { module = "com.diffplug.spotless:spotless-plugin-gradle", version.ref = "spotless" }
-nexus-publish-gradle = { module = "io.github.gradle-nexus:publish-plugin", version.ref = "nexus-publish" }
 
 sootup-core = { module = "org.soot-oss:sootup.core", version.ref = "sootup" }
 sootup-java-core = { module = "org.soot-oss:sootup.java.core", version.ref = "sootup" }

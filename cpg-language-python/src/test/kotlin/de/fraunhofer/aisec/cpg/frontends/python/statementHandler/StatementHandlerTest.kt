@@ -26,15 +26,14 @@
 package de.fraunhofer.aisec.cpg.frontends.python.statementHandler
 
 import de.fraunhofer.aisec.cpg.TranslationResult
-import de.fraunhofer.aisec.cpg.frontends.python.*
+import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.statements.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.statements.AssertStatement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeleteExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.SubscriptExpression
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.test.*
-import de.fraunhofer.aisec.cpg.test.analyze
-import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
-import de.fraunhofer.aisec.cpg.test.assertResolvedType
 import java.nio.file.Path
 import kotlin.test.*
 import org.junit.jupiter.api.BeforeAll
@@ -106,18 +105,18 @@ class StatementHandlerTest : BaseTest() {
         // All entries to the else block must come from the try block
         assertTrue(
             Util.eogConnect(
-                n = tryAll.elseBlock,
-                en = Util.Edge.ENTRIES,
-                refs = listOf(tryAll.tryBlock),
+                startNode = tryAll.elseBlock,
+                edgeDirection = Util.Edge.ENTRIES,
+                endNodes = listOf(tryAll.tryBlock),
             )
         )
 
         // All exits from the else block must go to the entries of the non-empty finals block
         assertTrue(
             Util.eogConnect(
-                n = tryAll.elseBlock,
-                en = Util.Edge.EXITS,
-                refs = listOf(tryAll.finallyBlock),
+                startNode = tryAll.elseBlock,
+                edgeDirection = Util.Edge.EXITS,
+                endNodes = listOf(tryAll.finallyBlock),
             )
         )
     }

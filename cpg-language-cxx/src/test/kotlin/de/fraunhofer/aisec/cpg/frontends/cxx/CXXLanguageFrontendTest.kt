@@ -660,6 +660,9 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
             }
+        val language = tu.ctx?.availableLanguage<CPPLanguage>()
+        assertNotNull(language)
+        assertEquals(language, tu.language)
 
         val recordDeclaration = tu.records.firstOrNull()
         assertNotNull(recordDeclaration)
@@ -696,7 +699,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                 "(int)void*",
                 listOf(tu.primitiveType("int")),
                 listOf(tu.incompleteType().reference(POINTER)),
-                CPPLanguage(),
+                language,
             ),
             methodWithParam.type,
         )
@@ -715,7 +718,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                 "()void*",
                 listOf(),
                 listOf(tu.incompleteType().reference(POINTER)),
-                CPPLanguage(),
+                language,
             ),
             inlineMethod.type,
         )
@@ -724,12 +727,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val inlineConstructor = recordDeclaration.constructors[0]
         assertEquals(recordDeclaration.name.localName, inlineConstructor.name.localName)
         assertEquals(
-            FunctionType(
-                "()SomeClass",
-                listOf(),
-                listOf(tu.objectType("SomeClass")),
-                CPPLanguage(),
-            ),
+            FunctionType("()SomeClass", listOf(), listOf(tu.objectType("SomeClass")), language),
             inlineConstructor.type,
         )
         assertTrue(inlineConstructor.hasBody())
@@ -743,7 +741,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                 "(int)SomeClass",
                 listOf(tu.primitiveType("int")),
                 listOf(tu.objectType("SomeClass")),
-                CPPLanguage(),
+                language,
             ),
             constructorDefinition.type,
         )
@@ -1089,7 +1087,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertNotNull(function)
         assertEquals("testExpressionInExpressionList()int", function.signature)
 
-        val locals = function.body?.locals
+        val locals = function.body.variables
         assertNotNull(locals)
 
         // Expecting x, foo, t
@@ -1343,9 +1341,10 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CLanguage>()
             }
-        // TU should only contain two AST declarations (EnumDeclaration and FunctionDeclaration),
-        // but NOT any EnumConstantDeclarations
-        assertEquals(2, tu.declarations.size)
+        // TU should only contain three AST declarations (EnumDeclaration, TypedefDeclaration and
+        // FunctionDeclaration), but NOT any EnumConstantDeclarations
+        assertEquals(3, tu.declarations.size)
+        assertEquals(0, tu.declarations.filterIsInstance<EnumConstantDeclaration>().size)
 
         val main = tu.functions["main"]
         assertNotNull(main)
@@ -1507,7 +1506,6 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                 it.registerPass<TypeResolver>()
                 it.registerPass<ControlFlowSensitiveDFGPass>()
                 it.registerPass<DynamicInvokeResolver>()
-                it.registerPass<FilenameMapper>()
             }
 
         val target = tu.functions["target"]
@@ -1552,7 +1550,6 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                 it.registerPass<TypeResolver>()
                 it.registerPass<DynamicInvokeResolver>()
                 it.registerPass<ControlFlowSensitiveDFGPass>()
-                it.registerPass<FilenameMapper>()
             }
 
         val target = tu.functions["target"]

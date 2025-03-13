@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.CallResolutionResult
 import de.fraunhofer.aisec.cpg.SignatureResult
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.ancestors
+import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
@@ -55,9 +56,11 @@ import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.passes.inference.Inference
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import java.io.File
 import kotlin.reflect.KClass
 import kotlin.reflect.full.primaryConstructor
+import org.neo4j.ogm.annotation.Transient
 
 /**
  * [CastResult] is the result of the function [Language.tryCast] and describes whether a cast of one
@@ -89,7 +92,7 @@ data class ImplicitCast(override var depthDistance: Int) : CastResult(depthDista
  * persisted in the final graph (database) and each node links to its corresponding language using
  * the [Node.language] property.
  */
-abstract class Language<T : LanguageFrontend<*, *>> : Node() {
+abstract class Language<T : LanguageFrontend<*, *>> : Node {
 
     /** The file extensions without the dot */
     abstract val fileExtensions: List<String>
@@ -123,12 +126,19 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
     /** All operators which perform a simple assignment from the rhs to the lhs. */
     open val simpleAssignmentOperators: Set<String> = setOf("=")
 
+    /** The standard evaluator to be used with this language. */
+    @Transient @DoNotPersist open val evaluator: ValueEvaluator = ValueEvaluator()
+
+    constructor(ctx: TranslationContext? = null) : super() {
+        this.ctx = ctx
+    }
+
     /**
      * Creates a new [LanguageFrontend] object to parse the language. It requires the
      * [TranslationContext], which holds the necessary managers.
      */
     open fun newFrontend(ctx: TranslationContext): T {
-        return this.frontend.primaryConstructor?.call(this, ctx)
+        return this.frontend.primaryConstructor?.call(ctx, this)
             ?: throw TranslationException("could not instantiate language frontend")
     }
 
@@ -485,7 +495,8 @@ object NoLanguage : Language<Nothing>() {
  *
  * @property languages A list of languages that are part of this composite language definition.
  */
-class MultipleLanguages(val languages: Set<Language<*>>) : Language<Nothing>() {
+class MultipleLanguages(ctx: TranslationContext, val languages: Set<Language<*>>) :
+    Language<Nothing>(ctx) {
     override val fileExtensions = languages.flatMap { it.fileExtensions }
     override val frontend: KClass<out Nothing> = Nothing::class
     override val builtInTypes: Map<String, Type> = mapOf()
@@ -501,7 +512,7 @@ fun Node.multiLanguage(): Language<*> {
     return if (languages.size == 1) {
         languages.single()
     } else if (languages.size > 1) {
-        MultipleLanguages(languages = languages)
+        MultipleLanguages(ctx!!, languages = languages)
     } else {
         UnknownLanguage
     }

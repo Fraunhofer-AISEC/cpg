@@ -63,8 +63,8 @@ import kotlin.math.min
  */
 @RegisterExtraPass(PythonAddDeclarationsPass::class)
 @SupportsParallelParsing(false) // https://github.com/Fraunhofer-AISEC/cpg/issues/2026
-class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: TranslationContext) :
-    LanguageFrontend<Python.AST.AST, Python.AST.AST?>(language, ctx) {
+class PythonLanguageFrontend(ctx: TranslationContext, language: Language<PythonLanguageFrontend>) :
+    LanguageFrontend<Python.AST.AST, Python.AST.AST?>(ctx, language) {
     val lineSeparator = "\n" // TODO
     private val tokenTypeIndex = 0
     private val jep = JepSingleton // configure Jep
@@ -339,6 +339,12 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
                     val nsd = newNamespaceDeclaration(fqn, rawNode = pythonASTModule)
                     nsd.path = relative?.parent?.pathString + "/" + module
                     scopeManager.addDeclaration(nsd)
+
+                    // Add the namespace to the parent namespace -- or the translation unit, if it
+                    // is the top one
+                    val holder = previous ?: tud
+                    holder.addDeclaration(nsd)
+
                     scopeManager.enterScope(nsd)
                     nsd
                 }
@@ -353,7 +359,11 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
                 when (stmt) {
                     // In order to be as compatible as possible with existing languages, we try to
                     // add declarations directly to the class
-                    is Python.AST.Def -> declarationHandler.handle(stmt)
+                    is Python.AST.Def -> {
+                        val decl = declarationHandler.handle(stmt)
+                        scopeManager.addDeclaration(decl)
+                        it.addDeclaration(decl)
+                    }
                     // All other statements are added to the (static) statements block of the
                     // namespace.
                     else -> it.statements += statementHandler.handle(stmt)

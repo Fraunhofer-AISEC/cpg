@@ -26,12 +26,15 @@
 package de.fraunhofer.aisec.cpg.helpers
 
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextIn
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
+import de.fraunhofer.aisec.cpg.helpers.Util.attachCallParameters
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.util.*
 import org.slf4j.Logger
@@ -51,83 +54,78 @@ object Util {
     }
 
     /**
-     * Checks if the Node `n` connects to the nodes in `refs` over the CPGS EOG graph edges that
-     * depict the evaluation order. The parameter q defines if all edges of interest to node must
-     * connect to an edge in refs or one is enough, cn and cr define whether the passed AST nodes
-     * themselves are used to search the connections or the EOG Border nodes in the AST subnode.
-     * Finally, en defines whether the EOG edges go * from n to r in refs or the inverse.
+     * Checks if the Node [startNode] connects to the nodes in [endNodes] over the CPGS EOG graph
+     * edges that depict the evaluation order. The parameter [quantifier] defines if all edges of
+     * interest to node must connect to an edge in [endNodes] or one is enough, [connectStart] and
+     * [connectEnd] define whether the passed AST nodes themselves are used to search the
+     * connections or the EOG Border nodes in the AST subnode. Finally, [edgeDirection] defines
+     * whether the EOG edges go * from [startNode] to node in [endNodes] or the inverse.
      *
-     * @param q
-     * - The quantifier, all or any node of n must connect to refs, defaults to ALL.
-     *
-     * @param cn
-     * - NODE if n itself is the node to connect or SUBTREE if the EOG borders are of interest.
-     *   Defaults to SUBTREE
-     *
-     * @param en
-     * - The Edge direction and therefore the borders of n to connect to refs
-     *
-     * @param n
-     * - Node of interest
-     *
-     * @param cr
-     * - NODE if refs nodes itself are the nodes to connect or SUBTREE if the EOG borders are of
-     *   interest
-     *
-     * @param branch
-     * - All edges must have the specified branch property
-     *
-     * @param refs
-     * - Multiple reference nodes that can be passed as varargs
-     *
-     * @return true if all/any of the connections from node connect to n.
+     * @param quantifier The quantifier, all or any node of [startNode] must connect to [endNodes],
+     *   defaults to ALL.
+     * @param connectStart NODE if [startNode] itself is the node to connect or SUBTREE if the EOG
+     *   borders are of interest. Defaults to SUBTREE
+     * @param edgeDirection The Edge direction and therefore the borders of [startNode] to connect
+     *   to [endNodes]
+     * @param startNode Node of interest
+     * @param connectEnd NODE if [endNodes] nodes itself are the nodes to connect or SUBTREE if the
+     *   EOG borders are of interest
+     * @param predicate All edges must have the specified branch property
+     * @param endNodes Multiple reference nodes that can be passed as varargs
+     * @return true if all/any of the connections from node connect to the [startNode].
      */
     // TODO: this function needs a major overhaul because it was
     //  running on the false assumption of the old containsProperty
     //  return values
     fun eogConnect(
-        q: Quantifier = Quantifier.ALL,
-        cn: Connect = Connect.SUBTREE,
-        en: Edge,
-        n: Node?,
-        cr: Connect = Connect.SUBTREE,
+        quantifier: Quantifier = Quantifier.ALL,
+        connectStart: Connect = Connect.SUBTREE,
+        edgeDirection: Edge,
+        startNode: Node?,
+        connectEnd: Connect = Connect.SUBTREE,
         predicate: ((EvaluationOrder) -> Boolean)? = null,
-        refs: List<Node?>,
+        endNodes: List<Node?>,
     ): Boolean {
-        if (n == null) {
+        if (startNode == null) {
             return false
         }
 
-        var nodeSide = listOf(n)
-        val er = if (en == Edge.ENTRIES) Edge.EXITS else Edge.ENTRIES
-        var refSide = refs
+        var nodeSide = listOf(startNode)
+        val er = if (edgeDirection == Edge.ENTRIES) Edge.EXITS else Edge.ENTRIES
+        var refSide = endNodes
         nodeSide =
-            if (cn == Connect.SUBTREE) {
-                val border = SubgraphWalker.getEOGPathEdges(n)
-                if (en == Edge.ENTRIES) {
+            if (connectStart == Connect.SUBTREE) {
+                val border = SubgraphWalker.getEOGPathEdges(startNode)
+                if (edgeDirection == Edge.ENTRIES) {
                     val pe = border.entries.flatMap { it.prevEOGEdges }
-                    if (Quantifier.ALL == q && pe.any { predicate?.invoke(it) == false })
+                    if (Quantifier.ALL == quantifier && pe.any { predicate?.invoke(it) == false })
                         return false
                     pe.filter { predicate?.invoke(it) != false }.map { it.start }
                 } else border.exits
             } else {
                 nodeSide.flatMap {
-                    if (en == Edge.ENTRIES) {
+                    if (edgeDirection == Edge.ENTRIES) {
                         val pe = it.prevEOGEdges
-                        if (Quantifier.ALL == q && pe.any { predicate?.invoke(it) == false })
+                        if (
+                            Quantifier.ALL == quantifier &&
+                                pe.any { predicate?.invoke(it) == false }
+                        )
                             return false
                         pe.filter { predicate?.invoke(it) != false }.map { it.start }
                     } else listOf(it)
                 }
             }
         refSide =
-            if (cr == Connect.SUBTREE) {
-                val borders = refs.map { SubgraphWalker.getEOGPathEdges(it) }
+            if (connectEnd == Connect.SUBTREE) {
+                val borders = endNodes.map { SubgraphWalker.getEOGPathEdges(it) }
 
                 borders.flatMap { border ->
                     if (Edge.ENTRIES == er) {
                         val pe = border.entries.flatMap { it.prevEOGEdges }
-                        if (Quantifier.ALL == q && pe.any { predicate?.invoke(it) == false })
+                        if (
+                            Quantifier.ALL == quantifier &&
+                                pe.any { predicate?.invoke(it) == false }
+                        )
                             return false
                         pe.filter { predicate?.invoke(it) != false }.map { it.start }
                     } else border.exits
@@ -136,14 +134,17 @@ object Util {
                 refSide.flatMap { node ->
                     if (er == Edge.ENTRIES) {
                         val pe = node?.prevEOGEdges ?: listOf()
-                        if (Quantifier.ALL == q && pe.any { predicate?.invoke(it) == false })
+                        if (
+                            Quantifier.ALL == quantifier &&
+                                pe.any { predicate?.invoke(it) == false }
+                        )
                             return false
                         pe.filter { predicate?.invoke(it) != false }.map { it.start }
                     } else listOf(node)
                 }
             }
         val refNodes = refSide
-        return if (Quantifier.ANY == q) nodeSide.any { it in refNodes }
+        return if (Quantifier.ANY == quantifier) nodeSide.any { it in refNodes }
         else refNodes.containsAll(nodeSide)
     }
 

@@ -50,11 +50,8 @@ internal class ScopeManagerTest : BaseTest() {
     @Throws(TranslationException::class)
     fun testReplaceNode() {
         val scopeManager = ScopeManager()
-        val frontend =
-            CXXLanguageFrontend(
-                CPPLanguage(),
-                TranslationContext(config, scopeManager, TypeManager()),
-            )
+        val ctx = TranslationContext(config, scopeManager, TypeManager())
+        val frontend = CXXLanguageFrontend(ctx, CPPLanguage(ctx))
         val tu = frontend.parse(File("src/test/resources/cxx/recordstmt.cpp"))
         val methods = tu.allChildren<MethodDeclaration>().filter { it !is ConstructorDeclaration }
         assertFalse(methods.isEmpty())

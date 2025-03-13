@@ -185,7 +185,11 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
 
         // Make sure we add the declaration at the correct place, i.e. with the scope we set at the
         // creation time
-        scopeManager.withScope(decl.scope) { scopeManager.addDeclaration(decl) }
+        scopeManager.withScope(decl.scope) {
+            scopeManager.addDeclaration(decl)
+            (it?.astNode as? DeclarationHolder)?.addDeclaration(decl)
+            decl
+        }
 
         return decl
     }
@@ -285,5 +289,5 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
     }
 
     override val language: Language<*>
-        get() = ctx.config.languages.firstOrNull { it is PythonLanguage } ?: UnknownLanguage
+        get() = ctx.availableLanguage<PythonLanguage>() ?: UnknownLanguage
 }

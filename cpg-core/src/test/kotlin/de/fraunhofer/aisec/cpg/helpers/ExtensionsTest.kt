@@ -25,9 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.helpers
 
-import de.fraunhofer.aisec.cpg.GraphExamples.Companion.testFrontend
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
+import de.fraunhofer.aisec.cpg.frontends.testFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.applyWithScope
@@ -58,7 +58,7 @@ internal class ExtensionsTest : BaseTest() {
         config: TranslationConfiguration =
             TranslationConfiguration.builder()
                 .defaultPasses()
-                .registerLanguage(TestLanguage("."))
+                .registerLanguage<TestLanguage>()
                 .build()
     ) =
         testFrontend(config).build {

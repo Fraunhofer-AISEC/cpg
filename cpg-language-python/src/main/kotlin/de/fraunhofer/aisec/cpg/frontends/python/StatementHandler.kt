@@ -77,8 +77,11 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     problem = "The statement of class ${node.javaClass} is not supported yet",
                     rawNode = node,
                 )
-            is Python.AST.Def ->
-                wrapDeclarationToStatement(frontend.declarationHandler.handleNode(node))
+            is Python.AST.Def -> {
+                val decl = frontend.declarationHandler.handleNode(node)
+                frontend.scopeManager.addDeclaration(decl)
+                wrapDeclarationToStatement(decl)
+            }
         }
     }
 
@@ -550,7 +553,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     )
                 conditionallyAddAdditionalSourcesToAnalysis(decl.import)
                 frontend.scopeManager.addDeclaration(decl)
-                declStmt.declarationEdges += decl
+                declStmt.declarations += decl
             } else {
                 // If we do not have an alias, we import all the packages along the path - unless we
                 // already have an import for the package in the scope
@@ -564,7 +567,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                         )
                     conditionallyAddAdditionalSourcesToAnalysis(decl.import)
                     frontend.scopeManager.addDeclaration(decl)
-                    declStmt.declarationEdges += decl
+                    declStmt.declarations += decl
                     importName = importName.parent
                 }
             }
@@ -642,7 +645,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
             // Finally, add our declaration to the scope and the declaration statement
             frontend.scopeManager.addDeclaration(decl)
-            declStmt.declarationEdges += decl
+            declStmt.declarations += decl
         }
         return declStmt
     }
@@ -932,6 +935,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     private fun wrapDeclarationToStatement(decl: Declaration): DeclarationStatement {
         val declStmt = newDeclarationStatement().codeAndLocationFrom(decl)
         declStmt.addDeclaration(decl)
+
         return declStmt
     }
 
