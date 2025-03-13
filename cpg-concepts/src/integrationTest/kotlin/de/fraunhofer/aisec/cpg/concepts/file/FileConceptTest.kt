@@ -122,7 +122,7 @@ class FileConceptTest : BaseTest() {
             executionPath(startNode = fileRead, type = Must, predicate = { it is CloseFile })
         assertTrue(
             executionPathReadToCloseMust.value,
-            "Expected to find an execution path from read to close. But it's not mandatory.",
+            "Expected to find an execution path from read to close. It's mandatory.",
         )
     }
 
