@@ -1,0 +1,373 @@
+<!doctype html>
+<html class="no-js">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
+    <title>PythonUnreachableEOGPass</title>
+<link href="../../../images/logo-icon.svg" rel="icon" type="image/svg">    <script>var pathToRoot = "../../../";</script>
+    <script>document.documentElement.classList.replace("no-js","js");</script>
+    <script>const storage = localStorage.getItem("dokka-dark-mode")
+    if (storage == null) {
+        const osDarkSchemePreferred = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+        if (osDarkSchemePreferred === true) {
+            document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+    } else {
+        const savedDarkMode = JSON.parse(storage)
+        if(savedDarkMode === true) {
+            document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+    }
+    </script>
+<script type="text/javascript" src="https://unpkg.com/kotlin-playground@1/dist/playground.min.js" async></script>
+<script type="text/javascript" src="../../../scripts/sourceset_dependencies.js" async></script>
+<link href="../../../styles/style.css" rel="Stylesheet">
+<link href="../../../styles/main.css" rel="Stylesheet">
+<link href="../../../styles/prism.css" rel="Stylesheet">
+<link href="../../../styles/logo-styles.css" rel="Stylesheet">
+<link href="../../../styles/font-jb-sans-auto.css" rel="Stylesheet">
+<link href="../../../ui-kit/ui-kit.min.css" rel="Stylesheet">
+<script type="text/javascript" src="../../../scripts/clipboard.js" async></script>
+<script type="text/javascript" src="../../../scripts/navigation-loader.js" async></script>
+<script type="text/javascript" src="../../../scripts/platform-content-handler.js" async></script>
+<script type="text/javascript" src="../../../scripts/main.js" defer></script>
+<script type="text/javascript" src="../../../scripts/prism.js" async></script>
+<script type="text/javascript" src="../../../ui-kit/ui-kit.min.js" defer></script>
+<script type="text/javascript" src="../../../scripts/symbol-parameters-wrapper_deferred.js" defer></script>
+<link href="../../../styles/multimodule.css" rel="Stylesheet"></head>
+<body>
+    <div class="root">
+    <nav class="navigation theme-dark" id="navigation-wrapper">
+<a class="library-name--link" href="../../../index.html">
+                    cpg
+            </a>        <button class="navigation-controls--btn navigation-controls--btn_toc ui-kit_mobile-only" id="toc-toggle" type="button">Toggle table of contents
+        </button>
+        <div class="navigation-controls--break ui-kit_mobile-only"></div>
+        <div class="library-version" id="library-version">
+<dokka-template-command data="{&quot;@class&quot;:&quot;org.jetbrains.dokka.base.templating.ReplaceVersionsCommand&quot;,&quot;location&quot;:&quot;de.fraunhofer.aisec.cpg.passes/-python-unreachable-e-o-g-pass/index.html&quot;}"><div class="dropdown versions-dropdown" data-role="dropdown">
+  <div class="button button_dropdown versions-dropdown-button" role="combobox" data-role="dropdown-toggle" aria-controls="versions-listbox" aria-haspopup="listbox" aria-expanded="false" aria-label="Select version" tabindex="0">9.3.0</div>
+  <div class="dropdown--list dropdown--list_positioned_left versions-dropdown-data" role="listbox" data-role="dropdown-listbox" aria-label="Versions" id="versions-listbox">
+    <div class="dropdown--header" data-remove-style="true" style="display: none"><span>Select version</span><button class="button" data-role="dropdown-toggle" aria-label="Close versions selection"><i class="ui-kit-icon ui-kit-icon_cross"></i></button></div>
+    <div><a href="../../../../../cpg-language-python/de.fraunhofer.aisec.cpg.passes/-python-unreachable-e-o-g-pass/index.html" class="dropdown--option dropdown--option-link" style="display: block; padding: 5px; color: #fff" data-remove-style="true" role="option">10.0.0-alpha2</a></div>
+    <div><a href="../../../../10.0.0-alpha1/cpg-language-python/de.fraunhofer.aisec.cpg.passes/-python-unreachable-e-o-g-pass/index.html" class="dropdown--option dropdown--option-link" style="display: block; padding: 5px; color: #fff" data-remove-style="true" role="option">10.0.0-alpha1</a></div>
+    <div><a href="index.html" class="dropdown--option dropdown--option-link" style="display: block; padding: 5px; color: #fff" data-remove-style="true" role="option">9.3.0</a></div>
+    <div><a href="../../../../9.2.2/cpg-language-python/de.fraunhofer.aisec.cpg.passes/-python-unreachable-e-o-g-pass/index.html" class="dropdown--option dropdown--option-link" style="display: block; padding: 5px; color: #fff" data-remove-style="true" role="option">9.2.2</a></div>
+    <div><a href="../../../../9.2.1/cpg-language-python/de.fraunhofer.aisec.cpg.passes/-python-unreachable-e-o-g-pass/index.html" class="dropdown--option dropdown--option-link" style="display: block; padding: 5px; color: #fff" data-remove-style="true" role="option">9.2.1</a></div>
+    <div><a href="../../../../9.2.0/cpg-language-python/de.fraunhofer.aisec.cpg.passes/-python-unreachable-e-o-g-pass/index.html" class="dropdown--option dropdown--option-link" style="display: block; padding: 5px; color: #fff" data-remove-style="true" role="option">9.2.0</a></div>
+    <div><a href="../../../../9.1.7/cpg-language-python/de.fraunhofer.aisec.cpg.passes/-python-unreachable-e-o-g-pass/index.html" class="dropdown--option dropdown--option-link" style="display: block; padding: 5px; color: #fff" data-remove-style="true" role="option">9.1.7</a></div>
+    <div><a href="../../../../main-SNAPSHOT/cpg-language-python/de.fraunhofer.aisec.cpg.passes/-python-unreachable-e-o-g-pass/index.html" class="dropdown--option dropdown--option-link" style="display: block; padding: 5px; color: #fff" data-remove-style="true" role="option">main-SNAPSHOT</a></div>
+  </div>
+  <div class="dropdown--overlay"></div>
+</div>
+</dokka-template-command>        </div>
+        <div class="navigation-controls">
+        <div class="filter-section filter-section_loading" id="filter-section">
+                <button class="platform-tag platform-selector jvm-like" data-active="" data-filter=":cpg-language-python:dokkaHtmlPartial/main">jvm</button>
+            <div class="dropdown filter-section--dropdown" data-role="dropdown" id="filter-section-dropdown">
+                <button class="button button_dropdown filter-section--dropdown-toggle" role="combobox" data-role="dropdown-toggle" aria-controls="platform-tags-listbox" aria-haspopup="listbox" aria-expanded="false" aria-label="Toggle source sets"></button>
+                <ul role="listbox" id="platform-tags-listbox" class="dropdown--list" data-role="dropdown-listbox">
+                    <div class="dropdown--header"><span>Platform filter</span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close platform filter">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                        <li role="option" class="dropdown--option platform-selector-option jvm-like" tabindex="0">
+                            <label class="checkbox">
+                                <input type="checkbox" class="checkbox--input" id=":cpg-language-python:dokkaHtmlPartial/main" data-filter=":cpg-language-python:dokkaHtmlPartial/main">
+                                <span class="checkbox--icon"></span>
+                                jvm
+                            </label>
+                        </li>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
+        </div>
+            <button class="navigation-controls--btn navigation-controls--btn_theme" id="theme-toggle-button" type="button">Switch theme
+            </button>
+            <div class="navigation-controls--btn navigation-controls--btn_search" id="searchBar" role="button">Search in
+                API
+            </div>
+        </div>
+    </nav>
+        <div id="container">
+            <div class="sidebar" id="leftColumn">
+                <div class="dropdown theme-dark_mobile" data-role="dropdown" id="toc-dropdown">
+                    <ul role="listbox" id="toc-listbox" class="dropdown--list dropdown--list_toc-list" data-role="dropdown-listbox">
+                        <div class="dropdown--header">
+                            <span>
+                                    cpg
+                            </span>
+                            <button class="button" data-role="dropdown-toggle" aria-label="Close table of contents">
+                                <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                            </button>
+                        </div>
+                        <div class="sidebar--inner" id="sideMenu"></div>
+                    </ul>
+                    <div class="dropdown--overlay"></div>
+                </div>
+            </div>
+            <div id="main">
+<div class="main-content" data-page-type="classlike" id="content" pageids="cpg-language-python::de.fraunhofer.aisec.cpg.passes/PythonUnreachableEOGPass///PointingToDeclaration//-2122170852">
+  <div class="breadcrumbs"><a href="../../index.html">cpg-language-python</a><span class="delimiter">/</span><a href="../index.html">de.fraunhofer.aisec.cpg.passes</a><span class="delimiter">/</span><span class="current">PythonUnreachableEOGPass</span></div>
+  <div class="cover ">
+    <h1 class="cover"><span>Python</span><wbr><span>Unreachable</span><wbr><span><span>EOGPass</span></span></h1>
+    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-python:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="index.html">PythonUnreachableEOGPass</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">ctx<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg/-translation-context/index.html">TranslationContext</a></span></span><span class="token punctuation">)</span> : <a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.passes/-unreachable-e-o-g-pass/index.html">UnreachableEOGPass</a></div><p class="paragraph">This is a specialized version of the <a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.passes/-unreachable-e-o-g-pass/index.html">UnreachableEOGPass</a> for Python that</p><ul><li><p class="paragraph">uses the <a href="../../de.fraunhofer.aisec.cpg.frontends.python/-python-value-evaluator/index.html">PythonValueEvaluator</a></p></li><li><p class="paragraph">is executed before the <a href="../../../cpg-core/de.fraunhofer.aisec.cpg.passes/-symbol-resolver/index.html">SymbolResolver</a> so that we can leverage the information about unreachable code regions</p></li></ul></div></div>
+  </div>
+  <div class="tabbedcontent">
+    <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="CONSTRUCTOR,TYPE,PROPERTY,FUNCTION">Members</button></div>
+    <div class="tabs-section-body">
+      <div data-togglable="CONSTRUCTOR">
+        <h2 class="">Constructors</h2>
+        <div class="table"><a data-name="65996776%2FConstructors%2F-2122170852" anchor-label="PythonUnreachableEOGPass" id="65996776%2FConstructors%2F-2122170852" data-filterable-set=":cpg-language-python:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-togglable="CONSTRUCTOR" data-filterable-current=":cpg-language-python:dokkaHtmlPartial/main" data-filterable-set=":cpg-language-python:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-python-unreachable-e-o-g-pass.html"><span>Python</span><wbr><span>Unreachable</span><wbr><span><span>EOGPass</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="65996776%2FConstructors%2F-2122170852"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-python:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">constructor</span><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">ctx<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg/-translation-context/index.html">TranslationContext</a></span></span><span class="token punctuation">)</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-togglable="PROPERTY">
+        <h2 class="">Properties</h2>
+        <div class="table"><a data-name="-27087183%2FProperties%2F-2122170852" anchor-label="config" id="-27087183%2FProperties%2F-2122170852" data-filterable-set=":cpg-language-python:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-language-python:dokkaHtmlPartial/main" data-filterable-set=":cpg-language-python:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="index.html#-27087183%2FProperties%2F-2122170852"><span><span>config</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-27087183%2FProperties%2F-2122170852"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-python:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="index.html#-27087183%2FProperties%2F-2122170852">config</a><span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg/-translation-configuration/index.html">TranslationConfiguration</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-740737216%2FProperties%2F-2122170852" anchor-label="ctx" id="-740737216%2FProperties%2F-2122170852" data-filterable-set=":cpg-language-python:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-language-python:dokkaHtmlPartial/main" data-filterable-set=":cpg-language-python:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="index.html#-740737216%2FProperties%2F-2122170852"><span><span>ctx</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-740737216%2FProperties%2F-2122170852"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-python:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">override </span><span class="token keyword">val </span><a href="index.html#-740737216%2FProperties%2F-2122170852">ctx</a><span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg/-translation-context/index.html">TranslationContext</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1530319112%2FProperties%2F-2122170852" anchor-label="name" id="1530319112%2FProperties%2F-2122170852" data-filterable-set=":cpg-language-python:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-language-python:dokkaHtmlPartial/main" data-filterable-set=":cpg-language-python:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="index.html#1530319112%2FProperties%2F-2122170852"><span><span>name</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1530319112%2FProperties%2F-2122170852"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-python:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">var </span><a href="index.html#1530319112%2FProperties%2F-2122170852">name</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-46607053%2FProperties%2F-2122170852" anchor-label="scope" id="-46607053%2FProperties%2F-2122170852" data-filterable-set=":cpg-language-python:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-language-python:dokkaHtmlPartial/main" data-filterable-set=":cpg-language-python:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="index.html#-46607053%2FProperties%2F-2122170852"><span><span>scope</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-46607053%2FProperties%2F-2122170852"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-python:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">val </span><a href="index.html#-46607053%2FProperties%2F-2122170852">scope</a><span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.scopes/-scope/index.html">Scope</a><span class="token operator">?</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1966931302%2FProperties%2F-2122170852" anchor-label="scopeManager" id="-1966931302%2FProperties%2F-2122170852" data-filterable-set=":cpg-language-python:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-language-python:dokkaHtmlPartial/main" data-filterable-set=":cpg-language-python:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="index.html#-1966931302%2FProperties%2F-2122170852"><span>scope</span><wbr><span><span>Manager</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1966931302%2FProperties%2F-2122170852"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-python:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="index.html#-1966931302%2FProperties%2F-2122170852">scopeManager</a><span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg/-scope-manager/index.html">ScopeManager</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="816551380%2FProperties%2F-2122170852" anchor-label="typeManager" id="816551380%2FProperties%2F-2122170852" data-filterable-set=":cpg-language-python:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-language-python:dokkaHtmlPartial/main" data-filterable-set=":cpg-language-python:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="index.html#816551380%2FProperties%2F-2122170852"><span>type</span><wbr><span><span>Manager</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="816551380%2FProperties%2F-2122170852"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-python:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="index.html#816551380%2FProperties%2F-2122170852">typeManager</a><span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg/-type-manager/index.html">TypeManager</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-togglable="FUNCTION">
+        <h2 class="">Functions</h2>
+        <div class="table"><a data-name="-2066961578%2FFunctions%2F-2122170852" anchor-label="accept" id="-2066961578%2FFunctions%2F-2122170852" data-filterable-set=":cpg-language-python:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-language-python:dokkaHtmlPartial/main" data-filterable-set=":cpg-language-python:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="index.html#-2066961578%2FFunctions%2F-2122170852"><span><span>accept</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-2066961578%2FFunctions%2F-2122170852"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-python:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="index.html#-2066961578%2FFunctions%2F-2122170852"><span class="token function">accept</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">node<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a></span></span><span class="token punctuation">)</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1854413177%2FFunctions%2F-2122170852" anchor-label="andThen" id="-1854413177%2FFunctions%2F-2122170852" data-filterable-set=":cpg-language-python:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-language-python:dokkaHtmlPartial/main" data-filterable-set=":cpg-language-python:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="index.html#-1854413177%2FFunctions%2F-2122170852"><span>and</span><wbr><span><span>Then</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1854413177%2FFunctions%2F-2122170852"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-python:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">fun </span><a href="index.html#-1854413177%2FFunctions%2F-2122170852"><span class="token function">andThen</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">p0<span class="token operator">: </span><a href="https://docs.oracle.com/javase/8/docs/api/java/util/function/Consumer.html">Consumer</a><span class="token operator">&lt;</span><span class="token keyword">in </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://docs.oracle.com/javase/8/docs/api/java/util/function/Consumer.html">Consumer</a><span class="token operator">&lt;</span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph/-node/index.html">Node</a><span class="token operator">&gt;</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1859471194%2FFunctions%2F-2122170852" anchor-label="cleanup" id="1859471194%2FFunctions%2F-2122170852" data-filterable-set=":cpg-language-python:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-language-python:dokkaHtmlPartial/main" data-filterable-set=":cpg-language-python:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="index.html#1859471194%2FFunctions%2F-2122170852"><span><span>cleanup</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1859471194%2FFunctions%2F-2122170852"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-python:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="index.html#1859471194%2FFunctions%2F-2122170852"><span class="token function">cleanup</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="2068845920%2FFunctions%2F-2122170852" anchor-label="passConfig" id="2068845920%2FFunctions%2F-2122170852" data-filterable-set=":cpg-language-python:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-language-python:dokkaHtmlPartial/main" data-filterable-set=":cpg-language-python:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="index.html#2068845920%2FFunctions%2F-2122170852"><span>pass</span><wbr><span><span>Config</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="2068845920%2FFunctions%2F-2122170852"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-python:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">fun </span><span class="token operator">&lt;</span><a href="index.html#2068845920%2FFunctions%2F-2122170852">T</a><span class="token operator"> : </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.passes/-pass-configuration/index.html">PassConfiguration</a><span class="token operator">&gt; </span><a href="index.html#2068845920%2FFunctions%2F-2122170852"><span class="token function">passConfig</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">: </span><a href="index.html#2068845920%2FFunctions%2F-2122170852">T</a><span class="token operator">?</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1952537933%2FFunctions%2F-2122170852" anchor-label="runsWithCurrentFrontend" id="-1952537933%2FFunctions%2F-2122170852" data-filterable-set=":cpg-language-python:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-language-python:dokkaHtmlPartial/main" data-filterable-set=":cpg-language-python:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="index.html#-1952537933%2FFunctions%2F-2122170852"><span>runs</span><wbr><span>With</span><wbr><span>Current</span><wbr><span><span>Frontend</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1952537933%2FFunctions%2F-2122170852"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-python:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="index.html#-1952537933%2FFunctions%2F-2122170852"><span class="token function">runsWithCurrentFrontend</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">usedFrontends<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-collection/index.html">Collection</a><span class="token operator">&lt;</span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.frontends/-language-frontend/index.html">LanguageFrontend</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token punctuation">, </span><span class="token operator">*</span><span class="token operator">&gt;</span><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="318198637%2FFunctions%2F-2122170852" anchor-label="runsWithLanguageTrait" id="318198637%2FFunctions%2F-2122170852" data-filterable-set=":cpg-language-python:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-language-python:dokkaHtmlPartial/main" data-filterable-set=":cpg-language-python:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="index.html#318198637%2FFunctions%2F-2122170852"><span>runs</span><wbr><span>With</span><wbr><span>Language</span><wbr><span><span>Trait</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="318198637%2FFunctions%2F-2122170852"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-python:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="index.html#318198637%2FFunctions%2F-2122170852"><span class="token function">runsWithLanguageTrait</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">language<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.frontends/-language/index.html">Language</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span><span class="token operator">?</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-323338937%2FFunctions%2F-2122170852" anchor-label="toString" id="-323338937%2FFunctions%2F-2122170852" data-filterable-set=":cpg-language-python:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-language-python:dokkaHtmlPartial/main" data-filterable-set=":cpg-language-python:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="index.html#-323338937%2FFunctions%2F-2122170852"><span>to</span><wbr><span><span>String</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-323338937%2FFunctions%2F-2122170852"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-python:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="index.html#-323338937%2FFunctions%2F-2122170852"><span class="token function">toString</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="415628698%2FFunctions%2F-2122170852" anchor-label="transfer" id="415628698%2FFunctions%2F-2122170852" data-filterable-set=":cpg-language-python:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-language-python:dokkaHtmlPartial/main" data-filterable-set=":cpg-language-python:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="index.html#415628698%2FFunctions%2F-2122170852"><span><span>transfer</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="415628698%2FFunctions%2F-2122170852"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-python:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="index.html#415628698%2FFunctions%2F-2122170852"><span class="token function">transfer</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">lattice<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.helpers.functional/-lattice/index.html">Lattice</a><span class="token operator">&lt;</span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.passes/-unreachability-state-element/index.html">UnreachabilityStateElement</a><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">currentEdge<span class="token operator">: </span><a href="../../../cpg-core/de.fraunhofer.aisec.cpg.graph.edges.flows/-evaluation-order/index.html">EvaluationOrder</a><span class="token punctuation">, </span></span><span class="parameter ">currentState<span class="token operator">: </span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.passes/-unreachability-state-element/index.html">UnreachabilityStateElement</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../../../cpg-analysis/de.fraunhofer.aisec.cpg.passes/-unreachability-state-element/index.html">UnreachabilityStateElement</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    <div class="footer">
+        <a href="#content" id="go-to-top-link" class="footer--button footer--button_go-to-top"></a>
+        <span>© 2025 Copyright</span>
+        <span class="pull-right">
+            <span>Generated by </span>
+            <a class="footer--link footer--link_external" href="https://github.com/Kotlin/dokka">
+                <span>dokka</span>
+            </a>
+        </span>
+    </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+

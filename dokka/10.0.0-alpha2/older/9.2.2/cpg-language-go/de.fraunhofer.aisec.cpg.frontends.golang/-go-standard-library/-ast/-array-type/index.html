@@ -1,0 +1,328 @@
+<!doctype html>
+<html class="no-js">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
+    <title>ArrayType</title>
+<link href="../../../../../images/logo-icon.svg" rel="icon" type="image/svg">    <script>var pathToRoot = "../../../../../";</script>
+    <script>document.documentElement.classList.replace("no-js","js");</script>
+    <script>const storage = localStorage.getItem("dokka-dark-mode")
+    if (storage == null) {
+        const osDarkSchemePreferred = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+        if (osDarkSchemePreferred === true) {
+            document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+    } else {
+        const savedDarkMode = JSON.parse(storage)
+        if(savedDarkMode === true) {
+            document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+    }
+    </script>
+<script type="text/javascript" src="https://unpkg.com/kotlin-playground@1/dist/playground.min.js" async></script>
+<script type="text/javascript" src="../../../../../scripts/sourceset_dependencies.js" async></script>
+<link href="../../../../../styles/style.css" rel="Stylesheet">
+<link href="../../../../../styles/main.css" rel="Stylesheet">
+<link href="../../../../../styles/prism.css" rel="Stylesheet">
+<link href="../../../../../styles/logo-styles.css" rel="Stylesheet">
+<link href="../../../../../styles/font-jb-sans-auto.css" rel="Stylesheet">
+<link href="../../../../../ui-kit/ui-kit.min.css" rel="Stylesheet">
+<script type="text/javascript" src="../../../../../scripts/clipboard.js" async></script>
+<script type="text/javascript" src="../../../../../scripts/navigation-loader.js" async></script>
+<script type="text/javascript" src="../../../../../scripts/platform-content-handler.js" async></script>
+<script type="text/javascript" src="../../../../../scripts/main.js" defer></script>
+<script type="text/javascript" src="../../../../../scripts/prism.js" async></script>
+<script type="text/javascript" src="../../../../../ui-kit/ui-kit.min.js" defer></script>
+<script type="text/javascript" src="../../../../../scripts/symbol-parameters-wrapper_deferred.js" defer></script>
+<link href="../../../../../styles/multimodule.css" rel="Stylesheet"></head>
+<body>
+    <div class="root">
+    <nav class="navigation theme-dark" id="navigation-wrapper">
+<a class="library-name--link" href="../../../../../index.html">
+                    cpg
+            </a>        <button class="navigation-controls--btn navigation-controls--btn_toc ui-kit_mobile-only" id="toc-toggle" type="button">Toggle table of contents
+        </button>
+        <div class="navigation-controls--break ui-kit_mobile-only"></div>
+        <div class="library-version" id="library-version">
+<dokka-template-command data="{&quot;@class&quot;:&quot;org.jetbrains.dokka.base.templating.ReplaceVersionsCommand&quot;,&quot;location&quot;:&quot;de.fraunhofer.aisec.cpg.frontends.golang/-go-standard-library/-ast/-array-type/index.html&quot;}"><div class="dropdown versions-dropdown" data-role="dropdown">
+  <div class="button button_dropdown versions-dropdown-button" role="combobox" data-role="dropdown-toggle" aria-controls="versions-listbox" aria-haspopup="listbox" aria-expanded="false" aria-label="Select version" tabindex="0">9.2.2</div>
+  <div class="dropdown--list dropdown--list_positioned_left versions-dropdown-data" role="listbox" data-role="dropdown-listbox" aria-label="Versions" id="versions-listbox">
+    <div class="dropdown--header" data-remove-style="true" style="display: none"><span>Select version</span><button class="button" data-role="dropdown-toggle" aria-label="Close versions selection"><i class="ui-kit-icon ui-kit-icon_cross"></i></button></div>
+    <div><a href="../../../../../../../cpg-language-go/de.fraunhofer.aisec.cpg.frontends.golang/-go-standard-library/-ast/-array-type/index.html" class="dropdown--option dropdown--option-link" style="display: block; padding: 5px; color: #fff" data-remove-style="true" role="option">10.0.0-alpha2</a></div>
+    <div><a href="../../../../../../10.0.0-alpha1/cpg-language-go/de.fraunhofer.aisec.cpg.frontends.golang/-go-standard-library/-ast/-array-type/index.html" class="dropdown--option dropdown--option-link" style="display: block; padding: 5px; color: #fff" data-remove-style="true" role="option">10.0.0-alpha1</a></div>
+    <div><a href="../../../../../../9.3.0/cpg-language-go/de.fraunhofer.aisec.cpg.frontends.golang/-go-standard-library/-ast/-array-type/index.html" class="dropdown--option dropdown--option-link" style="display: block; padding: 5px; color: #fff" data-remove-style="true" role="option">9.3.0</a></div>
+    <div><a href="index.html" class="dropdown--option dropdown--option-link" style="display: block; padding: 5px; color: #fff" data-remove-style="true" role="option">9.2.2</a></div>
+    <div><a href="../../../../../../9.2.1/cpg-language-go/de.fraunhofer.aisec.cpg.frontends.golang/-go-standard-library/-ast/-array-type/index.html" class="dropdown--option dropdown--option-link" style="display: block; padding: 5px; color: #fff" data-remove-style="true" role="option">9.2.1</a></div>
+    <div><a href="../../../../../../9.2.0/cpg-language-go/de.fraunhofer.aisec.cpg.frontends.golang/-go-standard-library/-ast/-array-type/index.html" class="dropdown--option dropdown--option-link" style="display: block; padding: 5px; color: #fff" data-remove-style="true" role="option">9.2.0</a></div>
+    <div><a href="../../../../../../9.1.7/cpg-language-go/de.fraunhofer.aisec.cpg.frontends.golang/-go-standard-library/-ast/-array-type/index.html" class="dropdown--option dropdown--option-link" style="display: block; padding: 5px; color: #fff" data-remove-style="true" role="option">9.1.7</a></div>
+    <div><a href="../../../../../../main-SNAPSHOT/cpg-language-go/de.fraunhofer.aisec.cpg.frontends.golang/-go-standard-library/-ast/-array-type/index.html" class="dropdown--option dropdown--option-link" style="display: block; padding: 5px; color: #fff" data-remove-style="true" role="option">main-SNAPSHOT</a></div>
+  </div>
+  <div class="dropdown--overlay"></div>
+</div>
+</dokka-template-command>        </div>
+        <div class="navigation-controls">
+        <div class="filter-section filter-section_loading" id="filter-section">
+                <button class="platform-tag platform-selector jvm-like" data-active="" data-filter=":cpg-language-go:dokkaHtmlPartial/main">jvm</button>
+            <div class="dropdown filter-section--dropdown" data-role="dropdown" id="filter-section-dropdown">
+                <button class="button button_dropdown filter-section--dropdown-toggle" role="combobox" data-role="dropdown-toggle" aria-controls="platform-tags-listbox" aria-haspopup="listbox" aria-expanded="false" aria-label="Toggle source sets"></button>
+                <ul role="listbox" id="platform-tags-listbox" class="dropdown--list" data-role="dropdown-listbox">
+                    <div class="dropdown--header"><span>Platform filter</span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close platform filter">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                        <li role="option" class="dropdown--option platform-selector-option jvm-like" tabindex="0">
+                            <label class="checkbox">
+                                <input type="checkbox" class="checkbox--input" id=":cpg-language-go:dokkaHtmlPartial/main" data-filter=":cpg-language-go:dokkaHtmlPartial/main">
+                                <span class="checkbox--icon"></span>
+                                jvm
+                            </label>
+                        </li>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
+        </div>
+            <button class="navigation-controls--btn navigation-controls--btn_theme" id="theme-toggle-button" type="button">Switch theme
+            </button>
+            <div class="navigation-controls--btn navigation-controls--btn_search" id="searchBar" role="button">Search in
+                API
+            </div>
+        </div>
+    </nav>
+        <div id="container">
+            <div class="sidebar" id="leftColumn">
+                <div class="dropdown theme-dark_mobile" data-role="dropdown" id="toc-dropdown">
+                    <ul role="listbox" id="toc-listbox" class="dropdown--list dropdown--list_toc-list" data-role="dropdown-listbox">
+                        <div class="dropdown--header">
+                            <span>
+                                    cpg
+                            </span>
+                            <button class="button" data-role="dropdown-toggle" aria-label="Close table of contents">
+                                <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                            </button>
+                        </div>
+                        <div class="sidebar--inner" id="sideMenu"></div>
+                    </ul>
+                    <div class="dropdown--overlay"></div>
+                </div>
+            </div>
+            <div id="main">
+<div class="main-content" data-page-type="classlike" id="content" pageids="cpg-language-go::de.fraunhofer.aisec.cpg.frontends.golang/GoStandardLibrary.Ast.ArrayType///PointingToDeclaration//-1165803760">
+  <div class="breadcrumbs"><a href="../../../../index.html">cpg-language-go</a><span class="delimiter">/</span><a href="../../../index.html">de.fraunhofer.aisec.cpg.frontends.golang</a><span class="delimiter">/</span><a href="../../index.html">GoStandardLibrary</a><span class="delimiter">/</span><a href="../index.html">Ast</a><span class="delimiter">/</span><span class="current">ArrayType</span></div>
+  <div class="cover ">
+    <h1 class="cover"><span>Array</span><wbr><span><span>Type</span></span></h1>
+    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-go:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="index.html">ArrayType</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">p<span class="token operator">: </span><span data-unresolved-link="com.sun.jna/Pointer///PointingToDeclaration/">Pointer</span><span class="token operator">?</span><span class="token operator"> = </span>Pointer.NULL</span></span><span class="token punctuation">)</span> : <a href="../-expr/index.html">GoStandardLibrary.Ast.Expr</a></div></div></div>
+  </div>
+  <div class="tabbedcontent">
+    <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="CONSTRUCTOR,TYPE,PROPERTY,FUNCTION">Members</button></div>
+    <div class="tabs-section-body">
+      <div data-togglable="CONSTRUCTOR">
+        <h2 class="">Constructors</h2>
+        <div class="table"><a data-name="1647591064%2FConstructors%2F-1165803760" anchor-label="ArrayType" id="1647591064%2FConstructors%2F-1165803760" data-filterable-set=":cpg-language-go:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-togglable="CONSTRUCTOR" data-filterable-current=":cpg-language-go:dokkaHtmlPartial/main" data-filterable-set=":cpg-language-go:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-array-type.html"><span>Array</span><wbr><span><span>Type</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1647591064%2FConstructors%2F-1165803760"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-go:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">constructor</span><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">p<span class="token operator">: </span><span data-unresolved-link="com.sun.jna/Pointer///PointingToDeclaration/">Pointer</span><span class="token operator">?</span><span class="token operator"> = </span>Pointer.NULL</span></span><span class="token punctuation">)</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-togglable="PROPERTY">
+        <h2 class="">Properties</h2>
+        <div class="table"><a data-name="-1981463776%2FProperties%2F-1165803760" anchor-label="elt" id="-1981463776%2FProperties%2F-1165803760" data-filterable-set=":cpg-language-go:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-language-go:dokkaHtmlPartial/main" data-filterable-set=":cpg-language-go:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="elt.html"><span><span>elt</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1981463776%2FProperties%2F-1165803760"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-go:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="elt.html">elt</a><span class="token operator">: </span><a href="../-expr/index.html">GoStandardLibrary.Ast.Expr</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1482489755%2FProperties%2F-1165803760" anchor-label="end" id="1482489755%2FProperties%2F-1165803760" data-filterable-set=":cpg-language-go:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-language-go:dokkaHtmlPartial/main" data-filterable-set=":cpg-language-go:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../-node/end.html"><span><span>end</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1482489755%2FProperties%2F-1165803760"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-go:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="../-node/end.html">end</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-int/index.html">Int</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="709094139%2FProperties%2F-1165803760" anchor-label="goType" id="709094139%2FProperties%2F-1165803760" data-filterable-set=":cpg-language-go:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-language-go:dokkaHtmlPartial/main" data-filterable-set=":cpg-language-go:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../../-go-object/go-type.html"><span>go</span><wbr><span><span>Type</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="709094139%2FProperties%2F-1165803760"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-go:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="../../-go-object/go-type.html">goType</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1246238489%2FProperties%2F-1165803760" anchor-label="pointer" id="1246238489%2FProperties%2F-1165803760" data-filterable-set=":cpg-language-go:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-language-go:dokkaHtmlPartial/main" data-filterable-set=":cpg-language-go:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../-file/index.html#1246238489%2FProperties%2F-1165803760"><span><span>pointer</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1246238489%2FProperties%2F-1165803760"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-go:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">var </span><a href="../-file/index.html#1246238489%2FProperties%2F-1165803760">pointer</a><span class="token operator">: </span><span data-unresolved-link="com.sun.jna/Pointer///PointingToDeclaration/">Pointer</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="107298882%2FProperties%2F-1165803760" anchor-label="pos" id="107298882%2FProperties%2F-1165803760" data-filterable-set=":cpg-language-go:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-language-go:dokkaHtmlPartial/main" data-filterable-set=":cpg-language-go:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../-node/pos.html"><span><span>pos</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="107298882%2FProperties%2F-1165803760"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-go:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="../-node/pos.html">pos</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-int/index.html">Int</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-togglable="FUNCTION">
+        <h2 class="">Functions</h2>
+        <div class="table"><a data-name="560409629%2FFunctions%2F-1165803760" anchor-label="equals" id="560409629%2FFunctions%2F-1165803760" data-filterable-set=":cpg-language-go:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-language-go:dokkaHtmlPartial/main" data-filterable-set=":cpg-language-go:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../-file/index.html#560409629%2FFunctions%2F-1165803760"><span><span>equals</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="560409629%2FFunctions%2F-1165803760"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-go:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">operator override </span><span class="token keyword">fun </span><a href="../-file/index.html#560409629%2FFunctions%2F-1165803760"><span class="token function">equals</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">other<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-any/index.html">Any</a><span class="token operator">?</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1150553822%2FFunctions%2F-1165803760" anchor-label="fromNative" id="-1150553822%2FFunctions%2F-1165803760" data-filterable-set=":cpg-language-go:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-language-go:dokkaHtmlPartial/main" data-filterable-set=":cpg-language-go:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../-expr/from-native.html"><span>from</span><wbr><span><span>Native</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1150553822%2FFunctions%2F-1165803760"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-go:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="../-expr/from-native.html"><span class="token function">fromNative</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">nativeValue<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-any/index.html">Any</a><span class="token operator">?</span><span class="token punctuation">, </span></span><span class="parameter ">context<span class="token operator">: </span><span data-unresolved-link="com.sun.jna/FromNativeContext///PointingToDeclaration/">FromNativeContext</span><span class="token operator">?</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-any/index.html">Any</a><span class="token operator">?</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="189691945%2FFunctions%2F-1165803760" anchor-label="hashCode" id="189691945%2FFunctions%2F-1165803760" data-filterable-set=":cpg-language-go:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-language-go:dokkaHtmlPartial/main" data-filterable-set=":cpg-language-go:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../-file/index.html#189691945%2FFunctions%2F-1165803760"><span>hash</span><wbr><span><span>Code</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="189691945%2FFunctions%2F-1165803760"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-go:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="../-file/index.html#189691945%2FFunctions%2F-1165803760"><span class="token function">hashCode</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-int/index.html">Int</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="624173907%2FFunctions%2F-1165803760" anchor-label="nativeType" id="624173907%2FFunctions%2F-1165803760" data-filterable-set=":cpg-language-go:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-language-go:dokkaHtmlPartial/main" data-filterable-set=":cpg-language-go:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../-file/index.html#624173907%2FFunctions%2F-1165803760"><span>native</span><wbr><span><span>Type</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="624173907%2FFunctions%2F-1165803760"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-go:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="../-file/index.html#624173907%2FFunctions%2F-1165803760"><span class="token function">nativeType</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://docs.oracle.com/javase/8/docs/api/java/lang/Class.html">Class</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1530338894%2FFunctions%2F-1165803760" anchor-label="toNative" id="-1530338894%2FFunctions%2F-1165803760" data-filterable-set=":cpg-language-go:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-language-go:dokkaHtmlPartial/main" data-filterable-set=":cpg-language-go:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../-file/index.html#-1530338894%2FFunctions%2F-1165803760"><span>to</span><wbr><span><span>Native</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1530338894%2FFunctions%2F-1165803760"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-go:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="../-file/index.html#-1530338894%2FFunctions%2F-1165803760"><span class="token function">toNative</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-any/index.html">Any</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="11525880%2FFunctions%2F-1165803760" anchor-label="toString" id="11525880%2FFunctions%2F-1165803760" data-filterable-set=":cpg-language-go:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":cpg-language-go:dokkaHtmlPartial/main" data-filterable-set=":cpg-language-go:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../-file/index.html#11525880%2FFunctions%2F-1165803760"><span>to</span><wbr><span><span>String</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="11525880%2FFunctions%2F-1165803760"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":cpg-language-go:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="../-file/index.html#11525880%2FFunctions%2F-1165803760"><span class="token function">toString</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    <div class="footer">
+        <a href="#content" id="go-to-top-link" class="footer--button footer--button_go-to-top"></a>
+        <span>© 2025 Copyright</span>
+        <span class="pull-right">
+            <span>Generated by </span>
+            <a class="footer--link footer--link_external" href="https://github.com/Kotlin/dokka">
+                <span>dokka</span>
+            </a>
+        </span>
+    </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+
