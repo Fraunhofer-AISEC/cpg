@@ -180,8 +180,9 @@ fun MetadataProvider.newRegisterConfigurationGroup(
  * Creates a new [ProvideConfiguration] operation.
  *
  * @param underlyingNode The underlying node representing this operation.
- * @param conf The [Configuration] concept to which the provide operation belongs.
- * @param source The source of the configuration.
+ * @param conf The [Configuration] concept which is the target which is provided by this operation.
+ * @param source The [ConfigurationSource] concept to which the provide operation belongs and the
+ *   source of the [Configuration].
  * @return The created [ProvideConfiguration] operation.
  */
 fun MetadataProvider.newProvideConfiguration(
@@ -201,8 +202,10 @@ fun MetadataProvider.newProvideConfiguration(
  * Creates a new [ProvideConfigurationGroup] operation.
  *
  * @param underlyingNode The underlying node representing this operation.
- * @param group The [ConfigurationGroup] concept to which the provide operation belongs.
- * @param source The source of the configuration group.
+ * @param group The [ConfigurationGroup] concept which is the target which is provided by this
+ *   operation.
+ * @param source The [ConfigurationSource] concept to which the provide operation belongs and the
+ *   source of the [ConfigurationGroup].
  * @return The created [ProvideConfigurationGroup] operation.
  */
 fun MetadataProvider.newProvideConfigurationGroup(
@@ -273,8 +276,9 @@ fun MetadataProvider.newRegisterConfigurationOption(
  * Creates a new [ProvideConfigurationOption] operation.
  *
  * @param underlyingNode The underlying node representing this operation.
- * @param option The [ConfigurationOption] concept to which the provide operation belongs.
- * @param source The source of the configuration option.
+ * @param option The [ConfigurationOption] concept which is provided by this operation.
+ * @param source The [ConfigurationOptionSource] representing the concept to which this operation
+ *   belongs and the source providing this [ConfigurationOption].
  * @param value The value of the configuration option.
  * @return The created [ProvideConfigurationOption] operation.
  */

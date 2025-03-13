@@ -174,7 +174,7 @@ class RegisterConfigurationOption(
  * operation, such as environment variables or command-line arguments.
  *
  * Note: The [ProvideConfiguration] operation is part of the [ConfigurationSource.ops] and not of
- * the [Configuration.ops] as its an operation of the source, not the target.
+ * the [Configuration.ops] as it's an operation of the source, not the target.
  */
 class ProvideConfiguration(
     underlyingNode: Node,
