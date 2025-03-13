@@ -45,7 +45,8 @@ import java.io.File
 import java.net.URI
 import java.nio.file.Path
 import jep.python.PyObject
-import kotlin.io.path.*
+import kotlin.io.path.nameWithoutExtension
+import kotlin.io.path.pathString
 import kotlin.math.min
 
 /**
@@ -309,7 +310,11 @@ class PythonLanguageFrontend(ctx: TranslationContext, language: Language<PythonL
                     "Python ast of type ${fromPython(pyAST).javaClass} is not supported yet"
                 ) // could be one of "ast.{Module,Interactive,Expression,FunctionType}
 
-        val tud = newTranslationUnitDeclaration(path.toString(), rawNode = pythonASTModule)
+        val tud =
+            newTranslationUnitDeclaration(path.toString(), rawNode = pythonASTModule).apply {
+                this.location = PhysicalLocation(uri = uri, region = Region())
+                this.code = fileContent
+            }
         scopeManager.resetToGlobal(tud)
 
         // We need to resolve the path relative to the top level to get the full module identifier
