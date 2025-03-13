@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import java.util.Objects
 
 /**
  * Represents the abstract concept of a "configuration". This is a common pattern in many
@@ -70,6 +71,12 @@ class Configuration(underlyingNode: Node) : Concept(underlyingNode = underlyingN
 class ConfigurationGroup(underlyingNode: Node, var conf: Configuration) :
     Concept(underlyingNode = underlyingNode) {
     var options: MutableList<ConfigurationOption> = mutableListOf()
+
+    override fun equals(other: Any?): Boolean {
+        return other is ConfigurationGroup && super.equals(other) && other.conf == this.conf
+    }
+
+    override fun hashCode() = Objects.hash(super.hashCode(), conf)
 }
 
 /**
@@ -91,7 +98,17 @@ class ConfigurationOption(
      * Since initializers could potentially be empty, we make this nullable.
      */
     var value: Node? = null,
-) : Concept(underlyingNode = underlyingNode)
+) : Concept(underlyingNode = underlyingNode) {
+
+    override fun equals(other: Any?): Boolean {
+        return other is ConfigurationOption &&
+            super.equals(other) &&
+            other.key == this.key &&
+            other.value == this.value
+    }
+
+    override fun hashCode() = Objects.hash(super.hashCode(), key, value)
+}
 
 /**
  * A common abstract class for configuration operations, such as reading options or a whole file.
@@ -105,7 +122,15 @@ class LoadConfiguration(
     var conf: Configuration,
     /** The expression that holds the file that is loaded. */
     val fileExpression: Expression,
-) : ConfigurationOperation(underlyingNode = underlyingNode, concept = conf)
+) : ConfigurationOperation(underlyingNode = underlyingNode, concept = conf) {
+    override fun equals(other: Any?): Boolean {
+        return other is LoadConfiguration &&
+            super.equals(other) &&
+            other.fileExpression == this.fileExpression
+    }
+
+    override fun hashCode() = Objects.hash(super.hashCode(), fileExpression)
+}
 
 /**
  * Represents an operation to read a specific configuration group. Often this is done with a member
@@ -160,7 +185,15 @@ class RegisterConfigurationOption(
     var option: ConfigurationOption,
     /** An optional default value of the option. */
     var defaultValue: Node? = null,
-) : ConfigurationOperation(underlyingNode = underlyingNode, concept = option)
+) : ConfigurationOperation(underlyingNode = underlyingNode, concept = option) {
+    override fun equals(other: Any?): Boolean {
+        return other is RegisterConfigurationOption &&
+            super.equals(other) &&
+            other.defaultValue == this.defaultValue
+    }
+
+    override fun hashCode() = Objects.hash(super.hashCode(), defaultValue)
+}
 
 /**
  * Represents an operation to provide a [Configuration], e.g., in the form of a configuration file
@@ -180,7 +213,13 @@ class ProvideConfiguration(
     underlyingNode: Node,
     var source: ConfigurationSource,
     var conf: Configuration,
-) : ConfigurationOperation(underlyingNode = underlyingNode, concept = source)
+) : ConfigurationOperation(underlyingNode = underlyingNode, concept = source) {
+    override fun equals(other: Any?): Boolean {
+        return other is ProvideConfiguration && super.equals(other) && other.conf == this.conf
+    }
+
+    override fun hashCode() = Objects.hash(super.hashCode(), conf)
+}
 
 /**
  * Represents an operation to provide a [ConfigurationGroup]. It connects a
@@ -190,7 +229,15 @@ class ProvideConfigurationGroup(
     underlyingNode: Node,
     var source: ConfigurationGroupSource,
     var group: ConfigurationGroup,
-) : ConfigurationOperation(underlyingNode = underlyingNode, concept = source)
+) : ConfigurationOperation(underlyingNode = underlyingNode, concept = source) {
+    override fun equals(other: Any?): Boolean {
+        return other is ProvideConfigurationGroup &&
+            super.equals(other) &&
+            other.group == this.group
+    }
+
+    override fun hashCode() = Objects.hash(super.hashCode(), group)
+}
 
 /**
  * Represents an operation to provide a [ConfigurationOption]. It connects a
@@ -201,7 +248,16 @@ class ProvideConfigurationOption(
     var source: ConfigurationOptionSource,
     var option: ConfigurationOption,
     var value: Node?,
-) : ConfigurationOperation(underlyingNode = underlyingNode, concept = source)
+) : ConfigurationOperation(underlyingNode = underlyingNode, concept = source) {
+    override fun equals(other: Any?): Boolean {
+        return other is ProvideConfigurationOption &&
+            super.equals(other) &&
+            other.option == this.option &&
+            other.value == this.value
+    }
+
+    override fun hashCode() = Objects.hash(super.hashCode(), option, value)
+}
 
 /**
  * Represents a possible source for a configuration. For example, when loading an INI file with our
