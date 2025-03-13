@@ -70,10 +70,6 @@ class Configuration(underlyingNode: Node) : Concept(underlyingNode = underlyingN
 class ConfigurationGroup(underlyingNode: Node, var conf: Configuration) :
     Concept(underlyingNode = underlyingNode) {
     var options: MutableList<ConfigurationOption> = mutableListOf()
-
-    init {
-        conf.groups.add(this)
-    }
 }
 
 /**
@@ -95,11 +91,7 @@ class ConfigurationOption(
      * Since initializers could potentially be empty, we make this nullable.
      */
     var value: Node? = null,
-) : Concept(underlyingNode = underlyingNode) {
-    init {
-        group.options.add(this)
-    }
-}
+) : Concept(underlyingNode = underlyingNode)
 
 /**
  * A common abstract class for configuration operations, such as reading options or a whole file.
@@ -124,11 +116,7 @@ class ReadConfigurationGroup(
     underlyingNode: Node,
     /** The config group that is being read with this operation. */
     var group: ConfigurationGroup,
-) : ConfigurationOperation(underlyingNode = underlyingNode, concept = group) {
-    init {
-        name = group.name
-    }
-}
+) : ConfigurationOperation(underlyingNode = underlyingNode, concept = group)
 
 /**
  * Represents an operation to read a specific configuration option. Often this is done with a member
@@ -138,11 +126,7 @@ class ReadConfigurationOption(
     underlyingNode: Node,
     /** The config option that is being read with this operation. */
     var option: ConfigurationOption,
-) : ConfigurationOperation(underlyingNode = underlyingNode, concept = option) {
-    init {
-        name = option.name
-    }
-}
+) : ConfigurationOperation(underlyingNode = underlyingNode, concept = option)
 
 /**
  * Represents an operation to register a new [ConfigurationGroup]. This is often done with a call,
@@ -158,11 +142,7 @@ class RegisterConfigurationGroup(
     underlyingNode: Node,
     /** The config group that is being registered with this operation. */
     var group: ConfigurationGroup,
-) : ConfigurationOperation(underlyingNode = underlyingNode, concept = group) {
-    init {
-        name = group.name
-    }
-}
+) : ConfigurationOperation(underlyingNode = underlyingNode, concept = group)
 
 /**
  * Represents an operation to register a new [ConfigurationOption]. This is often done with a call,
@@ -180,11 +160,7 @@ class RegisterConfigurationOption(
     var option: ConfigurationOption,
     /** An optional default value of the option. */
     var defaultValue: Node? = null,
-) : ConfigurationOperation(underlyingNode = underlyingNode, concept = option) {
-    init {
-        name = option.name
-    }
-}
+) : ConfigurationOperation(underlyingNode = underlyingNode, concept = option)
 
 /**
  * Represents an operation to provide a [Configuration], e.g., in the form of a configuration file
@@ -198,7 +174,7 @@ class RegisterConfigurationOption(
  * operation, such as environment variables or command-line arguments.
  *
  * Note: The [ProvideConfiguration] operation is part of the [ConfigurationSource.ops] and not of
- * the [Configuration.ops] as its an operation of the source, not the target.
+ * the [Configuration.ops] as it's an operation of the source, not the target.
  */
 class ProvideConfiguration(
     underlyingNode: Node,
@@ -214,11 +190,7 @@ class ProvideConfigurationGroup(
     underlyingNode: Node,
     var source: ConfigurationGroupSource,
     var group: ConfigurationGroup,
-) : ConfigurationOperation(underlyingNode = underlyingNode, concept = source) {
-    init {
-        name = group.name
-    }
-}
+) : ConfigurationOperation(underlyingNode = underlyingNode, concept = source)
 
 /**
  * Represents an operation to provide a [ConfigurationOption]. It connects a
@@ -229,11 +201,7 @@ class ProvideConfigurationOption(
     var source: ConfigurationOptionSource,
     var option: ConfigurationOption,
     var value: Node?,
-) : ConfigurationOperation(underlyingNode = underlyingNode, concept = source) {
-    init {
-        name = option.name
-    }
-}
+) : ConfigurationOperation(underlyingNode = underlyingNode, concept = source)
 
 /**
  * Represents a possible source for a configuration. For example, when loading an INI file with our
@@ -260,13 +228,8 @@ class ConfigurationSource(underlyingNode: Node) : Concept(underlyingNode = under
  * file with our INI file frontend, each section is presented as a [RecordDeclaration]. This record
  * declaration would be the source of the configuration group.
  */
-class ConfigurationGroupSource(underlyingNode: Node, conf: ConfigurationSource) :
-    Concept(underlyingNode = underlyingNode) {
+class ConfigurationGroupSource(underlyingNode: Node) : Concept(underlyingNode = underlyingNode) {
     val options: MutableList<ConfigurationOptionSource> = mutableListOf()
-
-    init {
-        conf.groups += this
-    }
 }
 
 /**
@@ -275,8 +238,4 @@ class ConfigurationGroupSource(underlyingNode: Node, conf: ConfigurationSource) 
  * field declaration would be the source to the configuration option.
  */
 class ConfigurationOptionSource(underlyingNode: Node, var group: ConfigurationGroupSource) :
-    Concept(underlyingNode = underlyingNode) {
-    init {
-        group.options += this
-    }
-}
+    Concept(underlyingNode = underlyingNode)

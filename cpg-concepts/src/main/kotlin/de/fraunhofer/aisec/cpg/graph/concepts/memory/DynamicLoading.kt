@@ -120,7 +120,7 @@ class LoadSymbol<T : Declaration>(
      * If this operation is targeting a specific [OperatingSystemArchitecture], it can be specified
      * here.
      */
-    os: OperatingSystemArchitecture? = loader?.os,
+    os: OperatingSystemArchitecture?,
 ) :
     DynamicLoadingOperation<T>(
         underlyingNode = underlyingNode,
