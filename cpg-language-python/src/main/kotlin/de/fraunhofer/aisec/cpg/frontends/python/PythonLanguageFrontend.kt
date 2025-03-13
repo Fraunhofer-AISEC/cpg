@@ -330,7 +330,6 @@ class PythonLanguageFrontend(ctx: TranslationContext, language: Language<PythonL
                                 endColumn = lastColumnLength,
                             ),
                     )
-                this.code = fileContent
             }
         scopeManager.resetToGlobal(tud)
 
