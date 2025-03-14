@@ -155,21 +155,15 @@ sealed class AnalysisDirection(val graphToFollow: GraphToFollow) {
         scope: AnalysisScope,
         vararg sensitivities: AnalysisSensitivity,
     ): Collection<Pair<Edge<Node>, Context>> {
-        val overlayingEdges = edges.filter { it.overlaying }
-        return if (overlayingEdges.isNotEmpty()) {
-                overlayingEdges
-            } else {
-                edges
-            }
-            .mapNotNull { edge ->
-                val newCtx = ctx.clone()
-                if (
-                    scope.followEdge(currentNode, edge, newCtx, this) &&
-                        sensitivities.all { it.followEdge(currentNode, edge, newCtx, this) }
-                ) {
-                    Pair(edge, newCtx)
-                } else null
-            }
+        return edges.mapNotNull { edge ->
+            val newCtx = ctx.clone()
+            if (
+                scope.followEdge(currentNode, edge, newCtx, this) &&
+                    sensitivities.all { it.followEdge(currentNode, edge, newCtx, this) }
+            ) {
+                Pair(edge, newCtx)
+            } else null
+        }
     }
 
     /**
