@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.graph.scopes
 
-import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
 
@@ -35,4 +34,4 @@ import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
  * the function (also the body) are inside the function scope. In other languages, such as C++, the
  * variables of the function body would be in a [LocalScope] of the [FunctionDeclaration.body].
  */
-class FunctionScope(ctx: TranslationContext, astNode: FunctionDeclaration) : Scope(ctx, astNode)
+class FunctionScope(astNode: FunctionDeclaration) : Scope(astNode)

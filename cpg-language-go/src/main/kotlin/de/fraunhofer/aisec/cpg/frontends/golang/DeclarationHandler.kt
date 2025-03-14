@@ -51,8 +51,8 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
             if (recv != null) {
                 val recvField = recv.list.firstOrNull()
                 val recordType = recvField?.type?.let { frontend.typeOf(it) } ?: unknownType()
-                // The record type be an unqualified type, so we need to use the current
-                // namespace to make a FQN out of it
+                // The record type is an unqualified type, so we need to use the current namespace
+                // to make a FQN out of it
                 val fqnRecord =
                     frontend.scopeManager.currentNamespace.fqn(recordType.root.name.localName)
 

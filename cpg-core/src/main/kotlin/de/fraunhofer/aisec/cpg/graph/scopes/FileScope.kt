@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.graph.scopes
 
-import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 
 /**
@@ -34,4 +33,4 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
  *
  * The only supported AST node is a [TranslationUnitDeclaration].
  */
-class FileScope(ctx: TranslationContext, astNode: TranslationUnitDeclaration) : Scope(ctx, astNode)
+class FileScope(astNode: TranslationUnitDeclaration) : Scope(astNode)

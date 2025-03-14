@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.graph.scopes
 
-import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
@@ -40,8 +39,7 @@ import org.neo4j.ogm.annotation.Relationship
  * namespace. This scope is special in a way that it will only exist once (per [GlobalScope]) and
  * contains all symbols declared in this namespace, even if they are spread across multiple files.
  */
-class NamespaceScope(ctx: TranslationContext, astNode: NamespaceDeclaration) :
-    NameScope(ctx, astNode) {
+class NamespaceScope(astNode: NamespaceDeclaration) : NameScope(astNode) {
 
     /**
      * This is the mirror property to [Scope.importedScopeEdges]. It specifies which other [Scope]s
@@ -58,6 +56,7 @@ class NamespaceScope(ctx: TranslationContext, astNode: NamespaceDeclaration) :
     val importedBy: MutableSet<Scope> by unwrappingIncoming(NamespaceScope::importedByEdges)
 
     context(ContextProvider)
+    @Suppress("CONTEXT_RECEIVERS_DEPRECATED")
     override fun addSymbol(symbol: Symbol, declaration: Declaration) {
         super.addSymbol(symbol, declaration)
 

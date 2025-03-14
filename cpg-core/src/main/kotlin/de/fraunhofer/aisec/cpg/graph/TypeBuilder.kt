@@ -122,5 +122,5 @@ fun LanguageProvider.primitiveType(name: CharSequence): Type {
  * [LanguageProvider].
  */
 fun LanguageProvider.isPrimitive(type: Type): Boolean {
-    return language.primitiveTypeNames?.contains(type.typeName) == true
+    return language.primitiveTypeNames.contains(type.typeName)
 }

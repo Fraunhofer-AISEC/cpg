@@ -41,9 +41,9 @@ class ScopeTest {
             var localA = newVariableDeclaration("a")
 
             // two scopes, global and local
-            val globalScope = GlobalScope(ctx)
+            val globalScope = GlobalScope()
             globalScope.addSymbol("a", globalA)
-            val scope = LocalScope(ctx, newBlock())
+            val scope = LocalScope(newBlock())
             scope.parent = globalScope
             scope.addSymbol("a", localA)
 

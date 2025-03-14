@@ -37,6 +37,7 @@ import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.passes.Pass
 import de.fraunhofer.aisec.cpg.passes.Pass.Companion.log
 import de.fraunhofer.aisec.cpg.passes.ResolveCallExpressionAmbiguityPass
+import de.fraunhofer.aisec.cpg.passes.TypeResolver
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import org.slf4j.Logger
@@ -58,7 +59,16 @@ class TypeManager {
         MutableMap<TemplateDeclaration, MutableList<ParameterizedType>> =
         ConcurrentHashMap()
 
-    val allFirstOrderTypes = identitySetOf<Type>()
+    /**
+     * Stores all first order types that are used in the program. They are the basis to be resolved.
+     * They are initially populates (and then later resolved) by the [TypeResolver].
+     */
+    val unresolvedTypes = identitySetOf<Type>()
+
+    /**
+     * Stores all resolved first order types. This is a set of all types that have been resolved by the
+     * [TypeResolver].
+     */
     val resolvedTypes = identitySetOf<Type>()
 
     /**

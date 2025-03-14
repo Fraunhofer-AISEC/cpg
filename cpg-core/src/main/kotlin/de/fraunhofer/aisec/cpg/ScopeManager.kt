@@ -59,7 +59,7 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
      * The top-most scope in the scope tree. This is the root of the tree and is not associated with
      * any particular AST node.
      */
-    val globalScope: GlobalScope = GlobalScope(ctx)
+    val globalScope: GlobalScope = GlobalScope()
 
     /**
      * A map associating each CPG node with its scope. The key type is intentionally a nullable
@@ -240,11 +240,11 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
                     is IfStatement,
                     is CatchClause,
                     is CollectionComprehension,
-                    is Block -> LocalScope(ctx, nodeToScope)
-                    is FunctionDeclaration -> FunctionScope(ctx, nodeToScope)
-                    is RecordDeclaration -> RecordScope(ctx, nodeToScope)
-                    is TemplateDeclaration -> TemplateScope(ctx, nodeToScope)
-                    is TranslationUnitDeclaration -> FileScope(ctx, nodeToScope)
+                    is Block -> LocalScope(nodeToScope)
+                    is FunctionDeclaration -> FunctionScope(nodeToScope)
+                    is RecordDeclaration -> RecordScope(nodeToScope)
+                    is TemplateDeclaration -> TemplateScope(nodeToScope)
+                    is TranslationUnitDeclaration -> FileScope(nodeToScope)
                     is NamespaceDeclaration -> newNamespaceIfNecessary(nodeToScope)
                     else -> {
                         LOGGER.error(
@@ -286,9 +286,7 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
      */
     private fun newNamespaceIfNecessary(nodeToScope: NamespaceDeclaration): NamespaceScope? {
         val existingScope =
-            filterScopes { it is NamespaceScope && it.name == nodeToScope.name }
-                .filterIsInstance<NamespaceScope>()
-                .firstOrNull()
+            filterScopes { it is NamespaceScope && it.name == nodeToScope.name }.firstOrNull()
 
         return if (existingScope != null) {
             // update the AST node to this namespace declaration
@@ -300,7 +298,7 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
 
             null
         } else {
-            NamespaceScope(ctx, nodeToScope)
+            NamespaceScope(nodeToScope)
         }
     }
 

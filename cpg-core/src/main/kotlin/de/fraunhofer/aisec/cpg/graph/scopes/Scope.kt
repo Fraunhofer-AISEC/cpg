@@ -28,7 +28,6 @@ package de.fraunhofer.aisec.cpg.graph.scopes
 import com.fasterxml.jackson.annotation.JsonBackReference
 import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.frontends.HasBuiltins
-import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.HasImplicitReceiver
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.ContextProvider
@@ -64,10 +63,9 @@ typealias SymbolMap = MutableMap<Symbol, MutableList<Declaration>>
  */
 @NodeEntity
 sealed class Scope(
-    ctx: TranslationContext,
     @Relationship(value = "SCOPE", direction = Relationship.Direction.INCOMING)
     @JsonBackReference
-    open var astNode: Node?,
+    open var astNode: Node?
 ) : Node() {
 
     /** FQN Name currently valid */
@@ -239,10 +237,7 @@ sealed class Scope(
         // language's builtins scope for the symbol
         val scopeManager = ctx.scopeManager
         if (
-            list.isNullOrEmpty() &&
-                !qualifiedLookup &&
-                languageOnly is HasBuiltins &&
-                scopeManager != null
+            list.isNullOrEmpty() && !qualifiedLookup && languageOnly is HasBuiltins
         ) {
             // If the language has builtins we can search there for the symbol
             val builtinsNamespace = languageOnly.builtinsNamespace

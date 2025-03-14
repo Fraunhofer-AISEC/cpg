@@ -224,12 +224,13 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         }
 
         // Gather them in the type manager, just so we have them
-        typeManager.allFirstOrderTypes += allTypes
+        typeManager.unresolvedTypes += allTypes
 
-        for (type in allTypes) {
+        for (type in typeManager.unresolvedTypes) {
             if (
-                type is ObjectType && type.typeOrigin == Type.Origin.UNRESOLVED ||
-                    type.typeOrigin == Type.Origin.GUESSED
+                type is ObjectType &&
+                    (type.typeOrigin == Type.Origin.UNRESOLVED ||
+                        type.typeOrigin == Type.Origin.GUESSED)
             ) {
                 resolveType(type)
             }
