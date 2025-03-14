@@ -39,7 +39,6 @@ mavenPublishing {
 
 node {
     download.set(true)
-    version.set("20.11.1")
     nodeProjectDir.set(file("${project.projectDir.resolve("src/main/nodejs")}"))
 }
 

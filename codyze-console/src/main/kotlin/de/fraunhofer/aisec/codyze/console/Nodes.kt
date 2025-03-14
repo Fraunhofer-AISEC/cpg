@@ -25,11 +25,12 @@
  */
 @file:Suppress("CONTEXT_RECEIVERS_DEPRECATED")
 
-package de.fraunhofer.aisec.cpg.webconsole
+package de.fraunhofer.aisec.codyze.console
 
 import de.fraunhofer.aisec.codyze.AnalysisResult
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.Component
+import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.component
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
@@ -91,9 +92,10 @@ data class NodeJSON(
     val name: String,
 )
 
+context(ContextProvider)
 fun TranslationUnitDeclaration.toJSON(): TranslationUnitJSON {
     val localName =
-        component?.topLevel?.let {
+        component?.topLevel()?.let {
             this.location?.artifactLocation?.uri?.toPath()?.toFile()?.relativeToOrNull(it)
         }
 
@@ -119,11 +121,12 @@ fun Node.toJSON(): NodeJSON {
     )
 }
 
+context(ContextProvider)
 fun Component.toJSON(): ComponentJSON {
     return ComponentJSON(
         name = this.name.toString(),
         translationUnits = this.translationUnits.map { tu -> tu.toJSON() },
-        topLevel = this.topLevel?.absolutePath,
+        topLevel = this.topLevel()?.absolutePath,
     )
 }
 

@@ -29,8 +29,8 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.subcommands
 import com.github.ajalt.clikt.parameters.groups.provideDelegate
 import de.fraunhofer.aisec.codyze.*
-import de.fraunhofer.aisec.cpg.webconsole.CPGService
-import de.fraunhofer.aisec.cpg.webconsole.startServer
+import de.fraunhofer.aisec.codyze.console.CPGService
+import de.fraunhofer.aisec.codyze.console.startServer
 import java.io.File
 
 /** The main `compliance` command. */

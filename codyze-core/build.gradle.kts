@@ -43,18 +43,17 @@ dependencies {
     testImplementation(kotlin("test"))
 
     // Script definition
-    api("org.jetbrains.kotlin:kotlin-scripting-common")
-    api("org.jetbrains.kotlin:kotlin-scripting-jvm")
+    api(libs.kotlin.scripting.common)
+    api(libs.kotlin.scripting.jvm)
 
     // Scripting host
-    api("org.jetbrains.kotlin:kotlin-scripting-jvm-host")
+    api(libs.kotlin.scripting.jvm.host)
 
     // We depend on the Python frontend for the integration tests, but the frontend is only
     // available if enabled.
     // If it's not available, the integration tests fail (which is ok). But if we would directly
-    // reference the
-    // project here, the build system would fail any task since it will not find a non-enabled
-    // project.
+    // reference the project here, the build system would fail any task since it will not find a
+    // non-enabled project.
     findProject(":cpg-language-python")?.also { integrationTestImplementation(it) }
     integrationTestImplementation(projects.cpgAnalysis)
 }

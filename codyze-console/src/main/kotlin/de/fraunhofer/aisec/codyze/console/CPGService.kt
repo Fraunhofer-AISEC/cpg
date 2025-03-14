@@ -23,7 +23,7 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.webconsole
+package de.fraunhofer.aisec.codyze.console
 
 import de.fraunhofer.aisec.codyze.AnalysisResult
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
@@ -77,14 +77,16 @@ class CPGService {
         val result = translationManager.analyze().get()
 
         val translationResult =
-            AnalysisResultJSON(
-                components = result.components.map { it.toJSON() },
-                totalNodes = result.nodes.size,
-                cpgResult = result,
-                analysisResult = null,
-                sourceDir = config.sourceLocations.first().absolutePath,
-                findings = listOf(),
-            )
+            with(result) {
+                AnalysisResultJSON(
+                    components = result.components.map { it.toJSON() },
+                    totalNodes = result.nodes.size,
+                    cpgResult = result,
+                    analysisResult = null,
+                    sourceDir = config.sourceLocations.first().absolutePath,
+                    findings = listOf(),
+                )
+            }
 
         this@CPGService.translationResult = translationResult
         return translationResult

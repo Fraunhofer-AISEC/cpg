@@ -23,8 +23,9 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.webconsole
+package de.fraunhofer.aisec.codyze.console
 
+import io.ktor.http.HttpHeaders
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
@@ -46,7 +47,7 @@ fun CPGService.startServer() {
 fun Application.configureWebconsole(service: CPGService) {
     install(CORS) {
         anyHost()
-        allowHeader(io.ktor.http.HttpHeaders.ContentType)
+        allowHeader(HttpHeaders.ContentType)
     }
 
     install(ContentNegotiation) {

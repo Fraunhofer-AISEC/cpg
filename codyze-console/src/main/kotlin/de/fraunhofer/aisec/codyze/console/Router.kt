@@ -23,7 +23,7 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.webconsole
+package de.fraunhofer.aisec.codyze.console
 
 import io.ktor.http.*
 import io.ktor.server.application.*
