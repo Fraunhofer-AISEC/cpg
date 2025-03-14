@@ -23,6 +23,8 @@
  *                    \______/ \__|       \______/
  *
  */
+@file:Suppress("CONTEXT_RECEIVERS_DEPRECATED")
+
 package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
@@ -125,6 +127,7 @@ fun MetadataProvider.newOperatorDeclaration(
  * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
  * prepended argument.
  */
+context(ContextProvider)
 @JvmOverloads
 fun MetadataProvider.newConstructorDeclaration(
     name: CharSequence?,
@@ -136,6 +139,7 @@ fun MetadataProvider.newConstructorDeclaration(
     node.applyMetadata(this, name, rawNode, defaultNamespace = recordDeclaration?.name)
 
     node.recordDeclaration = recordDeclaration
+    node.type = recordDeclaration?.toType() ?: unknownType()
 
     log(node)
     return node
@@ -193,6 +197,7 @@ fun MetadataProvider.newVariableDeclaration(
  * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
  * argument.
  */
+context(ContextProvider)
 @JvmOverloads
 fun LanguageProvider.newTupleDeclaration(
     elements: List<VariableDeclaration>,

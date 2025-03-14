@@ -148,7 +148,7 @@ class GoLanguageFrontend(ctx: TranslationContext, language: Language<GoLanguageF
                     isDependency = true
                     dependency.toFile()
                 }
-                ctx.currentComponent?.topLevel != null -> ctx.currentComponent?.topLevel
+                ctx.currentComponent?.topLevel() != null -> ctx.currentComponent?.topLevel()
                 else -> file.parentFile
             }!!
 
@@ -252,16 +252,9 @@ class GoLanguageFrontend(ctx: TranslationContext, language: Language<GoLanguageF
         val cpgType =
             when (type) {
                 is GoStandardLibrary.Ast.Ident -> {
-                    val name: String =
-                        if (isBuiltinType(type.name)) {
-                            // Definitely not an FQN type
-                            type.name
-                        } else {
-                            // FQN'ize this name (with the current file)
-                            "${currentFile?.name?.name}.${type.name}" // this.File.Name.Name
-                        }
-
-                    objectType(name)
+                    // Just return the name here, the type resolver will resolve this correctly to
+                    // an FQN later
+                    objectType(type.name)
                 }
                 is GoStandardLibrary.Ast.SelectorExpr -> {
                     // This is a FQN type
@@ -383,7 +376,7 @@ class GoLanguageFrontend(ctx: TranslationContext, language: Language<GoLanguageF
                 }
             }
 
-        return typeManager.registerType(typeManager.resolvePossibleTypedef(cpgType, scopeManager))
+        return typeManager.resolvePossibleTypedef(cpgType, scopeManager)
     }
 
     /**

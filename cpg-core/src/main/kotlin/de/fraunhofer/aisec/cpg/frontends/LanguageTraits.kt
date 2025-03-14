@@ -23,9 +23,10 @@
  *                    \______/ \__|       \______/
  *
  */
+@file:Suppress("CONTEXT_RECEIVERS_DEPRECATED")
+
 package de.fraunhofer.aisec.cpg.frontends
 
-import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.HasOperatorCode
 import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
@@ -117,10 +118,9 @@ interface HasSuperClasses : LanguageTrait {
      */
     val superClassKeyword: String
 
-    fun handleSuperExpression(
+    fun SymbolResolver.handleSuperExpression(
         memberExpression: MemberExpression,
         curClass: RecordDeclaration,
-        scopeManager: ScopeManager,
     ): Boolean
 }
 

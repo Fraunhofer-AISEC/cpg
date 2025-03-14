@@ -59,7 +59,7 @@ class JavaExternalTypeHierarchyResolver(ctx: TranslationContext) : ComponentPass
         val resolver = CombinedTypeSolver()
 
         resolver.add(ReflectionTypeSolver())
-        var root = ctx.currentComponent?.topLevel
+        var root = ctx.currentComponent?.topLevel()
         if (root == null && config.softwareComponents.size == 1) {
             root =
                 config.softwareComponents[config.softwareComponents.keys.first()]?.let {
@@ -74,7 +74,7 @@ class JavaExternalTypeHierarchyResolver(ctx: TranslationContext) : ComponentPass
         }
 
         // Iterate over all known types and add their (direct) supertypes.
-        var types = typeManager.firstOrderTypes.toList()
+        var types = typeManager.resolvedTypes.toList()
         for (t in types) {
             val symbol = resolver.tryToSolveType(t.typeName)
             if (symbol.isSolved) {

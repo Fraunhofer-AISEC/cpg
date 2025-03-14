@@ -78,7 +78,7 @@ class JVMLanguageFrontend(
                 "class" -> {
                     JavaView(
                         JavaClassPathAnalysisInputLocation(
-                            ctx.currentComponent?.topLevel?.path!!,
+                            ctx.currentComponent?.topLevel()?.path!!,
                             SourceType.Library,
                             listOf(
                                 NopEliminator(),
@@ -115,12 +115,14 @@ class JVMLanguageFrontend(
                 }
                 "java" -> {
                     JavaView(
-                        JavaSourcePathAnalysisInputLocation(ctx.currentComponent?.topLevel?.path!!)
+                        JavaSourcePathAnalysisInputLocation(
+                            ctx.currentComponent?.topLevel()?.path!!
+                        )
                     )
                 }
                 "jimple" -> {
                     JimpleView(
-                        JimpleAnalysisInputLocation(ctx.currentComponent?.topLevel?.toPath()!!)
+                        JimpleAnalysisInputLocation(ctx.currentComponent?.topLevel()?.toPath()!!)
                     )
                 }
                 else -> {

@@ -34,7 +34,6 @@ import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.passes.ImportDependencies
 import de.fraunhofer.aisec.cpg.passes.ImportResolver
-import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.io.File
 import org.neo4j.ogm.annotation.Relationship
@@ -70,11 +69,10 @@ open class Component : Node() {
      * Returns the top-level directory of this component according to
      * [TranslationConfiguration.topLevels]
      */
-    @DoNotPersist
-    val topLevel: File?
-        get() {
-            return ctx?.config?.topLevels?.get(this.name.localName)
-        }
+    context(ContextProvider)
+    fun topLevel(): File? {
+        return this@ContextProvider.ctx.config.topLevels[this.name.localName]
+    }
 
     /**
      * All points where unknown data may enter this application, e.g., the main method, or other
