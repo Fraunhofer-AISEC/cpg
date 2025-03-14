@@ -15,6 +15,7 @@ export interface Component {
 export interface FindingsJSON {
     kind: string;
     path: string;
+    component: string;
     rule: string | null;
     startLine: number;
     startColumn: number;

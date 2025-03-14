@@ -14,6 +14,8 @@ function TranslationUnitPage() {
     const componentName = searchParams.get('component');
     const path = searchParams.get('path');
     const line = searchParams.get('line') ? parseInt(searchParams.get('line')!, 10) : null;
+    const findingText = searchParams.get('findingText') || '';
+    const kind = searchParams.get('kind') || 'info';
 
     const [translationUnit, setTranslationUnit] = useState<TranslationUnit | null>(null);
     const [astNodes, setAstNodes] = useState<NodeInfo[]>([]);
@@ -104,6 +106,8 @@ function TranslationUnitPage() {
                         offsetTop={offsetTop}
                         offsetLeft={offsetLeft}
                         highlightLine={line}
+                        findingText={findingText}
+                        kind={kind}
                     />
 
                     {highlightedNode && (

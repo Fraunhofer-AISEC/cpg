@@ -1,4 +1,4 @@
-import React from 'react';
+import { useEffect } from 'react';
 import { NodeInfo } from '../types';
 
 interface NodeOverlayProps {
@@ -10,9 +10,47 @@ interface NodeOverlayProps {
     offsetTop: number;
     offsetLeft: number;
     highlightLine: number | null;
+    findingText?: string;
+    kind?: string
 }
 
-function NodeOverlay({ nodes, highlightedNode, setHighlightedNode, lineHeight, charWidth, offsetTop, offsetLeft, highlightLine }: NodeOverlayProps) {
+function NodeOverlay({
+                         nodes,
+                         highlightedNode,
+                         setHighlightedNode,
+                         lineHeight,
+                         charWidth,
+                         offsetTop,
+                         offsetLeft,
+                         highlightLine,
+                         findingText,
+                         kind = 'info'
+                     }: NodeOverlayProps) {
+    const getFindingStyle = () => {
+        switch (kind.toLowerCase()) {
+            case 'fail':
+            case 'error':
+                return {
+                    backgroundColor: 'rgba(254, 226, 226, 1)', // bg-red-100
+                    borderColor: 'rgba(239, 68, 68, 1)',      // border-red-500
+                    color: 'rgba(185, 28, 28, 1)'             // text-red-700
+                };
+            case 'pass':
+            case 'success':
+                return {
+                    backgroundColor: 'rgba(220, 252, 231, 1)', // bg-green-100
+                    borderColor: 'rgba(34, 197, 94, 1)',       // border-green-500
+                    color: 'rgba(21, 128, 61, 1)'              // text-green-700
+                };
+            default:
+                return {
+                    backgroundColor: 'rgba(243, 244, 246, 1)', // bg-gray-100
+                    borderColor: 'rgba(107, 114, 128, 1)',     // border-gray-500
+                    color: 'rgba(55, 65, 81, 1)'               // text-gray-700
+                };
+        }
+    };
+
     const getColorForNodeType = (type: string): string => {
         const colorMap: Record<string, string> = {
             FunctionDeclaration: 'rgba(255, 99, 132, 0.3)',  // Red
@@ -44,6 +82,19 @@ function NodeOverlay({ nodes, highlightedNode, setHighlightedNode, lineHeight, c
         return colorMap[type] || 'rgba(128, 128, 128, 0.3)';
     };
 
+    // Effect to scroll to highlighted line when the component mounts or highlightLine changes
+    useEffect(() => {
+        if (highlightLine !== null) {
+            const yPosition = (highlightLine - 1) * lineHeight + offsetTop;
+
+            // Scroll to position the line in the middle of the viewport
+            window.scrollTo({
+                top: yPosition - window.innerHeight / 3,
+                behavior: 'smooth'
+            });
+        }
+    }, [highlightLine, lineHeight, offsetTop]);
+
     return (
         <div className="absolute top-0 left-0 w-full h-full">
             {nodes.map((node) => (
@@ -67,15 +118,31 @@ function NodeOverlay({ nodes, highlightedNode, setHighlightedNode, lineHeight, c
                 />
             ))}
             {highlightLine !== null && (
-                <div
-                    className="absolute w-full"
-                    style={{
-                        top: `${(highlightLine - 1) * lineHeight + offsetTop}px`,
-                        height: `${lineHeight}px`,
-                        backgroundColor: 'rgba(255, 255, 0, 0.3)',
-                        zIndex: 5
-                    }}
-                />
+                <>
+                    <div
+                        className="absolute w-full"
+                        style={{
+                            top: `${(highlightLine - 1) * lineHeight + offsetTop}px`,
+                            height: `${lineHeight}px`,
+                            backgroundColor: 'rgba(255, 255, 0, 0.3)',
+                            zIndex: 5
+                        }}
+                    />
+                    {findingText && (
+                        <div
+                            className="absolute left-0 right-0 px-4 py-2 border-l-4"
+                            style={{
+                                top: `${highlightLine * lineHeight + offsetTop}px`,
+                                zIndex: 30,
+                                maxWidth: '100%',
+                                overflowWrap: 'break-word',
+                                ...getFindingStyle()
+                            }}
+                        >
+                            {findingText}
+                        </div>
+                    )}
+                </>
             )}
         </div>
     );
