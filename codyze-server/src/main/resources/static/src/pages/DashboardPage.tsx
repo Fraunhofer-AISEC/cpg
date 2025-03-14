@@ -1,10 +1,9 @@
-// src/main/web/src/pages/Dashboard.tsx
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { TranslationResult } from '../types';
 import { getTranslationResult, generateCPG } from '../services/api';
 
-const Dashboard: React.FC = () => {
+function DashboardPage() {
     const [result, setResult] = useState<TranslationResult | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
@@ -16,6 +15,9 @@ const Dashboard: React.FC = () => {
             try {
                 const data = await getTranslationResult();
                 setResult(data);
+                if (data && data.sourceDir) {
+                    setSourceDir(data.sourceDir);
+                }
             } catch (error) {
                 // Ignore error if no result exists yet
             }
@@ -107,6 +109,6 @@ const Dashboard: React.FC = () => {
             )}
         </div>
     );
-};
+}
 
-export default Dashboard;
+export default DashboardPage;

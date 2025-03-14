@@ -4,7 +4,7 @@ import { useParams, Link } from 'react-router-dom';
 import { Component } from '../types';
 import { getComponent } from '../services/api';
 
-const ComponentPage: React.FC = () => {
+function ComponentPage() {
     const { name } = useParams<{ name: string }>();
     const [component, setComponent] = useState<Component | null>(null);
     const [loading, setLoading] = useState<boolean>(true);

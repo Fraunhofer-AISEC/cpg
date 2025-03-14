@@ -29,26 +29,27 @@ import de.fraunhofer.aisec.codyze.AnalysisResult
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
-import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Name
-import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.nodes
-import de.fraunhofer.aisec.cpg.graph.translationResult
+import de.fraunhofer.aisec.cpg.passes.concepts.config.ProvideConfigPass
+import de.fraunhofer.aisec.cpg.passes.concepts.config.python.PythonStdLibConfigurationPass
 import java.nio.file.Path
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 class CPGService {
-    private var translationResult: TranslationResult? = null
+    private var translationResult: TranslationResultJSON? = null
 
-    suspend fun generateCPG(sourceDir: String): TranslationResult =
+    suspend fun generateCPG(sourceDir: String): TranslationResultJSON =
         withContext(Dispatchers.IO) {
             val path = Path.of(sourceDir)
             val config =
                 TranslationConfiguration.builder()
                     .sourceLocations(path.toFile())
                     .defaultPasses()
+                    .registerPass<PythonStdLibConfigurationPass>()
+                    .registerPass<ProvideConfigPass>()
                     .codeInNodes(true)
                     .registerLanguage<PythonLanguage>()
                     .build()
@@ -58,17 +59,18 @@ class CPGService {
             val result = translationManager.analyze().get()
 
             val translationResult =
-                TranslationResult(
-                    components = result.components.map { it.toServerNode() },
+                TranslationResultJSON(
+                    components = result.components.map { it.toJSON() },
                     totalNodes = result.nodes.size,
                     cpgResult = result,
+                    sourceDir = config.sourceLocations.first().absolutePath,
                 )
 
             this@CPGService.translationResult = translationResult
             translationResult
         }
 
-    fun getTranslationResult(): TranslationResult? {
+    fun getTranslationResult(): TranslationResultJSON? {
         return translationResult
     }
 
@@ -76,11 +78,11 @@ class CPGService {
         return translationResult?.components?.find { it.name == componentName }
     }
 
-    fun getTranslationUnit(componentName: String, unitPath: String): TranslationUnit? {
+    fun getTranslationUnit(componentName: String, unitPath: String): TranslationUnitJSON? {
         return getComponent(componentName)?.translationUnits?.find { it.path == unitPath }
     }
 
-    fun getNodesForTranslationUnit(componentName: String, unitPath: String): List<NodeInfo> {
+    fun getNodesForTranslationUnit(componentName: String, unitPath: String): List<NodeJSON> {
         val result = translationResult ?: return emptyList()
 
         val cpgResult = result.cpgResult ?: return emptyList()
@@ -94,8 +96,8 @@ class CPGService {
         return extractNodes(tu)
     }
 
-    private fun extractNodes(tu: TranslationUnitDeclaration): List<NodeInfo> {
-        return tu.nodes.map { it.toServerNode() }
+    private fun extractNodes(tu: TranslationUnitDeclaration): List<NodeJSON> {
+        return tu.nodes.map { it.toJSON() }
     }
 
     companion object {
@@ -104,40 +106,13 @@ class CPGService {
 
             val service = CPGService()
             service.translationResult =
-                TranslationResult(
-                    components = tr.components.map { it.toServerNode() },
+                TranslationResultJSON(
+                    components = tr.components.map { it.toJSON() },
                     totalNodes = tr.nodes.size,
                     cpgResult = tr,
+                    sourceDir = tr.config.sourceLocations.first().absolutePath,
                 )
             return service
         }
     }
-}
-
-private fun Node.toServerNode(): NodeInfo {
-    return NodeInfo(
-        id = this.id.toString(),
-        type = this.javaClass.simpleName,
-        startLine = location?.region?.startLine ?: -1,
-        startColumn = location?.region?.startColumn ?: -1,
-        endLine = location?.region?.endLine ?: -1,
-        endColumn = location?.region?.endColumn ?: -1,
-        code = this.code ?: "",
-        name = this.name.toString(),
-    )
-}
-
-fun Component.toServerNode(): ComponentJSON {
-    return ComponentJSON(
-        name = this.name.toString(),
-        translationUnits =
-            this.translationUnits.map { tu ->
-                TranslationUnit(
-                    name = tu.name.toString(),
-                    path = tu.location?.artifactLocation?.uri.toString(),
-                    code = tu.code ?: "",
-                )
-            },
-        topLevel = this.topLevel?.name ?: "",
-    )
 }
