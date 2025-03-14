@@ -41,18 +41,24 @@ import kotlinx.coroutines.withContext
 class CPGService {
     private var translationResult: TranslationResultJSON? = null
 
-    suspend fun generateCPG(sourceDir: String): TranslationResultJSON =
+    suspend fun generateCPG(request: GenerateCPGRequest): TranslationResultJSON =
         withContext(Dispatchers.IO) {
-            val path = Path.of(sourceDir)
-            val config =
+            val path = Path.of(request.sourceDir)
+            val builder =
                 TranslationConfiguration.builder()
                     .sourceLocations(path.toFile())
                     .defaultPasses()
+                    .loadIncludes(true)
                     .registerPass<PythonStdLibConfigurationPass>()
                     .registerPass<ProvideConfigPass>()
                     .codeInNodes(true)
                     .registerLanguage<PythonLanguage>()
-                    .build()
+
+            if (request.includeDir != null) {
+                builder.includePath(request.includeDir)
+            }
+
+            val config = builder.build()
 
             val translationManager = TranslationManager.builder().config(config).build()
 

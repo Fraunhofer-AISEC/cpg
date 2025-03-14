@@ -74,7 +74,7 @@ fun TranslationUnitDeclaration.toJSON(): TranslationUnitJSON {
         path = this.location?.artifactLocation?.uri.toString(),
         code = this.code ?: "",
         astNodes = this.nodes.map { it.toJSON() },
-        overlayNodes = this.overlays.map { it.toJSON() },
+        overlayNodes = this.nodes.flatMap { it.overlays.map { it.toJSON() } },
     )
 }
 

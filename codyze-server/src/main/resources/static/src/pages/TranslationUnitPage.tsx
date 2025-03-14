@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
-import { TranslationUnit, NodeInfo } from '../types';
-import { getTranslationUnit, getNodesForTranslationUnit } from '../services/api';
+import {useEffect, useState} from 'react';
+import {Link, useSearchParams} from 'react-router-dom';
+import {NodeInfo, TranslationUnit} from '../types';
+import {getTranslationUnit} from '../services/api';
 import SyntaxHighlighter from 'react-syntax-highlighter';
-import { docco } from 'react-syntax-highlighter/dist/esm/styles/hljs';
+import {docco} from 'react-syntax-highlighter/dist/esm/styles/hljs';
 import NodeOverlay from '../components/NodeOverlay';
 import NodeTooltip from '../components/NodeTooltip';
 import NodeTable from '../components/NodeTable';
@@ -20,6 +20,7 @@ function TranslationUnitPage() {
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
     const [highlightedNode, setHighlightedNode] = useState<NodeInfo | null>(null);
+    const [activeTab, setActiveTab] = useState<'astNodes' | 'overlayNodes'>('overlayNodes');
 
     const lineHeight = 24;
     const charWidth = 10;
@@ -71,6 +72,8 @@ function TranslationUnitPage() {
     const lineNumberWidth = Math.ceil(Math.log10(totalLines + 1));
     const offsetLeft = baseOffsetLeft + lineNumberWidth * charWidth;
 
+    const nodes = activeTab === 'overlayNodes' ? overlayNodes : astNodes;
+
     return (
         <div className="container mx-auto p-4">
             <div className="mb-4">
@@ -91,7 +94,7 @@ function TranslationUnitPage() {
                     </SyntaxHighlighter>
 
                     <NodeOverlay
-                        nodes={astNodes}
+                        nodes={nodes}
                         highlightedNode={highlightedNode}
                         setHighlightedNode={setHighlightedNode}
                         lineHeight={lineHeight}
@@ -112,13 +115,28 @@ function TranslationUnitPage() {
                 </div>
             </div>
 
-            <NodeTable
-                nodes={astNodes}
-                highlightedNode={highlightedNode}
-                setHighlightedNode={setHighlightedNode}
-            />
+            <div className="bg-white shadow-md rounded p-6">
+                <div className="mb-4">
+                    <button
+                        className={`px-4 py-2 ml-2 ${activeTab === 'overlayNodes' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
+                        onClick={() => setActiveTab('overlayNodes')}
+                    >
+                        Overlay Nodes
+                    </button>
+                    <button
+                        className={`px-4 py-2 ${activeTab === 'astNodes' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
+                        onClick={() => setActiveTab('astNodes')}
+                    >
+                        AST Nodes
+                    </button>
+                </div>
 
-            <ConceptOperationNodeTable nodes={overlayNodes} highlightedNode={highlightedNode} setHighlightedNode={setHighlightedNode} />
+                {activeTab === 'astNodes' ? (
+                    <NodeTable nodes={astNodes} highlightedNode={highlightedNode} setHighlightedNode={setHighlightedNode} />
+                ) : (
+                    <ConceptOperationNodeTable nodes={overlayNodes} highlightedNode={highlightedNode} setHighlightedNode={setHighlightedNode} />
+                )}
+            </div>
         </div>
     );
 };

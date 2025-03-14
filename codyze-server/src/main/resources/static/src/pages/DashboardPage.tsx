@@ -8,6 +8,7 @@ function DashboardPage() {
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
     const [sourceDir, setSourceDir] = useState<string>('');
+    const [includeDir, setIncludeDir] = useState<string | null>(null);
 
     useEffect(() => {
         // Try to fetch any existing result when the component mounts
@@ -32,7 +33,7 @@ function DashboardPage() {
         setError(null);
 
         try {
-            const data = await generateCPG(sourceDir);
+            const data = await generateCPG(sourceDir, includeDir);
             setResult(data);
         } catch (err) {
             setError('Failed to generate CPG. Please check the path and try again.');
@@ -59,6 +60,19 @@ function DashboardPage() {
                             className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                             placeholder="/path/to/source/code"
                             required
+                        />
+                    </div>
+                    <div className="mb-4">
+                        <label htmlFor="includeDir" className="block text-sm font-medium text-gray-700 mb-1">
+                            Include Directory (optional)
+                        </label>
+                        <input
+                            type="text"
+                            id="includeDir"
+                            value={includeDir}
+                            onChange={(e) => setIncludeDir(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                            placeholder="/path/to/source/code"
                         />
                     </div>
                     <button
