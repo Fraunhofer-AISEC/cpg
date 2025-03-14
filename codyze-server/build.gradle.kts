@@ -59,3 +59,7 @@ val npmBuild by
 application { mainClass.set("de.fraunhofer.aisec.cpg.webconsole.MainKt") }
 
 tasks.processResources { dependsOn(npmBuild) }
+
+var jarTasks = tasks.withType<Jar>()
+
+jarTasks.forEach { it.dependsOn(npmBuild) }
