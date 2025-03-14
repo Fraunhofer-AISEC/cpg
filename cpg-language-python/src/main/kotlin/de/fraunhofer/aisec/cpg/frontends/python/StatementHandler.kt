@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.frontends.python.Python.AST.IsAsync
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
@@ -657,13 +656,6 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      * manager.
      */
     private fun conditionallyAddAdditionalSourcesToAnalysis(importName: Name) {
-        val ctx = ctx
-        if (ctx == null) {
-            throw TranslationException(
-                "A translation context is needed for the import dependent addition of additional sources."
-            )
-        }
-
         var currentName: Name? = importName
         while (!currentName.isNullOrEmpty()) {
             // Build a set of candidates how files look like for the current name. They are a set of

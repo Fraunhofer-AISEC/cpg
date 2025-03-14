@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.types.DeclaresType
+import de.fraunhofer.aisec.cpg.graph.types.HasSecondaryTypeEdge
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
@@ -40,7 +41,12 @@ import org.neo4j.ogm.annotation.Transient
 
 /** Represents a C++ union/struct/class or Java class */
 open class RecordDeclaration :
-    Declaration(), DeclarationHolder, StatementHolder, EOGStarterHolder, DeclaresType {
+    Declaration(),
+    DeclarationHolder,
+    StatementHolder,
+    EOGStarterHolder,
+    DeclaresType,
+    HasSecondaryTypeEdge {
     /** The kind, i.e. struct, class, union or enum. */
     var kind: String? = null
 
@@ -225,4 +231,7 @@ open class RecordDeclaration :
 
     override val declaredType: Type
         get() = toType()
+
+    override val secondaryTypes: List<Type>
+        get() = superTypes
 }

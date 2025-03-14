@@ -23,6 +23,8 @@
  *                    \______/ \__|       \______/
  *
  */
+@file:Suppress("CONTEXT_RECEIVERS_DEPRECATED")
+
 package de.fraunhofer.aisec.cpg.graph.builder
 
 import de.fraunhofer.aisec.cpg.*
@@ -34,7 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CollectionComprehension
-import de.fraunhofer.aisec.cpg.graph.types.FunctionType
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.passes.executePass
@@ -49,7 +51,6 @@ fun LanguageFrontend<*, *>.translationResult(
     val node = TranslationResult(TranslationManager.builder().config(ctx.config).build(), ctx)
     val component = Component()
     component.name = Name(DEFAULT_APPLICATION_NAME)
-    component.ctx = this.ctx
     node.addComponent(component)
     init(node)
 
@@ -181,7 +182,7 @@ fun LanguageFrontend<*, *>.function(
     }
 
     // Make sure that our function has the correct type
-    node.type = FunctionType.computeType(node)
+    node.type = with(node) { computeType(node) }
 
     scopeManager.enterScope(node)
     init?.let { it(node) }
@@ -206,7 +207,7 @@ fun LanguageFrontend<*, *>.method(
 ): MethodDeclaration {
     val node = newMethodDeclaration(name)
     node.returnTypes = listOf(returnType)
-    node.type = FunctionType.computeType(node)
+    node.type = with(node) { computeType(node) }
 
     scopeManager.enterScope(node)
     if (init != null) {

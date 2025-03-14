@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.frontends
 
-import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.TranslationManager
@@ -74,17 +73,16 @@ class LanguageTest {
 
     @Test
     fun testMultiLanguage() {
-        class OtherLanguage(ctx: TranslationContext) : TestLanguage(ctx)
+        class OtherLanguage(ctx: TranslationContext) : TestLanguage()
 
         val ctx =
             TranslationContext(
                 config = TranslationConfiguration.builder().build(),
-                scopeManager = ScopeManager(),
                 typeManager = TypeManager(),
             )
 
         val otherLanguage = OtherLanguage(ctx)
-        val testLanguage = TestLanguage(ctx)
+        val testLanguage = TestLanguage()
 
         val result =
             TranslationResult(
@@ -96,7 +94,6 @@ class LanguageTest {
             with(TestLanguageFrontend(language = otherLanguage)) {
                 val tu = newTranslationUnitDeclaration("tu-language-other")
                 val comp = Component()
-                comp.ctx = this.ctx
                 comp.addTranslationUnit(tu)
                 comp
             }
@@ -106,7 +103,6 @@ class LanguageTest {
             with(TestLanguageFrontend(language = testLanguage)) {
                 val tu = newTranslationUnitDeclaration("tu-language-test")
                 val comp = Component()
-                comp.ctx = this.ctx
                 comp.addTranslationUnit(tu)
                 comp
             }

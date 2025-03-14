@@ -23,6 +23,8 @@
  *                    \______/ \__|       \______/
  *
  */
+@file:Suppress("CONTEXT_RECEIVERS_DEPRECATED")
+
 package de.fraunhofer.aisec.cpg.helpers
 
 import de.fraunhofer.aisec.cpg.ScopeManager
@@ -433,7 +435,6 @@ fun SubgraphWalker.ScopedWalker.replace(parent: Node?, old: Expression, new: Exp
 }
 
 private fun CallExpression.duplicateTo(call: CallExpression, callee: Reference) {
-    call.ctx = this.ctx
     call.language = this.language
     call.scope = this.scope
     call.argumentEdges.clear()
