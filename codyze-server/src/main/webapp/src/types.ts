@@ -12,12 +12,23 @@ export interface Component {
     topLevel?: string
 }
 
+export interface FindingsJSON {
+    kind: string;
+    path: string;
+    rule: string | null;
+    startLine: number;
+    startColumn: number;
+    endLine: number;
+    endColumn: number;
+}
+
 export interface TranslationUnit {
     name: string;
     path: string;
     code: string;
     astNodes: NodeInfo[];
     overlayNodes: NodeInfo[];
+    findings: FindingsJSON[];
 }
 
 export interface NodeInfo {

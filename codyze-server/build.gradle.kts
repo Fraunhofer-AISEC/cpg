@@ -48,12 +48,14 @@ val npmBuild by
             .file("src/main/webapp/package-lock.json")
             .withPathSensitivity(PathSensitivity.RELATIVE)
         inputs.dir("src/main/webapp/src").withPathSensitivity(PathSensitivity.RELATIVE)
-        outputs.dir("build/resources/static")
+        outputs.dir("src/main/resources/static")
         outputs.cacheIf { true }
 
-        workingDir.set(file("src/main/nodejs"))
+        workingDir.set(file("src/main/webapp"))
         npmCommand.set(listOf("run", "build"))
         dependsOn(tasks.getByName("npmInstall"))
     }
 
 application { mainClass.set("de.fraunhofer.aisec.cpg.webconsole.MainKt") }
+
+tasks.processResources { dependsOn(npmBuild) }
