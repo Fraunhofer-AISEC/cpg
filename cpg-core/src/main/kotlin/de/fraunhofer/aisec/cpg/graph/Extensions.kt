@@ -770,8 +770,8 @@ inline fun Node.followXUntilHit(
 
     val failedLoops =
         loopingPaths.filter { path ->
-            fulfilledPaths.none { it.subList(0, path.size - 1) == path } &&
-                failedPaths.none { it.subList(0, path.size - 1) == path }
+            fulfilledPaths.none { it.size > path.size && it.subList(0, path.size - 1) == path } &&
+                failedPaths.none { it.size > path.size && it.subList(0, path.size - 1) == path }
         }
 
     return FulfilledAndFailedPaths(
