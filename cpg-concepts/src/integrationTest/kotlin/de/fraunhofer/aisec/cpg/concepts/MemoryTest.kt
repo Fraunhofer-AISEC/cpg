@@ -153,7 +153,7 @@ class MemoryTest {
                 dataFlow(it) { node -> node.overlayEdges.any { edge -> edge.end is Encrypt } }
             }
         assertNotNull(tree)
-        assertEquals(true, tree.value)
+        assertTrue(tree.value)
 
         // Tree is deleted in all paths
         tree =
@@ -169,7 +169,7 @@ class MemoryTest {
                 )
             }
         assertNotNull(tree)
-        assertEquals(true, tree.value)
+        assertTrue(tree.value)
         assertEquals(2, tree.children.size)
 
         val queryTreeResult =
@@ -186,6 +186,7 @@ class MemoryTest {
 
         println(queryTreeResult.printNicely())
         assertTrue(queryTreeResult.value)
+        assertEquals(2, tree.children.size)
     }
 
     @Test
@@ -280,7 +281,5 @@ class MemoryTest {
                 )
             }
         assertNotNull(tree)
-        /*assertEquals(true, tree.value)
-        assertEquals(2, tree.children.size)*/
     }
 }
