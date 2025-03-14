@@ -103,6 +103,7 @@ class ConfigurationOption(
     override fun equals(other: Any?): Boolean {
         return other is ConfigurationOption &&
             super.equals(other) &&
+            other.group == this.group &&
             other.key == this.key &&
             other.value == this.value
     }
@@ -294,4 +295,12 @@ class ConfigurationGroupSource(underlyingNode: Node) : Concept(underlyingNode = 
  * field declaration would be the source to the configuration option.
  */
 class ConfigurationOptionSource(underlyingNode: Node, var group: ConfigurationGroupSource) :
-    Concept(underlyingNode = underlyingNode)
+    Concept(underlyingNode = underlyingNode) {
+    override fun equals(other: Any?): Boolean {
+        return other is ConfigurationOptionSource &&
+            super.equals(other) &&
+            other.group == this.group
+    }
+
+    override fun hashCode() = Objects.hash(super.hashCode(), group)
+}
