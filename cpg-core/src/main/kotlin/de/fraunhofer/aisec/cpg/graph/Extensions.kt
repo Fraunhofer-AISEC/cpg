@@ -780,8 +780,8 @@ inline fun Node.followXUntilHit(
 /**
  * Checks if the [node] is already in the [path] and if the last element on the call stack reaching
  * it is the same in [context] and in the [path]. This serves as an indication of a loop. We need
- * this to differentiate that a node (e.g. function declaration) can be visited through multiple
- * paths e.g. if there are subsequent calls to the samer function without indicating a loop.
+ * this to differentiate that a node (e.g., function declaration) can be visited through multiple
+ * paths, e.g., if there are subsequent calls to the same function without indicating a loop.
  */
 fun isNodeWithCallStackInPath(
     node: Node,

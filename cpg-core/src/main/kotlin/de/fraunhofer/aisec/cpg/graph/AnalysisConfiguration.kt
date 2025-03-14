@@ -254,7 +254,9 @@ class Forward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) {
                         // Return from the functions/methods which have been invoked.
                         val returnedTo =
                             (currentNode as? FunctionDeclaration
-                                    ?: currentNode.firstParentOrNull<FunctionDeclaration>())
+                                    ?: currentNode.firstParentOrNull<FunctionDeclaration>()
+                                    ?: (currentNode as? OverlayNode)?.underlyingNode
+                                        as? FunctionDeclaration)
                                 ?.calledByEdges as Collection<Edge<Node>>? ?: setOf()
 
                         filterAndJump(
