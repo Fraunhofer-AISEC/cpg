@@ -40,9 +40,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 class CPGService {
-    private var translationResult: TranslationResultJSON? = null
+    private var translationResult: AnalysisResultJSON? = null
 
-    suspend fun generateCPG(request: GenerateCPGRequest): TranslationResultJSON =
+    suspend fun generateCPG(request: GenerateCPGRequest): AnalysisResultJSON =
         withContext(Dispatchers.IO) {
             val path = Path.of(request.sourceDir)
             val builder =
@@ -70,18 +70,20 @@ class CPGService {
             val result = translationManager.analyze().get()
 
             val translationResult =
-                TranslationResultJSON(
+                AnalysisResultJSON(
                     components = result.components.map { it.toJSON() },
                     totalNodes = result.nodes.size,
                     cpgResult = result,
+                    analysisResult = null,
                     sourceDir = config.sourceLocations.first().absolutePath,
+                    findings = listOf(),
                 )
 
             this@CPGService.translationResult = translationResult
             translationResult
         }
 
-    fun getTranslationResult(): TranslationResultJSON? {
+    fun getTranslationResult(): AnalysisResultJSON? {
         return translationResult
     }
 
@@ -116,13 +118,20 @@ class CPGService {
             val tr = result.translationResult
 
             val service = CPGService()
-            service.translationResult =
-                TranslationResultJSON(
-                    components = tr.components.map { it.toJSON() },
-                    totalNodes = tr.nodes.size,
-                    cpgResult = tr,
-                    sourceDir = tr.config.sourceLocations.first().absolutePath,
-                )
+            with(tr) {
+                service.translationResult =
+                    AnalysisResultJSON(
+                        components = tr.components.map { it.toJSON() },
+                        totalNodes = tr.nodes.size,
+                        cpgResult = tr,
+                        analysisResult = result,
+                        sourceDir = tr.config.sourceLocations.first().absolutePath,
+                        findings =
+                            result.sarif.runs.flatMap {
+                                it.results?.map { it.toJSON() } ?: emptyList()
+                            },
+                    )
+            }
             return service
         }
     }

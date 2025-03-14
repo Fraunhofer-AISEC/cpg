@@ -23,24 +23,44 @@
  *                    \______/ \__|       \______/
  *
  */
+@file:Suppress("CONTEXT_RECEIVERS_DEPRECATED")
+
 package de.fraunhofer.aisec.cpg.webconsole
 
+import de.fraunhofer.aisec.codyze.AnalysisResult
+import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.component
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.nodes
-import kotlin.io.path.relativeToOrNull
+import io.github.detekt.sarif4k.Result
+import java.net.URL
+import kotlin.io.path.Path
 import kotlin.io.path.toPath
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 
 @Serializable
-data class TranslationResultJSON(
+data class FindingsJSON(
+    var kind: String,
+    var component: String,
+    var path: String,
+    var rule: String?,
+    val startLine: Long,
+    val startColumn: Long,
+    val endLine: Long,
+    val endColumn: Long,
+)
+
+@Serializable
+data class AnalysisResultJSON(
     val components: List<ComponentJSON>,
     val totalNodes: Int,
     var sourceDir: String,
-    @Transient val cpgResult: de.fraunhofer.aisec.cpg.TranslationResult? = null,
+    @Transient val cpgResult: TranslationResult? = null,
+    @Transient val analysisResult: AnalysisResult? = null,
+    val findings: List<FindingsJSON>,
 )
 
 @Serializable
@@ -104,5 +124,27 @@ fun Component.toJSON(): ComponentJSON {
         name = this.name.toString(),
         translationUnits = this.translationUnits.map { tu -> tu.toJSON() },
         topLevel = this.topLevel?.absolutePath,
+    )
+}
+
+context(TranslationResult)
+fun Result.toJSON(): FindingsJSON {
+    var path =
+        Path(URL(this.locations?.firstOrNull()?.physicalLocation?.artifactLocation?.uri).path)
+
+    var component =
+        this@TranslationResult.components.firstOrNull {
+            it.translationUnits.any { tu -> tu.location?.artifactLocation?.uri?.toPath() == path }
+        }
+
+    return FindingsJSON(
+        kind = this.kind?.name ?: "",
+        path = path.toString(),
+        component = component?.name.toString(),
+        rule = this.ruleID,
+        startLine = this.locations?.firstOrNull()?.physicalLocation?.region?.startLine ?: -1,
+        startColumn = this.locations?.firstOrNull()?.physicalLocation?.region?.startColumn ?: -1,
+        endLine = this.locations?.firstOrNull()?.physicalLocation?.region?.endLine ?: -1,
+        endColumn = this.locations?.firstOrNull()?.physicalLocation?.region?.endColumn ?: -1,
     )
 }
