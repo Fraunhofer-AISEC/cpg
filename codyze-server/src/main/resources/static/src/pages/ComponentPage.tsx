@@ -1,8 +1,8 @@
 // src/main/web/src/pages/ComponentPage.tsx
-import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { Component } from '../types';
-import { getComponent } from '../services/api';
+import {useEffect, useState} from 'react';
+import {Link, useParams} from 'react-router-dom';
+import {Component} from '../types';
+import {getComponent} from '../services/api';
 
 function ComponentPage() {
     const { name } = useParams<{ name: string }>();
@@ -56,7 +56,7 @@ function ComponentPage() {
             </div>
 
             <h1 className="text-2xl font-bold mb-6">{component.name}</h1>
-            <p className="text-gray-500 mb-4">Top Level: {component.topLevel}</p>
+            <p className="text-gray-500 mb-4">{component.topLevel}</p>
 
             <div className="bg-white shadow-md rounded p-6">
                 <h2 className="text-xl font-semibold mb-4">Translation Units</h2>
@@ -64,14 +64,14 @@ function ComponentPage() {
                     <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-gray-50">
                         <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Path</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                         </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
                         {component.translationUnits.map((unit) => (
                             <tr key={unit.path}>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{unit.path}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{unit.name}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                     <Link
                                         to={`/translation-unit?component=${component.name}&path=${encodeURIComponent(unit.path)}`}
