@@ -39,7 +39,7 @@ jackson = { module = "com.fasterxml.jackson.module:jackson-module-kotlin", versi
 jacksonyml = { module = "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml", version = "2.18.0"}
 eclipse-runtime = { module = "org.eclipse.platform:org.eclipse.core.runtime", version = "3.33.0"}
 osgi-service = { module = "org.osgi:org.osgi.service.prefs", version = "1.1.2"}
-icu4j = { module = "com.ibm.icu:icu4j", version = "76.1"}
+icu4j = { module = "com.ibm.icu:icu4j", version = "77.1"}
 # Note: This "module" intentionally looks very weird, because the CDT version is actually part of the path of the CDT external
 # repository. In order to avoid updating the repository URL everytime a new CDT version comes out, we need to do this weird hack.
 eclipse-cdt-core = { module = "11.5/cdt-11.5.0/plugins/org.eclipse.cdt:core", version = "8.4.0.202402110645"}
