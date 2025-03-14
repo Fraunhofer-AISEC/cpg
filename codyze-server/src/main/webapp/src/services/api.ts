@@ -9,6 +9,22 @@ export const generateCPG = async (sourceDir: string, includeDir?: string, topLev
     return response.data;
 };
 
+export const regenerateCPG = async (): Promise<TranslationResult> => {
+    const response = await fetch('/api/regenerate', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to regenerate CPG');
+    }
+
+    return response.json();
+};
+
 export const getTranslationResult = async (): Promise<TranslationResult> => {
     const response = await axios.get(`${API_BASE_URL}/result`);
     return response.data;
