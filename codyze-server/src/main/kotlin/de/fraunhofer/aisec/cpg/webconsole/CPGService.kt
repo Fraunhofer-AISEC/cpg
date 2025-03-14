@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.passes.concepts.config.ProvideConfigPass
 import de.fraunhofer.aisec.cpg.passes.concepts.config.python.PythonStdLibConfigurationPass
+import java.io.File
 import java.nio.file.Path
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -56,6 +57,10 @@ class CPGService {
 
             if (request.includeDir != null) {
                 builder.includePath(request.includeDir)
+            }
+
+            if (request.topLevel != null) {
+                builder.topLevel(File(request.topLevel))
             }
 
             val config = builder.build()

@@ -20,6 +20,24 @@ function NodeOverlay({ nodes, highlightedNode, setHighlightedNode, lineHeight, c
             Statement: 'rgba(75, 192, 192, 0.3)',            // Green
             Expression: 'rgba(153, 102, 255, 0.3)',          // Purple
             Literal: 'rgba(255, 159, 64, 0.3)',              // Orange
+            SetFileFlags: 'rgba(54, 162, 235, 0.3)',         // Dark Blue for file operations
+            SetFileMask: 'rgba(54, 162, 235, 0.3)',          // Dark Blue for file operations
+            CloseFile: 'rgba(54, 162, 235, 0.3)',            // Dark Blue for file operations
+            DeleteFile: 'rgba(54, 162, 235, 0.3)',           // Dark Blue for file operations
+            OpenFile: 'rgba(54, 162, 235, 0.3)',             // Dark Blue for file operations
+            ReadFile: 'rgba(54, 162, 235, 0.3)',             // Dark Blue for file operations
+            WriteFile: 'rgba(54, 162, 235, 0.3)',            // Dark Blue for file operations
+            Configuration: 'rgba(0, 0, 255, 0.3)',           // Bright Blue for configuration
+            ConfigurationGroup: 'rgba(0, 0, 255, 0.3)',      // Bright Blue for configuration
+            ConfigurationOption: 'rgba(0, 0, 255, 0.3)',     // Bright Blue for configuration
+            LoadConfiguration: 'rgba(0, 0, 255, 0.3)',       // Bright Blue for configuration
+            ReadConfigurationGroup: 'rgba(0, 0, 255, 0.3)',  // Bright Blue for configuration
+            ReadConfigurationOption: 'rgba(0, 0, 255, 0.3)', // Bright Blue for configuration
+            RegisterConfigurationGroup: 'rgba(0, 0, 255, 0.3)', // Bright Blue for configuration
+            RegisterConfigurationOption: 'rgba(0, 0, 255, 0.3)', // Bright Blue for configuration
+            ProvideConfiguration: 'rgba(0, 0, 255, 0.3)',    // Bright Blue for configuration
+            ProvideConfigurationGroup: 'rgba(0, 0, 255, 0.3)', // Bright Blue for configuration
+            ProvideConfigurationOption: 'rgba(0, 0, 255, 0.3)', // Bright Blue for configuration
         };
 
         return colorMap[type] || 'rgba(128, 128, 128, 0.3)';

@@ -2,11 +2,14 @@
 export interface TranslationResult {
     components: Component[];
     totalNodes: number;
+    sourceDir: string
+    includeDir: string
 }
 
 export interface Component {
     name: string;
     translationUnits: TranslationUnit[];
+    topLevel?: string
 }
 
 export interface TranslationUnit {

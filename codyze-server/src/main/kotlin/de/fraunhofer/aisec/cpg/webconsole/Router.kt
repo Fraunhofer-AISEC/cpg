@@ -34,7 +34,12 @@ import io.ktor.server.routing.*
 import java.io.File
 import kotlinx.serialization.Serializable
 
-@Serializable data class GenerateCPGRequest(val sourceDir: String, val includeDir: String? = null)
+@Serializable
+data class GenerateCPGRequest(
+    val sourceDir: String,
+    val includeDir: String? = null,
+    val topLevel: String? = null,
+)
 
 fun Routing.cpgRoutes(service: CPGService) {
     route("/api") {

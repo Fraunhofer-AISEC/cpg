@@ -41,7 +41,8 @@ function TranslationUnitPage() {
                 setTranslationUnit(data);
                 setAstNodes(data.astNodes);
                 setOverlayNodes(data.overlayNodes);
-                console.log(`Fetched ${data.length} nodes`);
+                console.log(`Fetched ${data.astNodes.length} AST nodes`);
+                console.log(`Fetched ${data.overlayNodes.length} overlay nodes`);
             } catch (err) {
                 setError('Failed to load nodes');
                 console.error(err);

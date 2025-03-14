@@ -27,8 +27,11 @@ package de.fraunhofer.aisec.cpg.webconsole
 
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.component
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.nodes
+import kotlin.io.path.relativeToOrNull
+import kotlin.io.path.toPath
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 
@@ -44,7 +47,7 @@ data class TranslationResultJSON(
 data class ComponentJSON(
     val name: String,
     val translationUnits: List<TranslationUnitJSON>,
-    val topLevel: String,
+    val topLevel: String?,
 )
 
 @Serializable
@@ -69,8 +72,13 @@ data class NodeJSON(
 )
 
 fun TranslationUnitDeclaration.toJSON(): TranslationUnitJSON {
+    val localName =
+        component?.topLevel?.let {
+            this.location?.artifactLocation?.uri?.toPath()?.toFile()?.relativeToOrNull(it)
+        }
+
     return TranslationUnitJSON(
-        name = this.name.toString(),
+        name = localName?.toString() ?: this.name.toString(),
         path = this.location?.artifactLocation?.uri.toString(),
         code = this.code ?: "",
         astNodes = this.nodes.map { it.toJSON() },
@@ -95,6 +103,6 @@ fun Component.toJSON(): ComponentJSON {
     return ComponentJSON(
         name = this.name.toString(),
         translationUnits = this.translationUnits.map { tu -> tu.toJSON() },
-        topLevel = this.topLevel?.name ?: "",
+        topLevel = this.topLevel?.absolutePath,
     )
 }
