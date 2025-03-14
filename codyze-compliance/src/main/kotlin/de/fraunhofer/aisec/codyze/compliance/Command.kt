@@ -31,6 +31,7 @@ import com.github.ajalt.clikt.parameters.groups.provideDelegate
 import de.fraunhofer.aisec.codyze.*
 import de.fraunhofer.aisec.cpg.webconsole.CPGService
 import de.fraunhofer.aisec.cpg.webconsole.startServer
+import java.io.File
 
 /** The main `compliance` command. */
 class ComplianceCommand : CliktCommand() {
@@ -55,6 +56,7 @@ open class ScanCommand : ProjectCommand() {
                 it
             }
         val result = project.analyzeWithGoals()
+        result.writeSarifJson(File("findings.json"))
 
         result.sarif.runs.forEach { run ->
             run.results?.forEach { result -> echo(result.message.toString()) }
