@@ -722,8 +722,8 @@ inline fun Node.followXUntilHit(
     val failedPaths = mutableListOf<List<Node>>()
     val loopingPaths = mutableListOf<List<Node>>()
     // The list of paths where we're not done yet.
-    val worklist = identitySetOf<Pair<List<Node>, Context>>()
-    worklist.add(Pair(listOf(this), context)) // We start only with the "from" node (=this)
+    val worklist = identitySetOf<List<Pair<Node, Context>>>()
+    worklist.add(listOf(this to context)) // We start only with the "from" node (=this)
 
     val alreadySeenNodes = mutableSetOf<Pair<Node, Context>>()
 
