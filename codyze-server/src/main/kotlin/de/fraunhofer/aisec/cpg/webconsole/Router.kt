@@ -27,14 +27,20 @@ package de.fraunhofer.aisec.cpg.webconsole
 
 import io.ktor.http.*
 import io.ktor.server.application.*
-import io.ktor.server.http.content.staticFiles
+import io.ktor.server.http.content.defaultResource
+import io.ktor.server.http.content.resources
+import io.ktor.server.http.content.static
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import java.io.File
 import kotlinx.serialization.Serializable
 
-@Serializable data class GenerateCPGRequest(val sourceDir: String, val includeDir: String? = null)
+@Serializable
+data class GenerateCPGRequest(
+    val sourceDir: String,
+    val includeDir: String? = null,
+    val topLevel: String? = null,
+)
 
 fun Routing.cpgRoutes(service: CPGService) {
     route("/api") {
@@ -105,9 +111,8 @@ fun Routing.cpgRoutes(service: CPGService) {
 }
 
 fun Routing.staticResources() {
-    staticFiles("/", File("static").absoluteFile)
-    /*static("/") {
+    static("/") {
         resources("static")
         defaultResource("static/index.html")
-    }*/
+    }
 }

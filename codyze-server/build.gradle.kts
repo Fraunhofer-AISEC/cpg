@@ -1,7 +1,10 @@
+import com.github.gradle.node.npm.task.NpmTask
+
 plugins {
     id("cpg.application-conventions")
     kotlin("plugin.serialization")
     id("io.ktor.plugin") version "2.3.7"
+    alias(libs.plugins.node)
 }
 
 dependencies {
@@ -30,7 +33,33 @@ dependencies {
 
     // Testing
     testImplementation("io.ktor:ktor-server-tests-jvm:2.3.7")
-    testImplementation("org.jetbrains.kotlin:kotlin-test-junit")
 }
 
+node {
+    download.set(true)
+    version.set("20.11.1")
+    nodeProjectDir.set(file("${project.projectDir.resolve("src/main/webapp")}"))
+}
+
+val npmBuild by
+    tasks.registering(NpmTask::class) {
+        inputs.file("src/main/webapp/package.json").withPathSensitivity(PathSensitivity.RELATIVE)
+        inputs
+            .file("src/main/webapp/package-lock.json")
+            .withPathSensitivity(PathSensitivity.RELATIVE)
+        inputs.dir("src/main/webapp/src").withPathSensitivity(PathSensitivity.RELATIVE)
+        outputs.dir("src/main/resources/static")
+        outputs.cacheIf { true }
+
+        workingDir.set(file("src/main/webapp"))
+        npmCommand.set(listOf("run", "build"))
+        dependsOn(tasks.getByName("npmInstall"))
+    }
+
 application { mainClass.set("de.fraunhofer.aisec.cpg.webconsole.MainKt") }
+
+tasks.processResources { dependsOn(npmBuild) }
+
+var jarTasks = tasks.withType<Jar>()
+
+jarTasks.forEach { it.dependsOn(npmBuild) }
