@@ -59,4 +59,3 @@ val npmBuild by
     }
 
 tasks.processResources { dependsOn(npmBuild) }
-tasks.sourcesJar { dependsOn(npmBuild)}
