@@ -196,15 +196,39 @@ open class Dataflow(
 
 sealed interface CallingContext {
     /** The call expression that affects this dataflow edge. */
-    val call: CallExpression
+    val calls: Set<CallExpression>
 }
 
-class CallingContextIn(override val call: CallExpression) : CallingContext
+class CallingContextIn(override val calls: Set<CallExpression>) : CallingContext {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is CallingContextIn) return false
+        return this.calls == other.calls
+    }
+
+    override fun hashCode(): Int {
+        var result = super.hashCode()
+        result = 31 * result + calls.hashCode()
+        return result
+    }
+}
 
 class CallingContextOut(
     /** The call expression that affects this dataflow edge. */
-    override val call: CallExpression
-) : CallingContext
+    override val calls: Set<CallExpression>
+) : CallingContext {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is CallingContextIn) return false
+        return this.calls == other.calls
+    }
+
+    override fun hashCode(): Int {
+        var result = super.hashCode()
+        result = 31 * result + calls.hashCode()
+        return result
+    }
+}
 
 /**
  * This edge class defines a flow of data between [start] and [end]. The flow must have a

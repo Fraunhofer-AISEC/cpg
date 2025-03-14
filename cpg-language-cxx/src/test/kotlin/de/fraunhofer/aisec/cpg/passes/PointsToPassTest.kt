@@ -2197,7 +2197,11 @@ class PointsToPassTest {
         assertNotNull(incpFD)
 
         // ParameterMemoryValues
-        val incpDerefValue = incpFD.parameters.first().memoryValue?.fullMemoryValues?.singleOrNull()
+        // TODO: Any better way to fetch the param's derefvalue?
+        val incpDerefValue =
+            (incpFD.parameters.first().memoryValue as ParameterMemoryValue)
+                .memoryValues
+                .firstOrNull { it is ParameterMemoryValue && it.name.localName == "derefvalue" }
         assertNotNull(incpDerefValue)
 
         // Literals
@@ -2215,18 +2219,19 @@ class PointsToPassTest {
         assertTrue(iArgLine380.nextDFGEdges.first().end is ParameterMemoryValue)
         assertLocalName("value", iArgLine380.nextDFGEdges.first().end)
         assertEquals(
-            ceLine380,
+            setOf(ceLine380),
             ((iArgLine380.nextDFGEdges.first() as ContextSensitiveDataflow).callingContext
                     as CallingContextIn)
-                .call,
+                .calls,
         )
 
         assertEquals(1, ceLine380.prevDFGEdges.size)
+        // TODO
         assertEquals(
-            ceLine380,
+            setOf(ceLine380),
             ((ceLine380.prevDFGEdges.first() as ContextSensitiveDataflow).callingContext
                     as CallingContextOut)
-                .call,
+                .calls,
         )
 
         // CallExpression in Line 384
@@ -2234,51 +2239,51 @@ class PointsToPassTest {
         assertTrue(iArgLine384.nextDFGEdges.first().end is ParameterMemoryValue)
         assertLocalName("value", iArgLine384.nextDFGEdges.first().end)
         assertEquals(
-            ceLine384,
+            setOf(ceLine384),
             ((iArgLine384.nextDFGEdges.first() as ContextSensitiveDataflow).callingContext
                     as CallingContextIn)
-                .call,
+                .calls,
         )
 
         assertEquals(1, ceLine384.prevDFGEdges.size)
         assertEquals(
-            ceLine384,
+            setOf(ceLine384),
             ((ceLine384.prevDFGEdges.first() as ContextSensitiveDataflow).callingContext
                     as CallingContextOut)
-                .call,
+                .calls,
         )
 
         // CallExpression in Line 386
         assertEquals(1, pArgLine386.nextDFGEdges.filter { !it.functionSummary }.size)
         assertEquals(
-            ceLine386,
+            setOf(ceLine386),
             ((pArgLine386.nextDFGEdges.first() as ContextSensitiveDataflow).callingContext
                     as CallingContextIn)
-                .call,
+                .calls,
         )
         assertEquals(1, incpDerefValue.prevDFGEdges.filter { it.start == literal1 }.size)
         assertEquals(
-            ceLine386,
+            setOf(ceLine386),
             ((incpDerefValue.prevDFGEdges.first { it.start == literal1 }
                         as ContextSensitiveDataflow)
                     .callingContext as CallingContextIn)
-                .call,
+                .calls,
         )
 
         // print Line 388
         assertEquals(1, jLine388.prevDFGEdges.size)
         assertEquals(
-            ceLine386,
+            setOf(ceLine386),
             ((jLine388.prevDFGEdges.first() as ContextSensitiveDataflow).callingContext
                     as CallingContextOut)
-                .call,
+                .calls,
         )
         assertEquals(1, pDerefLine388.prevDFGEdges.size)
         assertEquals(
-            ceLine386,
+            setOf(ceLine386),
             ((pDerefLine388.prevDFGEdges.first() as ContextSensitiveDataflow).callingContext
                     as CallingContextOut)
-                .call,
+                .calls,
         )
 
         // print Line 394

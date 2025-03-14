@@ -480,7 +480,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
 
                         if (arg != null) {
                             edgePropertiesMap[Triple(param, arg.refersTo, false)]?.add(
-                                CallingContextOut(currentNode)
+                                CallingContextOut(setOf(currentNode))
                             )
                         }
                     }

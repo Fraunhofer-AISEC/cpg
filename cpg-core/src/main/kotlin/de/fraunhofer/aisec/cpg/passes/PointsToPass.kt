@@ -545,6 +545,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         doubleState: PointsToStateElement,
     ): PointsToStateElement {
         var doubleState = doubleState
+        var callingContext = CallingContextIn(setOf(callExpression))
         callExpression.arguments.forEach { arg ->
             if (arg.argumentIndex < functionDeclaration.parameters.size) {
                 // Create a DFG-Edge from the argument to the parameter's memoryValue
@@ -552,10 +553,10 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 if (p.memoryValue == null)
                     initializeParameters(lattice, mutableListOf(p), doubleState, 1)
                 p.memoryValue?.let { memVal ->
-                    addEntryToEdgePropertiesMap(
+                    /*                    addEntryToEdgePropertiesMap(
                         Pair(memVal, arg),
                         identitySetOf(CallingContextIn(callExpression)),
-                    )
+                    )*/
                     doubleState =
                         lattice.push(
                             doubleState,
@@ -563,7 +564,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             GeneralStateEntryElement(
                                 PowersetLattice.Element(memVal),
                                 PowersetLattice.Element(arg),
-                                PowersetLattice.Element(),
+                                PowersetLattice.Element(Pair(arg, setOf(callingContext))),
                             ),
                         )
                     // Also draw the edges for the (deref)derefvalues if we have any and are
@@ -571,7 +572,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     memVal.memoryValueEdges
                         .filter {
                             it !is ContextSensitiveDataflow ||
-                                it.callingContext.call == callExpression
+                                it.callingContext.calls == callExpression
                         }
                         .map { it.start }
                         .forEach { derefPMV ->
@@ -586,7 +587,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 .forEach { (derefValue, _) ->
                                     addEntryToEdgePropertiesMap(
                                         Pair(derefPMV, derefValue),
-                                        identitySetOf(CallingContextIn(callExpression)),
+                                        identitySetOf(callingContext),
                                     )
                                     doubleState =
                                         lattice.push(
@@ -613,7 +614,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                             .forEach { (derefderefValue, _) ->
                                                 addEntryToEdgePropertiesMap(
                                                     Pair(derefderefPMV, derefderefValue),
-                                                    identitySetOf(CallingContextIn(callExpression)),
+                                                    identitySetOf(callingContext),
                                                 )
                                                 doubleState =
                                                     lattice.push(
@@ -1289,7 +1290,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         DeclarationStateEntryElement(
                             PowersetLattice.Element(addresses),
                             PowersetLattice.Element(Pair(pmv, false)),
-                            PowersetLattice.Element(),
+                            PowersetLattice.Element(Pair(pmv, setOf())),
                         )
                     val genStateElement =
                         GeneralStateEntryElement(
@@ -1301,9 +1302,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         doubleState =
                             lattice.pushToDeclarationsState(doubleState, addr, declStateElement)
                     }
-                    /*// We only write to the generalstate for the param-value itself
-                    if (i == 0)*/ doubleState =
-                        lattice.push(doubleState, src, genStateElement)
+                    doubleState = lattice.push(doubleState, src, genStateElement)
 
                     // prepare for next step
                     src = pmv
@@ -1351,7 +1350,7 @@ fun PointsToState.push(
     val newLatticeCopy = newLatticeElement.duplicate()
     newLatticeCopy.third.removeAll { pair ->
         currentState.generalState[newNode]?.third?.any {
-            it.first === pair.first && it.second.all { it in pair.second }
+            it.first === pair.first && it.second == pair.second
         } == true
     }
 

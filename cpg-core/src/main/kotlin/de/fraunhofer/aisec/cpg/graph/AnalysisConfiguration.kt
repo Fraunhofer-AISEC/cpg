@@ -478,7 +478,7 @@ object ContextSensitive : AnalysisSensitivity() {
         return if (analysisDirection.edgeRequiresCallPush(currentNode, edge)) {
             // Push the call of our calling context to the stack.
             // This is for following DFG edges.
-            (edge as? ContextSensitiveDataflow)?.callingContext?.call?.let {
+            (edge as? ContextSensitiveDataflow)?.callingContext?.calls?.forEach {
                 ctx.callStack.push(it)
             }
                 ?:
@@ -489,7 +489,7 @@ object ContextSensitive : AnalysisSensitivity() {
             // We are only interested in outgoing edges from our current
             // "call-in", i.e., the call expression that is on the stack.
             ctx.callStack.isEmpty() ||
-                (edge as? ContextSensitiveDataflow)?.callingContext?.call?.let {
+                (edge as? ContextSensitiveDataflow)?.callingContext?.calls?.all {
                     ctx.callStack.popIfOnTop(it)
                 } == true ||
                 ((edge as? Invoke)?.start as? CallExpression)?.let {
