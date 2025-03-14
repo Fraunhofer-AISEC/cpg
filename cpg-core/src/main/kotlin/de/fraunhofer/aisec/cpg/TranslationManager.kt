@@ -25,9 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg
 
-import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
-import de.fraunhofer.aisec.cpg.frontends.SupportsParallelParsing
-import de.fraunhofer.aisec.cpg.frontends.TranslationException
+import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
@@ -263,6 +261,25 @@ private constructor(
                     parseSequentially(component, result, ctx, sourceLocations)
                 }
             )
+
+            // Collects all used languages used in the main analysis code
+            result.usedLanguages.addAll(
+                sourceLocations.mapNotNull { with(ctx) { it.language } }.toSet()
+            )
+        }
+
+        // Adds all languages provided as additional sources that may be relevant in the main code
+        result.usedLanguages.addAll(
+            ctx.additionalSources.mapNotNull { with(ctx) { it.relative.language } }.toSet()
+        )
+
+        result.usedLanguages.filterIsInstance<HasBuiltins>().forEach { hasBuiltins ->
+            // Includes a file in the analysis, if relative to its rootpath it matches the name of
+            // a builtins file candidate.
+            val builtinsCandidates = hasBuiltins.builtinsFileCandidates
+            ctx.additionalSources
+                .filter { builtinsCandidates.contains(it.relative) }
+                .forEach { ctx.importedSources.add(it) }
         }
 
         // A set of processed files from [TranslationContext.additionalSources] that is used as

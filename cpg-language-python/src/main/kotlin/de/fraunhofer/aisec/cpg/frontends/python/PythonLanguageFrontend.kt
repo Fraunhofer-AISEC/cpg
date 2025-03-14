@@ -45,7 +45,8 @@ import java.io.File
 import java.net.URI
 import java.nio.file.Path
 import jep.python.PyObject
-import kotlin.io.path.*
+import kotlin.io.path.nameWithoutExtension
+import kotlin.io.path.pathString
 import kotlin.math.min
 
 /**
@@ -79,11 +80,18 @@ class PythonLanguageFrontend(ctx: TranslationContext, language: Language<PythonL
      */
     private lateinit var fileContent: String
     private lateinit var uri: URI
+    private var lastLineNumber: Int = -1
+    private var lastColumnLength: Int = -1
 
     @Throws(TranslationException::class)
     override fun parse(file: File): TranslationUnitDeclaration {
         fileContent = file.readText(Charsets.UTF_8)
         uri = file.toURI()
+
+        // Extract the file length for later usage
+        val fileAsLines = fileContent.lines()
+        lastLineNumber = fileAsLines.size
+        lastColumnLength = fileAsLines.lastOrNull()?.length ?: -1
 
         jep.getInterp().use {
             it.set("content", fileContent)
@@ -307,9 +315,22 @@ class PythonLanguageFrontend(ctx: TranslationContext, language: Language<PythonL
             fromPython(pyAST) as? Python.AST.Module
                 ?: TODO(
                     "Python ast of type ${fromPython(pyAST).javaClass} is not supported yet"
-                ) // could be one of "ast.{Module,Interactive,Expression,FunctionType}
+                ) // could be one of ast.{Module,Interactive,Expression,FunctionType}
 
-        val tud = newTranslationUnitDeclaration(path.toString(), rawNode = pythonASTModule)
+        val tud =
+            newTranslationUnitDeclaration(path.toString(), rawNode = pythonASTModule).apply {
+                this.location =
+                    PhysicalLocation(
+                        uri = uri,
+                        region =
+                            Region(
+                                startLine = 1,
+                                startColumn = 1,
+                                endLine = lastLineNumber,
+                                endColumn = lastColumnLength,
+                            ),
+                    )
+            }
         scopeManager.resetToGlobal(tud)
 
         // We need to resolve the path relative to the top level to get the full module identifier

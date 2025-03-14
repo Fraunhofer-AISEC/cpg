@@ -29,9 +29,9 @@ import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.file.*
 import de.fraunhofer.aisec.cpg.passes.concepts.file.python.PythonFileConceptPass
+import de.fraunhofer.aisec.cpg.query.Must
 import de.fraunhofer.aisec.cpg.query.dataFlow
 import de.fraunhofer.aisec.cpg.query.executionPath
-import de.fraunhofer.aisec.cpg.query.executionPathHelper
 import de.fraunhofer.aisec.cpg.test.BaseTest
 import de.fraunhofer.aisec.cpg.test.analyze
 import java.nio.file.Path
@@ -58,11 +58,7 @@ class FileConceptTest : BaseTest() {
             }
         assertNotNull(result)
 
-        val fileNodes =
-            result.conceptNodes.filterIsInstance<IsFile>() +
-                result.operationNodes.filterIsInstance<
-                    IsFile
-                >() // TODO why can't I use `overlays`? It's empty.
+        val fileNodes = result.allChildrenWithOverlays<IsFile>()
         assertTrue(fileNodes.isNotEmpty())
 
         val file = fileNodes.filterIsInstance<File>().singleOrNull()
@@ -103,16 +99,22 @@ class FileConceptTest : BaseTest() {
         val fileOpen = fileNodes.filterIsInstance<OpenFile>().singleOrNull()
         assertNotNull(fileOpen)
         assertTrue(
-            executionPathHelper(startNode = fileOpen, endNode = readFile),
+            executionPath(startNode = fileOpen, predicate = { it == readFile }).value,
             "Expected to find an execution path from open to read.",
         )
 
         val fileRead = fileNodes.filterIsInstance<ReadFile>().singleOrNull()
         assertNotNull(fileRead)
-        val closeFile = fileNodes.filterIsInstance<CloseFile>().singleOrNull()
-        assertNotNull(closeFile)
+        assertEquals(
+            2,
+            fileNodes.filterIsInstance<CloseFile>().size,
+            "We expect 2 x close (one for normally exiting `with` and one for the `catch` exit) operations.",
+        )
+
+        val executionPathReadToCloseMust =
+            executionPath(startNode = fileRead, type = Must, predicate = { it is CloseFile })
         assertTrue(
-            executionPathHelper(startNode = fileRead, endNode = closeFile),
+            executionPathReadToCloseMust.value,
             "Expected to find an execution path from read to close.",
         )
     }
@@ -133,11 +135,7 @@ class FileConceptTest : BaseTest() {
             }
         assertNotNull(result)
 
-        val fileNodes =
-            result.conceptNodes.filterIsInstance<IsFile>() +
-                result.operationNodes.filterIsInstance<
-                    IsFile
-                >() // TODO why can't I use `overlays`? It's empty.
+        val fileNodes = result.allChildrenWithOverlays<IsFile>()
         assertTrue(fileNodes.isNotEmpty())
 
         val file = fileNodes.filterIsInstance<File>().singleOrNull()
@@ -190,11 +188,7 @@ class FileConceptTest : BaseTest() {
             }
         assertNotNull(result)
 
-        val fileNodes =
-            result.conceptNodes.filterIsInstance<IsFile>() +
-                result.operationNodes.filterIsInstance<
-                    IsFile
-                >() // TODO why can't I use `overlays`? It's empty.
+        val fileNodes = result.allChildrenWithOverlays<IsFile>()
         assertTrue(fileNodes.isNotEmpty())
 
         val maskNode = fileNodes.filterIsInstance<SetFileMask>().singleOrNull()
@@ -287,11 +281,7 @@ class FileConceptTest : BaseTest() {
             }
         assertNotNull(result)
 
-        val conceptNodes =
-            result.conceptNodes.filterIsInstance<IsFile>() +
-                result.operationNodes.filterIsInstance<
-                    IsFile
-                >() // TODO why can't I use `overlays`? It's empty.
+        val conceptNodes = result.allChildrenWithOverlays<IsFile>()
         assertTrue(conceptNodes.isNotEmpty())
 
         val file = conceptNodes.filterIsInstance<File>().singleOrNull()
@@ -309,7 +299,7 @@ class FileConceptTest : BaseTest() {
 
         // Let's find our bad example
         assertTrue(
-            executionPathHelper(startNode = write, endNode = chmod),
+            executionPath(startNode = write, predicate = { it == chmod }).value,
             "Expected to find a violating execution path from write to chmod.",
         )
     }
@@ -332,11 +322,7 @@ class FileConceptTest : BaseTest() {
             }
         assertNotNull(result)
 
-        val conceptNodes =
-            result.conceptNodes.filterIsInstance<IsFile>() +
-                result.operationNodes.filterIsInstance<
-                    IsFile
-                >() // TODO why can't I use `overlays`? It's empty.
+        val conceptNodes = result.allChildrenWithOverlays<IsFile>()
         assertTrue(conceptNodes.isNotEmpty())
 
         val files = conceptNodes.filterIsInstance<File>()
@@ -350,7 +336,7 @@ class FileConceptTest : BaseTest() {
         }
     }
 
-    @Ignore
+    @Ignore("Issue https://github.com/Fraunhofer-AISEC/cpg/issues/2121")
     @Test
     fun testDelete() {
         val topLevel = Path.of("src", "integrationTest", "resources", "python", "file")
@@ -367,11 +353,7 @@ class FileConceptTest : BaseTest() {
             }
         assertNotNull(result)
 
-        val conceptNodes =
-            result.conceptNodes.filterIsInstance<IsFile>() +
-                result.operationNodes.filterIsInstance<
-                    IsFile
-                >() // TODO why can't I use `overlays`? It's empty.
+        val conceptNodes = result.allChildrenWithOverlays<IsFile>()
         assertTrue(conceptNodes.isNotEmpty())
 
         val file = conceptNodes.filterIsInstance<File>().singleOrNull()
@@ -392,12 +374,12 @@ class FileConceptTest : BaseTest() {
         )
 
         assertTrue(
-            executionPathHelper(startNode = fileRead, endNode = fileDelete),
+            executionPath(startNode = fileRead, predicate = { it == fileDelete }).value,
             "Expected to find an execution path from read to remove.",
         )
 
         assertTrue(
-            executionPathHelper(startNode = fileDelete, endNode = fileWrite),
+            executionPath(startNode = fileDelete, predicate = { it == fileWrite }).value,
             "Expected to find an execution path from remove to write.",
         )
     }

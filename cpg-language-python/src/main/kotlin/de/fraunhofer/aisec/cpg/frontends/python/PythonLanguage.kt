@@ -59,6 +59,7 @@ class PythonLanguage(ctx: TranslationContext) :
     override val namespaceDelimiter = "."
     @Convert(value = SimpleNameConverter::class)
     override val builtinsNamespace: Name = Name("builtins")
+    override val builtinsFileCandidates = nameToLanguageFiles(builtinsNamespace)
 
     @Transient
     override val frontend: KClass<out PythonLanguageFrontend> = PythonLanguageFrontend::class

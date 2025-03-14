@@ -32,7 +32,7 @@ jobs:
           python-version: "3.13"
       - uses: actions/setup-node@v4
         with:
-          node-version: "18"
+          node-version: "22"
       - uses: actions/setup-go@v5
         with:
           go-version-file: cpg-language-go/src/test/resources/golang/integration/go.mod
@@ -122,46 +122,46 @@ jobs:
           ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.GPG_PASSWORD }}
           ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
           ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
-      - name: Download old dokka versions (version)
-        if: startsWith(github.ref, 'refs/tags/v')
-        run: |
-          # make sure the previousDocs folder exists
-          mkdir -p previousDocs && cd previousDocs
-          # retrieve the previous documentation folders for each published version (this also includes "main")
-          wget -O - https://github.com/Fraunhofer-AISEC/cpg/archive/gh-pages.tar.gz | tar -xz --strip=2 cpg-gh-pages/dokka || echo "No dokka directory present. Will continue as if nothing happened"
-      - name: Download old dokka versions (main)
-        if: github.ref == 'refs/heads/main'
-        run: |
-          # make sure the previousDocs folder exists
-          mkdir -p previousDocs && cd previousDocs
-          # retrieve the previous documentation folders for each published version (this also includes "main")
-          wget -O - https://github.com/Fraunhofer-AISEC/cpg/archive/gh-pages.tar.gz | tar -xz --strip=2 cpg-gh-pages/dokka || echo "No dokka directory present. Will continue as if nothing happened"
-          # in order to avoid duplicate mains, remove the "main" version from the previous versions
-          rm -rf main
-      - name: Build JavaDoc
-        if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main'
-        run: |
-          ./gradlew --no-daemon -Pversion=$VERSION dokkaHtmlMultiModule
-        env:
-          VERSION: ${{ env.version }}
-      - name: Publish JavaDoc (version)
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: JamesIves/github-pages-deploy-action@v4
-        with:
-          folder: build/dokkaCustomMultiModuleOutput/${{ env.version }}
-          target-folder: dokka/${{ env.version }}
-      - name: Publish JavaDoc (version as main)
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: JamesIves/github-pages-deploy-action@v4
-        with:
-          folder: build/dokkaCustomMultiModuleOutput/${{ env.version }}
-          target-folder: dokka/main
-      - name: Publish JavaDoc (main)
-        if: github.ref == 'refs/heads/main'
-        uses: JamesIves/github-pages-deploy-action@v4
-        with:
-          folder: build/dokkaCustomMultiModuleOutput/main-SNAPSHOT
-          target-folder: dokka/main
+      #- name: Download old dokka versions (version)
+      #  if: startsWith(github.ref, 'refs/tags/v')
+      #  run: |
+      #    # make sure the previousDocs folder exists
+      #    mkdir -p previousDocs && cd previousDocs
+      #    # retrieve the previous documentation folders for each published version (this also includes "main")
+      #    wget -O - https://github.com/Fraunhofer-AISEC/cpg/archive/gh-pages.tar.gz | tar -xz --strip=2 cpg-gh-pages/dokka || echo "No dokka directory present. Will continue as if nothing happened"
+      #- name: Download old dokka versions (main)
+      #  if: github.ref == 'refs/heads/main'
+      #  run: |
+      #    # make sure the previousDocs folder exists
+      #    mkdir -p previousDocs && cd previousDocs
+      #    # retrieve the previous documentation folders for each published version (this also includes "main")
+      #    wget -O - https://github.com/Fraunhofer-AISEC/cpg/archive/gh-pages.tar.gz | tar -xz --strip=2 cpg-gh-pages/dokka || echo "No dokka directory present. Will continue as if nothing happened"
+      #    # in order to avoid duplicate mains, remove the "main" version from the previous versions
+      #    rm -rf main
+      #- name: Build JavaDoc
+      #  if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main'
+      #  run: |
+      #    ./gradlew --no-daemon -Pversion=$VERSION dokkaHtmlMultiModule
+      #  env:
+      #    VERSION: ${{ env.version }}
+      #- name: Publish JavaDoc (version)
+      #  if: startsWith(github.ref, 'refs/tags/v')
+      #  uses: JamesIves/github-pages-deploy-action@v4
+      #  with:
+      #    folder: build/dokkaCustomMultiModuleOutput/${{ env.version }}
+      #    target-folder: dokka/${{ env.version }}
+      #- name: Publish JavaDoc (version as main)
+      #  if: startsWith(github.ref, 'refs/tags/v')
+      #  uses: JamesIves/github-pages-deploy-action@v4
+      #  with:
+      #    folder: build/dokkaCustomMultiModuleOutput/${{ env.version }}
+      #    target-folder: dokka/main
+      #- name: Publish JavaDoc (main)
+      #  if: github.ref == 'refs/heads/main'
+      #  uses: JamesIves/github-pages-deploy-action@v4
+      #  with:
+      #    folder: build/dokkaCustomMultiModuleOutput/main-SNAPSHOT
+      #    target-folder: dokka/main
       - name: Create Release
         if: startsWith(github.ref, 'refs/tags/v')
         id: create_release

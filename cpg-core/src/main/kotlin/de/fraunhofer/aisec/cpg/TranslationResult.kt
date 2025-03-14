@@ -74,6 +74,9 @@ class TranslationResult(
     @PopulatedByPass(ImportResolver::class)
     var componentDependencies: ImportDependencies<Component>? = null
 
+    /** Contains all languages that were considered in the translation process. */
+    @Transient val usedLanguages = mutableSetOf<Language<*>>()
+
     /**
      * Scratch storage that can be used by passes to store additional information in this result.
      * Callers must ensure that keys are unique. It is recommended to prefix them with the class

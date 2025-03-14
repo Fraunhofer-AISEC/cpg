@@ -31,13 +31,15 @@ import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Forward
 import de.fraunhofer.aisec.cpg.graph.Interprocedural
-import de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.Cipher
 import de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.Encrypt
 import de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.GetSecret
-import de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.Secret
+import de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.newCipher
+import de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.newEncryptOperation
+import de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.newSecret
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.DeAllocate
-import de.fraunhofer.aisec.cpg.graph.concepts.memory.Memory
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.MemoryManagementMode
+import de.fraunhofer.aisec.cpg.graph.concepts.memory.newDeallocate
+import de.fraunhofer.aisec.cpg.graph.concepts.memory.newMemory
 import de.fraunhofer.aisec.cpg.graph.edges.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeleteExpression
 import de.fraunhofer.aisec.cpg.query.Must
@@ -212,7 +214,7 @@ class MemoryTest {
 
     fun mapNodesToConcepts(result: TranslationResult, mapToFunctionDeclaration: Boolean) {
         // Secrets (key) concepts
-        val key = Secret(underlyingNode = assertNotNull(result.variables["key"]))
+        val key = result.newSecret(underlyingNode = assertNotNull(result.variables["key"]))
         val getSecretFromServer =
             if (mapToFunctionDeclaration) {
                 result.functions["get_secret_from_server"]
@@ -220,14 +222,12 @@ class MemoryTest {
                 result.calls["get_secret_from_server"]
             }
         val getSecret =
-            GetSecret(underlyingNode = assertNotNull(getSecretFromServer), concept = key)
-        key.ops += getSecret
-        getSecretFromServer.prevEOG += getSecret
+            result.newGetSecret(underlyingNode = assertNotNull(getSecretFromServer), concept = key)
         getSecretFromServer.prevDFG += getSecret
 
         // Cipher (encryption) concepts
         val cipher =
-            Cipher(
+            result.newCipher(
                 underlyingNode =
                     assertNotNull(
                         assertNotNull(result.calls["encrypt"]).argumentEdges["cipher"]?.end
@@ -238,31 +238,27 @@ class MemoryTest {
         cipher.blockSize = cipherAndSize?.get(1)?.toIntOrNull()
         assertEquals("AES", cipher.cipherName)
         assertEquals(256, cipher.blockSize)
-        val encrypt =
-            Encrypt(
-                underlyingNode = assertNotNull(result.functions["encrypt"]),
-                concept = cipher,
-                key = key,
-            )
-        cipher.ops += encrypt
+        result.newEncryptOperation(
+            underlyingNode = assertNotNull(result.calls["encrypt"]),
+            concept = cipher,
+            key = key,
+        )
 
         // Memory concepts
         val memory =
-            Memory(
+            result.newMemory(
                 underlyingNode = assertNotNull(result.components[DEFAULT_APPLICATION_NAME]),
                 mode = MemoryManagementMode.MANAGED_WITH_GARBAGE_COLLECTION,
             )
         val ops =
             result.allChildren<DeleteExpression>().flatMap { delete ->
                 delete.operands.map {
-                    val deallocate =
-                        DeAllocate(underlyingNode = delete, concept = memory, what = it)
-                    deallocate.prevEOG += delete
-                    deallocate.prevDFG += it
-                    deallocate
+                    result.newDeAllocate(underlyingNode = delete, concept = memory, what = it).apply {
+                        this.prevDFG += it
+                    }
                 }
             }
-        memory.ops += ops
+        }
 
         // Key is used in encryption
         var tree =
@@ -277,9 +273,7 @@ class MemoryTest {
             key.underlyingNode?.let {
                 executionPath(
                     startNode = it,
-                    predicate = { node ->
-                        node.overlayEdges.any { edge -> edge.end is DeAllocate }
-                    },
+                    predicate = { node -> node is DeAllocate },
                     direction = Forward(GraphToFollow.EOG),
                     type = Must,
                     scope = Interprocedural(),

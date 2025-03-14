@@ -30,6 +30,8 @@ import de.fraunhofer.aisec.cpg.test.analyze
 import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 class LoadIncludesTest {
 
@@ -45,6 +47,20 @@ class LoadIncludesTest {
                 )
             }
 
-        assertEquals(result.ctx?.importedSources?.size, 2)
+        assertEquals(result.finalCtx.importedSources?.size, 3)
+
+        val stdlib = result.components("stdlib").flatMap { it.allChildren<Node>() }
+
+        val jsonloads = result.calls("json.loads").firstOrNull()
+        assertNotNull(jsonloads)
+        assertTrue(jsonloads.invokes.all { !it.isInferred && stdlib.contains(it) })
+
+        val jsonEncoder = result.memberExpressions("item_separator").firstOrNull()
+        assertNotNull(jsonEncoder)
+        assertTrue(jsonEncoder.refersTo?.let { !it.isInferred && stdlib.contains(it) } ?: false)
+
+        val str = result.calls("str").firstOrNull()
+        assertNotNull(str)
+        assertTrue(str.invokes.all { !it.isInferred && stdlib.contains(it) })
     }
 }

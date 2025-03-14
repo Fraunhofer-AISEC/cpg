@@ -131,6 +131,13 @@ class Application : Callable<Int> {
     }
 
     @CommandLine.Option(
+        names = ["--include-paths", "-IP"],
+        description =
+            ["Directories containing additional headers and implementations for imported code."],
+    )
+    var includePaths: List<String> = mutableListOf()
+
+    @CommandLine.Option(
         names = ["--user"],
         description = ["Neo4j user name (default: $DEFAULT_USER_NAME)"],
     )
@@ -469,6 +476,8 @@ class Application : Callable<Int> {
                 ControlFlowSensitiveDFGPass.Configuration(maxComplexity = maxComplexity)
             )
         }
+
+        includePaths.forEach { translationConfiguration.includePath(it) }
 
         if (mutuallyExclusiveParameters.softwareComponents.isNotEmpty()) {
             val components = mutableMapOf<String, List<File>>()
