@@ -51,30 +51,24 @@ export const getComponent = async (name: string): Promise<ComponentJSON> => {
 
 export const getTranslationUnit = async (
   componentName: string,
-  path: string,
+  id: string,
 ): Promise<TranslationUnitJSON> => {
-  const response = await axios.get(`${API_BASE_URL}/translationUnit`, {
-    params: { component: componentName, path },
-  });
+  const response = await axios.get(`${API_BASE_URL}/component/${componentName}/translation-unit/${id}`);
   return response.data;
 };
 
 export const getAstNodesForTranslationUnit = async (
   componentName: string,
-  path: string,
+  id: string,
 ): Promise<NodeJSON[]> => {
-  const response = await axios.get(`${API_BASE_URL}/astNodes`, {
-    params: { component: componentName, path },
-  });
+  const response = await axios.get(`${API_BASE_URL}/component/${componentName}/translation-unit/${id}/ast-nodes`);
   return response.data;
 };
 
 export const getOverlayNodesForTranslationUnit = async (
   componentName: string,
-  path: string,
+  name: string,
 ): Promise<NodeJSON[]> => {
-  const response = await axios.get(`${API_BASE_URL}/overlayNodes`, {
-    params: { component: componentName, path },
-  });
+  const response = await axios.get(`${API_BASE_URL}/component/${componentName}/translation-unit/${name}/overlay-nodes`);
   return response.data;
 };

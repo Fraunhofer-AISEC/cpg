@@ -24,6 +24,7 @@ export interface FindingsJSON {
 }
 
 export interface TranslationUnitJSON {
+  id: string;
   name: string;
   path: string;
   code: string;
@@ -39,4 +40,13 @@ export interface NodeJSON {
   endColumn: number;
   code: string;
   name: string;
+  prevDFG: EdgeJSON[];
+  nextDFG: EdgeJSON[];
+}
+
+export interface EdgeJSON {
+  id: string;
+  label: string;
+  start: string;
+  end: string;
 }

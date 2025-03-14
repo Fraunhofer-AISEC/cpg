@@ -13,7 +13,7 @@ function App() {
           <Routes>
             <Route path="/" element={<DashboardPage />} />
             <Route path="/component/:name" element={<ComponentPage />} />
-            <Route path="/translation-unit" element={<TranslationUnitPage />} />
+            <Route path="/component/:componentName/translation-unit/*" element={<TranslationUnitPage />} />
           </Routes>
         </main>
       </div>

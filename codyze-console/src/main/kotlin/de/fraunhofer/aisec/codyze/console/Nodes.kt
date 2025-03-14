@@ -34,12 +34,27 @@ import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.component
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import io.github.detekt.sarif4k.Result
 import java.net.URL
 import kotlin.io.path.Path
 import kotlin.io.path.toPath
+import kotlin.uuid.Uuid
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
+import kotlinx.serialization.descriptors.PrimitiveKind
+import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
+
+@Serializable
+data class EdgeJSON(
+    var label: String,
+    @Serializable(with = UuidSerializer::class) var start: Uuid,
+    @Serializable(with = UuidSerializer::class) var end: Uuid,
+)
 
 @Serializable
 data class FindingsJSON(
@@ -73,6 +88,7 @@ data class ComponentJSON(
 @Serializable
 data class TranslationUnitJSON(
     val name: String,
+    @Serializable(with = UuidSerializer::class) val id: Uuid,
     val path: String,
     val code: String,
     @Transient val cpgTU: TranslationUnitDeclaration? = null,
@@ -80,7 +96,7 @@ data class TranslationUnitJSON(
 
 @Serializable
 data class NodeJSON(
-    val id: String,
+    @Serializable(with = UuidSerializer::class) val id: Uuid,
     val type: String,
     val startLine: Int,
     val startColumn: Int,
@@ -88,6 +104,8 @@ data class NodeJSON(
     val endColumn: Int,
     val code: String,
     val name: String,
+    val prevDFG: List<EdgeJSON> = emptyList(),
+    val nextDFG: List<EdgeJSON> = emptyList(),
 )
 
 context(ContextProvider)
@@ -98,6 +116,7 @@ fun TranslationUnitDeclaration.toJSON(): TranslationUnitJSON {
         }
 
     return TranslationUnitJSON(
+        id = this.id,
         name = localName?.toString() ?: this.name.toString(),
         path = this.location?.artifactLocation?.uri.toString(),
         code = this.code ?: "",
@@ -107,7 +126,7 @@ fun TranslationUnitDeclaration.toJSON(): TranslationUnitJSON {
 
 fun Node.toJSON(): NodeJSON {
     return NodeJSON(
-        id = this.id.toString(),
+        id = this.id,
         type = this.javaClass.simpleName,
         startLine = location?.region?.startLine ?: -1,
         startColumn = location?.region?.startColumn ?: -1,
@@ -115,6 +134,16 @@ fun Node.toJSON(): NodeJSON {
         endColumn = location?.region?.endColumn ?: -1,
         code = this.code ?: "",
         name = this.name.toString(),
+        prevDFG = this.prevDFGEdges.map { it.toJSON() },
+        nextDFG = this.nextDFGEdges.map { it.toJSON() },
+    )
+}
+
+fun Edge<*>.toJSON(): EdgeJSON {
+    return EdgeJSON(
+        label = this.labels.firstOrNull() ?: "",
+        start = this.start.id,
+        end = this.end.id,
     )
 }
 
@@ -147,4 +176,17 @@ fun Result.toJSON(): FindingsJSON {
         endLine = this.locations?.firstOrNull()?.physicalLocation?.region?.endLine ?: -1,
         endColumn = this.locations?.firstOrNull()?.physicalLocation?.region?.endColumn ?: -1,
     )
+}
+
+object UuidSerializer : KSerializer<Uuid> {
+    override val descriptor: SerialDescriptor =
+        PrimitiveSerialDescriptor("Uuid", PrimitiveKind.STRING)
+
+    override fun serialize(encoder: Encoder, value: Uuid) {
+        encoder.encodeString(value.toString())
+    }
+
+    override fun deserialize(decoder: Decoder): Uuid {
+        return Uuid.parse(decoder.decodeString())
+    }
 }

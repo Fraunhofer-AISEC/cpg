@@ -35,6 +35,9 @@ function NodeTooltip({ node, lineHeight, charWidth, offsetTop, offsetLeft }: Nod
         <strong>Location:</strong> L{node.startLine}:C{node.startColumn} - L
         {node.endLine}:C{node.endColumn}
       </p>
+      <p>
+        <strong>PrevDFG:</strong> {JSON.stringify(node.prevDFG)}
+      </p>      
       <p className="mt-1 truncate">
         <strong>Code:</strong> {node.code}
       </p>

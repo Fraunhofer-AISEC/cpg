@@ -29,13 +29,13 @@ import de.fraunhofer.aisec.codyze.AnalysisResult
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
-import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.passes.concepts.config.ProvideConfigPass
 import de.fraunhofer.aisec.cpg.passes.concepts.config.python.PythonStdLibConfigurationPass
 import java.io.File
 import java.nio.file.Path
+import kotlin.uuid.Uuid
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -100,26 +100,20 @@ class CPGService {
         return translationResult?.components?.find { it.name == componentName }
     }
 
-    fun getTranslationUnit(componentName: String, unitPath: String): TranslationUnitJSON? {
-        return getComponent(componentName)?.translationUnits?.find { it.path == unitPath }
+    fun getTranslationUnit(componentName: String, id: String): TranslationUnitJSON? {
+        return getComponent(componentName)?.translationUnits?.find { it.id == Uuid.parse(id) }
     }
 
     fun getNodesForTranslationUnit(
         componentName: String,
-        unitPath: String,
+        id: String,
         overlayNodes: Boolean,
     ): List<NodeJSON> {
-        val result = translationResult ?: return emptyList()
-
-        val cpgResult = result.cpgResult ?: return emptyList()
-        val tu =
-            cpgResult.components
-                .find { it.name == Name(componentName) }
-                ?.translationUnits
-                ?.find { it.location?.artifactLocation?.uri.toString() == unitPath }
-                ?: return emptyList()
-
-        return extractNodes(tu, overlayNodes)
+        return getComponent(componentName)
+            ?.translationUnits
+            ?.find { it.id == Uuid.parse(id) }
+            ?.cpgTU
+            ?.let { extractNodes(it, overlayNodes) } ?: emptyList()
     }
 
     private fun extractNodes(

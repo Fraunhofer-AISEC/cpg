@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import SyntaxHighlighter from "react-syntax-highlighter";
 import { docco } from "react-syntax-highlighter/dist/esm/styles/hljs";
 import NodeOverlay from "../components/NodeOverlay";
@@ -13,9 +13,12 @@ import {
 import { NodeJSON, TranslationUnitJSON } from "../types";
 
 function TranslationUnitPage() {
+  const { componentName, "*": name } = useParams<{
+    componentName: string;
+    "*": string;
+  }>();
+
   const [searchParams] = useSearchParams();
-  const componentName = searchParams.get("component");
-  const path = searchParams.get("path");
   const line = searchParams.get("line")
     ? parseInt(searchParams.get("line")!, 10)
     : null;
@@ -40,21 +43,21 @@ function TranslationUnitPage() {
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!componentName || !path) {
-        setError("Missing component name or path");
+      if (!componentName || !name) {
+        setError("Missing component name or name");
         setLoading(false);
         return;
       }
 
       try {
         console.log(
-          `Fetching data for component: ${componentName}, path: ${path}`,
+          `Fetching data for component: ${componentName}, name: ${name}`,
         );
-        const data = await getTranslationUnit(componentName, path);
+        const data = await getTranslationUnit(componentName, name);
         setTranslationUnit(data);
-        setAstNodes(await getAstNodesForTranslationUnit(componentName, path));
+        setAstNodes(await getAstNodesForTranslationUnit(componentName, name));
         setOverlayNodes(
-          await getOverlayNodesForTranslationUnit(componentName, path),
+          await getOverlayNodesForTranslationUnit(componentName, name),
         );
       } catch (err) {
         setError("Failed to load nodes");
@@ -65,7 +68,7 @@ function TranslationUnitPage() {
     };
 
     fetchData();
-  }, [componentName, path]);
+  }, [componentName, name]);
 
   if (loading) {
     return (

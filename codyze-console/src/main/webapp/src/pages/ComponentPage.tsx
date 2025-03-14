@@ -86,7 +86,7 @@ function ComponentPage() {
                   </td>
                   <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
                     <Link
-                      to={`/translation-unit?component=${component.name}&path=${encodeURIComponent(unit.path)}`}
+                      to={`/component/${component.name}/translation-unit/${unit.id}`}
                       className="text-blue-600 hover:underline"
                     >
                       View Details

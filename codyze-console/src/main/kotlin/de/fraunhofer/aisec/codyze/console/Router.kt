@@ -94,15 +94,13 @@ fun Routing.cpgRoutes(service: CPGService) {
             }
         }
 
-        get("/translationUnit") {
+        get("/component/{component_name}/translation-unit/{id}") {
             val componentName =
-                call.request.queryParameters["component"]
+                call.parameters["component_name"]
                     ?: return@get call.respond(HttpStatusCode.BadRequest)
-            val path =
-                call.request.queryParameters["path"]
-                    ?: return@get call.respond(HttpStatusCode.BadRequest)
+            val id = call.parameters["id"] ?: return@get call.respond(HttpStatusCode.BadRequest)
 
-            val tu = service.getTranslationUnit(componentName, path)
+            val tu = service.getTranslationUnit(componentName, id)
             if (tu != null) {
                 call.respond(tu)
             } else {
@@ -113,27 +111,23 @@ fun Routing.cpgRoutes(service: CPGService) {
             }
         }
 
-        get("/astNodes") {
+        get("/component/{component_name}/translation-unit/{id}/ast-nodes") {
             val componentName =
-                call.request.queryParameters["component"]
+                call.parameters["component_name"]
                     ?: return@get call.respond(HttpStatusCode.BadRequest)
-            val path =
-                call.request.queryParameters["path"]
-                    ?: return@get call.respond(HttpStatusCode.BadRequest)
+            val id = call.parameters["id"] ?: return@get call.respond(HttpStatusCode.BadRequest)
 
-            val nodes = service.getNodesForTranslationUnit(componentName, path, false)
+            val nodes = service.getNodesForTranslationUnit(componentName, id, false)
             call.respond(nodes)
         }
 
-        get("/overlayNodes") {
+        get("/component/{component_name}/translation-unit/{id}/overlay-nodes") {
             val componentName =
-                call.request.queryParameters["component"]
+                call.parameters["component_name"]
                     ?: return@get call.respond(HttpStatusCode.BadRequest)
-            val path =
-                call.request.queryParameters["path"]
-                    ?: return@get call.respond(HttpStatusCode.BadRequest)
+            val id = call.parameters["id"] ?: return@get call.respond(HttpStatusCode.BadRequest)
 
-            val nodes = service.getNodesForTranslationUnit(componentName, path, true)
+            val nodes = service.getNodesForTranslationUnit(componentName, id, true)
             call.respond(nodes)
         }
     }
