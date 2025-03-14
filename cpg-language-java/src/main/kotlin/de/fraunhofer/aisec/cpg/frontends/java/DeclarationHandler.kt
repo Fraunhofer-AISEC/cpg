@@ -164,7 +164,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
     ) {
         // create the receiver
         val receiver =
-            this.newVariableDeclaration("this", recordDeclaration?.toType() ?: unknownType(), false)
+            newVariableDeclaration("this", recordDeclaration?.toType() ?: unknownType(), false)
                 .implicit("this")
         frontend.scopeManager.addDeclaration(receiver)
         functionDeclaration.receiver = receiver

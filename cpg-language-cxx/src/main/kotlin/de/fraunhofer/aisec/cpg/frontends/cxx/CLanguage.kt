@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import com.fasterxml.jackson.annotation.JsonIgnore
-import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.types.*
 import kotlin.reflect.KClass
@@ -35,8 +34,8 @@ import org.neo4j.ogm.annotation.Transient
 const val CONST = "const"
 
 /** The C language. */
-open class CLanguage(ctx: TranslationContext) :
-    Language<CXXLanguageFrontend>(ctx),
+open class CLanguage :
+    Language<CXXLanguageFrontend>(),
     HasStructs,
     HasFunctionPointers,
     HasQualifier,

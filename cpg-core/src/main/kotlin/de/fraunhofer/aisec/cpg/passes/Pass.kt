@@ -43,7 +43,6 @@ import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLate
 import de.fraunhofer.aisec.cpg.passes.configuration.RequiredFrontend
 import de.fraunhofer.aisec.cpg.passes.configuration.RequiresLanguageTrait
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
-import de.fraunhofer.aisec.cpg.processing.strategy.Strategy.TRANSLATION_UNITS_LEAST_IMPORTS
 import java.util.concurrent.CompletableFuture
 import java.util.function.Consumer
 import kotlin.reflect.KClass

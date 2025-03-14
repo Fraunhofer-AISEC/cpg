@@ -26,15 +26,13 @@
 package de.fraunhofer.aisec.cpg.frontends
 
 import de.fraunhofer.aisec.cpg.*
-import de.fraunhofer.aisec.cpg.TypeManager
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.declarations.ProblemDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
-import java.util.function.Supplier
 import kotlin.reflect.KClass
 import kotlin.test.assertNotNull
 
@@ -42,7 +40,7 @@ import kotlin.test.assertNotNull
  * This is a variant of the test language with `::` as a [namespaceDelimiter] to simulate languages
  * like C++.
  */
-open class TestLanguageWithColon(ctx: TranslationContext) : TestLanguage(ctx) {
+open class TestLanguageWithColon() : TestLanguage() {
     override val namespaceDelimiter: String
         get() = "::"
 }
@@ -51,8 +49,7 @@ open class TestLanguageWithColon(ctx: TranslationContext) : TestLanguage(ctx) {
  * This is a test language that can be used for unit test, where we need a language but do not have
  * a specific one.
  */
-open class TestLanguage(ctx: TranslationContext) :
-    Language<TestLanguageFrontend>(ctx), HasImplicitReceiver {
+open class TestLanguage : Language<TestLanguageFrontend>(), HasImplicitReceiver {
     override val fileExtensions: List<String> = listOf()
     override val frontend: KClass<out TestLanguageFrontend> = TestLanguageFrontend::class
     override val compoundAssignmentOperators =
@@ -74,11 +71,9 @@ open class TestLanguage(ctx: TranslationContext) :
         get() = "this"
 }
 
-class ClassTestLanguage(ctx: TranslationContext) :
-    TestLanguage(ctx), HasClasses, HasDefaultArguments
+class ClassTestLanguage() : TestLanguage(), HasClasses, HasDefaultArguments
 
-class StructTestLanguage(ctx: TranslationContext) :
-    TestLanguageWithColon(ctx), HasStructs, HasClasses, HasDefaultArguments
+class StructTestLanguage() : TestLanguageWithColon(), HasStructs, HasClasses, HasDefaultArguments
 
 /**
  * Creates a new [TestLanguageFrontend] with the given configuration [builder].
@@ -98,20 +93,15 @@ fun testFrontend(builder: (TranslationConfiguration.Builder) -> Unit): TestLangu
  * chance to configure a specific subclass of it, e.g., [TestLanguageWithColon].
  */
 fun testFrontend(config: TranslationConfiguration): TestLanguageFrontend {
-    val ctx = TranslationContext(config, ScopeManager(), TypeManager())
+    val ctx = TranslationContext(config)
     val language = ctx.availableLanguage<TestLanguage>()
     assertNotNull(language)
     return TestLanguageFrontend(ctx, language)
 }
 
 open class TestLanguageFrontend(
-    ctx: TranslationContext =
-        TranslationContext(
-            TranslationConfiguration.builder().build(),
-            ScopeManager(),
-            TypeManager(),
-        ),
-    language: Language<TestLanguageFrontend> = TestLanguage(ctx),
+    ctx: TranslationContext = TranslationContext(TranslationConfiguration.builder().build()),
+    language: Language<TestLanguageFrontend> = TestLanguage(),
 ) : LanguageFrontend<Any, Any>(ctx, language) {
     override fun parse(file: File): TranslationUnitDeclaration {
         TODO("Not yet implemented")
@@ -136,4 +126,4 @@ open class TestLanguageFrontend(
 }
 
 class TestHandler(frontend: TestLanguageFrontend) :
-    Handler<Node, Any, TestLanguageFrontend>(Supplier { ProblemExpression() }, frontend)
+    Handler<Node, Any, TestLanguageFrontend>(::ProblemDeclaration, frontend)

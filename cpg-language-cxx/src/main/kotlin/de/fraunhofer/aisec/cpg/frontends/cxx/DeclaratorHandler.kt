@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.types.*
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.helpers.Util
 import java.util.function.Supplier
 import org.eclipse.cdt.core.dom.ast.*
@@ -464,7 +465,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             createMethodReceiver(constructorDeclaration)
 
             // and set the type, constructors always have implicitly the return type of their class
-            constructorDeclaration.type = FunctionType.computeType(constructorDeclaration)
+            constructorDeclaration.type = computeType(constructorDeclaration)
             frontend.scopeManager.addDeclaration(constructorDeclaration)
             recordDeclaration.constructors += constructorDeclaration
         }

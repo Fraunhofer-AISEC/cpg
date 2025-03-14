@@ -23,6 +23,8 @@
  *                    \______/ \__|       \______/
  *
  */
+@file:Suppress("CONTEXT_RECEIVERS_DEPRECATED")
+
 package de.fraunhofer.aisec.cpg
 
 import de.fraunhofer.aisec.cpg.frontends.CastResult
@@ -33,9 +35,11 @@ import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.scopes.TemplateScope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.*
+import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.passes.Pass
 import de.fraunhofer.aisec.cpg.passes.Pass.Companion.log
 import de.fraunhofer.aisec.cpg.passes.ResolveCallExpressionAmbiguityPass
+import de.fraunhofer.aisec.cpg.passes.TypeResolver
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import org.slf4j.Logger
@@ -57,8 +61,11 @@ class TypeManager {
         MutableMap<TemplateDeclaration, MutableList<ParameterizedType>> =
         ConcurrentHashMap()
 
-    val firstOrderTypes = mutableListOf<Type>()
-    val secondOrderTypes = mutableListOf<Type>()
+    /**
+     * Stores all resolved first order types. This is a set of all types that have been resolved by
+     * the [TypeResolver].
+     */
+    val resolvedTypes = identitySetOf<Type>()
 
     /**
      * @param recordDeclaration that is instantiated by a template containing parameterizedtypes
@@ -193,24 +200,9 @@ class TypeManager {
         return parameterizedType
     }
 
-    inline fun <reified T : Type> registerType(t: T): T {
-        // Skip as they should be unique to each class and not globally unique
-        if (t is ParameterizedType) {
-            return t
-        }
-
-        if (t.isFirstOrderType) {
-            synchronized(firstOrderTypes) { firstOrderTypes.add(t) }
-        } else if (t is SecondOrderType) {
-            synchronized(secondOrderTypes) { secondOrderTypes.add(t) }
-        }
-
-        return t
-    }
-
     /** Checks, whether a [Type] with the given [name] exists. */
     fun typeExists(name: CharSequence): Boolean {
-        return firstOrderTypes.any { type: Type -> type.root.name == name }
+        return resolvedTypes.any { type: Type -> type.root.name == name }
     }
 
     fun resolvePossibleTypedef(alias: Type, scopeManager: ScopeManager): Type {
@@ -233,7 +225,7 @@ class TypeManager {
             return primitiveType
         }
 
-        return firstOrderTypes.firstOrNull {
+        return resolvedTypes.firstOrNull {
             (it.typeOrigin == Type.Origin.RESOLVED || it.typeOrigin == Type.Origin.GUESSED) &&
                 it.root.name == fqn &&
                 if (generics != null) {

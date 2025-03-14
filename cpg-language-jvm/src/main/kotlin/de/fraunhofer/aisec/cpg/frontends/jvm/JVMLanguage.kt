@@ -25,12 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.jvm
 
-import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.types.*
 import kotlin.reflect.KClass
 
-class JVMLanguage(ctx: TranslationContext) : Language<JVMLanguageFrontend>(ctx) {
+class JVMLanguage : Language<JVMLanguageFrontend>() {
     override val fileExtensions: List<String>
         get() = listOf("class", "java", "jimple", "jar")
 

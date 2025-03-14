@@ -27,4 +27,8 @@ package de.fraunhofer.aisec.cpg.graph.scopes
 
 import de.fraunhofer.aisec.cpg.graph.Node
 
+/**
+ * Represents a scope that is only visible in the current template. This is usually to hold template
+ * parameters.
+ */
 class TemplateScope(node: Node) : Scope(node)
