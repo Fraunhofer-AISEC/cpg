@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.concepts
 
+import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.TranslationResult.Companion.DEFAULT_APPLICATION_NAME
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.graph.*
@@ -32,8 +33,10 @@ import de.fraunhofer.aisec.cpg.graph.Forward
 import de.fraunhofer.aisec.cpg.graph.Interprocedural
 import de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.Encrypt
 import de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.GetSecret
+import de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.Secret
 import de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.newCipher
 import de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.newEncryptOperation
+import de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.newGetSecret
 import de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.newSecret
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.DeAllocate
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.MemoryManagementMode
@@ -42,6 +45,8 @@ import de.fraunhofer.aisec.cpg.graph.concepts.memory.newMemory
 import de.fraunhofer.aisec.cpg.graph.edges.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeleteExpression
 import de.fraunhofer.aisec.cpg.query.Must
+import de.fraunhofer.aisec.cpg.query.allExtended
+import de.fraunhofer.aisec.cpg.query.alwaysFlowsTo
 import de.fraunhofer.aisec.cpg.query.dataFlow
 import de.fraunhofer.aisec.cpg.query.executionPath
 import de.fraunhofer.aisec.cpg.test.analyze
@@ -50,19 +55,178 @@ import kotlin.test.*
 
 class MemoryTest {
     @Test
-    fun testMemoryDelete() {
+    fun testMemoryDeleteFunction() {
         val topLevel = File("src/integrationTest/resources/python")
         val result =
             analyze(listOf(topLevel.resolve("encrypt_with_key.py")), topLevel.toPath(), true) {
                 it.registerLanguage<PythonLanguage>()
             }
+        assertNotNull(result)
+        mapNodesToConcepts(result, true)
+
+        val key = result.allChildrenWithOverlays<Secret>().singleOrNull()
+        assertNotNull(key)
+
+        // Key is used in encryption
+        var tree =
+            key.underlyingNode?.let {
+                dataFlow(it) { node -> node.overlayEdges.any { edge -> edge.end is Encrypt } }
+            }
+        assertNotNull(tree)
+        assertEquals(true, tree.value)
+
+        // Tree is deleted in all paths
+        tree =
+            key.underlyingNode?.let {
+                executionPath(
+                    startNode = it,
+                    predicate = { node ->
+                        node.overlayEdges.any { edge -> edge.end is DeAllocate }
+                    },
+                    direction = Forward(GraphToFollow.EOG),
+                    type = Must,
+                    scope = Interprocedural(),
+                )
+            }
+        assertNotNull(tree)
+        assertEquals(true, tree.value)
+        assertEquals(2, tree.children.size)
+
+        val queryTreeResult =
+            result.allExtended<GetSecret>(
+                null,
+                { secret ->
+                    secret.alwaysFlowsTo(
+                        scope = Interprocedural(),
+                        sensitivities = FilterUnreachableEOG + FieldSensitive + ContextSensitive,
+                        predicate = { it is DeAllocate },
+                    )
+                },
+            )
+
+        println(queryTreeResult.printNicely())
+        assertTrue(queryTreeResult.value)
+    }
+
+    @Test
+    fun testMemoryDeleteFailFunction() {
+        val topLevel = File("src/integrationTest/resources/python")
+        val result =
+            analyze(listOf(topLevel.resolve("encrypt_with_key_fail.py")), topLevel.toPath(), true) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(result)
+        mapNodesToConcepts(result, true)
+
+        val queryTreeResult =
+            result.allExtended<GetSecret>(
+                null,
+                { secret ->
+                    secret.alwaysFlowsTo(
+                        scope = Interprocedural(),
+                        sensitivities = FilterUnreachableEOG + FieldSensitive + ContextSensitive,
+                        predicate = { it is DeAllocate },
+                    )
+                },
+            )
+
+        println(queryTreeResult.printNicely())
+        assertFalse(queryTreeResult.value)
+    }
+
+    @Test
+    fun testMemoryDeleteCall() {
+        val topLevel = File("src/integrationTest/resources/python")
+        val result =
+            analyze(listOf(topLevel.resolve("encrypt_with_key.py")), topLevel.toPath(), true) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(result)
+        mapNodesToConcepts(result, false)
+
+        val key = result.allChildrenWithOverlays<Secret>().singleOrNull()
+        assertNotNull(key)
+
+        // Key is used in encryption
+        var tree =
+            key.underlyingNode?.let {
+                dataFlow(it) { node -> node.overlayEdges.any { edge -> edge.end is Encrypt } }
+            }
+        assertNotNull(tree)
+        assertTrue(tree.value)
+
+        // Tree is deleted in all paths
+        tree =
+            key.underlyingNode?.let {
+                executionPath(
+                    startNode = it,
+                    predicate = { node ->
+                        node.overlayEdges.any { edge -> edge.end is DeAllocate }
+                    },
+                    direction = Forward(GraphToFollow.EOG),
+                    type = Must,
+                    scope = Interprocedural(),
+                )
+            }
+        assertNotNull(tree)
+        assertTrue(tree.value)
+        assertEquals(2, tree.children.size)
+
+        val queryTreeResult =
+            result.allExtended<GetSecret>(
+                null,
+                { secret ->
+                    secret.alwaysFlowsTo(
+                        scope = Interprocedural(),
+                        sensitivities = FilterUnreachableEOG + FieldSensitive + ContextSensitive,
+                        predicate = { it is DeAllocate },
+                    )
+                },
+            )
+
+        println(queryTreeResult.printNicely())
+        assertTrue(queryTreeResult.value)
+        assertEquals(2, tree.children.size)
+    }
+
+    @Test
+    fun testMemoryDeleteFailCall() {
+        val topLevel = File("src/integrationTest/resources/python")
+        val result =
+            analyze(listOf(topLevel.resolve("encrypt_with_key_fail.py")), topLevel.toPath(), true) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(result)
+        mapNodesToConcepts(result, false)
+
+        val queryTreeResult =
+            result.allExtended<GetSecret>(
+                null,
+                { secret ->
+                    secret.alwaysFlowsTo(
+                        scope = Interprocedural(),
+                        sensitivities = FilterUnreachableEOG + FieldSensitive + ContextSensitive,
+                        predicate = { it is DeAllocate },
+                    )
+                },
+            )
+
+        println(queryTreeResult.printNicely())
+        assertFalse(queryTreeResult.value)
+    }
+
+    fun mapNodesToConcepts(result: TranslationResult, mapToFunctionDeclaration: Boolean) {
         // Secrets (key) concepts
         val key = result.newSecret(underlyingNode = assertNotNull(result.variables["key"]))
+        val getSecretFromServer =
+            if (mapToFunctionDeclaration) {
+                result.functions["get_secret_from_server"]
+            } else {
+                result.calls["get_secret_from_server"]
+            }
         val getSecret =
-            GetSecret(
-                underlyingNode = assertNotNull(result.functions["get_secret_from_server"]),
-                concept = key,
-            )
+            result.newGetSecret(underlyingNode = assertNotNull(getSecretFromServer), concept = key)
+        getSecretFromServer.prevDFG += getSecret
 
         // Cipher (encryption) concepts
         val cipher =
@@ -91,7 +255,9 @@ class MemoryTest {
             )
         result.allChildren<DeleteExpression>().flatMap { delete ->
             delete.operands.map {
-                result.newDeallocate(underlyingNode = delete, concept = memory, what = it)
+                result.newDeallocate(underlyingNode = delete, concept = memory, what = it).apply {
+                    this.prevDFG += it
+                }
             }
         }
 
@@ -115,7 +281,5 @@ class MemoryTest {
                 )
             }
         assertNotNull(tree)
-        assertEquals(true, tree.value)
-        assertEquals(2, tree.children.size)
     }
 }
