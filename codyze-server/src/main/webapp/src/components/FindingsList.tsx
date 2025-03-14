@@ -19,7 +19,7 @@ const FindingsList: React.FC<FindingsListProps> = ({ findings }) => {
                         <p className="text-gray-700">
                             <span className="font-medium">Path: </span>
                             <Link
-                                to={`/translation-unit?component=${finding.component}&path=${encodeURIComponent("file:" + finding.path)}&line=${finding.startLine}`}
+                                to={`/translation-unit?component=${finding.component}&path=${encodeURIComponent("file:" + finding.path)}&line=${finding.startLine}&findingText=${getText(finding)}&kind=${finding.kind.toLowerCase()}`}
                                 className="text-blue-600 hover:underline"
                             >
                                 {finding.path}
@@ -37,5 +37,9 @@ const FindingsList: React.FC<FindingsListProps> = ({ findings }) => {
         </>
     );
 };
+
+function getText(finding: FindingsJSON): string {
+    return `${finding.kind}: ${finding.rule}`
+}
 
 export default FindingsList;
