@@ -6,9 +6,10 @@ plugins {
 
 dependencies {
     // CPG modules
-    implementation(project(":codyze-core"))
-    implementation(project(":cpg-core"))
-    implementation(project(":cpg-language-python"))
+    implementation(projects.cpg.codyzeCore)
+    implementation(projects.cpg.cpgCore)
+    implementation(projects.cpg.cpgConcepts)
+    implementation(projects.cpg.cpgLanguagePython)
 
     // Ktor server dependencies
     implementation("io.ktor:ktor-server-core-jvm:2.3.7")
@@ -29,7 +30,6 @@ dependencies {
 
     // Testing
     testImplementation("io.ktor:ktor-server-tests-jvm:2.3.7")
-    testImplementation("org.jetbrains.kotlin:kotlin-test-junit")
 }
 
 application { mainClass.set("de.fraunhofer.aisec.cpg.webconsole.MainKt") }
