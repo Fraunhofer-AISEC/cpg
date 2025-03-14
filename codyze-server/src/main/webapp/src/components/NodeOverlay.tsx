@@ -9,9 +9,10 @@ interface NodeOverlayProps {
     charWidth: number;
     offsetTop: number;
     offsetLeft: number;
+    highlightLine: number | null;
 }
 
-function NodeOverlay({ nodes, highlightedNode, setHighlightedNode, lineHeight, charWidth, offsetTop, offsetLeft }) {
+function NodeOverlay({ nodes, highlightedNode, setHighlightedNode, lineHeight, charWidth, offsetTop, offsetLeft, highlightLine }: NodeOverlayProps) {
     const getColorForNodeType = (type: string): string => {
         const colorMap: Record<string, string> = {
             FunctionDeclaration: 'rgba(255, 99, 132, 0.3)',  // Red
@@ -65,8 +66,19 @@ function NodeOverlay({ nodes, highlightedNode, setHighlightedNode, lineHeight, c
                     onMouseLeave={() => setHighlightedNode(null)}
                 />
             ))}
+            {highlightLine !== null && (
+                <div
+                    className="absolute w-full"
+                    style={{
+                        top: `${(highlightLine - 1) * lineHeight + offsetTop}px`,
+                        height: `${lineHeight}px`,
+                        backgroundColor: 'rgba(255, 255, 0, 0.3)',
+                        zIndex: 5
+                    }}
+                />
+            )}
         </div>
     );
-};
+}
 
 export default NodeOverlay;

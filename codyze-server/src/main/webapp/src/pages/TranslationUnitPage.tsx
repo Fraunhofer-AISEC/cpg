@@ -1,9 +1,9 @@
-import {useEffect, useState} from 'react';
-import {Link, useSearchParams} from 'react-router-dom';
-import {NodeInfo, TranslationUnit} from '../types';
-import {getTranslationUnit} from '../services/api';
+import { useEffect, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { NodeInfo, TranslationUnit } from '../types';
+import { getTranslationUnit } from '../services/api';
 import SyntaxHighlighter from 'react-syntax-highlighter';
-import {docco} from 'react-syntax-highlighter/dist/esm/styles/hljs';
+import { docco } from 'react-syntax-highlighter/dist/esm/styles/hljs';
 import NodeOverlay from '../components/NodeOverlay';
 import NodeTooltip from '../components/NodeTooltip';
 import NodeTable from '../components/NodeTable';
@@ -13,6 +13,7 @@ function TranslationUnitPage() {
     const [searchParams] = useSearchParams();
     const componentName = searchParams.get('component');
     const path = searchParams.get('path');
+    const line = searchParams.get('line') ? parseInt(searchParams.get('line')!, 10) : null;
 
     const [translationUnit, setTranslationUnit] = useState<TranslationUnit | null>(null);
     const [astNodes, setAstNodes] = useState<NodeInfo[]>([]);
@@ -102,6 +103,7 @@ function TranslationUnitPage() {
                         charWidth={charWidth}
                         offsetTop={offsetTop}
                         offsetLeft={offsetLeft}
+                        highlightLine={line}
                     />
 
                     {highlightedNode && (
