@@ -30,7 +30,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
-import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
@@ -633,7 +632,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         val (scope, doFqn) =
             if (frontend.scopeManager.currentScope is RecordScope) {
                 Pair(frontend.scopeManager.globalScope, true)
-            } else  {
+            } else {
                 Pair(frontend.scopeManager.currentScope, false)
             }
         // TODO(oxisto): What about namespaces?
