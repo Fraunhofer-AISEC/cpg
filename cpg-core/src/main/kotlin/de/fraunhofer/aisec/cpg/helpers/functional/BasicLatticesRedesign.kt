@@ -211,7 +211,7 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
                     this.all { t ->
                         if (t is Pair<*, *>)
                             other.any {
-                                it is Pair<*, *> && it.first === t.first && it.second === t.second
+                                it is Pair<*, *> && it.first === t.first && it.second == t.second
                             }
                         else t in other
                     } -> Order.EQUAL
@@ -219,7 +219,7 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
                     other.all { t ->
                         if (t is Pair<*, *>)
                             this.any {
-                                it is Pair<*, *> && it.first === t.first && it.second === t.second
+                                it is Pair<*, *> && it.first === t.first && it.second == t.second
                             }
                         else t in this
                     } -> Order.GREATER
@@ -227,7 +227,7 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
                     this.all { t ->
                         if (t is Pair<*, *>)
                             other.any {
-                                it is Pair<*, *> && it.first === t.first && it.second === t.second
+                                it is Pair<*, *> && it.first === t.first && it.second == t.second
                             }
                         else t in other
                     } -> Order.LESSER
