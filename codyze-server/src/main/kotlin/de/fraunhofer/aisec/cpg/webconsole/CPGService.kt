@@ -41,6 +41,7 @@ import kotlinx.coroutines.withContext
 
 class CPGService {
     private var translationResult: AnalysisResultJSON? = null
+    var lastConfiguration: TranslationConfiguration? = null
 
     suspend fun generateCPG(request: GenerateCPGRequest): AnalysisResultJSON =
         withContext(Dispatchers.IO) {
@@ -65,23 +66,29 @@ class CPGService {
 
             val config = builder.build()
 
-            val translationManager = TranslationManager.builder().config(config).build()
-
-            val result = translationManager.analyze().get()
-
-            val translationResult =
-                AnalysisResultJSON(
-                    components = result.components.map { it.toJSON() },
-                    totalNodes = result.nodes.size,
-                    cpgResult = result,
-                    analysisResult = null,
-                    sourceDir = config.sourceLocations.first().absolutePath,
-                    findings = listOf(),
-                )
-
-            this@CPGService.translationResult = translationResult
-            translationResult
+            generateCPGFromConfig(config)
         }
+
+    fun generateCPGFromConfig(config: TranslationConfiguration): AnalysisResultJSON {
+        lastConfiguration = config
+
+        val translationManager = TranslationManager.builder().config(config).build()
+
+        val result = translationManager.analyze().get()
+
+        val translationResult =
+            AnalysisResultJSON(
+                components = result.components.map { it.toJSON() },
+                totalNodes = result.nodes.size,
+                cpgResult = result,
+                analysisResult = null,
+                sourceDir = config.sourceLocations.first().absolutePath,
+                findings = listOf(),
+            )
+
+        this@CPGService.translationResult = translationResult
+        return translationResult
+    }
 
     fun getTranslationResult(): AnalysisResultJSON? {
         return translationResult
@@ -131,6 +138,7 @@ class CPGService {
                                 it.results?.map { it.toJSON() } ?: emptyList()
                             },
                     )
+                service.lastConfiguration = tr.config
             }
             return service
         }

@@ -39,7 +39,12 @@ fun main() {
 }
 
 fun CPGService.startServer() {
+<<<<<<< Updated upstream
     embeddedServer(Netty, port = 8080) { configureWebconsole(this@startServer) }.start(wait = true)
+=======
+    embeddedServer(Netty, host = "localhost", port = 8080) { configureWebconsole(this@startServer) }
+        .start(wait = true)
+>>>>>>> Stashed changes
 }
 
 fun Application.configureWebconsole(service: CPGService) {
