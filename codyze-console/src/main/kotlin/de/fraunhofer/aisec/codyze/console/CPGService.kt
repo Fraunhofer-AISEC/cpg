@@ -123,7 +123,7 @@ class CPGService {
         return if (overlayNodes) {
             tu.nodes.flatMap { it.overlays }.map { it.toJSON() }
         } else {
-            tu.nodes.map { it.toJSON() }
+            tu.declarations.filter { it != tu }.map { it.toJSON() }
         }
     }
 

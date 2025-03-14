@@ -2,9 +2,10 @@ import { useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import SyntaxHighlighter from "react-syntax-highlighter";
 import { docco } from "react-syntax-highlighter/dist/esm/styles/hljs";
-import NodeOverlay from "../components/NodeOverlay";
+import NodeOverlays from "../components/NodeOverlays";
 import NodeTable from "../components/NodeTable";
 import NodeTooltip from "../components/NodeTooltip";
+import { flattenNodes } from "../lib/flatten";
 import {
   getAstNodesForTranslationUnit,
   getOverlayNodesForTranslationUnit,
@@ -39,7 +40,7 @@ function TranslationUnitPage() {
   const lineHeight = 24;
   const charWidth = 10;
   const offsetTop = 8;
-  const baseOffsetLeft = 14;
+  const baseOffsetLeft = 12;
 
   useEffect(() => {
     const fetchData = async () => {
@@ -96,6 +97,15 @@ function TranslationUnitPage() {
   const offsetLeft = baseOffsetLeft + lineNumberWidth * charWidth;
 
   const nodes = activeTab === "overlayNodes" ? overlayNodes : astNodes;
+  const flattenedNodes = flattenNodes(nodes);
+
+  const handleNodeClick = (node: NodeJSON) => {
+    const yPosition = (node.startLine - 1) * lineHeight + offsetTop;
+    window.scrollTo({
+      top: yPosition - window.innerHeight / 3,
+      behavior: "smooth",
+    });
+  };
 
   return (
     <div className="container mx-auto p-4">
@@ -123,8 +133,9 @@ function TranslationUnitPage() {
             {translationUnit.code}
           </SyntaxHighlighter>
 
-          <NodeOverlay
-            nodes={nodes}
+          <NodeOverlays
+            nodes={flattenedNodes}
+            codeLines={translationUnit.code.split("\n")}
             highlightedNode={highlightedNode}
             setHighlightedNode={setHighlightedNode}
             lineHeight={lineHeight}
@@ -175,16 +186,18 @@ function TranslationUnitPage() {
         {activeTab === "astNodes" ? (
           <NodeTable
             title={"AST"}
-            nodes={astNodes}
+            nodes={flattenedNodes}
             highlightedNode={highlightedNode}
             setHighlightedNode={setHighlightedNode}
+            onNodeClick={handleNodeClick}
           />
         ) : (
           <NodeTable
             title={"Overlay Nodes"}
-            nodes={overlayNodes}
+            nodes={flattenedNodes}
             highlightedNode={highlightedNode}
             setHighlightedNode={setHighlightedNode}
+            onNodeClick={handleNodeClick}
           />
         )}
       </div>

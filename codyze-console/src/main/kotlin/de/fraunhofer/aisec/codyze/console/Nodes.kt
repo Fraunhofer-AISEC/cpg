@@ -104,6 +104,7 @@ data class NodeJSON(
     val endColumn: Int,
     val code: String,
     val name: String,
+    val astChildren: List<NodeJSON>,
     val prevDFG: List<EdgeJSON> = emptyList(),
     val nextDFG: List<EdgeJSON> = emptyList(),
 )
@@ -134,6 +135,7 @@ fun Node.toJSON(): NodeJSON {
         endColumn = location?.region?.endColumn ?: -1,
         code = this.code ?: "",
         name = this.name.toString(),
+        astChildren = this.astChildren.map { it.toJSON() },
         prevDFG = this.prevDFGEdges.map { it.toJSON() },
         nextDFG = this.nextDFGEdges.map { it.toJSON() },
     )

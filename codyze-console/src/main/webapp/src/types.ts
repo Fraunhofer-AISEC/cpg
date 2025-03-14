@@ -40,6 +40,7 @@ export interface NodeJSON {
   endColumn: number;
   code: string;
   name: string;
+  astChildren: NodeJSON[];
   prevDFG: EdgeJSON[];
   nextDFG: EdgeJSON[];
 }

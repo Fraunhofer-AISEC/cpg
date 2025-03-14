@@ -1,18 +1,22 @@
+import React from "react";
 import { NodeJSON } from "@/types";
+import { FlattenedNode } from "../lib/flatten";
 
 interface NodeTableProps {
   title: string;
-  nodes: NodeJSON[];
+  nodes: FlattenedNode[];
   highlightedNode: NodeJSON | null;
   setHighlightedNode: (node: NodeJSON | null) => void;
+  onNodeClick: (node: NodeJSON) => void;
 }
 
-function NodeTable({
+const NodeTable: React.FC<NodeTableProps> = ({
   title,
   nodes,
   highlightedNode,
   setHighlightedNode,
-}: NodeTableProps) {
+  onNodeClick,
+}) => {
   return (
     <div className="rounded bg-white p-6 shadow-md">
       <h2 className="mb-4 text-lg font-semibold">
@@ -40,11 +44,17 @@ function NodeTable({
             {nodes.map((node) => (
               <tr
                 key={node.id}
-                className={`${highlightedNode?.id === node.id ? "bg-gray-100" : ""} cursor-pointer hover:bg-gray-50`}
+                className={`${
+                  highlightedNode?.id === node.id ? "bg-gray-100" : ""
+                } cursor-pointer hover:bg-gray-50`}
                 onMouseEnter={() => setHighlightedNode(node)}
                 onMouseLeave={() => setHighlightedNode(null)}
+                onClick={() => onNodeClick(node)}
               >
-                <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
+                <td
+                  className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900"
+                  style={{ paddingLeft: `${node.depth * 10}px` }}
+                >
                   {node.type}
                 </td>
                 <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
@@ -64,6 +74,6 @@ function NodeTable({
       </div>
     </div>
   );
-}
+};
 
 export default NodeTable;
