@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { TranslationResult } from '../types';
-import { getTranslationResult, generateCPG } from '../services/api';
+import React, {useEffect, useState} from 'react';
+import {TranslationResult} from '../types';
+import {generateCPG, getTranslationResult} from '../services/api';
 import GenerateCPGForm from '../components/GenerateCPGForm';
 import AnalysisResults from '../components/AnalysisResults';
 
