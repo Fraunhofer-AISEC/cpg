@@ -39,7 +39,8 @@ fun main() {
 }
 
 fun CPGService.startServer() {
-    embeddedServer(Netty, host = "localhost", port = 8080) { configureWebconsole(this@startServer) }.start(wait = true)
+    embeddedServer(Netty, host = "localhost", port = 8080) { configureWebconsole(this@startServer) }
+        .start(wait = true)
 }
 
 fun Application.configureWebconsole(service: CPGService) {

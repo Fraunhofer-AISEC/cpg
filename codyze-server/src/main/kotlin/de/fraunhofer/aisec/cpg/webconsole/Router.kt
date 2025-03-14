@@ -54,6 +54,23 @@ fun Routing.cpgRoutes(service: CPGService) {
             }
         }
 
+        post("/regenerate") {
+            val lastConfig = service.lastConfiguration
+            if (lastConfig != null) {
+                try {
+                    val result = service.generateCPGFromConfig(lastConfig)
+                    call.respond(result)
+                } catch (e: Exception) {
+                    call.respond(HttpStatusCode.InternalServerError, mapOf("error" to e.message))
+                }
+            } else {
+                call.respond(
+                    HttpStatusCode.BadRequest,
+                    mapOf("error" to "No previous configuration to regenerate from"),
+                )
+            }
+        }
+
         get("/result") {
             val result = service.getTranslationResult()
             if (result != null) {
