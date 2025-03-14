@@ -768,13 +768,16 @@ inline fun Node.followXUntilHit(
         }
     }
 
-    if (failedPaths.isEmpty() && fulfilledPaths.isEmpty()) {
-        return FulfilledAndFailedPaths(
-            fulfilledPaths.toSet().toList(),
-            loopingPaths.toSet().toList(),
-        )
-    }
-    return FulfilledAndFailedPaths(fulfilledPaths.toSet().toList(), failedPaths.toSet().toList())
+    val failedLoops =
+        loopingPaths.filter { path ->
+            fulfilledPaths.none { it.subList(0, path.size - 1) == path } &&
+                failedPaths.none { it.subList(0, path.size - 1) == path }
+        }
+
+    return FulfilledAndFailedPaths(
+        fulfilledPaths.toSet().toList(),
+        (failedPaths + failedLoops).toSet().toList(),
+    )
 }
 
 /**
