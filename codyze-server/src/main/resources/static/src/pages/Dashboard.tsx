@@ -42,8 +42,6 @@ const Dashboard: React.FC = () => {
 
     return (
         <div className="container mx-auto p-4">
-            <h1 className="text-3xl font-bold mb-6">CPG Web Console</h1>
-
             <div className="bg-white shadow-md rounded p-6 mb-6">
                 <h2 className="text-xl font-semibold mb-4">Generate CPG</h2>
                 <form onSubmit={handleSubmit}>

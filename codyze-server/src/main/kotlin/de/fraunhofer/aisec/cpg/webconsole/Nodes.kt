@@ -36,7 +36,11 @@ data class TranslationResult(
 )
 
 @Serializable
-data class ComponentJSON(val name: String, val translationUnits: List<TranslationUnit>)
+data class ComponentJSON(
+    val name: String,
+    val translationUnits: List<TranslationUnit>,
+    val topLevel: String,
+)
 
 @Serializable data class TranslationUnit(val name: String, val path: String, val code: String)
 

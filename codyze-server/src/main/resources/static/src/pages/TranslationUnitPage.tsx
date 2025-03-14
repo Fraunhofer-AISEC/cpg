@@ -34,8 +34,8 @@ const TranslationUnitPage: React.FC = () => {
     // Constants for rendering node overlays
     const lineHeight = 24; // Adjust based on your actual line height
     const charWidth = 10;   // Adjust based on your actual character width
-    const offsetLeft = 33;
     const offsetTop = 8;
+    const baseOffsetLeft = 14; // Base offset for padding
 
     useEffect(() => {
         const fetchData = async () => {
@@ -80,6 +80,11 @@ const TranslationUnitPage: React.FC = () => {
             </div>
         );
     }
+
+    // Calculate the offsetLeft based on the number of lines
+    const totalLines = translationUnit.code.split('\n').length;
+    const lineNumberWidth = Math.ceil(Math.log10(totalLines + 1));
+    const offsetLeft = baseOffsetLeft + lineNumberWidth * charWidth;
 
     return (
         <div className="container mx-auto p-4">

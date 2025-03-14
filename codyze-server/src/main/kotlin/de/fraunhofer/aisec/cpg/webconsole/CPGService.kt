@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.nodes
+import de.fraunhofer.aisec.cpg.graph.translationResult
 import java.nio.file.Path
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -137,5 +138,6 @@ fun Component.toServerNode(): ComponentJSON {
                     code = tu.code ?: "",
                 )
             },
+        topLevel = this.topLevel?.name ?: "",
     )
 }
