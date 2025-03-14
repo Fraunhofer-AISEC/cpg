@@ -23,6 +23,8 @@
  *                    \______/ \__|       \______/
  *
  */
+@file:Suppress("CONTEXT_RECEIVERS_DEPRECATED")
+
 package de.fraunhofer.aisec.cpg
 
 import de.fraunhofer.aisec.cpg.frontends.CastResult
@@ -60,14 +62,8 @@ class TypeManager {
         ConcurrentHashMap()
 
     /**
-     * Stores all first order types that are used in the program. They are the basis to be resolved.
-     * They are initially populates (and then later resolved) by the [TypeResolver].
-     */
-    val unresolvedTypes = identitySetOf<Type>()
-
-    /**
-     * Stores all resolved first order types. This is a set of all types that have been resolved by the
-     * [TypeResolver].
+     * Stores all resolved first order types. This is a set of all types that have been resolved by
+     * the [TypeResolver].
      */
     val resolvedTypes = identitySetOf<Type>()
 

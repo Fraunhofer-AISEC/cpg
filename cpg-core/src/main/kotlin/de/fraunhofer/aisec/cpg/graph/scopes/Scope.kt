@@ -61,6 +61,7 @@ typealias SymbolMap = MutableMap<Symbol, MutableList<Declaration>>
  * Represent semantic scopes in the language. Depending on the language scopes can have visibility
  * restriction and can act as namespaces to avoid name collisions.
  */
+@Suppress("CONTEXT_RECEIVERS_DEPRECATED")
 @NodeEntity
 sealed class Scope(
     @Relationship(value = "SCOPE", direction = Relationship.Direction.INCOMING)
@@ -236,9 +237,7 @@ sealed class Scope(
         // search in the
         // language's builtins scope for the symbol
         val scopeManager = ctx.scopeManager
-        if (
-            list.isNullOrEmpty() && !qualifiedLookup && languageOnly is HasBuiltins
-        ) {
+        if (list.isNullOrEmpty() && !qualifiedLookup && languageOnly is HasBuiltins) {
             // If the language has builtins we can search there for the symbol
             val builtinsNamespace = languageOnly.builtinsNamespace
             // Retrieve the builtins scope from the builtins namespace

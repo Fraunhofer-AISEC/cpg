@@ -633,10 +633,8 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         val (scope, doFqn) =
             if (frontend.scopeManager.currentScope is RecordScope) {
                 Pair(frontend.scopeManager.globalScope, true)
-            } else if (frontend.scopeManager.currentScope is Scope) {
-                Pair(frontend.scopeManager.currentScope as Scope, false)
-            } else {
-                TODO()
+            } else  {
+                Pair(frontend.scopeManager.currentScope, false)
             }
         // TODO(oxisto): What about namespaces?
 

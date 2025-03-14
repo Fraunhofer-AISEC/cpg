@@ -29,7 +29,6 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.TypeManager
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
@@ -40,7 +39,6 @@ import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.recordDeclaration
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
-import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.inference.tryRecordInference
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
@@ -201,40 +199,6 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
     override fun cleanup() {
         // Nothing to do
-    }
-
-    /** Resolves all types in [TypeManager.resolvedTypes] using [resolveType]. */
-    fun resolveFirstOrderTypes(comp: Component) {
-        // Let's find all of our types!
-        val allTypes = identitySetOf<Type>()
-        comp.nodes.forEach {
-            if (it is HasType) {
-                var type = it.type.root
-                if (type is HasSecondaryTypeEdge) {
-                    allTypes += type.secondaryTypes.map { it.root }
-                }
-                allTypes += type
-            } else if (it is DeclaresType) {
-                allTypes += it.declaredType
-            }
-
-            if (it is HasSecondaryTypeEdge) {
-                allTypes += it.secondaryTypes.map { it.root }
-            }
-        }
-
-        // Gather them in the type manager, just so we have them
-        typeManager.unresolvedTypes += allTypes
-
-        for (type in typeManager.unresolvedTypes) {
-            if (
-                type is ObjectType &&
-                    (type.typeOrigin == Type.Origin.UNRESOLVED ||
-                        type.typeOrigin == Type.Origin.GUESSED)
-            ) {
-                resolveType(type)
-            }
-        }
     }
 }
 
