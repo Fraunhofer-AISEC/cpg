@@ -104,7 +104,11 @@ class CPGService {
         return getComponent(componentName)?.translationUnits?.find { it.path == unitPath }
     }
 
-    fun getNodesForTranslationUnit(componentName: String, unitPath: String): List<NodeJSON> {
+    fun getNodesForTranslationUnit(
+        componentName: String,
+        unitPath: String,
+        overlayNodes: Boolean,
+    ): List<NodeJSON> {
         val result = translationResult ?: return emptyList()
 
         val cpgResult = result.cpgResult ?: return emptyList()
@@ -115,11 +119,18 @@ class CPGService {
                 ?.find { it.location?.artifactLocation?.uri.toString() == unitPath }
                 ?: return emptyList()
 
-        return extractNodes(tu)
+        return extractNodes(tu, overlayNodes)
     }
 
-    private fun extractNodes(tu: TranslationUnitDeclaration): List<NodeJSON> {
-        return tu.nodes.map { it.toJSON() }
+    private fun extractNodes(
+        tu: TranslationUnitDeclaration,
+        overlayNodes: Boolean,
+    ): List<NodeJSON> {
+        return if (overlayNodes) {
+            tu.nodes.flatMap { it.overlays }.map { it.toJSON() }
+        } else {
+            tu.nodes.map { it.toJSON() }
+        }
     }
 
     companion object {

@@ -113,7 +113,7 @@ fun Routing.cpgRoutes(service: CPGService) {
             }
         }
 
-        get("/nodes") {
+        get("/astNodes") {
             val componentName =
                 call.request.queryParameters["component"]
                     ?: return@get call.respond(HttpStatusCode.BadRequest)
@@ -121,7 +121,19 @@ fun Routing.cpgRoutes(service: CPGService) {
                 call.request.queryParameters["path"]
                     ?: return@get call.respond(HttpStatusCode.BadRequest)
 
-            val nodes = service.getNodesForTranslationUnit(componentName, path)
+            val nodes = service.getNodesForTranslationUnit(componentName, path, false)
+            call.respond(nodes)
+        }
+
+        get("/overlayNodes") {
+            val componentName =
+                call.request.queryParameters["component"]
+                    ?: return@get call.respond(HttpStatusCode.BadRequest)
+            val path =
+                call.request.queryParameters["path"]
+                    ?: return@get call.respond(HttpStatusCode.BadRequest)
+
+            val nodes = service.getNodesForTranslationUnit(componentName, path, true)
             call.respond(nodes)
         }
     }

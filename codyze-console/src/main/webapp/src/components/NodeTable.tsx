@@ -1,47 +1,69 @@
-import React from 'react';
-import { NodeInfo } from '../types';
+import { NodeJSON } from "@/types";
 
 interface NodeTableProps {
-    nodes: NodeInfo[];
-    highlightedNode: NodeInfo | null;
-    setHighlightedNode: (node: NodeInfo | null) => void;
+  title: string;
+  nodes: NodeJSON[];
+  highlightedNode: NodeJSON | null;
+  setHighlightedNode: (node: NodeJSON | null) => void;
 }
 
-function NodeTable({ nodes, highlightedNode, setHighlightedNode }) {
-    return (
-        <div className="bg-white shadow-md rounded p-6">
-            <h2 className="text-lg font-semibold mb-4">AST Nodes ({nodes.length})</h2>
-            <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                    <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Code</th>
-                    </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                    {nodes.map((node) => (
-                        <tr
-                            key={node.id}
-                            className={`${highlightedNode?.id === node.id ? 'bg-gray-100' : ''} hover:bg-gray-50 cursor-pointer`}
-                            onMouseEnter={() => setHighlightedNode(node)}
-                            onMouseLeave={() => setHighlightedNode(null)}
-                        >
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{node.type}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{node.name}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                L{node.startLine}:C{node.startColumn} - L{node.endLine}:C{node.endColumn}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate max-w-xs">{node.code}</td>
-                        </tr>
-                    ))}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    );
-};
+function NodeTable({
+  title,
+  nodes,
+  highlightedNode,
+  setHighlightedNode,
+}: NodeTableProps) {
+  return (
+    <div className="rounded bg-white p-6 shadow-md">
+      <h2 className="mb-4 text-lg font-semibold">
+        {title} ({nodes.length})
+      </h2>
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                Type
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                Name
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                Location
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                Code
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200 bg-white">
+            {nodes.map((node) => (
+              <tr
+                key={node.id}
+                className={`${highlightedNode?.id === node.id ? "bg-gray-100" : ""} cursor-pointer hover:bg-gray-50`}
+                onMouseEnter={() => setHighlightedNode(node)}
+                onMouseLeave={() => setHighlightedNode(null)}
+              >
+                <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
+                  {node.type}
+                </td>
+                <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                  {node.name}
+                </td>
+                <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                  L{node.startLine}:C{node.startColumn} - L{node.endLine}:C
+                  {node.endColumn}
+                </td>
+                <td className="max-w-xs truncate whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                  {node.code}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
 
 export default NodeTable;

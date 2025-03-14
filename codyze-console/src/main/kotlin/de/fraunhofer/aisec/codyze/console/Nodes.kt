@@ -34,7 +34,6 @@ import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.component
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.nodes
 import io.github.detekt.sarif4k.Result
 import java.net.URL
 import kotlin.io.path.Path
@@ -76,8 +75,7 @@ data class TranslationUnitJSON(
     val name: String,
     val path: String,
     val code: String,
-    val astNodes: List<NodeJSON>,
-    val overlayNodes: List<NodeJSON>,
+    @Transient val cpgTU: TranslationUnitDeclaration? = null,
 )
 
 @Serializable
@@ -103,8 +101,7 @@ fun TranslationUnitDeclaration.toJSON(): TranslationUnitJSON {
         name = localName?.toString() ?: this.name.toString(),
         path = this.location?.artifactLocation?.uri.toString(),
         code = this.code ?: "",
-        astNodes = this.nodes.map { it.toJSON() },
-        overlayNodes = this.nodes.flatMap { it.overlays.map { it.toJSON() } },
+        cpgTU = this,
     )
 }
 
