@@ -33,8 +33,10 @@ import de.fraunhofer.aisec.cpg.graph.Forward
 import de.fraunhofer.aisec.cpg.graph.Interprocedural
 import de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.Encrypt
 import de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.GetSecret
+import de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.Secret
 import de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.newCipher
 import de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.newEncryptOperation
+import de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.newGetSecret
 import de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.newSecret
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.DeAllocate
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.MemoryManagementMode
@@ -250,12 +252,10 @@ class MemoryTest {
                 underlyingNode = assertNotNull(result.components[DEFAULT_APPLICATION_NAME]),
                 mode = MemoryManagementMode.MANAGED_WITH_GARBAGE_COLLECTION,
             )
-        val ops =
-            result.allChildren<DeleteExpression>().flatMap { delete ->
-                delete.operands.map {
-                    result.newDeAllocate(underlyingNode = delete, concept = memory, what = it).apply {
-                        this.prevDFG += it
-                    }
+        result.allChildren<DeleteExpression>().flatMap { delete ->
+            delete.operands.map {
+                result.newDeallocate(underlyingNode = delete, concept = memory, what = it).apply {
+                    this.prevDFG += it
                 }
             }
         }
