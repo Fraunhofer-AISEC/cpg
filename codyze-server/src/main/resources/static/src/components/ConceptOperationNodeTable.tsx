@@ -1,5 +1,5 @@
 import React from 'react';
-import { NodeInfo } from '../types';
+import {NodeInfo} from '../types';
 
 interface ConceptOperationNodeTableProps {
     nodes: NodeInfo[];

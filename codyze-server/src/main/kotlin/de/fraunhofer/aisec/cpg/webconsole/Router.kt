@@ -34,14 +34,14 @@ import io.ktor.server.routing.*
 import java.io.File
 import kotlinx.serialization.Serializable
 
-@Serializable data class GenerateCPGRequest(val sourceDir: String)
+@Serializable data class GenerateCPGRequest(val sourceDir: String, val includeDir: String? = null)
 
 fun Routing.cpgRoutes(service: CPGService) {
     route("/api") {
         post("/generate") {
             val request = call.receive<GenerateCPGRequest>()
             try {
-                val result = service.generateCPG(request.sourceDir)
+                val result = service.generateCPG(request)
                 call.respond(result)
             } catch (e: Exception) {
                 call.respond(HttpStatusCode.InternalServerError, mapOf("error" to e.message))
