@@ -4,8 +4,13 @@ import { TranslationResult, Component, TranslationUnit, NodeInfo } from '../type
 
 const API_BASE_URL = '/api';
 
+<<<<<<< HEAD
 export const generateCPG = async (sourceDir: string): Promise<TranslationResult> => {
     const response = await axios.post(`${API_BASE_URL}/generate`, { sourceDir });
+=======
+export const generateCPG = async (sourceDir: string, includeDir?: string): Promise<TranslationResult> => {
+    const response = await axios.post(`${API_BASE_URL}/generate`, { sourceDir, includeDir });
+>>>>>>> origin/webconsole
     return response.data;
 };
 

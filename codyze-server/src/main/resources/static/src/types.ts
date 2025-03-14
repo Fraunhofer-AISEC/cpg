@@ -13,6 +13,11 @@ export interface TranslationUnit {
     name: string;
     path: string;
     code: string;
+<<<<<<< HEAD
+=======
+    astNodes: NodeInfo[];
+    overlayNodes: NodeInfo[];
+>>>>>>> origin/webconsole
 }
 
 export interface NodeInfo {

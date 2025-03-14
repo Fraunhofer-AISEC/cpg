@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { TranslationUnit, NodeInfo } from '../types';
@@ -21,11 +22,26 @@ const getColorForNodeType = (type: string): string => {
 };
 
 const TranslationUnitPage: React.FC = () => {
+=======
+import {useEffect, useState} from 'react';
+import {Link, useSearchParams} from 'react-router-dom';
+import {NodeInfo, TranslationUnit} from '../types';
+import {getTranslationUnit} from '../services/api';
+import SyntaxHighlighter from 'react-syntax-highlighter';
+import {docco} from 'react-syntax-highlighter/dist/esm/styles/hljs';
+import NodeOverlay from '../components/NodeOverlay';
+import NodeTooltip from '../components/NodeTooltip';
+import NodeTable from '../components/NodeTable';
+import ConceptOperationNodeTable from '../components/ConceptOperationNodeTable';
+
+function TranslationUnitPage() {
+>>>>>>> origin/webconsole
     const [searchParams] = useSearchParams();
     const componentName = searchParams.get('component');
     const path = searchParams.get('path');
 
     const [translationUnit, setTranslationUnit] = useState<TranslationUnit | null>(null);
+<<<<<<< HEAD
     const [nodes, setNodes] = useState<NodeInfo[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
@@ -36,6 +52,19 @@ const TranslationUnitPage: React.FC = () => {
     const charWidth = 10;   // Adjust based on your actual character width
     const offsetLeft = 33;
     const offsetTop = 8;
+=======
+    const [astNodes, setAstNodes] = useState<NodeInfo[]>([]);
+    const [overlayNodes, setOverlayNodes] = useState<NodeInfo[]>([]);
+    const [loading, setLoading] = useState<boolean>(true);
+    const [error, setError] = useState<string | null>(null);
+    const [highlightedNode, setHighlightedNode] = useState<NodeInfo | null>(null);
+    const [activeTab, setActiveTab] = useState<'astNodes' | 'overlayNodes'>('overlayNodes');
+
+    const lineHeight = 24;
+    const charWidth = 10;
+    const offsetTop = 8;
+    const baseOffsetLeft = 14;
+>>>>>>> origin/webconsole
 
     useEffect(() => {
         const fetchData = async () => {
@@ -47,6 +76,7 @@ const TranslationUnitPage: React.FC = () => {
 
             try {
                 console.log(`Fetching data for component: ${componentName}, path: ${path}`);
+<<<<<<< HEAD
                 const [unitData, nodesData] = await Promise.all([
                     getTranslationUnit(componentName, path),
                     getNodesForTranslationUnit(componentName, path)
@@ -57,6 +87,15 @@ const TranslationUnitPage: React.FC = () => {
                 console.log(`Fetched ${nodesData.length} nodes`);
             } catch (err) {
                 setError('Failed to load translation unit data');
+=======
+                const data = await getTranslationUnit(componentName, path);
+                setTranslationUnit(data);
+                setAstNodes(data.astNodes);
+                setOverlayNodes(data.overlayNodes);
+                console.log(`Fetched ${data.length} nodes`);
+            } catch (err) {
+                setError('Failed to load nodes');
+>>>>>>> origin/webconsole
                 console.error(err);
             } finally {
                 setLoading(false);
@@ -81,6 +120,15 @@ const TranslationUnitPage: React.FC = () => {
         );
     }
 
+<<<<<<< HEAD
+=======
+    const totalLines = translationUnit.code.split('\n').length;
+    const lineNumberWidth = Math.ceil(Math.log10(totalLines + 1));
+    const offsetLeft = baseOffsetLeft + lineNumberWidth * charWidth;
+
+    const nodes = activeTab === 'overlayNodes' ? overlayNodes : astNodes;
+
+>>>>>>> origin/webconsole
     return (
         <div className="container mx-auto p-4">
             <div className="mb-4">
@@ -100,6 +148,7 @@ const TranslationUnitPage: React.FC = () => {
                         {translationUnit.code}
                     </SyntaxHighlighter>
 
+<<<<<<< HEAD
                     {/* Improved Node overlays */}
                     <div className="absolute top-0 left-0 w-full h-full">
                         {nodes.map((node) => (
@@ -139,11 +188,32 @@ const TranslationUnitPage: React.FC = () => {
                             <p><strong>Location:</strong> L{highlightedNode.startLine}:C{highlightedNode.startColumn} - L{highlightedNode.endLine}:C{highlightedNode.endColumn}</p>
                             <p className="mt-1 truncate"><strong>Code:</strong> {highlightedNode.code}</p>
                         </div>
+=======
+                    <NodeOverlay
+                        nodes={nodes}
+                        highlightedNode={highlightedNode}
+                        setHighlightedNode={setHighlightedNode}
+                        lineHeight={lineHeight}
+                        charWidth={charWidth}
+                        offsetTop={offsetTop}
+                        offsetLeft={offsetLeft}
+                    />
+
+                    {highlightedNode && (
+                        <NodeTooltip
+                            node={highlightedNode}
+                            lineHeight={lineHeight}
+                            charWidth={charWidth}
+                            offsetTop={offsetTop}
+                            offsetLeft={offsetLeft}
+                        />
+>>>>>>> origin/webconsole
                     )}
                 </div>
             </div>
 
             <div className="bg-white shadow-md rounded p-6">
+<<<<<<< HEAD
                 <h2 className="text-lg font-semibold mb-4">AST Nodes ({nodes.length})</h2>
                 <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-200">
@@ -174,6 +244,28 @@ const TranslationUnitPage: React.FC = () => {
                         </tbody>
                     </table>
                 </div>
+=======
+                <div className="mb-4">
+                    <button
+                        className={`px-4 py-2 ml-2 ${activeTab === 'overlayNodes' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
+                        onClick={() => setActiveTab('overlayNodes')}
+                    >
+                        Overlay Nodes
+                    </button>
+                    <button
+                        className={`px-4 py-2 ${activeTab === 'astNodes' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
+                        onClick={() => setActiveTab('astNodes')}
+                    >
+                        AST Nodes
+                    </button>
+                </div>
+
+                {activeTab === 'astNodes' ? (
+                    <NodeTable nodes={astNodes} highlightedNode={highlightedNode} setHighlightedNode={setHighlightedNode} />
+                ) : (
+                    <ConceptOperationNodeTable nodes={overlayNodes} highlightedNode={highlightedNode} setHighlightedNode={setHighlightedNode} />
+                )}
+>>>>>>> origin/webconsole
             </div>
         </div>
     );
