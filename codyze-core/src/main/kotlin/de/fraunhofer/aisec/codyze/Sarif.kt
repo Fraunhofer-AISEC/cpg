@@ -69,25 +69,31 @@ fun QueryTree<Boolean>.toSarif(ruleID: String): List<Result> {
             locations = listOfNotNull(child.node?.toSarifLocation()),
             stacks = child.node?.toSarifCallStack(),
             codeFlows =
-                child.children.mapNotNull { subChild ->
-                    if (subChild.value is List<*>) {
+                child.children
+                    .flatMap { it.getCodeflow() }
+                    .map {
                         CodeFlow(
                             threadFlows =
                                 listOf(
                                     ThreadFlow(
                                         message = Message(text = "Thread flow"),
-                                        locations =
-                                            (subChild.value as List<*>)
-                                                .filterIsInstance<Node>()
-                                                .toSarifThreadFlowLocation(),
+                                        locations = it.toSarifThreadFlowLocation(),
                                     )
                                 )
                         )
-                    } else {
-                        null
-                    }
-                },
+                    },
         )
+    }
+}
+
+/** Tries to extract the nodes which were visited to retrieve this result. */
+fun QueryTree<*>.getCodeflow(): List<List<Node>> {
+    return if (this.value is List<*>) {
+        listOf((this.value as Iterable<*>).filterIsInstance<Node>())
+    } else if (this.value is Boolean) {
+        this.children.flatMap { it.getCodeflow() }
+    } else {
+        listOf<List<Node>>()
     }
 }
 

@@ -25,10 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.TypeManager
 import de.fraunhofer.aisec.cpg.frontends.StructTestLanguage
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
@@ -41,7 +39,7 @@ class ReplaceTest {
     @ReplacePass(EvaluationOrderGraphPass::class, ReplaceTestLanguage::class, ReplacedPass::class)
     class ReplaceTestLanguageFrontend : TestLanguageFrontend()
 
-    class ReplaceTestLanguage(ctx: TranslationContext) : TestLanguage(ctx) {
+    class ReplaceTestLanguage() : TestLanguage() {
         override val frontend: KClass<out TestLanguageFrontend>
             get() = ReplaceTestLanguageFrontend::class
 
@@ -56,7 +54,7 @@ class ReplaceTest {
     fun testReplaceAnnotation() {
         val config =
             TranslationConfiguration.builder().registerLanguage<ReplaceTestLanguage>().build()
-        val ctx = TranslationContext(config, ScopeManager(), TypeManager())
+        val ctx = TranslationContext(config)
 
         assertContains(config.replacedPasses.values, ReplacedPass::class)
         assertContains(
@@ -65,7 +63,7 @@ class ReplaceTest {
         )
 
         val cls =
-            checkForReplacement(EvaluationOrderGraphPass::class, ReplaceTestLanguage(ctx), config)
+            checkForReplacement(EvaluationOrderGraphPass::class, ReplaceTestLanguage(), config)
         assertEquals(ReplacedPass::class, cls)
     }
 
@@ -76,7 +74,7 @@ class ReplaceTest {
                 .replacePass<EvaluationOrderGraphPass, StructTestLanguage, ReplacedPass>()
                 .replacePass<EvaluationOrderGraphPass, ReplaceTestLanguage, ReplacedPass>()
                 .build()
-        val ctx = TranslationContext(config, ScopeManager(), TypeManager())
+        val ctx = TranslationContext(config)
 
         assertContains(config.replacedPasses.values, ReplacedPass::class)
         assertContains(
@@ -84,13 +82,13 @@ class ReplaceTest {
             Pair(EvaluationOrderGraphPass::class, StructTestLanguage::class),
         )
 
-        var cls = checkForReplacement(EvaluationOrderGraphPass::class, TestLanguage(ctx), config)
+        var cls = checkForReplacement(EvaluationOrderGraphPass::class, TestLanguage(), config)
         assertEquals(EvaluationOrderGraphPass::class, cls)
 
-        cls = checkForReplacement(EvaluationOrderGraphPass::class, StructTestLanguage(ctx), config)
+        cls = checkForReplacement(EvaluationOrderGraphPass::class, StructTestLanguage(), config)
         assertEquals(ReplacedPass::class, cls)
 
-        cls = checkForReplacement(EvaluationOrderGraphPass::class, ReplaceTestLanguage(ctx), config)
+        cls = checkForReplacement(EvaluationOrderGraphPass::class, ReplaceTestLanguage(), config)
         assertEquals(ReplacedPass::class, cls)
     }
 }

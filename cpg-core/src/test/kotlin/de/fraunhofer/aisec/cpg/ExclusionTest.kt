@@ -40,7 +40,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
-class TestFileLanguage(ctx: TranslationContext) : TestLanguage(ctx) {
+class TestFileLanguage() : TestLanguage() {
     override val fileExtensions: List<String>
         get() = listOf("file")
 
@@ -50,13 +50,8 @@ class TestFileLanguage(ctx: TranslationContext) : TestLanguage(ctx) {
 
 /** Just a test frontend that "reads" a file and returns an empty [TranslationUnitDeclaration]. */
 class TestFileLanguageFrontend(
-    ctx: TranslationContext =
-        TranslationContext(
-            TranslationConfiguration.builder().build(),
-            ScopeManager(),
-            TypeManager(),
-        ),
-    language: Language<TestLanguageFrontend> = TestFileLanguage(ctx),
+    ctx: TranslationContext = TranslationContext(TranslationConfiguration.builder().build()),
+    language: Language<TestLanguageFrontend> = TestFileLanguage(),
 ) : TestLanguageFrontend(ctx, language) {
     override fun parse(file: File): TranslationUnitDeclaration {
         return newTranslationUnitDeclaration(file.name)

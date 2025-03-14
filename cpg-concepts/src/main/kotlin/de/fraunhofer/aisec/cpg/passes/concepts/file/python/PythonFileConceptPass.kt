@@ -121,11 +121,17 @@ class PythonFileConceptPass(ctx: TranslationContext) : ConceptPass(ctx) {
                                 )
                                 return
                             }
-                            newFileWrite(
-                                underlyingNode = callExpression,
-                                file = fileNode,
-                                what = arg,
-                            )
+                            if (
+                                callExpression.overlays.none {
+                                    it is WriteFile && it.file == fileNode && it.what == arg
+                                }
+                            ) {
+                                newFileWrite(
+                                    underlyingNode = callExpression,
+                                    file = fileNode,
+                                    what = arg,
+                                )
+                            }
                         }
                         else ->
                             Util.warnWithFileLocation(
@@ -249,7 +255,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : ConceptPass(ctx) {
             expression
                 .followDFGEdgesUntilHit(
                     collectFailedPaths = false,
-                    findAllPossiblePaths = true,
+                    findAllPossiblePaths = false,
                     direction = Backward(GraphToFollow.DFG),
                 ) { node ->
                     node.overlays.any { overlay -> overlay is OpenFile }

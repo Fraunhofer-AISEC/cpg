@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.types.HasSecondaryTypeEdge
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import java.util.*
@@ -43,9 +44,10 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /** Represents the declaration or definition of a function. */
-open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder, EOGStarterHolder {
+open class FunctionDeclaration :
+    ValueDeclaration(), DeclarationHolder, EOGStarterHolder, HasSecondaryTypeEdge {
     @Relationship("BODY") var bodyEdge = astOptionalEdgeOf<Statement>()
-    /** The function body. Usualfly a [Block]. */
+    /** The function body. Usually a [Block]. */
     var body by unwrapping(FunctionDeclaration::bodyEdge)
 
     /** The list of function parameters. */
@@ -199,6 +201,9 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder, EOGStart
         get() {
             return this.body?.cyclomaticComplexity ?: 0
         }
+
+    override val secondaryTypes: List<Type>
+        get() = returnTypes + throwsTypes + signatureTypes
 
     companion object {
         const val WHITESPACE = " "

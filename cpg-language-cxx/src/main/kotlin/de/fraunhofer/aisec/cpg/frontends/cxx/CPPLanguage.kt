@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.CallResolutionResult
 import de.fraunhofer.aisec.cpg.SignatureMatches
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.*
+import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.*
@@ -47,8 +48,9 @@ import kotlin.reflect.KClass
 import org.neo4j.ogm.annotation.Transient
 
 /** The C++ language. */
-open class CPPLanguage(ctx: TranslationContext) :
-    CLanguage(ctx),
+@Suppress("CONTEXT_RECEIVERS_DEPRECATED")
+open class CPPLanguage() :
+    CLanguage(),
     HasDefaultArguments,
     HasTemplates,
     HasStructs,
@@ -200,6 +202,7 @@ open class CPPLanguage(ctx: TranslationContext) :
         return CastNotPossible
     }
 
+    context(ContextProvider)
     override fun bestViableResolution(
         result: CallResolutionResult
     ): Pair<Set<FunctionDeclaration>, CallResolutionResult.SuccessKind> {

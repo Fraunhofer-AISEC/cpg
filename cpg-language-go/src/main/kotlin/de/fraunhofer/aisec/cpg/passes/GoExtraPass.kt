@@ -162,7 +162,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
     private fun addBuiltIn(): TranslationUnitDeclaration {
         val builtin = newTranslationUnitDeclaration("builtin.go")
-        builtin.language = GoLanguage(TranslationContext())
+        builtin.language = GoLanguage()
         scopeManager.resetToGlobal(builtin)
 
         return with(builtin) {
@@ -217,13 +217,11 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
     private fun TranslationUnitDeclaration.addBuiltInFunction(func: FunctionDeclaration) {
         func.type =
-            typeManager.registerType(
-                FunctionType(
-                    funcTypeName(func.signatureTypes, func.returnTypes),
-                    func.signatureTypes,
-                    func.returnTypes,
-                    func.language,
-                )
+            FunctionType(
+                funcTypeName(func.signatureTypes, func.returnTypes),
+                func.signatureTypes,
+                func.returnTypes,
+                func.language,
             )
         scopeManager.addDeclaration(func)
         this.declarations += func

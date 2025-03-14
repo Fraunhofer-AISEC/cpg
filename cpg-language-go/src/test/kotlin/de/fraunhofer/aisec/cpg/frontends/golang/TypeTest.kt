@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,34 +23,29 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.types
+package de.fraunhofer.aisec.cpg.frontends.golang
 
-import de.fraunhofer.aisec.cpg.graph.Name
-import de.fraunhofer.aisec.cpg.graph.unknownType
+import de.fraunhofer.aisec.cpg.test.analyze
+import java.nio.file.Path
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 
-/**
- * Represents a tuple of types. Primarily used in resolving function calls with multiple return
- * values.
- */
-class TupleType(types: List<Type>) : Type(), HasSecondaryTypeEdge {
-    var types: List<Type> = listOf()
-        set(value) {
-            field = value
-            name = Name(value.joinToString(", ", "(", ")") { it.name.toString() })
-        }
+class TypeTest {
+    @Test
+    fun testTypeNameConfusion() {
+        val topLevel = Path.of("src", "test", "resources", "golang")
+        val result =
+            analyze(listOf(topLevel.resolve("type_loop.go").toFile()), topLevel, true) {
+                it.registerLanguage<GoLanguage>()
+            }
+        assertNotNull(result)
 
-    init {
-        this.types = types
+        val types = result.finalCtx.typeManager.resolvedTypes
+        assertEquals(3, types.size)
+        assertEquals(
+            listOf("fmt.fmt", "fmt.some", "fmt.some"),
+            types.map { it.name.toString() }.sorted(),
+        )
     }
-
-    override fun reference(pointer: PointerType.PointerOrigin?): Type {
-        return unknownType()
-    }
-
-    override fun dereference(): Type {
-        return unknownType()
-    }
-
-    override val secondaryTypes: List<Type>
-        get() = types
 }

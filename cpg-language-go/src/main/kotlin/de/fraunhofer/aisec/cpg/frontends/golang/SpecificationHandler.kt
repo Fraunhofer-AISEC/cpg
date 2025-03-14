@@ -100,9 +100,6 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
     ): RecordDeclaration {
         val record = buildRecordDeclaration(structType, typeSpec.name.name, typeSpec)
 
-        // Make sure to register the type
-        frontend.typeManager.registerType(record.toType())
-
         return record
     }
 
@@ -147,9 +144,6 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
         interfaceType: GoStandardLibrary.Ast.InterfaceType,
     ): Declaration {
         val record = newRecordDeclaration(typeSpec.name.name, "interface", rawNode = typeSpec)
-
-        // Make sure to register the type
-        frontend.typeManager.registerType(record.toType())
 
         frontend.scopeManager.enterScope(record)
 
@@ -345,9 +339,6 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
 
                 // We add the underlying type as the single super class
                 record.superClasses = mutableListOf(targetType)
-
-                // Register the type with the type system
-                frontend.typeManager.registerType(record.toType())
 
                 // Make sure to add the scope to the scope manager
                 frontend.scopeManager.enterScope(record)
