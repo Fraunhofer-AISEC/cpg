@@ -34,6 +34,7 @@ import com.github.ajalt.clikt.parameters.types.path
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import io.github.detekt.sarif4k.*
 import java.io.File
 import java.nio.file.Path
@@ -78,7 +79,11 @@ class TranslationOptions : OptionGroup("CPG Translation Options") {
  * @param translationResult The result of the CPG translation.
  * @param sarif The SARIF object, that contains findings.
  */
-data class AnalysisResult(val translationResult: TranslationResult, val sarif: SarifSchema210) {
+data class AnalysisResult(
+    val translationResult: TranslationResult,
+    val sarif: SarifSchema210 = SarifSchema210(version = Version.The210, runs = listOf()),
+    val project: AnalysisProject,
+) : ContextProvider by translationResult {
     fun writeSarifJson(file: File) {
         file.writeText(SarifSerializer.toJson(sarif))
     }
@@ -115,14 +120,19 @@ class AnalysisProject(
     var librariesPath: Path? = projectDir?.resolve("libraries"),
     /** The translation configuration for the project. */
     var config: TranslationConfiguration,
+    /**
+     * Any post-process steps that can be applied to the analysis result. This can for example be
+     * used to fill [AnalysisResult.sarif].
+     */
+    var postProcess:
+        (AnalysisProject.(TranslationResult) -> Pair<List<ReportingDescriptor>, List<Result>>)? =
+        null,
 ) {
 
     /** Analyzes the project and returns the result. */
-    fun analyze(
-        postProcess: ((TranslationResult) -> Pair<List<ReportingDescriptor>, List<Result>>)? = null
-    ): AnalysisResult {
+    fun analyze(): AnalysisResult {
         val tr = TranslationManager.builder().config(config).build().analyze().get()
-        val (rules, results) = postProcess?.invoke(tr) ?: Pair(emptyList(), emptyList())
+        val (rules, results) = postProcess?.invoke(this, tr) ?: Pair(emptyList(), emptyList())
 
         // Create a new SARIF run, including a tool definition and rules corresponding to the
         // individual security statements
@@ -136,6 +146,7 @@ class AnalysisProject(
         return AnalysisResult(
             translationResult = tr,
             sarif = SarifSchema210(version = Version.The210, runs = listOf(run)),
+            project = this,
         )
     }
 
@@ -147,6 +158,12 @@ class AnalysisProject(
             components: List<String>? = null,
             exclusionPatterns: List<String>? = null,
             librariesPath: Path? = projectDir.resolve("libraries"),
+            postProcess:
+                (AnalysisProject.(TranslationResult) -> Pair<
+                        List<ReportingDescriptor>,
+                        List<Result>,
+                    >)? =
+                null,
             configBuilder:
                 ((TranslationConfiguration.Builder) -> TranslationConfiguration.Builder)? =
                 null,
@@ -220,6 +237,7 @@ class AnalysisProject(
                 name = projectDir.fileName.toString(),
                 librariesPath = librariesPath,
                 projectDir = projectDir,
+                postProcess = postProcess,
             )
         }
 
@@ -227,6 +245,12 @@ class AnalysisProject(
         fun fromOptions(
             projectOptions: ProjectOptions,
             translationOptions: TranslationOptions,
+            postProcess:
+                (AnalysisProject.(TranslationResult) -> Pair<
+                        List<ReportingDescriptor>,
+                        List<Result>,
+                    >)? =
+                null,
             configModifier:
                 ((TranslationConfiguration.Builder) -> TranslationConfiguration.Builder)? =
                 null,
@@ -237,6 +261,7 @@ class AnalysisProject(
                 translationOptions.components,
                 translationOptions.exclusionPatterns,
                 configBuilder = configModifier,
+                postProcess = postProcess,
             )
         }
     }

@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.component
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
+import de.fraunhofer.aisec.cpg.graph.nodes
 import io.github.detekt.sarif4k.Result
 import java.net.URL
 import kotlin.io.path.Path
@@ -73,7 +74,6 @@ data class AnalysisResultJSON(
     val components: List<ComponentJSON>,
     val totalNodes: Int,
     var sourceDir: String,
-    @Transient val cpgResult: TranslationResult? = null,
     @Transient val analysisResult: AnalysisResult? = null,
     val findings: List<FindingsJSON>,
 )
@@ -108,6 +108,17 @@ data class NodeJSON(
     val prevDFG: List<EdgeJSON> = emptyList(),
     val nextDFG: List<EdgeJSON> = emptyList(),
 )
+
+fun AnalysisResult.toJSON(): AnalysisResultJSON =
+    with(translationResult) {
+        AnalysisResultJSON(
+            components = components.map { it.toJSON() },
+            totalNodes = nodes.size,
+            analysisResult = this@toJSON,
+            sourceDir = config.sourceLocations.first().absolutePath,
+            findings = sarif.runs.flatMap { it.results?.map { it.toJSON() } ?: emptyList() },
+        )
+    }
 
 context(ContextProvider)
 fun TranslationUnitDeclaration.toJSON(): TranslationUnitJSON {

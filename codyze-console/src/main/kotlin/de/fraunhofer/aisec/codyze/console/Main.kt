@@ -36,15 +36,15 @@ import io.ktor.server.routing.*
 import kotlinx.serialization.json.Json
 
 fun main() {
-    CPGService().startServer()
+    ConsoleService().startServer()
 }
 
-fun CPGService.startServer() {
+fun ConsoleService.startServer() {
     embeddedServer(Netty, host = "localhost", port = 8080) { configureWebconsole(this@startServer) }
         .start(wait = true)
 }
 
-fun Application.configureWebconsole(service: CPGService) {
+fun Application.configureWebconsole(service: ConsoleService = ConsoleService()) {
     install(CORS) {
         anyHost()
         allowHeader(HttpHeaders.ContentType)
@@ -62,7 +62,7 @@ fun Application.configureWebconsole(service: CPGService) {
     configureRouting(service)
 }
 
-fun Application.configureRouting(service: CPGService) {
+fun Application.configureRouting(service: ConsoleService) {
     routing {
         // We'll add routes here
         cpgRoutes(service)

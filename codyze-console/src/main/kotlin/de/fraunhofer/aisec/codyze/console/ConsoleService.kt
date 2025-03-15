@@ -25,9 +25,9 @@
  */
 package de.fraunhofer.aisec.codyze.console
 
+import de.fraunhofer.aisec.codyze.AnalysisProject
 import de.fraunhofer.aisec.codyze.AnalysisResult
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
-import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.nodes
@@ -39,11 +39,18 @@ import kotlin.uuid.Uuid
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-class CPGService {
-    private var translationResult: AnalysisResultJSON? = null
-    var lastConfiguration: TranslationConfiguration? = null
+/**
+ * Service class for the console. This class is responsible for managing the translation process and
+ * storing the results.
+ *
+ * @property analysisResult The result of the last translation process
+ * @property lastProject The [AnalysisProject] of the last run.
+ */
+class ConsoleService {
+    private var analysisResult: AnalysisResultJSON? = null
+    var lastProject: AnalysisProject? = null
 
-    suspend fun generateCPG(request: GenerateCPGRequest): AnalysisResultJSON =
+    suspend fun analyze(request: AnalyzeRequest): AnalysisResultJSON =
         withContext(Dispatchers.IO) {
             val path = Path.of(request.sourceDir)
             val builder =
@@ -66,38 +73,27 @@ class CPGService {
 
             val config = builder.build()
 
-            generateCPGFromConfig(config)
+            // Build an ad-hoc project
+            val project = AnalysisProject(name = "ad-hoc", projectDir = null, config = config)
+            analyzeProject(project)
         }
 
-    fun generateCPGFromConfig(config: TranslationConfiguration): AnalysisResultJSON {
-        lastConfiguration = config
+    fun analyzeProject(project: AnalysisProject): AnalysisResultJSON {
+        lastProject = project
 
-        val translationManager = TranslationManager.builder().config(config).build()
+        val result = project.analyze()
 
-        val result = translationManager.analyze().get()
-
-        val translationResult =
-            with(result) {
-                AnalysisResultJSON(
-                    components = result.components.map { it.toJSON() },
-                    totalNodes = result.nodes.size,
-                    cpgResult = result,
-                    analysisResult = null,
-                    sourceDir = config.sourceLocations.first().absolutePath,
-                    findings = listOf(),
-                )
-            }
-
-        this@CPGService.translationResult = translationResult
-        return translationResult
+        val json = result.toJSON()
+        this@ConsoleService.analysisResult = json
+        return json
     }
 
     fun getTranslationResult(): AnalysisResultJSON? {
-        return translationResult
+        return analysisResult
     }
 
     fun getComponent(componentName: String): ComponentJSON? {
-        return translationResult?.components?.find { it.name == componentName }
+        return analysisResult?.components?.find { it.name == componentName }
     }
 
     fun getTranslationUnit(componentName: String, id: String): TranslationUnitJSON? {
@@ -128,25 +124,10 @@ class CPGService {
     }
 
     companion object {
-        fun fromAnalysisResult(result: AnalysisResult): CPGService {
-            val tr = result.translationResult
-
-            val service = CPGService()
-            with(tr) {
-                service.translationResult =
-                    AnalysisResultJSON(
-                        components = tr.components.map { it.toJSON() },
-                        totalNodes = tr.nodes.size,
-                        cpgResult = tr,
-                        analysisResult = result,
-                        sourceDir = tr.config.sourceLocations.first().absolutePath,
-                        findings =
-                            result.sarif.runs.flatMap {
-                                it.results?.map { it.toJSON() } ?: emptyList()
-                            },
-                    )
-                service.lastConfiguration = tr.config
-            }
+        fun fromAnalysisResult(result: AnalysisResult): ConsoleService {
+            val service = ConsoleService()
+            service.analysisResult = result.toJSON()
+            service.lastProject = result.project
             return service
         }
     }

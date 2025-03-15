@@ -21,7 +21,8 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
 
     // Testing
-    testImplementation(libs.ktor.server.tests)
+    testImplementation(libs.ktor.server.test.host)
+    testImplementation(libs.ktor.client.content.negotiation)
 }
 
 node {

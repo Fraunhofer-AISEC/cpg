@@ -14,7 +14,7 @@ export const generateCPG = async (
   includeDir?: string,
   topLevel?: string,
 ): Promise<TranslationResultJSON> => {
-  const response = await axios.post(`${API_BASE_URL}/generate`, {
+  const response = await axios.post(`${API_BASE_URL}/analyze`, {
     sourceDir,
     includeDir,
     topLevel,
@@ -23,7 +23,7 @@ export const generateCPG = async (
 };
 
 export const regenerateCPG = async (): Promise<TranslationResultJSON> => {
-  const response = await fetch("/api/regenerate", {
+  const response = await fetch("/api/reanalyze", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

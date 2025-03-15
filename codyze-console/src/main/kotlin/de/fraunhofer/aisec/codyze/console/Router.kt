@@ -35,30 +35,36 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
 
+enum class AnalysisMode {
+    TRANSLATION_ONLY,
+    ANALYZE_WITH_GOALS,
+}
+
 @Serializable
-data class GenerateCPGRequest(
+data class AnalyzeRequest(
     val sourceDir: String,
     val includeDir: String? = null,
     val topLevel: String? = null,
+    val analysisModel: AnalysisMode = AnalysisMode.TRANSLATION_ONLY,
 )
 
-fun Routing.cpgRoutes(service: CPGService) {
+fun Routing.cpgRoutes(service: ConsoleService) {
     route("/api") {
-        post("/generate") {
-            val request = call.receive<GenerateCPGRequest>()
+        post("/analyze") {
+            val request = call.receive<AnalyzeRequest>()
             try {
-                val result = service.generateCPG(request)
+                val result = service.analyze(request)
                 call.respond(result)
             } catch (e: Exception) {
                 call.respond(HttpStatusCode.InternalServerError, mapOf("error" to e.message))
             }
         }
 
-        post("/regenerate") {
-            val lastConfig = service.lastConfiguration
-            if (lastConfig != null) {
+        post("/reanalyze") {
+            val lastProject = service.lastProject
+            if (lastProject != null) {
                 try {
-                    val result = service.generateCPGFromConfig(lastConfig)
+                    val result = service.analyzeProject(lastProject)
                     call.respond(result)
                 } catch (e: Exception) {
                     call.respond(HttpStatusCode.InternalServerError, mapOf("error" to e.message))
