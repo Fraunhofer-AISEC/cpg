@@ -1,4 +1,4 @@
-import com.github.gradle.node.npm.task.NpmTask
+import com.github.gradle.node.pnpm.task.PnpmTask
 
 plugins {
     id("cpg.application-conventions")
@@ -31,25 +31,25 @@ node {
     nodeProjectDir.set(file("${project.projectDir.resolve("src/main/webapp")}"))
 }
 
-val npmBuild by
-    tasks.registering(NpmTask::class) {
+val pnpmBuild by
+    tasks.registering(PnpmTask::class) {
         inputs.file("src/main/webapp/package.json").withPathSensitivity(PathSensitivity.RELATIVE)
         inputs
-            .file("src/main/webapp/package-lock.json")
+            .file("src/main/webapp/pnpm-lock.yaml")
             .withPathSensitivity(PathSensitivity.RELATIVE)
         inputs.dir("src/main/webapp/src").withPathSensitivity(PathSensitivity.RELATIVE)
         outputs.dir("src/main/resources/static")
         outputs.cacheIf { true }
 
         workingDir.set(file("src/main/webapp"))
-        npmCommand.set(listOf("run", "build"))
-        dependsOn(tasks.getByName("npmInstall"))
+        pnpmCommand.set(listOf("run", "build"))
+        dependsOn(tasks.getByName("pnpmInstall"))
     }
 
 application { mainClass.set("de.fraunhofer.aisec.codyze.console.MainKt") }
 
-tasks.processResources { dependsOn(npmBuild) }
+tasks.processResources { dependsOn(pnpmBuild) }
 
 var jarTasks = tasks.withType<Jar>()
 
-jarTasks.forEach { it.dependsOn(npmBuild) }
+jarTasks.forEach { it.dependsOn(pnpmBuild) }

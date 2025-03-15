@@ -23,7 +23,7 @@
  *                    \______/ \__|       \______/
  *
  */
-import com.github.gradle.node.npm.task.NpmTask
+import com.github.gradle.node.pnpm.task.PnpmTask
 
 plugins {
     id("cpg.frontend-conventions")
@@ -43,19 +43,19 @@ node {
     nodeProjectDir.set(file("${project.projectDir.resolve("src/main/nodejs")}"))
 }
 
-val npmBuild by
-    tasks.registering(NpmTask::class) {
+val pnpmBuild by
+    tasks.registering(PnpmTask::class) {
         inputs.file("src/main/nodejs/package.json").withPathSensitivity(PathSensitivity.RELATIVE)
         inputs
-            .file("src/main/nodejs/package-lock.json")
+            .file("src/main/nodejs/pnpm-lock.yaml")
             .withPathSensitivity(PathSensitivity.RELATIVE)
         inputs.dir("src/main/nodejs/src").withPathSensitivity(PathSensitivity.RELATIVE)
         outputs.dir("build/resources/main/nodejs")
         outputs.cacheIf { true }
 
         workingDir.set(file("src/main/nodejs"))
-        npmCommand.set(listOf("run", "bundle"))
-        dependsOn(tasks.getByName("npmInstall"))
+        pnpmCommand.set(listOf("run", "bundle"))
+        dependsOn(tasks.getByName("pnpmInstall"))
     }
 
-tasks.processResources { dependsOn(npmBuild) }
+tasks.processResources { dependsOn(pnpmBuild) }
