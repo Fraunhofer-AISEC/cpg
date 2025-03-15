@@ -27,6 +27,7 @@ dependencies {
 
 node {
     download.set(true)
+    version.set("20.9.0")
     nodeProjectDir.set(file("${project.projectDir.resolve("src/main/webapp")}"))
 }
 
@@ -45,7 +46,7 @@ val npmBuild by
         dependsOn(tasks.getByName("npmInstall"))
     }
 
-application { mainClass.set("de.fraunhofer.aisec.cpg.webconsole.MainKt") }
+application { mainClass.set("de.fraunhofer.aisec.codyze.console.MainKt") }
 
 tasks.processResources { dependsOn(npmBuild) }
 

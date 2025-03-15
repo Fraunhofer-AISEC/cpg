@@ -60,7 +60,8 @@ data class EdgeJSON(
 @Serializable
 data class FindingsJSON(
     var kind: String,
-    var component: String,
+    var component: String?,
+    @Serializable(with = UuidSerializer::class) var translationUnit: Uuid?,
     var path: String,
     var rule: String?,
     val startLine: Long,
@@ -174,20 +175,21 @@ fun Result.toJSON(): FindingsJSON {
     var path =
         Path(URL(this.locations?.firstOrNull()?.physicalLocation?.artifactLocation?.uri).path)
 
-    var component =
-        this@TranslationResult.components.firstOrNull {
-            it.translationUnits.any { tu -> tu.location?.artifactLocation?.uri?.toPath() == path }
-        }
+    var translationUnit =
+        this@TranslationResult.components
+            .flatMap { it.translationUnits }
+            .firstOrNull { tu -> tu.location?.artifactLocation?.uri?.toPath() == path }
 
     return FindingsJSON(
         kind = this.kind?.name ?: "",
         path = path.toString(),
-        component = component?.name.toString(),
+        component = translationUnit?.component?.name?.toString(),
         rule = this.ruleID,
         startLine = this.locations?.firstOrNull()?.physicalLocation?.region?.startLine ?: -1,
         startColumn = this.locations?.firstOrNull()?.physicalLocation?.region?.startColumn ?: -1,
         endLine = this.locations?.firstOrNull()?.physicalLocation?.region?.endLine ?: -1,
         endColumn = this.locations?.firstOrNull()?.physicalLocation?.region?.endColumn ?: -1,
+        translationUnit = translationUnit?.id,
     )
 }
 
