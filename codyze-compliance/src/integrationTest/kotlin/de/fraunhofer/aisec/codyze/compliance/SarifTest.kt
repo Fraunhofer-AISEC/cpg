@@ -40,9 +40,10 @@ class SarifTest {
             AnalysisProject.from(
                 projectDir = Path("src/integrationTest/resources/demo-app"),
                 components = listOf("webapp"),
+                postProcess = AnalysisProject::executeSecurityGoalsQueries,
             )
 
-        val result = project.analyzeWithGoals()
+        val result = project.analyze()
         val tr = result.translationResult
         val webappMain = tr.namespaces["webapp.main"]
         assertNotNull(webappMain)

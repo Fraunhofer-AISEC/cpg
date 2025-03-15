@@ -29,6 +29,9 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.subcommands
 import com.github.ajalt.clikt.parameters.groups.provideDelegate
 import de.fraunhofer.aisec.codyze.*
+import de.fraunhofer.aisec.codyze.console.ConsoleService
+import de.fraunhofer.aisec.codyze.console.startServer
+import java.io.File
 
 /** The main `compliance` command. */
 class ComplianceCommand : CliktCommand() {
@@ -48,14 +51,23 @@ abstract class ProjectCommand : CliktCommand() {
 open class ScanCommand : ProjectCommand() {
     override fun run() {
         val project =
-            AnalysisProject.fromOptions(projectOptions, translationOptions) {
+            AnalysisProject.fromOptions(
+                projectOptions,
+                translationOptions,
+                postProcess = AnalysisProject::executeSecurityGoalsQueries,
+            ) {
                 // just to show that we can use a config build here
                 it
             }
-        val result = project.analyzeWithGoals()
+        val result = project.analyze()
+        result.writeSarifJson(File("findings.json"))
 
         result.sarif.runs.forEach { run ->
             run.results?.forEach { result -> echo(result.message.toString()) }
+        }
+
+        if (projectOptions.startServer) {
+            ConsoleService.fromAnalysisResult(result).startServer()
         }
     }
 }
