@@ -46,9 +46,7 @@ node {
 val pnpmBuild by
     tasks.registering(PnpmTask::class) {
         inputs.file("src/main/nodejs/package.json").withPathSensitivity(PathSensitivity.RELATIVE)
-        inputs
-            .file("src/main/nodejs/pnpm-lock.yaml")
-            .withPathSensitivity(PathSensitivity.RELATIVE)
+        inputs.file("src/main/nodejs/pnpm-lock.yaml").withPathSensitivity(PathSensitivity.RELATIVE)
         inputs.dir("src/main/nodejs/src").withPathSensitivity(PathSensitivity.RELATIVE)
         outputs.dir("build/resources/main/nodejs")
         outputs.cacheIf { true }
