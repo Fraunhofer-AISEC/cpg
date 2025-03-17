@@ -1,5 +1,5 @@
 [versions]
-kotlin = "2.0.20"
+kotlin = "2.1.10"
 neo4j = "4.0.10"
 neo4j5 = "5.28.2"
 log4j = "2.24.0"
@@ -14,7 +14,6 @@ sarif4k = "0.6.0"
 [libraries]
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin"}
 kotlin-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version = "1.10.1"}
-kotlin-ki-shell = { module = "com.github.Kotlin:kotlin-interactive-shell", version = "5b1ff4d821"}
 kotlin-test-junit5 = { module = "org.jetbrains.kotlin:kotlin-test-junit5", version.ref = "kotlin"}  # this is only needed for the testFixtures in cpg-core, everywhere else kotlin("test") is used
 
 log4j-impl = { module = "org.apache.logging.log4j:log4j-slf4j2-impl", version.ref = "log4j" }
