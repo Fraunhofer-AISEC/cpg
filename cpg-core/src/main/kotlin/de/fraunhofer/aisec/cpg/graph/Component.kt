@@ -46,7 +46,6 @@ import org.neo4j.ogm.annotation.Transient
  * This node holds all translation units belonging to this software component as well as (potential)
  * entry points or interactions with other software.
  */
-@Suppress("CONTEXT_RECEIVERS_DEPRECATED")
 open class Component : Node() {
     @Relationship("TRANSLATION_UNITS")
     val translationUnitEdges = astEdgesOf<TranslationUnitDeclaration>()
