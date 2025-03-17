@@ -1,6 +1,5 @@
 [versions]
-kotlin = "2.0.20"
-kotlin19 = "1.9.10"
+kotlin = "2.1.10"
 kotlinx-json = "1.8.0"
 neo4j = "4.0.10"
 neo4j5 = "5.28.2"
@@ -21,7 +20,7 @@ kotlin-scripting-jvm = { module = "org.jetbrains.kotlin:kotlin-scripting-jvm", v
 kotlin-scripting-jvm-host = { module = "org.jetbrains.kotlin:kotlin-scripting-jvm-host", version.ref = "kotlin"}
 kotlin-test-junit5 = { module = "org.jetbrains.kotlin:kotlin-test-junit5", version.ref = "kotlin"}  # this is only needed for the testFixtures in cpg-core, everywhere else kotlin("test") is used
 kotlin-serialization = { module = "org.jetbrains.kotlin:kotlin-serialization", version.ref = "kotlin" }
-kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version = "1.8.0" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-json" }
 
 log4j-impl = { module = "org.apache.logging.log4j:log4j-slf4j2-impl", version.ref = "log4j" }
 log4j-core = { module = "org.apache.logging.log4j:log4j-core", version.ref = "log4j" }
