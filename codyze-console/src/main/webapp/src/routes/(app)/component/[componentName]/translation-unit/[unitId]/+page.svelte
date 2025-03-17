@@ -59,13 +59,7 @@
           hideBorder
         />
         {#if finding && line}
-          <FindingOverlay
-            finding={finding}
-            kind={kind}
-            line={parseInt(line)}
-            lineHeight={lineHeight}
-            offsetTop={offsetTop}
-          />
+          <FindingOverlay {finding} {kind} line={parseInt(line)} {lineHeight} {offsetTop} />
         {/if}
       </Highlight>
 

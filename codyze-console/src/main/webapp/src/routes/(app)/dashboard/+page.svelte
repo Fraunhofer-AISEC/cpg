@@ -2,7 +2,7 @@
   import type { PageProps } from './$types';
   import AnalysisResult from '$lib/components/AnalysisResult.svelte';
   import NewAnalysis from '$lib/components/NewAnalysis.svelte';
-  import {invalidate} from "$app/navigation";
+  import { invalidate } from '$app/navigation';
 
   let { data }: PageProps = $props();
   let regenerateEnabled = $state(false);
@@ -14,9 +14,9 @@
       const response = await fetch('/api/analyze', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ sourceDir, includeDir, topLevel }),
+        body: JSON.stringify({ sourceDir, includeDir, topLevel })
       });
 
       if (!response.ok) {
@@ -24,7 +24,7 @@
       }
 
       const data = await response.json();
-      await invalidate("/api/result")
+      await invalidate('/api/result');
       console.log('Generation successful:', data);
     } catch (error) {
       console.error('Error during generation:', error);
