@@ -35,15 +35,25 @@ import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.json.Json
 
-fun main() {
-    ConsoleService().startServer()
-}
-
-fun ConsoleService.startServer() {
-    embeddedServer(Netty, host = "localhost", port = 8080) { configureWebconsole(this@startServer) }
+/**
+ * This function starts the embedded server for the web console. It uses the Netty engine and
+ * listens on localhost at port 8080. The server is configured using the [configureWebconsole]
+ * function.
+ */
+fun ConsoleService.startConsole() {
+    embeddedServer(Netty, host = "localhost", port = 8080) {
+            configureWebconsole(this@startConsole)
+        }
         .start(wait = true)
 }
 
+/**
+ * This function takes care of configuring the web console based on the [service]. It sets up the
+ * CORS policy, content negotiation, and routing.
+ *
+ * Note: Currently, the CORS policy allows any host. This should be restricted to specific hosts in
+ * a production environment and will be made available as an option later.
+ */
 fun Application.configureWebconsole(service: ConsoleService = ConsoleService()) {
     install(CORS) {
         anyHost()
@@ -62,10 +72,14 @@ fun Application.configureWebconsole(service: ConsoleService = ConsoleService()) 
     configureRouting(service)
 }
 
+/**
+ * This function sets up the routing for the web console. It defines the API routes and static
+ * resources (for serving the single-page application frontend).
+ */
 fun Application.configureRouting(service: ConsoleService) {
     routing {
         // We'll add routes here
-        cpgRoutes(service)
-        staticResources()
+        apiRoutes(service)
+        frontendRoutes()
     }
 }

@@ -26,32 +26,38 @@
 package de.fraunhofer.aisec.codyze.console
 
 import io.ktor.http.*
-import io.ktor.server.application.*
-import io.ktor.server.http.content.defaultResource
-import io.ktor.server.http.content.resources
-import io.ktor.server.http.content.static
+import io.ktor.server.http.content.staticResources
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import kotlinx.serialization.Serializable
 
-enum class AnalysisMode {
-    TRANSLATION_ONLY,
-    ANALYZE_WITH_GOALS,
-}
-
-@Serializable
-data class AnalyzeRequest(
-    val sourceDir: String,
-    val includeDir: String? = null,
-    val topLevel: String? = null,
-    val analysisModel: AnalysisMode = AnalysisMode.TRANSLATION_ONLY,
-)
-
-fun Routing.cpgRoutes(service: ConsoleService) {
+/**
+ * This function sets up the API routes for the web application. It defines the endpoints for
+ * analyzing code, reanalyzing the last project, getting the translation result, and retrieving
+ * components and translation units.
+ *
+ * The routes are defined using the Ktor routing DSL. Each route handles a specific HTTP method and
+ * path, and the corresponding handler function is called when a request matches that route. The
+ * functionality itself is then handled in the [ConsoleService].
+ *
+ * The following endpoints are defined:
+ * - POST `/api/analyze`: Analyzes a project based on the provided request.
+ * - POST `/api/reanalyze`: Reanalyzes the last project.
+ * - GET `/api/result`: Retrieves the translation result.
+ * - GET `/api/component/{name}`: Retrieves a component by name.
+ * - GET `/api/component/{component_name}/translation-unit/{id}`: Retrieves a translation unit by
+ *   ID.
+ * - GET `/api/component/{component_name}/translation-unit/{id}/ast-nodes`: Retrieves all AST nodes
+ *   for a translation unit.
+ * - GET `/api/component/{component_name}/translation-unit/{id}/overlay-nodes`: Retrieves all
+ *   overlay nodes for a translation unit.
+ */
+fun Routing.apiRoutes(service: ConsoleService) {
+    // The API routes are prefixed with /api
     route("/api") {
+        // The endpoint to analyze a project
         post("/analyze") {
-            val request = call.receive<AnalyzeRequest>()
+            val request = call.receive<AnalyzeRequestJSON>()
             try {
                 val result = service.analyze(request)
                 call.respond(result)
@@ -60,6 +66,7 @@ fun Routing.cpgRoutes(service: ConsoleService) {
             }
         }
 
+        // The endpoint to reanalyze the last project
         post("/reanalyze") {
             val lastProject = service.lastProject
             if (lastProject != null) {
@@ -77,6 +84,7 @@ fun Routing.cpgRoutes(service: ConsoleService) {
             }
         }
 
+        // The endpoint to get the translation result
         get("/result") {
             val result = service.getTranslationResult()
             if (result != null) {
@@ -89,6 +97,7 @@ fun Routing.cpgRoutes(service: ConsoleService) {
             }
         }
 
+        // The endpoint to get a component by name
         get("/component/{name}") {
             val name = call.parameters["name"] ?: return@get call.respond(HttpStatusCode.BadRequest)
             val component = service.getComponent(name)
@@ -100,6 +109,7 @@ fun Routing.cpgRoutes(service: ConsoleService) {
             }
         }
 
+        // The endpoint to get a translation unit by ID
         get("/component/{component_name}/translation-unit/{id}") {
             val componentName =
                 call.parameters["component_name"]
@@ -117,6 +127,7 @@ fun Routing.cpgRoutes(service: ConsoleService) {
             }
         }
 
+        // The endpoint to get all AST nodes for a translation unit
         get("/component/{component_name}/translation-unit/{id}/ast-nodes") {
             val componentName =
                 call.parameters["component_name"]
@@ -127,6 +138,7 @@ fun Routing.cpgRoutes(service: ConsoleService) {
             call.respond(nodes)
         }
 
+        // The endpoint to get all overlay nodes for a translation unit
         get("/component/{component_name}/translation-unit/{id}/overlay-nodes") {
             val componentName =
                 call.parameters["component_name"]
@@ -139,9 +151,14 @@ fun Routing.cpgRoutes(service: ConsoleService) {
     }
 }
 
-fun Routing.staticResources() {
-    static("/") {
-        resources("static")
-        defaultResource("static/index.html")
-    }
+/**
+ * This function sets up the static resources for the web application. It serves the static files
+ * from the "static" directory and sets the default resource to "index.html". This serves our SPA
+ * frontend.
+ *
+ * In order to allow deep-links in our frontend to work, we need to serve the index.html file for
+ * all paths that do not really exist so that our SPA can handle the routing.
+ */
+fun Routing.frontendRoutes() {
+    staticResources("/", "static", "index.html") { default("index.html") }
 }

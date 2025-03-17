@@ -23,21 +23,15 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.codyze
+package de.fraunhofer.aisec.codyze.console
 
 import com.github.ajalt.clikt.core.CliktCommand
-import com.github.ajalt.clikt.core.main
-import com.github.ajalt.clikt.core.subcommands
 
-class Codyze : CliktCommand() {
-    override fun run() {}
+/** The 'console' command. This will start the web console server. */
+class ConsoleCommand : CliktCommand() {
+    override fun run() {
+        ConsoleService().startConsole()
+    }
 }
 
-fun main(args: Array<String>) {
-    Codyze()
-        .subcommands(
-            de.fraunhofer.aisec.codyze.console.Command,
-            de.fraunhofer.aisec.codyze.compliance.Command,
-        )
-        .main(args)
-}
+var Command = ConsoleCommand()

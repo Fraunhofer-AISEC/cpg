@@ -1,8 +1,8 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Codyze with Server and Integration Test" type="JetRunConfigurationType">
+  <configuration default="false" name="Codyze Compliance Scan (with Console and Example)" type="JetRunConfigurationType">
     <option name="MAIN_CLASS_NAME" value="de.fraunhofer.aisec.codyze.ApplicationKt" />
     <module name="cpg.codyze.main" />
-    <option name="PROGRAM_PARAMETERS" value="compliance scan --project-dir codyze-compliance/src/integrationTest/resources/demo-app --components webapp --components auth --server=true" />
+    <option name="PROGRAM_PARAMETERS" value="compliance scan --project-dir codyze-compliance/src/integrationTest/resources/demo-app --components webapp --components auth --console=true" />
     <shortenClasspath name="NONE" />
     <method v="2">
       <option name="Make" enabled="true" />

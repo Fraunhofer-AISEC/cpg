@@ -30,6 +30,7 @@ import com.github.ajalt.clikt.core.subcommands
 import com.github.ajalt.clikt.parameters.groups.provideDelegate
 import de.fraunhofer.aisec.codyze.*
 import de.fraunhofer.aisec.codyze.console.ConsoleService
+import de.fraunhofer.aisec.codyze.console.startConsole
 import de.fraunhofer.aisec.codyze.console.startServer
 import java.io.File
 
@@ -66,8 +67,8 @@ open class ScanCommand : ProjectCommand() {
             run.results?.forEach { result -> echo(result.message.toString()) }
         }
 
-        if (projectOptions.startServer) {
-            ConsoleService.fromAnalysisResult(result).startServer()
+        if (projectOptions.startConsole) {
+            ConsoleService.fromAnalysisResult(result).startConsole()
         }
     }
 }

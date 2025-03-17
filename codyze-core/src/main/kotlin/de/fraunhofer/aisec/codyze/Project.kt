@@ -46,8 +46,8 @@ class ProjectOptions : OptionGroup("Project Options") {
     val directory by
         option("--project-dir", help = "The project directory").path().default(Path("."))
 
-    val startServer by
-        option("--server", help = "Starts the Codyze server after the analysis")
+    val startConsole by
+        option("--console", help = "Starts the Codyze web console after the analysis")
             .boolean()
             .default(false)
 }

@@ -37,7 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.nodes
 import io.github.detekt.sarif4k.Result
-import java.net.URL
+import java.net.URI
 import kotlin.io.path.Path
 import kotlin.io.path.toPath
 import kotlin.uuid.Uuid
@@ -50,6 +50,18 @@ import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 
+/**
+ * JSON data class for an analysis request. It contains the source directory, an optional include
+ * directory, and an optional top-level directory.
+ */
+@Serializable
+data class AnalyzeRequestJSON(
+    val sourceDir: String,
+    val includeDir: String? = null,
+    val topLevel: String? = null,
+)
+
+/** JSON data class for an [Edge]. */
 @Serializable
 data class EdgeJSON(
     var label: String,
@@ -57,6 +69,7 @@ data class EdgeJSON(
     @Serializable(with = UuidSerializer::class) var end: Uuid,
 )
 
+/** JSON data class for a SARIF [Result]. */
 @Serializable
 data class FindingsJSON(
     var kind: String,
@@ -70,6 +83,10 @@ data class FindingsJSON(
     val endColumn: Long,
 )
 
+/**
+ * JSON data class for the [AnalysisResult]. It contains a list of components, the total number of
+ * nodes, the source directory, and a list of findings.
+ */
 @Serializable
 data class AnalysisResultJSON(
     val components: List<ComponentJSON>,
@@ -79,6 +96,10 @@ data class AnalysisResultJSON(
     val findings: List<FindingsJSON>,
 )
 
+/**
+ * JSON data class for a [Component]. It contains the name of the component, a list of translation
+ * units, and an optional top-level directory.
+ */
 @Serializable
 data class ComponentJSON(
     val name: String,
@@ -86,6 +107,7 @@ data class ComponentJSON(
     val topLevel: String?,
 )
 
+/** JSON data class for a [TranslationUnitDeclaration]. */
 @Serializable
 data class TranslationUnitJSON(
     val name: String,
@@ -95,6 +117,7 @@ data class TranslationUnitJSON(
     @Transient val cpgTU: TranslationUnitDeclaration? = null,
 )
 
+/** JSON data class for a [Node]. */
 @Serializable
 data class NodeJSON(
     @Serializable(with = UuidSerializer::class) val id: Uuid,
@@ -110,6 +133,7 @@ data class NodeJSON(
     val nextDFG: List<EdgeJSON> = emptyList(),
 )
 
+/** Converts a [AnalysisResult] into its JSON representation. */
 fun AnalysisResult.toJSON(): AnalysisResultJSON =
     with(translationResult) {
         AnalysisResultJSON(
@@ -121,6 +145,7 @@ fun AnalysisResult.toJSON(): AnalysisResultJSON =
         )
     }
 
+/** Converts a [TranslationUnitDeclaration] into its JSON representation. */
 context(ContextProvider)
 fun TranslationUnitDeclaration.toJSON(): TranslationUnitJSON {
     val localName =
@@ -137,6 +162,17 @@ fun TranslationUnitDeclaration.toJSON(): TranslationUnitJSON {
     )
 }
 
+/** Converts a [Component] into its JSON representation. */
+context(ContextProvider)
+fun Component.toJSON(): ComponentJSON {
+    return ComponentJSON(
+        name = this.name.toString(),
+        translationUnits = this.translationUnits.map { tu -> tu.toJSON() },
+        topLevel = this.topLevel()?.absolutePath,
+    )
+}
+
+/** Converts a [Node] into its JSON representation. */
 fun Node.toJSON(): NodeJSON {
     return NodeJSON(
         id = this.id,
@@ -153,6 +189,7 @@ fun Node.toJSON(): NodeJSON {
     )
 }
 
+/** Converts an [Edge] into its JSON representation. */
 fun Edge<*>.toJSON(): EdgeJSON {
     return EdgeJSON(
         label = this.labels.firstOrNull() ?: "",
@@ -161,19 +198,16 @@ fun Edge<*>.toJSON(): EdgeJSON {
     )
 }
 
-context(ContextProvider)
-fun Component.toJSON(): ComponentJSON {
-    return ComponentJSON(
-        name = this.name.toString(),
-        translationUnits = this.translationUnits.map { tu -> tu.toJSON() },
-        topLevel = this.topLevel()?.absolutePath,
-    )
-}
-
+/**
+ * Converts a SARIF [Result] into its JSON representation. It needs a [TranslationResult] as a
+ * context receiver to find the component and translation unit of the finding.
+ */
 context(TranslationResult)
 fun Result.toJSON(): FindingsJSON {
     var path =
-        Path(URL(this.locations?.firstOrNull()?.physicalLocation?.artifactLocation?.uri).path)
+        this.locations?.firstOrNull()?.physicalLocation?.artifactLocation?.uri?.let {
+            Path(URI.create(it).toURL().path)
+        }
 
     var translationUnit =
         this@TranslationResult.components
@@ -193,6 +227,10 @@ fun Result.toJSON(): FindingsJSON {
     )
 }
 
+/**
+ * Custom serializer for [Uuid] to convert it to and from a string representation. This is used for
+ * serialization and deserialization of [Uuid] in the JSON data classes.
+ */
 object UuidSerializer : KSerializer<Uuid> {
     override val descriptor: SerialDescriptor =
         PrimitiveSerialDescriptor("Uuid", PrimitiveKind.STRING)

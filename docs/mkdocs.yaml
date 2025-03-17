@@ -157,6 +157,7 @@ nav:
   - "Home": index.md
   - "Getting Started":
       - GettingStarted/index.md
+      - "Using the Codyze CLI": GettingStarted/codyze.md
       - "Usage as library":
           - "Adding the Dependency": GettingStarted/library.md
           - "Using the Query API": GettingStarted/query.md

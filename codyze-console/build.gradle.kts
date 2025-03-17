@@ -1,7 +1,7 @@
 import com.github.gradle.node.pnpm.task.PnpmTask
 
 plugins {
-    id("cpg.application-conventions")
+    id("codyze.module-conventions")
     kotlin("plugin.serialization")
     alias(libs.plugins.ktor)
     alias(libs.plugins.node)
@@ -9,10 +9,7 @@ plugins {
 
 dependencies {
     // CPG modules
-    implementation(projects.codyzeCore)
-    implementation(projects.cpgCore)
     implementation(projects.cpgConcepts)
-    implementation(projects.cpgLanguagePython)
 
     // Ktor server dependencies
     implementation(libs.bundles.ktor)

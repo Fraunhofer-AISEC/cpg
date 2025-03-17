@@ -28,16 +28,16 @@ package de.fraunhofer.aisec.codyze.console
 import de.fraunhofer.aisec.codyze.AnalysisProject
 import de.fraunhofer.aisec.codyze.AnalysisResult
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
-import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.nodes
-import de.fraunhofer.aisec.cpg.passes.concepts.config.ProvideConfigPass
 import de.fraunhofer.aisec.cpg.passes.concepts.config.python.PythonStdLibConfigurationPass
 import java.io.File
 import java.nio.file.Path
 import kotlin.uuid.Uuid
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+
+private const val AD_HOC_PROJECT_NAME = "ad-hoc"
 
 /**
  * Service class for the console. This class is responsible for managing the translation process and
@@ -50,7 +50,8 @@ class ConsoleService {
     private var analysisResult: AnalysisResultJSON? = null
     var lastProject: AnalysisProject? = null
 
-    suspend fun analyze(request: AnalyzeRequest): AnalysisResultJSON =
+    /** Analyzes the given source directory and returns the analysis result. */
+    suspend fun analyze(request: AnalyzeRequestJSON): AnalysisResultJSON =
         withContext(Dispatchers.IO) {
             val path = Path.of(request.sourceDir)
             val builder =
@@ -59,9 +60,19 @@ class ConsoleService {
                     .defaultPasses()
                     .loadIncludes(true)
                     .registerPass<PythonStdLibConfigurationPass>()
-                    .registerPass<ProvideConfigPass>()
+                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage")
+                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage")
+                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage")
+                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.golang.GoLanguage")
+                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguage")
+                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage")
+                    .optionalLanguage(
+                        "de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguage"
+                    )
+                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.ruby.RubyLanguage")
+                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.jvm.JVMLanguage")
+                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.ini.IniFileLanguage")
                     .codeInNodes(true)
-                    .registerLanguage<PythonLanguage>()
 
             if (request.includeDir != null) {
                 builder.includePath(request.includeDir)
@@ -74,7 +85,8 @@ class ConsoleService {
             val config = builder.build()
 
             // Build an ad-hoc project
-            val project = AnalysisProject(name = "ad-hoc", projectDir = null, config = config)
+            val project =
+                AnalysisProject(name = AD_HOC_PROJECT_NAME, projectDir = null, config = config)
             analyzeProject(project)
         }
 
