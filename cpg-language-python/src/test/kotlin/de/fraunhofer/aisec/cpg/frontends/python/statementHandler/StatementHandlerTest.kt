@@ -29,10 +29,14 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.AssertStatement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeleteExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.SubscriptExpression
 import de.fraunhofer.aisec.cpg.helpers.Util
+import de.fraunhofer.aisec.cpg.query.May
+import de.fraunhofer.aisec.cpg.query.Must
+import de.fraunhofer.aisec.cpg.query.executionPath
 import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
 import kotlin.test.*
@@ -288,5 +292,98 @@ class StatementHandlerTest : BaseTest() {
         // There should be three variable declarations, two local and one global
         var cVariables = result.variables("c")
         assertEquals(3, cVariables.size)
+    }
+
+    @Test
+    fun testToplevelCode() {
+        var file = topLevel.resolve("toplevel_code.py").toFile()
+        val result = analyze(listOf(file), topLevel, true) { it.registerLanguage<PythonLanguage>() }
+        assertNotNull(result)
+
+        val block = result.statements.first()
+        assertNotNull(block)
+        val withStatement = result.trys.first()
+        assertNotNull(withStatement)
+        val printStatement = result.calls("print").first()
+        assertNotNull(printStatement)
+        Util.eogConnect(
+            quantifier = Util.Quantifier.ANY,
+            startNode = withStatement,
+            edgeDirection = Util.Edge.EXITS,
+            connectEnd = Util.Connect.NODE,
+            endNodes = listOf(block),
+        )
+        assertTrue(
+            Util.eogConnect(
+                startNode = block,
+                edgeDirection = Util.Edge.EXITS,
+                endNodes = listOf(printStatement),
+            )
+        )
+    }
+
+    @Test
+    fun testToplevelWithDeclaration() {
+        var file = topLevel.resolve("toplevel_withDeclaration.py").toFile()
+        val result = analyze(listOf(file), topLevel, true) { it.registerLanguage<PythonLanguage>() }
+        assertNotNull(result)
+
+        val eogStarts =
+            result.allChildren<Node>() { it.prevEOG.isEmpty() && it.nextEOG.isNotEmpty() }
+        assertEquals(eogStarts.size, 2)
+
+        val prints =
+            result
+                .calls("print")
+                .sortedWith(
+                    compareBy(
+                        { it.location?.region?.startLine ?: 0 },
+                        { it.location?.region?.startColumn ?: 0 },
+                    )
+                )
+        assertEquals(3, prints.size)
+
+        val assignments = result.allChildren<AssignExpression>()
+        assertEquals(1, assignments.size)
+
+        val function = result.functions.firstOrNull()
+        assertNotNull(function)
+
+        // Test that the print and the assigment are part of the same eog path
+
+        assertTrue(
+            executionPath(
+                    startNode = prints.first(),
+                    direction = Forward(GraphToFollow.EOG),
+                    type = Must,
+                    scope = Intraprocedural(),
+                    predicate = { node -> node == assignments.first() },
+                )
+                .value
+        )
+
+        assertTrue(
+            executionPath(
+                    startNode = assignments.first(),
+                    direction = Forward(GraphToFollow.EOG),
+                    type = Must,
+                    scope = Intraprocedural(),
+                    predicate = { node -> node == prints[1] },
+                )
+                .value
+        )
+
+        // test that the function and the eog starting from the function are on independent eog paths
+
+        assertFalse(
+            executionPath(
+                    startNode = assignments.first(),
+                    direction = Forward(GraphToFollow.EOG),
+                    type = May,
+                    scope = Intraprocedural(),
+                    predicate = { node -> node == prints.last() },
+                )
+                .value
+        )
     }
 }
