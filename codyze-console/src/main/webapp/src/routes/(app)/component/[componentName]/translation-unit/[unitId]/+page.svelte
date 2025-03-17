@@ -8,11 +8,15 @@
   import type { PageProps } from './$types';
   import NodeOverlays from '$lib/components/NodeOverlays.svelte';
   import NodeTooltip from '$lib/components/NodeTooltip.svelte';
+  import { getFindingStyle } from '$lib/colors';
+  import FindingOverlay from '$lib/components/FindingOverlay.svelte';
 
   let { data }: PageProps = $props();
 
   const urlParams = new URLSearchParams(window.location.search);
   const line = urlParams.get('line');
+  const finding = urlParams.get('finding');
+  const kind = urlParams.get('kind');
 
   let activeTab = $state('overlayNodes');
   let nodes = $derived(
@@ -54,6 +58,15 @@
           --padding-right={0}
           hideBorder
         />
+        {#if finding && line}
+          <FindingOverlay
+            finding={finding}
+            kind={kind}
+            line={parseInt(line)}
+            lineHeight={lineHeight}
+            offsetTop={offsetTop}
+          />
+        {/if}
       </Highlight>
 
       <NodeOverlays

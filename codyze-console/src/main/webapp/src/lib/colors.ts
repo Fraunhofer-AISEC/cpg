@@ -1,9 +1,9 @@
-export function getFindingStyle(kind: string): {
+export function getFindingStyle(kind: string | null): {
   backgroundColor: string;
   borderColor: string;
   color: string;
 } {
-  switch (kind.toLowerCase()) {
+  switch (kind?.toLowerCase()) {
     case 'fail':
     case 'error':
       return {

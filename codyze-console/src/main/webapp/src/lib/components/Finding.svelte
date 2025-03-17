@@ -21,7 +21,7 @@
     <span class="font-medium">Path: </span>
     {#if finding.component && finding.translationUnit}
       <a
-        href={`/component/${finding.component}/translation-unit/${finding.translationUnit}?line=${finding.startLine}&findingText=${getText(finding)}&kind=${finding.kind.toLowerCase()}`}
+        href={`/component/${finding.component}/translation-unit/${finding.translationUnit}?line=${finding.startLine}&finding=${getText(finding)}&kind=${finding.kind.toLowerCase()}`}
         class="text-blue-600 hover:underline"
       >
         {finding.path}
