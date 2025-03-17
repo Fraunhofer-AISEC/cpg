@@ -37,6 +37,16 @@ import de.fraunhofer.aisec.cpg.graph.concepts.flows.Main
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import io.github.detekt.sarif4k.ArtifactLocation
+import io.github.detekt.sarif4k.Location
+import io.github.detekt.sarif4k.Message
+import io.github.detekt.sarif4k.PhysicalLocation
+import io.github.detekt.sarif4k.Region
+import io.github.detekt.sarif4k.Run
+import io.github.detekt.sarif4k.SarifSchema210
+import io.github.detekt.sarif4k.Tool
+import io.github.detekt.sarif4k.ToolComponent
+import io.github.detekt.sarif4k.Version
 import io.ktor.client.call.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
@@ -90,6 +100,42 @@ val mockService =
                             }
                     },
             project = AnalysisProject(name = "mock", projectDir = null, config = mockConfig),
+            sarif =
+                SarifSchema210(
+                    version = Version.The210,
+                    runs =
+                        listOf(
+                            Run(
+                                tool = Tool(driver = ToolComponent(name = "mock")),
+                                results =
+                                    listOf(
+                                        io.github.detekt.sarif4k.Result(
+                                            ruleID = "mock",
+                                            message = Message(text = "mock"),
+                                            locations =
+                                                listOf(
+                                                    Location(
+                                                        physicalLocation =
+                                                            PhysicalLocation(
+                                                                artifactLocation =
+                                                                    ArtifactLocation(
+                                                                        uri = "file:mock.cpp"
+                                                                    ),
+                                                                region =
+                                                                    Region(
+                                                                        startLine = 1,
+                                                                        startColumn = 1,
+                                                                        endLine = 2,
+                                                                        endColumn = 2,
+                                                                    ),
+                                                            )
+                                                    )
+                                                ),
+                                        )
+                                    ),
+                            )
+                        ),
+                ),
         )
     )
 
@@ -115,6 +161,9 @@ class ApplicationTest {
         val component = result.components.firstOrNull()
         assertNotNull(component)
         assertEquals("mock", component.name)
+
+        val findings = result.findings
+        assertEquals(1, findings.size)
     }
 
     @Test
