@@ -121,11 +121,17 @@ class PythonFileConceptPass(ctx: TranslationContext) : ConceptPass(ctx) {
                                 )
                                 return
                             }
-                            newFileWrite(
-                                underlyingNode = callExpression,
-                                file = fileNode,
-                                what = arg,
-                            )
+                            if (
+                                callExpression.overlays.none {
+                                    it is WriteFile && it.file == fileNode && it.what == arg
+                                }
+                            ) {
+                                newFileWrite(
+                                    underlyingNode = callExpression,
+                                    file = fileNode,
+                                    what = arg,
+                                )
+                            }
                         }
                         else ->
                             Util.warnWithFileLocation(
