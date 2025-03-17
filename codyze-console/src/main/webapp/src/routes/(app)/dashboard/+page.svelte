@@ -27,5 +27,7 @@
     </div>
   {/if}
 
-  <AnalysisResult result={data.result} />
+  {#if data.result && data.result.components}
+    <AnalysisResult result={data.result} />
+  {/if}
 </div>
