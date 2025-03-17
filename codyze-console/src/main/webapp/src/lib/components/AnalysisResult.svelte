@@ -15,7 +15,7 @@
     <h2 class="mb-4 text-xl font-semibold">Analysis Results</h2>
     <div class="mb-4">
       <p class="text-gray-700">
-        <span class="font-medium">Total Components:</span>{' '}
+        <span class="font-medium">Total Components:</span>
         {result.components.length}
       </p>
       <p class="text-gray-700">

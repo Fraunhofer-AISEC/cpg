@@ -12,8 +12,6 @@
     charWidth: number;
     offsetTop: number;
     offsetLeft: number;
-    findingText?: string;
-    kind?: string;
   }
 
   let {
@@ -23,9 +21,7 @@
     lineHeight,
     charWidth,
     offsetTop,
-    offsetLeft,
-    findingText,
-    kind
+    offsetLeft
   }: Props = $props();
 </script>
 

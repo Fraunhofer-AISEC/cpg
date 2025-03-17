@@ -1,15 +1,13 @@
 <script lang="ts">
+  import FindingOverlay from '$lib/components/FindingOverlay.svelte';
+  import NodeOverlays from '$lib/components/NodeOverlays.svelte';
   import NodeTable from '$lib/components/NodeTable.svelte';
   import { flattenNodes } from '$lib/flatten';
   import { type NodeJSON } from '$lib/types';
   import Highlight, { LineNumbers } from 'svelte-highlight';
   import python from 'svelte-highlight/languages/python';
-  import github from 'svelte-highlight/styles/github';
+  import 'svelte-highlight/styles/github.css';
   import type { PageProps } from './$types';
-  import NodeOverlays from '$lib/components/NodeOverlays.svelte';
-  import NodeTooltip from '$lib/components/NodeTooltip.svelte';
-  import { getFindingStyle } from '$lib/colors';
-  import FindingOverlay from '$lib/components/FindingOverlay.svelte';
 
   let { data }: PageProps = $props();
 
@@ -34,10 +32,6 @@
   const lineNumberWidth = Math.ceil(Math.log10(totalLines + 1));
   const offsetLeft = baseOffsetLeft + lineNumberWidth * charWidth;
 </script>
-
-<svelte:head>
-  {@html github}
-</svelte:head>
 
 <div class="container mx-auto p-4">
   <div class="mb-4">

@@ -65,8 +65,8 @@
     ? '0.125em solid black'
     : '0.0625em solid transparent'}
   style:opacity={highlightedNode?.id === node.id ? 0.6 : 0.3}
-  style:minWidth={'0.25em'}
-  style:minHeight={'0.25em'}
+  style:min-width="0.25em"
+  style:min-height="0.25em"
   style:z-index={node.depth}
   onmouseenter={() => (highlightedNode = node)}
   onmouseleave={() => (highlightedNode = null)}

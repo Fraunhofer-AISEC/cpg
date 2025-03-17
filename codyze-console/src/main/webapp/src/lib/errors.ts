@@ -9,9 +9,12 @@ import { error } from '@sveltejs/kit';
  *
  * @returns the response or an error
  */
-export function throwError(response: Response) {
+export async function throwError(response: Response) {
   if (!response.ok) {
-    return error(response.status, response.statusText);
+    let body = await response.json();
+    return error(response.status, {
+      message: body.error ?? response.statusText,
+    });
   }
 
   return response;
