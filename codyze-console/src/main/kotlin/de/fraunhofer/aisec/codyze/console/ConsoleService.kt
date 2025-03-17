@@ -148,7 +148,7 @@ class ConsoleService {
         return if (overlayNodes) {
             tu.nodes.flatMap { it.overlays }.map { it.toJSON() }
         } else {
-            tu.astChildren.filter { it != tu }.map { it.toJSON() }
+            tu.declarations.map { it.toJSON() } + tu.statements.map { it.toJSON() }
         }
     }
 
