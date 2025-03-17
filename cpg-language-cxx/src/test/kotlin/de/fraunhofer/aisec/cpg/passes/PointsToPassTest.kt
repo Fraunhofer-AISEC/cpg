@@ -1329,7 +1329,10 @@ class PointsToPassTest {
 
         // Line 172
         assertEquals(1, local_28Line172.fullMemoryValues.size)
-        assertEquals(ceLine172, local_28Line172.fullMemoryValues.firstOrNull())
+        assertTrue(
+            local_28Line172.fullMemoryValues.singleOrNull { it.name.localName == "dlmalloc" }
+                is UnknownMemoryValue
+        )
         assertEquals(ceLine172, local_28Line172.prevDFG.singleOrNull())
 
         // Line 179

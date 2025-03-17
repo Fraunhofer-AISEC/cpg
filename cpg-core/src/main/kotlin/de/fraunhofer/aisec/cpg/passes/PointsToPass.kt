@@ -633,21 +633,20 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             // If we have a FunctionSummary, we push the values of the arguments and return value
             // after executing the function call to our doubleState.
             for ((param, fsEntries) in invoke.functionSummary) {
-                var argument: Expression? = null
-                var prevDFG: Node? = null
-                when (param) {
-                    is ParameterDeclaration -> {
-                        // Dereference the parameter
-                        if (param.argumentIndex < currentNode.arguments.size) {
-                            argument = currentNode.arguments[param.argumentIndex]
+                val argument =
+                    when (param) {
+                        is ParameterDeclaration -> {
+                            // Dereference the parameter
+                            if (param.argumentIndex < currentNode.arguments.size) {
+                                currentNode.arguments[param.argumentIndex]
+                            } else null
                         }
+                        is ReturnStatement -> {
+                            param.returnValue
+                        }
+                        else -> null
                     }
-                    is ReturnStatement -> {
-                        argument = currentNode
-                        prevDFG = param.returnValue
-                    }
-                }
-                if (argument != null /*&& prevDFG != null*/) {
+                if (argument != null) {
                     fsEntries
                         .sortedBy { it.destValueDepth }
                         .forEach { (dstValueDepth, srcNode, srcValueDepth, subAccessName, shortFS)
@@ -694,7 +693,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                     param,
                                     propertySet,
                                     currentNode,
-                                    prevDFG,
                                 )
                         }
                 }
@@ -820,7 +818,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         param: Node,
         propertySet: EqualLinkedHashSet<Any>,
         currentNode: CallExpression,
-        prevDFG: Node?,
     ): MutableMap<Node, IdentitySet<Triple<Node, Node, EqualLinkedHashSet<Any>>>> {
         var doubleState = doubleState
         when (srcNode) {
@@ -872,11 +869,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             if (
                                 currentSet.none {
                                     it.first === value &&
-                                        (it.second === prevDFG || it.second === value)
-                                    it.third == updatedPropertySet
+                                        it.second === value &&
+                                        it.third == updatedPropertySet
                                 }
                             ) {
-                                currentSet += Triple(value, (prevDFG ?: value), updatedPropertySet)
+                                currentSet += Triple(value, value, updatedPropertySet)
                             }
                         }
                     }
@@ -902,12 +899,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                     if (
                                         currentSet.none {
                                             it.first === value &&
-                                                (it.second === prevDFG || it.second === value)
-                                            it.third == updatedPropertySet
+                                                it.second === value &&
+                                                it.third == updatedPropertySet
                                         }
                                     ) {
-                                        currentSet +=
-                                            Triple(value, (prevDFG ?: value), updatedPropertySet)
+                                        currentSet += Triple(value, value, updatedPropertySet)
                                     }
                                 }
                             }
@@ -924,11 +920,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     if (
                         currentSet.none {
                             it.first === srcNode &&
-                                (it.second === prevDFG || it.second === srcNode) &&
+                                it.second === srcNode &&
                                 it.third == updatedPropertySet
                         }
                     ) {
-                        currentSet += Triple(srcNode, (prevDFG ?: srcNode), updatedPropertySet)
+                        currentSet += Triple(srcNode, srcNode, updatedPropertySet)
                     }
                 }
             }
@@ -948,15 +944,13 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     newSet.forEach { pair ->
                         if (
                             currentSet.none {
-                                it.first === pair.first &&
-                                    (it.second === prevDFG || it.second === pair.first)
+                                it.first === pair.first && it.second === pair.first
                                 pair.second in it.third
                             }
                         ) {
                             val updatedPropertySet = propertySet
                             updatedPropertySet.add(shortFS)
-                            currentSet +=
-                                Triple(pair.first, (prevDFG ?: pair.first), updatedPropertySet)
+                            currentSet += Triple(pair.first, pair.first, updatedPropertySet)
                         }
                     }
                 }
