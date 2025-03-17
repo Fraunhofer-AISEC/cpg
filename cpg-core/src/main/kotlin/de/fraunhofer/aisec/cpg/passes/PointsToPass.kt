@@ -1122,7 +1122,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     // set to true)
                     .filter { !it.second }
                     .mapTo(IdentitySet()) { it.first }
-            val lastWrites = doubleState.getLastWrites(currentNode)
+            val prevDFGs = doubleState.getLastWrites(currentNode)
 
             // If we have any information from the dereferenced value, we also fetch that
             values
@@ -1133,30 +1133,30 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         excludeShortFSValues = true,
                     )
                 }
-                // .map { it.first }
                 .forEach { (derefValue, _, _) ->
-                    values.add(derefValue)
-                    // Store the information over the type of the edge in the edgePropertiesMap
-                    addEntryToEdgePropertiesMap(
-                        Pair(currentNode, derefValue),
-                        identitySetOf(PointerDataflowGranularity(PointerAccess.currentDerefValue)),
+                    prevDFGs.add(
+                        Pair(
+                            derefValue,
+                            equalLinkedHashSetOf(
+                                PointerDataflowGranularity(PointerAccess.currentDerefValue)
+                            ),
+                        )
                     )
                     // Let's see if we can deref once more
                     if (doubleState.hasDeclarationStateEntry(derefValue)) {
-                        doubleState
-                            .fetchElementFromDeclarationState(derefValue)
-                            // .map { it.first }
-                            .forEach { (derefDerefValue, _, _) ->
-                                values.add(derefDerefValue)
-                                addEntryToEdgePropertiesMap(
-                                    Pair(currentNode, derefDerefValue),
-                                    identitySetOf(
+                        doubleState.fetchElementFromDeclarationState(derefValue).forEach {
+                            (derefDerefValue, _, _) ->
+                            prevDFGs.add(
+                                Pair(
+                                    derefDerefValue,
+                                    equalLinkedHashSetOf(
                                         PointerDataflowGranularity(
                                             PointerAccess.currentDerefDerefValue
                                         )
                                     ),
                                 )
-                            }
+                            )
+                        }
                     }
                 }
 
@@ -1167,7 +1167,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     GeneralStateEntryElement(
                         PowersetLattice.Element(addresses),
                         PowersetLattice.Element(values),
-                        PowersetLattice.Element(lastWrites),
+                        PowersetLattice.Element(prevDFGs),
                     ),
                 )
 
@@ -1860,9 +1860,10 @@ fun PointsToStateElement.updateValues(
     }
 
     /* Also update the generalState for dst (if we have any destinations) */
-    // If the lastWrites are in the sources, we don't have to set the prevDFG edges
+    // If the lastWrites are in the sources or destinations, we don't have to set the prevDFG edges
     lastWrites.removeIf { lw ->
-        sources.any { src -> src.first == lw.first && src.second in lw.second }
+        sources.any { src -> src.first == lw.first && src.second in lw.second } ||
+            lw.first in destinations
     }
     destinations.forEach { d ->
         newGenState[d] =

@@ -38,7 +38,6 @@ import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.test.assertLocalName
 import java.io.File
-import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -203,7 +202,7 @@ class PointsToPassTest {
         assertLocalName("b", bDecl.memoryAddresses.singleOrNull())
         assertEquals(aRefLine7, bDecl.prevFullDFG.singleOrNull())
         assertEquals(iDecl.memoryAddresses.singleOrNull(), bDecl.fullMemoryValues.singleOrNull())
-        assertEquals(aDecl, aRefLine7.prevDFG.singleOrNull())
+        assertEquals(aDecl, aRefLine7.prevFullDFG.singleOrNull())
 
         // Line 8
         assertEquals(1, iRefLine8.memoryAddresses.size)
@@ -217,7 +216,7 @@ class PointsToPassTest {
         assertEquals(iDecl.memoryAddresses.singleOrNull(), iRefLine9.memoryAddresses.first())
         assertEquals(1, iRefLine9.fullMemoryValues.size)
         assertEquals(literal2, iRefLine9.fullMemoryValues.filterIsInstance<Literal<*>>().first())
-        assertEquals(literal2, iRefLine9.prevDFG.singleOrNull())
+        assertEquals(literal2, iRefLine9.prevFullDFG.singleOrNull())
 
         // Line 10
         assertEquals(1, iRefLine10.memoryAddresses.size)
@@ -2547,21 +2546,5 @@ class PointsToPassTest {
         assertEquals(1, iLine436.prevFunctionSummaryDFG.size)
         assertEquals(1, setCE.invokes.size)
         assertTrue(iLine436.prevFunctionSummaryDFG.contains(setCE.invokes.first()))
-    }
-
-    @Test
-    @Ignore
-    fun testFoo() {
-        val file =
-            File(
-                "/home/moe/projects/cpg-attestation/sgx-examples/write_secret_to_outside/Enclave/Enclave.cpp"
-            )
-        val tu =
-            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
-                it.registerLanguage<CPPLanguage>()
-                it.registerPass<PointsToPass>()
-                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
-            }
-        assertNotNull(tu)
     }
 }
