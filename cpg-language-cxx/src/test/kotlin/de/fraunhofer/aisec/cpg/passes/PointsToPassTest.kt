@@ -2178,6 +2178,13 @@ class PointsToPassTest {
                 .first()
         assertNotNull(pDerefLine388)
 
+        val jLine392 =
+            tu.allChildren<Reference> {
+                    it.location?.region?.startLine == 392 && it.name.localName == "j"
+                }
+                .first()
+        assertNotNull(jLine392)
+
         val jLine394 =
             tu.allChildren<Reference> {
                     it.location?.region?.startLine == 394 && it.name.localName == "j"
@@ -2305,28 +2312,54 @@ class PointsToPassTest {
         )
 
         // print Line 388
-        assertEquals(1, jLine388.prevDFGEdges.size)
+        assertEquals(1, jLine388.prevDFGEdges.filterIsInstance<ContextSensitiveDataflow>().size)
         assertEquals(
             setOf(ceLine386),
-            ((jLine388.prevDFGEdges.first() as ContextSensitiveDataflow).callingContext
-                    as CallingContextOut)
+            ((jLine388.prevDFGEdges.filterIsInstance<ContextSensitiveDataflow>().first())
+                    .callingContext as CallingContextOut)
                 .calls,
         )
-        assertEquals(1, pDerefLine388.prevDFGEdges.size)
+        assertEquals(incpFD, jLine388.prevFunctionSummaryDFG.singleOrNull())
+
+        assertEquals(3, pDerefLine388.prevDFGEdges.size)
+        assertEquals(
+            1,
+            pDerefLine388.prevDFGEdges.filterIsInstance<ContextSensitiveDataflow>().size,
+        )
         assertEquals(
             setOf(ceLine386),
-            ((pDerefLine388.prevDFGEdges.first() as ContextSensitiveDataflow).callingContext
-                    as CallingContextOut)
+            ((pDerefLine388.prevDFGEdges.filterIsInstance<ContextSensitiveDataflow>().first())
+                    .callingContext as CallingContextOut)
                 .calls,
         )
+        assertEquals(
+            pDerefLine388.input,
+            pDerefLine388.prevDFGEdges
+                .singleOrNull { it.granularity is PartialDataflowGranularity<*> }
+                ?.start,
+        )
+        assertEquals(incpFD, pDerefLine388.prevFunctionSummaryDFG.singleOrNull())
 
         // print Line 394
         assertEquals(1, jLine394.prevDFGEdges.size)
         assertTrue(jLine394.prevDFGEdges.first() !is ContextSensitiveDataflow)
-        assertEquals(literal2, jLine394.prevDFG.first())
-        assertEquals(1, pDerefLine394.prevDFGEdges.size)
-        assertTrue(pDerefLine394.prevDFGEdges.first() !is ContextSensitiveDataflow)
-        assertEquals(literal2, pDerefLine394.prevDFG.first())
+        assertEquals(jLine392, jLine394.prevDFG.singleOrNull())
+        assertEquals(literal2, jLine394.memoryValues.singleOrNull())
+
+        assertEquals(2, pDerefLine394.prevDFGEdges.size)
+        assertEquals(
+            pDerefLine394.input,
+            pDerefLine394.prevDFGEdges
+                .singleOrNull { it.granularity is PartialDataflowGranularity<*> }
+                ?.start,
+        )
+        assertEquals(
+            jLine392,
+            pDerefLine394.prevDFGEdges
+                .singleOrNull { it.granularity !is PartialDataflowGranularity<*> }
+                ?.start,
+        )
+        assertEquals(literal2, pDerefLine394.memoryValues.singleOrNull())
     }
 
     @Test

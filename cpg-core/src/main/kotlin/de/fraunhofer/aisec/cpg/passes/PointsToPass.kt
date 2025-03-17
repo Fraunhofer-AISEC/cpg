@@ -281,36 +281,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
             // Then the memoryValues
             if (key is HasMemoryValue && value.second.isNotEmpty()) {
-                value.second.forEach { v ->
-                    val properties = edgePropertiesMap[Pair(key, v)]
-
-                    var context: CallingContext? = null
-                    var granularity = default()
-                    var functionSummary = false
-
-                    // the properties can contain a lot of things. A granularity, a
-                    // callingcontext, or a boolean indicating if this is a functionSummary edge or
-                    // not
-                    properties?.forEach { property ->
-                        when (property) {
-                            is Granularity -> granularity = property
-                            is CallingContext -> context = property
-                            is Boolean -> functionSummary = property
-                        }
-                    }
-
-                    if (context == null) // TODO: add functionSummary flag for contextSensitive DFs
-                     key.memoryValueEdges += Dataflow(v, key, granularity, functionSummary)
-                    else
-                        key.memoryValueEdges.addContextSensitive(
-                            v,
-                            granularity,
-                            context,
-                            functionSummary,
-                        )
-
-                    // key.memoryValues += v
-                }
+                value.second.forEach { v -> key.memoryValueEdges += Dataflow(v, key) }
             }
 
             // And now the prevDFGs. These are pairs, where the second item is a with a set of
@@ -1533,9 +1504,7 @@ fun PointsToStateElement.getLastWrites(
                 val lastWrite = this.declarationsState[addr]?.third
                 // Usually, we should have a lastwrite, so we take that
                 if (lastWrite?.isNotEmpty() == true)
-                    lastWrite.mapTo(IdentitySet()) {
-                        ret.add(Pair(it.first, equalLinkedHashSetOf(it.second)))
-                    }
+                    lastWrite.mapTo(IdentitySet()) { ret.add(Pair(it.first, it.second)) }
                 // However, there might be cases were we don't yet have written to the dereferenced
                 // value, in this case we return an UnknownMemoryValue
                 else {
@@ -1560,9 +1529,7 @@ fun PointsToStateElement.getLastWrites(
                     this.declarationsState[it]?.third?.isNotEmpty() == true
                 }
                 .flatMapTo(IdentitySet()) {
-                    this.declarationsState[it]?.third!!.map {
-                        Pair(it.first, equalLinkedHashSetOf<Any>(it.second))
-                    }
+                    this.declarationsState[it]?.third!!.map { Pair(it.first, it.second) }
                 }
     }
 }
