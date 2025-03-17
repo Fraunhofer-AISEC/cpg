@@ -7,12 +7,10 @@
     nodes: FlattenedNode[];
     codeLines: string[];
     highlightedNode: NodeJSON | null;
-    setHighlightedNode: (node: NodeJSON | null) => void;
     lineHeight: number;
     charWidth: number;
     offsetTop: number;
     offsetLeft: number;
-    highlightLine: number | null;
     findingText?: string;
     kind?: string;
   }
@@ -25,7 +23,6 @@
     charWidth,
     offsetTop,
     offsetLeft,
-    highlightLine,
     findingText,
     kind
   }: Props = $props();
