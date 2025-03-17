@@ -373,7 +373,8 @@ class StatementHandlerTest : BaseTest() {
                 .value
         )
 
-        // test that the function and the eog starting from the function are on independent eog paths
+        // test that the function and the eog starting from the function are on independent eog
+        // paths
 
         assertFalse(
             executionPath(
