@@ -1101,10 +1101,10 @@ fun LanguageFrontend<*, *>.member(
             while (scope != null && scope !is RecordScope) {
                 scope = scope.parent
             }
-            val scopeType = scope?.name?.let { t(it) } ?: unknownType()
+            val scopeType = scope?.name?.let { this.t(it) } ?: unknownType()
             scopeType
         }
-    val memberBase = base ?: memberOrRef(parsedName.parent ?: parseName("this"), type)
+    val memberBase = base ?: this.memberOrRef(parsedName.parent ?: this.parseName("this"), type)
 
     val node = newMemberExpression(name, memberBase, operatorCode = operatorCode)
 
