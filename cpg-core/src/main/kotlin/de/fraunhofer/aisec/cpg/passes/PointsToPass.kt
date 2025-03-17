@@ -561,7 +561,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 PowersetLattice.Element(memVal),
                                 PowersetLattice.Element(arg),
                                 PowersetLattice.Element(
-                                    Pair(arg, equalLinkedHasSetOf(callingContext))
+                                    Pair(arg, equalLinkedHashSetOf(callingContext))
                                 ),
                             ),
                         )
@@ -597,7 +597,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                                 PowersetLattice.Element(
                                                     Pair(
                                                         derefValue,
-                                                        equalLinkedHasSetOf(callingContext),
+                                                        equalLinkedHashSetOf(callingContext),
                                                     )
                                                 ),
                                             ),
@@ -779,12 +779,12 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             // Collect the properties for the  DeclarationStateEntry
                             val propertySet: EqualLinkedHashSet<Any> =
                                 if (subAccessName.isNotEmpty()) {
-                                    equalLinkedHasSetOf(
+                                    equalLinkedHashSetOf(
                                         PartialDataflowGranularity(
                                             FieldDeclaration().apply { name = Name(subAccessName) }
                                         )
                                     )
-                                } else equalLinkedHasSetOf()
+                                } else equalLinkedHashSetOf()
 
                             // If this is a short FunctionSummary, store this info in the
                             // edgePropertiesMap
@@ -986,12 +986,13 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             i++
         }
 
-        var callingContextOut = CallingContextOut(setOf(currentNode))
+        val callingContextOut = CallingContextOut(setOf(currentNode))
         mapDstToSrc.forEach { (dst, values) ->
             // If the values of the destination are the same as the destination (e.g. if dst is a
             // CallExpression), we also add destinations to update the generalState, otherwise, the
             // destinationAddresses for the DeclarationState are enough
-            val dstValues = doubleState.getValues(dst).mapTo(IdentitySet()) { it.first }
+            //            val dstValues = doubleState.getValues(dst).mapTo(IdentitySet()) { it.first
+            // }
             val sources = values.mapTo(IdentitySet()) { Pair(it.first, true in it.third) }
             val lastWrites: IdentitySet<Pair<Node, EqualLinkedHashSet<Any>>> =
                 //                (values /*+ Pair(currentNode, true)*/).toIdentitySet()
@@ -1000,27 +1001,27 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     else
                         Pair(
                             it.second,
-                            equalLinkedHasSetOf(*(it.third + callingContextOut).toTypedArray()),
+                            equalLinkedHashSetOf(*(it.third + callingContextOut).toTypedArray()),
                         )
                 }
 
             doubleState =
-                if (dstValues.all { it == dst })
-                    doubleState.updateValues(
-                        lattice,
-                        sources,
-                        identitySetOf(dst),
-                        identitySetOf(dst),
-                        lastWrites,
-                    )
-                else
-                    doubleState.updateValues(
-                        lattice,
-                        sources,
-                        identitySetOf(),
-                        identitySetOf(dst),
-                        lastWrites,
-                    )
+                //                if (dst is CallExpression)
+                doubleState.updateValues(
+                    lattice,
+                    sources,
+                    identitySetOf(dst),
+                    identitySetOf(dst),
+                    lastWrites,
+                )
+            /*else
+            doubleState.updateValues(
+                lattice,
+                sources,
+                identitySetOf(),
+                identitySetOf(dst),
+                lastWrites,
+            )*/
 
             // Add the callingContextOut to the edgePropertiesMap and check if we also need the
             // shortFS flag
@@ -1061,7 +1062,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 var newLastWriteEntry =
                     Pair<Node, EqualLinkedHashSet<Any>>(
                         currentNode.input,
-                        equalLinkedHasSetOf(false),
+                        equalLinkedHashSetOf(false),
                     )
                 // If we already have exactly that entry, no need to re-write it, otherwise we might
                 // confuse the iterateEOG function
@@ -1121,7 +1122,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             val destinationsAddresses =
                 destinations.flatMap { doubleState.getAddresses(it) }.toIdentitySet()
             val lastWrites =
-                destinations.mapTo(IdentitySet()) { Pair(it, equalLinkedHasSetOf<Any>(false)) }
+                destinations.mapTo(IdentitySet()) { Pair(it, equalLinkedHashSetOf<Any>(false)) }
             doubleState =
                 doubleState.updateValues(
                     lattice,
@@ -1268,7 +1269,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     DeclarationStateEntryElement(
                         PowersetLattice.Element(addresses),
                         PowersetLattice.Element(values.map { Pair(it, false) }.toIdentitySet()),
-                        PowersetLattice.Element(Pair(currentNode, equalLinkedHasSetOf<Any>(false))),
+                        PowersetLattice.Element(Pair(currentNode, equalLinkedHashSetOf<Any>(false))),
                     ),
                 )
         }
@@ -1340,7 +1341,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         DeclarationStateEntryElement(
                             PowersetLattice.Element(addresses),
                             PowersetLattice.Element(Pair(pmv, false)),
-                            PowersetLattice.Element(Pair(pmv, equalLinkedHasSetOf())),
+                            PowersetLattice.Element(Pair(pmv, equalLinkedHashSetOf())),
                         )
                     val genStateElement =
                         GeneralStateEntryElement(
@@ -1531,8 +1532,8 @@ fun PointsToStateElement.getLastWrites(
         is PointerReference -> {
             // For pointerReferences, we take the memoryAddress of the refersTo
             return (node.input as Reference).refersTo?.memoryAddresses?.mapTo(IdentitySet()) {
-                Pair<Node, EqualLinkedHashSet<Any>>(it, equalLinkedHasSetOf())
-            } ?: identitySetOf(Pair(node, equalLinkedHasSetOf()))
+                Pair<Node, EqualLinkedHashSet<Any>>(it, equalLinkedHashSetOf())
+            } ?: identitySetOf(Pair(node, equalLinkedHashSetOf()))
         }
         is PointerDereference -> {
             val ret = identitySetOf<Pair<Node, EqualLinkedHashSet<Any>>>()
@@ -1541,7 +1542,7 @@ fun PointsToStateElement.getLastWrites(
                 // Usually, we should have a lastwrite, so we take that
                 if (lastWrite?.isNotEmpty() == true)
                     lastWrite.mapTo(IdentitySet()) {
-                        ret.add(Pair(it.first, equalLinkedHasSetOf(it.second)))
+                        ret.add(Pair(it.first, equalLinkedHashSetOf(it.second)))
                     }
                 // However, there might be cases were we don't yet have written to the dereferenced
                 // value, in this case we return an UnknownMemoryValue
@@ -1552,7 +1553,7 @@ fun PointsToStateElement.getLastWrites(
                             nodesCreatingUnknownValues.computeIfAbsent(Pair(addr, newName)) {
                                 UnknownMemoryValue(newName)
                             },
-                            equalLinkedHasSetOf(),
+                            equalLinkedHashSetOf(),
                         )
                     )
                 }
@@ -1568,7 +1569,7 @@ fun PointsToStateElement.getLastWrites(
                 }
                 .flatMapTo(IdentitySet()) {
                     this.declarationsState[it]?.third!!.map {
-                        Pair(it.first, equalLinkedHasSetOf<Any>(it.second))
+                        Pair(it.first, equalLinkedHashSetOf<Any>(it.second))
                     }
                 }
     }
@@ -1613,10 +1614,11 @@ fun PointsToStateElement.getValues(node: Node): IdentitySet<Pair<Node, Boolean>>
                 //                .toIdentitySet()
                 .mapTo(IdentitySet()) { Pair(it, false) }
         }
-        is MemoryAddress -> {
+        is MemoryAddress,
+        is CallExpression -> {
             fetchElementFromDeclarationState(node).mapTo(IdentitySet()) {
                 Pair(it.first, it.second)
-            } // .toIdentitySet()
+            }
         }
         is MemberExpression -> {
             val (base, fieldName) = resolveMemberExpression(node)
@@ -1657,7 +1659,6 @@ fun PointsToStateElement.getValues(node: Node): IdentitySet<Pair<Node, Boolean>>
         is SubscriptExpression -> {
             this.getAddresses(node).flatMap { this.getValues(it) }.toIdentitySet()
         }
-        /* In these cases, we simply have to fetch the current value for the MemoryAddress from the DeclarationState */
         else -> identitySetOf(Pair(node, false))
     }
 }

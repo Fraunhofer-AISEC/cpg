@@ -2219,7 +2219,7 @@ class PointsToPassTest {
 
         // CallExpression in Line 380
         assertEquals(1, iArgLine380.nextDFGEdges.size)
-        // Argument's nextDFG should point to the paremeterMemoryValue of the Function
+        // Argument's nextDFG should point to the ParameterMemoryValue of the Function
         assertEquals(
             incFD.parameters.first().memoryValue,
             iArgLine380.nextDFGEdges.first().end as? ParameterMemoryValue,
@@ -2231,6 +2231,7 @@ class PointsToPassTest {
                 .calls,
         )
 
+        // The value of the return statement in the FD flows to the callExpression
         assertEquals(1, ceLine380.prevDFGEdges.size)
         assertEquals(
             incFD.returns.singleOrNull()?.returnValue,
@@ -2243,8 +2244,13 @@ class PointsToPassTest {
                 .calls,
         )
 
+        assertEquals(binOpLine207, iRefLeftLine380.memoryValues.singleOrNull())
+        // The callexpression flows to the lhs
+        assertEquals(1, ceLine380.nextDFG.size)
+        assertEquals(iRefLeftLine380, ceLine380.nextDFG.singleOrNull())
+
         // CallExpression in Line 384
-        assertEquals(1, iArgLine384.nextDFGEdges.size)
+        // Argument's nextDFG should point to the ParameterMemoryValue of the Function
         assertEquals(
             incFD.parameters.first().memoryValue,
             iArgLine384.nextDFGEdges.first().end as? ParameterMemoryValue,
@@ -2256,7 +2262,12 @@ class PointsToPassTest {
                 .calls,
         )
 
+        // The value of the return statement in the FD flows to the callExpression
         assertEquals(1, ceLine384.prevDFGEdges.size)
+        assertEquals(
+            incFD.returns.singleOrNull()?.returnValue,
+            ceLine384.prevDFGEdges.singleOrNull()?.start,
+        )
         assertEquals(
             setOf(ceLine384),
             ((ceLine384.prevDFGEdges.first() as ContextSensitiveDataflow).callingContext
@@ -2264,7 +2275,13 @@ class PointsToPassTest {
                 .calls,
         )
 
+        assertEquals(binOpLine207, iRefLeftLine384.memoryValues.singleOrNull())
+        // The callexpression flows to the lhs
+        assertEquals(1, ceLine384.nextDFG.size)
+        assertEquals(iRefLeftLine384, ceLine384.nextDFG.singleOrNull())
+
         // CallExpression in Line 386
+        // Argument's nextDFG should point to the ParameterMemoryValue of the Function
         assertEquals(1, pArgLine386.nextDFGEdges.filter { !it.functionSummary }.size)
         assertEquals(
             setOf(ceLine386),
@@ -2272,6 +2289,12 @@ class PointsToPassTest {
                     as CallingContextIn)
                 .calls,
         )
+        assertEquals(
+            incpFD.parameters.first().memoryValue,
+            pArgLine386.nextDFGEdges.first().end as? ParameterMemoryValue,
+        )
+
+        // Argument's nextDFG should point to the ParameterMemoryValue of the Function
         assertEquals(1, incpDerefValue.prevDFGEdges.filter { it.start == literal1 }.size)
         assertEquals(
             setOf(ceLine386),

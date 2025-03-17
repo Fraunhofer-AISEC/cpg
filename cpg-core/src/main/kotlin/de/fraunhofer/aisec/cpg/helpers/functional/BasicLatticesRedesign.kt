@@ -44,7 +44,7 @@ class EqualLinkedHashSet<T> : LinkedHashSet<T>() {
     }
 }
 
-fun <T> equalLinkedHasSetOf(vararg elements: T): EqualLinkedHashSet<T> {
+fun <T> equalLinkedHashSetOf(vararg elements: T): EqualLinkedHashSet<T> {
     val set = EqualLinkedHashSet<T>()
     set.addAll(elements)
     return set
