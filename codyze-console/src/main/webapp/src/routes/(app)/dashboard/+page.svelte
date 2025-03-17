@@ -2,13 +2,35 @@
   import type { PageProps } from './$types';
   import AnalysisResult from '$lib/components/AnalysisResult.svelte';
   import NewAnalysis from '$lib/components/NewAnalysis.svelte';
+  import {invalidate} from "$app/navigation";
 
   let { data }: PageProps = $props();
   let regenerateEnabled = $state(false);
   let loading = $state(false);
 
-  function handleSubmit(sourceDir: string, includeDir?: string, topLevel?: string) {
+  async function handleSubmit(sourceDir: string, includeDir?: string, topLevel?: string) {
     loading = true;
+    try {
+      const response = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ sourceDir, includeDir, topLevel }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+
+      const data = await response.json();
+      await invalidate("/api/result")
+      console.log('Generation successful:', data);
+    } catch (error) {
+      console.error('Error during generation:', error);
+    } finally {
+      loading = false;
+    }
   }
 </script>
 
