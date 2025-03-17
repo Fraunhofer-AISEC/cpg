@@ -23,7 +23,19 @@
     offsetLeft
   }: Props = $props();
 
-  function calculateWidth(node: NodeJSON, codeLines: string[]): number {
+  /**
+   * Calculate the width of the {@link node} in rem units.
+   *
+   * There are two cases to consider:
+   * - The node spans multiple lines. In this case, the width is the length of the longest line
+   *   that the node spans.
+   * - The node spans a single line. In this case, the width is the difference between the end
+   *   and start columns.
+   *
+   * @param node the node to calculate the width for
+   * @param codeLines the lines of code that the node spans
+   */
+  function computeWidth(node: NodeJSON, codeLines: string[]): number {
     if (node.startLine === node.endLine) {
       return (node.endColumn - node.startColumn) * charWidth;
     } else {
@@ -34,20 +46,27 @@
       );
     }
   }
+
+  let top = $derived(`${(node.startLine - 1) * lineHeight + offsetTop}rem`);
+  let left = $derived(`${node.startColumn * charWidth + offsetLeft}rem`);
+  let height = $derived(`${(node.endLine - node.startLine + 1) * lineHeight}rem`);
+  let width = $derived(`${computeWidth(node, codeLines)}rem`);
 </script>
 
 <div
   role="presentation"
   class="absolute cursor-pointer transition-all duration-200"
-  style:top={`${(node.startLine - 1) * lineHeight + offsetTop}px`}
-  style:left={`${node.startColumn * charWidth + offsetLeft}px`}
-  style:height={`${(node.endLine - node.startLine + 1) * lineHeight}px`}
-  style:width={`${calculateWidth(node, codeLines)}px`}
+  style:top
+  style:left
+  style:height
+  style:width
   style:background-color={getColorForNodeType(node.type)}
-  style:border={highlightedNode?.id === node.id ? '2px solid black' : '1px solid transparent'}
+  style:border={highlightedNode?.id === node.id
+    ? '0.125em solid black'
+    : '0.0625em solid transparent'}
   style:opacity={highlightedNode?.id === node.id ? 0.6 : 0.3}
-  style:minWidth={'4px'}
-  style:minHeight={'4px'}
+  style:minWidth={'0.25em'}
+  style:minHeight={'0.25em'}
   style:z-index={node.depth}
   onmouseenter={() => (highlightedNode = node)}
   onmouseleave={() => (highlightedNode = null)}

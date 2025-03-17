@@ -10,13 +10,16 @@
   }
 
   let { node, lineHeight, charWidth, offsetTop, offsetLeft }: Props = $props();
+
+  let top = $derived(`${node.endLine * lineHeight + offsetTop}rem`);
+  let left = $derived(`${node.startColumn * charWidth + offsetLeft}rem`);
 </script>
 
 <div
   class="absolute z-30 rounded border border-gray-300 bg-white p-2 text-xs shadow-md"
-  style:top={`${node.endLine * lineHeight + offsetTop}px`}
-  style:left={`${node.startColumn * charWidth + offsetLeft}px`}
-  style:max-width="300px"
+  style:top
+  style:left
+  style:max-width="18.75em"
 >
   <p class="font-bold">{node.type}</p>
   <p>

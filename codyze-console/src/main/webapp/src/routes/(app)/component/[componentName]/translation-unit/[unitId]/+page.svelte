@@ -21,10 +21,10 @@
   let tableTitle = $derived(activeTab === 'overlayNodes' ? 'Overlay Nodes' : 'AST Nodes');
   let highlightedNode = $state<NodeJSON | null>(null);
 
-  const lineHeight = 24;
-  const charWidth = 10;
-  const offsetTop = 16;
-  const baseOffsetLeft = 36;
+  const lineHeight = 1.5;
+  const charWidth = 0.625;
+  const offsetTop = 1;
+  const baseOffsetLeft = 2.25;
 
   const totalLines = data.translationUnit.code.split('\n').length;
   const lineNumberWidth = Math.ceil(Math.log10(totalLines + 1));
@@ -65,10 +65,6 @@
         {offsetTop}
         {offsetLeft}
       />
-
-      {#if highlightedNode}
-        <NodeTooltip node={highlightedNode} {lineHeight} {charWidth} {offsetTop} {offsetLeft} />
-      {/if}
     </div>
   </div>
 

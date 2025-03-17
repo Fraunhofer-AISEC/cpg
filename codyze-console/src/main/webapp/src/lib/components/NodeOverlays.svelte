@@ -2,6 +2,7 @@
   import type { FlattenedNode } from '$lib/flatten';
   import type { NodeJSON } from '$lib/types';
   import NodeOverlay from '$lib/components/NodeOverlay.svelte';
+  import NodeTooltip from '$lib/components/NodeTooltip.svelte';
 
   interface Props {
     nodes: FlattenedNode[];
@@ -40,4 +41,8 @@
       {offsetLeft}
     />
   {/each}
+
+  {#if highlightedNode}
+    <NodeTooltip node={highlightedNode} {lineHeight} {charWidth} {offsetTop} {offsetLeft} />
+  {/if}
 </div>
