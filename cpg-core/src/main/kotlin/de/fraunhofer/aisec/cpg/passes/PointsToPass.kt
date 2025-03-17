@@ -355,24 +355,33 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     }
                     // If so, store the last write for the parameter in the FunctionSummary
                     .forEach { (value, shortFS, subAccessName) ->
+                        // TODO: Also extract the last write. TO be able to do this for fields, we
+                        // need the info here on which address we are working, which we currently
+                        // loose by calling fetchElementsfromDeclarationsState
                         // Extract the value depth from the value's localName
                         val srcValueDepth = stringToDepth(value.name.localName)
                         // Store the information in the functionSummary
-                        node.functionSummary
-                            .computeIfAbsent(param) { mutableSetOf() }
-                            .add(
-                                FunctionDeclaration.FSEntry(
-                                    dstValueDepth,
-                                    value,
-                                    srcValueDepth,
-                                    subAccessName,
-                                )
+                        val existingEntry =
+                            node.functionSummary.computeIfAbsent(param) { mutableSetOf() }
+                        existingEntry.add(
+                            FunctionDeclaration.FSEntry(
+                                dstValueDepth,
+                                value,
+                                srcValueDepth,
+                                subAccessName,
                             )
+                        )
                         // Additionally, we store this as a shortFunctionSummary were the Function
                         // writes to the parameter
-                        node.functionSummary
-                            .computeIfAbsent(param) { mutableSetOf() }
-                            .add(
+                        // Check that we don't already have an effectively the same entry
+                        if (
+                            existingEntry.none { e ->
+                                e.destValueDepth == dstValueDepth &&
+                                    e.srcNode == node &&
+                                    e.shortFunctionSummary
+                            }
+                        ) {
+                            existingEntry.add(
                                 FunctionDeclaration.FSEntry(
                                     dstValueDepth,
                                     node,
@@ -381,6 +390,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                     true,
                                 )
                             )
+                        }
                         val propertySet = identitySetOf<Any>(true)
                         if (subAccessName != "")
                             propertySet.add(FieldDeclaration().apply { name = Name(subAccessName) })
@@ -987,6 +997,10 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 val argumentValues =
                     doubleState.getNestedValues(argument, destAddrDepth, fetchFields = true)
                 argumentValues.forEach { (v, _) ->
+                    // We over approximate here and also add the main memory Address to the list of
+                    // destinations
+                    fieldAddresses.add(v)
+
                     val parentName = nodeNameToString(v)
                     val newName = Name(subAccessName, parentName)
                     fieldAddresses.addAll(

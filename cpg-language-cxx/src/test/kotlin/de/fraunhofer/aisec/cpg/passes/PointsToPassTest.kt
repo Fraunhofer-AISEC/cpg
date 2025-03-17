@@ -1338,8 +1338,14 @@ class PointsToPassTest {
         // Line 179
         assertEquals(2, local_28Line179.fullMemoryValues.size)
         assertTrue(local_28Line179.fullMemoryValues.contains(literal0Line167))
-        assertTrue(local_28Line179.fullMemoryValues.contains(ceLine172))
-        assertEquals(setOf<Node>(local_28Line167, local_28Line172), local_28Line179.prevDFG)
+        assertLocalName(
+            "dlmalloc",
+            local_28Line179.fullMemoryValues.filterIsInstance<UnknownMemoryValue>().singleOrNull(),
+        )
+        assertEquals(
+            setOf<Node>(local_28Line167, local_28Line172),
+            local_28Line179.prevFullDFG.toSet(),
+        )
 
         assertEquals(2, local_28DerefLine179.fullMemoryValues.size)
         assertTrue(local_28DerefLine179.fullMemoryValues.contains(literal0Line177))
@@ -1371,18 +1377,32 @@ class PointsToPassTest {
 
         // Line 180
         assertEquals(
-            mutableSetOf<Node>(literal0Line167, ceLine172),
-            local_28Line180.fullMemoryValues,
+            literal0Line167,
+            local_28Line180.fullMemoryValues.filterIsInstance<Literal<*>>().singleOrNull(),
         )
-        assertEquals(mutableSetOf<Node>(local_28Line167, local_28Line172), local_28Line180.prevDFG)
+        assertLocalName(
+            "dlmalloc",
+            local_28Line180.fullMemoryValues.filterIsInstance<UnknownMemoryValue>().singleOrNull(),
+        )
+        assertEquals(
+            mutableSetOf<Node>(local_28Line167, local_28Line172),
+            local_28Line180.prevFullDFG.toMutableSet(),
+        )
 
         // Line 181
         assertEquals(2, local_28DerefLine181.fullMemoryValues.size)
-        assertTrue(local_28DerefLine181.fullMemoryValues.contains(ceLine201))
         assertEquals(
             1,
             local_28DerefLine181.fullMemoryValues
-                .filter { it is UnknownMemoryValue && it.name.localName == "DAT_0011b1c8" }
+                .filterIsInstance<UnknownMemoryValue>()
+                .filter { it.name.localName == "DAT_0011b1c8" }
+                .size,
+        )
+        assertEquals(
+            1,
+            local_28DerefLine181.fullMemoryValues
+                .filterIsInstance<UnknownMemoryValue>()
+                .filter { it.name.localName == "CONCAT71" }
                 .size,
         )
         assertEquals(4, local_28DerefLine181.prevDFG.size)
