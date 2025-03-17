@@ -305,8 +305,6 @@ class FileConceptTest : BaseTest() {
     }
 
     @Test
-    // Needs other traversal of EOG. See #2123
-    @Ignore
     fun testBranching() {
         val topLevel = Path.of("src", "integrationTest", "resources", "python", "file")
 
@@ -336,7 +334,6 @@ class FileConceptTest : BaseTest() {
         }
     }
 
-    @Ignore("Issue https://github.com/Fraunhofer-AISEC/cpg/issues/2121")
     @Test
     fun testDelete() {
         val topLevel = Path.of("src", "integrationTest", "resources", "python", "file")
