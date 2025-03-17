@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.concepts.arch.Agnostic
 import de.fraunhofer.aisec.cpg.graph.concepts.flows.Main
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import io.ktor.client.call.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
@@ -74,10 +75,16 @@ val mockService =
                                     TranslationUnitDeclaration().apply {
                                         name = Name("tu1")
                                         id = Uuid.parse("00000000-0000-0000-0000-000000000001")
-                                        declarations +=
+                                        var func =
                                             FunctionDeclaration().apply {
                                                 name = Name("main")
                                                 Main(this, os = Agnostic(this))
+                                            }
+                                        declarations += func
+                                        statements +=
+                                            CallExpression().apply {
+                                                name = Name("main")
+                                                prevDFG += func
                                             }
                                     }
                             }
@@ -145,7 +152,7 @@ class ApplicationTest {
         assertEquals(HttpStatusCode.OK, response.status)
 
         val nodes = response.body<List<NodeJSON>>()
-        assertEquals(1, nodes.size)
+        assertEquals(2, nodes.size)
     }
 
     @Test
