@@ -647,63 +647,14 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         doubleState: PointsToStateElement,
     ): PointsToStateElement {
         var doubleState = doubleState
-        // mutableMapOf(Node, Value, prevDFG, edge-Properties)
-        //                val mapDstToSrc = mutableMapOf<Node, IdentitySet<Pair<Node, Set<Any>>>>()
-        val mapDstToSrc =
+        var mapDstToSrc =
             mutableMapOf<Node, IdentitySet<Triple<Node, Node, EqualLinkedHashSet<Any>>>>()
-
-        // First, check if there are missing FunctionSummaries
-        /*currentNode.language?.let { language ->
-            currentNode.invokes.forEach { invoke ->
-                if (invoke.functionSummary.isEmpty()) {
-                    ctx.config.functionSummaries.run {
-                        this.functionToDFGEntryMap
-                            .filterKeys { it.methodName == invoke.name.localName }
-                            .map { (declEntry, summary) ->
-                                applyDfgEntryToFunctionDeclaration(invoke, summary)
-                            }
-                    }
-                }
-            }
-        }*/
 
         var i = 0
         // The toIdentitySet avoids having the same elements multiple times
         val invokes = currentNode.invokes.toIdentitySet().toList()
         while (i < invokes.size) {
-            val invoke = invokes[i]
-            if (invoke.functionSummary.isEmpty()) {
-                if (invoke.hasBody()) {
-                    log.debug("functionSummaryAnalysisChain: {}", functionSummaryAnalysisChain)
-                    if (invoke !in functionSummaryAnalysisChain) {
-                        val summaryCopy = functionSummaryAnalysisChain.toSet()
-                        functionSummaryAnalysisChain.add(invoke)
-                        acceptInternal(invoke)
-                        functionSummaryAnalysisChain.clear()
-                        functionSummaryAnalysisChain.addAll(summaryCopy)
-                    } else {
-                        log.error(
-                            "Cannot calculate functionSummary for $invoke as it's recursively called. callChain: $functionSummaryAnalysisChain"
-                        )
-                        val newValues: MutableSet<FunctionDeclaration.FSEntry> =
-                            invoke.parameters
-                                .map { FunctionDeclaration.FSEntry(0, it, 1, "") }
-                                .toMutableSet()
-                        invoke.functionSummary[ReturnStatement()] = newValues
-                    }
-                } else {
-                    // Add a dummy function summary so that we don't try this every time
-                    // In this dummy, all parameters point to the return
-                    // TODO: This actually generates a new return statement but it's not part of the
-                    // function. Wouldn't the edges better point to the FunctionDeclaration and in a
-                    // case with a body, all returns flow to the FunctionDeclaration too?
-                    val newValues: MutableSet<FunctionDeclaration.FSEntry> =
-                        invoke.parameters
-                            .map { FunctionDeclaration.FSEntry(0, it, 1, "") }
-                            .toMutableSet()
-                    invoke.functionSummary[ReturnStatement()] = newValues
-                }
-            }
+            val invoke = calculateFunctionSummaries(invokes[i])
 
             doubleState =
                 calculateIncomingCallingContexts(lattice, invoke, currentNode, doubleState)
@@ -730,52 +681,14 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         .sortedBy { it.destValueDepth }
                         .forEach { (dstValueDepth, srcNode, srcValueDepth, subAccessName, shortFS)
                             ->
-                            val destAddrDepth = dstValueDepth - 1
-                            // Is the destAddrDepth > 2? In this case, the DeclarationState
-                            // might be outdated. So check in the mapDstToSrc for updates
-                            val updatedAddresses =
-                                mapDstToSrc.entries
-                                    .filter {
-                                        it.key in
-                                            doubleState.getValues(argument).mapTo(IdentitySet()) {
-                                                it.first
-                                            }
-                                    }
-                                    .flatMap { it.value }
-                                    .map { it.first }
-                                    .toIdentitySet()
                             val destination =
-                                if (dstValueDepth > 2 && updatedAddresses.isNotEmpty()) {
-                                    updatedAddresses
-                                } else {
-                                    if (subAccessName.isNotEmpty()) {
-                                        val fieldAddresses = identitySetOf<Node>()
-                                        // Collect the fieldAddresses for each possible value
-                                        val argumentValues =
-                                            doubleState.getNestedValues(
-                                                argument,
-                                                destAddrDepth,
-                                                fetchFields = true,
-                                            )
-                                        argumentValues.forEach { (v, _) ->
-                                            val parentName = nodeNameToString(v)
-                                            val newName = Name(subAccessName, parentName)
-                                            fieldAddresses.addAll(
-                                                doubleState.fetchFieldAddresses(
-                                                    identitySetOf(v),
-                                                    newName,
-                                                )
-                                            )
-                                        }
-                                        fieldAddresses
-                                    } else {
-                                        doubleState.getNestedValues(argument, destAddrDepth).mapTo(
-                                            IdentitySet()
-                                        ) {
-                                            it.first
-                                        }
-                                    }
-                                }
+                                calculateCallExpressionDestination(
+                                    doubleState,
+                                    mapDstToSrc,
+                                    dstValueDepth,
+                                    subAccessName,
+                                    argument,
+                                )
                             // Collect the properties for the  DeclarationStateEntry
                             val propertySet: EqualLinkedHashSet<Any> =
                                 if (subAccessName.isNotEmpty()) {
@@ -797,189 +710,21 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                     identitySetOf(shortFS),
                                 )
                             }
-                            when (srcNode) {
-                                is ParameterDeclaration -> {
-                                    // Add the (dereferenced) value of the respective argument
-                                    // in
-                                    // the CallExpression
-                                    if (srcNode.argumentIndex < currentNode.arguments.size) {
-                                        // If this is a short FunctionSummary, we additionally
-                                        // update the
-                                        // generalState to draw the additional DFG Edges
-                                        if (shortFS) {
-                                            doubleState =
-                                                lattice.push(
-                                                    doubleState,
-                                                    argument,
-                                                    GeneralStateEntryElement(
-                                                        PowersetLattice.Element(),
-                                                        PowersetLattice.Element(
-                                                            currentNode.arguments[
-                                                                    srcNode.argumentIndex]
-                                                        ),
-                                                        PowersetLattice.Element(),
-                                                    ),
-                                                )
-                                        }
-                                        val values =
-                                            if (!shortFS)
-                                                doubleState
-                                                    .getNestedValues(
-                                                        currentNode.arguments[
-                                                                srcNode.argumentIndex],
-                                                        srcValueDepth,
-                                                        fetchFields = true,
-                                                    )
-                                                    .mapTo(IdentitySet()) { it.first }
-                                            else
-                                                identitySetOf(
-                                                    currentNode.arguments[param.argumentIndex]
-                                                )
-                                        values.forEach { value ->
-                                            destination.forEach { d ->
-                                                // The extracted value might come from a state we
-                                                // created for a shortfunctionSummary. If so, we
-                                                // have to store that info in the map
-                                                val updatedPropertySet = propertySet
-                                                updatedPropertySet.add(
-                                                    edgePropertiesMap[
-                                                            Pair(
-                                                                currentNode.arguments[
-                                                                        srcNode.argumentIndex],
-                                                                value,
-                                                            )]
-                                                        ?.filterIsInstance<Boolean>()
-                                                        ?.any { it } == true || shortFS
-                                                )
-                                                val currentSet =
-                                                    mapDstToSrc.computeIfAbsent(d) {
-                                                        identitySetOf()
-                                                    }
-                                                if (
-                                                    currentSet.none {
-                                                        it.first === value &&
-                                                            (it.second === prevDFG ||
-                                                                it.second === value)
-                                                        it.third == updatedPropertySet
-                                                    }
-                                                ) {
-                                                    currentSet +=
-                                                        Triple(
-                                                            value,
-                                                            (prevDFG ?: value),
-                                                            updatedPropertySet,
-                                                        )
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-
-                                is ParameterMemoryValue -> {
-                                    // In case the FunctionSummary says that we have to use the
-                                    // dereferenced value here, we look up the argument,
-                                    // dereference it, and then add it to the sources
-                                    currentNode.invokes
-                                        .flatMap { it.parameters }
-                                        .filterTo(identitySetOf()) {
-                                            it.name == srcNode.name.parent
-                                        }
-                                        .forEach {
-                                            if (it.argumentIndex < currentNode.arguments.size) {
-                                                val arg = currentNode.arguments[it.argumentIndex]
-                                                destination.forEach { d ->
-                                                    val updatedPropertySet = propertySet
-                                                    updatedPropertySet.add(shortFS)
-                                                    val currentSet =
-                                                        mapDstToSrc.computeIfAbsent(d) {
-                                                            identitySetOf()
-                                                        }
-                                                    doubleState
-                                                        .getNestedValues(arg, srcValueDepth)
-                                                        .forEach { (value, _) ->
-                                                            if (
-                                                                currentSet.none {
-                                                                    it.first === value &&
-                                                                        (it.second === prevDFG ||
-                                                                            it.second === value)
-                                                                    it.third == updatedPropertySet
-                                                                }
-                                                            ) {
-                                                                currentSet +=
-                                                                    Triple(
-                                                                        value,
-                                                                        (prevDFG ?: value),
-                                                                        updatedPropertySet,
-                                                                    )
-                                                            }
-                                                        }
-                                                }
-                                            }
-                                        }
-                                    //                                    }
-                                }
-
-                                is MemoryAddress -> {
-                                    destination.forEach { d ->
-                                        val currentSet =
-                                            mapDstToSrc.computeIfAbsent(d) { identitySetOf() }
-                                        val updatedPropertySet = propertySet
-                                        updatedPropertySet.add(shortFS)
-                                        if (
-                                            currentSet.none {
-                                                it.first === srcNode &&
-                                                    (it.second === prevDFG ||
-                                                        it.second === srcNode) &&
-                                                    it.third == updatedPropertySet
-                                            }
-                                        ) {
-                                            currentSet +=
-                                                Triple(
-                                                    srcNode,
-                                                    (prevDFG ?: srcNode),
-                                                    updatedPropertySet,
-                                                )
-                                        }
-                                    }
-                                }
-
-                                else -> {
-                                    destination.forEach { d ->
-                                        val currentSet =
-                                            mapDstToSrc.computeIfAbsent(d) { identitySetOf() }
-                                        val newSet =
-                                            if (srcValueDepth == 0)
-                                                identitySetOf(Pair(srcNode, shortFS))
-                                            else
-                                                doubleState
-                                                    .getNestedValues(srcNode, srcValueDepth)
-                                                    .mapTo(IdentitySet()) {
-                                                        Pair(it.first, shortFS)
-                                                    }
-
-                                        newSet.forEach { pair ->
-                                            if (
-                                                currentSet.none {
-                                                    it.first === pair.first &&
-                                                        (it.second === prevDFG ||
-                                                            it.second === pair.first)
-                                                    pair.second in it.third
-                                                }
-                                            ) {
-                                                val updatedPropertySet = propertySet
-                                                updatedPropertySet.add(shortFS)
-                                                currentSet +=
-                                                    Triple(
-                                                        pair.first,
-                                                        (prevDFG ?: pair.first),
-                                                        updatedPropertySet,
-                                                    )
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            // }
+                            mapDstToSrc =
+                                addEntryToMap(
+                                    lattice,
+                                    doubleState,
+                                    mapDstToSrc,
+                                    destination,
+                                    srcNode,
+                                    shortFS,
+                                    argument,
+                                    srcValueDepth,
+                                    param,
+                                    propertySet,
+                                    currentNode,
+                                    prevDFG,
+                                )
                         }
                 }
             }
@@ -988,61 +733,308 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
         val callingContextOut = CallingContextOut(setOf(currentNode))
         mapDstToSrc.forEach { (dst, values) ->
-            // If the values of the destination are the same as the destination (e.g. if dst is a
-            // CallExpression), we also add destinations to update the generalState, otherwise, the
-            // destinationAddresses for the DeclarationState are enough
-            //            val dstValues = doubleState.getValues(dst).mapTo(IdentitySet()) { it.first
-            // }
-            val sources = values.mapTo(IdentitySet()) { Pair(it.first, true in it.third) }
-            val lastWrites: IdentitySet<Pair<Node, EqualLinkedHashSet<Any>>> =
-                //                (values /*+ Pair(currentNode, true)*/).toIdentitySet()
-                values.mapTo(IdentitySet()) {
-                    if (it.third.singleOrNull() == true) Pair(it.second, it.third)
-                    else
-                        Pair(
-                            it.second,
-                            equalLinkedHashSetOf(*(it.third + callingContextOut).toTypedArray()),
-                        )
-                }
-
             doubleState =
-                //                if (dst is CallExpression)
-                doubleState.updateValues(
-                    lattice,
-                    sources,
-                    identitySetOf(dst),
-                    identitySetOf(dst),
-                    lastWrites,
-                )
-            /*else
-            doubleState.updateValues(
-                lattice,
-                sources,
-                identitySetOf(),
-                identitySetOf(dst),
-                lastWrites,
-            )*/
-
-            // Add the callingContextOut to the edgePropertiesMap and check if we also need the
-            // shortFS flag
-            // TODO
-            /*            values.forEach { v ->
-                if (v.second)
-                // a shortFunctionSummary + the callingContextOut
-                addEntryToEdgePropertiesMap(
-                        Pair(dst, v.first),
-                        identitySetOf(true, CallingContextOut(currentNode)),
-                    )
-                // the callingContextOut only
-                else
-                    addEntryToEdgePropertiesMap(
-                        Pair(dst, v.first),
-                        identitySetOf(CallingContextOut(currentNode)),
-                    )
-            }*/
+                writeMapEntriesToState(lattice, doubleState, dst, values, callingContextOut)
         }
 
         return doubleState
+    }
+
+    private fun calculateFunctionSummaries(invoke: FunctionDeclaration): FunctionDeclaration {
+        if (invoke.functionSummary.isEmpty()) {
+            if (invoke.hasBody()) {
+                log.debug("functionSummaryAnalysisChain: {}", functionSummaryAnalysisChain)
+                if (invoke !in functionSummaryAnalysisChain) {
+                    val summaryCopy = functionSummaryAnalysisChain.toSet()
+                    functionSummaryAnalysisChain.add(invoke)
+                    acceptInternal(invoke)
+                    functionSummaryAnalysisChain.clear()
+                    functionSummaryAnalysisChain.addAll(summaryCopy)
+                } else {
+                    log.error(
+                        "Cannot calculate functionSummary for $invoke as it's recursively called. callChain: $functionSummaryAnalysisChain"
+                    )
+                    val newValues: MutableSet<FunctionDeclaration.FSEntry> =
+                        invoke.parameters
+                            .map { FunctionDeclaration.FSEntry(0, it, 1, "") }
+                            .toMutableSet()
+                    invoke.functionSummary[ReturnStatement()] = newValues
+                }
+            } else {
+                // Add a dummy function summary so that we don't try this every time
+                // In this dummy, all parameters point to the return
+                // TODO: This actually generates a new return statement but it's not part of the
+                // function. Wouldn't the edges better point to the FunctionDeclaration and in a
+                // case with a body, all returns flow to the FunctionDeclaration too?
+                val newValues: MutableSet<FunctionDeclaration.FSEntry> =
+                    invoke.parameters
+                        .map { FunctionDeclaration.FSEntry(0, it, 1, "") }
+                        .toMutableSet()
+                invoke.functionSummary[ReturnStatement()] = newValues
+            }
+        }
+        return invoke
+    }
+
+    private fun writeMapEntriesToState(
+        lattice: PointsToState,
+        doubleState: PointsToStateElement,
+        dst: Node,
+        values: IdentitySet<Triple<Node, Node, EqualLinkedHashSet<Any>>>,
+        callingContextOut: CallingContextOut,
+    ): PointsToStateElement {
+        // If the values of the destination are the same as the destination (e.g. if dst is a
+        // CallExpression), we also add destinations to update the generalState, otherwise, the
+        // destinationAddresses for the DeclarationState are enough
+        //            val dstValues = doubleState.getValues(dst).mapTo(IdentitySet()) { it.first
+        // }
+        val sources = values.mapTo(IdentitySet()) { Pair(it.first, true in it.third) }
+        val lastWrites: IdentitySet<Pair<Node, EqualLinkedHashSet<Any>>> =
+            //                (values /*+ Pair(currentNode, true)*/).toIdentitySet()
+            values.mapTo(IdentitySet()) {
+                if (it.third.singleOrNull() == true) Pair(it.second, it.third)
+                else
+                    Pair(
+                        it.second,
+                        equalLinkedHashSetOf(*(it.third + callingContextOut).toTypedArray()),
+                    )
+            }
+
+        //        doubleState =
+        //                if (dst is CallExpression)
+        return doubleState.updateValues(
+            lattice,
+            sources,
+            identitySetOf(dst),
+            identitySetOf(dst),
+            lastWrites,
+        )
+        /*else
+        doubleState.updateValues(
+            lattice,
+            sources,
+            identitySetOf(),
+            identitySetOf(dst),
+            lastWrites,
+        )*/
+
+        // Add the callingContextOut to the edgePropertiesMap and check if we also need the
+        // shortFS flag
+        // TODO
+        /*            values.forEach { v ->
+            if (v.second)
+            // a shortFunctionSummary + the callingContextOut
+            addEntryToEdgePropertiesMap(
+                    Pair(dst, v.first),
+                    identitySetOf(true, CallingContextOut(currentNode)),
+                )
+            // the callingContextOut only
+            else
+                addEntryToEdgePropertiesMap(
+                    Pair(dst, v.first),
+                    identitySetOf(CallingContextOut(currentNode)),
+                )
+        }*/
+    }
+
+    private fun addEntryToMap(
+        lattice: PointsToState,
+        doubleState: PointsToStateElement,
+        mapDstToSrc: MutableMap<Node, IdentitySet<Triple<Node, Node, EqualLinkedHashSet<Any>>>>,
+        destination: IdentitySet<Node>,
+        srcNode: Node,
+        shortFS: Boolean,
+        argument: Expression,
+        srcValueDepth: Int,
+        param: Node,
+        propertySet: EqualLinkedHashSet<Any>,
+        currentNode: CallExpression,
+        prevDFG: Node?,
+    ): MutableMap<Node, IdentitySet<Triple<Node, Node, EqualLinkedHashSet<Any>>>> {
+        var doubleState = doubleState
+        when (srcNode) {
+            is ParameterDeclaration -> {
+                // Add the (dereferenced) value of the respective argument
+                // in
+                // the CallExpression
+                if (srcNode.argumentIndex < currentNode.arguments.size) {
+                    // If this is a short FunctionSummary, we additionally
+                    // update the
+                    // generalState to draw the additional DFG Edges
+                    if (shortFS) {
+                        doubleState =
+                            lattice.push(
+                                doubleState,
+                                argument,
+                                GeneralStateEntryElement(
+                                    PowersetLattice.Element(),
+                                    PowersetLattice.Element(
+                                        currentNode.arguments[srcNode.argumentIndex]
+                                    ),
+                                    PowersetLattice.Element(),
+                                ),
+                            )
+                    }
+                    val values =
+                        if (!shortFS)
+                            doubleState
+                                .getNestedValues(
+                                    currentNode.arguments[srcNode.argumentIndex],
+                                    srcValueDepth,
+                                    fetchFields = true,
+                                )
+                                .mapTo(IdentitySet()) { it.first }
+                        else identitySetOf(currentNode.arguments[param.argumentIndex])
+                    values.forEach { value ->
+                        destination.forEach { d ->
+                            // The extracted value might come from a state we
+                            // created for a shortfunctionSummary. If so, we
+                            // have to store that info in the map
+                            val updatedPropertySet = propertySet
+                            updatedPropertySet.add(
+                                edgePropertiesMap[
+                                        Pair(currentNode.arguments[srcNode.argumentIndex], value)]
+                                    ?.filterIsInstance<Boolean>()
+                                    ?.any { it } == true || shortFS
+                            )
+                            val currentSet = mapDstToSrc.computeIfAbsent(d) { identitySetOf() }
+                            if (
+                                currentSet.none {
+                                    it.first === value &&
+                                        (it.second === prevDFG || it.second === value)
+                                    it.third == updatedPropertySet
+                                }
+                            ) {
+                                currentSet += Triple(value, (prevDFG ?: value), updatedPropertySet)
+                            }
+                        }
+                    }
+                }
+            }
+
+            is ParameterMemoryValue -> {
+                // In case the FunctionSummary says that we have to use the
+                // dereferenced value here, we look up the argument,
+                // dereference it, and then add it to the sources
+                currentNode.invokes
+                    .flatMap { it.parameters }
+                    .filterTo(identitySetOf()) { it.name == srcNode.name.parent }
+                    .forEach {
+                        if (it.argumentIndex < currentNode.arguments.size) {
+                            val arg = currentNode.arguments[it.argumentIndex]
+                            destination.forEach { d ->
+                                val updatedPropertySet = propertySet
+                                updatedPropertySet.add(shortFS)
+                                val currentSet = mapDstToSrc.computeIfAbsent(d) { identitySetOf() }
+                                doubleState.getNestedValues(arg, srcValueDepth).forEach { (value, _)
+                                    ->
+                                    if (
+                                        currentSet.none {
+                                            it.first === value &&
+                                                (it.second === prevDFG || it.second === value)
+                                            it.third == updatedPropertySet
+                                        }
+                                    ) {
+                                        currentSet +=
+                                            Triple(value, (prevDFG ?: value), updatedPropertySet)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                //                                    }
+            }
+
+            is MemoryAddress -> {
+                destination.forEach { d ->
+                    val currentSet = mapDstToSrc.computeIfAbsent(d) { identitySetOf() }
+                    val updatedPropertySet = propertySet
+                    updatedPropertySet.add(shortFS)
+                    if (
+                        currentSet.none {
+                            it.first === srcNode &&
+                                (it.second === prevDFG || it.second === srcNode) &&
+                                it.third == updatedPropertySet
+                        }
+                    ) {
+                        currentSet += Triple(srcNode, (prevDFG ?: srcNode), updatedPropertySet)
+                    }
+                }
+            }
+
+            else -> {
+                destination.forEach { d ->
+                    val currentSet = mapDstToSrc.computeIfAbsent(d) { identitySetOf() }
+                    val newSet =
+                        if (srcValueDepth == 0) identitySetOf(Pair(srcNode, shortFS))
+                        else
+                            doubleState.getNestedValues(srcNode, srcValueDepth).mapTo(
+                                IdentitySet()
+                            ) {
+                                Pair(it.first, shortFS)
+                            }
+
+                    newSet.forEach { pair ->
+                        if (
+                            currentSet.none {
+                                it.first === pair.first &&
+                                    (it.second === prevDFG || it.second === pair.first)
+                                pair.second in it.third
+                            }
+                        ) {
+                            val updatedPropertySet = propertySet
+                            updatedPropertySet.add(shortFS)
+                            currentSet +=
+                                Triple(pair.first, (prevDFG ?: pair.first), updatedPropertySet)
+                        }
+                    }
+                }
+            }
+        }
+        return mapDstToSrc
+    }
+
+    private fun calculateCallExpressionDestination(
+        doubleState: PointsToStateElement,
+        mapDstToSrc: MutableMap<Node, IdentitySet<Triple<Node, Node, EqualLinkedHashSet<Any>>>>,
+        dstValueDepth: Int,
+        subAccessName: String,
+        argument: Expression,
+    ): IdentitySet<Node> {
+        val destAddrDepth = dstValueDepth - 1
+        // Is the destAddrDepth > 2? In this case, the DeclarationState
+        // might be outdated. So check in the mapDstToSrc for updates
+        val updatedAddresses =
+            mapDstToSrc.entries
+                .filter {
+                    it.key in doubleState.getValues(argument).mapTo(IdentitySet()) { it.first }
+                }
+                .flatMap { it.value }
+                .map { it.first }
+                .toIdentitySet()
+
+        return if (dstValueDepth > 2 && updatedAddresses.isNotEmpty()) {
+            updatedAddresses
+        } else {
+            if (subAccessName.isNotEmpty()) {
+                val fieldAddresses = identitySetOf<Node>()
+                // Collect the fieldAddresses for each possible value
+                val argumentValues =
+                    doubleState.getNestedValues(argument, destAddrDepth, fetchFields = true)
+                argumentValues.forEach { (v, _) ->
+                    val parentName = nodeNameToString(v)
+                    val newName = Name(subAccessName, parentName)
+                    fieldAddresses.addAll(
+                        doubleState.fetchFieldAddresses(identitySetOf(v), newName)
+                    )
+                }
+                fieldAddresses
+            } else {
+                doubleState.getNestedValues(argument, destAddrDepth).mapTo(IdentitySet()) {
+                    it.first
+                }
+            }
+        }
     }
 
     private fun handleUnaryOperator(
