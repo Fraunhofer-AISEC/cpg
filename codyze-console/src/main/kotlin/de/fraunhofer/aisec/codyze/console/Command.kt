@@ -34,4 +34,5 @@ class ConsoleCommand : CliktCommand() {
     }
 }
 
+/** The main command for the console. This will start the web console server. */
 var Command = ConsoleCommand()

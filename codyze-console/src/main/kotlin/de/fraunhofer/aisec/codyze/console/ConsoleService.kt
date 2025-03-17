@@ -50,7 +50,9 @@ class ConsoleService {
     private var analysisResult: AnalysisResultJSON? = null
     var lastProject: AnalysisProject? = null
 
-    /** Analyzes the given source directory and returns the analysis result. */
+    /**
+     * Analyzes the given source directory and returns the analysis result as [AnalysisResultJSON].
+     */
     suspend fun analyze(request: AnalyzeRequestJSON): AnalysisResultJSON =
         withContext(Dispatchers.IO) {
             val path = Path.of(request.sourceDir)
@@ -90,6 +92,7 @@ class ConsoleService {
             analyzeProject(project)
         }
 
+    /** Analyzes the given project and returns the analysis result as [AnalysisResultJSON]. */
     fun analyzeProject(project: AnalysisProject): AnalysisResultJSON {
         lastProject = project
 
@@ -100,18 +103,28 @@ class ConsoleService {
         return json
     }
 
+    /** Returns the translation result of the last analysis as [AnalysisResultJSON]. */
     fun getTranslationResult(): AnalysisResultJSON? {
         return analysisResult
     }
 
+    /** Returns the component with the given name as [ComponentJSON]. */
     fun getComponent(componentName: String): ComponentJSON? {
         return analysisResult?.components?.find { it.name == componentName }
     }
 
+    /**
+     * Returns the translation unit with the given ID for the specified component as
+     * [TranslationUnitJSON].
+     */
     fun getTranslationUnit(componentName: String, id: String): TranslationUnitJSON? {
         return getComponent(componentName)?.translationUnits?.find { it.id == Uuid.parse(id) }
     }
 
+    /**
+     * Returns the nodes for the given translation unit ID for the specified component as a list of
+     * [NodeJSON].
+     */
     fun getNodesForTranslationUnit(
         componentName: String,
         id: String,
@@ -124,6 +137,10 @@ class ConsoleService {
             ?.let { extractNodes(it, overlayNodes) } ?: emptyList()
     }
 
+    /**
+     * Extracts the nodes from the given translation unit. If [overlayNodes] is true, it extracts
+     * the overlay nodes, otherwise it extracts the AST nodes.
+     */
     private fun extractNodes(
         tu: TranslationUnitDeclaration,
         overlayNodes: Boolean,
@@ -136,6 +153,7 @@ class ConsoleService {
     }
 
     companion object {
+        /** Creates a new [ConsoleService] instance from the given [AnalysisResult]. */
         fun fromAnalysisResult(result: AnalysisResult): ConsoleService {
             val service = ConsoleService()
             service.analysisResult = result.toJSON()
