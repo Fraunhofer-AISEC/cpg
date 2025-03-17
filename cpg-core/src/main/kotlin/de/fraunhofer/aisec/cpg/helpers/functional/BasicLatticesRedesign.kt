@@ -36,6 +36,20 @@ import kotlin.collections.fold
 import kotlin.collections.plusAssign
 import kotlin.collections.set
 
+class EqualLinkedHashSet<T> : LinkedHashSet<T>() {
+    override fun equals(other: Any?): Boolean {
+        return other is LinkedHashSet<*> &&
+            this.size == other.size &&
+            this.all { t -> other.any { it == t } }
+    }
+}
+
+fun <T> equalLinkedHasSetOf(vararg elements: T): EqualLinkedHashSet<T> {
+    val set = EqualLinkedHashSet<T>()
+    set.addAll(elements)
+    return set
+}
+
 /** Used to identify the order of elements */
 enum class Order {
     LESSER,
@@ -195,7 +209,7 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
                 this.all { t ->
                     if (t is Pair<*, *>)
                         other.any {
-                            it is Pair<*, *> && it.first === t.first && it.second === t.second
+                            it is Pair<*, *> && it.first === t.first && it.second == t.second
                         }
                     else t in other
                 }
@@ -249,7 +263,7 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
                     this.any {
                         it is Pair<*, *> &&
                             it.first === element.first &&
-                            it.second === element.second
+                            it.second == element.second
                     }
             ) {
                 return false

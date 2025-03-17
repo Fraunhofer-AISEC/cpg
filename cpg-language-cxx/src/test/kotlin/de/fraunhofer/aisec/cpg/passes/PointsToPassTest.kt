@@ -2196,6 +2196,9 @@ class PointsToPassTest {
         val incpFD = tu.functions.firstOrNull { it.name.localName == "incp" }
         assertNotNull(incpFD)
 
+        val incFD = tu.functions.firstOrNull { it.name.localName == "inc" }
+        assertNotNull(incFD)
+
         // ParameterMemoryValues
         // TODO: Any better way to fetch the param's derefvalue?
         val incpDerefValue =
@@ -2216,8 +2219,11 @@ class PointsToPassTest {
 
         // CallExpression in Line 380
         assertEquals(1, iArgLine380.nextDFGEdges.size)
-        assertTrue(iArgLine380.nextDFGEdges.first().end is ParameterMemoryValue)
-        assertLocalName("value", iArgLine380.nextDFGEdges.first().end)
+        // Argument's nextDFG should point to the paremeterMemoryValue of the Function
+        assertEquals(
+            incFD.parameters.first().memoryValue,
+            iArgLine380.nextDFGEdges.first().end as? ParameterMemoryValue,
+        )
         assertEquals(
             setOf(ceLine380),
             ((iArgLine380.nextDFGEdges.first() as ContextSensitiveDataflow).callingContext
@@ -2226,7 +2232,10 @@ class PointsToPassTest {
         )
 
         assertEquals(1, ceLine380.prevDFGEdges.size)
-        // TODO
+        assertEquals(
+            incFD.returns.singleOrNull()?.returnValue,
+            ceLine380.prevDFGEdges.singleOrNull()?.start,
+        )
         assertEquals(
             setOf(ceLine380),
             ((ceLine380.prevDFGEdges.first() as ContextSensitiveDataflow).callingContext
@@ -2236,8 +2245,10 @@ class PointsToPassTest {
 
         // CallExpression in Line 384
         assertEquals(1, iArgLine384.nextDFGEdges.size)
-        assertTrue(iArgLine384.nextDFGEdges.first().end is ParameterMemoryValue)
-        assertLocalName("value", iArgLine384.nextDFGEdges.first().end)
+        assertEquals(
+            incFD.parameters.first().memoryValue,
+            iArgLine384.nextDFGEdges.first().end as? ParameterMemoryValue,
+        )
         assertEquals(
             setOf(ceLine384),
             ((iArgLine384.nextDFGEdges.first() as ContextSensitiveDataflow).callingContext

@@ -219,7 +219,7 @@ class CallingContextOut(
 ) : CallingContext {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is CallingContextIn) return false
+        if (other !is CallingContextOut) return false
         return this.calls == other.calls
     }
 
