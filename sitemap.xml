@@ -2,102 +2,98 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://fraunhofer-aisec.github.io/cpg/</loc>
-         <lastmod>2025-02-24</lastmod>
+         <lastmod>2025-03-17</lastmod>
     </url>
     <url>
          <loc>https://fraunhofer-aisec.github.io/cpg/API/</loc>
-         <lastmod>2025-02-24</lastmod>
+         <lastmod>2025-03-17</lastmod>
     </url>
     <url>
          <loc>https://fraunhofer-aisec.github.io/cpg/CPG/</loc>
-         <lastmod>2025-02-24</lastmod>
+         <lastmod>2025-03-17</lastmod>
     </url>
     <url>
          <loc>https://fraunhofer-aisec.github.io/cpg/CPG/impl/</loc>
-         <lastmod>2025-02-24</lastmod>
+         <lastmod>2025-03-17</lastmod>
     </url>
     <url>
          <loc>https://fraunhofer-aisec.github.io/cpg/CPG/impl/design_principles/</loc>
-         <lastmod>2025-02-24</lastmod>
+         <lastmod>2025-03-17</lastmod>
     </url>
     <url>
          <loc>https://fraunhofer-aisec.github.io/cpg/CPG/impl/language/</loc>
-         <lastmod>2025-02-24</lastmod>
+         <lastmod>2025-03-17</lastmod>
     </url>
     <url>
          <loc>https://fraunhofer-aisec.github.io/cpg/CPG/impl/passes/</loc>
-         <lastmod>2025-02-24</lastmod>
+         <lastmod>2025-03-17</lastmod>
     </url>
     <url>
          <loc>https://fraunhofer-aisec.github.io/cpg/CPG/impl/scopes/</loc>
-         <lastmod>2025-02-24</lastmod>
+         <lastmod>2025-03-17</lastmod>
     </url>
     <url>
          <loc>https://fraunhofer-aisec.github.io/cpg/CPG/impl/symbol-resolver/</loc>
-         <lastmod>2025-02-24</lastmod>
+         <lastmod>2025-03-17</lastmod>
     </url>
     <url>
          <loc>https://fraunhofer-aisec.github.io/cpg/CPG/specs/</loc>
-         <lastmod>2025-02-24</lastmod>
+         <lastmod>2025-03-17</lastmod>
     </url>
     <url>
          <loc>https://fraunhofer-aisec.github.io/cpg/CPG/specs/dfg-function-summaries/</loc>
-         <lastmod>2025-02-24</lastmod>
+         <lastmod>2025-03-17</lastmod>
     </url>
     <url>
          <loc>https://fraunhofer-aisec.github.io/cpg/CPG/specs/dfg/</loc>
-         <lastmod>2025-02-24</lastmod>
+         <lastmod>2025-03-17</lastmod>
     </url>
     <url>
          <loc>https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/</loc>
-         <lastmod>2025-02-24</lastmod>
+         <lastmod>2025-03-17</lastmod>
     </url>
     <url>
          <loc>https://fraunhofer-aisec.github.io/cpg/CPG/specs/graph/</loc>
-         <lastmod>2025-02-24</lastmod>
+         <lastmod>2025-03-17</lastmod>
     </url>
     <url>
          <loc>https://fraunhofer-aisec.github.io/cpg/CPG/specs/inference/</loc>
-         <lastmod>2025-02-24</lastmod>
+         <lastmod>2025-03-17</lastmod>
     </url>
     <url>
          <loc>https://fraunhofer-aisec.github.io/cpg/CPG/specs/overlays/</loc>
-         <lastmod>2025-02-24</lastmod>
+         <lastmod>2025-03-17</lastmod>
     </url>
     <url>
          <loc>https://fraunhofer-aisec.github.io/cpg/CPG/specs/pdg/</loc>
-         <lastmod>2025-02-24</lastmod>
+         <lastmod>2025-03-17</lastmod>
     </url>
     <url>
          <loc>https://fraunhofer-aisec.github.io/cpg/Contributing/</loc>
-         <lastmod>2025-02-24</lastmod>
+         <lastmod>2025-03-17</lastmod>
     </url>
     <url>
          <loc>https://fraunhofer-aisec.github.io/cpg/GettingStarted/</loc>
-         <lastmod>2025-02-24</lastmod>
-    </url>
-    <url>
-         <loc>https://fraunhofer-aisec.github.io/cpg/GettingStarted/cli/</loc>
-         <lastmod>2025-02-24</lastmod>
+         <lastmod>2025-03-17</lastmod>
     </url>
     <url>
          <loc>https://fraunhofer-aisec.github.io/cpg/GettingStarted/library/</loc>
-         <lastmod>2025-02-24</lastmod>
+         <lastmod>2025-03-17</lastmod>
     </url>
     <url>
          <loc>https://fraunhofer-aisec.github.io/cpg/GettingStarted/neo4j/</loc>
-         <lastmod>2025-02-24</lastmod>
+         <lastmod>2025-03-17</lastmod>
     </url>
     <url>
          <loc>https://fraunhofer-aisec.github.io/cpg/GettingStarted/query/</loc>
-         <lastmod>2025-02-24</lastmod>
+         <lastmod>2025-03-17</lastmod>
     </url>
     <url>
          <loc>https://fraunhofer-aisec.github.io/cpg/GettingStarted/query_examples/</loc>
-         <lastmod>2025-02-24</lastmod>
+         <lastmod>2025-03-17</lastmod>
     </url>
     <url>
          <loc>https://fraunhofer-aisec.github.io/cpg/GettingStarted/shortcuts/</loc>
-         <lastmod>2025-02-24</lastmod>
+         <lastmod>2025-03-17</lastmod>
     </url>
 </urlset>
