@@ -1,6 +1,5 @@
 [versions]
 kotlin = "2.0.20"
-kotlin19 = "1.9.10"
 neo4j = "4.0.10"
 neo4j5 = "5.28.2"
 log4j = "2.24.0"
@@ -14,12 +13,6 @@ sarif4k = "0.6.0"
 
 [libraries]
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin"}
-kotlin-script-runtime = { module = "org.jetbrains.kotlin:kotlin-script-runtime", version.ref = "kotlin19"}
-kotlin-scripting-common = { module = "org.jetbrains.kotlin:kotlin-scripting-common", version.ref = "kotlin19"}
-kotlin-scripting-jvm = { module = "org.jetbrains.kotlin:kotlin-scripting-jvm", version.ref = "kotlin19"}
-kotlin-scripting-dependencies = { module = "org.jetbrains.kotlin:kotlin-scripting-dependencies", version.ref = "kotlin19"}
-kotlin-scripting-dependencies-maven-all = { module = "org.jetbrains.kotlin:kotlin-scripting-dependencies-maven-all", version.ref = "kotlin19"}
-kotlin-scripting-ide-services = { module = "org.jetbrains.kotlin:kotlin-scripting-ide-services", version.ref = "kotlin19"}
 kotlin-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version = "1.10.1"}
 kotlin-ki-shell = { module = "com.github.Kotlin:kotlin-interactive-shell", version = "5b1ff4d821"}
 kotlin-test-junit5 = { module = "org.jetbrains.kotlin:kotlin-test-junit5", version.ref = "kotlin"}  # this is only needed for the testFixtures in cpg-core, everywhere else kotlin("test") is used
@@ -77,13 +70,6 @@ sootup-jimple-parser = { module = "org.soot-oss:sootup.jimple.parser", version.r
 [bundles]
 log4j = ["log4j-impl", "log4j-core"]
 neo4j = ["neo4j-ogm-core", "neo4j-ogm-bolt-driver"]
-kotlin-scripting = [
-    "kotlin-scripting-common",
-    "kotlin-scripting-jvm",
-    "kotlin-scripting-ide-services",
-    "kotlin-scripting-dependencies",
-    "kotlin-scripting-dependencies-maven-all",
-]
 sootup = ["sootup-core", "sootup-java-core", "sootup-java-sourcecode", "sootup-java-bytecode", "sootup-jimple-parser"]
 
 [plugins]
