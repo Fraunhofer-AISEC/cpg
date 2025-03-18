@@ -40,10 +40,10 @@ import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation
 import de.fraunhofer.aisec.cpg.helpers.neo4j.SimpleNameConverter
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
-import org.neo4j.ogm.annotation.Transient
-import org.neo4j.ogm.annotation.typeconversion.Convert
 import java.io.File
 import kotlin.reflect.KClass
+import org.neo4j.ogm.annotation.Transient
+import org.neo4j.ogm.annotation.typeconversion.Convert
 
 /** The Python language. */
 class PythonLanguage :

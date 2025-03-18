@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration.Companion.BRACKET_LEFT
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration.Companion.BRACKET_RIGHT
@@ -71,7 +70,10 @@ constructor(
          * This helper function computes a [FunctionType] out of an existing [FunctionDeclaration].
          */
         @JvmStatic
-        fun computeType(func: FunctionDeclaration, returnTypes: List<Type> = func.returnTypes.toList()): FunctionType {
+        fun computeType(
+            func: FunctionDeclaration,
+            returnTypes: List<Type> = func.returnTypes.toList(),
+        ): FunctionType {
             val type =
                 FunctionType(
                     buildSignature(func, returnTypes),

@@ -49,7 +49,11 @@ import org.neo4j.ogm.annotation.Relationship
 
 /** Represents the declaration or definition of a function. */
 open class FunctionDeclaration :
-    ValueDeclaration(), DeclarationHolder, EOGStarterHolder, HasType.TypeObserver, HasSecondaryTypeEdge {
+    ValueDeclaration(),
+    DeclarationHolder,
+    EOGStarterHolder,
+    HasType.TypeObserver,
+    HasSecondaryTypeEdge {
     @Relationship("BODY") var bodyEdge = astOptionalEdgeOf<Statement>()
     /** The function body. Usually a [Block]. */
     var body by unwrapping(FunctionDeclaration::bodyEdge)
