@@ -76,7 +76,6 @@ fun QueryTree<Boolean>.toSarif(ruleID: String): List<Result> {
                     null
                 },
             codeFlows =
-                // TODO: Use the SinglePathResult instead
                 child.children
                     .flatMap { it.getCodeflow() }
                     .map {
