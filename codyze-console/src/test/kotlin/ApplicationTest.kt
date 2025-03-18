@@ -143,6 +143,7 @@ val mockService =
 val emptyService = ConsoleService()
 
 class ApplicationTest {
+
     @Test
     fun testRoot() = testApplication {
         application { configureWebconsole() }
@@ -174,7 +175,23 @@ class ApplicationTest {
         application { configureWebconsole(emptyService) }
         val client = createClient { install(ContentNegotiation) { json() } }
         val response = client.get("/api/result")
-        assertEquals(HttpStatusCode.NotFound, response.status)
+        assertEquals(
+            HttpStatusCode.NotFound,
+            response.status,
+            "Expected 404 Not Found because no result is available",
+        )
+    }
+
+    @Test
+    fun testReAnalyzeFailed() = testApplication {
+        application { configureWebconsole(emptyService) }
+        val client = createClient { install(ContentNegotiation) { json() } }
+        val response = client.post("/api/reanalyze")
+        assertEquals(
+            HttpStatusCode.BadRequest,
+            response.status,
+            "Expected 400 Bad Request because to previous analysis is there",
+        )
     }
 
     @Test
@@ -207,6 +224,15 @@ class ApplicationTest {
 
         val translationUnit = response.body<TranslationUnitJSON>()
         assertEquals("tu1", translationUnit.name)
+    }
+
+    @Test
+    fun testGetTranslationUnitNotFound() = testApplication {
+        application { configureWebconsole(mockService) }
+        val client = createClient { install(ContentNegotiation) { json() } }
+        val response =
+            client.get("/api/component/mock/translation-unit/00000000-0000-0000-0000-000000000002")
+        assertEquals(HttpStatusCode.NotFound, response.status)
     }
 
     @Test
