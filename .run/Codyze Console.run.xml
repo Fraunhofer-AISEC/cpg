@@ -1,0 +1,11 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Codyze Console" type="JetRunConfigurationType">
+    <option name="MAIN_CLASS_NAME" value="de.fraunhofer.aisec.codyze.ApplicationKt" />
+    <module name="cpg.codyze.main" />
+    <option name="PROGRAM_PARAMETERS" value="console" />
+    <shortenClasspath name="NONE" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

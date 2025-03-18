@@ -139,6 +139,9 @@ val mockService =
         )
     )
 
+/** A mock version of the [ConsoleService] that returns an empty analysis result. */
+val emptyService = ConsoleService()
+
 class ApplicationTest {
     @Test
     fun testRoot() = testApplication {
@@ -167,6 +170,14 @@ class ApplicationTest {
     }
 
     @Test
+    fun testGetResultNotFound() = testApplication {
+        application { configureWebconsole(emptyService) }
+        val client = createClient { install(ContentNegotiation) { json() } }
+        val response = client.get("/api/result")
+        assertEquals(HttpStatusCode.NotFound, response.status)
+    }
+
+    @Test
     fun testGetComponent() = testApplication {
         application { configureWebconsole(mockService) }
         val client = createClient { install(ContentNegotiation) { json() } }
@@ -176,6 +187,14 @@ class ApplicationTest {
         val component = response.body<ComponentJSON>()
         assertNotNull(component)
         assertEquals("mock", component.name)
+    }
+
+    @Test
+    fun testGetComponentNotFound() = testApplication {
+        application { configureWebconsole(mockService) }
+        val client = createClient { install(ContentNegotiation) { json() } }
+        val response = client.get("/api/component/unknown")
+        assertEquals(HttpStatusCode.NotFound, response.status)
     }
 
     @Test
