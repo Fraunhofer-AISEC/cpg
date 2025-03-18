@@ -36,7 +36,6 @@
   </p>
   <p class="text-gray-700">
     <span class="font-medium">Location:</span>
-    {finding.startLine}
-    :{finding.startColumn} - {finding.endLine}:{finding.endColumn}
+    {finding.startLine}:{finding.startColumn} - {finding.endLine}:{finding.endColumn}
   </p>
 </li>
