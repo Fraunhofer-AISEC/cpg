@@ -64,6 +64,7 @@ enum class HttpMethod {
     CONNECT,
     TRACE,
     DELETE,
+    UNKNOWN,
 }
 
 /** Base class for operations on an [HttpEndpoint]. */
