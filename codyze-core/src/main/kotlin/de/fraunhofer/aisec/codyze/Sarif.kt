@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.firstParentOrNull
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.query.QueryTree
+import de.fraunhofer.aisec.cpg.query.SinglePathResult
 import io.github.detekt.sarif4k.*
 
 /**
@@ -68,6 +69,12 @@ fun QueryTree<Boolean>.toSarif(ruleID: String): List<Result> {
                 },
             locations = listOfNotNull(child.node?.toSarifLocation()),
             stacks = child.node?.toSarifCallStack(),
+            properties =
+                if (child is SinglePathResult) {
+                    PropertyBag(mapOf("Termination reason" to child.terminationReason))
+                } else {
+                    null
+                },
             codeFlows =
                 // TODO: Use the SinglePathResult instead
                 child.children
@@ -89,7 +96,9 @@ fun QueryTree<Boolean>.toSarif(ruleID: String): List<Result> {
 
 /** Tries to extract the nodes which were visited to retrieve this result. */
 fun QueryTree<*>.getCodeflow(): List<List<Node>> {
-    return if (this.value is List<*>) {
+    return if (this is SinglePathResult) {
+        this.children.flatMap { it.getCodeflow() }
+    } else if (this.value is List<*>) {
         listOf((this.value as Iterable<*>).filterIsInstance<Node>())
     } else if (this.value is Boolean) {
         this.children.flatMap { it.getCodeflow() }
