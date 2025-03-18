@@ -28,12 +28,16 @@ package de.fraunhofer.aisec.codyze
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.main
 import com.github.ajalt.clikt.core.subcommands
-import de.fraunhofer.aisec.codyze.compliance.Command
 
 class Codyze : CliktCommand() {
     override fun run() {}
 }
 
 fun main(args: Array<String>) {
-    Codyze().subcommands(Command).main(args)
+    Codyze()
+        .subcommands(
+            de.fraunhofer.aisec.codyze.console.Command,
+            de.fraunhofer.aisec.codyze.compliance.Command,
+        )
+        .main(args)
 }
