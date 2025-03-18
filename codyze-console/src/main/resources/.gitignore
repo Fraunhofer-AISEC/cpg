@@ -1,0 +1,5 @@
+static
+node_modules
+.vite.deps
+.vite
+

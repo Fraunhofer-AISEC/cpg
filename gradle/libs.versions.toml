@@ -1,5 +1,6 @@
 [versions]
 kotlin = "2.1.10"
+kotlinx-json = "1.8.0"
 neo4j = "4.0.10"
 neo4j5 = "5.28.2"
 log4j = "2.24.0"
@@ -10,11 +11,17 @@ slf4j = "2.0.16"
 clikt = "5.0.2"
 kaml = "0.72.0"
 sarif4k = "0.6.0"
+ktor = "3.1.1"
+node = "22.14.0"
 
 [libraries]
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin"}
-kotlin-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version = "1.10.1"}
+kotlin-scripting-common = { module = "org.jetbrains.kotlin:kotlin-scripting-common", version.ref = "kotlin"}
+kotlin-scripting-jvm = { module = "org.jetbrains.kotlin:kotlin-scripting-jvm", version.ref = "kotlin"}
+kotlin-scripting-jvm-host = { module = "org.jetbrains.kotlin:kotlin-scripting-jvm-host", version.ref = "kotlin"}
 kotlin-test-junit5 = { module = "org.jetbrains.kotlin:kotlin-test-junit5", version.ref = "kotlin"}  # this is only needed for the testFixtures in cpg-core, everywhere else kotlin("test") is used
+kotlin-serialization = { module = "org.jetbrains.kotlin:kotlin-serialization", version.ref = "kotlin" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-json" }
 
 log4j-impl = { module = "org.apache.logging.log4j:log4j-slf4j2-impl", version.ref = "log4j" }
 log4j-core = { module = "org.apache.logging.log4j:log4j-core", version.ref = "log4j" }
@@ -40,12 +47,18 @@ picocli-codegen = { module = "info.picocli:picocli-codegen", version = "4.7.0"}
 jep = { module = "black.ninia:jep", version = "4.2.0" }  # build.yml uses grep to extract the jep verison number for CI/CD purposes
 llvm = { module = "org.bytedeco:llvm-platform", version = "16.0.4-1.5.9"}
 jruby = { module = "org.jruby:jruby-core", version = "9.4.3.0" }
-jline = { module = "org.jline:jline", version = "3.29.0" }
-antlr-runtime = { module = "org.antlr:antlr4-runtime", version = "4.8-1" } # we cannot upgrade until ki-shell upgrades this!
 ini4j = { module = "org.ini4j:ini4j", version = "0.5.4" }
 clikt = { module = "com.github.ajalt.clikt:clikt", version.ref = "clikt" }
 kaml = { module = "com.charleskorn.kaml:kaml", version.ref = "kaml" }
 sarif4k = { module = "io.github.detekt.sarif4k:sarif4k", version.ref = "sarif4k" }
+
+ktor-server-core = { module = "io.ktor:ktor-server-core", version.ref = "ktor" }
+ktor-server-netty = { module = "io.ktor:ktor-server-netty", version.ref = "ktor" }
+ktor-server-cors = { module = "io.ktor:ktor-server-cors", version.ref = "ktor" }
+ktor-server-content-negotiation = { module = "io.ktor:ktor-server-content-negotiation", version.ref = "ktor" }
+ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
+ktor-server-test-host = { module = "io.ktor:ktor-server-test-host", version.ref = "ktor" }
+ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
 
 # test
 junit-params = { module = "org.junit.jupiter:junit-jupiter-params", version = "5.12.0"}
@@ -54,7 +67,6 @@ mockito = { module = "org.mockito:mockito-core", version = "5.16.0"}
 # plugins needed for build.gradle.kts in buildSrc
 publish-central = { module = "com.vanniktech:gradle-maven-publish-plugin", version.ref = "publish" }
 kotlin-gradle = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
-kotlin-serialization = { module = "org.jetbrains.kotlin:kotlin-serialization", version.ref = "kotlin" }
 dokka-gradle = { module = "org.jetbrains.dokka:dokka-gradle-plugin", version = "2.0.0" } # the dokka plugin is slightly behind the main Kotlin release cycle
 dokka-versioning = { module = "org.jetbrains.dokka:versioning-plugin", version = "2.0.0"}
 kover-gradle = { module = "org.jetbrains.kotlinx:kover-gradle-plugin", version = "0.9.0" }
@@ -70,10 +82,12 @@ sootup-jimple-parser = { module = "org.soot-oss:sootup.jimple.parser", version.r
 log4j = ["log4j-impl", "log4j-core"]
 neo4j = ["neo4j-ogm-core", "neo4j-ogm-bolt-driver"]
 sootup = ["sootup-core", "sootup-java-core", "sootup-java-sourcecode", "sootup-java-bytecode", "sootup-jimple-parser"]
+ktor = ["ktor-server-core", "ktor-server-netty", "ktor-server-cors","ktor-server-content-negotiation", "ktor-serialization-kotlinx-json"]
 
 [plugins]
 kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin"}
 dokka = { id = "org.jetbrains.dokka", version.ref = "kotlin" }
 spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
 node = { id = "com.github.node-gradle.node", version = "7.1.0"}
+ktor = { id = "io.ktor.plugin", version.ref = "ktor" }
 download = { id = "de.undercouch.download", version = "5.6.0" }
