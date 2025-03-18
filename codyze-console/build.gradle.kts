@@ -7,6 +7,13 @@ plugins {
     alias(libs.plugins.node)
 }
 
+mavenPublishing {
+    pom {
+        name.set("Codyze - Console")
+        description.set("The web-based console of Codyze")
+    }
+}
+
 dependencies {
     // CPG modules
     implementation(projects.cpgConcepts)
