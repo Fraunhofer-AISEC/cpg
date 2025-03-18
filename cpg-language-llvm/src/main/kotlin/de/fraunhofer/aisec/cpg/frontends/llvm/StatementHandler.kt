@@ -1395,13 +1395,14 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
         flatAST.add(declaration)
 
-        // add the declaration to the current scope
-        frontend.scopeManager.addDeclaration(declaration)
         // add it to our bindings cache
         frontend.bindingsCache[instr.symbolName] = declaration
 
         val declStatement = newDeclarationStatement(rawNode = instr)
+        // add the declaration to the current scope
+        frontend.scopeManager.addDeclaration(declaration)
         declStatement.singleDeclaration = declaration
+
         val mutableFunctionStatements = firstBB.statements.toMutableList()
         mutableFunctionStatements.add(0, declStatement)
         firstBB.statements = mutableFunctionStatements

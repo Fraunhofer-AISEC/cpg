@@ -42,6 +42,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.TypeExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.helpers.Util.debugWithFileLocation
 import de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation
 import java.util.*
@@ -134,7 +135,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
                 inferred.returnTypes = listOf(returnType)
             }
 
-            inferred.type = FunctionType.computeType(inferred)
+            inferred.type = computeType(inferred)
 
             debugWithFileLocation(
                 hint,
@@ -149,6 +150,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
 
             // Add it to the scope
             scopeManager.addDeclaration(inferred)
+            start.addDeclaration(inferred)
 
             // Some magic that adds it to static imports. Not sure if this really needed
             if (record != null && isStatic) {
@@ -178,11 +180,12 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
 
     fun createInferredConstructor(signature: List<Type?>): ConstructorDeclaration {
         return inferInScopeOf(start) {
-            val inferred =
-                newConstructorDeclaration(start.name.localName, start as? RecordDeclaration)
+            val record = start as? RecordDeclaration
+            val inferred = newConstructorDeclaration(start.name.localName, record)
             createInferredParameters(inferred, signature)
 
             scopeManager.addDeclaration(inferred)
+            record?.addConstructor(inferred)
 
             inferred
         }
@@ -227,6 +230,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
                 param.argumentIndex = i
 
                 scopeManager.addDeclaration(param)
+                function.parameters += param
             }
 
             scopeManager.leaveScope(function)
@@ -425,6 +429,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
             scopeManager.leaveScope(declaration)
 
             scopeManager.addDeclaration(declaration)
+            start.addDeclaration(declaration)
             declaration
         }
     }
@@ -459,6 +464,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
 
             // Add it to the scope
             scopeManager.addDeclaration(inferred)
+            (start as? DeclarationHolder)?.addDeclaration(inferred)
 
             inferred
         }
@@ -486,6 +492,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
             inferred.path = path
 
             scopeManager.addDeclaration(inferred)
+            (start as? DeclarationHolder)?.addDeclaration(inferred)
 
             // We need to "enter" the scope to make it known to the scope map of the ScopeManager
             scopeManager.enterScope(inferred)

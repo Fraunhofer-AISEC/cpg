@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.frontends.TranslationException
+import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.unknownType
 
@@ -43,7 +43,7 @@ constructor(
     var parameters: List<Type> = listOf(),
     var returnTypes: List<Type> = listOf(),
     language: Language<*>,
-) : Type(typeName, language) {
+) : Type(typeName, language), HasSecondaryTypeEdge {
 
     override fun reference(pointer: PointerType.PointerOrigin?): Type {
         // TODO(oxisto): In the future, we actually could just remove the FunctionPointerType
@@ -59,12 +59,15 @@ constructor(
         return unknownType()
     }
 
+    override val secondaryTypes: List<Type>
+        get() = parameters + returnTypes
+
     companion object {
         /**
          * This helper function computes a [FunctionType] out of an existing [FunctionDeclaration].
          */
         @JvmStatic
-        fun computeType(func: FunctionDeclaration): FunctionType {
+        fun ContextProvider.computeType(func: FunctionDeclaration): FunctionType {
             val type =
                 FunctionType(
                     func.signature,
@@ -73,8 +76,7 @@ constructor(
                     func.language,
                 )
 
-            val c = func.ctx ?: throw TranslationException("context not available")
-            return c.typeManager.registerType(type)
+            return type
         }
     }
 }

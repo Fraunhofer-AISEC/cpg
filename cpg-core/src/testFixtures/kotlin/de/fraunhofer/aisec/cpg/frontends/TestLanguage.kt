@@ -26,23 +26,30 @@
 package de.fraunhofer.aisec.cpg.frontends
 
 import de.fraunhofer.aisec.cpg.*
-import de.fraunhofer.aisec.cpg.TypeManager
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.declarations.ProblemDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
-import java.util.function.Supplier
 import kotlin.reflect.KClass
+import kotlin.test.assertNotNull
+
+/**
+ * This is a variant of the test language with `::` as a [namespaceDelimiter] to simulate languages
+ * like C++.
+ */
+open class TestLanguageWithColon() : TestLanguage() {
+    override val namespaceDelimiter: String
+        get() = "::"
+}
 
 /**
  * This is a test language that can be used for unit test, where we need a language but do not have
  * a specific one.
  */
-open class TestLanguage(final override var namespaceDelimiter: String = "::") :
-    Language<TestLanguageFrontend>(), HasImplicitReceiver {
+open class TestLanguage : Language<TestLanguageFrontend>(), HasImplicitReceiver {
     override val fileExtensions: List<String> = listOf()
     override val frontend: KClass<out TestLanguageFrontend> = TestLanguageFrontend::class
     override val compoundAssignmentOperators =
@@ -64,26 +71,38 @@ open class TestLanguage(final override var namespaceDelimiter: String = "::") :
         get() = "this"
 }
 
-class StructTestLanguage(namespaceDelimiter: String = "::") :
-    TestLanguage(namespaceDelimiter), HasStructs, HasClasses, HasDefaultArguments
+class ClassTestLanguage() : TestLanguage(), HasClasses, HasDefaultArguments
 
+class StructTestLanguage() : TestLanguageWithColon(), HasStructs, HasClasses, HasDefaultArguments
+
+/**
+ * Creates a new [TestLanguageFrontend] with the given configuration [builder].
+ *
+ * Note: This requires that the user registers at least one [TestLanguage], but it gives him the
+ * chance to configure a specific subclass of it, e.g., [TestLanguageWithColon].
+ */
 fun testFrontend(builder: (TranslationConfiguration.Builder) -> Unit): TestLanguageFrontend {
     var config = TranslationConfiguration.builder().also(builder).build()
+    return testFrontend(config)
+}
 
-    var ctx: TranslationContext = TranslationContext(config, ScopeManager(), TypeManager())
-    return TestLanguageFrontend(ctx = ctx)
+/**
+ * Creates a new [TestLanguageFrontend] with the given [config].
+ *
+ * Note: This requires that the user registers at least one [TestLanguage], but it gives him the
+ * chance to configure a specific subclass of it, e.g., [TestLanguageWithColon].
+ */
+fun testFrontend(config: TranslationConfiguration): TestLanguageFrontend {
+    val ctx = TranslationContext(config)
+    val language = ctx.availableLanguage<TestLanguage>()
+    assertNotNull(language)
+    return TestLanguageFrontend(ctx, language)
 }
 
 open class TestLanguageFrontend(
-    namespaceDelimiter: String = "::",
-    language: Language<TestLanguageFrontend> = TestLanguage(namespaceDelimiter),
-    ctx: TranslationContext =
-        TranslationContext(
-            TranslationConfiguration.builder().build(),
-            ScopeManager(),
-            TypeManager(),
-        ),
-) : LanguageFrontend<Any, Any>(language, ctx) {
+    ctx: TranslationContext = TranslationContext(TranslationConfiguration.builder().build()),
+    language: Language<TestLanguageFrontend> = TestLanguage(),
+) : LanguageFrontend<Any, Any>(ctx, language) {
     override fun parse(file: File): TranslationUnitDeclaration {
         TODO("Not yet implemented")
     }
@@ -107,4 +126,4 @@ open class TestLanguageFrontend(
 }
 
 class TestHandler(frontend: TestLanguageFrontend) :
-    Handler<Node, Any, TestLanguageFrontend>(Supplier { ProblemExpression() }, frontend)
+    Handler<Node, Any, TestLanguageFrontend>(::ProblemDeclaration, frontend)

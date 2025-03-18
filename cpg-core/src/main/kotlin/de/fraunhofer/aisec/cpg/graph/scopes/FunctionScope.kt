@@ -26,5 +26,12 @@
 package de.fraunhofer.aisec.cpg.graph.scopes
 
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
 
-class FunctionScope(astNode: FunctionDeclaration) : ValueDeclarationScope(astNode)
+/**
+ * Represents a scope that is only visible in the current function. This is usually used to hold
+ * [ParameterDeclaration] nodes, but in some languages such as Python, all variables that are inside
+ * the function (also the body) are inside the function scope. In other languages, such as C++, the
+ * variables of the function body would be in a [LocalScope] of the [FunctionDeclaration.body].
+ */
+class FunctionScope(astNode: FunctionDeclaration) : Scope(astNode)

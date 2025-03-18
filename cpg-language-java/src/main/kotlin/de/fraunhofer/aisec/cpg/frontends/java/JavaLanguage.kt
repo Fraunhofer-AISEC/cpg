@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.frontends.java
 
 import com.fasterxml.jackson.annotation.JsonIgnore
-import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
@@ -37,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.*
+import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import kotlin.reflect.KClass
 import org.neo4j.ogm.annotation.Transient
 
@@ -113,11 +113,10 @@ open class JavaLanguage :
         } else super.propagateTypeOfBinaryOperation(operation)
     }
 
-    override fun handleSuperExpression(
+    override fun SymbolResolver.handleSuperExpression(
         memberExpression: MemberExpression,
         curClass: RecordDeclaration,
-        scopeManager: ScopeManager,
-    ) = JavaCallResolverHelper.handleSuperExpression(memberExpression, curClass, scopeManager)
+    ) = handleSuperExpressionHelper(memberExpression, curClass)
 
     /**
      * This function handles some specifics of the Java language when choosing a reference target

@@ -80,10 +80,6 @@ For all builds on the `main` branch, an artefact is published in the [GitHub Pac
 
 To use the GitHub Gradle Registry, please refer to https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-gradle-registry#using-a-published-package
 
-### On Command Line
-
-The library can be used on the command line using the `cpg-console` subproject. Please refer to the [README.md](./cpg-console/README.md) of the `cpg-console` as well as our small [tutorial](./tutorial.md) for further details.
-
 ### Configuration
 
 The behavior of the library can be configured in several ways. Most of this is done through the `TranslationConfiguration`

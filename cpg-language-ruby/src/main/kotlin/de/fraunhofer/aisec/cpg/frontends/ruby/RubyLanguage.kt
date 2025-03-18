@@ -25,15 +25,15 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.ruby
 
-import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.types.*
+import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import kotlin.reflect.KClass
 
 /** The Ruby Language */
-class RubyLanguage() :
+class RubyLanguage :
     Language<RubyLanguageFrontend>(),
     HasDefaultArguments,
     HasClasses,
@@ -75,10 +75,9 @@ class RubyLanguage() :
             "^=", // Bitwise XOR assignment
         )
 
-    override fun handleSuperExpression(
+    override fun SymbolResolver.handleSuperExpression(
         memberExpression: MemberExpression,
         curClass: RecordDeclaration,
-        scopeManager: ScopeManager,
     ): Boolean {
         TODO("Not yet implemented")
     }

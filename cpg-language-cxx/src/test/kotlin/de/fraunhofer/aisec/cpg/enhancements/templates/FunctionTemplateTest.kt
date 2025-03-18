@@ -93,6 +93,12 @@ internal class FunctionTemplateTest : BaseTest() {
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
+        val language = result.finalCtx.availableLanguage<CPPLanguage>()
+        assertNotNull(language)
+
+        val ctx = result.finalCtx
+        assertNotNull(ctx)
+
         // This test checks the structure of FunctionTemplates without the TemplateExpansionPass
         val functionTemplateDecl = result.allChildren<FunctionTemplateDeclaration>()[0]
 
@@ -103,9 +109,9 @@ internal class FunctionTemplateTest : BaseTest() {
         val typeParamDeclaration = typeParamDecls[0]
         assertEquals(typeParamDeclaration, functionTemplateDecl.parameters[0])
 
-        val typeT = ParameterizedType("T", CPPLanguage())
-        val intType = IntegerType("int", 32, CPPLanguage(), NumericType.Modifier.SIGNED)
-        val floatType = FloatingPointType("float", 32, CPPLanguage(), NumericType.Modifier.SIGNED)
+        val typeT = ParameterizedType("T", language)
+        val intType = IntegerType("int", 32, language, NumericType.Modifier.SIGNED)
+        val floatType = FloatingPointType("float", 32, language, NumericType.Modifier.SIGNED)
         assertEquals(typeT, typeParamDeclaration.type)
         assertEquals(intType, typeParamDeclaration.default)
 
@@ -193,6 +199,12 @@ internal class FunctionTemplateTest : BaseTest() {
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
+        val language = result.finalCtx.availableLanguage<CPPLanguage>()
+        assertNotNull(language)
+
+        val ctx = result.finalCtx
+        assertNotNull(ctx)
+
         val templateDeclaration =
             findByUniquePredicate(result.allChildren<FunctionTemplateDeclaration>()) {
                 t: FunctionTemplateDeclaration ->
@@ -217,7 +229,7 @@ internal class FunctionTemplateTest : BaseTest() {
         assertEquals(fixedMultiply, call.invokes[0])
 
         // Check template parameters
-        val doubleType = FloatingPointType("double", 64, CPPLanguage(), NumericType.Modifier.SIGNED)
+        val doubleType = FloatingPointType("double", 64, language, NumericType.Modifier.SIGNED)
         val literal5 = findByUniquePredicate(result.literals) { l: Literal<*> -> l.value == 5 }
         assertEquals(2, call.templateArguments.size)
         assertEquals(doubleType, (call.templateArguments[0] as TypeExpression).type)
@@ -330,6 +342,12 @@ internal class FunctionTemplateTest : BaseTest() {
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
+        val language = result.finalCtx.availableLanguage<CPPLanguage>()
+        assertNotNull(language)
+
+        val ctx = result.finalCtx
+        assertNotNull(ctx)
+
         val templateDeclaration =
             findByUniquePredicate(result.allChildren<FunctionTemplateDeclaration>()) {
                 t: FunctionTemplateDeclaration ->
@@ -354,7 +372,7 @@ internal class FunctionTemplateTest : BaseTest() {
         assertEquals(fixedMultiply, call.invokes[0])
 
         // Check template parameters
-        val doubleType = FloatingPointType("double", 64, CPPLanguage(), NumericType.Modifier.SIGNED)
+        val doubleType = FloatingPointType("double", 64, language, NumericType.Modifier.SIGNED)
         val literal5 = findByUniquePredicate(result.literals) { l: Literal<*> -> l.value == 5 }
         assertEquals(2, call.templateArguments.size)
         assertEquals(doubleType, (call.templateArguments[0] as TypeExpression).type)
@@ -540,6 +558,8 @@ internal class FunctionTemplateTest : BaseTest() {
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
+        val language = result.finalCtx.availableLanguage<CPPLanguage>()
+        assertNotNull(language)
 
         // Check inferred for first fixed_division call
         var templateDeclaration =
@@ -594,7 +614,7 @@ internal class FunctionTemplateTest : BaseTest() {
         )
 
         // Check return values
-        assertEquals(UnknownType.getUnknownType(CPPLanguage()), callInt2.type)
-        assertEquals(UnknownType.getUnknownType(CPPLanguage()), callDouble3.type)
+        assertEquals(UnknownType.getUnknownType(language), callInt2.type)
+        assertEquals(UnknownType.getUnknownType(language), callDouble3.type)
     }
 }

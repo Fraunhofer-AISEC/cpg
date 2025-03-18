@@ -69,8 +69,8 @@ import org.ini4j.Profile.Section
  * - [setComment] not implemented as this is not used (no [Handler] pattern implemented)
  * - Comments in general are not supported.
  */
-class IniFileFrontend(language: Language<IniFileFrontend>, ctx: TranslationContext) :
-    LanguageFrontend<Any, Any?>(language, ctx) {
+class IniFileFrontend(ctx: TranslationContext, language: Language<IniFileFrontend>) :
+    LanguageFrontend<Any, Any?>(ctx, language) {
 
     private lateinit var uri: URI
     private lateinit var region: Region
@@ -91,7 +91,7 @@ class IniFileFrontend(language: Language<IniFileFrontend>, ctx: TranslationConte
          * [de.fraunhofer.aisec.cpg.TranslationConfiguration.topLevel] using
          * [Language.namespaceDelimiter] as a separator
          */
-        val topLevel = ctx.currentComponent?.topLevel?.let { file.relativeToOrNull(it) } ?: file
+        val topLevel = ctx.currentComponent?.topLevel()?.let { file.relativeToOrNull(it) } ?: file
         val parentDir = topLevel.parent
 
         val namespace =
@@ -104,11 +104,18 @@ class IniFileFrontend(language: Language<IniFileFrontend>, ctx: TranslationConte
 
         val tud = newTranslationUnitDeclaration(name = file.name, rawNode = ini)
         scopeManager.resetToGlobal(tud)
+
         val nsd = newNamespaceDeclaration(name = namespace, rawNode = ini)
         scopeManager.addDeclaration(nsd)
+        tud.namespaces += nsd
+
         scopeManager.enterScope(nsd)
 
-        ini.values.forEach { handleSection(it) }
+        ini.values.forEach {
+            val record = handleSection(it)
+            scopeManager.addDeclaration(record)
+            nsd.addDeclaration(record)
+        }
 
         scopeManager.enterScope(nsd)
         return tud
@@ -118,23 +125,29 @@ class IniFileFrontend(language: Language<IniFileFrontend>, ctx: TranslationConte
      * Translates a `Section` into a [RecordDeclaration] and handles all `entries` using
      * [handleEntry].
      */
-    private fun handleSection(section: Section) {
+    private fun handleSection(section: Section): RecordDeclaration {
         val record = newRecordDeclaration(name = section.name, kind = "section", rawNode = section)
-        scopeManager.addDeclaration(record)
         scopeManager.enterScope(record)
-        section.entries.forEach { handleEntry(it) }
+        section.entries.forEach {
+            val field = handleEntry(it)
+            scopeManager.addDeclaration(field)
+            record.fields += field
+        }
         scopeManager.leaveScope(record)
+
+        return record
     }
 
     /**
      * Translates an `MutableEntry` to a new [FieldDeclaration] with the
      * [FieldDeclaration.initializer] being set to the `entry`s value.
      */
-    private fun handleEntry(entry: MutableMap.MutableEntry<String?, String?>) {
+    private fun handleEntry(entry: MutableMap.MutableEntry<String?, String?>): FieldDeclaration {
         val field =
             newFieldDeclaration(name = entry.key, type = primitiveType("string"), rawNode = entry)
                 .apply { initializer = newLiteral(value = entry.value, rawNode = entry) }
-        scopeManager.addDeclaration(field)
+
+        return field
     }
 
     override fun typeOf(type: Any?): Type {

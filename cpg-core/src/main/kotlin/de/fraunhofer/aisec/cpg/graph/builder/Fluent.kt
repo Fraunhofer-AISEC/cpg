@@ -23,6 +23,8 @@
  *                    \______/ \__|       \______/
  *
  */
+@file:Suppress("CONTEXT_RECEIVERS_DEPRECATED")
+
 package de.fraunhofer.aisec.cpg.graph.builder
 
 import de.fraunhofer.aisec.cpg.*
@@ -34,7 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CollectionComprehension
-import de.fraunhofer.aisec.cpg.graph.types.FunctionType
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.passes.executePass
@@ -49,7 +51,6 @@ fun LanguageFrontend<*, *>.translationResult(
     val node = TranslationResult(TranslationManager.builder().config(ctx.config).build(), ctx)
     val component = Component()
     component.name = Name(DEFAULT_APPLICATION_NAME)
-    component.ctx = this.ctx
     node.addComponent(component)
     init(node)
 
@@ -99,6 +100,8 @@ fun LanguageFrontend<*, *>.namespace(
     init(node)
     scopeManager.leaveScope(node)
     scopeManager.addDeclaration(node)
+    addDeclaration(node)
+
     return node
 }
 
@@ -119,6 +122,7 @@ fun LanguageFrontend<*, *>.record(
     init(node)
     scopeManager.leaveScope(node)
     scopeManager.addDeclaration(node)
+    addDeclaration(node)
 
     return node
 }
@@ -142,6 +146,7 @@ fun LanguageFrontend<*, *>.field(
     }
 
     scopeManager.addDeclaration(node)
+    addDeclaration(node)
 
     return node
 }
@@ -177,13 +182,14 @@ fun LanguageFrontend<*, *>.function(
     }
 
     // Make sure that our function has the correct type
-    node.type = FunctionType.computeType(node)
+    node.type = with(node) { computeType(node) }
 
     scopeManager.enterScope(node)
     init?.let { it(node) }
     scopeManager.leaveScope(node)
 
     scopeManager.addDeclaration(node)
+    addDeclaration(node)
 
     return node
 }
@@ -201,7 +207,7 @@ fun LanguageFrontend<*, *>.method(
 ): MethodDeclaration {
     val node = newMethodDeclaration(name)
     node.returnTypes = listOf(returnType)
-    node.type = FunctionType.computeType(node)
+    node.type = with(node) { computeType(node) }
 
     scopeManager.enterScope(node)
     if (init != null) {
@@ -283,6 +289,7 @@ fun LanguageFrontend<*, *>.param(
     init?.let { it(node) }
 
     scopeManager.addDeclaration(node)
+    this@FunctionDeclaration.parameters += node
 
     return node
 }
@@ -411,8 +418,7 @@ fun LanguageFrontend<*, *>.variable(
     val node = newVariableDeclaration(name, type)
     if (init != null) init(node)
 
-    declarationEdges += node
-
+    declarations += node
     scopeManager.addDeclaration(node)
 
     return node
@@ -432,8 +438,7 @@ fun LanguageFrontend<*, *>.problemDecl(
     val node = newProblemDeclaration(problem = description, problemType = type)
     if (init != null) init(node)
 
-    declarationEdges += node
-
+    declarations += node
     scopeManager.addDeclaration(node)
 
     return node
@@ -667,9 +672,9 @@ fun LanguageFrontend<*, *>.forInitializer(
 
     initializerStatement = node
 
-    if (node.isSingleDeclaration()) {
-
-        scopeManager.addDeclaration(node.singleDeclaration, false)
+    val single = node.singleDeclaration
+    if (single != null) {
+        scopeManager.addDeclaration(single)
     }
 
     return node
@@ -1096,10 +1101,10 @@ fun LanguageFrontend<*, *>.member(
             while (scope != null && scope !is RecordScope) {
                 scope = scope.parent
             }
-            val scopeType = scope?.name?.let { t(it) } ?: unknownType()
+            val scopeType = scope?.name?.let { this.t(it) } ?: unknownType()
             scopeType
         }
-    val memberBase = base ?: memberOrRef(parsedName.parent ?: parseName("this"), type)
+    val memberBase = base ?: this.memberOrRef(parsedName.parent ?: this.parseName("this"), type)
 
     val node = newMemberExpression(name, memberBase, operatorCode = operatorCode)
 

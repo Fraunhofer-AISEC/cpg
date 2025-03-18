@@ -6,4 +6,3 @@ int main(){
 
   for(auto i : ls) printf("%d\n", i);
 }
-

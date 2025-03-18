@@ -81,8 +81,8 @@ import org.slf4j.LoggerFactory
  */
 @RegisterExtraPass(DynamicInvokeResolver::class)
 @RegisterExtraPass(CXXExtraPass::class)
-open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: TranslationContext) :
-    LanguageFrontend<IASTNode, IASTTypeId>(language, ctx) {
+open class CXXLanguageFrontend(ctx: TranslationContext, language: Language<CXXLanguageFrontend>) :
+    LanguageFrontend<IASTNode, IASTTypeId>(ctx, language) {
 
     /**
      * The dialect used by this language frontend, either [GCCLanguage] for C or [GPPLanguage] for
@@ -156,7 +156,7 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
 
                 // Check for relative path based on the top level and all include paths
                 val includeLocations: MutableList<Path> = ArrayList()
-                val topLevel = ctx.currentComponent?.topLevel
+                val topLevel = ctx.currentComponent?.topLevel()
                 if (topLevel != null) {
                     includeLocations.add(topLevel.toPath().toAbsolutePath())
                 }
@@ -205,7 +205,7 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
 
         // include paths
         val includePaths = mutableSetOf<String>()
-        ctx.currentComponent?.topLevel?.let {
+        ctx.currentComponent?.topLevel()?.let {
             includePaths.add(it.toPath().toAbsolutePath().toString())
         }
 
@@ -554,9 +554,9 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
 
         type =
             if (resolveTypeDef) {
-                typeManager.registerType(typeManager.resolvePossibleTypedef(type, scopeManager))
+                typeManager.resolvePossibleTypedef(type, scopeManager)
             } else {
-                typeManager.registerType(type)
+                type
             }
         return type
     }
@@ -782,8 +782,6 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
         if (declarator.nestedDeclarator != null && type !is FunctionPointerType) {
             type = adjustType(declarator.nestedDeclarator, type)
         }
-
-        type = typeManager.registerType(type)
 
         // Check for parameterized types
         if (type is SecondOrderType) {

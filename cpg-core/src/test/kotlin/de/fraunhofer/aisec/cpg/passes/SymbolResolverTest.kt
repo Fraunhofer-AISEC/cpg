@@ -43,35 +43,37 @@ class SymbolResolverTest {
     fun testCombinedVariableAndCallResolution() {
         val result = GraphExamples.getCombinedVariableAndCallTest()
 
-        val type = result.records["TestClass"]?.toType()
-        assertNotNull(type)
+        with(result) {
+            val type = result.records["TestClass"]?.toType()
+            assertNotNull(type)
 
-        val method1 = result.methods["method1"]
-        assertNotNull(method1)
+            val method1 = result.methods["method1"]
+            assertNotNull(method1)
 
-        val method2 = result.methods["method2"]
-        assertNotNull(method2)
+            val method2 = result.methods["method2"]
+            assertNotNull(method2)
 
-        val constructor = result.methods["TestClass"]
-        assertNotNull(constructor)
+            val constructor = result.methods["TestClass"]
+            assertNotNull(constructor)
 
-        val variable = method2.variables["variable"]
-        assertEquals(type, variable?.type)
+            val variable = method2.variables["variable"]
+            assertEquals(type, variable?.type)
 
-        val ref = method2.refs["variable"]
-        assertEquals(type, ref?.type)
+            val ref = method2.refs["variable"]
+            assertEquals(type, ref?.type)
 
-        val callmethod1 = method2.calls["method1"]
-        assertIs<MemberCallExpression>(callmethod1)
-        assertRefersTo(callmethod1.base, method2.receiver)
-        assertInvokes(callmethod1, method1)
+            val callmethod1 = method2.calls["method1"]
+            assertIs<MemberCallExpression>(callmethod1)
+            assertRefersTo(callmethod1.base, method2.receiver)
+            assertInvokes(callmethod1, method1)
 
-        val callmethod2 = method2.calls["method2"]
-        assertInvokes(callmethod2, method2)
+            val callmethod2 = method2.calls["method2"]
+            assertInvokes(callmethod2, method2)
 
-        val construct = method1.calls { it is ConstructExpression }.firstOrNull()
-        assertNotNull(construct)
-        assertInvokes(construct, constructor)
+            val construct = method1.calls { it is ConstructExpression }.firstOrNull()
+            assertNotNull(construct)
+            assertInvokes(construct, constructor)
+        }
     }
 
     @Test

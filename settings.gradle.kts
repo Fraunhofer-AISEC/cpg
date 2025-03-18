@@ -9,12 +9,12 @@ enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 include(":cpg-core")
 include(":cpg-analysis")
 include(":cpg-neo4j")
-include(":cpg-console")
 include(":cpg-concepts")
 
 include(":codyze")
 include(":codyze-core")
 include(":codyze-compliance")
+include(":codyze-console")
 
 // this code block also exists in the root build.gradle.kts
 val enableJavaFrontend: Boolean by extra {

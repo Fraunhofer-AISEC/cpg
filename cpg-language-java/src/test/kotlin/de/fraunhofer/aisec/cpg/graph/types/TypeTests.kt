@@ -39,7 +39,9 @@ internal class TypeTests : BaseTest() {
     @Throws(Exception::class)
     fun testParameterizedTypes() {
         val topLevel = Path.of("src", "test", "resources", "types")
-        val result = analyze("java", topLevel, true) { it.registerLanguage(JavaLanguage()) }
+        val result = analyze("java", topLevel, true) { it.registerLanguage<JavaLanguage>() }
+        val language = result.finalCtx.availableLanguage<JavaLanguage>()
+        assertNotNull(language)
 
         // Check Parameterized
         val recordDeclarations = result.records
@@ -65,7 +67,7 @@ internal class TypeTests : BaseTest() {
         // Return Type of get Method
         val methodDeclarationGet = findByUniqueName(methodDeclarations, "get")
         assertEquals(
-            FunctionType("get()T", listOf(), listOf(typeT), JavaLanguage()),
+            FunctionType("get()T", listOf(), listOf(typeT), language),
             methodDeclarationGet.type,
         )
     }
@@ -74,7 +76,7 @@ internal class TypeTests : BaseTest() {
     @Throws(Exception::class)
     fun graphTest() {
         val topLevel = Path.of("src", "test", "resources", "types")
-        val result = analyze("java", topLevel, true) { it.registerLanguage(JavaLanguage()) }
+        val result = analyze("java", topLevel, true) { it.registerLanguage<JavaLanguage>() }
         val variables = result.allChildren<ObjectType>()
         val recordDeclarations = result.records
 
@@ -110,7 +112,7 @@ internal class TypeTests : BaseTest() {
     @Test
     fun testCommonTypeTestJava() {
         val topLevel = Path.of("src", "test", "resources", "compiling", "hierarchy")
-        val result = analyze("java", topLevel, true) { it.registerLanguage(JavaLanguage()) }
+        val result = analyze("java", topLevel, true) { it.registerLanguage<JavaLanguage>() }
         with(result) {
             val root = assertResolvedType("multistep.Root")
             val level0 = assertResolvedType("multistep.Level0")
@@ -119,7 +121,7 @@ internal class TypeTests : BaseTest() {
             val level2 = assertResolvedType("multistep.Level2")
             val unrelated = assertResolvedType("multistep.Unrelated")
             println(
-                result.finalCtx.typeManager.firstOrderTypes
+                result.finalCtx.typeManager.resolvedTypes
                     .filter { it.typeName == "multistep.Root" }
                     .map { it.superTypes }
             )

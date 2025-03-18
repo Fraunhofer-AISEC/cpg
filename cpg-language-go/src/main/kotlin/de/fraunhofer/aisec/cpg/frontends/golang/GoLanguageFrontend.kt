@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.frontends.golang.GoStandardLibrary.Modfile
 import de.fraunhofer.aisec.cpg.frontends.golang.GoStandardLibrary.Parser
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.DeclarationSequence
+import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
@@ -65,8 +66,8 @@ import java.net.URI
     with = GoEvaluationOrderGraphPass::class,
 )
 @SupportsParallelParsing(false)
-class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: TranslationContext) :
-    LanguageFrontend<GoStandardLibrary.Ast.Node, GoStandardLibrary.Ast.Expr>(language, ctx) {
+class GoLanguageFrontend(ctx: TranslationContext, language: Language<GoLanguageFrontend>) :
+    LanguageFrontend<GoStandardLibrary.Ast.Node, GoStandardLibrary.Ast.Expr>(ctx, language) {
 
     private var currentFileSet: GoStandardLibrary.Ast.FileSet? = null
     private var currentModule: GoStandardLibrary.Modfile.File? = null
@@ -147,7 +148,7 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
                     isDependency = true
                     dependency.toFile()
                 }
-                ctx.currentComponent?.topLevel != null -> ctx.currentComponent?.topLevel
+                ctx.currentComponent?.topLevel() != null -> ctx.currentComponent?.topLevel()
                 else -> file.parentFile
             }!!
 
@@ -178,7 +179,10 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
         // We parse the imports specifically and not as part of the handler later
         for (spec in f.imports) {
             val import = specificationHandler.handle(spec)
-            scopeManager.addDeclaration(import)
+            if (import is ImportDeclaration) {
+                scopeManager.addDeclaration(import)
+                tu.addDeclaration(import)
+            }
         }
 
         val p = newNamespaceDeclaration(f.name.name)
@@ -209,7 +213,10 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
             // contain multiple CPG declarations.
             val declaration = declarationHandler.handle(decl)
             if (declaration is DeclarationSequence) {
-                declaration.declarations.forEach { scopeManager.addDeclaration(it) }
+                declaration.declarations.forEach {
+                    scopeManager.addDeclaration(it)
+                    p.addDeclaration(it)
+                }
             } else {
                 // We need to be careful with method declarations. We need to put them in the
                 // respective name scope of the record and NOT on the global scope / namespace scope
@@ -223,8 +230,9 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
                         // it
                         p.declarations += declaration
                     }
-                } else {
+                } else if (declaration != null) {
                     scopeManager.addDeclaration(declaration)
+                    p.addDeclaration(declaration)
                 }
             }
         }
@@ -235,6 +243,7 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
         scopeManager.resetToGlobal(tu)
 
         scopeManager.addDeclaration(p)
+        tu.addDeclaration(p)
 
         return tu
     }
@@ -243,16 +252,9 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
         val cpgType =
             when (type) {
                 is GoStandardLibrary.Ast.Ident -> {
-                    val name: String =
-                        if (isBuiltinType(type.name)) {
-                            // Definitely not an FQN type
-                            type.name
-                        } else {
-                            // FQN'ize this name (with the current file)
-                            "${currentFile?.name?.name}.${type.name}" // this.File.Name.Name
-                        }
-
-                    objectType(name)
+                    // Just return the name here, the type resolver will resolve this correctly to
+                    // an FQN later
+                    objectType(type.name)
                 }
                 is GoStandardLibrary.Ast.SelectorExpr -> {
                     // This is a FQN type
@@ -318,12 +320,12 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
 
                     // Create an anonymous struct, this will add it to the scope manager. This is
                     // somewhat duplicate, but the easiest for now. We need to create it in the
-                    // global
-                    // scope to avoid namespace issues
+                    // global scope to avoid namespace issues
                     var record =
                         scopeManager.withScope(scopeManager.globalScope) {
                             var record = specificationHandler.buildRecordDeclaration(type, name)
                             scopeManager.addDeclaration(record)
+                            currentTU?.declarations += record
                             record
                         }
 
@@ -374,7 +376,7 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
                 }
             }
 
-        return typeManager.registerType(typeManager.resolvePossibleTypedef(cpgType, scopeManager))
+        return typeManager.resolvePossibleTypedef(cpgType, scopeManager)
     }
 
     /**

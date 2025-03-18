@@ -2,6 +2,7 @@ import org.gradle.accessors.dm.LibrariesForLibs
 
 plugins {
     id("cpg.common-conventions")
+    id("cpg.publishing-conventions")
     application
 }
 

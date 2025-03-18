@@ -25,7 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.golang
 
-import de.fraunhofer.aisec.cpg.analysis.MultiValueEvaluator
+import de.fraunhofer.aisec.cpg.evaluation.MultiValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.*
@@ -96,77 +96,83 @@ class GoLanguageFrontendTest : BaseTest() {
     @Test
     fun testConstruct() {
         val topLevel = Path.of("src", "test", "resources", "golang")
-        val tu =
-            analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("construct.go").toFile()),
-                topLevel,
-                true,
-            ) {
+        val result =
+            analyze(listOf(topLevel.resolve("construct.go").toFile()), topLevel, true) {
                 it.registerLanguage<GoLanguage>()
             }
-        assertNotNull(tu)
+        assertNotNull(result)
 
-        val p = tu.namespaces["p"]
-        assertNotNull(p)
+        with(result) {
+            val p = namespaces["p"]
+            assertNotNull(p)
 
-        val myStruct = p.records["p.MyStruct"]
-        assertNotNull(myStruct)
+            val myStruct = p.records["p.MyStruct"]
+            assertNotNull(myStruct)
 
-        val main = p.functions["main"]
-        assertNotNull(main)
+            val main = p.functions["main"]
+            assertNotNull(main)
 
-        val body = main.body as? Block
-        assertNotNull(body)
+            val body = main.body as? Block
+            assertNotNull(body)
 
-        var decl = main.variables["o"]
-        assertNotNull(decl)
+            var decl = main.variables["o"]
+            assertNotNull(decl)
 
-        val new = assertIs<NewExpression>(decl.firstAssignment)
-        with(tu) { assertEquals(assertResolvedType("p.MyStruct").pointer(), new.type) }
+            val new = assertIs<NewExpression>(decl.firstAssignment)
+            with(result) { assertEquals(assertResolvedType("p.MyStruct").pointer(), new.type) }
 
-        val construct = new.initializer as? ConstructExpression
-        assertNotNull(construct)
-        assertEquals(myStruct, construct.instantiates)
+            val construct = new.initializer as? ConstructExpression
+            assertNotNull(construct)
+            assertEquals(myStruct, construct.instantiates)
 
-        // make array
+            // make array
 
-        decl = main.variables["a"]
-        assertNotNull(decl)
+            decl = main.variables["a"]
+            assertNotNull(decl)
 
-        var make = assertIs<Expression>(decl.firstAssignment)
-        assertNotNull(make)
-        with(tu) { assertEquals(tu.primitiveType("int").array(), make.type) }
+            var make = assertIs<Expression>(decl.firstAssignment)
+            assertNotNull(make)
+            assertEquals(primitiveType("int").array(), make.type)
 
-        assertTrue(make is NewArrayExpression)
+            assertTrue(make is NewArrayExpression)
 
-        val dimension = make.dimensions.firstOrNull() as? Literal<*>
-        assertNotNull(dimension)
-        assertEquals(5, dimension.value)
+            val dimension = make.dimensions.firstOrNull() as? Literal<*>
+            assertNotNull(dimension)
+            assertEquals(5, dimension.value)
 
-        // make map
+            // make map
 
-        decl = main.variables["m"]
-        assertNotNull(decl)
+            decl = main.variables["m"]
+            assertNotNull(decl)
 
-        make = assertIs(decl.firstAssignment)
-        assertNotNull(make)
-        assertTrue(make is ConstructExpression)
-        // TODO: Maps can have dedicated types and parsing them as a generic here is only a
-        //  temporary solution. This should be fixed in the future.
-        assertEquals(
-            tu.objectType("map", listOf(tu.primitiveType("string"), tu.primitiveType("string"))),
-            make.type,
-        )
+            make = assertIs(decl.firstAssignment)
+            assertNotNull(make)
+            assertTrue(make is ConstructExpression)
 
-        // make channel
+            // TODO: Maps can have dedicated types and parsing them as a generic here is only a
+            //  temporary solution. This should be fixed in the future.
+            assertEquals(
+                objectType("map", listOf(primitiveType("string"), primitiveType("string"))).also {
+                    it.scope = finalCtx.scopeManager.globalScope
+                },
+                make.type,
+            )
 
-        decl = main.variables["ch"]
-        assertNotNull(decl)
+            // make channel
 
-        make = assertIs(decl.firstAssignment)
-        assertNotNull(make)
-        assertTrue(make is ConstructExpression)
-        assertEquals(tu.objectType("chan", listOf(tu.primitiveType("int"))), make.type)
+            decl = main.variables["ch"]
+            assertNotNull(decl)
+
+            make = assertIs(decl.firstAssignment)
+            assertNotNull(make)
+            assertTrue(make is ConstructExpression)
+            assertEquals(
+                objectType("chan", listOf(primitiveType("int"))).also {
+                    it.scope = finalCtx.scopeManager.globalScope
+                },
+                make.type,
+            )
+        }
     }
 
     @Test
@@ -680,60 +686,60 @@ class GoLanguageFrontendTest : BaseTest() {
             }
 
         assertNotNull(result)
-        val app = result.components["application"]
-        assertNotNull(app)
+        with(result) {
+            val app = result.components["application"]
+            assertNotNull(app)
 
-        val tus = app.translationUnits
+            val tus = app.translationUnits
 
-        // fetch the function declaration from the struct TU
-        val tu2 = tus[1]
+            // fetch the function declaration from the struct TU
+            val tu2 = tus[1]
 
-        val p2 = tu2.namespaces["p"]
-        assertNotNull(p2)
+            val p2 = tu2.namespaces["p"]
+            assertNotNull(p2)
 
-        val myOtherFunc = p2.methods["myOtherFunc"]
-        assertNotNull(myOtherFunc)
-        assertFalse(myOtherFunc.isImplicit)
+            val myOtherFunc = p2.methods["myOtherFunc"]
+            assertNotNull(myOtherFunc)
+            assertFalse(myOtherFunc.isImplicit)
 
-        val newMyStruct = p2.functions["NewMyStruct"]
-        assertNotNull(newMyStruct)
+            val newMyStruct = p2.functions["NewMyStruct"]
+            assertNotNull(newMyStruct)
 
-        // and compare it with the call TU
-        val tu = tus[0]
+            // and compare it with the call TU
+            val tu = tus[0]
 
-        val p = tu.namespaces["p"]
-        assertNotNull(p)
+            val p = tu.namespaces["p"]
+            assertNotNull(p)
 
-        val main = p.functions["main"]
-        assertNotNull(main)
+            val main = p.functions["main"]
+            assertNotNull(main)
 
-        val body = main.body as? Block
-        assertNotNull(body)
+            val body = main.body as? Block
+            assertNotNull(body)
 
-        val c = body.variables["c"]
+            val c = body.variables["c"]
 
-        assertNotNull(c)
-        with(tu) {
+            assertNotNull(c)
             // type will be inferred from the function declaration
             assertEquals(assertResolvedType("p.MyStruct").pointer(), c.type)
+
+            val newMyStructCall = assertIs<CallExpression>(c.firstAssignment)
+            assertInvokes(newMyStructCall, newMyStruct)
+
+            val call = tu.calls["myOtherFunc"] as? MemberCallExpression
+            assertNotNull(call)
+
+            val base = call.base as? Reference
+            assertNotNull(base)
+            assertRefersTo(base, c)
+
+            val myOtherFuncCall = tu.calls["myOtherFunc"]
+            assertNotNull(myOtherFuncCall)
+            assertInvokes(myOtherFuncCall, myOtherFunc)
+
+            val go = main.calls["go"]
+            assertNotNull(go)
         }
-
-        val newMyStructCall = assertIs<CallExpression>(c.firstAssignment)
-        assertInvokes(newMyStructCall, newMyStruct)
-
-        val call = tu.calls["myOtherFunc"] as? MemberCallExpression
-        assertNotNull(call)
-
-        val base = call.base as? Reference
-        assertNotNull(base)
-        assertRefersTo(base, c)
-
-        val myOtherFuncCall = tu.calls["myOtherFunc"]
-        assertNotNull(myOtherFuncCall)
-        assertInvokes(myOtherFuncCall, myOtherFunc)
-
-        val go = main.calls["go"]
-        assertNotNull(go)
     }
 
     @Test
@@ -1126,6 +1132,9 @@ class GoLanguageFrontendTest : BaseTest() {
             }
         assertNotNull(result)
 
+        val language = result.finalCtx.availableLanguage<GoLanguage>()
+        assertNotNull(language)
+
         val meter = result.variables["util.Meter"]
         assertNotNull(meter)
         assertLocalName("Length", meter.type)
@@ -1147,7 +1156,7 @@ class GoLanguageFrontendTest : BaseTest() {
         // We should be able to resolve the call from our stored "do" function to funcy
         assertInvokes(funcy, result.functions["do"])
 
-        val refs = result.refs.filter { it.name.localName != GoLanguage().anonymousIdentifier }
+        val refs = result.refs.filter { it.name.localName != language.anonymousIdentifier }
         refs.forEach { assertNotNull(it.refersTo, "${it.name}'s referTo is empty") }
     }
 

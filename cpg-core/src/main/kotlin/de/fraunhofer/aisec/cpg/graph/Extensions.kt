@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import kotlin.collections.filter
 import kotlin.collections.firstOrNull
 import kotlin.math.absoluteValue
@@ -391,6 +392,27 @@ class SimpleStack<T> {
     fun clone(): SimpleStack<T> {
         return SimpleStack<T>().apply { deque.addAll(this@SimpleStack.deque) }
     }
+
+    override fun equals(other: Any?): Boolean {
+        return other is SimpleStack<T> && this.depth == other.depth && this.deque == other.deque
+    }
+
+    override fun hashCode(): Int {
+        return deque.hashCode()
+    }
+
+    fun startsWith(other: SimpleStack<T>): Boolean {
+        for ((idx, elem) in other.deque.withIndex()) {
+            if (elem != this.deque.getOrNull(idx)) {
+                return false
+            }
+        }
+        return true
+    }
+
+    operator fun contains(elem: T): Boolean {
+        return deque.contains(elem)
+    }
 }
 
 /**
@@ -716,21 +738,23 @@ inline fun Node.followXUntilHit(
     val fulfilledPaths = mutableListOf<List<Node>>()
     // failedPaths: All the paths which do not satisfy "predicate"
     val failedPaths = mutableListOf<Pair<FailureReason, List<Node>>>()
+    val loopingPaths = mutableListOf<List<Node>>()
     // The list of paths where we're not done yet.
-    val worklist = mutableSetOf<Pair<List<Node>, Context>>()
-    worklist.add(Pair(listOf(this), context)) // We start only with the "from" node (=this)
+    val worklist = identitySetOf<List<Pair<Node, Context>>>()
+    worklist.add(listOf(this to context)) // We start only with the "from" node (=this)
 
-    val alreadySeenNodes = mutableSetOf<Node>()
+    val alreadySeenNodes = mutableSetOf<Pair<Node, Context>>()
 
     while (worklist.isNotEmpty()) {
-        val currentPath = worklist.maxBy { it.first.size }
+        val currentPath = worklist.maxBy { it.size }
         worklist.remove(currentPath)
-        val currentNode = currentPath.first.last()
-        var currentContext = currentPath.second
-        alreadySeenNodes.add(currentNode)
+        val currentNode = currentPath.last().first
+        var currentContext = currentPath.last().second
+        alreadySeenNodes.add(currentNode to currentContext)
+        val currentPathNodes = currentPath.map { it.first }
         // The last node of the path is where we continue. We get all of its outgoing CDG edges and
         // follow them
-        val nextNodes = x(currentNode, currentContext, currentPath.first)
+        val nextNodes = x(currentNode, currentContext, currentPathNodes)
 
         // No further nodes in the path and the path criteria are not satisfied.
         if (nextNodes.isEmpty() && collectFailedPaths) {
@@ -741,12 +765,10 @@ inline fun Node.followXUntilHit(
 
         for ((next, newContext) in nextNodes) {
             // Copy the path for each outgoing CDG edge and add the next node
-            val nextPath = currentPath.first.toMutableList()
-            nextPath.add(next)
             if (predicate(next)) {
                 // We ended up in the node fulfilling "predicate", so we're done for this path. Add
                 // the path to the results.
-                fulfilledPaths.add(nextPath)
+                fulfilledPaths.add(currentPathNodes.toMutableList() + next)
                 continue // Don't add this path anymore. The requirement is satisfied.
             }
             if (earlyTermination(next, currentContext)) {
@@ -756,16 +778,46 @@ inline fun Node.followXUntilHit(
             // The next node is new in the current path (i.e., there's no loop), so we add the path
             // with the next step to the worklist.
             if (
-                next !in currentPath.first &&
+                !isNodeWithCallStackInPath(next, newContext, currentPath) &&
                     (findAllPossiblePaths ||
-                        (next !in alreadySeenNodes && worklist.none { next in it.first }))
+                        (!isNodeWithCallStackInPath(next, newContext, alreadySeenNodes) &&
+                            worklist.none { isNodeWithCallStackInPath(next, newContext, it) }))
             ) {
-                worklist.add(Pair(nextPath, newContext.inc()))
+                worklist.add(currentPath.toMutableList() + (next to newContext.inc()))
+            } else {
+                // There's a loop.
+                loopingPaths.add(currentPathNodes.toMutableList() + next)
             }
         }
     }
 
-    return FulfilledAndFailedPaths(fulfilledPaths, failedPaths)
+    val failedLoops =
+        loopingPaths.filter { path ->
+            fulfilledPaths.none { it.size > path.size && it.subList(0, path.size - 1) == path } &&
+                failedPaths.none { it.second.size > path.size && it.second.subList(0, path.size - 1) == path }
+        }.map{FailureReason.PATH_ENDED to it}
+
+    return FulfilledAndFailedPaths(
+        fulfilledPaths.toSet().toList(),
+        (failedPaths + failedLoops).toSet().toList(),
+    )
+}
+
+/**
+ * Checks if the [node] is already in the [path] and if the last element on the call stack reaching
+ * it is the same in [context] and in the [path]. This serves as an indication of a loop. We need
+ * this to differentiate that a node (e.g., function declaration) can be visited through multiple
+ * paths, e.g., if there are subsequent calls to the same function without indicating a loop.
+ */
+fun isNodeWithCallStackInPath(
+    node: Node,
+    context: Context,
+    path: Collection<Pair<Node, Context>>,
+): Boolean {
+    return path.any {
+        it.first == node &&
+            context.callStack.top?.let { top -> top in it.second.callStack } != false
+    }
 }
 
 /**
@@ -913,7 +965,7 @@ fun Node.followPrevDFG(predicate: (Node) -> Boolean): MutableList<Node>? {
         ?.toMutableList()
 }
 
-/** Returns all [Node] children in this graph, starting with this [Node]. */
+/** Returns all [Node] children in the AST-subgraph, starting with this [Node]. */
 val Node?.nodes: List<Node>
     get() = this.allChildren()
 

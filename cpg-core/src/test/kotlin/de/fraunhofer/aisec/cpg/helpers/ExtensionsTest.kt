@@ -25,11 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.helpers
 
-import de.fraunhofer.aisec.cpg.GraphExamples.Companion.testFrontend
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
+import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.testFrontend
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.applyWithScope
 import de.fraunhofer.aisec.cpg.graph.builder.body
 import de.fraunhofer.aisec.cpg.graph.builder.declare
@@ -39,8 +39,7 @@ import de.fraunhofer.aisec.cpg.graph.builder.translationResult
 import de.fraunhofer.aisec.cpg.graph.builder.translationUnit
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.problems
-import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CollectionComprehension
+import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.variables
 import de.fraunhofer.aisec.cpg.test.BaseTest
@@ -48,7 +47,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
-import kotlin.test.assertNull
 
 internal class ExtensionsTest : BaseTest() {
     val problemDeclText = "This is a problem declaration."
@@ -58,7 +56,7 @@ internal class ExtensionsTest : BaseTest() {
         config: TranslationConfiguration =
             TranslationConfiguration.builder()
                 .defaultPasses()
-                .registerLanguage(TestLanguage("."))
+                .registerLanguage<TestLanguage>()
                 .build()
     ) =
         testFrontend(config).build {
@@ -86,17 +84,18 @@ internal class ExtensionsTest : BaseTest() {
     }
 
     @Test
-    fun testApplyWithScopeWithoutCtxAndScopeManager() {
-        val collectionComprehension =
-            CollectionComprehension().applyWithScope {
-                val varA = VariableDeclaration()
-                varA.name = Name("a")
-                val declarationStatement = DeclarationStatement()
-                declarationStatement.addDeclaration(varA)
-                this.statement = declarationStatement
-            }
-        val varA = collectionComprehension.variables["a"]
-        assertIs<VariableDeclaration>(varA)
-        assertNull(varA.scope)
+    fun testApplyWithScope() {
+        with(TestLanguageFrontend()) {
+            val collectionComprehension =
+                newCollectionComprehension().applyWithScope {
+                    val varA = newVariableDeclaration("a")
+                    val declarationStatement = newDeclarationStatement()
+                    declarationStatement.addDeclaration(varA)
+                    this.statement = declarationStatement
+                }
+            val varA = collectionComprehension.variables["a"]
+            assertIs<VariableDeclaration>(varA)
+            assertIs<GlobalScope>(varA.scope)
+        }
     }
 }

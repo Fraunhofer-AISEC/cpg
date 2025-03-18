@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.*
@@ -48,10 +47,9 @@ import de.fraunhofer.aisec.cpg.graph.types.apply
  * @param constructExpression
  * @param template
  */
-fun addRecursiveDefaultTemplateArgs(
+fun SymbolResolver.addRecursiveDefaultTemplateArgs(
     constructExpression: ConstructExpression,
     template: RecordTemplateDeclaration,
-    scopeManager: ScopeManager,
 ) {
     var templateParameters: Int
     do {
@@ -74,7 +72,6 @@ fun addRecursiveDefaultTemplateArgs(
             constructExpression,
             templateParametersExplicitInitialization,
             templateParameterRealDefaultInitialization,
-            scopeManager,
         )
     } while (templateParameters != constructExpression.templateArguments.size)
 }
@@ -113,12 +110,11 @@ fun handleExplicitTemplateParameters(
  * @param templateParameterRealDefaultInitialization mapping of template parameter to its real
  *   default (no recursive)
  */
-fun applyMissingParams(
+fun SymbolResolver.applyMissingParams(
     template: RecordTemplateDeclaration,
     constructExpression: ConstructExpression,
     templateParametersExplicitInitialization: Map<Node, Node>,
     templateParameterRealDefaultInitialization: Map<Node, Node?>,
-    scopeManager: ScopeManager,
 ) {
     with(constructExpression) {
         val missingParams: List<Node?> =

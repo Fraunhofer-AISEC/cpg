@@ -332,6 +332,6 @@ fun <T : Any?> assertLiteralValue(expected: T, expr: Expression?, message: Strin
 
 fun ContextProvider.assertResolvedType(fqn: String): Type {
     var type =
-        ctx?.typeManager?.lookupResolvedType(fqn, language = (this as? LanguageProvider)?.language)
+        ctx.typeManager.lookupResolvedType(fqn, language = (this as? LanguageProvider)?.language)
     return assertNotNull(type)
 }

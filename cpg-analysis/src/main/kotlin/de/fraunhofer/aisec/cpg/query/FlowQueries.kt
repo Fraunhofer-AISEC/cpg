@@ -263,6 +263,7 @@ fun Node.alwaysFlowsTo(
                 contextSensitive = ContextSensitive in sensitivities,
             )
             .flatten()
+            .toSet()
     val earlyTerminationPredicate = { n: Node, ctx: Context ->
         earlyTermination?.let { it(n) } == true ||
             (!allowOverwritingValue &&

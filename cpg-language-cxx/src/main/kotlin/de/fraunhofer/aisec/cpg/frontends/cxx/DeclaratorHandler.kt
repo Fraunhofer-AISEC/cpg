@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.types.*
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.helpers.Util
 import java.util.function.Supplier
 import org.eclipse.cdt.core.dom.ast.*
@@ -101,8 +102,8 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
 
         // Check, if the name is qualified or if we are within a record scope
         return if (
-            (frontend.scopeManager.currentScope is RecordScope ||
-                language?.namespaceDelimiter?.let { name.contains(it) } == true)
+            frontend.scopeManager.currentScope is RecordScope ||
+                language.namespaceDelimiter.let { name.contains(it) } == true
         ) {
             // If yes, treat this like a field declaration
             this.handleFieldDeclarator(ctx)
@@ -120,9 +121,6 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                     implicitInitializerAllowed = implicitInitializerAllowed,
                     rawNode = ctx,
                 )
-
-            // Add this declaration to the current scope
-            frontend.scopeManager.addDeclaration(declaration)
 
             declaration
         }
@@ -146,8 +144,6 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                 implicitInitializerAllowed = true,
                 rawNode = ctx,
             )
-
-        frontend.scopeManager.addDeclaration(declaration)
 
         return declaration
     }
@@ -280,20 +276,17 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             // Enter the name scope
             parentScope.astNode?.let {
                 frontend.scopeManager.enterScope(it)
-                frontend.scopeManager.addDeclaration(declaration, addToAST = false)
+                frontend.scopeManager.addDeclaration(declaration)
             }
 
             // We also need to by-pass the scope manager for this, because it will
             // otherwise add the declaration to the AST element of the named scope (the record
             // or namespace declaration); in the case of a record declaration to the `methods`
-            // fields. However, since `methods` is an
-            // AST field, (for now) we only want those methods in there, that were actual AST
+            // fields. However, since `methods` is an  AST field, (for now) we only want those
+            // methods in there, that were actual AST
             // parents. This is also something that we need to figure out how we want to handle
             // this.
             parentScope.addSymbol(declaration.symbol, declaration)
-        } else {
-            // Add the declaration via the scope manager
-            frontend.scopeManager.addDeclaration(declaration)
         }
 
         // Enter the scope of the function itself
@@ -334,11 +327,11 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
 
                 arg.argumentIndex = i
             }
-            // Note that this .addValueDeclaration call already adds arg to the function's
-            // parameters.
-            // This is why the following line has been commented out by @KW
-            frontend.scopeManager.addDeclaration(arg)
-            // declaration.getParameters().add(arg);
+
+            if (arg is ParameterDeclaration) {
+                frontend.scopeManager.addDeclaration(arg)
+                declaration.parameters += arg
+            }
             i++
         }
 
@@ -351,6 +344,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             varargs.isImplicit = true
             varargs.argumentIndex = i
             frontend.scopeManager.addDeclaration(varargs)
+            declaration.parameters += varargs
         }
         frontend.scopeManager.leaveScope(declaration)
 
@@ -435,7 +429,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         }
 
         result.location = frontend.locationOf(ctx)
-        frontend.scopeManager.addDeclaration(result)
+
         return result
     }
 
@@ -458,11 +452,9 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                     .toMutableList()
         }
 
-        frontend.scopeManager.addDeclaration(recordDeclaration)
-
         frontend.scopeManager.enterScope(recordDeclaration)
 
-        processMembers(ctx)
+        processMembers(recordDeclaration, ctx)
 
         if (recordDeclaration.constructors.isEmpty()) {
             // create an implicit constructor declaration with the same name as the record
@@ -473,9 +465,9 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             createMethodReceiver(constructorDeclaration)
 
             // and set the type, constructors always have implicitly the return type of their class
-            constructorDeclaration.type = FunctionType.computeType(constructorDeclaration)
-            recordDeclaration.addConstructor(constructorDeclaration)
+            constructorDeclaration.type = computeType(constructorDeclaration)
             frontend.scopeManager.addDeclaration(constructorDeclaration)
+            recordDeclaration.constructors += constructorDeclaration
         }
 
         frontend.scopeManager.leaveScope(recordDeclaration)
@@ -495,14 +487,21 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         return newTypeParameterDeclaration(ctx.rawSignature, rawNode = ctx)
     }
 
-    private fun processMembers(ctx: IASTCompositeTypeSpecifier) {
+    private fun processMembers(
+        recordDeclaration: RecordDeclaration,
+        ctx: IASTCompositeTypeSpecifier,
+    ) {
         for (member in ctx.members) {
             if (member is CPPASTVisibilityLabel) {
                 // TODO: parse visibility
                 continue
             }
 
-            frontend.declarationHandler.handle(member)
+            val declaration = frontend.declarationHandler.handle(member)
+            if (declaration != null) {
+                frontend.scopeManager.addDeclaration(declaration)
+                recordDeclaration.addDeclaration(declaration)
+            }
         }
     }
 }

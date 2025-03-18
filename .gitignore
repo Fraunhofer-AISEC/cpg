@@ -22,4 +22,5 @@ logs
 
 gradle.properties
 LibrariesTest.kt
+findings.json
 

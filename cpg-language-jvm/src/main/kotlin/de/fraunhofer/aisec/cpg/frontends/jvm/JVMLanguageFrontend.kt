@@ -51,9 +51,9 @@ import sootup.jimple.parser.JimpleView
 typealias SootType = sootup.core.types.Type
 
 class JVMLanguageFrontend(
-    language: Language<out LanguageFrontend<Any, SootType>>,
     ctx: TranslationContext,
-) : LanguageFrontend<Any, SootType>(language, ctx) {
+    language: Language<out LanguageFrontend<Any, SootType>>,
+) : LanguageFrontend<Any, SootType>(ctx, language) {
 
     val declarationHandler = DeclarationHandler(this)
     val statementHandler = StatementHandler(this)
@@ -78,7 +78,7 @@ class JVMLanguageFrontend(
                 "class" -> {
                     JavaView(
                         JavaClassPathAnalysisInputLocation(
-                            ctx.currentComponent?.topLevel?.path!!,
+                            ctx.currentComponent?.topLevel()?.path!!,
                             SourceType.Library,
                             listOf(
                                 NopEliminator(),
@@ -115,12 +115,14 @@ class JVMLanguageFrontend(
                 }
                 "java" -> {
                     JavaView(
-                        JavaSourcePathAnalysisInputLocation(ctx.currentComponent?.topLevel?.path!!)
+                        JavaSourcePathAnalysisInputLocation(
+                            ctx.currentComponent?.topLevel()?.path!!
+                        )
                     )
                 }
                 "jimple" -> {
                     JimpleView(
-                        JimpleAnalysisInputLocation(ctx.currentComponent?.topLevel?.toPath()!!)
+                        JimpleAnalysisInputLocation(ctx.currentComponent?.topLevel()?.toPath()!!)
                     )
                 }
                 else -> {
@@ -139,6 +141,7 @@ class JVMLanguageFrontend(
                 packages.computeIfAbsent(sootClass.type.packageName.name) {
                     val pkg = newNamespaceDeclaration(it)
                     scopeManager.addDeclaration(pkg)
+                    tu.addDeclaration(pkg)
                     pkg
                 }
 
@@ -146,7 +149,10 @@ class JVMLanguageFrontend(
             scopeManager.enterScope(pkg)
 
             val decl = declarationHandler.handle(sootClass)
-            scopeManager.addDeclaration(decl)
+            if (decl != null) {
+                scopeManager.addDeclaration(decl)
+                pkg.addDeclaration(decl)
+            }
 
             // Leave namespace scope
             scopeManager.leaveScope(pkg)

@@ -25,7 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.scopes
 
-import de.fraunhofer.aisec.cpg.ScopeManager
+import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
@@ -45,8 +45,8 @@ class NamespaceScope(astNode: NamespaceDeclaration) : NameScope(astNode) {
      * This is the mirror property to [Scope.importedScopeEdges]. It specifies which other [Scope]s
      * are importing this namespace.
      *
-     * This is used in [addDeclaration] to update the [ImportDeclaration.importedSymbols] once we
-     * add a new symbol here, so that is it also visible in the scope of the [ImportDeclaration].
+     * This is used in [addSymbol] to update the [ImportDeclaration.importedSymbols] once we add a
+     * new symbol here, so that is it also visible in the scope of the [ImportDeclaration].
      */
     @Relationship(value = "IMPORTS_SCOPE", direction = Relationship.Direction.INCOMING)
     val importedByEdges: Imports =
@@ -55,18 +55,16 @@ class NamespaceScope(astNode: NamespaceDeclaration) : NameScope(astNode) {
     /** Virtual property for accessing [importedScopeEdges] without property edges. */
     val importedBy: MutableSet<Scope> by unwrappingIncoming(NamespaceScope::importedByEdges)
 
-    override fun addDeclaration(
-        declaration: Declaration,
-        addToAST: Boolean,
-        scopeManager: ScopeManager,
-    ) {
-        val result = super.addDeclaration(declaration, addToAST, scopeManager)
+    context(ContextProvider)
+    @Suppress("CONTEXT_RECEIVERS_DEPRECATED")
+    override fun addSymbol(symbol: Symbol, declaration: Declaration) {
+        super.addSymbol(symbol, declaration)
 
         // Update imported symbols of dependent scopes
         for (edge in importedByEdges) {
-            edge.declaration?.let { scopeManager.updateImportedSymbols(it) }
+            edge.declaration?.let {
+                this@ContextProvider.ctx.scopeManager.updateImportedSymbols(it)
+            }
         }
-
-        return result
     }
 }

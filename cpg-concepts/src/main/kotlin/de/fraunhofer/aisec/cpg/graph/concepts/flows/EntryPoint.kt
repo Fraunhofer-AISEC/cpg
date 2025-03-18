@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.concepts.flows
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.arch.OperatingSystemArchitecture
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import java.util.Objects
 
 /**
  * Represents an entry point into the execution of the program. This can be a "local" entry point,
@@ -45,7 +46,13 @@ abstract class LocalEntryPoint(
      * [OperatingSystemArchitecture], it can be specified here.
      */
     var os: OperatingSystemArchitecture,
-) : EntryPoint(underlyingNode = underlyingNode)
+) : EntryPoint(underlyingNode = underlyingNode) {
+    override fun equals(other: Any?): Boolean {
+        return other is LocalEntryPoint && super.equals(other) && other.os == this.os
+    }
+
+    override fun hashCode() = Objects.hash(super.hashCode(), os)
+}
 
 /** The main function of a program. */
 class Main(underlyingNode: FunctionDeclaration, os: OperatingSystemArchitecture) :

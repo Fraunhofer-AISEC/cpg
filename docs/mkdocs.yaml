@@ -157,11 +157,11 @@ nav:
   - "Home": index.md
   - "Getting Started":
       - GettingStarted/index.md
+      - "Using the Codyze CLI": GettingStarted/codyze.md
       - "Usage as library":
           - "Adding the Dependency": GettingStarted/library.md
           - "Using the Query API": GettingStarted/query.md
           - "Shortcuts to Explore the Graph": GettingStarted/shortcuts.md
-      - "Using the Interactive CLI": GettingStarted/cli.md
       - "Using neo4j": GettingStarted/neo4j.md
   - "Specifications":
       - CPG/specs/index.md

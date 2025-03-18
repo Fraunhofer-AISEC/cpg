@@ -34,7 +34,9 @@ import de.fraunhofer.aisec.cpg.CallResolutionResult
 import de.fraunhofer.aisec.cpg.SignatureResult
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.ancestors
+import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.Component
+import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
@@ -55,9 +57,13 @@ import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.passes.inference.Inference
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import java.io.File
 import kotlin.reflect.KClass
 import kotlin.reflect.full.primaryConstructor
+import org.neo4j.ogm.annotation.Transient
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 /**
  * [CastResult] is the result of the function [Language.tryCast] and describes whether a cast of one
@@ -89,7 +95,7 @@ data class ImplicitCast(override var depthDistance: Int) : CastResult(depthDista
  * persisted in the final graph (database) and each node links to its corresponding language using
  * the [Node.language] property.
  */
-abstract class Language<T : LanguageFrontend<*, *>> : Node() {
+abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
 
     /** The file extensions without the dot */
     abstract val fileExtensions: List<String>
@@ -123,12 +129,20 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
     /** All operators which perform a simple assignment from the rhs to the lhs. */
     open val simpleAssignmentOperators: Set<String> = setOf("=")
 
+    /** The standard evaluator to be used with this language. */
+    @Transient @DoNotPersist open val evaluator: ValueEvaluator = ValueEvaluator()
+
+    init {
+        this.language = this
+        this.name = Name(this::class.simpleName ?: EMPTY_NAME)
+    }
+
     /**
      * Creates a new [LanguageFrontend] object to parse the language. It requires the
      * [TranslationContext], which holds the necessary managers.
      */
     open fun newFrontend(ctx: TranslationContext): T {
-        return this.frontend.primaryConstructor?.call(this, ctx)
+        return this.frontend.primaryConstructor?.call(ctx, this)
             ?: throw TranslationException("could not instantiate language frontend")
     }
 
@@ -156,11 +170,6 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
         result = 31 * result + primitiveTypeNames.hashCode()
         result = 31 * result + accessModifiers.hashCode()
         return result
-    }
-
-    init {
-        this.language = this
-        this::class.simpleName?.let { this.name = Name(it) }
     }
 
     private fun arithmeticOpTypePropagation(lhs: Type, rhs: Type): Type {
@@ -309,6 +318,7 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
      *   the best. The ranking is determined by the [CastResult.depthDistance] of all cast results
      *   in the signature results.
      */
+    context(ContextProvider)
     open fun bestViableResolution(
         result: CallResolutionResult
     ): Pair<Set<FunctionDeclaration>, CallResolutionResult.SuccessKind> {
@@ -343,7 +353,7 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
                     null,
                     source,
                     false,
-                    source.ctx!!,
+                    ctx,
                     null,
                     needsExactMatch = true,
                 )
@@ -418,13 +428,20 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
      * @param TypeToInfer the type of the node that should be inferred
      * @param source the source that was responsible for the inference
      */
+    context(ContextProvider)
     fun <TypeToInfer : Node> translationUnitForInference(source: Node): TranslationUnitDeclaration {
         // The easiest way to identify the current component would be traversing the AST, but that
         // does not work for types. But types have a scope and the scope (should) have the
         // connection to the AST. We add several fallbacks here to make sure that we have a
         // component.
         val component =
-            source.scope?.astNode?.component ?: source.component ?: source.ctx?.currentComponent
+            if (source !is Type) {
+                source.component
+                    ?: this@ContextProvider.ctx.currentComponent
+                    ?: source.scope?.astNode?.component
+            } else {
+                this@ContextProvider.ctx.currentComponent ?: source.scope?.astNode?.component
+            }
         if (component == null) {
             val msg =
                 "No suitable component found that should be used for inference. " +
@@ -442,6 +459,10 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node() {
         }
 
         return tu
+    }
+
+    companion object {
+        @JvmStatic protected val log: Logger = LoggerFactory.getLogger(Language::class.java)
     }
 }
 
