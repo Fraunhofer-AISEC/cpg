@@ -760,7 +760,7 @@ inline fun Node.followXUntilHit(
         if (nextNodes.isEmpty() && collectFailedPaths) {
             // TODO: How to determine if this path is really at the end or if it exceeded the number
             // of steps?
-            failedPaths.add(FailureReason.PATH_ENDED to currentPath.first)
+            failedPaths.add(FailureReason.PATH_ENDED to currentPath.map { it.first })
         }
 
         for ((next, newContext) in nextNodes) {
@@ -772,7 +772,9 @@ inline fun Node.followXUntilHit(
                 continue // Don't add this path anymore. The requirement is satisfied.
             }
             if (earlyTermination(next, currentContext)) {
-                failedPaths.add(FailureReason.HIT_EARLY_TERMINATION to nextPath)
+                failedPaths.add(
+                    FailureReason.HIT_EARLY_TERMINATION to currentPath.map { it.first } + next
+                )
                 continue // Don't add this path anymore. We already failed.
             }
             // The next node is new in the current path (i.e., there's no loop), so we add the path
@@ -792,10 +794,16 @@ inline fun Node.followXUntilHit(
     }
 
     val failedLoops =
-        loopingPaths.filter { path ->
-            fulfilledPaths.none { it.size > path.size && it.subList(0, path.size - 1) == path } &&
-                failedPaths.none { it.second.size > path.size && it.second.subList(0, path.size - 1) == path }
-        }.map{FailureReason.PATH_ENDED to it}
+        loopingPaths
+            .filter { path ->
+                fulfilledPaths.none {
+                    it.size > path.size && it.subList(0, path.size - 1) == path
+                } &&
+                    failedPaths.none {
+                        it.second.size > path.size && it.second.subList(0, path.size - 1) == path
+                    }
+            }
+            .map { FailureReason.PATH_ENDED to it }
 
     return FulfilledAndFailedPaths(
         fulfilledPaths.toSet().toList(),
