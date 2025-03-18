@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,24 +23,29 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.analysis
+package de.fraunhofer.aisec.cpg.frontends.golang
 
-import de.fraunhofer.aisec.cpg.console.RunPlugin
+import de.fraunhofer.aisec.cpg.test.analyze
+import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
-import org.jetbrains.kotlinx.ki.shell.Command
-import org.jetbrains.kotlinx.ki.shell.configuration.ReplConfigurationBase
+import kotlin.test.assertNotNull
 
-class RunPluginTest {
-    object TestConfig : ReplConfigurationBase()
-
+class TypeTest {
     @Test
-    fun testExecute() {
-        val plugin = RunPlugin().Load(TestConfig)
+    fun testTypeNameConfusion() {
+        val topLevel = Path.of("src", "test", "resources", "golang")
+        val result =
+            analyze(listOf(topLevel.resolve("type_loop.go").toFile()), topLevel, true) {
+                it.registerLanguage<GoLanguage>()
+            }
+        assertNotNull(result)
 
-        val result = plugin.execute(":run")
-        assertTrue(result is Command.Result.RunSnippets)
-        assertEquals(4, result.snippetsToRun.toList().size)
+        val types = result.finalCtx.typeManager.resolvedTypes
+        assertEquals(3, types.size)
+        assertEquals(
+            listOf("fmt.fmt", "fmt.some", "fmt.some"),
+            types.map { it.name.toString() }.sorted(),
+        )
     }
 }

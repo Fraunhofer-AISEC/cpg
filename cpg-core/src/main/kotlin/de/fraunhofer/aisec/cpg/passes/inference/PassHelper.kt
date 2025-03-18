@@ -134,14 +134,14 @@ internal fun Pass<*>.tryRecordInference(type: Type, source: Node): RecordDeclara
 
     val record =
         (holder ?: scopeManager.translationUnitForInference<RecordDeclaration>(source))
-            ?.startInference(ctx)
+            .startInference(ctx)
             ?.inferRecordDeclaration(type, kind, source)
 
     // Update the type's record. Because types are only unique per scope, we potentially need to
     // update multiple type nodes, i.e., all type nodes whose FQN match the inferred record. We only
     // need to do this if we are NOT in the type resolver
     if (this !is TypeResolver && record != null) {
-        typeManager.firstOrderTypes
+        typeManager.resolvedTypes
             .filter { it.name == record.name }
             .forEach { it.recordDeclaration = record }
     }
@@ -401,7 +401,7 @@ internal fun Pass<*>.tryMethodInference(
 
     if (inferGlobalFunction) {
         var currentTU =
-            scopeManager.currentScope?.globalScope?.astNode as? TranslationUnitDeclaration
+            scopeManager.currentScope.globalScope?.astNode as? TranslationUnitDeclaration
         return listOfNotNull(currentTU?.inferFunction(call, ctx = ctx))
     }
 

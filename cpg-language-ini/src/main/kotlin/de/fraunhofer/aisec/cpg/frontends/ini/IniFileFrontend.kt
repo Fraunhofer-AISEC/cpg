@@ -91,7 +91,7 @@ class IniFileFrontend(ctx: TranslationContext, language: Language<IniFileFronten
          * [de.fraunhofer.aisec.cpg.TranslationConfiguration.topLevel] using
          * [Language.namespaceDelimiter] as a separator
          */
-        val topLevel = ctx.currentComponent?.topLevel?.let { file.relativeToOrNull(it) } ?: file
+        val topLevel = ctx.currentComponent?.topLevel()?.let { file.relativeToOrNull(it) } ?: file
         val parentDir = topLevel.parent
 
         val namespace =

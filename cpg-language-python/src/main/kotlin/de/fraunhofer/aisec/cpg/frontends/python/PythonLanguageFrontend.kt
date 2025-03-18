@@ -309,7 +309,7 @@ class PythonLanguageFrontend(ctx: TranslationContext, language: Language<PythonL
     }
 
     private fun pythonASTtoCPG(pyAST: PyObject, path: Path): TranslationUnitDeclaration {
-        var topLevel = ctx.currentComponent?.topLevel ?: path.parent.toFile()
+        var topLevel = ctx.currentComponent?.topLevel() ?: path.parent.toFile()
 
         val pythonASTModule =
             fromPython(pyAST) as? Python.AST.Module

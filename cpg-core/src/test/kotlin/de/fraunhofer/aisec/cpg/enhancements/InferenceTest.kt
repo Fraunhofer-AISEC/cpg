@@ -98,17 +98,12 @@ class InferenceTest {
 
     @Test
     fun testUnaryOperatorReturnType() {
-        val tu =
-            GraphExamples.getInferenceUnaryOperatorReturnType()
-                .components
-                .firstOrNull()
-                ?.translationUnits
-                ?.firstOrNull()
-        assertNotNull(tu)
-        with(tu) {
+        val result = GraphExamples.getInferenceUnaryOperatorReturnType()
+        assertNotNull(result)
+        with(result) {
             val longType = assertResolvedType("long")
 
-            val bar = tu.functions["bar"]
+            val bar = functions["bar"]
             assertNotNull(bar)
 
             assertEquals(longType, bar.returnTypes.singleOrNull())
@@ -117,18 +112,13 @@ class InferenceTest {
 
     @Test
     fun testTupleTypeReturnType() {
-        val tu =
-            GraphExamples.getInferenceTupleReturnType()
-                .components
-                .firstOrNull()
-                ?.translationUnits
-                ?.firstOrNull()
-        assertNotNull(tu)
-        with(tu) {
+        val result = GraphExamples.getInferenceTupleReturnType()
+        assertNotNull(result)
+        with(result) {
             val fooType = assertResolvedType("Foo")
             val barType = assertResolvedType("Bar")
 
-            val bar = tu.functions["bar"]
+            val bar = functions["bar"]
             assertNotNull(bar)
 
             assertEquals(listOf(fooType, barType), bar.returnTypes)
@@ -137,22 +127,17 @@ class InferenceTest {
 
     @Test
     fun testBinaryOperatorReturnType() {
-        val tu =
-            GraphExamples.getInferenceBinaryOperatorReturnType()
-                .components
-                .firstOrNull()
-                ?.translationUnits
-                ?.firstOrNull()
-        assertNotNull(tu)
-        with(tu) {
+        val result = GraphExamples.getInferenceBinaryOperatorReturnType()
+        assertNotNull(result)
+        with(result) {
             val intType = assertResolvedType("int")
             val longType = assertResolvedType("long")
 
-            val bar = tu.functions["bar"]
+            val bar = functions["bar"]
             assertNotNull(bar)
             assertEquals(intType, bar.returnTypes.singleOrNull())
 
-            val baz = tu.functions["baz"]
+            val baz = functions["baz"]
             assertNotNull(baz)
             assertEquals(longType, baz.returnTypes.singleOrNull())
         }

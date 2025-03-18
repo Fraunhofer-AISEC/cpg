@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.scopes
 
+import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
@@ -54,12 +55,16 @@ class NamespaceScope(astNode: NamespaceDeclaration) : NameScope(astNode) {
     /** Virtual property for accessing [importedScopeEdges] without property edges. */
     val importedBy: MutableSet<Scope> by unwrappingIncoming(NamespaceScope::importedByEdges)
 
+    context(ContextProvider)
+    @Suppress("CONTEXT_RECEIVERS_DEPRECATED")
     override fun addSymbol(symbol: Symbol, declaration: Declaration) {
         super.addSymbol(symbol, declaration)
 
         // Update imported symbols of dependent scopes
         for (edge in importedByEdges) {
-            edge.declaration?.let { ctx?.scopeManager?.updateImportedSymbols(it) }
+            edge.declaration?.let {
+                this@ContextProvider.ctx.scopeManager.updateImportedSymbols(it)
+            }
         }
     }
 }

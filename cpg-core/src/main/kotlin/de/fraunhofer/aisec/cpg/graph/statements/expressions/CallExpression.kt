@@ -47,7 +47,11 @@ import org.neo4j.ogm.annotation.Relationship
  * and is connected via the INVOKES edge to its [FunctionDeclaration].
  */
 open class CallExpression :
-    Expression(), HasOverloadedOperation, HasType.TypeObserver, ArgumentHolder {
+    Expression(),
+    HasOverloadedOperation,
+    HasType.TypeObserver,
+    ArgumentHolder,
+    HasSecondaryTypeEdge {
     /**
      * Connection to its [FunctionDeclaration]. This will be populated by the [SymbolResolver]. This
      * will have an effect on the [type]
@@ -286,4 +290,7 @@ open class CallExpression :
     // TODO: Not sure if we can add the template, templateParameters, templateInstantiation fields
     //  here
     override fun hashCode() = Objects.hash(super.hashCode(), arguments)
+
+    override val secondaryTypes: List<Type>
+        get() = signature
 }

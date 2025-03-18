@@ -249,7 +249,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : ConceptPass(ctx) {
             expression
                 .followDFGEdgesUntilHit(
                     collectFailedPaths = false,
-                    findAllPossiblePaths = true,
+                    findAllPossiblePaths = false,
                     direction = Backward(GraphToFollow.DFG),
                 ) { node ->
                     node.overlays.any { overlay -> overlay is OpenFile }

@@ -42,6 +42,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.TypeExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.helpers.Util.debugWithFileLocation
 import de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation
 import java.util.*
@@ -134,7 +135,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
                 inferred.returnTypes = listOf(returnType)
             }
 
-            inferred.type = FunctionType.computeType(inferred)
+            inferred.type = computeType(inferred)
 
             debugWithFileLocation(
                 hint,

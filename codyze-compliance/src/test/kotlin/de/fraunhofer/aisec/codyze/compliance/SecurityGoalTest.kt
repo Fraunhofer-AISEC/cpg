@@ -25,12 +25,9 @@
  */
 package de.fraunhofer.aisec.codyze.compliance
 
-import de.fraunhofer.aisec.cpg.ScopeManager
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.TranslationResult
-import de.fraunhofer.aisec.cpg.TypeManager
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Name
 import kotlin.io.path.Path
@@ -75,11 +72,7 @@ class SecurityGoalTest {
         val result =
             TranslationResult(
                 translationManager = TranslationManager.builder().build(),
-                TranslationContext(
-                    config = TranslationConfiguration.builder().build(),
-                    scopeManager = ScopeManager(),
-                    typeManager = TypeManager(),
-                ),
+                TranslationContext(),
             )
         val auth = Component().also { it.name = Name("auth") }
         result.components += auth
