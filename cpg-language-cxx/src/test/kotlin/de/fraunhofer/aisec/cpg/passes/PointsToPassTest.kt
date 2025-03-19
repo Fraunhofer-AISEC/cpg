@@ -2419,6 +2419,8 @@ class PointsToPassTest {
             tu.allChildren<UnaryOperator> { it.location?.region?.startLine == 407 }.first()
         assertNotNull(uOPLine407)
 
+        assertEquals(setOf<Node>(uOPLine407), uOPLine407.memoryValues)
+
         // Literals
         val literal1 = tu.allChildren<Literal<*>> { it.location?.region?.startLine == 400 }.first()
         assertNotNull(literal1)
@@ -2428,8 +2430,10 @@ class PointsToPassTest {
         assertEquals(mutableSetOf<Node>(literal1, uOPLine403), iLine405.fullMemoryValues)
 
         // printf in Line 409
+        assertEquals(1, iLine409.prevDFG.size)
+        assertEquals(mutableSetOf<Node>(uOPLine407.input), iLine409.prevDFG)
         assertEquals(1, iLine409.fullMemoryValues.size)
-        assertEquals(mutableSetOf<Node>(uOPLine407.input), iLine409.fullMemoryValues)
+        assertEquals(mutableSetOf<Node>(uOPLine407), iLine409.fullMemoryValues)
     }
 
     @Test
