@@ -23,10 +23,10 @@
   let tableTitle = $derived(activeTab === 'overlayNodes' ? 'Overlay Nodes' : 'AST Nodes');
   let highlightedNode = $state<NodeJSON | null>(null);
 
-  const lineHeight = 1.5;
-  const charWidth = 0.625;
+  const lineHeight = 1.5; // 24px / 16
+  const charWidth = 0.60015625; // 9.6025px / 16
   const offsetTop = 1;
-  const baseOffsetLeft = 2.25;
+  const baseOffsetLeft = 2.4;
 
   const totalLines = data.translationUnit.code.split('\n').length;
   const lineNumberWidth = Math.ceil(Math.log10(totalLines + 1));
@@ -44,18 +44,25 @@
 
   <div class="relative mb-6 rounded bg-white p-2 shadow-md">
     <div class="relative">
-      <Highlight language={python} code={data.translationUnit.code} let:highlighted>
-        <LineNumbers
-          {highlighted}
-          highlightedLines={line ? [parseInt(line) - 1] : []}
-          --line-number-color="gray"
-          --padding-right={0}
-          hideBorder
-        />
-        {#if finding && line}
-          <FindingOverlay {finding} {kind} line={parseInt(line)} {lineHeight} {offsetTop} />
-        {/if}
-      </Highlight>
+      <!-- 
+      Make sure that really everything inside the code area is monospaced,
+      otherwise we have a slight offset between browsers.
+      -->
+      <div class="font-mono">
+        <Highlight language={python} code={data.translationUnit.code} let:highlighted>
+          <LineNumbers
+            {highlighted}
+            highlightedLines={line ? [parseInt(line) - 1] : []}
+            --line-number-color="gray"
+            --padding-right={0}
+            hideBorder
+          />
+        </Highlight>
+      </div>
+
+      {#if finding && line}
+        <FindingOverlay {finding} {kind} line={parseInt(line)} {lineHeight} {offsetTop} />
+      {/if}
 
       <NodeOverlays
         {nodes}
