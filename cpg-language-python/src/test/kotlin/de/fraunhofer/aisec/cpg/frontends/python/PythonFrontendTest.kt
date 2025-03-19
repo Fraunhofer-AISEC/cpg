@@ -39,6 +39,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.*
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.types.DynamicType
 import de.fraunhofer.aisec.cpg.graph.types.ListType
 import de.fraunhofer.aisec.cpg.graph.types.MapType
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
@@ -190,7 +191,7 @@ class PythonFrontendTest : BaseTest() {
         val s = bar.parameters.firstOrNull()
         assertNotNull(s)
         assertLocalName("s", s)
-        assertEquals(tu.primitiveType("str"), s.type)
+        assertContains(s.assignedTypes, tu.primitiveType("str"))
 
         assertLocalName("bar", bar)
 
@@ -546,9 +547,10 @@ class PythonFrontendTest : BaseTest() {
         val fromOther = tu.functions["from_other"]
         assertNotNull(fromOther)
 
-        val paramType = fromOther.parameters.firstOrNull()?.type
-        assertNotNull(paramType)
-        assertEquals(other.toType(), paramType)
+        val param = fromOther.parameters.firstOrNull()
+        assertNotNull(param)
+        assertIs<DynamicType>(param.type)
+        assertContains(param.assignedTypes, other.toType())
     }
 
     @Test
@@ -1516,7 +1518,10 @@ class PythonFrontendTest : BaseTest() {
             assertNotNull(bar)
 
             assertEquals(assertResolvedType("int"), bar.returnTypes.singleOrNull())
-            assertEquals(assertResolvedType("int"), bar.parameters.firstOrNull()?.type)
+
+            val param = bar.parameters.firstOrNull()
+            assertNotNull(param)
+            assertContains(param.assignedTypes, assertResolvedType("int"))
             assertEquals(assertResolvedType("complex_class.Foo"), bar.receiver?.type)
         }
     }

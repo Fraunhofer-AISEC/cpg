@@ -29,6 +29,7 @@ The `assignedTypes` of `obj` will be a set containing `A` and `B` (plus the inte
 
 ## Dynamically Typed Languages
 
-Dynamically typed languages such as Python or JavaScript present an extra challenge because for most (if not all) variables, the type is not known at compile-time. In these languages, the type of a variable can change at runtime, and the CPG needs to be able to represent this. We therefore introduce a special `DynamicType` type class and assign it to `type` of most nodes. There are two exceptions to this rule:
+Dynamically typed languages such as Python or JavaScript present an extra challenge because for most (if not all) variables, the type is not known at compile-time. In these languages, the type of a variable can change at runtime, and the CPG needs to be able to represent this. We therefore introduce a special `DynamicType` type class and assign it to `type` of most nodes. There are some exceptions to this rule:
 - `ConstructExpression`: When we construct an object, we know the type of the object at compile-time, so we set the `type` to the type of the object.
 - `Literal`: When we have a literal, we also know the type at compile-time, so we set the `type` to the type of the literal, for example `str` for string-based literals in Python.
+- Lists, dictionaries, comprehensions: When we encounter a collection comprehension, list or dictionary expressions, we also know a partial type at compile-time, so we set the `type` to the type of the collection, e.g. a list or a dictionary in Python.
