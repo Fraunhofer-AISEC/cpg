@@ -763,7 +763,8 @@ class CallResolverTest : BaseTest() {
             }
         assertNotNull(result)
 
-        result.refs.forEach { assertNotNull(it.refs) }
+        result.refs.forEach { assertNotNull(it.refersTo) }
+        result.calls.forEach { assertTrue(it.invokes.isNotEmpty()) }
     }
 
     companion object {
