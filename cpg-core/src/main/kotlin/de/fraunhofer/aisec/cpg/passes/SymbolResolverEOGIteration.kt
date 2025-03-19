@@ -40,7 +40,6 @@ import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
-import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.LatticeElement
 import de.fraunhofer.aisec.cpg.helpers.State
@@ -136,68 +135,72 @@ class SymbolResolverEOGIteration(ctx: TranslationContext) : EOGStarterPass(ctx) 
         val node = currentEdge.end
         when (node) {
             is Declaration -> {
-                // Push declaration into scope
-                state.symbols.push(node.scope!!, PowersetLatticeDeclaration(identitySetOf(node)))
+                handleDeclaration(state, node)
             }
             is Reference -> {
-                infoWithFileLocation(
-                    node,
-                    log,
-                    "Resolving reference. {} scopes are active",
-                    state.symbols.size,
-                )
-                // Lookup symbol here or after the final state?
-                var candidates =
-                    if (node is MemberExpression) {
-                        // We need to extract the scope from the base type and then do a qualified
-                        // lookup
-                        val baseType = ((node.base as? Reference)?.refersTo as? HasType)?.type
-                        val scope = ctx.scopeManager.lookupScope(baseType!!.root.name)
-                        println(scope)
-                        state.symbols.resolveSymbol(
-                            symbol = node.name.localName,
-                            startScope = scope!!,
-                            language = node.language,
-                            qualifiedLookup = true,
-                        )
-                    } else {
-                        state.symbols.resolveSymbol(
-                            symbol = node.name.localName,
-                            startScope = node.scope!!,
-                            language = node.language,
-                            qualifiedLookup = false,
-                        )
-                    }
-                println(candidates)
-
-                // Let's set it here for now, but also to the final state, maybe it's helpful for
-                // later
-                state.push(node, PowersetLatticeDeclaration(candidates))
-                node.candidates = candidates
-
-                // Now it's getting interesting! We need to make the final decision based on whether
-                // this a simple reference to a variable or if we are the callee of a call
-                // expression
-                val call = node.astParent as? CallExpression
-                if (call != null) {
-                    // Reference to a function via a call expression
-                    // TODO: arguments
-                    call.invokes =
-                        candidates.filterIsInstance<FunctionDeclaration>().toMutableList()
-                    node.refersTo = call.invokes.firstOrNull()
-                } else {
-                    // Reference to a variable
-                    node.refersTo = candidates.firstOrNull()
-                }
+                handleReference(node, state)
             }
         }
 
         return state
     }
+
+    private fun handleReference(node: Reference, state: DeclarationState) {
+        infoWithFileLocation(
+            node,
+            log,
+            "Resolving reference. {} scopes are active",
+            state.symbols.size,
+        )
+        // Lookup symbol here or after the final state?
+        var candidates =
+            if (node is MemberExpression) {
+                // We need to extract the scope from the base type and then do a qualified
+                // lookup
+                // TODO: lookup based on assigned types as well
+                val baseType = node.base.type
+                val scope = ctx.scopeManager.lookupScope(baseType.root.name)
+                state.symbols.resolveSymbol(
+                    symbol = node.name.localName,
+                    startScope = scope!!,
+                    language = node.language,
+                    qualifiedLookup = true,
+                )
+            } else {
+                state.symbols.resolveSymbol(
+                    symbol = node.name.localName,
+                    startScope = node.scope!!,
+                    language = node.language,
+                    qualifiedLookup = false,
+                )
+            }
+        println(candidates)
+
+        // Let's set it here for now, but also to the final state, maybe it's helpful for
+        // later
+        state.push(node, PowersetLatticeDeclaration(candidates))
+        node.candidates = candidates
+
+        // Now it's getting interesting! We need to make the final decision based on whether
+        // this a simple reference to a variable or if we are the callee of a call
+        // expression
+        val call = node.astParent as? CallExpression
+        if (call != null) {
+            decideInvokesBasedOnCandidates(node, call)
+        } else {
+            // Reference to a variable
+            node.refersTo = candidates.firstOrNull()
+        }
+    }
+
+    private fun handleDeclaration(state: DeclarationState, node: Declaration) {
+        // Push declaration into scope
+        state.symbols.push(node.scope, PowersetLatticeDeclaration(identitySetOf(node)))
+    }
 }
 
 // TODO: we could do this easier if we would have a lattice that combines the symbols across the
-// scopes and doing the shadowing
+//  scopes and doing the shadowing
 private fun State<Scope?, Set<Declaration>>.resolveSymbol(
     symbol: Symbol,
     language: Language<*>,
