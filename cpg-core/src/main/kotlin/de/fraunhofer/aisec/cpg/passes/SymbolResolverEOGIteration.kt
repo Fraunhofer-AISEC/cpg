@@ -26,17 +26,24 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.frontends.HasImplicitReceiver
+import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
+import de.fraunhofer.aisec.cpg.graph.firstScopeParentOrNull
+import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
+import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
+import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.LatticeElement
 import de.fraunhofer.aisec.cpg.helpers.State
-import de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation
 import de.fraunhofer.aisec.cpg.helpers.Util.infoWithFileLocation
 import de.fraunhofer.aisec.cpg.helpers.Worklist
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
@@ -67,13 +74,14 @@ class PowersetLatticeDeclaration(override val elements: IdentitySet<Declaration>
 }
 
 @DependsOn(EvaluationOrderGraphPass::class)
+@DependsOn(TypeResolver::class)
 class SymbolResolverEOGIteration(ctx: TranslationContext) : EOGStarterPass(ctx) {
     override fun cleanup() {
         // Nothing to clean up
     }
 
     class DeclarationState : State<Node, Set<Declaration>>() {
-        val symbols: State<Scope, Set<Declaration>> = State()
+        val symbols: State<Scope?, Set<Declaration>> = State()
         val candidates: State<Node, Set<Declaration>> = State()
 
         override fun duplicate(): DeclarationState {
@@ -91,7 +99,26 @@ class SymbolResolverEOGIteration(ctx: TranslationContext) : EOGStarterPass(ctx) 
 
         val startState = DeclarationState()
 
-        startState.symbols.push(t.scope!!, PowersetLatticeDeclaration(identitySetOf()))
+        // Push all global symbols (sort of legacy, in the future they should also go through the
+        // EOG)
+        startState.symbols.push(
+            ctx.scopeManager.globalScope,
+            PowersetLatticeDeclaration(
+                ctx.scopeManager.globalScope.symbols.values.flatten().toIdentitySet()
+            ),
+        )
+
+        // Push all record symbols (legacy, need to visit EOG in the future)
+        ctx.scopeManager
+            .filterScopes { it is NameScope }
+            .forEach {
+                startState.symbols.push(
+                    it,
+                    PowersetLatticeDeclaration(it.symbols.values.flatten().toIdentitySet()),
+                )
+            }
+
+        startState.symbols.push(t.scope, PowersetLatticeDeclaration(identitySetOf()))
         val finalState =
             iterateEOG(t.nextEOGEdges, startState, ::transfer) as? DeclarationState ?: return
         finalState.symbols.forEach { println(it) }
@@ -107,31 +134,62 @@ class SymbolResolverEOGIteration(ctx: TranslationContext) : EOGStarterPass(ctx) 
         }
 
         val node = currentEdge.end
-        if (node is Declaration) {
-            // Push declaration into scope
-            state.symbols.push(node.scope!!, PowersetLatticeDeclaration(identitySetOf(node)))
-        } else if (node is Reference) {
-            if (node is MemberExpression) {
-                errorWithFileLocation(node, log, "Cannot resolve member expression for now")
-                return state
+        when (node) {
+            is Declaration -> {
+                // Push declaration into scope
+                state.symbols.push(node.scope!!, PowersetLatticeDeclaration(identitySetOf(node)))
             }
-            infoWithFileLocation(
-                node,
-                log,
-                "Resolving reference. {} scopes are active",
-                state.symbols.size,
-            )
-            // Lookup symbol here or after the final state?
-            var candidates =
-                state.symbols.resolveSymbol(node.name.localName, startScope = node.scope!!)
-            println(candidates)
+            is Reference -> {
+                infoWithFileLocation(
+                    node,
+                    log,
+                    "Resolving reference. {} scopes are active",
+                    state.symbols.size,
+                )
+                // Lookup symbol here or after the final state?
+                var candidates =
+                    if (node is MemberExpression) {
+                        // We need to extract the scope from the base type and then do a qualified
+                        // lookup
+                        val baseType = ((node.base as? Reference)?.refersTo as? HasType)?.type
+                        val scope = ctx.scopeManager.lookupScope(baseType!!.root.name)
+                        println(scope)
+                        state.symbols.resolveSymbol(
+                            symbol = node.name.localName,
+                            startScope = scope!!,
+                            language = node.language,
+                            qualifiedLookup = true,
+                        )
+                    } else {
+                        state.symbols.resolveSymbol(
+                            symbol = node.name.localName,
+                            startScope = node.scope!!,
+                            language = node.language,
+                            qualifiedLookup = false,
+                        )
+                    }
+                println(candidates)
 
-            // Let set it here for now, but also to the final state, maybe it's helpful for later
-            state.push(node, PowersetLatticeDeclaration(candidates))
-            node.candidates = candidates
+                // Let's set it here for now, but also to the final state, maybe it's helpful for
+                // later
+                state.push(node, PowersetLatticeDeclaration(candidates))
+                node.candidates = candidates
 
-            // Set the refers to
-            node.refersTo = candidates.firstOrNull()
+                // Now it's getting interesting! We need to make the final decision based on whether
+                // this a simple reference to a variable or if we are the callee of a call
+                // expression
+                val call = node.astParent as? CallExpression
+                if (call != null) {
+                    // Reference to a function via a call expression
+                    // TODO: arguments
+                    call.invokes =
+                        candidates.filterIsInstance<FunctionDeclaration>().toMutableList()
+                    node.refersTo = call.invokes.firstOrNull()
+                } else {
+                    // Reference to a variable
+                    node.refersTo = candidates.firstOrNull()
+                }
+            }
         }
 
         return state
@@ -140,23 +198,39 @@ class SymbolResolverEOGIteration(ctx: TranslationContext) : EOGStarterPass(ctx) 
 
 // TODO: we could do this easier if we would have a lattice that combines the symbols across the
 // scopes and doing the shadowing
-private fun State<Scope, Set<Declaration>>.resolveSymbol(
-    string: String,
+private fun State<Scope?, Set<Declaration>>.resolveSymbol(
+    symbol: Symbol,
+    language: Language<*>,
     startScope: Scope,
+    qualifiedLookup: Boolean,
 ): IdentitySet<Declaration> {
     val symbols = identitySetOf<Declaration>()
     var scope: Scope? = startScope
-    // Let's see if we have any state for the start scope.
+
+    // TODO: support modified scope
+    val modifiedScoped = null
 
     while (scope != null) {
         var scopeSymbols = this[scope]?.elements
-        scopeSymbols?.filterTo(symbols) { it.name.localName == string }
+        scopeSymbols?.filterTo(symbols) { it.name.localName == symbol }
         if (symbols.isNotEmpty() == true) {
             return symbols
         }
 
         // If we didn't find the symbol in the current scope, we need to check the parent scope
-        scope = scope.parent
+        scope =
+            if (qualifiedLookup || modifiedScoped != null) {
+                break
+            } else {
+                // If our language needs explicit lookup for fields (and other class members),
+                // we need to skip record scopes unless we are in a qualified lookup
+                if (language !is HasImplicitReceiver && scope.parent is RecordScope) {
+                    scope.firstScopeParentOrNull { it !is RecordScope }
+                } else {
+                    // Otherwise, we can just go to the next parent
+                    scope.parent
+                }
+            }
     }
 
     return symbols
