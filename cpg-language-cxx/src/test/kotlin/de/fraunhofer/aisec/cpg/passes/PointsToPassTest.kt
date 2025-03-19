@@ -1013,7 +1013,10 @@ class PointsToPassTest {
         assertEquals(bDecl.memoryAddresses.singleOrNull(), bRefLine138.memoryAddresses.first())
         assertEquals(1, bRefLine138.fullMemoryValues.size)
         assertEquals(aDecl.memoryAddresses.single(), bRefLine138.fullMemoryValues.first())
-        assertEquals(bDecl, bRefLine138.prevDFG.singleOrNull())
+
+        assertEquals(2, bRefLine138.prevDFG.size)
+        assertEquals(setOf<Node>(bDecl, literal10), bRefLine138.prevDFG)
+        assertEquals(bDecl, bRefLine138.prevFullDFG.singleOrNull())
 
         assertEquals(1, bPointerDerefLine138.memoryAddresses.size)
         assertEquals(
@@ -1038,14 +1041,18 @@ class PointsToPassTest {
         assertEquals(bDecl.memoryAddresses.singleOrNull(), bRefLine139.memoryAddresses.first())
         assertEquals(1, bRefLine139.fullMemoryValues.size)
         assertEquals(aDecl.memoryAddresses.single(), bRefLine139.fullMemoryValues.first())
-        assertEquals(1, bRefLine139.prevDFG.size)
-        assertEquals(bDecl, bRefLine139.prevDFG.first())
+
+        assertEquals(2, bRefLine139.prevDFG.size)
+        assertEquals(setOf<Node>(bDecl, literal10), bRefLine139.prevDFG)
+        assertEquals(bDecl, bRefLine139.prevFullDFG.singleOrNull())
 
         assertEquals(1, cRefLine139.memoryAddresses.size)
         assertEquals(cDecl.memoryAddresses.singleOrNull(), cRefLine139.memoryAddresses.first())
         assertEquals(1, cRefLine139.fullMemoryValues.size)
         assertEquals(bDecl.memoryAddresses.single(), cRefLine139.fullMemoryValues.first())
-        assertEquals(cDecl, cRefLine139.prevDFG.singleOrNull())
+        assertEquals(cDecl, cRefLine139.prevFullDFG.singleOrNull())
+        // TODO: There are many more prevDFG edges. Should they actually exist or should we remove
+        // them and add them transitively?
 
         assertEquals(1, cPointerDerefLine139.memoryAddresses.size)
         assertEquals(
