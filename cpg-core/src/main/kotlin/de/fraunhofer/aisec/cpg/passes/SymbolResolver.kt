@@ -525,12 +525,13 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
         // Set the start scope. This can either be the call's scope or a scope specified in an FQN.
         // If our base is a dynamic or unknown type, we can skip the scope extraction because it
-        // will always
-        // fail
+        // will always fail
         val extractedScope =
             if (
                 source is MemberCallExpression &&
-                    (source.base?.type is DynamicType || source.base?.type is UnknownType)
+                    (source.base?.type is DynamicType ||
+                        source.base?.type is UnknownType ||
+                        source.base?.type is AutoType)
             ) {
                 ScopeManager.ScopeExtraction(null, Name(""))
             } else {

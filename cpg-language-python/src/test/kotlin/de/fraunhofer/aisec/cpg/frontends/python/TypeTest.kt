@@ -58,8 +58,10 @@ class TypeTest {
 
         val bar = result.variables["bar"]
         assertNotNull(bar)
+        assertEquals(setOf("dfg_type.Bar"), bar.assignedTypes.map { it.typeName }.toSet())
 
         val a = result.variables["a"]
         assertNotNull(a)
+        assertEquals(setOf("str", "int"), a.assignedTypes.map { it.typeName }.toSet())
     }
 }
