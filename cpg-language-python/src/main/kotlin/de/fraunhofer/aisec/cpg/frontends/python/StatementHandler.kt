@@ -789,7 +789,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      */
     private fun handleAnnAssign(node: Python.AST.AnnAssign): AssignExpression {
         val lhs = frontend.expressionHandler.handle(node.target)
-        lhs.type = frontend.typeOf(node.annotation)
+        lhs.assignedTypes += frontend.typeOf(node.annotation)
         val rhs = node.value?.let { listOf(frontend.expressionHandler.handle(it)) } ?: emptyList()
         return newAssignExpression(lhs = listOf(lhs), rhs = rhs, rawNode = node)
     }
@@ -826,7 +826,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         val lhs = node.targets.map { frontend.expressionHandler.handle(it) }
         node.type_comment?.let { typeComment ->
             val tpe = frontend.typeOf(typeComment)
-            lhs.forEach { it.type = tpe }
+            lhs.forEach { it.assignedTypes += tpe }
         }
         val rhs = frontend.expressionHandler.handle(node.value)
         if (rhs is List<*>)

@@ -44,9 +44,9 @@ import de.fraunhofer.aisec.cpg.graph.unknownType
 interface HasType : LanguageProvider {
 
     /**
-     * This property refers to the *definite* [Type] that the [Node] has. If you are unsure about
-     * what it's type is, you should prefer to set it to the [UnknownType]. It is usually one of the
-     * following:
+     * This property refers to the *definite* [Type] that the [Node] has during *compile-time*. If
+     * you are unsure about what it's type is, you should prefer to set it to the [UnknownType]. It
+     * is usually one of the following:
      * - the type declared by the [Node], e.g., by a [ValueDeclaration]
      * - intrinsically tied to the node, e.g. an [IntegerType] in an integer [Literal]
      * - the [Type] of a declaration a node is referring to, e.g., in a [Reference]
@@ -56,10 +56,10 @@ interface HasType : LanguageProvider {
     var type: Type
 
     /**
-     * This property refers to a list of [Type] nodes which are assigned to that [Node]. This could
-     * be different from the [HasType.type]. A common example is that a node could contain an
-     * interface as a [HasType.type], but the actual implementation of the type as one of the
-     * [assignedTypes]. This could potentially also be empty, if we don't see any assignments to
+     * This property refers to a list of [Type] nodes which are assigned to that [Node] at-runtime.
+     * This could be different from the [HasType.type]. A common example is that a node could
+     * contain an interface as a [HasType.type], but the actual implementation of the type as one of
+     * the [assignedTypes]. This could potentially also be empty, if we don't see any assignments to
      * this expression.
      *
      * Note: in order to properly inform observers, one should NOT use the regular [MutableSet.add]
@@ -246,6 +246,18 @@ class InitializerTypePropagation(private var decl: HasType, private var tupleIdx
     }
 
     override fun assignedTypeChanged(assignedTypes: Set<Type>, src: HasType) {
-        // TODO
+        // Also propagate the assigned types to the declaration. This is important for languages
+        // with dynamic types because we rely on the assigned types and the dynamic type always
+        // stays the "dynamic type".
+        val assignedTypes =
+            assignedTypes.map {
+                if (it is TupleType && tupleIdx != -1) {
+                    it.types.getOrElse(tupleIdx) { decl.unknownType() }
+                } else {
+                    it
+                }
+            }
+
+        decl.addAssignedTypes(assignedTypes.toSet())
     }
 }

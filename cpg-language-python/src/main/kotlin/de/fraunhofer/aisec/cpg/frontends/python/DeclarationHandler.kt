@@ -212,14 +212,14 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
         isKwoOnly: Boolean = false,
         defaultValue: Expression? = null,
     ): ParameterDeclaration {
-        val type = frontend.typeOf(node.annotation)
         val arg =
             newParameterDeclaration(
                 name = node.arg,
-                type = type,
+                type = dynamicType(),
                 variadic = isVariadic,
                 rawNode = node,
             )
+        arg.assignedTypes += frontend.typeOf(node.annotation)
         defaultValue?.let { arg.default = it }
         if (isPosOnly) {
             arg.modifiers += MODIFIER_POSITIONAL_ONLY_ARGUMENT

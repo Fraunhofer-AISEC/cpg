@@ -254,7 +254,15 @@ open class CallExpression :
     }
 
     override fun assignedTypeChanged(assignedTypes: Set<Type>, src: HasType) {
-        // Nothing to do
+        // Propagate assigned func types from the function declaration to the call expression
+        val assignedFuncTypes = assignedTypes.filterIsInstance<FunctionType>()
+        assignedFuncTypes.forEach {
+            if (it.returnTypes.size == 1) {
+                addAssignedType(it.returnTypes.single())
+            } else if (it.returnTypes.size > 1) {
+                addAssignedType(TupleType(it.returnTypes))
+            }
+        }
     }
 
     override fun toString(): String {

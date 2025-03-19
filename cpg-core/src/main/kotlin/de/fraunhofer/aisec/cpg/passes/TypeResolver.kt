@@ -71,6 +71,7 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         if (node is HasType) {
             var type = node.type.root
             handleType(type)
+            node.assignedTypes.forEach { handleType(it.root) }
         } else if (node is DeclaresType) {
             handleType(node.declaredType)
         }
