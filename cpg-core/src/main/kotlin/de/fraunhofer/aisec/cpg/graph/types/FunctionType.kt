@@ -85,6 +85,14 @@ constructor(
             return type
         }
 
+        /**
+         * This helper function builds a function signature out of an existing [FunctionDeclaration]
+         * and potential return types.
+         *
+         * Its main use-case is to have a human-readable representation of the function type. For
+         * example `foo(Bar)string` for a function `foo` with parameter types `Bar` and return type
+         * `string`.
+         */
         fun buildSignature(func: FunctionDeclaration, returnTypes: List<Type>): String =
             func.name.localName +
                 func.parameters.joinToString(COMMA + WHITESPACE, BRACKET_LEFT, BRACKET_RIGHT) {

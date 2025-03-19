@@ -44,7 +44,7 @@ import de.fraunhofer.aisec.cpg.graph.unknownType
 interface HasType : LanguageProvider {
 
     /**
-     * This property refers to the *definite* [Type] that the [Node] has. If you are unsure about
+     * This property refers to the *definite* [Type] that the [Node] has during *compile-time*. If you are unsure about
      * what it's type is, you should prefer to set it to the [UnknownType]. It is usually one of the
      * following:
      * - the type declared by the [Node], e.g., by a [ValueDeclaration]
@@ -56,7 +56,7 @@ interface HasType : LanguageProvider {
     var type: Type
 
     /**
-     * This property refers to a list of [Type] nodes which are assigned to that [Node]. This could
+     * This property refers to a list of [Type] nodes which are assigned to that [Node] at-runtime. This could
      * be different from the [HasType.type]. A common example is that a node could contain an
      * interface as a [HasType.type], but the actual implementation of the type as one of the
      * [assignedTypes]. This could potentially also be empty, if we don't see any assignments to
