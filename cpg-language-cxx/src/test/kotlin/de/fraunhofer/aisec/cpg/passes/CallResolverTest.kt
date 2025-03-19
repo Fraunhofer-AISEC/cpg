@@ -749,6 +749,23 @@ class CallResolverTest : BaseTest() {
         assertEquals(2, declarations.size)
     }
 
+    @Test
+    @Throws(Exception::class)
+    fun testEOGSymbolResolver() {
+        val result =
+            analyze(
+                listOf(Path.of(topLevel.toString(), "symbols.cpp").toFile()),
+                topLevel,
+                usePasses = false,
+            ) {
+                it.registerPass<SymbolResolverEOGIteration>()
+                it.registerLanguage<CPPLanguage>()
+            }
+        assertNotNull(result)
+
+        result.refs.forEach { assertNotNull(it.refs) }
+    }
+
     companion object {
         private val topLevel = Path.of("src", "test", "resources", "calls")
     }
