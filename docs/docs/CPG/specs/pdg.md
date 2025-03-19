@@ -34,6 +34,7 @@ class Main {
     }
 }
 ```
+
 If you want to know if the key is printed by the program, then you will follow
 the DFG and you won't find a direct dataflow between the call to `generateKey`
 and the call to `println`.
@@ -51,6 +52,7 @@ This feature can easily be used through the
 
 As an example, we receive an empty list for when running the following query
 traversing only the DFG:
+
 ```kotlin
 val dfgOnly =
     key.followDFGEdgesUntilHit(
@@ -62,8 +64,10 @@ val dfgOnly =
     }
 println(dfgOnly.fulfilled)
 ```
+
 In contrast, we do find the paths between the two nodes when paths when
 running the same query with `Imlicit` specifying
+
 ```kotlin
 val pdg =
     key.followDFGEdgesUntilHit(

@@ -39,6 +39,10 @@ body {
   font-size: 0.7rem;
 }
 
+.admonition.warning p {
+  border: 0px;
+}
+
 .md-typeset hr {
   border: 1px solid #c7cacc;
   border-top: none;

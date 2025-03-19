@@ -13,7 +13,7 @@ description: >
 
 The CPG can be used in different ways:
 
-* [Using the Codyze CLI](./codyze.md)
+* [Using Codyze](./codyze.md)
 * [As a library for Kotlin/Java](./library.md)
 * [With custom automated analyses using the Query API](./query.md)
 * [Via neo4j](./neo4j.md)

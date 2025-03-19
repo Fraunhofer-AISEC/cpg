@@ -70,7 +70,8 @@ programming language.
 
   * The graph can be exported to the graph database [neo4j](https://neo4j.com)
   * The CPG can be included into every project as a library
-  * We offer an interactive CLI ([Codyze](./GettingStarted/codyze.md)) to explore the graph
+  * We offer an interactive webconsole ([Codyze](./GettingStarted/codyze.md)) to explore the graph
+  * [Codyze](./GettingStarted/codyze.md) provides a standalone tool checking for compliance of your software artifacts with certain requirements
   * We provide an API for querying the graph for interesting properties
   </div>
 
