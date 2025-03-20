@@ -202,6 +202,13 @@ class SymbolResolverEOGIteration(ctx: TranslationContext) : EOGStarterPass(ctx) 
                 }
             }
         }
+
+        finalState.types.forEach { node, types ->
+            if (node is HasType) {
+                node.type = types.commonType ?: unknownType()
+                node.assignedTypes = types.toSet()
+            }
+        }
     }
 
     protected open fun transfer(
