@@ -40,13 +40,14 @@ import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.LatticeElement
 import de.fraunhofer.aisec.cpg.helpers.Util.infoWithFileLocation
 import de.fraunhofer.aisec.cpg.helpers.functional.Lattice
 import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
-import de.fraunhofer.aisec.cpg.helpers.functional.TupleLattice
+import de.fraunhofer.aisec.cpg.helpers.functional.TripleLattice
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 
@@ -58,6 +59,10 @@ typealias PowersetLatticeDeclarationLattice = PowersetLattice<Declaration>
 
 typealias PowersetLatticeDeclarationElement = PowersetLattice.Element<Declaration>
 
+typealias PowersetLatticeTypeLattice = PowersetLattice<Type>
+
+typealias PowersetLatticeTypeElement = PowersetLattice.Element<Type>
+
 typealias ScopeToDeclarationLattice = MapLattice<Scope, PowersetLatticeDeclarationElement>
 
 typealias ScopeToDeclarationElement = MapLattice.Element<Scope, PowersetLatticeDeclarationElement>
@@ -66,10 +71,15 @@ typealias NodeToDeclarationLattice = MapLattice<Node, PowersetLatticeDeclaration
 
 typealias NodeToDeclarationElement = MapLattice.Element<Node, PowersetLatticeDeclarationElement>
 
-typealias DeclarationStateElement =
-    TupleLattice.Element<ScopeToDeclarationElement, NodeToDeclarationElement>
+typealias NodeToTypeLattice = MapLattice<Node, PowersetLatticeTypeElement>
 
-typealias DeclarationState = TupleLattice<ScopeToDeclarationElement, NodeToDeclarationElement>
+typealias NodeToTypeElement = MapLattice.Element<Node, PowersetLatticeTypeElement>
+
+typealias DeclarationStateElement =
+    TripleLattice.Element<ScopeToDeclarationElement, NodeToDeclarationElement, NodeToTypeElement>
+
+typealias DeclarationState =
+    TripleLattice<ScopeToDeclarationElement, NodeToDeclarationElement, NodeToTypeElement>
 
 val DeclarationStateElement.symbols
     get() = this.first
@@ -77,22 +87,27 @@ val DeclarationStateElement.symbols
 val DeclarationStateElement.candidates
     get() = this.second
 
-fun DeclarationStateElement.pushScope(
+val DeclarationStateElement.types
+    get() = this.third
+
+// TODO: alex is lub'ing
+fun DeclarationStateElement.pushDeclarationToScope(
     scope: Scope,
     vararg elements: Declaration,
 ): DeclarationStateElement {
     val newSymbols = this.symbols.duplicate()
     newSymbols.computeIfAbsent(scope) { PowersetLatticeDeclarationElement() }.addAll(elements)
-    return DeclarationStateElement(newSymbols, this.candidates.duplicate())
+    return DeclarationStateElement(newSymbols, this.candidates.duplicate(), this.types.duplicate())
 }
 
+// TODO: alex is lub'ing
 fun DeclarationStateElement.pushCandidate(
     scope: Node,
     vararg elements: Declaration,
 ): DeclarationStateElement {
     val newCandidates = this.candidates.duplicate()
     newCandidates.computeIfAbsent(scope) { PowersetLatticeDeclarationElement() }.addAll(elements)
-    return DeclarationStateElement(this.symbols.duplicate(), newCandidates)
+    return DeclarationStateElement(this.symbols.duplicate(), newCandidates, this.types.duplicate())
 }
 
 @DependsOn(EvaluationOrderGraphPass::class)
@@ -111,24 +126,36 @@ class SymbolResolverEOGIteration(ctx: TranslationContext) : EOGStarterPass(ctx) 
             DeclarationState(
                 ScopeToDeclarationLattice(PowersetLatticeDeclarationLattice()),
                 NodeToDeclarationLattice(PowersetLatticeDeclarationLattice()),
+                NodeToTypeLattice(PowersetLatticeTypeLattice()),
             )
 
-        val startState =
-            DeclarationStateElement(ScopeToDeclarationElement(), NodeToDeclarationElement())
+        var startState =
+            DeclarationStateElement(
+                ScopeToDeclarationElement(),
+                NodeToDeclarationElement(),
+                NodeToTypeElement(),
+            )
 
         // Push all global symbols (sort of legacy, in the future they should also go through the
         // EOG)
-        startState.pushScope(
-            ctx.scopeManager.globalScope,
-            *ctx.scopeManager.globalScope.symbols.values.flatten().toTypedArray(),
-        )
+        startState =
+            startState.pushDeclarationToScope(
+                ctx.scopeManager.globalScope,
+                *ctx.scopeManager.globalScope.symbols.values.flatten().toTypedArray(),
+            )
 
         // Push all record symbols (legacy, need to visit EOG in the future)
         ctx.scopeManager
             .filterScopes { it is NameScope }
-            .forEach { startState.pushScope(it, *it.symbols.values.flatten().toTypedArray()) }
+            .forEach {
+                startState =
+                    startState.pushDeclarationToScope(
+                        it,
+                        *it.symbols.values.flatten().toTypedArray(),
+                    )
+            }
 
-        t.scope?.let { startState.pushScope(it) }
+        t.scope?.let { startState = startState.pushDeclarationToScope(it) }
         val finalState = lattice.iterateEOG(t.nextEOGEdges, startState, ::transfer)
 
         finalState.symbols.forEach { println(it) }
@@ -211,7 +238,7 @@ class SymbolResolverEOGIteration(ctx: TranslationContext) : EOGStarterPass(ctx) 
         node: Declaration,
     ): DeclarationStateElement {
         // Push declaration into scope
-        return node.scope?.let { state.pushScope(it, node) } ?: state
+        return node.scope?.let { state.pushDeclarationToScope(it, node) } ?: state
     }
 }
 

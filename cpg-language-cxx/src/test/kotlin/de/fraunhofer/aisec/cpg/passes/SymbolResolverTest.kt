@@ -43,7 +43,9 @@ class SymbolResolverTest {
                 it.registerPass<SymbolResolverEOGIteration>()
             }
         assertNotNull(result)
-        result.refs.forEach { assertNotNull(it.refersTo) }
+        result.refs.forEach {
+            assertNotNull(it.refersTo, "${it} should not have an empty refersTo")
+        }
     }
 
     @Test
