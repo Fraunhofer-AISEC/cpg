@@ -60,6 +60,7 @@ class SymbolResolverTest {
             analyze(listOf(file), file.parentFile.toPath(), usePasses = false) {
                 it.registerLanguage<CPPLanguage>()
                 it.registerPass<SymbolResolverEOGIteration>()
+                it.disableTypeObserver()
             }
         assertNotNull(result)
         result.refs.forEach { assertNotNull(it.refersTo) }
@@ -73,6 +74,7 @@ class SymbolResolverTest {
             analyze(listOf(file), file.parentFile.toPath(), usePasses = false) {
                 it.registerLanguage<CPPLanguage>()
                 it.registerPass<SymbolResolverEOGIteration>()
+                it.disableTypeObserver()
             }
         assertNotNull(result)
         result.refs.forEach { assertNotNull(it.refersTo) }
