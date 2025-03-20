@@ -27,9 +27,11 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.types.BooleanType
 import de.fraunhofer.aisec.cpg.test.analyze
 import java.io.File
 import kotlin.test.Test
+import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -43,9 +45,11 @@ class SymbolResolverTest {
                 it.registerPass<SymbolResolverEOGIteration>()
             }
         assertNotNull(result)
-        result.refs.forEach {
-            assertNotNull(it.refersTo, "${it} should not have an empty refersTo")
-        }
+        result.refs.forEach { assertNotNull(it.refersTo, "$it should not have an empty refersTo") }
+
+        val ifCondition = result.ifs.firstOrNull()?.condition
+        assertNotNull(ifCondition)
+        assertIs<BooleanType>(ifCondition.type)
     }
 
     @Test
