@@ -43,6 +43,8 @@ import org.neo4j.ogm.annotation.Relationship
 @NodeEntity
 abstract class ValueDeclaration : Declaration(), HasType, HasAliases {
 
+    override var observerEnabled: Boolean = true
+
     override val typeObservers: MutableSet<HasType.TypeObserver> = identitySetOf()
 
     override var language: Language<*> = UnknownLanguage

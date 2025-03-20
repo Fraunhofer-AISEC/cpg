@@ -48,6 +48,9 @@ import org.neo4j.ogm.annotation.Transient
  */
 @NodeEntity
 abstract class Expression : Statement(), HasType {
+
+    override var observerEnabled: Boolean = true
+
     /**
      * Is this node used for writing data instead of just reading it? Determines dataflow direction
      */

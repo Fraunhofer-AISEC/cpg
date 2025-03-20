@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types
 
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.graph.LanguageProvider
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
@@ -42,6 +43,13 @@ import de.fraunhofer.aisec.cpg.graph.unknownType
  * types should derive from these two base classes.
  */
 interface HasType : LanguageProvider {
+
+    /**
+     * This property is used to determine if the type propagation using [TypeObserver] is enabled
+     * for this node. This property is set to `true` by default. This property can be set to `false`
+     * by [Node.applyMetadata] based on [TranslationConfiguration.disableTypeObserver].
+     */
+    var observerEnabled: Boolean
 
     /**
      * This property refers to the *definite* [Type] that the [Node] has during *compile-time*. If
