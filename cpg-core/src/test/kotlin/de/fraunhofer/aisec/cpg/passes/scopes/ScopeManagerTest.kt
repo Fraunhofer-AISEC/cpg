@@ -44,80 +44,105 @@ internal class ScopeManagerTest : BaseTest() {
     @Test
     fun testMerge() {
         val tm = TypeManager()
-        val s1 = ScopeManager()
-        val ctx = TranslationContext(config, s1, tm)
-        val language = TestLanguageWithColon(ctx)
-        val frontend1 = TestLanguageFrontend(ctx, language)
-        s1.resetToGlobal(frontend1.newTranslationUnitDeclaration("f1.cpp", null))
-        with(frontend1) {
-            // build a namespace declaration in f1.cpp with the namespace A
-            val namespaceA1 = frontend1.newNamespaceDeclaration("A")
-            s1.enterScope(namespaceA1)
-            val func1 = frontend1.newFunctionDeclaration("func1")
-            s1.addDeclaration(func1)
-            s1.leaveScope(namespaceA1)
-            s1.addDeclaration(namespaceA1)
 
-            val s2 = ScopeManager()
-            val frontend2 = TestLanguageFrontend(TranslationContext(config, s2, tm), language)
-            s2.resetToGlobal(frontend2.newTranslationUnitDeclaration("f1.cpp", null))
+        val rootCtx = TranslationContext(config, tm)
+        val language = TestLanguageWithColon()
 
-            // and do the same in the other file
-            val namespaceA2 = frontend2.newNamespaceDeclaration("A")
-            s2.enterScope(namespaceA2)
-            val func2 = frontend2.newFunctionDeclaration("func2")
-            s2.addDeclaration(func2)
-            s2.leaveScope(namespaceA2)
-            s2.addDeclaration(namespaceA2)
+        val ctx1 = TranslationContext(config, tm)
+        val s1 = ctx1.scopeManager
 
-            // merge the two scopes. this replicates the behaviour of parseParallel
-            val final = ScopeManager()
-            final.mergeFrom(listOf(s1, s2))
+        val frontend1 = TestLanguageFrontend(ctx1, language)
+        val (func1, namespaceA1) =
+            with(frontend1) {
+                val tu1 = frontend1.newTranslationUnitDeclaration("f1.cpp", null)
+                s1.resetToGlobal(tu1)
 
-            // in the final scope manager, there should only be one NameScope "A"
-            val scopes = final.filterScopes { it.name.toString() == "A" }
-            assertEquals(1, scopes.size)
+                // build a namespace declaration in f1.cpp with the namespace A
+                val namespaceA1 = frontend1.newNamespaceDeclaration("A")
+                s1.enterScope(namespaceA1)
 
-            val scopeA = scopes.firstOrNull() as? NameScope
-            assertNotNull(scopeA)
+                val func1 = frontend1.newFunctionDeclaration("func1")
+                s1.addDeclaration(func1)
+                namespaceA1.declarations += func1
 
-            // should also be able to look up via the FQN
-            assertEquals(scopeA, final.lookupScope(parseName("A")))
+                s1.leaveScope(namespaceA1)
+                s1.addDeclaration(namespaceA1)
+                tu1.declarations += namespaceA1
+                Pair(func1, namespaceA1)
+            }
 
-            // and it should contain both functions from the different file in the same namespace
-            assertContains(scopeA.symbols["func1"] ?: listOf(), func1)
-            assertContains(scopeA.symbols["func2"] ?: listOf(), func2)
+        val ctx2 = TranslationContext(config, tm)
+        val s2 = ctx2.scopeManager
+        val frontend2 = TestLanguageFrontend(ctx2, language)
+        val (func2, namespaceA2) =
+            with(frontend2) {
+                val tu2 = frontend2.newTranslationUnitDeclaration("f1.cpp", null)
+                s2.resetToGlobal(tu2)
 
-            // finally, test whether our two namespace declarations are pointing to the same
-            // NameScope
-            assertEquals(scopeA, final.lookupScope(namespaceA1))
-            assertEquals(scopeA, final.lookupScope(namespaceA2))
+                // and do the same in the other file
+                val namespaceA2 = frontend2.newNamespaceDeclaration("A")
+                s2.enterScope(namespaceA2)
 
-            // in the final scope manager, the global scope should not be any of the merged scope
-            // managers' original global scopes
-            assertFalse(listOf(s1, s2).map { it.globalScope }.contains(final.globalScope))
+                val func2 = frontend2.newFunctionDeclaration("func2")
+                s2.addDeclaration(func2)
+                namespaceA2.declarations += func2
 
-            // resolve symbol
-            val func =
-                final
-                    .lookupSymbolByName(
-                        name = parseName("A::func1"),
-                        language = language,
-                        startScope = final.globalScope,
-                    )
-                    .firstOrNull()
+                s2.leaveScope(namespaceA2)
+                s2.addDeclaration(namespaceA2)
+                tu2.declarations += namespaceA2
+                Pair(func2, namespaceA2)
+            }
 
-            assertEquals(func1, func)
-        }
+        // merge the two scopes. this replicates the behaviour of parseParallel
+        val final = rootCtx.scopeManager
+        final.mergeFrom(listOf(s1, s2))
+
+        // in the final scope manager, there should only be one NameScope "A"
+        val scopes = final.filterScopes { it.name.toString() == "A" }
+        assertEquals(1, scopes.size)
+
+        val scopeA = scopes.firstOrNull() as? NameScope
+        assertNotNull(scopeA)
+
+        // should also be able to look up via the FQN
+        assertEquals(scopeA, final.lookupScope(parseName("A", delimiter = "::")))
+
+        // and it should contain both functions from the different file in the same namespace
+        assertContains(scopeA.symbols["func1"] ?: listOf(), func1)
+        assertContains(scopeA.symbols["func2"] ?: listOf(), func2)
+
+        // finally, test whether our two namespace declarations are pointing to the same
+        // NameScope
+        assertEquals(scopeA, final.lookupScope(namespaceA1))
+        assertEquals(scopeA, final.lookupScope(namespaceA2))
+
+        // in the final scope manager, the global scope should not be any of the merged scope
+        // managers' original global scopes
+        assertNotSame(s1.globalScope, final.globalScope)
+        assertNotSame(s2.globalScope, final.globalScope)
+
+        // resolve symbol
+        val func =
+            final
+                .lookupSymbolByName(
+                    name = parseName("A::func1", delimiter = "::"),
+                    language = language,
+                    startScope = final.globalScope,
+                )
+                .firstOrNull()
+
+        assertEquals(func1, func)
     }
 
     @Test
     fun testScopeFQN() {
-        val s = ScopeManager()
-        val ctx = TranslationContext(config, s, TypeManager())
-        val frontend = TestLanguageFrontend(ctx, TestLanguageWithColon(ctx))
-        s.resetToGlobal(frontend.newTranslationUnitDeclaration("file.cpp", null))
+        val ctx = TranslationContext(config)
+        val s = ctx.scopeManager
+        val frontend = TestLanguageFrontend(ctx, TestLanguageWithColon())
         with(frontend) {
+            val tu = frontend.newTranslationUnitDeclaration("file.cpp", null)
+            s.resetToGlobal(tu)
+
             assertNull(s.currentNamespace)
 
             val namespaceA = frontend.newNamespaceDeclaration("A", null)
@@ -133,9 +158,12 @@ internal class ScopeManagerTest : BaseTest() {
 
             val func = frontend.newFunctionDeclaration("func")
             s.addDeclaration(func)
+            tu.declarations += func
 
             s.leaveScope(namespaceB)
             s.addDeclaration(namespaceB)
+            namespaceA.declarations += namespaceB
+
             s.leaveScope(namespaceA)
 
             val scope = s.lookupScope(parseName("A::B"))
@@ -145,8 +173,7 @@ internal class ScopeManagerTest : BaseTest() {
 
     @Test
     fun testMatchesSignature() {
-        val s = ScopeManager()
-        val frontend = TestLanguageFrontend(TranslationContext(config, s, TypeManager()))
+        val frontend = TestLanguageFrontend(TranslationContext(config))
         with(frontend) {
             val method =
                 newMethodDeclaration("testMethod").apply {

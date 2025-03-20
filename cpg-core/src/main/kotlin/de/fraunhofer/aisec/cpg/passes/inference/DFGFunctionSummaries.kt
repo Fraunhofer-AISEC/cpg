@@ -32,6 +32,7 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import de.fraunhofer.aisec.cpg.IncompatibleSignature
 import de.fraunhofer.aisec.cpg.SignatureMatches
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.CastNotPossible
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.ContextProvider
@@ -49,6 +50,7 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.matchesSignature
+import de.fraunhofer.aisec.cpg.passes.DFGPass
 import de.fraunhofer.aisec.cpg.tryCast
 import java.io.File
 import org.slf4j.Logger
@@ -56,8 +58,9 @@ import org.slf4j.LoggerFactory
 
 /**
  * If the user of the library registers one or multiple DFG-function summary files (via
- * [Builder.registerFunctionSummaries]), this class is responsible for parsing the files, caching
- * the result and adding the respective DFG summaries to the [FunctionDeclaration].
+ * [TranslationConfiguration.Builder.registerFunctionSummaries]), this class is responsible for
+ * parsing the files, caching the result and adding the respective DFG summaries to the
+ * [FunctionDeclaration].
  */
 class DFGFunctionSummaries {
     private constructor()
@@ -92,7 +95,7 @@ class DFGFunctionSummaries {
      * Adds the DFG edges to the [functionDeclaration] depending on the function summaries which are
      * kept in this object. If no suitable entry was found, this method returns `false`.
      */
-    fun addFlowsToFunctionDeclaration(functionDeclaration: FunctionDeclaration): Boolean {
+    fun DFGPass.addFlowsToFunctionDeclaration(functionDeclaration: FunctionDeclaration): Boolean {
         val dfgEntries = findFunctionDeclarationEntry(functionDeclaration) ?: return false
         applyDfgEntryToFunctionDeclaration(functionDeclaration, dfgEntries)
         return true
@@ -108,8 +111,8 @@ class DFGFunctionSummaries {
             contextProvider.newFunctionDeclaration(language.parseName(declEntry.methodName))
         declEntry.signature?.forEachIndexed { i, typeName ->
             val type =
-                if (contextProvider.ctx?.typeManager?.typeExists(typeName) == true) {
-                    contextProvider.ctx?.typeManager?.lookupResolvedType(typeName)
+                if (contextProvider.ctx.typeManager.typeExists(typeName) == true) {
+                    contextProvider.ctx.typeManager.lookupResolvedType(typeName)
                 } else {
                     var type = ObjectType(typeName, listOf(), false, language)
                     // Apply our usual metadata, such as scope, code, location, if we have any. Make
@@ -121,7 +124,8 @@ class DFGFunctionSummaries {
 
                     // Piping it through register type will ensure that we know the type and can
                     // resolve it later
-                    contextProvider.ctx?.typeManager?.registerType(type)
+                    // contextProvider.ctx.typeManager.registerType(type)
+                    type
                 } ?: language.unknownType()
             inferredFunction.parameters +=
                 contextProvider.newParameterDeclaration(Name("param$i"), type)
@@ -144,13 +148,14 @@ class DFGFunctionSummaries {
      * This method returns the list of [DFGEntry] for the "best match" or `null` if no entry
      * matches.
      */
-    private fun findFunctionDeclarationEntry(functionDecl: FunctionDeclaration): List<DFGEntry>? {
+    private fun DFGPass.findFunctionDeclarationEntry(
+        functionDecl: FunctionDeclaration
+    ): List<DFGEntry>? {
         if (functionToDFGEntryMap.isEmpty()) return null
 
         val language = functionDecl.language
         val languageName = language.javaClass.name
         val methodName = functionDecl.name
-        val typeManager = functionDecl.ctx?.typeManager ?: return null
 
         // The language and the method name have to match. If a signature is specified, it also has
         // to match to the one of the FunctionDeclaration, null indicates that we accept everything.

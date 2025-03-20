@@ -61,7 +61,7 @@ class IniFileConfigurationSourcePass(ctx: TranslationContext) : ConceptPass(ctx)
     }
 
     private fun handleTranslationUnit(tu: TranslationUnitDeclaration): ConfigurationSource {
-        return ConfigurationSource(underlyingNode = tu).also { it.name = tu.name }
+        return newConfigurationSource(underlyingNode = tu).also { it.name = tu.name }
     }
 
     /**
@@ -84,7 +84,7 @@ class IniFileConfigurationSourcePass(ctx: TranslationContext) : ConceptPass(ctx)
         }
 
         val group =
-            ConfigurationGroupSource(underlyingNode = record, conf = conf).also {
+            newConfigurationGroupSource(underlyingNode = record, concept = conf).also {
                 it.name = record.name
             }
 
@@ -116,7 +116,7 @@ class IniFileConfigurationSourcePass(ctx: TranslationContext) : ConceptPass(ctx)
         }
 
         val option =
-            ConfigurationOptionSource(underlyingNode = field, group = group).also {
+            newConfigurationOptionSource(underlyingNode = field, concept = group).also {
                 it.name = field.name
             }
 

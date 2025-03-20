@@ -32,8 +32,6 @@ import de.fraunhofer.aisec.cpg.graph.NodeBuilder.log
 import de.fraunhofer.aisec.cpg.graph.edges.flows.ContextSensitiveDataflow
 import de.fraunhofer.aisec.cpg.graph.statements.ThrowExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CollectionComprehension
 import de.fraunhofer.aisec.cpg.graph.types.ProblemType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 
@@ -653,7 +651,6 @@ fun MetadataProvider.newProblemType(rawNode: Any? = null): ProblemType {
 
 fun <T> Literal<T>.duplicate(implicit: Boolean): Literal<T> {
     val duplicate = Literal<T>()
-    duplicate.ctx = this.ctx
     duplicate.language = this.language
     duplicate.value = this.value
     duplicate.type = this.type
@@ -664,7 +661,6 @@ fun <T> Literal<T>.duplicate(implicit: Boolean): Literal<T> {
     duplicate.argumentIndex = this.argumentIndex
     duplicate.annotations = this.annotations
     duplicate.comment = this.comment
-    duplicate.file = this.file
     duplicate.name = this.name.clone()
     for (edge in this.nextDFGEdges) {
         if (edge is ContextSensitiveDataflow) {
@@ -700,7 +696,6 @@ fun <T> Literal<T>.duplicate(implicit: Boolean): Literal<T> {
 
 fun TypeExpression.duplicate(implicit: Boolean): TypeExpression {
     val duplicate = TypeExpression()
-    duplicate.ctx = this.ctx
     duplicate.name = this.name.clone()
     duplicate.language = this.language
     duplicate.type = this.type

@@ -161,10 +161,13 @@ internal class JavaLanguageFrontendTest : BaseTest() {
     @Test
     fun testTryCatch() {
         val file = File("src/test/resources/components/TryStmt.java")
-        val tu =
-            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+        val result =
+            analyze(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<JavaLanguage>()
             }
+
+        val tu = result.components.firstOrNull()?.translationUnits?.firstOrNull()
+        assertNotNull(tu)
 
         val declaration = tu.declarations[0] as? RecordDeclaration
         assertNotNull(declaration)
@@ -188,7 +191,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         scope = firstCatch.scope
         assertNotNull(scope)
 
-        with(tu) {
+        with(result) {
             // first exception type was? resolved, so we can expect a FQN
             assertEquals(
                 assertResolvedType("java.lang.NumberFormatException"),
@@ -616,21 +619,23 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val tu =
             findByUniqueName(result.components.flatMap { it.translationUnits }, file1.toString())
 
-        val namespace = tu.declarations<NamespaceDeclaration>(0)
-        assertNotNull(namespace)
+        with(result) {
+            val namespace = tu.declarations<NamespaceDeclaration>(0)
+            assertNotNull(namespace)
 
-        val record = namespace.declarations<RecordDeclaration>(0)
-        assertNotNull(record)
+            val record = namespace.declarations<RecordDeclaration>(0)
+            assertNotNull(record)
 
-        val constructor = record.constructors[0]
-        val op = constructor.bodyOrNull<AssignExpression>(0)
-        assertNotNull(op)
+            val constructor = record.constructors[0]
+            val op = constructor.bodyOrNull<AssignExpression>(0)
+            assertNotNull(op)
 
-        val lhs = op.lhs<MemberExpression>()
-        val receiver = (lhs?.base as? Reference)?.refersTo as? VariableDeclaration?
-        assertNotNull(receiver)
-        assertLocalName("this", receiver)
-        assertEquals(tu.assertResolvedType("my.Animal"), receiver.type)
+            val lhs = op.lhs<MemberExpression>()
+            val receiver = (lhs?.base as? Reference)?.refersTo as? VariableDeclaration?
+            assertNotNull(receiver)
+            assertLocalName("this", receiver)
+            assertEquals(assertResolvedType("my.Animal"), receiver.type)
+        }
     }
 
     @Test
@@ -660,7 +665,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
             }
         }
 
-        class MyJavaLanguage(ctx: TranslationContext) : JavaLanguage(ctx) {
+        class MyJavaLanguage : JavaLanguage() {
             override val frontend = MyJavaLanguageFrontend::class
         }
 

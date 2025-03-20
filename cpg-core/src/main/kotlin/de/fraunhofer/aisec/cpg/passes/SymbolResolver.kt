@@ -320,7 +320,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 base is Reference &&
                 base.name.localName == language.superClassKeyword
         ) {
-            language.handleSuperExpression(current, record, scopeManager)
+            with(language) { handleSuperExpression(current, record) }
         }
 
         // Handle a possible overloaded operator->. If we find an overloaded operator, this inserts
@@ -626,7 +626,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                     template.parameters.size - constructExpression.templateArguments.size
                 if (defaultDifference <= template.parameterDefaults.size) {
                     // Check if predefined template value is used as default in next value
-                    addRecursiveDefaultTemplateArgs(constructExpression, template, scopeManager)
+                    addRecursiveDefaultTemplateArgs(constructExpression, template)
 
                     // Add missing defaults
                     val missingNewParams: List<Node?> =

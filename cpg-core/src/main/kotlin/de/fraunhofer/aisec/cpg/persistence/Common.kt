@@ -172,10 +172,12 @@ val KClass<*>.labels: Set<String>
     }
 
 internal val kClassType = KClass::class.createType(listOf(KTypeProjection.STAR))
-internal val nodeType = Node::class.createType()
+internal val persistableType = Persistable::class.createType()
 internal val collectionType = Collection::class.createType(listOf(KTypeProjection.STAR))
-internal val collectionOfNodeType =
-    Collection::class.createType(listOf(KTypeProjection(variance = KVariance.OUT, type = nodeType)))
+internal val collectionOfPersistableType =
+    Collection::class.createType(
+        listOf(KTypeProjection(variance = KVariance.OUT, type = persistableType))
+    )
 internal val edgeCollectionType =
     EdgeCollection::class.createType(listOf(KTypeProjection.STAR, KTypeProjection.STAR))
 internal val mapType = Map::class.createType(listOf(KTypeProjection.STAR, KTypeProjection.STAR))
@@ -268,7 +270,7 @@ private fun isSimpleProperty(property: KProperty1<out Persistable, *>): Boolean 
         returnType.isSubtypeOf(kClassType) -> false
         returnType.isSubtypeOf(collectionType) -> false
         returnType.isSubtypeOf(mapType) -> false
-        returnType.isSubtypeOf(nodeType) -> false
+        returnType.isSubtypeOf(persistableType) -> false
         (returnType.javaType as? Class<*>)?.isInterface == true -> false
         else -> true
     }
@@ -303,8 +305,8 @@ private fun isRelationship(property: KProperty1<out Persistable, *>): Boolean {
         property.javaField?.getAnnotation(Relationship::class.java)?.direction == INCOMING -> false
         property.visibility == KVisibility.PRIVATE -> false
         returnType.isSubtypeOf(edgeCollectionType) -> true
-        returnType.isSubtypeOf(collectionOfNodeType) -> true
-        returnType.isSubtypeOf(nodeType) -> true
+        returnType.isSubtypeOf(collectionOfPersistableType) -> true
+        returnType.isSubtypeOf(persistableType) -> true
         else -> false
     }
 }

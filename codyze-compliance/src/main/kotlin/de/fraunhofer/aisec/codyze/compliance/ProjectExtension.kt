@@ -37,14 +37,6 @@ fun AnalysisProject.loadSecurityGoals(): List<SecurityGoal> {
 }
 
 /**
- * Extends the regular [AnalysisProject.analyze] method with the ability to load security goals and
- * execute queries based on them.
- */
-fun AnalysisProject.analyzeWithGoals(): AnalysisResult {
-    return this.analyze(postProcess = ::executeSecurityGoalsQueries)
-}
-
-/**
  * Executes the security goals queries and returns the security goals as SARIF rules and the query
  * results as SARIF results.
  */

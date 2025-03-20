@@ -29,10 +29,10 @@ jobs:
           java-version: "17"
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.13"
       - uses: actions/setup-node@v4
         with:
-          node-version: "18"
+          node-version: "22"
       - uses: actions/setup-go@v5
         with:
           go-version-file: cpg-language-go/src/test/resources/golang/integration/go.mod
@@ -63,10 +63,10 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
       - name: Build ${{ env.version }}
         run: |
-          ./gradlew --parallel -Pversion=$VERSION spotlessCheck -x spotlessApply build -x distZip -x distTar koverXmlReport koverHtmlReport performanceTest integrationTest
+          ./gradlew --parallel spotlessCheck -x spotlessApply build -x distZip -x distTar koverXmlReport koverHtmlReport performanceTest integrationTest
         id: build
         env:
-          VERSION: ${{ env.version }}
+          ORG_GRADLE_PROJECT_version: ${{ env.version }}
       - name: Prepare report.xml for Codecov
         run: |
           # this is needed because codecov incorrectly reports lines that have no coverage information (good or bad) as a miss
@@ -82,6 +82,12 @@ jobs:
           files: ./build/reports/kover/report-codecov.xml
           token: ${{ secrets.CODECOV_TOKEN }}
           verbose: true
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/test-results-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          os: linux-arm64
       - name: Prepare test and coverage reports
         if: ${{ always() }}
         run: |
@@ -92,71 +98,72 @@ jobs:
         with:
           name: reports
           path: reports.zip
-      - name: Publish to Maven Central
-        if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, 'beta') && !contains(github.ref, 'alpha')
+      - name: Publish to Maven Central (release)
+        if: startsWith(github.ref, 'refs/tags/v')
         run: |
-          export ORG_GRADLE_PROJECT_signingKey=`echo ${{ secrets.GPG_PRIVATE_KEY }} | base64 -d`
-          ./gradlew --no-daemon -Dorg.gradle.internal.publish.checksums.insecure=true --parallel -Pversion=$VERSION -PenableJavaFrontend=true  -PenableCXXFrontend=true -PenableGoFrontend=true -PenablePythonFrontend=true -PenableLLVMFrontend=true -PenableTypeScriptFrontend=true -PenableRubyFrontend=true publishToSonatype closeSonatypeStagingRepository
+          export ORG_GRADLE_PROJECT_signingInMemoryKey=`echo ${{ secrets.GPG_PRIVATE_KEY }} | base64 -d`
+          ./gradlew --no-daemon --parallel publishAllPublicationsToMavenCentralRepository
         env:
-          VERSION: ${{ env.version }}
-          ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.GPG_PASSWORD }}
+          ORG_GRADLE_PROJECT_version: ${{ env.version }}
+          ORG_GRADLE_PROJECT_includeJavadoc: true
+          ORG_GRADLE_PROJECT_signingRequired: true
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.GPG_PASSWORD }}
           ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
           ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
-      - name: Download old dokka versions (version)
-        if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, 'beta') && !contains(github.ref, 'alpha')
-        run: |
-          # make sure the previousDocs folder exists
-          mkdir -p previousDocs && cd previousDocs
-          # retrieve the previous documentation folders for each published version (this also includes "main")
-          wget -O - https://github.com/Fraunhofer-AISEC/cpg/archive/gh-pages.tar.gz | tar -xz --strip=2 cpg-gh-pages/dokka || echo "No dokka directory present. Will continue as if nothing happened"
-      - name: Download old dokka versions (main)
-        if: github.ref == 'refs/heads/main'
-        run: |
-          # make sure the previousDocs folder exists
-          mkdir -p previousDocs && cd previousDocs
-          # retrieve the previous documentation folders for each published version (this also includes "main")
-          wget -O - https://github.com/Fraunhofer-AISEC/cpg/archive/gh-pages.tar.gz | tar -xz --strip=2 cpg-gh-pages/dokka || echo "No dokka directory present. Will continue as if nothing happened"
-          # in order to avoid duplicate mains, remove the "main" version from the previous versions
-          rm -rf main
-      - name: Build JavaDoc
-        if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, 'beta') && !contains(github.ref, 'alpha') || github.ref == 'refs/heads/main'
-        run: |
-          ./gradlew --no-daemon -Pversion=$VERSION dokkaHtmlMultiModule
-        env:
-          VERSION: ${{ env.version }}
-      - name: Publish JavaDoc (version)
-        if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, 'beta') && !contains(github.ref, 'alpha')
-        uses: JamesIves/github-pages-deploy-action@v4
-        with:
-          folder: build/dokkaCustomMultiModuleOutput/${{ env.version }}
-          target-folder: dokka/${{ env.version }}
-      - name: Publish JavaDoc (version as main)
-        if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, 'beta') && !contains(github.ref, 'alpha')
-        uses: JamesIves/github-pages-deploy-action@v4
-        with:
-          folder: build/dokkaCustomMultiModuleOutput/${{ env.version }}
-          target-folder: dokka/main
-      - name: Publish JavaDoc (main)
-        if: github.ref == 'refs/heads/main'
-        uses: JamesIves/github-pages-deploy-action@v4
-        with:
-          folder: build/dokkaCustomMultiModuleOutput/main-SNAPSHOT
-          target-folder: dokka/main
-      - name: Publish to GitHub Packages (as snapshot)
+      - name: Publish to Maven Central (snapshot)
         if: github.ref == 'refs/heads/main' || contains(github.event.pull_request.labels.*.name, 'publish-to-github-packages')
         run: |
-          ./gradlew --parallel -Pversion=$VERSION publishAllPublicationsToGitHubPackagesRepository
+          export ORG_GRADLE_PROJECT_signingInMemoryKey=`echo ${{ secrets.GPG_PRIVATE_KEY }} | base64 -d`
+          ./gradlew --no-daemon --parallel publishAllPublicationsToMavenCentralRepository -x npmInstall
         env:
-          VERSION: ${{ env.version }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      #- name: Publish to GitHub Packages (as commit SHA)
-      #  if: github.ref == 'refs/heads/main' || contains(github.event.pull_request.labels.*.name, 'publish-to-github-packages')
+          ORG_GRADLE_PROJECT_version: ${{ env.version }}
+          ORG_GRADLE_PROJECT_includeJavadoc: false
+          ORG_GRADLE_PROJECT_signingRequired: false
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.GPG_PASSWORD }}
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+      #- name: Download old dokka versions (version)
+      #  if: startsWith(github.ref, 'refs/tags/v')
       #  run: |
-      #    ./gradlew --parallel -Pversion=${GITHUB_SHA::7} publishAllPublicationsToGitHubPackagesRepository
+      #    # make sure the previousDocs folder exists
+      #    mkdir -p previousDocs && cd previousDocs
+      #    # retrieve the previous documentation folders for each published version (this also includes "main")
+      #    wget -O - https://github.com/Fraunhofer-AISEC/cpg/archive/gh-pages.tar.gz | tar -xz --strip=2 cpg-gh-pages/dokka || echo "No dokka directory present. Will continue as if nothing happened"
+      #- name: Download old dokka versions (main)
+      #  if: github.ref == 'refs/heads/main'
+      #  run: |
+      #    # make sure the previousDocs folder exists
+      #    mkdir -p previousDocs && cd previousDocs
+      #    # retrieve the previous documentation folders for each published version (this also includes "main")
+      #    wget -O - https://github.com/Fraunhofer-AISEC/cpg/archive/gh-pages.tar.gz | tar -xz --strip=2 cpg-gh-pages/dokka || echo "No dokka directory present. Will continue as if nothing happened"
+      #    # in order to avoid duplicate mains, remove the "main" version from the previous versions
+      #    rm -rf main
+      #- name: Build JavaDoc
+      #  if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main'
+      #  run: |
+      #    ./gradlew --no-daemon -Pversion=$VERSION dokkaHtmlMultiModule
       #  env:
-      #    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #    VERSION: ${{ env.version }}
+      #- name: Publish JavaDoc (version)
+      #  if: startsWith(github.ref, 'refs/tags/v')
+      #  uses: JamesIves/github-pages-deploy-action@v4
+      #  with:
+      #    folder: build/dokkaCustomMultiModuleOutput/${{ env.version }}
+      #    target-folder: dokka/${{ env.version }}
+      #- name: Publish JavaDoc (version as main)
+      #  if: startsWith(github.ref, 'refs/tags/v')
+      #  uses: JamesIves/github-pages-deploy-action@v4
+      #  with:
+      #    folder: build/dokkaCustomMultiModuleOutput/${{ env.version }}
+      #    target-folder: dokka/main
+      #- name: Publish JavaDoc (main)
+      #  if: github.ref == 'refs/heads/main'
+      #  uses: JamesIves/github-pages-deploy-action@v4
+      #  with:
+      #    folder: build/dokkaCustomMultiModuleOutput/main-SNAPSHOT
+      #    target-folder: dokka/main
       - name: Create Release
-        if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, 'beta') && !contains(github.ref, 'alpha')
+        if: startsWith(github.ref, 'refs/tags/v')
         id: create_release
         uses: softprops/action-gh-release@v2
         with:

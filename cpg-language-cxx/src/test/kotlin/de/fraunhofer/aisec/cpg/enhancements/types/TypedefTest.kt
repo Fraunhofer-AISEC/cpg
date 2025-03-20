@@ -46,33 +46,29 @@ internal class TypedefTest : BaseTest() {
     @Test
     @Throws(Exception::class)
     fun testSingle() {
-        val tu =
-            analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("typedefs.cpp").toFile()),
-                topLevel,
-                true,
-            ) {
+        val result =
+            analyze(listOf(topLevel.resolve("typedefs.cpp").toFile()), topLevel, true) {
                 it.registerLanguage<CPPLanguage>()
             }
-        with(tu) {
+        with(result) {
             // normal type
-            val l1 = tu.variables["l1"]
-            val l2 = tu.variables["l2"]
+            val l1 = variables["l1"]
+            val l2 = variables["l2"]
             assertEquals(l1?.type, l2?.type)
 
             // pointer
-            val longptr1 = tu.variables["longptr1"]
-            val longptr2 = tu.variables["longptr2"]
+            val longptr1 = variables["longptr1"]
+            val longptr2 = variables["longptr2"]
             assertEquals(longptr1?.type, longptr2?.type)
 
             // array
-            val arr1 = tu.variables["arr1"]
-            val arr2 = tu.variables["arr2"]
+            val arr1 = variables["arr1"]
+            val arr2 = variables["arr2"]
             assertEquals(arr1?.type, arr2?.type)
 
             // function pointer
-            val uintfp1 = tu.variables["uintfp1"]
-            val uintfp2 = tu.variables["uintfp2"]
+            val uintfp1 = variables["uintfp1"]
+            val uintfp2 = variables["uintfp2"]
 
             val fpType = uintfp1?.type as? FunctionPointerType
             assertNotNull(fpType)
@@ -82,7 +78,7 @@ internal class TypedefTest : BaseTest() {
             assertEquals(NumericType.Modifier.UNSIGNED, returnType.modifier)
             assertEquals(uintfp1.type, uintfp2?.type)
 
-            val type = tu.ctx?.scopeManager?.typedefFor(Name("test"))
+            val type = finalCtx.scopeManager.typedefFor(Name("test"))
             assertIs<IntegerType>(type)
             assertLocalName("uint8_t", type)
         }
@@ -132,36 +128,33 @@ internal class TypedefTest : BaseTest() {
     @Test
     @Throws(Exception::class)
     fun testMultiple() {
-        val tu =
-            analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("typedefs.cpp").toFile()),
-                topLevel,
-                true,
-            ) {
+        val result =
+            analyze(listOf(topLevel.resolve("typedefs.cpp").toFile()), topLevel, true) {
                 it.registerLanguage<CPPLanguage>()
             }
-        with(tu) {
+        with(result) {
             // simple type
-            val i1 = tu.variables["i1"]
-            val i2 = tu.variables["i2"]
+            val i1 = variables["i1"]
+            val i2 = variables["i2"]
             assertEquals(i1?.type, i2?.type)
 
             // array
-            val a1 = tu.variables["a1"]
-            val a2 = tu.variables["a2"]
+            val a1 = variables["a1"]
+            val a2 = variables["a2"]
             assertEquals(a1?.type, a2?.type)
 
             // pointer
-            val intPtr1 = tu.variables["intPtr1"]
-            val intPtr2 = tu.variables["intPtr2"]
+            val intPtr1 = variables["intPtr1"]
+            val intPtr2 = variables["intPtr2"]
             assertEquals(intPtr1?.type, intPtr2?.type)
 
             // function pointer
-            val fPtr1 = tu.variables["intFptr1"]
-            val fPtr2 = tu.variables["intFptr2"]
+            val fPtr1 = variables["intFptr1"]
+            val fPtr2 = variables["intFptr2"]
             assertEquals(fPtr1?.type, fPtr2?.type)
 
-            val type = tu.ctx?.scopeManager?.typedefFor(Name("type_B"))
+            val type =
+                finalCtx.scopeManager.typedefFor(Name("type_B"), finalCtx.scopeManager.globalScope)
             assertLocalName("template_class_A", type)
             assertIs<ObjectType>(type)
             assertEquals(listOf(primitiveType("int"), primitiveType("int")), type.generics)

@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase.Companion.fromFile
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.passes.*
+import de.fraunhofer.aisec.cpg.passes.concepts.file.python.PythonFileConceptPass
 import de.fraunhofer.aisec.cpg.persistence.persist
 import java.io.File
 import java.net.ConnectException
@@ -128,6 +129,13 @@ class Application : Callable<Int> {
         )
         var listPasses: Boolean = false
     }
+
+    @CommandLine.Option(
+        names = ["--include-paths", "-IP"],
+        description =
+            ["Directories containing additional headers and implementations for imported code."],
+    )
+    var includePaths: List<String> = mutableListOf()
 
     @CommandLine.Option(
         names = ["--user"],
@@ -277,7 +285,6 @@ class Application : Callable<Int> {
             EvaluationOrderGraphPass::class,
             TypeResolver::class,
             ControlFlowSensitiveDFGPass::class,
-            FilenameMapper::class,
             ControlDependenceGraphPass::class,
             ProgramDependenceGraphPass::class,
         )
@@ -470,6 +477,8 @@ class Application : Callable<Int> {
             )
         }
 
+        includePaths.forEach { translationConfiguration.includePath(it) }
+
         if (mutuallyExclusiveParameters.softwareComponents.isNotEmpty()) {
             val components = mutableMapOf<String, List<File>>()
             for (sc in mutuallyExclusiveParameters.softwareComponents) {
@@ -485,6 +494,8 @@ class Application : Callable<Int> {
             translationConfiguration.defaultPasses()
             translationConfiguration.registerPass<ControlDependenceGraphPass>()
             translationConfiguration.registerPass<ProgramDependenceGraphPass>()
+            translationConfiguration.registerPass<PythonFileConceptPass>()
+            // translationConfiguration.registerPass<PythonEncryptionPass>()
         }
         if (customPasses != "DEFAULT") {
             val pieces = customPasses.split(",")

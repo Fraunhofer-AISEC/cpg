@@ -392,6 +392,9 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             is LambdaExpression -> handleLambdaExpression(node)
             is LookupScopeStatement -> handleLookupScopeStatement(node)
             is ThrowExpression -> handleThrowExpression(node)
+            // For templates, we will just handle the declarations and not the realizations (for
+            // now)
+            is TemplateDeclaration -> handleTemplate(node)
             // These nodes will be added to the eog graph but no children will be handled
             is EmptyStatement -> handleDefault(node)
             is Literal<*> -> handleDefault(node)
@@ -405,6 +408,16 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             is IncludeDeclaration -> doNothing()
             else -> LOGGER.info("Parsing of type ${node.javaClass} is not supported (yet)")
         }
+    }
+
+    protected fun handleTemplate(template: TemplateDeclaration) {
+        // Handle the declarations
+        for (decl in template.declarations) {
+            handleEOG(decl)
+        }
+
+        // Finally the template itself
+        attachToEOG(template)
     }
 
     protected fun handlePointerReference(node: PointerReference) {

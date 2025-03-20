@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.analysis.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
@@ -49,8 +48,6 @@ import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 @DependsOn(PointsToPass::class, softDependency = true)
 @DependsOn(DFGPass::class, softDependency = true)
 open class UnreachableEOGPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
-
-    protected open val evaluator = ValueEvaluator()
 
     override fun cleanup() {
         // Nothing to do
@@ -145,7 +142,7 @@ open class UnreachableEOGPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
         n: IfStatement,
         state: UnreachabilityStateElement,
     ): UnreachabilityStateElement {
-        val evalResult = evaluator.evaluate(n.condition)
+        val evalResult = n.language.evaluator.evaluate(n.condition)
 
         val (unreachableEdges, remainingEdges) =
             if (evalResult == true) {
@@ -194,7 +191,7 @@ open class UnreachableEOGPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                 is ForStatement -> n.condition
                 else -> return state
             }
-        val evalResult = evaluator.evaluate(condition)
+        val evalResult = n.language.evaluator.evaluate(condition)
 
         val (unreachableEdges, remainingEdges) =
             if (evalResult is Boolean && evalResult == true) {

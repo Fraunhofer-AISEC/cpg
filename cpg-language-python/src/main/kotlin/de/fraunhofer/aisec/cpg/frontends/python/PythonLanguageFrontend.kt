@@ -45,7 +45,8 @@ import java.io.File
 import java.net.URI
 import java.nio.file.Path
 import jep.python.PyObject
-import kotlin.io.path.*
+import kotlin.io.path.nameWithoutExtension
+import kotlin.io.path.pathString
 import kotlin.math.min
 
 /**
@@ -79,11 +80,18 @@ class PythonLanguageFrontend(ctx: TranslationContext, language: Language<PythonL
      */
     private lateinit var fileContent: String
     private lateinit var uri: URI
+    private var lastLineNumber: Int = -1
+    private var lastColumnLength: Int = -1
 
     @Throws(TranslationException::class)
     override fun parse(file: File): TranslationUnitDeclaration {
         fileContent = file.readText(Charsets.UTF_8)
         uri = file.toURI()
+
+        // Extract the file length for later usage
+        val fileAsLines = fileContent.lines()
+        lastLineNumber = fileAsLines.size
+        lastColumnLength = fileAsLines.lastOrNull()?.length ?: -1
 
         jep.getInterp().use {
             it.set("content", fileContent)
@@ -301,15 +309,28 @@ class PythonLanguageFrontend(ctx: TranslationContext, language: Language<PythonL
     }
 
     private fun pythonASTtoCPG(pyAST: PyObject, path: Path): TranslationUnitDeclaration {
-        var topLevel = ctx.currentComponent?.topLevel ?: path.parent.toFile()
+        var topLevel = ctx.currentComponent?.topLevel() ?: path.parent.toFile()
 
         val pythonASTModule =
             fromPython(pyAST) as? Python.AST.Module
                 ?: TODO(
                     "Python ast of type ${fromPython(pyAST).javaClass} is not supported yet"
-                ) // could be one of "ast.{Module,Interactive,Expression,FunctionType}
+                ) // could be one of ast.{Module,Interactive,Expression,FunctionType}
 
-        val tud = newTranslationUnitDeclaration(path.toString(), rawNode = pythonASTModule)
+        val tud =
+            newTranslationUnitDeclaration(path.toString(), rawNode = pythonASTModule).apply {
+                this.location =
+                    PhysicalLocation(
+                        uri = uri,
+                        region =
+                            Region(
+                                startLine = 1,
+                                startColumn = 1,
+                                endLine = lastLineNumber,
+                                endColumn = lastColumnLength,
+                            ),
+                    )
+            }
         scopeManager.resetToGlobal(tud)
 
         // We need to resolve the path relative to the top level to get the full module identifier
@@ -339,6 +360,12 @@ class PythonLanguageFrontend(ctx: TranslationContext, language: Language<PythonL
                     val nsd = newNamespaceDeclaration(fqn, rawNode = pythonASTModule)
                     nsd.path = relative?.parent?.pathString + "/" + module
                     scopeManager.addDeclaration(nsd)
+
+                    // Add the namespace to the parent namespace -- or the translation unit, if it
+                    // is the top one
+                    val holder = previous ?: tud
+                    holder.addDeclaration(nsd)
+
                     scopeManager.enterScope(nsd)
                     nsd
                 }
@@ -353,7 +380,11 @@ class PythonLanguageFrontend(ctx: TranslationContext, language: Language<PythonL
                 when (stmt) {
                     // In order to be as compatible as possible with existing languages, we try to
                     // add declarations directly to the class
-                    is Python.AST.Def -> declarationHandler.handle(stmt)
+                    is Python.AST.Def -> {
+                        val decl = declarationHandler.handle(stmt)
+                        scopeManager.addDeclaration(decl)
+                        it.addDeclaration(decl)
+                    }
                     // All other statements are added to the (static) statements block of the
                     // namespace.
                     else -> it.statements += statementHandler.handle(stmt)

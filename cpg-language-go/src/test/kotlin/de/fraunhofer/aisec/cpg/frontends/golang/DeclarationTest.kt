@@ -276,13 +276,13 @@ class DeclarationTest {
     @Test
     fun testConst() {
         val topLevel = Path.of("src", "test", "resources", "golang")
-        val tu =
-            analyzeAndGetFirstTU(listOf(topLevel.resolve("const.go").toFile()), topLevel, true) {
+        val result =
+            analyze(listOf(topLevel.resolve("const.go").toFile()), topLevel, true) {
                 it.registerLanguage<GoLanguage>()
             }
-        assertNotNull(tu)
+        assertNotNull(result)
 
-        with(tu) {
+        with(result) {
             val values =
                 mapOf(
                     "zeroShift" to Pair(0, assertResolvedType("int")),
@@ -305,7 +305,7 @@ class DeclarationTest {
                     "onehundredandfive" to Pair(105, assertResolvedType("int")),
                 )
             values.forEach {
-                val variable = tu.variables[it.key]
+                val variable = variables[it.key]
                 assertNotNull(variable, "variable \"${it.key}\" not found")
                 assertEquals(it.value.first, variable.evaluate(), "${it.key} does not match")
                 assertEquals(it.value.second, variable.type, "${it.key} has the wrong type")

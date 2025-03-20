@@ -89,32 +89,25 @@ class DFGFunctionSummariesTest {
                                 // We need three types with a type hierarchy.
                                 val objectType = t("test.Object")
                                 val listType = t("test.List")
-                                ctx?.let {
-                                    val recordDecl =
-                                        startInference(it)?.inferRecordDeclaration(listType)
-                                    listType.recordDeclaration = recordDecl
-                                    recordDecl?.addSuperClass(objectType)
-                                    listType.superTypes.add(objectType)
-                                }
+                                var recordDecl =
+                                    startInference(ctx)?.inferRecordDeclaration(listType)
+                                listType.recordDeclaration = recordDecl
+                                recordDecl?.addSuperClass(objectType)
+                                listType.superTypes.add(objectType)
 
                                 val specialListType = t("test.SpecialList")
-                                ctx?.let {
-                                    val recordDecl =
-                                        startInference(it)?.inferRecordDeclaration(specialListType)
-                                    specialListType.recordDeclaration = recordDecl
-                                    recordDecl?.addSuperClass(listType)
-                                    specialListType.superTypes.add(listType)
-                                }
+                                recordDecl =
+                                    startInference(ctx)?.inferRecordDeclaration(specialListType)
+                                specialListType.recordDeclaration = recordDecl
+                                recordDecl?.addSuperClass(listType)
+                                specialListType.superTypes.add(listType)
 
                                 val verySpecialListType = t("test.VerySpecialList")
-                                ctx?.let {
-                                    val recordDecl =
-                                        startInference(it)
-                                            ?.inferRecordDeclaration(verySpecialListType)
-                                    verySpecialListType.recordDeclaration = recordDecl
-                                    recordDecl?.addSuperClass(specialListType)
-                                    verySpecialListType.superTypes.add(listType)
-                                }
+                                recordDecl =
+                                    startInference(ctx)?.inferRecordDeclaration(verySpecialListType)
+                                verySpecialListType.recordDeclaration = recordDecl
+                                recordDecl?.addSuperClass(specialListType)
+                                verySpecialListType.superTypes.add(listType)
                             }
 
                             function("main", t("int")) {
@@ -268,7 +261,7 @@ class DFGFunctionSummariesTest {
 
         val nextDfg = argA.nextDFGEdges.single()
         assertEquals(
-            call,
+            setOf(call),
             ((nextDfg as? ContextSensitiveDataflow)?.callingContext as? CallingContextIn)?.calls,
         )
         assertEquals(param0.memoryValue!!, nextDfg.end)
@@ -297,7 +290,7 @@ class DFGFunctionSummariesTest {
         val prevDfgOfReturnA =
             returnA.prevDFGEdges.singleOrNull {
                 ((it as? ContextSensitiveDataflow)?.callingContext as? CallingContextOut)?.calls ==
-                    call
+                    setOf(call)
             }
         assertEquals(literal5, prevDfgOfReturnA?.start)
     }
@@ -316,7 +309,6 @@ class DFGFunctionSummariesTest {
             registerPass<DynamicInvokeResolver>()
             registerPass<EvaluationOrderGraphPass>()
             registerPass<TypeResolver>()
-            registerPass<FilenameMapper>()
         }
         assertNotNull(dfgTest)
 
@@ -345,7 +337,7 @@ class DFGFunctionSummariesTest {
         val nextDfg =
             argA.nextDFGEdges.singleOrNull {
                 ((it as? ContextSensitiveDataflow)?.callingContext as? CallingContextIn)?.calls ==
-                    call
+                    setOf(call)
             }
         assertNotNull(nextDfg)
         assertEquals(param0, nextDfg.end)
@@ -369,7 +361,7 @@ class DFGFunctionSummariesTest {
         val nextDfgOfParam0 =
             param0.nextDFGEdges.singleOrNull {
                 ((it as? ContextSensitiveDataflow)?.callingContext as? CallingContextOut)?.calls ==
-                    call
+                    setOf(call)
             }
         assertEquals(argA, nextDfgOfParam0?.end)
     }

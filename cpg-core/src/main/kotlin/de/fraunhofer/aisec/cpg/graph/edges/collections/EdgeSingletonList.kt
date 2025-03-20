@@ -183,7 +183,7 @@ open class EdgeSingletonList<
             return (if (outgoing) {
                 this@EdgeSingletonList.element?.end
             } else {
-                this@EdgeSingletonList.element?.start as NodeType
+                this@EdgeSingletonList.element?.start as NodeType?
             })
                 as NullableNodeType
         }

@@ -25,7 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.concepts
 
-import de.fraunhofer.aisec.cpg.analysis.MultiValueEvaluator
+import de.fraunhofer.aisec.cpg.evaluation.MultiValueEvaluator
 import de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.arch.POSIX

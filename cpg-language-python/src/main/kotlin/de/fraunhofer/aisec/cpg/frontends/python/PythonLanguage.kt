@@ -25,7 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.python
 
-import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
 import de.fraunhofer.aisec.cpg.graph.Name
@@ -39,14 +39,15 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation
 import de.fraunhofer.aisec.cpg.helpers.neo4j.SimpleNameConverter
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import java.io.File
 import kotlin.reflect.KClass
 import org.neo4j.ogm.annotation.Transient
 import org.neo4j.ogm.annotation.typeconversion.Convert
 
 /** The Python language. */
-class PythonLanguage(ctx: TranslationContext) :
-    Language<PythonLanguageFrontend>(ctx),
+class PythonLanguage :
+    Language<PythonLanguageFrontend>(),
     HasShortCircuitOperators,
     HasOperatorOverloading,
     HasFunctionStyleConstruction,
@@ -57,6 +58,7 @@ class PythonLanguage(ctx: TranslationContext) :
     override val namespaceDelimiter = "."
     @Convert(value = SimpleNameConverter::class)
     override val builtinsNamespace: Name = Name("builtins")
+    override val builtinsFileCandidates = nameToLanguageFiles(builtinsNamespace)
 
     @Transient
     override val frontend: KClass<out PythonLanguageFrontend> = PythonLanguageFrontend::class
@@ -179,6 +181,10 @@ class PythonLanguage(ctx: TranslationContext) :
                     language = this,
                 ),
         )
+
+    @DoNotPersist
+    override val evaluator: ValueEvaluator
+        get() = PythonValueEvaluator()
 
     override fun propagateTypeOfBinaryOperation(operation: BinaryOperator): Type {
         val autoType = autoType()

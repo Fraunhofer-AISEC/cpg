@@ -89,7 +89,7 @@ class Imports(
     outgoing: Boolean = true,
 ) :
     EdgeSet<NamespaceScope, Import>(
-        thisRef,
+        thisRef = thisRef,
         init = { start, end -> Import(start as Scope, end) },
         outgoing = outgoing,
     ),

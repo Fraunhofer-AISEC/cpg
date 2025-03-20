@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.graph.types.FunctionType
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver.Companion.addImplicitTemplateParametersToCall
@@ -163,7 +163,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         val anonymousFunction =
             node.declarator?.let { frontend.declaratorHandler.handle(it) as? FunctionDeclaration }
                 ?: newFunctionDeclaration("lambda${lambda.hashCode()}")
-        anonymousFunction.type = FunctionType.computeType(anonymousFunction)
+        anonymousFunction.type = computeType(anonymousFunction)
 
         frontend.scopeManager.enterScope(anonymousFunction)
         anonymousFunction.body = frontend.statementHandler.handle(node.body)

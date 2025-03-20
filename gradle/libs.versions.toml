@@ -1,28 +1,27 @@
 [versions]
-kotlin = "2.0.20"
-kotlin19 = "1.9.10"
+kotlin = "2.1.10"
+kotlinx-json = "1.8.0"
 neo4j = "4.0.10"
 neo4j5 = "5.28.2"
 log4j = "2.24.0"
 spotless = "7.0.1"
-nexus-publish = "2.0.0"
+publish = "0.31.0"
 sootup = "1.3.0"
 slf4j = "2.0.16"
 clikt = "5.0.2"
 kaml = "0.72.0"
 sarif4k = "0.6.0"
+ktor = "3.1.1"
+node = "22.14.0"
 
 [libraries]
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin"}
-kotlin-script-runtime = { module = "org.jetbrains.kotlin:kotlin-script-runtime", version.ref = "kotlin19"}
-kotlin-scripting-common = { module = "org.jetbrains.kotlin:kotlin-scripting-common", version.ref = "kotlin19"}
-kotlin-scripting-jvm = { module = "org.jetbrains.kotlin:kotlin-scripting-jvm", version.ref = "kotlin19"}
-kotlin-scripting-dependencies = { module = "org.jetbrains.kotlin:kotlin-scripting-dependencies", version.ref = "kotlin19"}
-kotlin-scripting-dependencies-maven-all = { module = "org.jetbrains.kotlin:kotlin-scripting-dependencies-maven-all", version.ref = "kotlin19"}
-kotlin-scripting-ide-services = { module = "org.jetbrains.kotlin:kotlin-scripting-ide-services", version.ref = "kotlin19"}
-kotlin-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version = "1.10.1"}
-kotlin-ki-shell = { module = "com.github.Kotlin:kotlin-interactive-shell", version = "5b1ff4d821"}
+kotlin-scripting-common = { module = "org.jetbrains.kotlin:kotlin-scripting-common", version.ref = "kotlin"}
+kotlin-scripting-jvm = { module = "org.jetbrains.kotlin:kotlin-scripting-jvm", version.ref = "kotlin"}
+kotlin-scripting-jvm-host = { module = "org.jetbrains.kotlin:kotlin-scripting-jvm-host", version.ref = "kotlin"}
 kotlin-test-junit5 = { module = "org.jetbrains.kotlin:kotlin-test-junit5", version.ref = "kotlin"}  # this is only needed for the testFixtures in cpg-core, everywhere else kotlin("test") is used
+kotlin-serialization = { module = "org.jetbrains.kotlin:kotlin-serialization", version.ref = "kotlin" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-json" }
 
 log4j-impl = { module = "org.apache.logging.log4j:log4j-slf4j2-impl", version.ref = "log4j" }
 log4j-core = { module = "org.apache.logging.log4j:log4j-core", version.ref = "log4j" }
@@ -37,9 +36,9 @@ neo4j-driver = { module = "org.neo4j.driver:neo4j-java-driver", version.ref = "n
 javaparser = { module = "com.github.javaparser:javaparser-symbol-solver-core", version = "3.26.0"}
 jackson = { module = "com.fasterxml.jackson.module:jackson-module-kotlin", version = "2.18.0"}
 jacksonyml = { module = "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml", version = "2.18.0"}
-eclipse-runtime = { module = "org.eclipse.platform:org.eclipse.core.runtime", version = "3.32.0"}
+eclipse-runtime = { module = "org.eclipse.platform:org.eclipse.core.runtime", version = "3.33.0"}
 osgi-service = { module = "org.osgi:org.osgi.service.prefs", version = "1.1.2"}
-icu4j = { module = "com.ibm.icu:icu4j", version = "76.1"}
+icu4j = { module = "com.ibm.icu:icu4j", version = "77.1"}
 # Note: This "module" intentionally looks very weird, because the CDT version is actually part of the path of the CDT external
 # repository. In order to avoid updating the repository URL everytime a new CDT version comes out, we need to do this weird hack.
 eclipse-cdt-core = { module = "11.5/cdt-11.5.0/plugins/org.eclipse.cdt:core", version = "8.4.0.202402110645"}
@@ -48,25 +47,30 @@ picocli-codegen = { module = "info.picocli:picocli-codegen", version = "4.7.0"}
 jep = { module = "black.ninia:jep", version = "4.2.0" }  # build.yml uses grep to extract the jep verison number for CI/CD purposes
 llvm = { module = "org.bytedeco:llvm-platform", version = "16.0.4-1.5.9"}
 jruby = { module = "org.jruby:jruby-core", version = "9.4.3.0" }
-jline = { module = "org.jline:jline", version = "3.29.0" }
-antlr-runtime = { module = "org.antlr:antlr4-runtime", version = "4.8-1" } # we cannot upgrade until ki-shell upgrades this!
 ini4j = { module = "org.ini4j:ini4j", version = "0.5.4" }
 clikt = { module = "com.github.ajalt.clikt:clikt", version.ref = "clikt" }
 kaml = { module = "com.charleskorn.kaml:kaml", version.ref = "kaml" }
 sarif4k = { module = "io.github.detekt.sarif4k:sarif4k", version.ref = "sarif4k" }
+
+ktor-server-core = { module = "io.ktor:ktor-server-core", version.ref = "ktor" }
+ktor-server-netty = { module = "io.ktor:ktor-server-netty", version.ref = "ktor" }
+ktor-server-cors = { module = "io.ktor:ktor-server-cors", version.ref = "ktor" }
+ktor-server-content-negotiation = { module = "io.ktor:ktor-server-content-negotiation", version.ref = "ktor" }
+ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
+ktor-server-test-host = { module = "io.ktor:ktor-server-test-host", version.ref = "ktor" }
+ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
 
 # test
 junit-params = { module = "org.junit.jupiter:junit-jupiter-params", version = "5.12.0"}
 mockito = { module = "org.mockito:mockito-core", version = "5.16.0"}
 
 # plugins needed for build.gradle.kts in buildSrc
+publish-central = { module = "com.vanniktech:gradle-maven-publish-plugin", version.ref = "publish" }
 kotlin-gradle = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
-kotlin-serialization = { module = "org.jetbrains.kotlin:kotlin-serialization", version.ref = "kotlin" }
 dokka-gradle = { module = "org.jetbrains.dokka:dokka-gradle-plugin", version = "2.0.0" } # the dokka plugin is slightly behind the main Kotlin release cycle
 dokka-versioning = { module = "org.jetbrains.dokka:versioning-plugin", version = "2.0.0"}
 kover-gradle = { module = "org.jetbrains.kotlinx:kover-gradle-plugin", version = "0.9.0" }
 spotless-gradle = { module = "com.diffplug.spotless:spotless-plugin-gradle", version.ref = "spotless" }
-nexus-publish-gradle = { module = "io.github.gradle-nexus:publish-plugin", version.ref = "nexus-publish" }
 
 sootup-core = { module = "org.soot-oss:sootup.core", version.ref = "sootup" }
 sootup-java-core = { module = "org.soot-oss:sootup.java.core", version.ref = "sootup" }
@@ -77,18 +81,13 @@ sootup-jimple-parser = { module = "org.soot-oss:sootup.jimple.parser", version.r
 [bundles]
 log4j = ["log4j-impl", "log4j-core"]
 neo4j = ["neo4j-ogm-core", "neo4j-ogm-bolt-driver"]
-kotlin-scripting = [
-    "kotlin-scripting-common",
-    "kotlin-scripting-jvm",
-    "kotlin-scripting-ide-services",
-    "kotlin-scripting-dependencies",
-    "kotlin-scripting-dependencies-maven-all",
-]
 sootup = ["sootup-core", "sootup-java-core", "sootup-java-sourcecode", "sootup-java-bytecode", "sootup-jimple-parser"]
+ktor = ["ktor-server-core", "ktor-server-netty", "ktor-server-cors","ktor-server-content-negotiation", "ktor-serialization-kotlinx-json"]
 
 [plugins]
 kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin"}
 dokka = { id = "org.jetbrains.dokka", version.ref = "kotlin" }
 spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
 node = { id = "com.github.node-gradle.node", version = "7.1.0"}
+ktor = { id = "io.ktor.plugin", version.ref = "ktor" }
 download = { id = "de.undercouch.download", version = "5.6.0" }

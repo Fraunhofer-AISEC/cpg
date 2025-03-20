@@ -43,17 +43,19 @@ import io.github.detekt.sarif4k.*
  * [Boolean] and that the [QueryTree.children] represent the individual findings.
  */
 fun QueryTree<Boolean>.toSarif(ruleID: String): List<Result> {
-    return this.children.map {
+    return this.children.map { child ->
+        val result = (child.value as? Boolean) ?: this.value
+
         Result(
             ruleID = ruleID,
             message =
-                if (this.value) {
+                if (result) {
                     Message(text = "Query was successful")
                 } else {
                     Message(text = "Query failed")
                 },
             level =
-                if (this.value) {
+                if (result) {
                     Level.None
                 } else {
                     Level.Error
@@ -64,28 +66,34 @@ fun QueryTree<Boolean>.toSarif(ruleID: String): List<Result> {
                 } else {
                     ResultKind.Fail
                 },
-            locations = listOfNotNull(it.node?.toSarifLocation()),
-            stacks = it.node?.toSarifCallStack(),
+            locations = listOfNotNull(child.node?.toSarifLocation()),
+            stacks = child.node?.toSarifCallStack(),
             codeFlows =
-                it.children.mapNotNull { child ->
-                    if (child.value is List<*>) {
+                child.children
+                    .flatMap { it.getCodeflow() }
+                    .map {
                         CodeFlow(
                             threadFlows =
                                 listOf(
                                     ThreadFlow(
                                         message = Message(text = "Thread flow"),
-                                        locations =
-                                            (child.value as List<*>)
-                                                .filterIsInstance<Node>()
-                                                .toSarifThreadFlowLocation(),
+                                        locations = it.toSarifThreadFlowLocation(),
                                     )
                                 )
                         )
-                    } else {
-                        null
-                    }
-                },
+                    },
         )
+    }
+}
+
+/** Tries to extract the nodes which were visited to retrieve this result. */
+fun QueryTree<*>.getCodeflow(): List<List<Node>> {
+    return if (this.value is List<*>) {
+        listOf((this.value as Iterable<*>).filterIsInstance<Node>())
+    } else if (this.value is Boolean) {
+        this.children.flatMap { it.getCodeflow() }
+    } else {
+        listOf<List<Node>>()
     }
 }
 

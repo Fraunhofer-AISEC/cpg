@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
-import de.fraunhofer.aisec.cpg.graph.scopes.ValueDeclarationScope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.recordDeclaration
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
@@ -161,7 +160,9 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 val currInitializer = node.initializer
                 if (currInitializer == null && node.isImplicitInitializerAllowed) {
                     val initializer =
-                        newConstructExpression(typeString).implicit(code = "$typeString()")
+                        newConstructExpression(typeString)
+                            .codeAndLocationFrom(node)
+                            .implicit(code = "$typeString()")
                     initializer.language = node.language
                     initializer.type = node.type
                     node.initializer = initializer
@@ -213,7 +214,7 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
         if (scope is GlobalScope) {
             scope = scopeManager.globalScope
         }
-        if (scope is ValueDeclarationScope) {
+        if (scope != null) {
             // Update the definition
             val candidates =
                 scope.symbols[declaration.symbol]?.filterIsInstance<FunctionDeclaration>()?.filter {
