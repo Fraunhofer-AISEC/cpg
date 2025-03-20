@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.NodeEntity
 import org.neo4j.ogm.annotation.Transient
@@ -49,7 +50,7 @@ import org.neo4j.ogm.annotation.Transient
 @NodeEntity
 abstract class Expression : Statement(), HasType {
 
-    override var observerEnabled: Boolean = true
+    @DoNotPersist override var observerEnabled: Boolean = true
 
     /**
      * Is this node used for writing data instead of just reading it? Determines dataflow direction
