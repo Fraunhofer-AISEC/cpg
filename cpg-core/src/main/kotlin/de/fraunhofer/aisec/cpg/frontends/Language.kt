@@ -193,8 +193,24 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
      * Determines how to propagate types across binary operations since these may differ among the
      * programming languages.
      */
-    open fun propagateTypeOfBinaryOperation(operation: BinaryOperator): Type {
-        return when (operation.operatorCode) {
+    open fun propagateTypeOfBinaryOperation(operator: BinaryOperator): Type {
+        return propagateTypeOfBinaryOperation(
+            operator.operatorCode,
+            operator.lhs.type,
+            operator.rhs.type,
+        )
+    }
+
+    /**
+     * Determines how to propagate types across binary operations since these may differ among the
+     * programming languages.
+     */
+    open fun propagateTypeOfBinaryOperation(opCode: String?, lhsType: Type, rhsType: Type): Type {
+        return when (opCode) {
+            "<",
+            "=<",
+            ">",
+            "<=",
             "==",
             "===" ->
                 // A comparison, so we return the type "boolean"
@@ -202,14 +218,18 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
                     ?: this.builtInTypes.values.firstOrNull { it.name.localName.startsWith("bool") }
                     ?: unknownType()
             "+" ->
-                if (operation.lhs.type is StringType) {
-                    // string + anything => string
-                    operation.lhs.type
-                } else if (operation.rhs.type is StringType) {
-                    // anything + string => string
-                    operation.rhs.type
-                } else {
-                    arithmeticOpTypePropagation(operation.lhs.type, operation.rhs.type)
+                when {
+                    lhsType is StringType -> {
+                        // string + anything => string
+                        lhsType
+                    }
+                    rhsType is StringType -> {
+                        // anything + string => string
+                        rhsType
+                    }
+                    else -> {
+                        arithmeticOpTypePropagation(lhsType, rhsType)
+                    }
                 }
             "-",
             "*",
@@ -219,13 +239,13 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
             "&&",
             "|",
             "||",
-            "^" -> arithmeticOpTypePropagation(operation.lhs.type, operation.rhs.type)
+            "^" -> arithmeticOpTypePropagation(lhsType, rhsType)
             "<<",
             ">>",
             ">>>" ->
-                if (operation.lhs.type.isPrimitive && operation.rhs.type.isPrimitive) {
+                if (lhsType.isPrimitive && rhsType.isPrimitive) {
                     // primitive type 1 OP primitive type 2 => primitive type 1
-                    operation.lhs.type
+                    lhsType
                 } else {
                     unknownType()
                 }
