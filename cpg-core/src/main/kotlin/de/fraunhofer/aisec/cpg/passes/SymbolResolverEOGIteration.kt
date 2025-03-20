@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.commonType
 import de.fraunhofer.aisec.cpg.frontends.HasImplicitReceiver
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.Node
@@ -37,11 +38,13 @@ import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.LatticeElement
 import de.fraunhofer.aisec.cpg.helpers.Util.infoWithFileLocation
@@ -93,6 +96,13 @@ val DeclarationStateElement.candidates
 val DeclarationStateElement.types
     get() = this.third
 
+/**
+ * Pushes the [Declaration] to the [DeclarationStateElement.symbols] and returns a new
+ * [DeclarationState].
+ *
+ * If the [Declaration] is a [HasType], the type is also pushed to the
+ * [DeclarationStateElement.types].
+ */
 // TODO: alex is lub'ing
 fun DeclarationStateElement.pushDeclarationToScope(
     scope: Scope,
@@ -100,7 +110,15 @@ fun DeclarationStateElement.pushDeclarationToScope(
 ): DeclarationStateElement {
     val newSymbols = this.symbols.duplicate()
     newSymbols.computeIfAbsent(scope) { PowersetLatticeDeclarationElement() }.addAll(elements)
-    return DeclarationStateElement(newSymbols, this.candidates.duplicate(), this.types.duplicate())
+
+    val newTypes = this.types.duplicate()
+    elements.forEach { decl ->
+        if (decl is HasType) {
+            newTypes.computeIfAbsent(decl) { PowersetLatticeTypeElement() }.add(decl.type)
+        }
+    }
+
+    return DeclarationStateElement(newSymbols, this.candidates.duplicate(), newTypes)
 }
 
 // TODO: alex is lub'ing
@@ -200,8 +218,24 @@ class SymbolResolverEOGIteration(ctx: TranslationContext) : EOGStarterPass(ctx) 
             is Reference -> {
                 handleReference(node, state)
             }
+            is BinaryOperator -> {
+                handleBinaryOperator(node, state)
+            }
             else -> state
         }
+    }
+
+    private fun handleBinaryOperator(
+        binOp: BinaryOperator,
+        state: DeclarationStateElement,
+    ): DeclarationStateElement {
+        val lhsType = state.types[binOp.lhs]?.commonType ?: unknownType()
+        val rhsType = state.types[binOp.rhs]?.commonType ?: unknownType()
+
+        val type =
+            binOp.language.propagateTypeOfBinaryOperation(binOp.operatorCode, lhsType, rhsType)
+
+        return state.pushType(binOp, type)
     }
 
     private fun handleReference(
@@ -264,9 +298,9 @@ class SymbolResolverEOGIteration(ctx: TranslationContext) : EOGStarterPass(ctx) 
         state = node.scope?.let { state.pushDeclarationToScope(it, node) } ?: state
 
         // Push type of declaration
-        if (node is HasType) {
+        /*if (node is HasType) {
             state = state.pushType(node, node.type)
-        }
+        }*/
 
         return state
     }
