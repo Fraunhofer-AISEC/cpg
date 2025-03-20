@@ -43,13 +43,14 @@ class SymbolResolverTest {
             analyze(listOf(file), file.parentFile.toPath(), usePasses = false) {
                 it.registerLanguage<CPPLanguage>()
                 it.registerPass<SymbolResolverEOGIteration>()
+                it.disableTypeObserver()
             }
         assertNotNull(result)
         result.refs.forEach { assertNotNull(it.refersTo, "$it should not have an empty refersTo") }
 
         val ifCondition = result.ifs.firstOrNull()?.condition
         assertNotNull(ifCondition)
-        assertIs<BooleanType>(ifCondition.type)
+        assertIs<BooleanType>(ifCondition.type, "Type of if condition should be BooleanType")
     }
 
     @Test
