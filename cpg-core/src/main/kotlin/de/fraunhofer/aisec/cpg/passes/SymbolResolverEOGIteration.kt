@@ -40,6 +40,7 @@ import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.LatticeElement
@@ -50,6 +51,8 @@ import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.TripleLattice
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
+import kotlin.collections.firstOrNull
+import kotlin.collections.toSet
 
 /**
  * Implements the [LatticeElement] for a lattice over a set of nodes. The lattice itself is
@@ -110,6 +113,13 @@ fun DeclarationStateElement.pushCandidate(
     return DeclarationStateElement(this.symbols.duplicate(), newCandidates, this.types.duplicate())
 }
 
+// TODO: alex is lub'ing
+fun DeclarationStateElement.pushType(node: Node, vararg elements: Type): DeclarationStateElement {
+    val newTypes = this.types.duplicate()
+    newTypes.computeIfAbsent(node) { PowersetLatticeTypeElement() }.addAll(elements)
+    return DeclarationStateElement(this.symbols.duplicate(), this.candidates.duplicate(), newTypes)
+}
+
 @DependsOn(EvaluationOrderGraphPass::class)
 @DependsOn(TypeResolver::class)
 class SymbolResolverEOGIteration(ctx: TranslationContext) : EOGStarterPass(ctx) {
@@ -158,7 +168,22 @@ class SymbolResolverEOGIteration(ctx: TranslationContext) : EOGStarterPass(ctx) 
         t.scope?.let { startState = startState.pushDeclarationToScope(it) }
         val finalState = lattice.iterateEOG(t.nextEOGEdges, startState, ::transfer)
 
-        finalState.symbols.forEach { println(it) }
+        finalState.candidates.forEach { node, candidates ->
+            if (node is Reference) {
+                node.candidates = candidates
+
+                // Now it's getting interesting! We need to make the final decision based on whether
+                // this a simple reference to a variable or if we are the callee of a call
+                // expression
+                val call = node.astParent as? CallExpression
+                if (call != null) {
+                    decideInvokesBasedOnCandidates(node, call)
+                } else {
+                    // Reference to a variable
+                    node.refersTo = candidates.firstOrNull()
+                }
+            }
+        }
     }
 
     protected open fun transfer(
@@ -193,17 +218,18 @@ class SymbolResolverEOGIteration(ctx: TranslationContext) : EOGStarterPass(ctx) 
         // Lookup symbol here or after the final state?
         var candidates =
             if (node is MemberExpression) {
-                // We need to extract the scope from the base type and then do a qualified
+                // We need to extract the scope from the base type(s) and then do a qualified
                 // lookup
-                // TODO: lookup based on assigned types as well
-                val baseType = node.base.type
-                val scope = ctx.scopeManager.lookupScope(baseType.root.name)
-                state.symbols.resolveSymbol(
-                    symbol = node.name.localName,
-                    startScope = scope!!,
-                    language = node.language,
-                    qualifiedLookup = true,
-                )
+                val baseTypes = state.types[node.base] ?: identitySetOf()
+                val scopes = baseTypes.mapNotNull { ctx.scopeManager.lookupScope(it.root.name) }
+                scopes.flatMap { scope ->
+                    state.symbols.resolveSymbol(
+                        symbol = node.name.localName,
+                        startScope = scope,
+                        language = node.language,
+                        qualifiedLookup = true,
+                    )
+                }
             } else {
                 state.symbols.resolveSymbol(
                     symbol = node.name.localName,
@@ -217,18 +243,13 @@ class SymbolResolverEOGIteration(ctx: TranslationContext) : EOGStarterPass(ctx) 
         // Let's set it here for now, but also to the final state, maybe it's helpful for
         // later
         state = state.pushCandidate(node, *candidates.toTypedArray())
-        node.candidates = candidates
 
-        // Now it's getting interesting! We need to make the final decision based on whether
-        // this a simple reference to a variable or if we are the callee of a call
-        // expression
-        val call = node.astParent as? CallExpression
-        if (call != null) {
-            decideInvokesBasedOnCandidates(node, call)
-        } else {
-            // Reference to a variable
-            node.refersTo = candidates.firstOrNull()
-        }
+        // Push the type information
+        state =
+            state.pushType(
+                node,
+                *candidates.mapNotNull { state.types[it]?.toSet() }.flatten().toTypedArray(),
+            )
 
         return state
     }
@@ -237,8 +258,17 @@ class SymbolResolverEOGIteration(ctx: TranslationContext) : EOGStarterPass(ctx) 
         state: DeclarationStateElement,
         node: Declaration,
     ): DeclarationStateElement {
+        var state = state
+
         // Push declaration into scope
-        return node.scope?.let { state.pushDeclarationToScope(it, node) } ?: state
+        state = node.scope?.let { state.pushDeclarationToScope(it, node) } ?: state
+
+        // Push type of declaration
+        if (node is HasType) {
+            state = state.pushType(node, node.type)
+        }
+
+        return state
     }
 }
 
