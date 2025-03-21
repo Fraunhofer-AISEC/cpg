@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.NodeBuilder.LOGGER
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.log
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.helpers.getCodeOfSubregion
 import de.fraunhofer.aisec.cpg.passes.inference.IsImplicitProvider
 import de.fraunhofer.aisec.cpg.passes.inference.IsInferredProvider
@@ -149,6 +150,11 @@ fun Node.applyMetadata(
                 defaultNamespace
             }
         this.name = this.newName(name, doNotPrependNamespace, namespace)
+    }
+
+    // Disable the type observer if the config says so.
+    if (this is HasType && provider is ContextProvider && provider.ctx.config.disableTypeObserver) {
+        observerEnabled = false
     }
 }
 
