@@ -95,6 +95,7 @@ data class ImplicitCast(override var depthDistance: Int) : CastResult(depthDista
  * persisted in the final graph (database) and each node links to its corresponding language using
  * the [Node.language] property.
  */
+@Suppress("CONTEXT_RECEIVERS_DEPRECATED")
 abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
 
     /** The file extensions without the dot */
@@ -269,6 +270,11 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
      * When propagating [HasType.assignedTypes] from one node to another, we might want to propagate
      * only certain types. A common example is to truncate [NumericType]s, when they are not "big"
      * enough.
+     *
+     * @param existingType The existing type of the node that should be updated
+     * @param newType The new type that should be propagated
+     * @param hint The node that is used as a hint for the language to determine the type of the
+     *   node that should be updated
      */
     open fun shouldPropagateType(existingType: Type, newType: Type, hint: HasType): Boolean {
         return when {
