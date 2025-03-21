@@ -186,20 +186,17 @@ class PythonLanguage :
     override val evaluator: ValueEvaluator
         get() = PythonValueEvaluator()
 
-    override fun propagateTypeOfBinaryOperation(operation: BinaryOperator): Type {
-        if (
-            operation.operatorCode == "/" &&
-                operation.lhs.type is NumericType &&
-                operation.rhs.type is NumericType
-        ) {
+    override fun propagateTypeOfBinaryOperation(
+        operatorCode: String?,
+        lhsType: Type,
+        rhsType: Type,
+        hint: BinaryOperator?,
+    ): Type {
+        if (operatorCode == "/" && lhsType is NumericType && rhsType is NumericType) {
             // In Python, the / operation automatically casts the result to a float
             return primitiveType("float")
-        } else if (
-            operation.operatorCode == "//" &&
-                operation.lhs.type is NumericType &&
-                operation.rhs.type is NumericType
-        ) {
-            return if (operation.lhs.type is IntegerType && operation.rhs.type is IntegerType) {
+        } else if (operatorCode == "//" && lhsType is NumericType && rhsType is NumericType) {
+            return if (lhsType is IntegerType && rhsType is IntegerType) {
                 // In Python, the // operation keeps the type as an int if both inputs are integers
                 // or casts it to a float otherwise.
                 primitiveType("int")
@@ -209,7 +206,7 @@ class PythonLanguage :
         }
 
         // The rest behaves like other languages
-        return super.propagateTypeOfBinaryOperation(operation)
+        return super.propagateTypeOfBinaryOperation(operatorCode, lhsType, rhsType, hint)
     }
 
     override fun tryCast(
