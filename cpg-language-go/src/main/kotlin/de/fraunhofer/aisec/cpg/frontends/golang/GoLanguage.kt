@@ -225,31 +225,36 @@ class GoLanguage :
         return CastNotPossible
     }
 
-    override fun propagateTypeOfBinaryOperation(operation: BinaryOperator): Type {
-        if (operation.operatorCode == "==") {
-            return super.propagateTypeOfBinaryOperation(operation)
+    override fun propagateTypeOfBinaryOperation(
+        operatorCode: String?,
+        lhsType: Type,
+        rhsType: Type,
+        hint: BinaryOperator?,
+    ): Type {
+        if (operatorCode == "==") {
+            return super.propagateTypeOfBinaryOperation(operatorCode, lhsType, rhsType, hint)
         }
 
         // Deal with literals. Numeric literals can also be used in simple arithmetic of the
         // underlying type is numeric
         return when {
-            operation.lhs is Literal<*> && (operation.lhs as Literal<*>).type is NumericType -> {
-                val type = operation.rhs.type
+            hint?.lhs is Literal<*> && lhsType is NumericType -> {
+                val type = rhsType
                 if (type is NumericType || type.underlyingType is NumericType) {
                     type
                 } else {
                     unknownType()
                 }
             }
-            operation.rhs is Literal<*> && (operation.rhs as Literal<*>).type is NumericType -> {
-                val type = operation.lhs.type
+            hint?.rhs is Literal<*> && rhsType is NumericType -> {
+                val type = lhsType
                 if (type is NumericType || type.underlyingType is NumericType) {
                     type
                 } else {
                     unknownType()
                 }
             }
-            else -> super.propagateTypeOfBinaryOperation(operation)
+            else -> super.propagateTypeOfBinaryOperation(operatorCode, lhsType, rhsType, hint)
         }
     }
 }
