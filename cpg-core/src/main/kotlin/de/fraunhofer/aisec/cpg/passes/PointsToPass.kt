@@ -162,8 +162,7 @@ private fun isGlobal(node: Node): Boolean {
 }
 
 private fun addEntryToEdgePropertiesMap(index: Pair<Node, Node>, entries: IdentitySet<Any>) {
-    if (edgePropertiesMap[index] == null) edgePropertiesMap[index] = entries
-    else edgePropertiesMap[index]!!.addAll(entries)
+    edgePropertiesMap.computeIfAbsent(index) { identitySetOf() }.addAll(entries)
 }
 
 /**
@@ -273,7 +272,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         for ((key, value) in finalState.generalState) {
             // The generalState values have 3 items: The address, the value, and the prevDFG-Edges
             // with a set of properties
-            // Let's start with fetch the addresses
+            // Let's start with fetching the addresses
             if (key is HasMemoryAddress) {
                 key.memoryAddresses.clear() // TODO: Do we really have to do this??
                 key.memoryAddresses += value.first.filterIsInstance<MemoryAddress>()
@@ -1116,8 +1115,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 doubleState
                     .getValues(currentNode)
                     // Filter only the values that are not stored for short FunctionSummaries (aka
-                    // it.second
-                    // set to true)
+                    // it.second set to true)
                     .filter { !it.second }
                     .mapTo(IdentitySet()) { it.first }
             val prevDFGs = doubleState.getLastWrites(currentNode)
@@ -1529,7 +1527,7 @@ fun PointsToStateElement.getLastWrites(
                     this.declarationsState[it]?.third?.isNotEmpty() == true
                 }
                 .flatMapTo(EqualLinkedHashSet()) {
-                    this.declarationsState[it]?.third!!.map {
+                    this.declarationsState[it]?.third?.mapNotNull {
                         Pair(
                             it.first,
                             it.second.filterTo(EqualLinkedHashSet()) {
@@ -1538,7 +1536,7 @@ fun PointsToStateElement.getLastWrites(
                                     it.partialTarget.name.localName == partial.localName)
                             },
                         )
-                    }
+                    } ?: setOf()
                 }
         }
         else ->
@@ -1549,7 +1547,7 @@ fun PointsToStateElement.getLastWrites(
                     this.declarationsState[it]?.third?.isNotEmpty() == true
                 }
                 .flatMapTo(EqualLinkedHashSet()) {
-                    this.declarationsState[it]?.third!!.map { Pair(it.first, it.second) }
+                    this.declarationsState[it]?.third?.map { Pair(it.first, it.second) } ?: setOf()
                 }
     }
 }
@@ -1842,7 +1840,7 @@ fun PointsToStateElement.updateValues(
             lastWrites.forEach { lw ->
                 val existingEntries =
                     newDeclState[destAddr]?.third?.filter {
-                        it.first == lw.first && it.second == lw.second
+                        it.first === lw.first && it.second == lw.second
                     }
                 if (existingEntries?.isNotEmpty() == true) prevDFG.addAll(existingEntries)
                 else prevDFG.add(lw)
@@ -1867,19 +1865,15 @@ fun PointsToStateElement.updateValues(
             }
 
             // Add the node to the globalDerefs. Don't delete the old one (except unknown values for
-            // the node itself), b/c we never know with
-            // global variables when they are used
-            if (globalDerefs[destAddr] == null) globalDerefs[destAddr] = sources
-            else {
-                if (
-                    globalDerefs[destAddr]!!.size == 1 &&
-                        globalDerefs[destAddr]!!.first().first is UnknownMemoryValue &&
-                        globalDerefs[destAddr]!!.first().first.name.localName ==
-                            destAddr.name.localName
-                )
-                    globalDerefs[destAddr]!!.remove(globalDerefs[destAddr]!!.first())
-                globalDerefs[destAddr]!!.addAll(sources)
-            }
+            // the node itself), b/c we never know with global variables when they are used
+            val globalDerefsDst = globalDerefs.computeIfAbsent(destAddr) { identitySetOf() }
+            if (
+                globalDerefsDst.size == 1 &&
+                    globalDerefsDst.first().first is UnknownMemoryValue &&
+                    globalDerefsDst.first().first.name.localName == destAddr.name.localName
+            )
+                globalDerefsDst.clear()
+            globalDerefsDst.addAll(sources)
         }
     }
 
