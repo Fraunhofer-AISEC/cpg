@@ -872,6 +872,30 @@ class PointsToPassTest {
                 .first()
         assertNotNull(ceLine112)
 
+        val ceLine115 =
+            tu.functions["testmemcpy"]
+                .calls { it.name.localName == "memcpy" && it.location?.region?.startLine == 115 }
+                .first()
+        assertNotNull(ceLine115)
+
+        val ceLine118 =
+            tu.functions["testmemcpy"]
+                .calls { it.name.localName == "memcpy" && it.location?.region?.startLine == 118 }
+                .first()
+        assertNotNull(ceLine118)
+
+        val ceLine121 =
+            tu.functions["testmemcpy"]
+                .calls { it.name.localName == "memcpy" && it.location?.region?.startLine == 121 }
+                .first()
+        assertNotNull(ceLine121)
+
+        val ceLine125 =
+            tu.functions["testmemcpy"]
+                .calls { it.name.localName == "memcpy" && it.location?.region?.startLine == 125 }
+                .first()
+        assertNotNull(ceLine125)
+
         // FunctionDeclarations
         val memcpyFD = ceLine112.invokes.singleOrNull()
         assertNotNull(memcpyFD)
@@ -885,8 +909,56 @@ class PointsToPassTest {
             )
         }
         // And from the argument's derefvalues to the parameterMemoryValue's derefvalues
-        //       (memcpyFD.parameters[1].memoryValue.memoryValues.filter { it.name.localName ==
-        // "derefvalue" }.singleOrNull() as MemoryAddress).prevDFG
+        assertEquals(
+            1,
+            aDecl.nextDFGEdges
+                .filter {
+                    it is ContextSensitiveDataflow &&
+                        (it.callingContext as? CallingContextIn)?.calls == setOf(ceLine112) &&
+                        it.end.name.localName == "derefvalue"
+                }
+                .size,
+        )
+        assertEquals(
+            1,
+            aDecl.nextDFGEdges
+                .filter {
+                    it is ContextSensitiveDataflow &&
+                        (it.callingContext as? CallingContextIn)?.calls == setOf(ceLine115) &&
+                        it.end.name.localName == "derefvalue"
+                }
+                .size,
+        )
+        assertEquals(
+            1,
+            aDecl.nextDFGEdges
+                .filter {
+                    it is ContextSensitiveDataflow &&
+                        (it.callingContext as? CallingContextIn)?.calls == setOf(ceLine118) &&
+                        it.end.name.localName == "derefvalue"
+                }
+                .size,
+        )
+        assertEquals(
+            1,
+            aDecl.nextDFGEdges
+                .filter {
+                    it is ContextSensitiveDataflow &&
+                        (it.callingContext as? CallingContextIn)?.calls == setOf(ceLine121) &&
+                        it.end.name.localName == "derefvalue"
+                }
+                .size,
+        )
+        assertEquals(
+            1,
+            aDecl.nextDFGEdges
+                .filter {
+                    it is ContextSensitiveDataflow &&
+                        (it.callingContext as? CallingContextIn)?.calls == setOf(ceLine125) &&
+                        it.end.name.localName == "derefvalue"
+                }
+                .size,
+        )
 
         // Result of memcpy in Line 112
         assertEquals(1, bRef.memoryAddresses.size)

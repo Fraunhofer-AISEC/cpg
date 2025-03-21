@@ -1157,37 +1157,56 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             // If we have any information from the dereferenced value, we also fetch that
             values
                 .filterTo(identitySetOf()) { doubleState.hasDeclarationStateEntry(it, true) }
-                .flatMap {
-                    doubleState.fetchElementFromDeclarationState(
-                        addr = it,
-                        excludeShortFSValues = true,
-                    )
-                }
-                .forEach { (derefValue, _, _) ->
-                    prevDFGs.add(
-                        Pair(
-                            derefValue,
-                            equalLinkedHashSetOf(
-                                PointerDataflowGranularity(PointerAccess.currentDerefValue)
-                            ),
+                /*                .flatMap {
+                 */
+                /*                    doubleState.fetchElementFromDeclarationState(
+                    addr = it,
+                    excludeShortFSValues = true,
+                )*/
+                /*
+                    doubleState.getLastWrites(it).filter { it.second.none { it == true } }
+                }*/
+                .forEach { value ->
+                    // draw the DFG Edges
+                    val currentderefGranularity =
+                        equalLinkedHashSetOf<Any>(
+                            PointerDataflowGranularity(PointerAccess.currentDerefValue)
                         )
-                    )
+                    doubleState
+                        .getLastWrites(value)
+                        .filter { it.second.none { it == true } }
+                        .forEach { prevDFGs.add(Pair(it.first, currentderefGranularity)) }
+
                     // Let's see if we can deref once more
-                    if (doubleState.hasDeclarationStateEntry(derefValue)) {
-                        doubleState.fetchElementFromDeclarationState(derefValue).forEach {
-                            (derefDerefValue, _, _) ->
-                            prevDFGs.add(
-                                Pair(
-                                    derefDerefValue,
-                                    equalLinkedHashSetOf(
-                                        PointerDataflowGranularity(
-                                            PointerAccess.currentDerefDerefValue
-                                        )
-                                    ),
-                                )
+                    val derefValues =
+                        doubleState
+                            .fetchElementFromDeclarationState(
+                                addr = value,
+                                excludeShortFSValues = true,
                             )
-                        }
-                    }
+                            .map { it.first }
+                            .forEach { derefValue ->
+                                if (doubleState.hasDeclarationStateEntry(derefValue)) {
+                                    doubleState
+                                        .fetchElementFromDeclarationState(derefValue)
+                                        .forEach { (derefDerefValue, _, _) ->
+                                            val currentderefderefGranularity =
+                                                equalLinkedHashSetOf<Any>(
+                                                    PointerDataflowGranularity(
+                                                        PointerAccess.currentDerefDerefValue
+                                                    )
+                                                )
+                                            doubleState
+                                                .getLastWrites(derefValue)
+                                                .filter { it.second.none { it == true } }
+                                                .forEach {
+                                                    prevDFGs.add(
+                                                        Pair(it.first, currentderefderefGranularity)
+                                                    )
+                                                }
+                                        }
+                                }
+                            }
                 }
 
             doubleState =
