@@ -1283,6 +1283,10 @@ class PointsToPassTest {
             tu.allChildren<CallExpression> { it.location?.region?.startLine == 177 }.first()
         assertNotNull(ceLine177)
 
+        val ceLine180 =
+            tu.allChildren<CallExpression> { it.location?.region?.startLine == 180 }.first()
+        assertNotNull(ceLine180)
+
         val ceLine201 =
             tu.allChildren<CallExpression> { it.location?.region?.startLine == 201 }.first()
         assertNotNull(ceLine201)
@@ -1413,23 +1417,91 @@ class PointsToPassTest {
                 .size,
         )
         assertEquals(4, local_28DerefLine181.prevDFG.size)
-        assertEquals(ceLine201, local_28DerefLine181.prevFullDFG.singleOrNull())
+        // One full edge to CONCAT71
+        assertLocalName(
+            "CONCAT71",
+            local_28DerefLine181.prevFullDFG.filterIsInstance<UnknownMemoryValue>().singleOrNull(),
+        )
+        // One FS edge to ecall_key_to_out
         assertEquals(fdecallkeytoout, local_28DerefLine181.prevFunctionSummaryDFG.singleOrNull())
+        // A partial edge to the deref's input
+        assertEquals(
+            1,
+            local_28DerefLine181.prevDFGEdges
+                .filter {
+                    it.granularity is PartialDataflowGranularity<*> &&
+                        it.start == local_28DerefLine181.input
+                }
+                .size,
+        )
+        // A partial edge to DAT_0011b1c8
+        assertLocalName(
+            "DAT_0011b1c8",
+            local_28DerefLine181.prevDFGEdges
+                .singleOrNull {
+                    it.granularity is PartialDataflowGranularity<*> &&
+                        it.start is UnknownMemoryValue
+                }
+                ?.start,
+        )
 
         assertEquals(1, sseLine181.fullMemoryValues.size)
         assertEquals(
             1,
-            sseLine181.prevDFG
+            sseLine181.fullMemoryValues
                 .filter { it is UnknownMemoryValue && it.name.localName == "DAT_0011b1c8" }
                 .size,
+        )
+
+        assertEquals(2, sseLine181.prevDFG.size)
+        assertEquals(
+            2,
+            sseLine181.prevDFGEdges
+                .filter {
+                    it is ContextSensitiveDataflow &&
+                        it.callingContext.calls == setOf(ceLine180) &&
+                        it.granularity == FullDataflowGranularity
+                }
+                .size,
+        )
+        // One DFG-Edge to DAT_0011b1c8
+        assertLocalName(
+            "DAT_0011b1c8",
+            sseLine181.prevDFGEdges
+                .filter {
+                    it is ContextSensitiveDataflow &&
+                        it.callingContext.calls == setOf(ceLine180) &&
+                        it.granularity == FullDataflowGranularity &&
+                        !it.functionSummary &&
+                        it.start is UnknownMemoryValue
+                }
+                .singleOrNull()
+                ?.start,
+        )
+        // One Summary edge to the FD
+        assertEquals(
+            fdecallkeytoout,
+            sseLine181.prevDFGEdges
+                .filter {
+                    it is ContextSensitiveDataflow &&
+                        it.callingContext.calls == setOf(ceLine180) &&
+                        it.granularity == FullDataflowGranularity &&
+                        it.functionSummary
+                }
+                .singleOrNull()
+                ?.start,
         )
 
         // Line 190
         assertEquals(1, local_18DerefLine190.memoryAddresses.size)
         assertTrue(local_18DerefLine190.memoryAddresses.firstOrNull() is ParameterMemoryValue)
         assertLocalName("derefvalue", local_18DerefLine190.memoryAddresses.firstOrNull())
-        assertEquals(3, local_18DerefLine190.fullMemoryValues.size)
-        assertTrue(local_18DerefLine190.fullMemoryValues.contains(ceLine201))
+        assertEquals(4, local_18DerefLine190.fullMemoryValues.size)
+        assertTrue(
+            local_18DerefLine190.fullMemoryValues.any {
+                it is UnknownMemoryValue && it.name.localName == "CONCAT71"
+            }
+        )
         assertTrue(
             local_18DerefLine190.fullMemoryValues.any {
                 it is UnknownMemoryValue && it.name.localName == "DAT_0011b1c8"
@@ -1437,8 +1509,60 @@ class PointsToPassTest {
         )
         assertEquals(
             1,
-            local_18DerefLine190.prevDFG
+            local_18DerefLine190.fullMemoryValues
                 .filter { it is ParameterMemoryValue && it.name.localName == "derefderefvalue" }
+                .size,
+        )
+        // TODO: Don't think we need this here
+        assertTrue(local_18DerefLine190.fullMemoryValues.contains(fdecallkeytoout))
+        assertEquals(6, local_18DerefLine190.prevDFGEdges.size)
+        assertEquals(
+            1,
+            local_18DerefLine190.prevDFGEdges
+                .filter {
+                    it.granularity is PartialDataflowGranularity<*> &&
+                        it.start == local_18DerefLine190.input
+                }
+                .size,
+        )
+        assertEquals(
+            1,
+            local_18DerefLine190.prevDFGEdges
+                .filter {
+                    it.granularity is PointerDataflowGranularity &&
+                        it.start is UnknownMemoryValue &&
+                        it.start.name.localName == "derefderefvalue"
+                }
+                .size,
+        )
+        assertEquals(
+            3,
+            local_18DerefLine190.prevDFGEdges.filter { it is ContextSensitiveDataflow }.size,
+        )
+        assertEquals(
+            1,
+            local_18DerefLine190.prevDFGEdges
+                .filter {
+                    it is ContextSensitiveDataflow &&
+                        it.start is UnknownMemoryValue &&
+                        it.start.name.localName == "DAT_0011b1c8"
+                }
+                .size,
+        )
+        assertEquals(
+            1,
+            local_18DerefLine190.prevDFGEdges
+                .filter {
+                    it is ContextSensitiveDataflow &&
+                        it.start is UnknownMemoryValue &&
+                        it.start.name.localName == "CONCAT71"
+                }
+                .size,
+        )
+        assertEquals(
+            1,
+            local_18DerefLine190.prevDFGEdges
+                .filter { it is ContextSensitiveDataflow && it.functionSummary }
                 .size,
         )
 

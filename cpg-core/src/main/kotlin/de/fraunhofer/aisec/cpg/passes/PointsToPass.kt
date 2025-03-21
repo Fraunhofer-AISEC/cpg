@@ -113,10 +113,10 @@ typealias PointsToStateElement =
 typealias PointsToState = TupleLattice<SingleGeneralStateElement, SingleDeclarationStateElement>
 
 /**
- * Returns a string that allows a human to identify the node. Mostly, this is simply the node's
+ * Returns a name that allows a human to identify the node. Mostly, this is simply the node's
  * localName, but for Literals, it is their value
  */
-fun nodeNameToString(node: Node): Name {
+fun getNodeName(node: Node): Name {
     return when (node) {
         is Literal<*> -> Name(node.value.toString())
         is UnknownMemoryValue -> Name(node.name.localName, Name("UnknownMemoryValue"))
@@ -373,24 +373,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         )
                         // Additionally, we store this as a shortFunctionSummary were the Function
                         // writes to the parameter
-                        // Check that we don't already have an effectively the same entry
-                        if (
-                            existingEntry.none { e ->
-                                e.destValueDepth == dstValueDepth &&
-                                    e.srcNode == node &&
-                                    e.shortFunctionSummary
-                            }
-                        ) {
-                            existingEntry.add(
-                                FunctionDeclaration.FSEntry(
-                                    dstValueDepth,
-                                    node,
-                                    0,
-                                    subAccessName,
-                                    true,
-                                )
-                            )
-                        }
+                        existingEntry.add(
+                            FunctionDeclaration.FSEntry(dstValueDepth, node, 0, subAccessName, true)
+                        )
                         val propertySet = identitySetOf<Any>(true)
                         if (subAccessName != "")
                             propertySet.add(FieldDeclaration().apply { name = Name(subAccessName) })
@@ -661,7 +646,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         .sortedBy { it.destValueDepth }
                         .forEach { (dstValueDepth, srcNode, srcValueDepth, subAccessName, shortFS)
                             ->
-                            val destination =
+                            println("in handleCE: srcnode: $srcNode, subAccessName: $subAccessName")
+                            val destinations =
                                 calculateCallExpressionDestination(
                                     doubleState,
                                     mapDstToSrc,
@@ -695,7 +681,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                     lattice,
                                     doubleState,
                                     mapDstToSrc,
-                                    destination,
+                                    destinations,
                                     srcNode,
                                     shortFS,
                                     argument,
@@ -954,8 +940,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     newSet.forEach { pair ->
                         if (
                             currentSet.none {
-                                it.first === pair.first && it.second === pair.first
-                                pair.second in it.third
+                                it.first === pair.first &&
+                                    it.second === pair.first &&
+                                    pair.second in it.third
                             }
                         ) {
                             val updatedPropertySet = propertySet
@@ -988,6 +975,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 .map { it.first }
                 .toIdentitySet()
 
+        println(
+            "dstValueDepth > 2 && updatedAddresses.isNotEmpty(): ${dstValueDepth > 2 && updatedAddresses.isNotEmpty()}"
+        )
         return if (dstValueDepth > 2 && updatedAddresses.isNotEmpty()) {
             updatedAddresses
         } else {
@@ -1001,7 +991,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     // destinations
                     fieldAddresses.add(v)
 
-                    val parentName = nodeNameToString(v)
+                    val parentName = getNodeName(v)
                     val newName = Name(subAccessName, parentName)
                     fieldAddresses.addAll(
                         doubleState.fetchFieldAddresses(identitySetOf(v), newName)
@@ -1439,7 +1429,7 @@ fun PointsToStateElement.fetchElementFromDeclarationState(
         val element = globalDerefs[addr]
         if (element != null) element.map { ret.add(Triple(it.first, false, "")) }
         else {
-            val newName = nodeNameToString(addr)
+            val newName = getNodeName(addr)
             val newEntry =
                 nodesCreatingUnknownValues.computeIfAbsent(Pair(addr, newName)) {
                     UnknownMemoryValue(newName, true)
@@ -1455,7 +1445,7 @@ fun PointsToStateElement.fetchElementFromDeclarationState(
         var elements = this.declarationsState[addr]?.second?.toList()
         if (excludeShortFSValues) elements = elements?.filter { !it.second }
         if (elements.isNullOrEmpty()) {
-            val newName = nodeNameToString(addr)
+            val newName = getNodeName(addr)
             val newEntry =
                 nodesCreatingUnknownValues.computeIfAbsent(Pair(addr, newName)) {
                     UnknownMemoryValue(newName)
@@ -1498,16 +1488,18 @@ fun PointsToStateElement.fetchElementFromDeclarationState(
 
 fun PointsToStateElement.getLastWrites(
     node: Node
-): IdentitySet<Pair<Node, EqualLinkedHashSet<Any>>> {
+): EqualLinkedHashSet<Pair<Node, EqualLinkedHashSet<Any>>> {
     return when (node) {
         is PointerReference -> {
             // For pointerReferences, we take the memoryAddress of the refersTo
-            return (node.input as Reference).refersTo?.memoryAddresses?.mapTo(IdentitySet()) {
+            return (node.input as Reference).refersTo?.memoryAddresses?.mapTo(
+                EqualLinkedHashSet()
+            ) {
                 Pair<Node, EqualLinkedHashSet<Any>>(it, equalLinkedHashSetOf())
-            } ?: identitySetOf(Pair(node, equalLinkedHashSetOf()))
+            } ?: equalLinkedHashSetOf(Pair(node, equalLinkedHashSetOf()))
         }
         is PointerDereference -> {
-            val ret = identitySetOf<Pair<Node, EqualLinkedHashSet<Any>>>()
+            val ret = equalLinkedHashSetOf<Pair<Node, EqualLinkedHashSet<Any>>>()
             this.getAddresses(node).forEach { addr ->
                 val lastWrite = this.declarationsState[addr]?.third
                 // Usually, we should have a lastwrite, so we take that
@@ -1516,7 +1508,7 @@ fun PointsToStateElement.getLastWrites(
                 // However, there might be cases were we don't yet have written to the dereferenced
                 // value, in this case we return an UnknownMemoryValue
                 else {
-                    val newName = Name(nodeNameToString(addr).localName + ".derefvalue")
+                    val newName = Name(getNodeName(addr).localName + ".derefvalue")
                     ret.add(
                         Pair(
                             nodesCreatingUnknownValues.computeIfAbsent(Pair(addr, newName)) {
@@ -1529,14 +1521,34 @@ fun PointsToStateElement.getLastWrites(
             }
             return ret
         }
+        is SubscriptExpression -> {
+            // For SubScriptExpressions, we additionally check if the partial write matches
+            val partial = getNodeName(node.subscriptExpression)
+            this.getAddresses(node)
+                .filterTo(equalLinkedHashSetOf()) {
+                    this.declarationsState[it]?.third?.isNotEmpty() == true
+                }
+                .flatMapTo(EqualLinkedHashSet()) {
+                    this.declarationsState[it]?.third!!.map {
+                        Pair(
+                            it.first,
+                            it.second.filterTo(EqualLinkedHashSet()) {
+                                !(it is PartialDataflowGranularity<*> &&
+                                    it.partialTarget is FieldDeclaration &&
+                                    it.partialTarget.name.localName == partial.localName)
+                            },
+                        )
+                    }
+                }
+        }
         else ->
             // For the rest, we read the declarationState to determine when the memoryAddress of the
             // node was last written to
             this.getAddresses(node)
-                .filterTo(identitySetOf()) {
+                .filterTo(equalLinkedHashSetOf()) {
                     this.declarationsState[it]?.third?.isNotEmpty() == true
                 }
-                .flatMapTo(IdentitySet()) {
+                .flatMapTo(EqualLinkedHashSet()) {
                     this.declarationsState[it]?.third!!.map { Pair(it.first, it.second) }
                 }
     }
@@ -1596,7 +1608,7 @@ fun PointsToStateElement.getValues(node: Node): IdentitySet<Pair<Node, Boolean>>
                     fetchElementFromDeclarationState(it).map { Pair(it.first, it.second) }
                 }
             } else {
-                val newName = Name(nodeNameToString(node).localName, base.name)
+                val newName = Name(getNodeName(node).localName, base.name)
                 identitySetOf(
                     Pair(
                         nodesCreatingUnknownValues.computeIfAbsent(Pair(node, newName)) {
@@ -1685,12 +1697,12 @@ fun PointsToStateElement.getAddresses(node: Node): IdentitySet<Node> {
             this.getAddresses(node.expression)
         }
         is SubscriptExpression -> {
-            val localName = nodeNameToString(node.subscriptExpression)
+            val localName = getNodeName(node.subscriptExpression)
             this.getValues(node.base)
                 .flatMap {
                     fetchFieldAddresses(
                         identitySetOf(it.first),
-                        Name(localName.localName, nodeNameToString(it.first)),
+                        Name(localName.localName, getNodeName(it.first)),
                     )
                 }
                 .toIdentitySet()
@@ -1747,14 +1759,17 @@ fun PointsToStateElement.fetchFieldAddresses(
 ): IdentitySet<Node> {
     val fieldAddresses = identitySetOf<Node>()
 
+    println(
+        "In fetchfieldAddresses. baseAddresses.first: ${baseAddresses.first()} baseAddresses.size: ${baseAddresses.size}"
+    )
     baseAddresses.forEach { addr ->
         val elements =
             declarationsState[addr]?.first?.filterTo(identitySetOf()) {
                 it.name.localName == nodeName.localName
             }
 
+        println("addr: $addr, elements.isempty: ${elements?.isEmpty()}")
         if (elements.isNullOrEmpty()) {
-            // val newName = nodeNameToString(addr)
             val newEntry =
                 identitySetOf<Node>(
                     nodesCreatingUnknownValues.computeIfAbsent(Pair(addr, nodeName)) {
@@ -1763,6 +1778,7 @@ fun PointsToStateElement.fetchFieldAddresses(
                 )
 
             if (this.declarationsState[addr] == null) {
+                println("++ is null ++")
                 this.declarationsState[addr] =
                     TripleLattice.Element(
                         PowersetLattice.Element(addr),
