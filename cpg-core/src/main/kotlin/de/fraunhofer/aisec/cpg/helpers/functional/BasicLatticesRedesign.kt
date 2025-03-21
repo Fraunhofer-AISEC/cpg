@@ -36,6 +36,20 @@ import kotlin.collections.fold
 import kotlin.collections.plusAssign
 import kotlin.collections.set
 
+class EqualLinkedHashSet<T> : LinkedHashSet<T>() {
+    override fun equals(other: Any?): Boolean {
+        return other is LinkedHashSet<*> &&
+            this.size == other.size &&
+            this.all { t -> other.any { it == t } }
+    }
+}
+
+fun <T> equalLinkedHashSetOf(vararg elements: T): EqualLinkedHashSet<T> {
+    val set = EqualLinkedHashSet<T>()
+    set.addAll(elements)
+    return set
+}
+
 /** Used to identify the order of elements */
 enum class Order {
     LESSER,
@@ -148,7 +162,7 @@ interface Lattice<T : Lattice.Element> {
             // Compute the effects of "nextEdge" on the state by applying the transformation to its
             // state.
             val nextGlobal = globalState[nextEdge] ?: continue
-            val newState = transformation(this, nextEdge, nextGlobal)
+            val newState = transformation(this, nextEdge, nextGlobal.duplicate() as T)
             if (nextEdge.end.nextEOGEdges.isEmpty()) {
                 finalState[nextEdge] = newState
             }
@@ -159,7 +173,10 @@ interface Lattice<T : Lattice.Element> {
                 val oldGlobalIt = globalState[it]
                 val newGlobalIt = (oldGlobalIt?.let { this.lub(newState, it) } ?: newState)
                 globalState[it] = newGlobalIt
-                if (it !in edgesList && (oldGlobalIt == null || newGlobalIt != oldGlobalIt)) {
+                if (
+                    it !in edgesList &&
+                        (oldGlobalIt == null || newGlobalIt.compare(oldGlobalIt) == Order.GREATER)
+                ) {
                     edgesList.add(0, it)
                 }
             }
@@ -187,7 +204,15 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
         }
 
         override fun equals(other: Any?): Boolean {
-            return other is Element<T> && super<IdentitySet>.equals(other)
+            return other is Element<T> &&
+                this.size == other.size &&
+                this.all { t ->
+                    if (t is Pair<*, *>)
+                        other.any {
+                            it is Pair<*, *> && it.first === t.first && it.second == t.second
+                        }
+                    else t in other
+                }
         }
 
         override fun compare(other: Lattice.Element): Order {
@@ -196,9 +221,30 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
                     throw IllegalArgumentException(
                         "$other should be of type PowersetLattice.Element<T> but is of type ${other.javaClass}"
                     )
-                super<IdentitySet>.equals(other) -> Order.EQUAL
-                this.size > other.size && this.containsAll(other) -> Order.GREATER
-                other.size > this.size && other.containsAll(this) -> Order.LESSER
+                this.size == other.size &&
+                    this.all { t ->
+                        if (t is Pair<*, *>)
+                            other.any {
+                                it is Pair<*, *> && it.first === t.first && it.second == t.second
+                            }
+                        else t in other
+                    } -> Order.EQUAL
+                this.size > other.size &&
+                    other.all { t ->
+                        if (t is Pair<*, *>)
+                            this.any {
+                                it is Pair<*, *> && it.first === t.first && it.second == t.second
+                            }
+                        else t in this
+                    } -> Order.GREATER
+                other.size > this.size &&
+                    this.all { t ->
+                        if (t is Pair<*, *>)
+                            other.any {
+                                it is Pair<*, *> && it.first === t.first && it.second == t.second
+                            }
+                        else t in other
+                    } -> Order.LESSER
                 else -> Order.UNEQUAL
             }
         }
@@ -209,6 +255,20 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
 
         override fun hashCode(): Int {
             return super.hashCode()
+        }
+
+        override fun add(element: T): Boolean {
+            if (
+                element is Pair<*, *> &&
+                    this.any {
+                        it is Pair<*, *> &&
+                            it.first === element.first &&
+                            it.second == element.second
+                    }
+            ) {
+                return false
+            }
+            return super.add(element)
         }
     }
 
@@ -284,7 +344,7 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
         }
 
         override fun duplicate(): Element<K, V> {
-            return Element(this.map { (k, v) -> Pair<K, V>(k, v.duplicate() as V) }.toMap())
+            return Element(*this.map { (k, v) -> Pair<K, V>(k, v.duplicate() as V) }.toTypedArray())
         }
 
         override fun hashCode(): Int {

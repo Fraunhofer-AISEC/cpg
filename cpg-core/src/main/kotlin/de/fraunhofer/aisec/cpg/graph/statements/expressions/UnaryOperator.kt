@@ -25,12 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
-import de.fraunhofer.aisec.cpg.graph.AccessValues
-import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
-import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
-import de.fraunhofer.aisec.cpg.graph.pointer
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import org.apache.commons.lang3.builder.ToStringBuilder
@@ -74,6 +71,10 @@ class UnaryOperator : Expression(), HasOverloadedOperation, ArgumentHolder, HasT
     var isPrefix = false
 
     private fun changeExpressionAccess() {
+        if (operatorCode == "++" || operatorCode == "--") {
+            (input as? Reference)?.dfgHandlerHint = true
+        }
+
         var access =
             if (operatorCode == "++" || operatorCode == "--") {
                 AccessValues.READWRITE

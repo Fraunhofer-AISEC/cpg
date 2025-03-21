@@ -25,12 +25,12 @@
  */
 plugins { id("cpg.frontend-conventions") }
 
-mavenPublishing {
+/*mavenPublishing {
     pom {
         name.set("Code Property Graph - C/C++ Frontend")
         description.set("A C/C++ language frontend for the CPG")
     }
-}
+}*/
 
 dependencies {
     // Eclipse dependencies

@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
+import de.fraunhofer.aisec.cpg.helpers.orderEOGStartersBasedOnDependencies
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteFirst
@@ -79,7 +80,8 @@ abstract class TranslationUnitPass(ctx: TranslationContext) : Pass<TranslationUn
  * If used with [executePass], one [Pass] object is instantiated for each [Node] in a
  * [EOGStarterHolder] in each [TranslationUnitDeclaration] in each [Component].
  */
-abstract class EOGStarterPass(ctx: TranslationContext) : Pass<Node>(ctx)
+abstract class EOGStarterPass(ctx: TranslationContext, val orderDependencies: Boolean = false) :
+    Pass<Node>(ctx)
 
 open class PassConfiguration {}
 
@@ -292,7 +294,11 @@ fun executePass(
             consumeTargets(
                 (prototype as EOGStarterPass)::class,
                 ctx,
-                result.allEOGStarters,
+                if (prototype.orderDependencies) {
+                    orderEOGStartersBasedOnDependencies(result.allEOGStarters)
+                } else {
+                    result.allEOGStarters
+                },
                 executedFrontends,
             )
         }

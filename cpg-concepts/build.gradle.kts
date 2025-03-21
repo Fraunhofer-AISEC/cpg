@@ -25,12 +25,12 @@
  */
 plugins { id("cpg.frontend-conventions") }
 
-mavenPublishing {
+/*mavenPublishing {
     pom {
         name.set("Code Property Graph - Concepts")
         description.set("A 'concepts' extension for the CPG")
     }
-}
+}*/
 
 dependencies {
     implementation(projects.cpgAnalysis)
