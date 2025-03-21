@@ -270,24 +270,22 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
      * only certain types. A common example is to truncate [NumericType]s, when they are not "big"
      * enough.
      */
-    open fun shouldPropagateType(hasType: HasType, srcType: Type): Boolean {
-        val nodeType = hasType.type
-
+    open fun shouldPropagateType(existingType: Type, newType: Type, hint: HasType): Boolean {
         return when {
             // We only want to add certain types, in case we have a numeric type
-            nodeType is NumericType -> {
+            existingType is NumericType -> {
                 // We do not allow to propagate non-numeric types into numeric types
-                if (srcType !is NumericType) {
+                if (newType !is NumericType) {
                     false
                 } else {
-                    val srcWidth = srcType.bitWidth
-                    val lhsWidth = nodeType.bitWidth
+                    val srcWidth = newType.bitWidth
+                    val lhsWidth = existingType.bitWidth
                     // Do not propagate anything if the new type is too big for the current type.
                     return !(lhsWidth != null && srcWidth != null && lhsWidth < srcWidth)
                 }
             }
             // We do not want to propagate a dynamic type
-            srcType is DynamicType -> {
+            newType is DynamicType -> {
                 false
             }
             else -> {
