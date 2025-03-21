@@ -865,6 +865,29 @@ class PointsToPassTest {
                 .firstOrNull()
         assertNotNull(pfPointerDeref)
 
+        // callexpressions
+        val ceLine112 =
+            tu.functions["testmemcpy"]
+                .calls { it.name.localName == "memcpy" && it.location?.region?.startLine == 112 }
+                .first()
+        assertNotNull(ceLine112)
+
+        // FunctionDeclarations
+        val memcpyFD = ceLine112.invokes.singleOrNull()
+        assertNotNull(memcpyFD)
+
+        // DFGs for the memcpys
+        // We need incoming DFGs from the arguments to the parametermemoryvalues
+        for (i in 0..2) {
+            assertEquals(
+                memcpyFD.parameters[i].memoryValue,
+                ceLine112.arguments[i].nextDFG.singleOrNull(),
+            )
+        }
+        // And from the argument's derefvalues to the parameterMemoryValue's derefvalues
+        //       (memcpyFD.parameters[1].memoryValue.memoryValues.filter { it.name.localName ==
+        // "derefvalue" }.singleOrNull() as MemoryAddress).prevDFG
+
         // Result of memcpy in Line 112
         assertEquals(1, bRef.memoryAddresses.size)
         assertEquals(bDecl.memoryAddresses.singleOrNull(), bRef.memoryAddresses.first())

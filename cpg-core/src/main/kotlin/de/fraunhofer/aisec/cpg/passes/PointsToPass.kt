@@ -510,13 +510,13 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 val p = functionDeclaration.parameters[arg.argumentIndex]
                 if (p.memoryValue == null)
                     initializeParameters(lattice, mutableListOf(p), doubleState, 1)
-                p.memoryValue?.let { memVal ->
+                p.memoryValue?.let { paramVal ->
                     doubleState =
                         lattice.push(
                             doubleState,
-                            memVal,
+                            paramVal,
                             GeneralStateEntryElement(
-                                PowersetLattice.Element(memVal),
+                                PowersetLattice.Element(paramVal),
                                 PowersetLattice.Element(arg),
                                 PowersetLattice.Element(
                                     Pair(arg, equalLinkedHashSetOf(callingContext))
@@ -525,68 +525,98 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         )
                     // Also draw the edges for the (deref)derefvalues if we have any and are
                     // dealing with a pointer parameter (AKA memoryValue is not null)
-                    memVal.memoryValueEdges
+                    paramVal.memoryValueEdges
                         .filter {
-                            it !is ContextSensitiveDataflow ||
-                                it.callingContext.calls == callExpression
+                            /*(it !is ContextSensitiveDataflow ||
+                            it.callingContext.calls == callExpression) &&*/
+                            it.start is ParameterMemoryValue &&
+                                it.start.name.localName == "derefvalue"
                         }
                         .map { it.start }
                         .forEach { derefPMV ->
                             doubleState
                                 .getNestedValues(
                                     arg,
-                                    2,
+                                    1,
                                     fetchFields = false,
                                     onlyFetchExistingEntries = true,
                                     excludeShortFSValues = true,
                                 )
-                                .forEach { (derefValue, _) ->
-                                    doubleState =
-                                        lattice.push(
-                                            doubleState,
-                                            derefPMV,
-                                            GeneralStateEntryElement(
-                                                PowersetLattice.Element(derefPMV),
-                                                PowersetLattice.Element(derefValue),
-                                                PowersetLattice.Element(
-                                                    Pair(
-                                                        derefValue,
-                                                        equalLinkedHashSetOf(callingContext),
-                                                    )
-                                                ),
-                                            ),
-                                        )
-                                    // The same for the derefderef values
-                                    (derefPMV as? HasMemoryValue)?.memoryValues?.forEach {
-                                        derefderefPMV ->
-                                        // probably iterate through everything???
+                                .forEach { (argVal, _) ->
+                                    val argDerefVals =
                                         doubleState
                                             .getNestedValues(
-                                                derefValue,
+                                                argVal,
                                                 1,
                                                 fetchFields = false,
                                                 onlyFetchExistingEntries = true,
                                                 excludeShortFSValues = true,
                                             )
-                                            .forEach { (derefderefValue, _) ->
-                                                addEntryToEdgePropertiesMap(
-                                                    Pair(derefderefPMV, derefderefValue),
-                                                    identitySetOf(callingContext),
-                                                )
-                                                doubleState =
-                                                    lattice.push(
-                                                        doubleState,
-                                                        derefderefPMV,
-                                                        GeneralStateEntryElement(
-                                                            PowersetLattice.Element(derefderefPMV),
-                                                            PowersetLattice.Element(
-                                                                derefderefValue
-                                                            ),
-                                                            PowersetLattice.Element(),
-                                                        ),
+                                            .mapTo(equalLinkedHashSetOf()) { it.first }
+                                    val lastDerefWrites =
+                                        doubleState.getLastWrites(argVal).mapTo(
+                                            equalLinkedHashSetOf()
+                                        ) {
+                                            Pair(
+                                                it.first,
+                                                equalLinkedHashSetOf<Any>(callingContext),
+                                            )
+                                        }
+                                    doubleState =
+                                        lattice.push(
+                                            doubleState,
+                                            derefPMV,
+                                            GeneralStateEntryElement(
+                                                PowersetLattice.Element(paramVal),
+                                                PowersetLattice.Element(argDerefVals),
+                                                PowersetLattice.Element(lastDerefWrites),
+                                            ),
+                                        )
+                                    // The same for the derefderef values
+                                    (derefPMV as? HasMemoryValue)
+                                        ?.memoryValues
+                                        ?.filter { it.name.localName == "derefderefvalue" }
+                                        ?.forEach { derefderefPMV ->
+                                            argDerefVals
+                                                .flatMap {
+                                                    doubleState.getNestedValues(
+                                                        it,
+                                                        1,
+                                                        fetchFields = false,
+                                                        onlyFetchExistingEntries = true,
+                                                        excludeShortFSValues = true,
                                                     )
-                                            }
-                                    }
+                                                }
+                                                .forEach { (derefderefValue, _) ->
+                                                    val lastDerefDerefWrites =
+                                                        argDerefVals
+                                                            .flatMapTo(IdentitySet()) {
+                                                                doubleState.getLastWrites(it)
+                                                            }
+                                                            .mapTo(IdentitySet()) {
+                                                                Pair(
+                                                                    it.first,
+                                                                    equalLinkedHashSetOf<Any>(
+                                                                        callingContext
+                                                                    ),
+                                                                )
+                                                            }
+                                                    doubleState =
+                                                        lattice.push(
+                                                            doubleState,
+                                                            derefderefPMV,
+                                                            GeneralStateEntryElement(
+                                                                PowersetLattice.Element(derefPMV),
+                                                                PowersetLattice.Element(
+                                                                    derefderefValue
+                                                                ),
+                                                                PowersetLattice.Element(
+                                                                    lastDerefDerefWrites
+                                                                ),
+                                                            ),
+                                                        )
+                                                }
+                                        }
                                 }
                         }
                 }
@@ -634,7 +664,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         .sortedBy { it.destValueDepth }
                         .forEach { (dstValueDepth, srcNode, srcValueDepth, subAccessName, shortFS)
                             ->
-                            println("in handleCE: srcnode: $srcNode, subAccessName: $subAccessName")
                             val destinations =
                                 calculateCallExpressionDestination(
                                     doubleState,
@@ -1735,7 +1764,7 @@ fun PointsToStateElement.getNestedValues(
                 }
         )
             identitySetOf()
-        else getValues(node)
+        else getValues(node).filterTo(IdentitySet()) { it.second != excludeShortFSValues }
     for (i in 1..<nestingDepth) {
         ret =
             ret.filterTo(identitySetOf()) {
@@ -1761,16 +1790,12 @@ fun PointsToStateElement.fetchFieldAddresses(
 ): IdentitySet<Node> {
     val fieldAddresses = identitySetOf<Node>()
 
-    println(
-        "In fetchfieldAddresses. baseAddresses.first: ${baseAddresses.first()} baseAddresses.size: ${baseAddresses.size}"
-    )
     baseAddresses.forEach { addr ->
         val elements =
             declarationsState[addr]?.first?.filterTo(identitySetOf()) {
                 it.name.localName == nodeName.localName
             }
 
-        println("addr: $addr, elements.isempty: ${elements?.isEmpty()}")
         if (elements.isNullOrEmpty()) {
             val newEntry =
                 identitySetOf<Node>(
@@ -1780,7 +1805,6 @@ fun PointsToStateElement.fetchFieldAddresses(
                 )
 
             if (this.declarationsState[addr] == null) {
-                println("++ is null ++")
                 this.declarationsState[addr] =
                     TripleLattice.Element(
                         PowersetLattice.Element(addr),

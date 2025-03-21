@@ -107,12 +107,12 @@ int testmemcpy() {
 
   printf("a : %d, %p; b : %d, %p, c : %d, %p, d : %d, %p, e : %d, %p, f : %d, %p\n", a, &a, b, &b, c, &c, d, &d, e, &e, f, &f);
   printf("pa: %d, %p; pb: %d, %p, pc: %d, %p, pd: %d, %p, pe: %d, %p, pf: %d, %p\n", *pa, pa, *pb, pb, *pc, pc, *pd, pd, *pe, pe, *pf, pf);
-
+  
   // Copy the data at pa.memoryValue (AKA &a) to the address at pb.memoryValue (AKA &b)
   memcpy(pb,pa,sizeof(a));
 
   // Copy the data at pa.memoryValue (AKA &a) to the address at caddr.memoryValue (AKA &c)
-  memcpy((void *)caddr,pa,sizeof(pa));
+  memcpy((long *)caddr,pa,sizeof(pa));
 
   // Copy the data at pa.memoryValue (AKA &a) to the address at &d.memoryValue (AKA d.memoryAddress) 
   memcpy(&d,pa,sizeof(a));
@@ -127,7 +127,7 @@ int testmemcpy() {
 
   printf("a : %d, %p; b : %d, %p, c : %d, %p, d : %d, %p, e : %d, %p, f : %d, %p\n", a, &a, b, &b, c, &c, d, &d, e, &e, f, &f);
   printf("pa: %d, %p; pb: %d, %p, pc: %d, %p, pd: %d, %p, pe: %d, %p, pf: %d, %p\n", *pa, pa, *pb, pb, *pc, pc, *pd, pd, *pe, pe, *pf, pf);
-}
+i}
 
 int pointertopointer(){
 
