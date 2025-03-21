@@ -63,6 +63,11 @@ typealias DeclarationStateEntry =
         PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>>,
     >
 
+/**
+ * A typealias for an element in the generalState. The first element represent possible addresses,
+ * the second element represents possible memory values and the third element represents the last
+ * writes with their properties.
+ */
 typealias GeneralStateEntryElement =
     TripleLattice.Element<
         // Address
@@ -73,6 +78,11 @@ typealias GeneralStateEntryElement =
         PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>>,
     >
 
+/**
+ * A typealias for an element in the declarationState. The first element represent possible
+ * addresses, the second element represents the values with an indication if it comes from a short
+ * function summary and the third element represents the last writes with their properties.
+ */
 typealias DeclarationStateEntryElement =
     TripleLattice.Element<
         // Address
@@ -83,29 +93,13 @@ typealias DeclarationStateEntryElement =
         PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>>,
     >
 
-typealias SingleGeneralStateElement =
-    MapLattice.Element<
-        Node,
-        TripleLattice.Element<
-            PowersetLattice.Element<Node>,
-            PowersetLattice.Element<Node>,
-            PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>>,
-        >,
-    >
+typealias SingleGeneralStateElement = MapLattice.Element<Node, GeneralStateEntryElement>
 
 typealias SingleDeclarationStateElement = MapLattice.Element<Node, DeclarationStateEntryElement>
 
 typealias SingleGeneralState = MapLattice<Node, GeneralStateEntryElement>
 
-typealias SingleDeclarationState =
-    MapLattice<
-        Node,
-        TripleLattice.Element<
-            PowersetLattice.Element<Node>,
-            PowersetLattice.Element<Pair<Node, Boolean>>,
-            PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>>,
-        >,
-    >
+typealias SingleDeclarationState = MapLattice<Node, DeclarationStateEntryElement>
 
 typealias PointsToStateElement =
     TupleLattice.Element<SingleGeneralStateElement, SingleDeclarationStateElement>
@@ -1677,8 +1671,8 @@ fun PointsToStateElement.getAddresses(node: Node): IdentitySet<Node> {
         }
         is Reference -> {
             /*
-            For references, the address is the same as for the declaration, AKA the refersTo
-            */
+             * For references, the address is the same as for the declaration, AKA the refersTo
+             */
             node.refersTo?.let { refersTo ->
                 /* In some cases, the refersTo might not yet have an initialized MemoryAddress, for example if it's a FunctionDeclaration. So let's do this here */
                 if (refersTo.memoryAddresses.isEmpty()) {
@@ -1746,7 +1740,6 @@ fun PointsToStateElement.getNestedValues(
                     )
                 }
                 .mapTo(IdentitySet()) { Pair(it.first, it.second) }
-        // .toIdentitySet()
     }
     return ret
 }
@@ -1815,7 +1808,7 @@ fun PointsToStateElement.updateValues(
     destinationAddresses.forEach { destAddr ->
         // Clear previous entries in edgePropertiesMap
         edgePropertiesMap
-            .filter { it.key.first == destAddr }
+            .filter { it.key.first === destAddr }
             .forEach { entry -> edgePropertiesMap.remove(entry.key) }
 
         if (!isGlobal(destAddr)) {
@@ -1832,7 +1825,7 @@ fun PointsToStateElement.updateValues(
                     } ?: pair
                 }
             /* val newPrevDFG =
-            // TODO: To we also need to fetch some properties here?
+            // TODO: Do we also need to fetch some properties here?
             lastWrites.mapTo(IdentitySet()) { Pair(it, false) }*/
             // If we already have exactly this value in the state for the prevDFGs, we take that in
             // order not to confuse the iterateEOG function
@@ -1880,7 +1873,7 @@ fun PointsToStateElement.updateValues(
     /* Also update the generalState for dst (if we have any destinations) */
     // If the lastWrites are in the sources or destinations, we don't have to set the prevDFG edges
     lastWrites.removeIf { lw ->
-        sources.any { src -> src.first == lw.first && src.second in lw.second } ||
+        sources.any { src -> src.first === lw.first && src.second in lw.second } ||
             lw.first in destinations
     }
     destinations.forEach { d ->
