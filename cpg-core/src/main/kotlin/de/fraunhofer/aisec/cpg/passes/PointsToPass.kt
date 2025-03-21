@@ -190,8 +190,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     ) : PassConfiguration()
 
     // For recursive creation of FunctionSummaries, we have to make sure that we don't run in
-    // circles.
-    // Therefore, we store the chain of FunctionDeclarations we currently analyse
+    // circles. Therefore, we store the chain of FunctionDeclarations we currently analyse
     private val functionSummaryAnalysisChain = mutableSetOf<FunctionDeclaration>()
 
     override fun cleanup() {
@@ -348,9 +347,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     }
                     // If so, store the last write for the parameter in the FunctionSummary
                     .forEach { (value, shortFS, subAccessName) ->
-                        // TODO: Also extract the last write. TO be able to do this for fields, we
-                        // need the info here on which address we are working, which we currently
-                        // loose by calling fetchElementsfromDeclarationsState
+                        // TODO: Also extract the last write. To be able to do this for fields, we
+                        //   need the info here on which address we are working, which we currently
+                        //   loose by calling fetchElementsfromDeclarationsState.
                         // Extract the value depth from the value's localName
                         val srcValueDepth = stringToDepth(value.name.localName)
                         // Store the information in the functionSummary
@@ -542,10 +541,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                     excludeShortFSValues = true,
                                 )
                                 .forEach { (derefValue, _) ->
-                                    /*addEntryToEdgePropertiesMap(
-                                        Pair(derefPMV, derefValue),
-                                        identitySetOf(callingContext),
-                                    )*/
                                     doubleState =
                                         lattice.push(
                                             doubleState,
@@ -795,6 +790,28 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         }*/
     }
 
+    /**
+     * Adds entries to the map that tracks the source nodes for each destination node.
+     *
+     * This method updates the `mapDstToSrc` map with the source nodes and their properties for each
+     * destination node. It handles different types of source nodes, including
+     * `ParameterDeclaration`, `ParameterMemoryValue`, `MemoryAddress`, and other nodes. Depending
+     * on the type of source node, it may also update the general state to draw additional Data Flow
+     * Graph (DFG) edges.
+     *
+     * @param lattice The lattice representing the points-to state.
+     * @param doubleState The current state of the points-to analysis.
+     * @param mapDstToSrc The map that tracks the source nodes for each destination node.
+     * @param destination The set of destination nodes.
+     * @param srcNode The source node to be added to the map.
+     * @param shortFS A flag indicating if this is a short function summary.
+     * @param argument The argument expression related to the source node.
+     * @param srcValueDepth The depth of the source value.
+     * @param param The parameter node related to the source node.
+     * @param propertySet The set of properties associated with the source node.
+     * @param currentNode The current call expression being analyzed.
+     * @return The updated map that tracks the source nodes for each destination node.
+     */
     private fun addEntryToMap(
         lattice: PointsToState,
         doubleState: PointsToStateElement,
@@ -812,12 +829,10 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         when (srcNode) {
             is ParameterDeclaration -> {
                 // Add the (dereferenced) value of the respective argument
-                // in
-                // the CallExpression
+                // in the CallExpression
                 if (srcNode.argumentIndex < currentNode.arguments.size) {
                     // If this is a short FunctionSummary, we additionally
-                    // update the
-                    // generalState to draw the additional DFG Edges
+                    // update the generalState to draw the additional DFG Edges
                     if (shortFS) {
                         doubleState =
                             lattice.push(
@@ -845,7 +860,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     values.forEach { value ->
                         destination.forEach { d ->
                             // The extracted value might come from a state we
-                            // created for a shortfunctionSummary. If so, we
+                            // created for a short function summary. If so, we
                             // have to store that info in the map
                             val updatedPropertySet = propertySet
                             updatedPropertySet.add(
@@ -898,7 +913,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             }
                         }
                     }
-                //                                    }
             }
 
             is MemoryAddress -> {
@@ -968,9 +982,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 .map { it.first }
                 .toIdentitySet()
 
-        println(
-            "dstValueDepth > 2 && updatedAddresses.isNotEmpty(): ${dstValueDepth > 2 && updatedAddresses.isNotEmpty()}"
-        )
         return if (dstValueDepth > 2 && updatedAddresses.isNotEmpty()) {
             updatedAddresses
         } else {
