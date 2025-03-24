@@ -57,7 +57,7 @@ val javadocJar by tasks.registering(Jar::class) {
 //
 // specify Java & Kotlin JVM version
 kotlin {
-    jvmToolchain(17)
+    jvmToolchain(21)
 }
 
 tasks.withType<KotlinCompile> {
