@@ -1,8 +1,8 @@
 # Query Examples
 
-We want to create a way to create "rules" or "checks", that check for certain patterns in the code. Therefore we need to decide, if we want to have a "algorithmic" or a "descriptive" way to declare such as check.
+We want to create a way to create "rules" or "checks" that check for certain patterns in the code. Therefore, we need to decide if we want to have an "algorithmic" or a "descriptive" way to declare such a check.
 
-Syntax explanation: `|x|` means, that `x` should be "resolved", either through constant propagation or other fancy algorithms.
+Syntax explanation: `|x|` means that `x` should be "resolved", either through constant propagation or other fancy algorithms.
 
 The following examples check that no such bug is present.
 
@@ -20,7 +20,7 @@ result.all<HasBase>(mustSatisfy={it.base() != null})
 ```
 
 ## Memcpy too large source (Buffer Overflow)
-Part of CWE 120: Buffer Copy without Checking Size of Input ('Classic Buffer Overflow') --> do we also need to find selfwritten copy functions for buffers?
+Part of CWE 120: Buffer Copy without Checking Size of Input ('Classic Buffer Overflow') --> do we also need to find self-written copy functions for buffers?
 ```
 result.all<CallExpression>({ it.name == "memcpy" }, { sizeof(it.arguments[0]) >= min(it.arguments[2]) } )
 ```
@@ -43,11 +43,11 @@ For assignments:
 ```
 result.all<Assignment>({ it.target?.type?.isPrimitive == true }, { max(it.value) <= maxSizeOfType(it.target!!.type) && min(it.value) >= minSizeOfType(it.target!!.type)})
 ```
-For other expressions, we need to compute the effect of the operator
+For other expressions, we need to compute the effect of the operator.
 
 ## Use after free
 
-Intuition: No node which is reachable from a node `free(x)` must use `x`. Use EOG for reachability but I'm not sure how to say "don't use x". This is the most basic form.
+Intuition: No node which is reachable from a node `free(x)` must use `x`. Use EOG for reachability, but I'm not sure how to say "don't use x". This is the most basic form.
 ```
 result.all<CallExpression>({ it.name == "free" }) { outer -> !executionPath(outer) { (it as? DeclaredReferenceExpression)?.refersTo == (outer.arguments[0] as? DeclaredReferenceExpression)?.refersTo }.value }
 ```
@@ -77,20 +77,19 @@ Since many classical vulns. (injection) are related to user input, we probably n
 Sounds like this always depends on the program? What is an insecure return value?
 
 E.g.:
-*  Authorization: instead of assuming successful authorization (`authorized = true`) and checking for the contrary; start with assuming unauthorized (`authorized = false`) and check for authorization
+* Authorization: instead of assuming successful authorization (`authorized = true`) and checking for the contrary; start with assuming unauthorized (`authorized = false`) and check for authorization.
 
 ## Missing Return Value Validation (Error checking)
 
 CWE 252
 
-I can't think of a simple query here which does not introduce too many findings because it often depends "what happens afterwards". Example: logging an error value is typically not problematic. Also, the return values can have very different meanings which makes it hard to find a solution for all issues.
+I can't think of a simple query here which does not introduce too many findings because it often depends on "what happens afterward". Example: logging an error value is typically not problematic. Also, the return values can have very different meanings which makes it hard to find a solution for all issues.
 
 Simple idea 1: There has to be at least a check for the return value (probably for a given list of functions and respective error indicating return values).
 
 ## Command Injection
 
-*  Perform data flow analysis and check if unchecked user input reaches function calling system commands
-
+* Perform data flow analysis and check if unchecked user input reaches function calling system commands.
 
 ## Proper Nulltermination of Strings (C specific)
 
@@ -100,7 +99,7 @@ Simple idea 1: There has to be at least a check for the return value (probably f
 
 ## Use of Hard-coded Credentials (CWE 798)
 
-Idea: when crypto API is known, we could follow to input argument for passwords / keys ...
+Idea: when crypto API is known, we could follow the input argument for passwords/keys ...
 
 ```
 relevant_args = {"function": "arg0"}
@@ -136,15 +135,14 @@ val cipher = initialize_cipher(algo); // at this point one can infer that algo m
 
 ## https://cwe.mitre.org/data/definitions/1228.html
 
-Should be easy by simply maintaining a list of the dangerous, inconsistent, obsolete, etc. functions and checking all `CallExpression`s
-
+Should be easy by simply maintaining a list of the dangerous, inconsistent, obsolete, etc. functions and checking all `CallExpression`s.
 
 # Which analyses do we need?
 
 * Integer range
 * Buffer size of constant sized arrays (mem size, no elements)
-* Data flow analysis (intraproc: DFG edges, interproc: missing)
-* Reachability (intraproc: EOG edges, interproc: missing)
+* Data flow analysis (intraproc: DFG edges, interproc: accessible via `followDFGEdgesUntilHit`)
+* Reachability (intraproc: EOG edges, interproc: accessible via `followEOGEdgesUntilHit`)
 * Points-to information
 * Taint analysis
 * Constant propagation
