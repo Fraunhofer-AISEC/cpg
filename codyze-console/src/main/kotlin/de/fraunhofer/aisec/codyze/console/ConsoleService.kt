@@ -28,6 +28,9 @@ package de.fraunhofer.aisec.codyze.console
 import de.fraunhofer.aisec.codyze.AnalysisProject
 import de.fraunhofer.aisec.codyze.AnalysisResult
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.graph.Name
+import de.fraunhofer.aisec.cpg.graph.concepts.logging.Log
+import de.fraunhofer.aisec.cpg.graph.concepts.newConcept
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.passes.concepts.config.python.PythonStdLibConfigurationPass
@@ -135,6 +138,54 @@ class ConsoleService {
             ?.find { it.id == Uuid.parse(id) }
             ?.cpgTU
             ?.let { extractNodes(it, overlayNodes) } ?: emptyList()
+    }
+
+    /**
+     * Adds a new [Concept] to an existing node in the analysis result.
+     *
+     * @param request The request containing node ID, concept name and configuration parameters
+     * @throws IllegalStateException if no analysis result exists
+     * @throws IllegalArgumentException if the target node is not found or the concept name is
+     *   invalid
+     */
+    fun addConcept(request: ConceptRequestJSON) {
+        val analysisResult =
+            this.analysisResult ?: throw IllegalStateException("No analysis result exists")
+
+        val node =
+            analysisResult.components
+                .flatMap { it.translationUnits }
+                .flatMap { it.cpgTU.nodes }
+                .find { it.id == request.nodeId }
+                ?: throw IllegalArgumentException("Target node not found")
+
+        val concept =
+            node.newConcept(
+                constructor =
+                    when (request.conceptName) {
+                        "Log" -> { node -> Log(node).apply { name = Name("TEST Log " /* TODO */) } }
+                        "File" -> { node ->
+                                de.fraunhofer.aisec.cpg.graph.concepts.file.File(node, "Filename")
+                            }
+                        "Secret" -> { node ->
+                                de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.Secret(node)
+                            }
+                        /* TODO more concepts... */
+                        else ->
+                            throw IllegalArgumentException(
+                                "Unknown concept: ${request.conceptName}"
+                            )
+                    },
+                underlyingNode = node,
+            )
+
+        // Handle DFG edges if requested
+        if (request.addDFGToConcept) {
+            node.nextDFG += concept
+        }
+        if (request.addDFGFromConcept) {
+            concept.nextDFG += node
+        }
     }
 
     /**
