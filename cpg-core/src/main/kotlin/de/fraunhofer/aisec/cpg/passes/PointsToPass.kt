@@ -208,17 +208,12 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         if (node !is FunctionDeclaration) {
             return
         }
-        // If the node already has a function summary, we have visited it before and can
+        // If the node has a body and a function summary, we have visited it before and can
         // return here.
         if (
-            node.functionSummary.isNotEmpty() &&
+            (node.functionSummary.isNotEmpty() && node.body != null) &&
                 node.functionSummary.keys.any { it in node.parameters || it in node.returns }
         ) {
-            return
-        }
-
-        // Skip empty functions
-        if (node.body == null) {
             return
         }
 
@@ -260,7 +255,12 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
         startState = initializeParameters(lattice, node.parameters, startState)
 
-        var finalState = lattice.iterateEOG(node.nextEOGEdges, startState, ::transfer)
+        val finalState =
+            if (node.body == null) {
+                handleEmptyFunctionDeclaration(lattice, startState, node)
+            } else {
+                lattice.iterateEOG(node.nextEOGEdges, startState, ::transfer)
+            }
 
         for ((key, value) in finalState.generalState) {
             // The generalState values have 3 items: The address, the value, and the prevDFG-Edges
@@ -307,6 +307,55 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
         /* Store function summary for this FunctionDeclaration. */
         storeFunctionSummary(node, finalState)
+    }
+
+    /**
+     * This function draws the basic DFG-Edges based on the functionDeclaration, such as edges
+     * between ParameterMemoryValues
+     */
+    private fun handleEmptyFunctionDeclaration(
+        lattice: PointsToState,
+        startState: TupleLattice.Element<SingleGeneralStateElement, SingleDeclarationStateElement>,
+        functionDeclaration: FunctionDeclaration,
+    ): PointsToStateElement {
+        var doubleState = startState
+        for ((param, fsEntries) in functionDeclaration.functionSummary) {
+            fsEntries.forEach { (dstValueDepth, srcNode, srcValueDepth, subAccessName, shortFS) ->
+                if (param is ParameterDeclaration && srcNode is ParameterDeclaration) {
+                    val dst =
+                        param.memoryValue
+                            ?.memoryValues
+                            ?.filterIsInstance<ParameterMemoryValue>()
+                            ?.singleOrNull {
+                                it.name.localName == "deref".repeat(dstValueDepth - 1) + "value"
+                            }
+                    val src =
+                        srcNode.memoryValue
+                            ?.memoryValues
+                            ?.filterIsInstance<ParameterMemoryValue>()
+                            ?.singleOrNull {
+                                it.name.localName == "deref".repeat(srcValueDepth - 1) + "value"
+                            }
+                    if (src != null && dst != null) {
+                        val propertySet = equalLinkedHashSetOf<Any>()
+                        if (subAccessName != "")
+                            propertySet.add(FieldDeclaration().apply { name = Name(subAccessName) })
+                        if (shortFS) propertySet.add(shortFS)
+                        doubleState =
+                            lattice.push(
+                                doubleState,
+                                dst,
+                                GeneralStateEntryElement(
+                                    PowersetLattice.Element(),
+                                    PowersetLattice.Element(),
+                                    PowersetLattice.Element(Pair(src, propertySet)),
+                                ),
+                            )
+                    }
+                }
+            }
+        }
+        return doubleState
     }
 
     private fun storeFunctionSummary(node: FunctionDeclaration, doubleState: PointsToStateElement) {
@@ -509,7 +558,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 // Create a DFG-Edge from the argument to the parameter's memoryValue
                 val p = functionDeclaration.parameters[arg.argumentIndex]
                 if (p.memoryValue == null)
-                    initializeParameters(lattice, mutableListOf(p), doubleState, 1)
+                    initializeParameters(lattice, mutableListOf(p), doubleState, 2)
                 p.memoryValue?.let { paramVal ->
                     doubleState =
                         lattice.push(
@@ -883,6 +932,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                     currentNode.arguments[srcNode.argumentIndex],
                                     srcValueDepth,
                                     fetchFields = true,
+                                    excludeShortFSValues = true,
                                 )
                                 .mapTo(IdentitySet()) { it.first }
                         else identitySetOf(currentNode.arguments[param.argumentIndex])
@@ -1777,7 +1827,8 @@ fun PointsToStateElement.getNestedValues(
     if (nestingDepth == 0) return this.getAddresses(node).mapTo(IdentitySet()) { Pair(it, false) }
     var ret =
         if (
-            onlyFetchExistingEntries &&
+            node !is PointerReference &&
+                onlyFetchExistingEntries &&
                 this.getAddresses(node).none { addr ->
                     this.hasDeclarationStateEntry(addr, excludeShortFSValues)
                 }

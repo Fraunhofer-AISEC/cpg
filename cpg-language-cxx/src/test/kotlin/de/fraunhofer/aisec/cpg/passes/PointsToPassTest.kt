@@ -951,7 +951,7 @@ class PointsToPassTest {
         )
         assertEquals(
             1,
-            aDecl.nextDFGEdges
+            paDecl.nextDFGEdges
                 .filter {
                     it is ContextSensitiveDataflow &&
                         (it.callingContext as? CallingContextIn)?.calls == setOf(ceLine125) &&

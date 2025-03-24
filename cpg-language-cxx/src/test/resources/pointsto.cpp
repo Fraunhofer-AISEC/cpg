@@ -112,7 +112,7 @@ int testmemcpy() {
   memcpy(pb,pa,sizeof(a));
 
   // Copy the data at pa.memoryValue (AKA &a) to the address at caddr.memoryValue (AKA &c)
-  memcpy((long *)caddr,pa,sizeof(pa));
+  memcpy((long *)caddr,pa,sizeof(a));
 
   // Copy the data at pa.memoryValue (AKA &a) to the address at &d.memoryValue (AKA d.memoryAddress) 
   memcpy(&d,pa,sizeof(a));

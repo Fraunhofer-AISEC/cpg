@@ -369,6 +369,9 @@ class DFGFunctionSummaries {
                 }
             // TODO: It would make sense to model properties here. Could be the index of a return
             // value, full vs. partial flow or whatever comes to our minds in the future
+            // TODO: Unsure if we still need this. We currently draw the edges between the
+            // ParameterMemoryValues. We can't do this here because we don't yet have them, so we do
+            // this in handleCallExpression in the pointsToPass
             to?.let { from?.nextDFGEdges += it }
         }
     }
