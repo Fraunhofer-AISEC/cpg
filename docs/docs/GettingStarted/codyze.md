@@ -1,11 +1,11 @@
 ---
-title: "Using the Codyze CLI"
-linkTitle: "Using the Codyze CLI"
+title: "Using Codyze"
+linkTitle: "Using Codyze"
 no_list: true
 weight: 2
 date: 2025-03-17
 description: >
-  Using the Codyze CLI
+  Using Codyze
 ---
 
 # Codyze - The swiss army knife for the code property graph

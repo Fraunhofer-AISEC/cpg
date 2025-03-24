@@ -1,6 +1,6 @@
 ---
-title: "Using the Interactive CLI"
-linkTitle: "Using the Interactive CLI"
+title: "Using neo4j"
+linkTitle: "Using neo4j"
 no_list: true
 weight: 2
 date: 2025-01-10
