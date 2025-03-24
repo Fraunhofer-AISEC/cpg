@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.concepts.http
 import de.fraunhofer.aisec.cpg.graph.MetadataProvider
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
-import de.fraunhofer.aisec.cpg.graph.concepts.auth.Authentication
+import de.fraunhofer.aisec.cpg.graph.concepts.auth.IdentityAccessManagement
 import de.fraunhofer.aisec.cpg.graph.concepts.newConcept
 import de.fraunhofer.aisec.cpg.graph.concepts.newOperation
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
@@ -38,13 +38,13 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
  *
  * @param underlyingNode The underlying node representing this concept.
  * @param isTLS Whether the client uses TLS.
- * @param authentication The [Authentication] method used by the client.
+ * @param authentication The [IdentityAccessManagement] method used by the client.
  * @return The created [HttpClient] concept.
  */
 fun MetadataProvider.newHttpClient(
     underlyingNode: Node,
     isTLS: Boolean?,
-    authentication: Authentication?,
+    authentication: IdentityAccessManagement?,
 ) =
     newConcept(
         { HttpClient(it, isTLS = isTLS, authentication = authentication) },
@@ -76,7 +76,7 @@ fun MetadataProvider.newHttpRequestHandler(
  * @param httpMethod The [HttpMethod] the created [HttpEndpoint] listens to.
  * @param path The path of the created [HttpEndpoint].
  * @param arguments A list of the [Node]s representing the arguments passed to the [HttpEndpoint].
- * @param authentication The [Authentication] method used by the [HttpEndpoint].
+ * @param authentication The [IdentityAccessManagement] method used by the [HttpEndpoint].
  * @return The created [HttpEndpoint] concept.
  */
 fun MetadataProvider.newHttpEndpoint(
@@ -84,7 +84,7 @@ fun MetadataProvider.newHttpEndpoint(
     httpMethod: HttpMethod,
     path: String,
     arguments: List<Node>,
-    authentication: Authentication?,
+    authentication: IdentityAccessManagement?,
 ) =
     newConcept(
         {

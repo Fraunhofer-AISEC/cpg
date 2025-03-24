@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.concepts.http
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
-import de.fraunhofer.aisec.cpg.graph.concepts.auth.Authentication
+import de.fraunhofer.aisec.cpg.graph.concepts.auth.IdentityAccessManagement
 import de.fraunhofer.aisec.cpg.graph.concepts.flows.RemoteEntryPoint
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import java.util.Objects
@@ -39,7 +39,7 @@ class HttpEndpoint(
     val httpMethod: HttpMethod,
     val path: String,
     val arguments: List<Node>,
-    val authentication: Authentication?,
+    val authentication: IdentityAccessManagement?,
 ) : RemoteEntryPoint(underlyingNode = underlyingNode) {
     override fun equals(other: Any?): Boolean {
         return other is HttpEndpoint &&

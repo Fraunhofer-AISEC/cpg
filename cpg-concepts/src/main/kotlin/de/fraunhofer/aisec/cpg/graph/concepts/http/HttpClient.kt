@@ -28,14 +28,14 @@ package de.fraunhofer.aisec.cpg.graph.concepts.http
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
-import de.fraunhofer.aisec.cpg.graph.concepts.auth.Authentication
+import de.fraunhofer.aisec.cpg.graph.concepts.auth.IdentityAccessManagement
 import java.util.Objects
 
 /** Represents an [HttpClient]. */
 class HttpClient(
     underlyingNode: Node,
     val isTLS: Boolean? = false,
-    val authentication: Authentication? = null,
+    val authentication: IdentityAccessManagement? = null,
 ) : Concept(underlyingNode = underlyingNode) {
     override fun equals(other: Any?): Boolean {
         return other is HttpClient &&
