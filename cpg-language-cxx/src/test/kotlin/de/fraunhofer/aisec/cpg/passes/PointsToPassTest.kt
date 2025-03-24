@@ -900,6 +900,19 @@ class PointsToPassTest {
         val memcpyFD = ceLine112.invokes.singleOrNull()
         assertNotNull(memcpyFD)
 
+        // memcpy PMVs
+        val memcpySrcDeref =
+            memcpyFD.parameters[1].memoryValue?.memoryValues?.singleOrNull {
+                it.name.localName == "derefvalue"
+            }
+        assertNotNull(memcpySrcDeref)
+
+        val memcpyDstDeref =
+            memcpyFD.parameters[0].memoryValue?.memoryValues?.singleOrNull {
+                it.name.localName == "derefvalue"
+            }
+        assertNotNull(memcpyDstDeref)
+
         // DFGs for the memcpys
         // We need incoming DFGs from the arguments to the parametermemoryvalues
         for (i in 0..2) {
@@ -915,7 +928,7 @@ class PointsToPassTest {
                 .filter {
                     it is ContextSensitiveDataflow &&
                         (it.callingContext as? CallingContextIn)?.calls == setOf(ceLine112) &&
-                        it.end.name.localName == "derefvalue"
+                        it.end == memcpySrcDeref
                 }
                 .size,
         )
@@ -925,7 +938,7 @@ class PointsToPassTest {
                 .filter {
                     it is ContextSensitiveDataflow &&
                         (it.callingContext as? CallingContextIn)?.calls == setOf(ceLine115) &&
-                        it.end.name.localName == "derefvalue"
+                        it.end == memcpySrcDeref
                 }
                 .size,
         )
@@ -935,7 +948,7 @@ class PointsToPassTest {
                 .filter {
                     it is ContextSensitiveDataflow &&
                         (it.callingContext as? CallingContextIn)?.calls == setOf(ceLine118) &&
-                        it.end.name.localName == "derefvalue"
+                        it.end == memcpySrcDeref
                 }
                 .size,
         )
@@ -945,7 +958,7 @@ class PointsToPassTest {
                 .filter {
                     it is ContextSensitiveDataflow &&
                         (it.callingContext as? CallingContextIn)?.calls == setOf(ceLine121) &&
-                        it.end.name.localName == "derefvalue"
+                        it.end == memcpySrcDeref
                 }
                 .size,
         )
@@ -955,65 +968,147 @@ class PointsToPassTest {
                 .filter {
                     it is ContextSensitiveDataflow &&
                         (it.callingContext as? CallingContextIn)?.calls == setOf(ceLine125) &&
-                        it.end.name.localName == "derefvalue"
+                        it.end == memcpySrcDeref
                 }
                 .size,
         )
+
+        // The flow within the memcpy from one deref-PMV to the other
+        assertEquals(memcpyDstDeref, memcpySrcDeref.nextDFG.singleOrNull())
 
         // Result of memcpy in Line 112
         assertEquals(1, bRef.memoryAddresses.size)
         assertEquals(bDecl.memoryAddresses.singleOrNull(), bRef.memoryAddresses.first())
         assertEquals(1, bRef.fullMemoryValues.size)
         assertEquals(aDecl.fullMemoryValues.first(), bRef.fullMemoryValues.first())
+        assertEquals(
+            memcpyDstDeref,
+            bRef.prevDFGEdges
+                .singleOrNull {
+                    it is ContextSensitiveDataflow && it.callingContext.calls == setOf(ceLine112)
+                }
+                ?.start,
+        )
 
         assertEquals(1, pbPointerDeref.memoryAddresses.size)
         assertEquals(bDecl.memoryAddresses.singleOrNull(), pbPointerDeref.memoryAddresses.first())
         assertEquals(1, pbPointerDeref.fullMemoryValues.size)
         assertEquals(aDecl.fullMemoryValues.first(), pbPointerDeref.fullMemoryValues.first())
+        assertEquals(
+            memcpyDstDeref,
+            pbPointerDeref.prevDFGEdges
+                .singleOrNull {
+                    it is ContextSensitiveDataflow && it.callingContext.calls == setOf(ceLine112)
+                }
+                ?.start,
+        )
 
         // Result of memcpy in Line 115
         assertEquals(1, cRef.memoryAddresses.size)
         assertEquals(cDecl.memoryAddresses.singleOrNull(), cRef.memoryAddresses.first())
         assertEquals(1, cRef.fullMemoryValues.size)
         assertEquals(aDecl.fullMemoryValues.first(), cRef.fullMemoryValues.first())
+        assertEquals(aDecl.fullMemoryValues.first(), cRef.fullMemoryValues.first())
+        assertEquals(
+            memcpyDstDeref,
+            cRef.prevDFGEdges
+                .singleOrNull {
+                    it is ContextSensitiveDataflow && it.callingContext.calls == setOf(ceLine115)
+                }
+                ?.start,
+        )
 
         assertEquals(1, pcPointerDeref.memoryAddresses.size)
         assertEquals(cDecl.memoryAddresses.singleOrNull(), pcPointerDeref.memoryAddresses.first())
         assertEquals(1, pcPointerDeref.fullMemoryValues.size)
         assertEquals(aDecl.fullMemoryValues.first(), pcPointerDeref.fullMemoryValues.first())
+        assertEquals(
+            memcpyDstDeref,
+            pcPointerDeref.prevDFGEdges
+                .singleOrNull {
+                    it is ContextSensitiveDataflow && it.callingContext.calls == setOf(ceLine115)
+                }
+                ?.start,
+        )
 
         // Result of memcpy in Line 118
         assertEquals(1, dRef.memoryAddresses.size)
         assertEquals(dDecl.memoryAddresses.singleOrNull(), dRef.memoryAddresses.first())
         assertEquals(1, dRef.fullMemoryValues.size)
         assertEquals(aDecl.fullMemoryValues.first(), dRef.fullMemoryValues.first())
+        assertEquals(
+            memcpyDstDeref,
+            dRef.prevDFGEdges
+                .singleOrNull {
+                    it is ContextSensitiveDataflow && it.callingContext.calls == setOf(ceLine118)
+                }
+                ?.start,
+        )
 
         assertEquals(1, pdPointerDeref.memoryAddresses.size)
         assertEquals(dDecl.memoryAddresses.singleOrNull(), pdPointerDeref.memoryAddresses.first())
         assertEquals(1, pdPointerDeref.fullMemoryValues.size)
         assertEquals(aDecl.fullMemoryValues.first(), pdPointerDeref.fullMemoryValues.first())
+        assertEquals(
+            memcpyDstDeref,
+            pdPointerDeref.prevDFGEdges
+                .singleOrNull {
+                    it is ContextSensitiveDataflow && it.callingContext.calls == setOf(ceLine118)
+                }
+                ?.start,
+        )
 
         // Result of memcpy in Line 121
         assertEquals(1, eRef.memoryAddresses.size)
         assertEquals(eDecl.memoryAddresses.singleOrNull(), eRef.memoryAddresses.first())
         assertEquals(1, eRef.fullMemoryValues.size)
         assertEquals(aDecl.fullMemoryValues.first(), eRef.fullMemoryValues.first())
+        assertEquals(
+            memcpyDstDeref,
+            eRef.prevDFGEdges
+                .singleOrNull {
+                    it is ContextSensitiveDataflow && it.callingContext.calls == setOf(ceLine121)
+                }
+                ?.start,
+        )
 
         assertEquals(1, pePointerDeref.memoryAddresses.size)
         assertEquals(eDecl.memoryAddresses.singleOrNull(), pePointerDeref.memoryAddresses.first())
         assertEquals(1, pePointerDeref.fullMemoryValues.size)
         assertEquals(aDecl.fullMemoryValues.first(), pePointerDeref.fullMemoryValues.first())
+        assertEquals(
+            memcpyDstDeref,
+            pePointerDeref.prevDFGEdges
+                .singleOrNull {
+                    it is ContextSensitiveDataflow && it.callingContext.calls == setOf(ceLine121)
+                }
+                ?.start,
+        )
 
         // Result of memcpy in Line 125
         assertEquals(1, fRef.memoryAddresses.size)
         assertEquals(fDecl.memoryAddresses.singleOrNull(), fRef.memoryAddresses.first())
         assertEquals(1, fRef.fullMemoryValues.size)
         assertEquals(fDecl.fullMemoryValues.first(), fRef.fullMemoryValues.first())
+        // Here, we overwrote the pointer instead of the variable, so f was still the last time
+        // written by it's declaration
+        assertEquals(fDecl, fRef.prevDFG.singleOrNull())
 
         assertEquals(1, pfPointerDeref.memoryAddresses.size)
         assertEquals(aDecl.memoryAddresses.singleOrNull(), pfPointerDeref.memoryAddresses.first())
         assertEquals(1, pfPointerDeref.fullMemoryValues.size)
         assertEquals(aDecl.fullMemoryValues.first(), pfPointerDeref.fullMemoryValues.first())
+        // *pf now points to a, so that's it's last write
+        assertEquals(aDecl, pfPointerDeref.prevFullDFG.singleOrNull())
+        // but pf was written in the memcpy
+        assertEquals(
+            memcpyDstDeref,
+            pfRef.prevDFGEdges
+                .singleOrNull {
+                    it is ContextSensitiveDataflow && it.callingContext.calls == setOf(ceLine125)
+                }
+                ?.start,
+        )
     }
 
     @Test

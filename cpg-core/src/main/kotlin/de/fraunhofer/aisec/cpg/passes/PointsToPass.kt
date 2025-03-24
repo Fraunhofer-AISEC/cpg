@@ -721,6 +721,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                     subAccessName,
                                     argument,
                                 )
+                            val lastWrite = calculateLastWrites(param, dstValueDepth)
                             // Collect the properties for the  DeclarationStateEntry
                             val propertySet: EqualLinkedHashSet<Any> =
                                 if (subAccessName.isNotEmpty()) {
@@ -755,6 +756,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                     param,
                                     propertySet,
                                     currentNode,
+                                    lastWrite,
                                 )
                         }
                 }
@@ -769,6 +771,20 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         }
 
         return doubleState
+    }
+
+    private fun calculateLastWrites(param: Node, dstValueDepth: Int): ParameterMemoryValue? {
+        var ret = (param as? ParameterDeclaration)?.memoryValue
+        for (i in 0..<dstValueDepth - 1) {
+            if (ret == null) return null
+            else {
+                ret =
+                    ret.memoryValues.filterIsInstance<ParameterMemoryValue>().singleOrNull {
+                        it.name.localName == "deref" + ret?.name?.localName
+                    }
+            }
+        }
+        return ret
     }
 
     private fun calculateFunctionSummaries(invoke: FunctionDeclaration): FunctionDeclaration {
@@ -902,6 +918,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         param: Node,
         propertySet: EqualLinkedHashSet<Any>,
         currentNode: CallExpression,
+        lastWrite: ParameterMemoryValue?,
     ): MutableMap<Node, IdentitySet<Triple<Node, Node, EqualLinkedHashSet<Any>>>> {
         var doubleState = doubleState
         when (srcNode) {
@@ -952,11 +969,12 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             if (
                                 currentSet.none {
                                     it.first === value &&
-                                        it.second === value &&
+                                        it.second == (lastWrite ?: value) &&
                                         it.third == updatedPropertySet
                                 }
                             ) {
-                                currentSet += Triple(value, value, updatedPropertySet)
+                                currentSet +=
+                                    Triple(value, (lastWrite ?: value), updatedPropertySet)
                             }
                         }
                     }
@@ -1834,7 +1852,10 @@ fun PointsToStateElement.getNestedValues(
                 }
         )
             identitySetOf()
-        else getValues(node).filterTo(IdentitySet()) { it.second != excludeShortFSValues }
+        else
+            getValues(node).filterTo(IdentitySet()) { /*it.second != excludeShortFSValues*/
+                if (excludeShortFSValues) !it.second else true
+            }
     for (i in 1..<nestingDepth) {
         ret =
             ret.filterTo(identitySetOf()) {
