@@ -163,11 +163,13 @@ class ConsoleService {
             node.newConcept(
                 constructor =
                     when (request.conceptName) {
-                        "Log" -> { node -> Log(node).apply { name = Name("TEST Log " /* TODO */) } }
-                        "File" -> { node ->
+                        "de.fraunhofer.aisec.cpg.graph.concepts.logging.Log" -> { node ->
+                                Log(node).apply { name = Name("TEST Log " /* TODO */) }
+                            }
+                        "de.fraunhofer.aisec.cpg.graph.concepts.file.File" -> { node ->
                                 de.fraunhofer.aisec.cpg.graph.concepts.file.File(node, "Filename")
                             }
-                        "Secret" -> { node ->
+                        "de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.Secret" -> { node ->
                                 de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.Secret(node)
                             }
                         /* TODO more concepts... */

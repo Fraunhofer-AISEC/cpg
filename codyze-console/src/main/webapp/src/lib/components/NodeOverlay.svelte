@@ -97,6 +97,32 @@
           alert('Failed to add concept: ' + error.message);
       }
   }
+
+  interface ConceptGroup {
+      path: string;
+      concepts: { name: string; fullName: string; }[];
+  }
+
+  function groupConcepts(concepts: string[]): ConceptGroup[] {
+      const prefix = 'de.fraunhofer.aisec.cpg.graph.concepts.';
+      const groups: Map<string, { name: string; fullName: string; }[]> = new Map();
+
+      for (const fullName of concepts) {
+          if (!fullName.startsWith(prefix)) continue;
+
+          const name = fullName.split('.').pop()!;
+          const path = fullName.slice(prefix.length, fullName.lastIndexOf('.')); // Remove prefix and class name
+
+          if (!groups.has(path)) {
+              groups.set(path, []);
+          }
+          groups.get(path)!.push({ name, fullName });
+      }
+
+      return Array.from(groups.entries())
+          .map(([path, concepts]) => ({ path, concepts }))
+          .sort((a, b) => a.path.localeCompare(b.path));
+  }
 </script>
 
 <div
@@ -120,21 +146,31 @@
 ></div>
 
 {#if showDialog}
-    <div
-            class="fixed inset-0 z-50 flex items-center justify-center"
-            onclick={() => (showDialog = false)}
-    >
-        <div class="rounded bg-white p-4 shadow-lg" onclick={(e) => e.stopPropagation()}>
+    <div class="fixed inset-0 z-50 flex items-center justify-center" onclick={() => (showDialog = false)}>
+        <div class="rounded bg-white p-4 shadow-lg max-h-[80vh] overflow-auto" onclick={(e) => e.stopPropagation()}>
             <h3 class="mb-4 text-lg font-bold">Add Concept</h3>
-            <select
-                class="mb-4 w-full rounded border p-2"
-                bind:value={selectedConcept}
-            >
-                <option value="">Select a concept...</option>
-                {#each availableConcepts as concept}
-                    <option value={concept}>{concept}</option>
+            <div class="mb-4 border rounded p-2">
+                {#each groupConcepts(availableConcepts) as {path, concepts}}
+                    <div class="pl-4 border-l-2 border-gray-200 my-1">
+                        {#if path}
+                            <div class="text-gray-600 text-sm font-medium">{path}</div>
+                        {/if}
+                        {#each concepts as concept}
+                            <label class="flex items-center py-1 hover:bg-gray-50 cursor-pointer">
+                                <span class="text-gray-400 mr-2">└─</span>
+                                <input
+                                    type="radio"
+                                    name="concept"
+                                    value={concept.fullName}
+                                    bind:group={selectedConcept}
+                                    class="mr-2"
+                                />
+                                <span>{concept.name}</span>
+                            </label>
+                        {/each}
+                    </div>
                 {/each}
-            </select>
+            </div>
             <div class="mb-4 space-y-2">
                 <label class="flex items-center">
                     <input type="checkbox" bind:checked={dfgToConcept} class="mr-2" />
@@ -147,14 +183,14 @@
             </div>
             <div class="flex justify-end space-x-2">
                 <button
-                        class="rounded bg-gray-300 px-4 py-2 hover:bg-gray-400"
-                        onclick={() => (showDialog = false)}
+                    class="rounded bg-gray-300 px-4 py-2 hover:bg-gray-400"
+                    onclick={() => (showDialog = false)}
                 >
                     Cancel
                 </button>
                 <button
-                        class="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
-                        onclick={handleSubmit}
+                    class="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+                    onclick={handleSubmit}
                 >
                     Add
                 </button>
