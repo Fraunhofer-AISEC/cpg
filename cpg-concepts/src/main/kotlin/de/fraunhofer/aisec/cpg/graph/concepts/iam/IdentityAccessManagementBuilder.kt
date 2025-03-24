@@ -23,7 +23,7 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.concepts.auth
+package de.fraunhofer.aisec.cpg.graph.concepts.iam
 
 import de.fraunhofer.aisec.cpg.graph.MetadataProvider
 import de.fraunhofer.aisec.cpg.graph.Node
@@ -72,6 +72,45 @@ fun MetadataProvider.newAuthenticate(
                 credential = credential,
             )
         },
+        underlyingNode = underlyingNode,
+        concept = concept,
+    )
+
+/**
+ * Creates a new [IssueJwt] operation belonging to a certain [JwtAuth] concept.
+ *
+ * @param underlyingNode The underlying node representing this concept.
+ * @param concept The [JwtAuth] concept to which the operation belongs.
+ */
+fun MetadataProvider.newIssueJwt(underlyingNode: Node, concept: JwtAuth) =
+    newOperation(
+        { underlyingNode, concept -> IssueJwt(underlyingNode = underlyingNode, jwt = concept) },
+        underlyingNode = underlyingNode,
+        concept = concept,
+    )
+
+/**
+ * Creates a new [ValidateJwt] operation belonging to a certain [JwtAuth] concept.
+ *
+ * @param underlyingNode The underlying node representing this concept.
+ * @param concept The [JwtAuth] concept to which the operation belongs.
+ */
+fun MetadataProvider.newValidateJwt(underlyingNode: Node, concept: JwtAuth) =
+    newOperation(
+        { underlyingNode, concept -> ValidateJwt(underlyingNode = underlyingNode, jwt = concept) },
+        underlyingNode = underlyingNode,
+        concept = concept,
+    )
+
+/**
+ * Creates a new [AuthorizeJwt] operation belonging to a certain [JwtAuth] concept.
+ *
+ * @param underlyingNode The underlying node representing this concept.
+ * @param concept The [JwtAuth] concept to which the operation belongs.
+ */
+fun MetadataProvider.newAuthorizeJwt(underlyingNode: Node, concept: JwtAuth) =
+    newOperation(
+        { underlyingNode, concept -> AuthorizeJwt(underlyingNode = underlyingNode, jwt = concept) },
         underlyingNode = underlyingNode,
         concept = concept,
     )

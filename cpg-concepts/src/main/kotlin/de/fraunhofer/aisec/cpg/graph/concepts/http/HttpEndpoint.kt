@@ -28,8 +28,8 @@ package de.fraunhofer.aisec.cpg.graph.concepts.http
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
-import de.fraunhofer.aisec.cpg.graph.concepts.auth.IdentityAccessManagement
 import de.fraunhofer.aisec.cpg.graph.concepts.flows.RemoteEntryPoint
+import de.fraunhofer.aisec.cpg.graph.concepts.iam.IdentityAccessManagement
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import java.util.Objects
 

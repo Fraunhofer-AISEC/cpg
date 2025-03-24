@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.concepts.http
 import de.fraunhofer.aisec.cpg.graph.MetadataProvider
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
-import de.fraunhofer.aisec.cpg.graph.concepts.auth.IdentityAccessManagement
+import de.fraunhofer.aisec.cpg.graph.concepts.iam.IdentityAccessManagement
 import de.fraunhofer.aisec.cpg.graph.concepts.newConcept
 import de.fraunhofer.aisec.cpg.graph.concepts.newOperation
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration

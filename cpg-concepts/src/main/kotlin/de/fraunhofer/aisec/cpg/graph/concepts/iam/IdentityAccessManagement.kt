@@ -23,7 +23,7 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.concepts.auth
+package de.fraunhofer.aisec.cpg.graph.concepts.iam
 
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
