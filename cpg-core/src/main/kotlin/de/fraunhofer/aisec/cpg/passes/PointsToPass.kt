@@ -322,20 +322,21 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         for ((param, fsEntries) in functionDeclaration.functionSummary) {
             fsEntries.forEach { (dstValueDepth, srcNode, srcValueDepth, subAccessName, shortFS) ->
                 if (param is ParameterDeclaration && srcNode is ParameterDeclaration) {
-                    val dst =
-                        param.memoryValue
-                            ?.memoryValues
-                            ?.filterIsInstance<ParameterMemoryValue>()
-                            ?.singleOrNull {
-                                it.name.localName == "deref".repeat(dstValueDepth - 1) + "value"
-                            }
-                    val src =
-                        srcNode.memoryValue
-                            ?.memoryValues
-                            ?.filterIsInstance<ParameterMemoryValue>()
-                            ?.singleOrNull {
-                                it.name.localName == "deref".repeat(srcValueDepth - 1) + "value"
-                            }
+                    var dst = param.memoryValue
+                    for (i in 1..<dstValueDepth) {
+                        // hop to the next deref-PMV
+                        dst =
+                            dst?.memoryValues
+                                ?.filterIsInstance<ParameterMemoryValue>()
+                                ?.singleOrNull { it.name.localName == "deref".repeat(i) + "value" }
+                    }
+                    var src = srcNode.memoryValue
+                    for (i in 1..<srcValueDepth) {
+                        src =
+                            src?.memoryValues
+                                ?.filterIsInstance<ParameterMemoryValue>()
+                                ?.singleOrNull { it.name.localName == "deref".repeat(i) + "value" }
+                    }
                     if (src != null && dst != null) {
                         val propertySet = equalLinkedHashSetOf<Any>()
                         if (subAccessName != "")
@@ -398,7 +399,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     .forEach { (value, shortFS, subAccessName) ->
                         // TODO: Also extract the last write. To be able to do this for fields, we
                         //   need the info here on which address we are working, which we currently
-                        //   loose by calling fetchElementsfromDeclarationsState.
+                        //   lost by calling fetchElementsfromDeclarationsState.
                         // Extract the value depth from the value's localName
                         val srcValueDepth = stringToDepth(value.name.localName)
                         // Store the information in the functionSummary
@@ -1593,11 +1594,11 @@ fun PointsToStateElement.fetchElementFromDeclarationState(
         if (fetchFields) {
             val fields =
                 this.declarationsState[addr]?.first?.filterTo(identitySetOf()) { it != addr }
-            this.declarationsState[addr]?.first?.filterTo(identitySetOf()) { it != addr }
             fields?.forEach { field ->
-                this.declarationsState[field]?.second?.let {
-                    it.map { ret.add(Triple(it.first, it.second, field.name.localName)) }
-                }
+                this.declarationsState[field]
+                    ?.second
+                    ?.filter { if (excludeShortFSValues) !it.second else true }
+                    ?.let { it.map { ret.add(Triple(it.first, it.second, field.name.localName)) } }
             }
         }
     }

@@ -187,7 +187,7 @@ LAB_001011ce:
   if (local_28 != (void *)0x0) {
     free(local_28);
   }
-  printf("%d %d\n", *local_18, *param_1); return uVar2;
+  printf("%d %d\n", *local_18, **param_1); return uVar2;
 }
 
 void ecall_key_to_out(/*undefined8*/ void *param_1)
