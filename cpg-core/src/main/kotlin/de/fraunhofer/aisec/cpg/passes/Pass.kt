@@ -81,7 +81,7 @@ abstract class TranslationUnitPass(ctx: TranslationContext) : Pass<TranslationUn
  */
 abstract class EOGStarterPass(ctx: TranslationContext) : Pass<Node>(ctx)
 
-open class PassConfiguration {}
+open class PassConfiguration
 
 /**
  * Represents an abstract class that enhances the graph before it is persisted. Passes can exist at
