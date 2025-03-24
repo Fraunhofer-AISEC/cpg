@@ -80,10 +80,12 @@ class NamespaceDeclaration : Declaration(), DeclarationHolder, StatementHolder, 
     override val eogStarters: List<Node>
         get() {
             val list = mutableListOf<Node>()
-            // Add all top-level declarations
-            list += declarations
-            // Add all top-level statements
-            list += statements
+
+            // The Namespace Declaration itself is the start of an eog itself, all statements and
+            // declarations
+            // that are directly a child of the declaration, are evaluated as static nodes  when the
+            // namespace is created.
+            list += this
 
             return list
         }
