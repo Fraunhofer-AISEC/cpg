@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.graph.primitiveType
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.types.*
-import de.fraunhofer.aisec.cpg.graph.unknownType
 import org.neo4j.ogm.annotation.Transient
 
 /** The Go language. */
@@ -235,25 +234,15 @@ class GoLanguage :
             return super.propagateTypeOfBinaryOperation(operatorCode, lhsType, rhsType, hint)
         }
 
-        // Deal with literals. Numeric literals can also be used in simple arithmetic of the
+        // Deal with literals. Numeric literals can also be used in simple arithmetic if the
         // underlying type is numeric
         return when {
-            hint?.lhs is Literal<*> && lhsType is NumericType -> {
-                val type = rhsType
-                if (type is NumericType || type.underlyingType is NumericType) {
-                    type
-                } else {
-                    unknownType()
-                }
-            }
-            hint?.rhs is Literal<*> && rhsType is NumericType -> {
-                val type = lhsType
-                if (type is NumericType || type.underlyingType is NumericType) {
-                    type
-                } else {
-                    unknownType()
-                }
-            }
+            hint?.lhs is Literal<*> &&
+                lhsType is NumericType &&
+                rhsType.underlyingType is NumericType -> rhsType
+            hint?.rhs is Literal<*> &&
+                rhsType is NumericType &&
+                lhsType.underlyingType is NumericType -> lhsType
             else -> super.propagateTypeOfBinaryOperation(operatorCode, lhsType, rhsType, hint)
         }
     }

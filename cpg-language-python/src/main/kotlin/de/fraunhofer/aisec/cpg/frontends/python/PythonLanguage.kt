@@ -192,21 +192,29 @@ class PythonLanguage :
         rhsType: Type,
         hint: BinaryOperator?,
     ): Type {
-        if (operatorCode == "/" && lhsType is NumericType && rhsType is NumericType) {
-            // In Python, the / operation automatically casts the result to a float
-            return primitiveType("float")
-        } else if (operatorCode == "//" && lhsType is NumericType && rhsType is NumericType) {
-            return if (lhsType is IntegerType && rhsType is IntegerType) {
-                // In Python, the // operation keeps the type as an int if both inputs are integers
-                // or casts it to a float otherwise.
-                primitiveType("int")
-            } else {
-                primitiveType("float")
+        when {
+            operatorCode == "/" && lhsType is NumericType && rhsType is NumericType -> {
+                // In Python, the / operation automatically casts the result to a float
+                return primitiveType("float")
             }
-        }
+            operatorCode == "*" && lhsType is StringType && rhsType is NumericType -> {
+                return lhsType
+            }
+            operatorCode == "//" && lhsType is NumericType && rhsType is NumericType -> {
+                return if (lhsType is IntegerType && rhsType is IntegerType) {
+                    // In Python, the // operation keeps the type as an int if both inputs are
+                    // integers
+                    // or casts it to a float otherwise.
+                    primitiveType("int")
+                } else {
+                    primitiveType("float")
+                }
+            }
 
-        // The rest behaves like other languages
-        return super.propagateTypeOfBinaryOperation(operatorCode, lhsType, rhsType, hint)
+            // The rest behaves like other languages
+            else ->
+                return super.propagateTypeOfBinaryOperation(operatorCode, lhsType, rhsType, hint)
+        }
     }
 
     override fun tryCast(
