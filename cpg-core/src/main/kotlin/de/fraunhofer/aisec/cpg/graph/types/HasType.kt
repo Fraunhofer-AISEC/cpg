@@ -25,8 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types
 
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.graph.LanguageProvider
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.applyMetadata
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeSingletonList
@@ -42,6 +44,13 @@ import de.fraunhofer.aisec.cpg.graph.unknownType
  * types should derive from these two base classes.
  */
 interface HasType : LanguageProvider {
+
+    /**
+     * This property is used to determine if the type propagation using [TypeObserver] is enabled
+     * for this node. This property is set to `true` by default. This property can be set to `false`
+     * by [applyMetadata] based on [TranslationConfiguration.disableTypeObserver].
+     */
+    var observerEnabled: Boolean
 
     /**
      * This property refers to the *definite* [Type] that the [Node] has during *compile-time*. If
@@ -74,7 +83,7 @@ interface HasType : LanguageProvider {
      * change.
      */
     fun addAssignedType(type: Type) {
-        if (language.shouldPropagateType(this.type, type, this) == false) {
+        if (!observerEnabled || language.shouldPropagateType(this.type, type, this) == false) {
             return
         }
 
@@ -89,6 +98,10 @@ interface HasType : LanguageProvider {
      * change.
      */
     fun addAssignedTypes(types: Set<Type>) {
+        if (!observerEnabled) {
+            return
+        }
+
         val changed =
             (this.assignedTypes as MutableSet).addAll(
                 types.filter { language.shouldPropagateType(this.type, it, this) == true }
@@ -180,6 +193,10 @@ interface HasType : LanguageProvider {
      * to use this function to harmonize the behaviour of propagating types.
      */
     fun informObservers(changeType: TypeObserver.ChangeType) {
+        if (!observerEnabled) {
+            return
+        }
+
         if (changeType == TypeObserver.ChangeType.ASSIGNED_TYPE) {
             val assignedTypes = this.assignedTypes
             if (assignedTypes.isEmpty()) {
