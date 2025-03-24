@@ -35,7 +35,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
-import de.fraunhofer.aisec.cpg.helpers.orderEOGStartersBasedOnDependencies
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteFirst
@@ -78,13 +77,9 @@ abstract class TranslationUnitPass(ctx: TranslationContext) : Pass<TranslationUn
 /**
  * A [EOGStarterPass] is a pass that operates on nodes that are contained in a [EOGStarterHolder].
  * If used with [executePass], one [Pass] object is instantiated for each [Node] in a
- * [EOGStarterHolder] in each [TranslationUnitDeclaration] in each [Component]. [orderDependencies]
- * indicates if we should try to compute the order of processing the nodes based on their
- * dependencies, where eogStarters with no/less unresolved dependencies will be resolved first
- * (e.g., the callee should be resolved before its callers).
+ * [EOGStarterHolder] in each [TranslationUnitDeclaration] in each [Component].
  */
-abstract class EOGStarterPass(ctx: TranslationContext, val orderDependencies: Boolean = false) :
-    Pass<Node>(ctx)
+abstract class EOGStarterPass(ctx: TranslationContext) : Pass<Node>(ctx)
 
 open class PassConfiguration {}
 
@@ -297,18 +292,9 @@ fun executePass(
             consumeTargets(
                 (prototype as EOGStarterPass)::class,
                 ctx,
-
                 // Gather all resolution EOG starters; and make sure they really do not have a
-                // predecessor, otherwise we might analyze a node multiple times. If
-                // EOGStarterPass.orderDependencies is set to true, we will try to order the
-                // EOGStarters based on their dependencies.
-                if (prototype.orderDependencies) {
-                    orderEOGStartersBasedOnDependencies(
-                        result.allEOGStarters.filter { it.prevEOGEdges.isEmpty() }
-                    )
-                } else {
-                    result.allEOGStarters.filter { it.prevEOGEdges.isEmpty() }
-                },
+                // predecessor, otherwise we might analyze a node multiple times.
+                result.allEOGStarters.filter { it.prevEOGEdges.isEmpty() },
                 executedFrontends,
             )
         }
