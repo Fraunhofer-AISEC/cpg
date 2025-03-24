@@ -1,3 +1,6 @@
+import groovy.util.Node
+import groovy.util.NodeList
+
 /*
  * Copyright (c) 2021, Fraunhofer AISEC. All rights reserved.
  *
@@ -37,7 +40,7 @@ application {
     applicationDefaultJvmArgs = listOf("-Xss515m", "-Xmx8g")
 }
 
-/*mavenPublishing {
+mavenPublishing {
     pom {
         name.set("Code Property Graph - Neo4j")
         description.set(
@@ -59,7 +62,7 @@ application {
             }
         }
     }
-}*/
+}
 
 dependencies {
     // Neo4j OGM. This will be removed at some point

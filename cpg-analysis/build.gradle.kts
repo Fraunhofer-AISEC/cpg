@@ -25,12 +25,12 @@
  */
 plugins { id("cpg.library-conventions") }
 
-/*mavenPublishing {
+mavenPublishing {
     pom {
         name.set("Code Property Graph - Analysis Modules")
         description.set("Analysis modules for the CPG")
     }
-}*/
+}
 
 dependencies {
     api(projects.cpgCore)
