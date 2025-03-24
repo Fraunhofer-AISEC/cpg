@@ -241,20 +241,27 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
     open fun shouldPropagateType(hasType: HasType, srcType: Type): Boolean {
         val nodeType = hasType.type
 
-        // We only want to add certain types, in case we have a numeric type
-        if (nodeType is NumericType) {
-            // We do not allow to propagate non-numeric types into numeric types
-            return if (srcType !is NumericType) {
+        return when {
+            // We only want to add certain types, in case we have a numeric type
+            nodeType is NumericType -> {
+                // We do not allow to propagate non-numeric types into numeric types
+                if (srcType !is NumericType) {
+                    false
+                } else {
+                    val srcWidth = srcType.bitWidth
+                    val lhsWidth = nodeType.bitWidth
+                    // Do not propagate anything if the new type is too big for the current type.
+                    return !(lhsWidth != null && srcWidth != null && lhsWidth < srcWidth)
+                }
+            }
+            // We do not want to propagate a dynamic type
+            srcType is DynamicType -> {
                 false
-            } else {
-                val srcWidth = srcType.bitWidth
-                val lhsWidth = nodeType.bitWidth
-                // Do not propagate anything if the new type is too big for the current type.
-                return !(lhsWidth != null && srcWidth != null && lhsWidth < srcWidth)
+            }
+            else -> {
+                true
             }
         }
-
-        return true
     }
 
     /**
