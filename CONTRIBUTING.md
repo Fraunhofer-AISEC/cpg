@@ -1,7 +1,7 @@
 # Prerequisites
 
 * git
-* Java 17 to Java 21 (OpenSDK)
+* Java 21 (OpenSDK)
 
 # Build and Run
 
@@ -27,10 +27,10 @@ Make sure you can build the repository
 ./gradlew clean spotlessApply build publishToMavenLocal
 ```
 
-This project requires Java 17 to Java 21. If a Java version between 17 and 21 is not your default Java version, make sure to configure gradle to use it by setting its java.home variable:
+This project requires Java 21. If Java 21 is not your default Java version, make sure to configure gradle to use it by setting its java.home variable:
 
 ```
-./gradlew -Dorg.gradle.java.home="/usr/lib/jvm/java-17-openjdk-amd64/" build
+./gradlew -Dorg.gradle.java.home="/usr/lib/jvm/java-21-openjdk-amd64/" build
 ```
 
 ## Copyright Notice

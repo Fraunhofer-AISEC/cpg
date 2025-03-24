@@ -14,7 +14,7 @@ A simple tool to export a *code property graph* to a neo4j database.
 
 ## Requirements
 
-The application requires Java 17 to Java 21.
+The application requires Java 21.
 
 ## Build
 
