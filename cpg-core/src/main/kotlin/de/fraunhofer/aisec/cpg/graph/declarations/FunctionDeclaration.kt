@@ -38,6 +38,8 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.HasSecondaryTypeEdge
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.helpers.functional.EqualLinkedHashSet
+import de.fraunhofer.aisec.cpg.helpers.functional.equalLinkedHashSetOf
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
@@ -113,6 +115,7 @@ open class FunctionDeclaration :
         // We use shortFunctionSummaries to draw "short" DFG-Edges that allow us to follow DFG Paths
         // without going into functions. Not as detailed, but faster
         val shortFunctionSummary: Boolean = false,
+        val lastWrites: EqualLinkedHashSet<Node> = equalLinkedHashSetOf(),
     )
 
     var functionSummary = mutableMapOf<Node, MutableSet<FSEntry>>()
