@@ -18,7 +18,11 @@
 
   let activeTab = $state('overlayNodes');
   let nodes = $derived(
-    flattenNodes(activeTab === 'overlayNodes' ? data.overlayNodes : data.astNodes)
+    flattenNodes(
+      activeTab === 'overlayNodes' ? data.overlayNodes : data.astNodes,
+      data.component.name,
+      data.translationUnit.id
+    )
   );
   let tableTitle = $derived(activeTab === 'overlayNodes' ? 'Overlay Nodes' : 'AST Nodes');
   let highlightedNode = $state<NodeJSON | null>(null);
@@ -72,6 +76,7 @@
         {charWidth}
         {offsetTop}
         {offsetLeft}
+        conceptGroups={data.conceptGroups}
       />
     </div>
   </div>

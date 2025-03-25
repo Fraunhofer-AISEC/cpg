@@ -53,7 +53,8 @@ import org.reflections.Reflections
  *   for a translation unit.
  * - GET `/api/component/{component_name}/translation-unit/{id}/overlay-nodes`: Retrieves all
  *   overlay nodes for a translation unit.
- * - GET `/api/concepts`: Retrieves a list of all available [Concept] classes (as Java class names).
+ * - GET `/api/concept-classes`: Retrieves a list of all available [Concept] classes (as Java class
+ *   names).
  * - POST `/api/concept`: Adds a concept node to the current
  *   [de.fraunhofer.aisec.codyze.AnalysisResult]
  */
@@ -175,7 +176,7 @@ fun Routing.apiRoutes(service: ConsoleService) {
          * The endpoint to get a list of all available [Concept] classes. Returns a JSON object with
          * an array of concept names (Java class names).
          */
-        get("/concepts") {
+        get("/classes/concepts") {
             val reflections =
                 Reflections(
                     "de.fraunhofer.aisec.cpg.graph.concepts",
@@ -185,7 +186,7 @@ fun Routing.apiRoutes(service: ConsoleService) {
             val conceptClasses = reflections.getSubTypesOf(Concept::class.java)
             val conceptNames = conceptClasses.map { it.name }.toSet()
 
-            call.respond(mapOf("concepts" to conceptNames))
+            call.respond(mapOf("classes" to conceptNames))
         }
     }
 }

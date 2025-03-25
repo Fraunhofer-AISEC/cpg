@@ -1,7 +1,9 @@
 <script lang="ts">
   import { getColorForNodeType } from '$lib/colors';
+  import type { ConceptGroup } from '$lib/concepts';
   import type { FlattenedNode } from '$lib/flatten';
   import type { NodeJSON } from '$lib/types';
+  import type { MouseEventHandler } from 'svelte/elements';
 
   interface Props {
     node: FlattenedNode;
@@ -11,6 +13,7 @@
     charWidth: number;
     offsetTop: number;
     offsetLeft: number;
+    onNodeClick: (node: FlattenedNode) => void;
   }
 
   let {
@@ -20,7 +23,8 @@
     lineHeight,
     charWidth,
     offsetTop,
-    offsetLeft
+    offsetLeft,
+    onNodeClick
   }: Props = $props();
 
   /**
@@ -51,78 +55,6 @@
   let left = $derived(`${node.startColumn * charWidth + offsetLeft}rem`);
   let height = $derived(`${(node.endLine - node.startLine + 1) * lineHeight}rem`);
   let width = $derived(`${computeWidth(node, codeLines)}rem`);
-
-  let showDialog = $state(false);
-  let availableConcepts = $state<string[]>([]);
-  let selectedConcept = $state('');
-  let dfgToConcept = $state(false);
-  let dfgFromConcept = $state(false);
-
-  async function handleClick() {
-      const response = await fetch('/api/concepts');
-      const data = await response.json();
-      availableConcepts = data.concepts;
-      showDialog = true;
-  }
-
-  async function handleSubmit() {
-      if (!selectedConcept) {
-          alert('Please select a concept');
-          return;
-      }
-
-      try {
-          const response = await fetch('/api/concept', {
-              method: 'POST',
-              headers: {
-                  'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                  nodeId: node.id,
-                  conceptName: selectedConcept,
-                  addDFGToConcept: dfgToConcept,
-                  addDFGFromConcept: dfgFromConcept
-              })
-          });
-
-          if (!response.ok) {
-              const errorText = await response.text();
-              throw new Error(`Server returned ${response.status}: ${errorText}`);
-          }
-
-          showDialog = false;
-          window.location.reload();
-      } catch (error) {
-          console.error('Error adding concept:', error);
-          alert('Failed to add concept: ' + error.message);
-      }
-  }
-
-  interface ConceptGroup {
-      path: string;
-      concepts: { name: string; fullName: string; }[];
-  }
-
-  function groupConcepts(concepts: string[]): ConceptGroup[] {
-      const prefix = 'de.fraunhofer.aisec.cpg.graph.concepts.';
-      const groups: Map<string, { name: string; fullName: string; }[]> = new Map();
-
-      for (const fullName of concepts) {
-          if (!fullName.startsWith(prefix)) continue;
-
-          const name = fullName.split('.').pop()!;
-          const path = fullName.slice(prefix.length, fullName.lastIndexOf('.')); // Remove prefix and class name
-
-          if (!groups.has(path)) {
-              groups.set(path, []);
-          }
-          groups.get(path)!.push({ name, fullName });
-      }
-
-      return Array.from(groups.entries())
-          .map(([path, concepts]) => ({ path, concepts }))
-          .sort((a, b) => a.path.localeCompare(b.path));
-  }
 </script>
 
 <div
@@ -142,59 +74,5 @@
   style:z-index={node.depth}
   onmouseenter={() => (highlightedNode = node)}
   onmouseleave={() => (highlightedNode = null)}
-  onclick={handleClick}
+  onclick={() => onNodeClick(node)}
 ></div>
-
-{#if showDialog}
-    <div class="fixed inset-0 z-50 flex items-center justify-center" onclick={() => (showDialog = false)}>
-        <div class="rounded bg-white p-4 shadow-lg max-h-[80vh] overflow-auto" onclick={(e) => e.stopPropagation()}>
-            <h3 class="mb-4 text-lg font-bold">Add Concept</h3>
-            <div class="mb-4 border rounded p-2">
-                {#each groupConcepts(availableConcepts) as {path, concepts}}
-                    <div class="pl-4 border-l-2 border-gray-200 my-1">
-                        {#if path}
-                            <div class="text-gray-600 text-sm font-medium">{path}</div>
-                        {/if}
-                        {#each concepts as concept}
-                            <label class="flex items-center py-1 hover:bg-gray-50 cursor-pointer">
-                                <span class="text-gray-400 mr-2">└─</span>
-                                <input
-                                    type="radio"
-                                    name="concept"
-                                    value={concept.fullName}
-                                    bind:group={selectedConcept}
-                                    class="mr-2"
-                                />
-                                <span>{concept.name}</span>
-                            </label>
-                        {/each}
-                    </div>
-                {/each}
-            </div>
-            <div class="mb-4 space-y-2">
-                <label class="flex items-center">
-                    <input type="checkbox" bind:checked={dfgToConcept} class="mr-2" />
-                    Connect DFG from this node to the new concept
-                </label>
-                <label class="flex items-center">
-                    <input type="checkbox" bind:checked={dfgFromConcept} class="mr-2" />
-                    Connect DFG from the new concept to this node
-                </label>
-            </div>
-            <div class="flex justify-end space-x-2">
-                <button
-                    class="rounded bg-gray-300 px-4 py-2 hover:bg-gray-400"
-                    onclick={() => (showDialog = false)}
-                >
-                    Cancel
-                </button>
-                <button
-                    class="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
-                    onclick={handleSubmit}
-                >
-                    Add
-                </button>
-            </div>
-        </div>
-    </div>
-{/if}
