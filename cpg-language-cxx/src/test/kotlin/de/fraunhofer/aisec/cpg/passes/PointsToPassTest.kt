@@ -1180,7 +1180,8 @@ class PointsToPassTest {
             tu.allChildren<PointerDereference> {
                     it.location?.region?.startLine == 140 &&
                         it.name.localName == "c" &&
-                        it.input is PointerDereference
+                        it.input is PointerDereference &&
+                        it.location?.region?.startColumn == 40
                 }
                 .singleOrNull()
 
@@ -1205,7 +1206,16 @@ class PointsToPassTest {
         assertEquals(aDecl.memoryAddresses.single(), bRefLine138.fullMemoryValues.first())
 
         assertEquals(2, bRefLine138.prevDFG.size)
-        assertEquals(setOf<Node>(bDecl, literal10), bRefLine138.prevDFG)
+        assertEquals(
+            aDecl,
+            bRefLine138.prevDFGEdges
+                .singleOrNull {
+                    it.granularity is PointerDataflowGranularity &&
+                        (it.granularity as PointerDataflowGranularity).pointerTarget.name ==
+                            "currentDerefValue"
+                }
+                ?.start,
+        )
         assertEquals(bDecl, bRefLine138.prevFullDFG.singleOrNull())
 
         assertEquals(1, bPointerDerefLine138.memoryAddresses.size)
@@ -1233,16 +1243,44 @@ class PointsToPassTest {
         assertEquals(aDecl.memoryAddresses.single(), bRefLine139.fullMemoryValues.first())
 
         assertEquals(2, bRefLine139.prevDFG.size)
-        assertEquals(setOf<Node>(bDecl, literal10), bRefLine139.prevDFG)
+        assertEquals(
+            aDecl,
+            bRefLine139.prevDFGEdges
+                .singleOrNull {
+                    it.granularity is PointerDataflowGranularity &&
+                        (it.granularity as PointerDataflowGranularity).pointerTarget.name ==
+                            "currentDerefValue"
+                }
+                ?.start,
+        )
         assertEquals(bDecl, bRefLine139.prevFullDFG.singleOrNull())
 
         assertEquals(1, cRefLine139.memoryAddresses.size)
         assertEquals(cDecl.memoryAddresses.singleOrNull(), cRefLine139.memoryAddresses.first())
         assertEquals(1, cRefLine139.fullMemoryValues.size)
         assertEquals(bDecl.memoryAddresses.single(), cRefLine139.fullMemoryValues.first())
+        assertEquals(3, cRefLine139.prevDFGEdges.size)
         assertEquals(cDecl, cRefLine139.prevFullDFG.singleOrNull())
-        // TODO: There are many more prevDFG edges. Should they actually exist or should we remove
-        // them and add them transitively?
+        assertEquals(
+            bDecl,
+            cRefLine139.prevDFGEdges
+                .singleOrNull {
+                    it.granularity is PointerDataflowGranularity &&
+                        (it.granularity as PointerDataflowGranularity).pointerTarget.name ==
+                            "currentDerefValue"
+                }
+                ?.start,
+        )
+        assertEquals(
+            aDecl,
+            cRefLine139.prevDFGEdges
+                .singleOrNull {
+                    it.granularity is PointerDataflowGranularity &&
+                        (it.granularity as PointerDataflowGranularity).pointerTarget.name ==
+                            "currentDerefDerefValue"
+                }
+                ?.start,
+        )
 
         assertEquals(1, cPointerDerefLine139.memoryAddresses.size)
         assertEquals(
@@ -1251,14 +1289,26 @@ class PointsToPassTest {
         )
         assertEquals(1, cPointerDerefLine139.fullMemoryValues.size)
         assertEquals(aDecl.memoryAddresses.single(), cPointerDerefLine139.fullMemoryValues.first())
-        assertEquals(2, cPointerDerefLine139.prevDFG.size)
+        assertEquals(3, cPointerDerefLine139.prevDFG.size)
         assertEquals(bDecl, cPointerDerefLine139.prevFullDFG.singleOrNull())
         assertEquals(
-            cPointerDerefLine139.input,
+            aDecl,
             cPointerDerefLine139.prevDFGEdges
-                .filter { it.granularity != FullDataflowGranularity }
-                .map { it.start }
-                .singleOrNull(),
+                .singleOrNull {
+                    it.granularity is PointerDataflowGranularity &&
+                        (it.granularity as PointerDataflowGranularity).pointerTarget.name ==
+                            "currentDerefValue"
+                }
+                ?.start,
+        )
+        assertEquals(
+            1,
+            cPointerDerefLine139.prevDFGEdges
+                .filter {
+                    it.granularity is PartialDataflowGranularity<*> &&
+                        it.start == cPointerDerefLine139.input
+                }
+                .size,
         )
 
         // Line 140
