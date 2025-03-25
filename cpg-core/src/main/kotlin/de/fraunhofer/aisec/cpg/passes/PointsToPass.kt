@@ -705,7 +705,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             } else null
                         }
                         is ReturnStatement -> {
-                            param.returnValue
+                            // param // .returnValue
+                            currentNode
                         }
                         else -> null
                     }
@@ -722,7 +723,15 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                     subAccessName,
                                     argument,
                                 )
-                            val lastWrite = calculateLastWrites(param, dstValueDepth)
+                            val lastWrite =
+                                calculateLastWrites(
+                                    param,
+                                    dstValueDepth,
+                                    invoke,
+                                    srcNode,
+                                    shortFS,
+                                    currentNode,
+                                )
                             // Collect the properties for the  DeclarationStateEntry
                             val propertySet: EqualLinkedHashSet<Any> =
                                 if (subAccessName.isNotEmpty()) {
@@ -774,7 +783,30 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         return doubleState
     }
 
-    private fun calculateLastWrites(param: Node, dstValueDepth: Int): ParameterMemoryValue? {
+    private fun calculateLastWrites(
+        param: Node,
+        dstValueDepth: Int,
+        invoke: FunctionDeclaration,
+        srcNode: Node,
+        shortFS: Boolean,
+        currentNode: CallExpression,
+    ): Node? {
+        // For shortFS summaries, the lastWrite (AKA prevDFG) is different since we don't want to
+        // enter the FunctionDeclaration
+        if (shortFS) {
+            return when (srcNode) {
+                is FunctionDeclaration -> currentNode
+                is ParameterDeclaration -> currentNode.arguments[srcNode.argumentIndex]
+                else -> srcNode
+            }
+            /*if (srcNode is ParameterDeclaration) return currentNode.arguments[srcNode.argumentIndex]
+            else */
+        }
+
+        // For return statements, we point it to the functionDeclaration
+        if (param is ReturnStatement) return invoke
+
+        // Else, for ParameterDeclarations, we determine the current deref value
         var ret = (param as? ParameterDeclaration)?.memoryValue
         for (i in 0..<dstValueDepth - 1) {
             if (ret == null) return null
@@ -838,7 +870,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         // }
         val sources = values.mapTo(IdentitySet()) { Pair(it.first, true in it.third) }
         val lastWrites: IdentitySet<Pair<Node, EqualLinkedHashSet<Any>>> =
-            //                (values /*+ Pair(currentNode, true)*/).toIdentitySet()
             values.mapTo(IdentitySet()) {
                 if (it.third.singleOrNull() == true) Pair(it.second, it.third)
                 else
@@ -865,24 +896,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             identitySetOf(dst),
             lastWrites,
         )*/
-
-        // Add the callingContextOut to the edgePropertiesMap and check if we also need the
-        // shortFS flag
-        // TODO
-        /*            values.forEach { v ->
-            if (v.second)
-            // a shortFunctionSummary + the callingContextOut
-            addEntryToEdgePropertiesMap(
-                    Pair(dst, v.first),
-                    identitySetOf(true, CallingContextOut(currentNode)),
-                )
-            // the callingContextOut only
-            else
-                addEntryToEdgePropertiesMap(
-                    Pair(dst, v.first),
-                    identitySetOf(CallingContextOut(currentNode)),
-                )
-        }*/
     }
 
     /**
@@ -914,12 +927,12 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         destination: IdentitySet<Node>,
         srcNode: Node,
         shortFS: Boolean,
-        argument: Expression,
+        argument: Node,
         srcValueDepth: Int,
         param: Node,
         propertySet: EqualLinkedHashSet<Any>,
         currentNode: CallExpression,
-        lastWrite: ParameterMemoryValue?,
+        lastWrite: Node?,
     ): MutableMap<Node, IdentitySet<Triple<Node, Node, EqualLinkedHashSet<Any>>>> {
         var doubleState = doubleState
         when (srcNode) {
@@ -1001,11 +1014,12 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                     if (
                                         currentSet.none {
                                             it.first === value &&
-                                                it.second === value &&
+                                                it.second == (lastWrite ?: value) &&
                                                 it.third == updatedPropertySet
                                         }
                                     ) {
-                                        currentSet += Triple(value, value, updatedPropertySet)
+                                        currentSet +=
+                                            Triple(value, (lastWrite ?: value), updatedPropertySet)
                                     }
                                 }
                             }
@@ -1021,11 +1035,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     if (
                         currentSet.none {
                             it.first === srcNode &&
-                                it.second === srcNode &&
+                                it.second === (lastWrite ?: srcNode) &&
                                 it.third == updatedPropertySet
                         }
                     ) {
-                        currentSet += Triple(srcNode, srcNode, updatedPropertySet)
+                        currentSet += Triple(srcNode, (lastWrite ?: srcNode), updatedPropertySet)
                     }
                 }
             }
@@ -1046,13 +1060,14 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         if (
                             currentSet.none {
                                 it.first === pair.first &&
-                                    it.second === pair.first &&
+                                    it.second === (lastWrite ?: pair.first) &&
                                     pair.second in it.third
                             }
                         ) {
                             val updatedPropertySet = propertySet
                             updatedPropertySet.add(shortFS)
-                            currentSet += Triple(pair.first, pair.first, updatedPropertySet)
+                            currentSet +=
+                                Triple(pair.first, (lastWrite ?: pair.first), updatedPropertySet)
                         }
                     }
                 }
@@ -1066,7 +1081,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         mapDstToSrc: MutableMap<Node, IdentitySet<Triple<Node, Node, EqualLinkedHashSet<Any>>>>,
         dstValueDepth: Int,
         subAccessName: String,
-        argument: Expression,
+        argument: Node,
     ): IdentitySet<Node> {
         val destAddrDepth = dstValueDepth - 1
         // Is the destAddrDepth > 2? In this case, the DeclarationState

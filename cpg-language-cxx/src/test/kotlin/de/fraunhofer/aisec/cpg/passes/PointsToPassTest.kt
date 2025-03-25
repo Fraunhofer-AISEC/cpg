@@ -2156,22 +2156,39 @@ class PointsToPassTest {
         assertNotNull(ceLine242)
 
         // Line 230
-        assertEquals(1, ceLine230.fullMemoryValues.size)
-        assertEquals(binOpLine207, ceLine230.fullMemoryValues.firstOrNull())
-        assertEquals(1, iRefLine230Left.fullMemoryValues.size)
-        assertEquals(ceLine230, iRefLine230Left.fullMemoryValues.firstOrNull())
+        assertLocalName(
+            "inc",
+            iRefLine230Left.fullMemoryValues.singleOrNull { it is UnknownMemoryValue },
+        )
         assertEquals(1, iRefLine230Right.nextDFG.size)
-        assertTrue(iRefLine230Right.nextDFG.firstOrNull() is ParameterMemoryValue)
-        assertLocalName("value", iRefLine230Right.nextDFG.firstOrNull())
-        assertEquals("i", iRefLine230Right.nextDFG.firstOrNull()?.name?.parent?.localName)
+        assertLocalName(
+            "value",
+            iRefLine230Right.nextDFG.singleOrNull { it is ParameterMemoryValue },
+        )
+        assertEquals(
+            "i",
+            iRefLine230Right.nextDFG
+                .singleOrNull { it is ParameterMemoryValue }
+                ?.name
+                ?.parent
+                ?.localName,
+        )
 
         // Line 231
         assertEquals(1, iRefLine231.fullMemoryValues.size)
-        assertEquals(ceLine230, iRefLine231.fullMemoryValues.first())
+        assertLocalName(
+            "inc",
+            iRefLine231.fullMemoryValues.singleOrNull { it is UnknownMemoryValue },
+        )
         assertEquals(1, pDerefLine231.fullMemoryValues.size)
-        assertEquals(ceLine230, pDerefLine231.fullMemoryValues.first())
+        assertLocalName(
+            "inc",
+            pDerefLine231.fullMemoryValues.singleOrNull { it is UnknownMemoryValue },
+        )
         assertEquals(1, pDerefLine231.memoryAddresses.size)
         assertEquals(iDecl.memoryAddresses.singleOrNull(), pDerefLine231.memoryAddresses.first())
+        assertEquals(iRefLine230Left, iRefLine231.prevFullDFG.singleOrNull())
+        assertEquals(iRefLine230Left, pDerefLine231.prevFullDFG.singleOrNull())
 
         // Line 234
         assertEquals(1, pDerefLine234.memoryAddresses.size)
@@ -2623,6 +2640,9 @@ class PointsToPassTest {
             }
         assertNotNull(tu)
 
+        // Declarations
+        val jDecl = tu.functions["testCallingContexts"].variables["j"]
+
         // CallExpressions
         val ceLine380 =
             tu.allChildren<CallExpression> { it.location?.region?.startLine == 380 }.first()
@@ -2757,12 +2777,9 @@ class PointsToPassTest {
                 .calls,
         )
 
-        // The value of the return statement in the FD flows to the callExpression
+        // The value of the return statement flows first to the FD and then to the callExpression
         assertEquals(1, ceLine380.prevDFGEdges.size)
-        assertEquals(
-            incFD.returns.singleOrNull()?.returnValue,
-            ceLine380.prevDFGEdges.singleOrNull()?.start,
-        )
+        assertEquals(incFD, ceLine380.prevDFGEdges.singleOrNull()?.start)
         assertEquals(
             setOf(ceLine380),
             ((ceLine380.prevDFGEdges.first() as ContextSensitiveDataflow).callingContext
@@ -2790,10 +2807,7 @@ class PointsToPassTest {
 
         // The value of the return statement in the FD flows to the callExpression
         assertEquals(1, ceLine384.prevDFGEdges.size)
-        assertEquals(
-            incFD.returns.singleOrNull()?.returnValue,
-            ceLine384.prevDFGEdges.singleOrNull()?.start,
-        )
+        assertEquals(incFD, ceLine384.prevDFGEdges.singleOrNull()?.start)
         assertEquals(
             setOf(ceLine384),
             ((ceLine384.prevDFGEdges.first() as ContextSensitiveDataflow).callingContext
@@ -2820,14 +2834,13 @@ class PointsToPassTest {
             pArgLine386.nextDFGEdges.first().end as? ParameterMemoryValue,
         )
 
-        // Argument's nextDFG should point to the ParameterMemoryValue of the Function
-        assertEquals(1, incpDerefValue.prevDFGEdges.filter { it.start == literal1 }.size)
         assertEquals(
-            setOf(ceLine386),
-            ((incpDerefValue.prevDFGEdges.first { it.start == literal1 }
-                        as ContextSensitiveDataflow)
-                    .callingContext as CallingContextIn)
-                .calls,
+            jDecl,
+            incpDerefValue.prevDFGEdges
+                .singleOrNull {
+                    it is ContextSensitiveDataflow && it.callingContext.calls == setOf(ceLine386)
+                }
+                ?.start,
         )
 
         // print Line 388
@@ -2838,7 +2851,7 @@ class PointsToPassTest {
                     .callingContext as CallingContextOut)
                 .calls,
         )
-        assertEquals(incpFD, jLine388.prevFunctionSummaryDFG.singleOrNull())
+        assertEquals(listOf(incpFD, incpFD.parameters[0]), jLine388.prevFunctionSummaryDFG)
 
         assertEquals(3, pDerefLine388.prevDFGEdges.size)
         assertEquals(
