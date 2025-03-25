@@ -29,7 +29,6 @@ import de.fraunhofer.aisec.codyze.AnalysisProject
 import de.fraunhofer.aisec.codyze.AnalysisResult
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.graph.Name
-import de.fraunhofer.aisec.cpg.graph.concepts.logging.Log
 import de.fraunhofer.aisec.cpg.graph.concepts.newConcept
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.nodes
@@ -141,33 +140,41 @@ class ConsoleService {
     }
 
     /**
-     * Adds a new [Concept] to an existing node in the analysis result.
+     * Adds a new [Concept] node as an [de.fraunhofer.aisec.cpg.graph.OverlayNode] to an existing
+     * node in the analysis result. The DFG edges can be configured to connect the new concept node
+     * to the existing node.
      *
      * @param request The request containing node ID, concept name and configuration parameters
+     *   (connect DFG)
      * @throws IllegalStateException if no analysis result exists
      * @throws IllegalArgumentException if the target node is not found or the concept name is
      *   invalid
      */
     fun addConcept(request: ConceptRequestJSON) {
         val analysisResult =
-            this.analysisResult ?: throw IllegalStateException("No analysis result exists")
+            this.analysisResult ?: throw IllegalStateException("No analysis result found.")
 
         val node =
             analysisResult.components
                 .flatMap { it.translationUnits }
                 .flatMap { it.cpgTU.nodes }
-                .find { it.id == request.nodeId }
-                ?: throw IllegalArgumentException("Target node not found")
+                .singleOrNull { it.id == request.nodeId }
+                ?: throw IllegalArgumentException("Unique target node not found.")
 
         val concept =
             node.newConcept(
                 constructor =
                     when (request.conceptName) {
                         "de.fraunhofer.aisec.cpg.graph.concepts.logging.Log" -> { node ->
-                                Log(node).apply { name = Name("TEST Log " /* TODO */) }
+                                de.fraunhofer.aisec.cpg.graph.concepts.logging.Log(node).apply {
+                                    name = Name("Manually added Log" /* TODO */)
+                                }
                             }
                         "de.fraunhofer.aisec.cpg.graph.concepts.file.File" -> { node ->
-                                de.fraunhofer.aisec.cpg.graph.concepts.file.File(node, "Filename")
+                                de.fraunhofer.aisec.cpg.graph.concepts.file.File(
+                                    node,
+                                    "filename", /* TODO */
+                                )
                             }
                         "de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.Secret" -> { node ->
                                 de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.Secret(node)
@@ -175,7 +182,7 @@ class ConsoleService {
                         /* TODO more concepts... */
                         else ->
                             throw IllegalArgumentException(
-                                "Unknown concept: ${request.conceptName}"
+                                "Unknown concept: \"${request.conceptName}\"."
                             )
                     },
                 underlyingNode = node,

@@ -53,8 +53,9 @@ import org.reflections.Reflections
  *   for a translation unit.
  * - GET `/api/component/{component_name}/translation-unit/{id}/overlay-nodes`: Retrieves all
  *   overlay nodes for a translation unit.
- *
- *     TODO: update this list...
+ * - GET `/api/concepts`: Retrieves a list of all available [Concept] classes (as Java class names).
+ * - POST `/api/concept`: Adds a concept node to the current
+ *   [de.fraunhofer.aisec.codyze.AnalysisResult]
  */
 fun Routing.apiRoutes(service: ConsoleService) {
     // The API routes are prefixed with /api
@@ -153,37 +154,26 @@ fun Routing.apiRoutes(service: ConsoleService) {
             call.respond(nodes)
         }
 
-        // The endpoint to add a concept node to a specific location
+        // The endpoint to add a concept node to the current analysis result
         post("/concept") {
             try {
-                val request =
-                    try {
-                        call.receive<ConceptRequestJSON>()
-                    } catch (e: Exception) {
-                        call.respond(
-                            HttpStatusCode.BadRequest,
-                            mapOf("error" to "Invalid request format: ${e.message}"),
-                        )
-                        return@post
-                    }
-
+                val request = call.receive<ConceptRequestJSON>()
                 try {
-                    val result = service.addConcept(request)
-                    call.respond(result)
+                    call.respond(service.addConcept(request))
                 } catch (e: Exception) {
                     call.respond(HttpStatusCode.InternalServerError, mapOf("error" to e.message))
                 }
             } catch (e: Exception) {
                 call.respond(
-                    HttpStatusCode.InternalServerError,
-                    mapOf("error" to "Unexpected error: ${e.message}"),
+                    HttpStatusCode.BadRequest,
+                    mapOf("error" to "Invalid request format: ${e.message}"),
                 )
             }
         }
 
         /**
          * The endpoint to get a list of all available [Concept] classes. Returns a JSON object with
-         * an array of concept names.
+         * an array of concept names (Java class names).
          */
         get("/concepts") {
             val reflections =

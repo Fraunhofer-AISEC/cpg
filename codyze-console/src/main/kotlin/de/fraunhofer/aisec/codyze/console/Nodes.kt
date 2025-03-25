@@ -129,7 +129,16 @@ data class NodeJSON(
     val nextDFG: List<EdgeJSON> = emptyList(),
 )
 
-/** JSON data class for a concept request. */
+/**
+ * JSON data class for an "add new concept" request
+ * [de.fraunhofer.aisec.codyze.console.ConsoleService.addConcept].
+ *
+ * @param nodeId The UUID of the underlying node.
+ * @param conceptName The (Java class) name of the concept.
+ * @param addDFGToConcept Whether to add DFG edges from the underlying node to the new concept node.
+ * @param addDFGFromConcept Whether to add DFG edges from the new concept node to the underlying
+ *   node.
+ */
 @Serializable
 data class ConceptRequestJSON(
     val nodeId: Uuid,
