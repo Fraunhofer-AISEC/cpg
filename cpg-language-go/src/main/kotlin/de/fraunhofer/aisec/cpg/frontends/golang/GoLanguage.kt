@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.graph.primitiveType
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.types.*
-import de.fraunhofer.aisec.cpg.graph.unknownType
 import org.neo4j.ogm.annotation.Transient
 
 /** The Go language. */
@@ -225,31 +224,26 @@ class GoLanguage :
         return CastNotPossible
     }
 
-    override fun propagateTypeOfBinaryOperation(operation: BinaryOperator): Type {
-        if (operation.operatorCode == "==") {
-            return super.propagateTypeOfBinaryOperation(operation)
+    override fun propagateTypeOfBinaryOperation(
+        operatorCode: String?,
+        lhsType: Type,
+        rhsType: Type,
+        hint: BinaryOperator?,
+    ): Type {
+        if (operatorCode == "==") {
+            return super.propagateTypeOfBinaryOperation(operatorCode, lhsType, rhsType, hint)
         }
 
-        // Deal with literals. Numeric literals can also be used in simple arithmetic of the
+        // Deal with literals. Numeric literals can also be used in simple arithmetic if the
         // underlying type is numeric
         return when {
-            operation.lhs is Literal<*> && (operation.lhs as Literal<*>).type is NumericType -> {
-                val type = operation.rhs.type
-                if (type is NumericType || type.underlyingType is NumericType) {
-                    type
-                } else {
-                    unknownType()
-                }
-            }
-            operation.rhs is Literal<*> && (operation.rhs as Literal<*>).type is NumericType -> {
-                val type = operation.lhs.type
-                if (type is NumericType || type.underlyingType is NumericType) {
-                    type
-                } else {
-                    unknownType()
-                }
-            }
-            else -> super.propagateTypeOfBinaryOperation(operation)
+            hint?.lhs is Literal<*> &&
+                lhsType is NumericType &&
+                rhsType.underlyingType is NumericType -> rhsType
+            hint?.rhs is Literal<*> &&
+                rhsType is NumericType &&
+                lhsType.underlyingType is NumericType -> lhsType
+            else -> super.propagateTypeOfBinaryOperation(operatorCode, lhsType, rhsType, hint)
         }
     }
 }

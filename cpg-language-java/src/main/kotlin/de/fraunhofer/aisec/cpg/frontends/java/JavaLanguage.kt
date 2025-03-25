@@ -103,14 +103,19 @@ open class JavaLanguage :
             "java.lang.String" to StringType("java.lang.String", this),
         )
 
-    override fun propagateTypeOfBinaryOperation(operation: BinaryOperator): Type {
+    override fun propagateTypeOfBinaryOperation(
+        operatorCode: String?,
+        lhsType: Type,
+        rhsType: Type,
+        hint: BinaryOperator?,
+    ): Type {
         return if (
-            operation.operatorCode == "+" &&
-                (operation.lhs.type as? IntegerType)?.name?.localName?.equals("char") == true &&
-                (operation.rhs.type as? IntegerType)?.name?.localName?.equals("char") == true
+            operatorCode == "+" &&
+                (lhsType as? IntegerType)?.name?.localName?.equals("char") == true &&
+                (rhsType as? IntegerType)?.name?.localName?.equals("char") == true
         ) {
             getSimpleTypeOf("int") ?: UnknownType.getUnknownType(this)
-        } else super.propagateTypeOfBinaryOperation(operation)
+        } else super.propagateTypeOfBinaryOperation(operatorCode, lhsType, rhsType, hint)
     }
 
     override fun SymbolResolver.handleSuperExpression(
