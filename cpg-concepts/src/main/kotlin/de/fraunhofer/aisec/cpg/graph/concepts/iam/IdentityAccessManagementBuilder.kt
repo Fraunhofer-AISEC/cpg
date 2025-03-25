@@ -23,7 +23,7 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.concepts.auth
+package de.fraunhofer.aisec.cpg.graph.concepts.iam
 
 import de.fraunhofer.aisec.cpg.graph.MetadataProvider
 import de.fraunhofer.aisec.cpg.graph.Node
@@ -52,16 +52,16 @@ fun MetadataProvider.newJwtAuth(underlyingNode: Node, jwt: Node, payload: Node) 
     newConcept({ JwtAuth(it, jwt = jwt, payload = payload) }, underlyingNode = underlyingNode)
 
 /**
- * Creates a new [Authenticate] operation belonging to a certain [Authentication] concept.
+ * Creates a new [Authenticate] operation belonging to a certain [IdentityAccessManagement] concept.
  *
  * @param underlyingNode The underlying node representing this concept.
- * @param concept The [Authentication] concept to which the operation belongs.
+ * @param concept The [IdentityAccessManagement] concept to which the operation belongs.
  * @param credential The credential can be a call (e.g., a function call that reads a header) or a
  *   variable that holds the value, e.g. the token * @return The created [Authenticate] operation.
  */
 fun MetadataProvider.newAuthenticate(
     underlyingNode: Node,
-    concept: Authentication,
+    concept: IdentityAccessManagement,
     credential: Node,
 ) =
     newOperation(
@@ -72,6 +72,45 @@ fun MetadataProvider.newAuthenticate(
                 credential = credential,
             )
         },
+        underlyingNode = underlyingNode,
+        concept = concept,
+    )
+
+/**
+ * Creates a new [IssueJwt] operation belonging to a certain [JwtAuth] concept.
+ *
+ * @param underlyingNode The underlying node representing this concept.
+ * @param concept The [JwtAuth] concept to which the operation belongs.
+ */
+fun MetadataProvider.newIssueJwt(underlyingNode: Node, concept: JwtAuth) =
+    newOperation(
+        { underlyingNode, concept -> IssueJwt(underlyingNode = underlyingNode, jwt = concept) },
+        underlyingNode = underlyingNode,
+        concept = concept,
+    )
+
+/**
+ * Creates a new [ValidateJwt] operation belonging to a certain [JwtAuth] concept.
+ *
+ * @param underlyingNode The underlying node representing this concept.
+ * @param concept The [JwtAuth] concept to which the operation belongs.
+ */
+fun MetadataProvider.newValidateJwt(underlyingNode: Node, concept: JwtAuth) =
+    newOperation(
+        { underlyingNode, concept -> ValidateJwt(underlyingNode = underlyingNode, jwt = concept) },
+        underlyingNode = underlyingNode,
+        concept = concept,
+    )
+
+/**
+ * Creates a new [AuthorizeJwt] operation belonging to a certain [JwtAuth] concept.
+ *
+ * @param underlyingNode The underlying node representing this concept.
+ * @param concept The [JwtAuth] concept to which the operation belongs.
+ */
+fun MetadataProvider.newAuthorizeJwt(underlyingNode: Node, concept: JwtAuth) =
+    newOperation(
+        { underlyingNode, concept -> AuthorizeJwt(underlyingNode = underlyingNode, jwt = concept) },
         underlyingNode = underlyingNode,
         concept = concept,
     )
