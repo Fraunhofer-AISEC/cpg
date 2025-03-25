@@ -25,11 +25,13 @@
  */
 package de.fraunhofer.aisec.codyze.console
 
+import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import io.ktor.http.*
-import io.ktor.server.http.content.staticResources
+import io.ktor.server.http.content.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import org.reflections.Reflections
 
 /**
  * This function sets up the API routes for the web application. It defines the endpoints for
@@ -51,6 +53,10 @@ import io.ktor.server.routing.*
  *   for a translation unit.
  * - GET `/api/component/{component_name}/translation-unit/{id}/overlay-nodes`: Retrieves all
  *   overlay nodes for a translation unit.
+ * - GET `/api/concept-classes`: Retrieves a list of all available [Concept] classes (as Java class
+ *   names).
+ * - POST `/api/concept`: Adds a concept node to the current
+ *   [de.fraunhofer.aisec.codyze.AnalysisResult]
  */
 fun Routing.apiRoutes(service: ConsoleService) {
     // The API routes are prefixed with /api
@@ -147,6 +153,40 @@ fun Routing.apiRoutes(service: ConsoleService) {
 
             val nodes = service.getNodesForTranslationUnit(componentName, id, true)
             call.respond(nodes)
+        }
+
+        // The endpoint to add a concept node to the current analysis result
+        post("/concept") {
+            try {
+                val request = call.receive<ConceptRequestJSON>()
+                try {
+                    call.respond(service.addConcept(request))
+                } catch (e: Exception) {
+                    call.respond(HttpStatusCode.InternalServerError, mapOf("error" to e.message))
+                }
+            } catch (e: Exception) {
+                call.respond(
+                    HttpStatusCode.BadRequest,
+                    mapOf("error" to "Invalid request format: ${e.message}"),
+                )
+            }
+        }
+
+        /**
+         * The endpoint to get a list of all available [Concept] classes. Returns a JSON object with
+         * an array of concept names (Java class names).
+         */
+        get("/classes/concepts") {
+            val reflections =
+                Reflections(
+                    "de.fraunhofer.aisec.cpg.graph.concepts",
+                    org.reflections.scanners.Scanners.SubTypes,
+                )
+
+            val conceptClasses = reflections.getSubTypesOf(Concept::class.java)
+            val conceptNames = conceptClasses.map { it.name }.toSet()
+
+            call.respond(mapOf("classes" to conceptNames))
         }
     }
 }

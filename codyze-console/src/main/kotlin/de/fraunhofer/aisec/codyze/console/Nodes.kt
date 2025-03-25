@@ -29,13 +29,9 @@ package de.fraunhofer.aisec.codyze.console
 
 import de.fraunhofer.aisec.codyze.AnalysisResult
 import de.fraunhofer.aisec.cpg.TranslationResult
-import de.fraunhofer.aisec.cpg.graph.Component
-import de.fraunhofer.aisec.cpg.graph.ContextProvider
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.component
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
-import de.fraunhofer.aisec.cpg.graph.nodes
 import io.github.detekt.sarif4k.Result
 import java.net.URI
 import kotlin.io.path.Path
@@ -131,6 +127,24 @@ data class NodeJSON(
     val astChildren: List<NodeJSON>,
     val prevDFG: List<EdgeJSON> = emptyList(),
     val nextDFG: List<EdgeJSON> = emptyList(),
+)
+
+/**
+ * JSON data class for an "add new concept" request
+ * [de.fraunhofer.aisec.codyze.console.ConsoleService.addConcept].
+ *
+ * @param nodeId The UUID of the underlying node.
+ * @param conceptName The (Java class) name of the concept.
+ * @param addDFGToConcept Whether to add DFG edges from the underlying node to the new concept node.
+ * @param addDFGFromConcept Whether to add DFG edges from the new concept node to the underlying
+ *   node.
+ */
+@Serializable
+data class ConceptRequestJSON(
+    val nodeId: Uuid,
+    val conceptName: String,
+    val addDFGToConcept: Boolean,
+    val addDFGFromConcept: Boolean,
 )
 
 /** Converts a [AnalysisResult] into its JSON representation. */

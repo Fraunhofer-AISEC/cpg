@@ -7,6 +7,8 @@ import type { NodeJSON } from '$lib/types';
  */
 export interface FlattenedNode extends NodeJSON {
   depth: number;
+  componentName: string;
+  unitId: string;
 }
 
 /**
@@ -14,13 +16,17 @@ export interface FlattenedNode extends NodeJSON {
  * @param nodes The root nodes of the tree.
  * @returns The flattened list of nodes.
  */
-export const flattenNodes = (nodes: NodeJSON[]): FlattenedNode[] => {
+export const flattenNodes = (
+  nodes: NodeJSON[],
+  componentName: string,
+  unitId: string
+): FlattenedNode[] => {
   const result: FlattenedNode[] = [];
   const stack: { node: NodeJSON; depth: number }[] = nodes.map((node) => ({ node, depth: 0 }));
 
   while (stack.length) {
     const { node, depth } = stack.pop()!;
-    result.push({ ...node, depth });
+    result.push({ ...node, depth, componentName, unitId });
     if (node.astChildren) {
       stack.push(...node.astChildren.map((child) => ({ node: child, depth: depth + 1 })));
     }
