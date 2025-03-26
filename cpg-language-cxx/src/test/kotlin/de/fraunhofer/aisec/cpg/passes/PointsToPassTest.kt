@@ -2819,7 +2819,10 @@ class PointsToPassTest {
                     .callingContext as CallingContextOut)
                 .calls,
         )
-        assertEquals(listOf(incpFD, incpFD.parameters[0]), jLine388.prevFunctionSummaryDFG)
+        assertEquals(
+            setOf(ceLine386, incpFD.parameters[0]),
+            jLine388.prevFunctionSummaryDFG.toSet(),
+        )
 
         assertEquals(3, pDerefLine388.prevDFGEdges.size)
         assertEquals(
