@@ -2318,76 +2318,44 @@ class PointsToPassTest {
         println(ctxLine43)
 
         // Function Summary for mbedtls_ssl_read
+        // Start with the precise function summaries:
         assertEquals(1, FSread.size)
-        assertEquals(5, FSread.entries.firstOrNull()?.value?.size)
+        val preciseFSread = FSread.entries.firstOrNull()?.value?.filter { !it.shortFunctionSummary }
+        assertNotNull(preciseFSread)
+        assertEquals(5, preciseFSread.size)
+        assertTrue(preciseFSread.any { it.srcNode == literal1 && it.subAccessName == "i" })
+        assertTrue(preciseFSread.any { it.srcNode == literal2 && it.subAccessName == "j" })
+        assertTrue(preciseFSread.any { it.srcNode == literal3 && it.subAccessName == "k" })
+        assertTrue(preciseFSread.any { it.srcNode == literal4 && it.subAccessName == "session.l" })
         assertTrue(
-            FSread.entries.firstOrNull()?.value?.any {
-                it.srcNode == literal1 && it.subAccessName == "i"
-            } == true
-        )
-        assertTrue(
-            FSread.entries.firstOrNull()?.value?.any {
-                it.srcNode == literal2 && it.subAccessName == "j"
-            } == true
-        )
-        assertTrue(
-            FSread.entries.firstOrNull()?.value?.any {
-                it.srcNode == literal3 && it.subAccessName == "k"
-            } == true
-        )
-        assertTrue(
-            FSread.entries.firstOrNull()?.value?.any {
-                it.srcNode == literal4 && it.subAccessName == "session.l"
-            } == true
-        )
-        assertTrue(
-            FSread.entries.firstOrNull()?.value?.any {
-                it.srcNode is UnknownMemoryValue && it.subAccessName == "session"
-            } == true
+            preciseFSread.any { it.srcNode is UnknownMemoryValue && it.subAccessName == "session" }
         )
 
         // Function Summary for inner_renegotiate
         assertEquals(1, FSinnerrenegotiate.size)
-        assertEquals(
-            2,
-            FSinnerrenegotiate.entries
-                .firstOrNull()
-                ?.value
-                ?.filter { !it.shortFunctionSummary }
-                ?.size,
+        val preciseFSinnerrenegotiate =
+            FSinnerrenegotiate.entries.firstOrNull()?.value?.filter { !it.shortFunctionSummary }
+        assertNotNull(preciseFSinnerrenegotiate)
+        assertEquals(2, preciseFSinnerrenegotiate.size)
+        assertTrue(
+            preciseFSinnerrenegotiate.any { it.srcNode == literal6 && it.subAccessName == "j" }
         )
         assertTrue(
-            FSinnerrenegotiate.entries
-                .firstOrNull()
-                ?.value
-                ?.filter { !it.shortFunctionSummary }
-                ?.any { it.srcNode == literal6 && it.subAccessName == "j" } == true
-        )
-        assertTrue(
-            FSinnerrenegotiate.entries
-                .firstOrNull()
-                ?.value
-                ?.filter { !it.shortFunctionSummary }
-                ?.any { it.srcNode == literal7 && it.subAccessName == "session.l" } == true
+            preciseFSinnerrenegotiate.any {
+                it.srcNode == literal7 && it.subAccessName == "session.l"
+            }
         )
 
         // Function Summary for renegotiate
         assertEquals(1, FSrenegotiate.size)
-        assertEquals(3, FSrenegotiate.entries.firstOrNull()?.value?.size)
+        val preciseFSrenegotiate =
+            FSrenegotiate.entries.firstOrNull()?.value?.filter { !it.shortFunctionSummary }
+        assertNotNull(preciseFSrenegotiate)
+        assertEquals(3, preciseFSrenegotiate.size)
+        assertTrue(preciseFSrenegotiate.any { it.srcNode == literal5 && it.subAccessName == "i" })
+        assertTrue(preciseFSrenegotiate.any { it.srcNode == literal6 && it.subAccessName == "j" })
         assertTrue(
-            FSrenegotiate.entries.firstOrNull()?.value?.any {
-                it.srcNode == literal5 && it.subAccessName == "i"
-            } == true
-        )
-        assertTrue(
-            FSrenegotiate.entries.firstOrNull()?.value?.any {
-                it.srcNode == literal6 && it.subAccessName == "j"
-            } == true
-        )
-        assertTrue(
-            FSrenegotiate.entries.firstOrNull()?.value?.any {
-                it.srcNode == literal7 && it.subAccessName == "session.l"
-            } == true
+            preciseFSrenegotiate.any { it.srcNode == literal7 && it.subAccessName == "session.l" }
         )
     }
 
