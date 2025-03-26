@@ -40,6 +40,7 @@ import de.fraunhofer.aisec.cpg.test.assertLocalName
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -1342,161 +1343,163 @@ class PointsToPassTest {
         assertNotNull(tu)
 
         // ParameterDeclaration
-        val param_1Line145 =
-            tu.allChildren<ParameterDeclaration> { it.location?.region?.startLine == 145 }.first()
-        assertNotNull(param_1Line145)
+        val param1Line145 =
+            tu.allChildren<ParameterDeclaration> { it.location?.region?.startLine == 145 }
+                .singleOrNull()
+        assertNotNull(param1Line145)
 
-        val param_1Line193 =
-            tu.allChildren<ParameterDeclaration> { it.location?.region?.startLine == 193 }.first()
-        assertNotNull(param_1Line193)
+        val param1Line193 =
+            tu.allChildren<ParameterDeclaration> { it.location?.region?.startLine == 193 }
+                .singleOrNull()
+        assertNotNull(param1Line193)
 
         // References
-        val local_20Line159 =
+        val local20Line159 =
             tu.allChildren<Reference> {
                     it.location?.region?.startLine == 159 && it.name.localName == "local_20"
                 }
-                .first()
-        assertNotNull(local_20Line159)
-        val param_1Line159 =
+                .singleOrNull()
+        assertNotNull(local20Line159)
+        val param1Line159 =
             tu.allChildren<Reference> {
                     it.location?.region?.startLine == 159 && it.name.localName == "param_1"
                 }
-                .first()
-        assertNotNull(param_1Line159)
+                .singleOrNull()
+        assertNotNull(param1Line159)
 
-        val local_30Line160 =
+        val local30Line160 =
             tu.allChildren<Reference> {
                     it.location?.region?.startLine == 160 && it.name.localName == "local_30"
                 }
-                .first()
-        assertNotNull(local_30Line160)
-        val param_1Line160 =
+                .singleOrNull()
+        assertNotNull(local30Line160)
+        val param1Line160 =
             tu.allChildren<Reference> {
                     it.location?.region?.startLine == 160 && it.name.localName == "param_1"
                 }
-                .first()
-        assertNotNull(param_1Line160)
+                .singleOrNull()
+        assertNotNull(param1Line160)
 
-        val local_30Line165 =
+        val local30Line165 =
             tu.allChildren<Reference> {
                     it.location?.region?.startLine == 165 && it.name.localName == "local_30"
                 }
-                .first()
-        assertNotNull(local_30Line165)
+                .singleOrNull()
+        assertNotNull(local30Line165)
 
-        val local_18Line165 =
+        val local18Line165 =
             tu.allChildren<Reference> {
                     it.location?.region?.startLine == 165 && it.name.localName == "local_18"
                 }
-                .first()
-        assertNotNull(local_18Line165)
+                .singleOrNull()
+        assertNotNull(local18Line165)
 
-        val local_10Line166 =
+        val local10Line166 =
             tu.allChildren<Reference> {
                     it.location?.region?.startLine == 166 && it.name.localName == "local_10"
                 }
-                .first()
-        assertNotNull(local_10Line166)
+                .singleOrNull()
+        assertNotNull(local10Line166)
 
-        val local_28Line167 =
+        val local28Line167 =
             tu.allChildren<Reference> {
                     it.location?.region?.startLine == 167 && it.name.localName == "local_28"
                 }
-                .first()
-        assertNotNull(local_28Line167)
+                .singleOrNull()
+        assertNotNull(local28Line167)
 
-        val local_28Line172 =
+        val local28Line172 =
             tu.allChildren<Reference> {
                     it.location?.region?.startLine == 172 && it.name.localName == "local_28"
                 }
-                .first()
-        assertNotNull(local_28Line172)
+                .singleOrNull()
+        assertNotNull(local28Line172)
 
-        val local_10Line172 =
+        val local10Line172 =
             tu.allChildren<Reference> {
                     it.location?.region?.startLine == 172 && it.name.localName == "local_10"
                 }
-                .first()
-        assertNotNull(local_10Line172)
+                .singleOrNull()
+        assertNotNull(local10Line172)
 
-        val local_28Line177 =
+        val local28Line177 =
             tu.allChildren<Reference> {
                     it.location?.region?.startLine == 177 && it.name.localName == "local_28"
                 }
-                .first()
-        assertNotNull(local_28Line177)
+                .singleOrNull()
+        assertNotNull(local28Line177)
 
-        val local_10Line177 =
+        val local10Line177 =
             tu.allChildren<Reference> {
                     it.location?.region?.startLine == 177 && it.name.localName == "local_10"
                 }
-                .first()
-        assertNotNull(local_10Line177)
+                .singleOrNull()
+        assertNotNull(local10Line177)
 
-        val local_28Line179 =
+        val local28Line179 =
             tu.allChildren<Reference> {
                     it.location?.region?.startLine == 179 &&
                         it.name.localName == "local_28" &&
                         it.location?.region?.startColumn == 19
                 }
-                .first()
-        assertNotNull(local_28Line179)
+                .singleOrNull()
+        assertNotNull(local28Line179)
 
-        val local_28Line180 =
+        val local28Line180 =
             tu.allChildren<Reference> {
                     it.location?.region?.startLine == 180 && it.name.localName == "local_28"
                 }
-                .first()
-        assertNotNull(local_28Line180)
+                .singleOrNull()
+        assertNotNull(local28Line180)
 
-        val local_28DerefLine181 =
+        val local28DerefLine181 =
             tu.allChildren<PointerDereference> {
                     it.location?.region?.startLine == 181 && it.name.localName == "local_28"
                 }
-                .first()
-        assertNotNull(local_28DerefLine181)
+                .singleOrNull()
+        assertNotNull(local28DerefLine181)
 
-        val local_28Line182 =
+        val local28Line182 =
             tu.allChildren<Reference> {
                     it.location?.region?.startLine == 182 && it.name.localName == "local_28"
                 }
-                .first()
-        assertNotNull(local_28Line182)
+                .singleOrNull()
+        assertNotNull(local28Line182)
 
         // PointerDereferences
-        val local_28DerefLine179 =
+        val local28DerefLine179 =
             tu.allChildren<PointerDereference> {
                     it.location?.region?.startLine == 179 && it.name.localName == "local_28"
                 }
-                .first()
-        assertNotNull(local_28DerefLine179)
+                .singleOrNull()
+        assertNotNull(local28DerefLine179)
 
-        val local_18DerefLine190 =
+        val local18DerefLine190 =
             tu.allChildren<PointerDereference> {
                     it.location?.region?.startLine == 190 && it.name.localName == "local_18"
                 }
-                .first()
-        assertNotNull(local_18DerefLine190)
+                .singleOrNull()
+        assertNotNull(local18DerefLine190)
 
-        val param_1DerefDerefLine190 =
+        val param1DerefDerefLine190 =
             tu.allChildren<PointerDereference> {
                     it.location?.region?.startLine == 190 &&
                         it.name.localName == "param_1" &&
                         it.location?.region?.startColumn == 32
                 }
-                .first()
-        assertNotNull(param_1DerefDerefLine190)
+                .singleOrNull()
+        assertNotNull(param1DerefDerefLine190)
 
-        val param_1DerefLine201 =
+        val param1DerefLine201 =
             tu.allChildren<PointerDereference> {
                     it.location?.region?.startLine == 201 && it.name.localName == "param_1"
                 }
-                .first()
-        assertNotNull(param_1DerefLine201)
+                .singleOrNull()
+        assertNotNull(param1DerefLine201)
 
-        val param_1SSELine202 =
+        val param1SSELine202 =
             tu.allChildren<SubscriptExpression> { it.location?.region?.startLine == 202 }.first()
-        assertNotNull(param_1SSELine202)
+        assertNotNull(param1SSELine202)
 
         // Literals
         val literal10Line166 =
@@ -1561,40 +1564,40 @@ class PointsToPassTest {
         assertNotNull(fssgxecallkeytoout)
 
         // Line 159
-        assertEquals(1, local_20Line159.fullMemoryValues.size)
-        assertEquals(1, param_1Line159.fullMemoryValues.size)
+        assertEquals(1, local20Line159.fullMemoryValues.size)
+        assertEquals(1, param1Line159.fullMemoryValues.size)
         assertEquals(
-            param_1Line159.fullMemoryValues.first(),
-            local_20Line159.fullMemoryValues.first(),
+            param1Line159.fullMemoryValues.first(),
+            local20Line159.fullMemoryValues.first(),
         )
 
         // Effect from Line 160
-        assertEquals(1, local_30Line165.fullMemoryValues.size)
-        assertTrue(local_30Line165.fullMemoryValues.first() is ParameterMemoryValue)
+        assertEquals(1, local30Line165.fullMemoryValues.size)
+        assertTrue(local30Line165.fullMemoryValues.first() is ParameterMemoryValue)
         assertEquals(
             "param_1.derefvalue",
-            local_30Line165.fullMemoryValues.firstOrNull()?.name.toString(),
+            local30Line165.fullMemoryValues.firstOrNull()?.name.toString(),
         )
 
         // Line 165
-        assertEquals(1, local_18Line165.fullMemoryValues.size)
-        assertTrue(local_18Line165.fullMemoryValues.first() is ParameterMemoryValue)
+        assertEquals(1, local18Line165.fullMemoryValues.size)
+        assertTrue(local18Line165.fullMemoryValues.first() is ParameterMemoryValue)
         assertEquals(
             "param_1.derefvalue",
-            local_18Line165.fullMemoryValues.firstOrNull()?.name.toString(),
+            local18Line165.fullMemoryValues.firstOrNull()?.name.toString(),
         )
 
         // Line 167
-        assertEquals(1, local_28Line167.fullMemoryValues.size)
-        assertEquals(literal0Line167, local_28Line167.fullMemoryValues.firstOrNull())
+        assertEquals(1, local28Line167.fullMemoryValues.size)
+        assertEquals(literal0Line167, local28Line167.fullMemoryValues.firstOrNull())
 
         // Line 172
-        assertEquals(1, local_28Line172.fullMemoryValues.size)
+        assertEquals(1, local28Line172.fullMemoryValues.size)
         assertTrue(
-            local_28Line172.fullMemoryValues.singleOrNull { it.name.localName == "dlmalloc" }
+            local28Line172.fullMemoryValues.singleOrNull { it.name.localName == "dlmalloc" }
                 is UnknownMemoryValue
         )
-        assertEquals(ceLine172, local_28Line172.prevDFG.singleOrNull())
+        assertEquals(ceLine172, local28Line172.prevDFG.singleOrNull())
 
         // Line 177
         assertEquals(
@@ -1614,35 +1617,35 @@ class PointsToPassTest {
         )
 
         // Line 179
-        assertEquals(2, local_28Line179.fullMemoryValues.size)
-        assertTrue(local_28Line179.fullMemoryValues.contains(literal0Line167))
+        assertEquals(2, local28Line179.fullMemoryValues.size)
+        assertTrue(local28Line179.fullMemoryValues.contains(literal0Line167))
         assertLocalName(
             "dlmalloc",
-            local_28Line179.fullMemoryValues.filterIsInstance<UnknownMemoryValue>().singleOrNull(),
+            local28Line179.fullMemoryValues.filterIsInstance<UnknownMemoryValue>().singleOrNull(),
         )
         assertEquals(
-            setOf<Node>(local_28Line167, local_28Line172),
-            local_28Line179.prevFullDFG.toSet(),
+            setOf<Node>(local28Line167, local28Line172),
+            local28Line179.prevFullDFG.toSet(),
         )
 
-        assertEquals(2, local_28DerefLine179.fullMemoryValues.size)
-        assertTrue(local_28DerefLine179.fullMemoryValues.contains(literal0Line177))
+        assertEquals(2, local28DerefLine179.fullMemoryValues.size)
+        assertTrue(local28DerefLine179.fullMemoryValues.contains(literal0Line177))
         assertEquals(
             1,
-            local_28DerefLine179.fullMemoryValues
+            local28DerefLine179.fullMemoryValues
                 .filterIsInstance<UnknownMemoryValue>()
                 .filter { it.name.localName == "0" }
                 .size,
         )
 
         // ATM, we don't have short function Summaries for functions w/o body
-        assertEquals(3, local_28DerefLine179.prevDFG.size)
-        assertEquals(2, local_28DerefLine179.prevFullDFG.size)
+        assertEquals(3, local28DerefLine179.prevDFG.size)
+        assertEquals(2, local28DerefLine179.prevFullDFG.size)
         assertEquals(
             memsetFD.parameters[0].memoryValue?.memoryValues?.singleOrNull {
                 it.name.localName == "derefvalue"
             },
-            local_28DerefLine179.prevDFGEdges
+            local28DerefLine179.prevDFGEdges
                 .singleOrNull {
                     it is ContextSensitiveDataflow && it.callingContext.calls == setOf(ceLine177)
                 }
@@ -1650,11 +1653,11 @@ class PointsToPassTest {
         )
         assertLocalName(
             "0.derefvalue",
-            local_28DerefLine179.prevFullDFG.firstOrNull { it is UnknownMemoryValue },
+            local28DerefLine179.prevFullDFG.firstOrNull { it is UnknownMemoryValue },
         )
         assertEquals(
-            local_28DerefLine179.input,
-            local_28DerefLine179.prevDFGEdges
+            local28DerefLine179.input,
+            local28DerefLine179.prevDFGEdges
                 .firstOrNull { it.granularity !is FullDataflowGranularity }
                 ?.start,
         )
@@ -1662,39 +1665,39 @@ class PointsToPassTest {
         // Line 180
         assertEquals(
             literal0Line167,
-            local_28Line180.fullMemoryValues.filterIsInstance<Literal<*>>().singleOrNull(),
+            local28Line180.fullMemoryValues.filterIsInstance<Literal<*>>().singleOrNull(),
         )
         assertLocalName(
             "dlmalloc",
-            local_28Line180.fullMemoryValues.filterIsInstance<UnknownMemoryValue>().singleOrNull(),
+            local28Line180.fullMemoryValues.filterIsInstance<UnknownMemoryValue>().singleOrNull(),
         )
         assertEquals(
-            mutableSetOf<Node>(local_28Line167, local_28Line172),
-            local_28Line180.prevFullDFG.toMutableSet(),
+            mutableSetOf<Node>(local28Line167, local28Line172),
+            local28Line180.prevFullDFG.toMutableSet(),
         )
 
         // Line 181
-        assertEquals(2, local_28DerefLine181.fullMemoryValues.size)
+        assertEquals(2, local28DerefLine181.fullMemoryValues.size)
         assertEquals(
             1,
-            local_28DerefLine181.fullMemoryValues
+            local28DerefLine181.fullMemoryValues
                 .filterIsInstance<UnknownMemoryValue>()
                 .filter { it.name.localName == "DAT_0011b1c8" }
                 .size,
         )
         assertEquals(
             1,
-            local_28DerefLine181.fullMemoryValues
+            local28DerefLine181.fullMemoryValues
                 .filterIsInstance<UnknownMemoryValue>()
                 .filter { it.name.localName == "CONCAT71" }
                 .size,
         )
 
-        assertEquals(4, local_28DerefLine181.prevDFG.size)
+        assertEquals(4, local28DerefLine181.prevDFG.size)
         // One full context sensitive edge to CONCAT71
         assertLocalName(
             "CONCAT71",
-            local_28DerefLine181.prevDFGEdges
+            local28DerefLine181.prevDFGEdges
                 .singleOrNull {
                     it is ContextSensitiveDataflow &&
                         it.callingContext.calls == setOf(ceLine180) &&
@@ -1706,17 +1709,17 @@ class PointsToPassTest {
         // A partial edge to the deref's input
         assertEquals(
             1,
-            local_28DerefLine181.prevDFGEdges
+            local28DerefLine181.prevDFGEdges
                 .filter {
                     it.granularity is PartialDataflowGranularity<*> &&
-                        it.start == local_28DerefLine181.input
+                        it.start == local28DerefLine181.input
                 }
                 .size,
         )
         // A partial, contextsensitive edge to DAT_0011b1c8
         assertLocalName(
             "DAT_0011b1c8",
-            local_28DerefLine181.prevDFGEdges
+            local28DerefLine181.prevDFGEdges
                 .singleOrNull {
                     it is ContextSensitiveDataflow &&
                         it.callingContext.calls == setOf(ceLine180) &&
@@ -1726,7 +1729,7 @@ class PointsToPassTest {
                 ?.start,
         )
         // One FS edge to ecall_key_to_out
-        assertEquals(fdecallkeytoout, local_28DerefLine181.prevFunctionSummaryDFG.singleOrNull())
+        assertEquals(fdecallkeytoout, local28DerefLine181.prevFunctionSummaryDFG.singleOrNull())
 
         assertEquals(1, sseLine181.fullMemoryValues.size)
         assertEquals(
@@ -1751,65 +1754,63 @@ class PointsToPassTest {
         assertLocalName(
             "DAT_0011b1c8",
             sseLine181.prevDFGEdges
-                .filter {
+                .singleOrNull {
                     it is ContextSensitiveDataflow &&
                         it.callingContext.calls == setOf(ceLine180) &&
                         it.granularity == FullDataflowGranularity &&
                         !it.functionSummary &&
                         it.start is UnknownMemoryValue
                 }
-                .singleOrNull()
                 ?.start,
         )
         // One Summary edge to the FD
         assertEquals(
             fdecallkeytoout,
             sseLine181.prevDFGEdges
-                .filter {
+                .singleOrNull {
                     it is ContextSensitiveDataflow &&
                         it.callingContext.calls == setOf(ceLine180) &&
                         it.granularity == FullDataflowGranularity &&
                         it.functionSummary
                 }
-                .singleOrNull()
                 ?.start,
         )
 
         // Line 190
-        assertEquals(1, local_18DerefLine190.memoryAddresses.size)
-        assertTrue(local_18DerefLine190.memoryAddresses.firstOrNull() is ParameterMemoryValue)
-        assertLocalName("derefvalue", local_18DerefLine190.memoryAddresses.firstOrNull())
-        assertEquals(3, local_18DerefLine190.fullMemoryValues.size)
+        assertEquals(1, local18DerefLine190.memoryAddresses.size)
+        assertTrue(local18DerefLine190.memoryAddresses.firstOrNull() is ParameterMemoryValue)
+        assertLocalName("derefvalue", local18DerefLine190.memoryAddresses.firstOrNull())
+        assertEquals(3, local18DerefLine190.fullMemoryValues.size)
         assertTrue(
-            local_18DerefLine190.fullMemoryValues.any {
+            local18DerefLine190.fullMemoryValues.any {
                 it is UnknownMemoryValue && it.name.localName == "CONCAT71"
             }
         )
         assertTrue(
-            local_18DerefLine190.fullMemoryValues.any {
+            local18DerefLine190.fullMemoryValues.any {
                 it is UnknownMemoryValue && it.name.localName == "DAT_0011b1c8"
             }
         )
         assertEquals(
             1,
-            local_18DerefLine190.fullMemoryValues
+            local18DerefLine190.fullMemoryValues
                 .filter { it is ParameterMemoryValue && it.name.localName == "derefderefvalue" }
                 .size,
         )
 
         assertEquals(
             3,
-            local_18DerefLine190.prevDFGEdges
+            local18DerefLine190.prevDFGEdges
                 .filter { it.granularity !is PointerDataflowGranularity }
                 .size,
         )
         // The partial edge to the input
         assertEquals(
             1,
-            local_18DerefLine190.prevDFGEdges
+            local18DerefLine190.prevDFGEdges
                 .filter {
                     it.granularity is PartialDataflowGranularity<*> &&
-                        it.start == local_18DerefLine190.input
+                        it.start == local18DerefLine190.input
                 }
                 .size,
         )
@@ -1818,7 +1819,7 @@ class PointsToPassTest {
             ceLine183.invokes.singleOrNull().parameters[0].memoryValue?.memoryValues?.singleOrNull {
                 it.name.localName == "derefvalue"
             },
-            local_18DerefLine190.prevDFGEdges
+            local18DerefLine190.prevDFGEdges
                 .singleOrNull {
                     it.granularity !is PointerDataflowGranularity &&
                         it is ContextSensitiveDataflow &&
@@ -1830,7 +1831,7 @@ class PointsToPassTest {
         // param_1
         assertLocalName(
             "derefderefvalue",
-            local_18DerefLine190.prevDFGEdges
+            local18DerefLine190.prevDFGEdges
                 .singleOrNull {
                     it.granularity is FullDataflowGranularity && it !is ContextSensitiveDataflow
                 }
@@ -1839,24 +1840,24 @@ class PointsToPassTest {
 
         assertEquals(
             3,
-            param_1DerefDerefLine190.prevDFGEdges
+            param1DerefDerefLine190.prevDFGEdges
                 .filter { it.granularity !is PointerDataflowGranularity }
                 .size,
         )
         // the partial edge
         assertEquals(
             1,
-            param_1DerefDerefLine190.prevDFGEdges
+            param1DerefDerefLine190.prevDFGEdges
                 .filter {
                     it.granularity is PartialDataflowGranularity<*> &&
-                        it.start == param_1DerefDerefLine190.input
+                        it.start == param1DerefDerefLine190.input
                 }
                 .size,
         )
         // if we didn't enter any if, we would still have the original derefderefvalue from param_1
         assertLocalName(
             "derefderefvalue",
-            param_1DerefDerefLine190.prevDFGEdges
+            param1DerefDerefLine190.prevDFGEdges
                 .singleOrNull {
                     it.granularity !is PointerDataflowGranularity &&
                         it !is ContextSensitiveDataflow &&
@@ -1870,7 +1871,7 @@ class PointsToPassTest {
             ceLine183.invokes.singleOrNull().parameters[0].memoryValue?.memoryValues?.singleOrNull {
                 it.name.localName == "derefvalue"
             },
-            param_1DerefDerefLine190.prevDFGEdges
+            param1DerefDerefLine190.prevDFGEdges
                 .singleOrNull {
                     it is ContextSensitiveDataflow && it.callingContext.calls == setOf(ceLine183)
                 }
@@ -1878,16 +1879,16 @@ class PointsToPassTest {
         )
 
         // Line 201
-        assertEquals(1, param_1DerefLine201.fullMemoryValues.size)
+        assertEquals(1, param1DerefLine201.fullMemoryValues.size)
         assertLocalName(
             "CONCAT71",
-            param_1DerefLine201.fullMemoryValues.singleOrNull { it is UnknownMemoryValue },
+            param1DerefLine201.fullMemoryValues.singleOrNull { it is UnknownMemoryValue },
         )
 
         // Line 202
-        assertEquals(1, param_1SSELine202.fullMemoryValues.size)
+        assertEquals(1, param1SSELine202.fullMemoryValues.size)
         assertTrue(
-            param_1SSELine202.fullMemoryValues.any {
+            param1SSELine202.fullMemoryValues.any {
                 it is UnknownMemoryValue && it.name.localName == "DAT_0011b1c8"
             }
         )
@@ -2156,10 +2157,10 @@ class PointsToPassTest {
         assertNotNull(ceLine242)
 
         // Line 230
-        assertLocalName(
-            "inc",
-            iRefLine230Left.fullMemoryValues.singleOrNull { it is UnknownMemoryValue },
-        )
+        assertIs<CallExpression>(iRefLine230Left.prevFullDFG.singleOrNull())
+        assertLocalName("inc", iRefLine230Left.prevFullDFG.singleOrNull())
+        assertIs<CallExpression>(iRefLine230Left.fullMemoryValues.singleOrNull())
+        assertLocalName("inc", iRefLine230Left.fullMemoryValues.singleOrNull())
         assertEquals(1, iRefLine230Right.nextDFG.size)
         assertLocalName(
             "value",
@@ -2381,7 +2382,7 @@ class PointsToPassTest {
                         it.location?.region?.startColumn == 101 &&
                         it.name.localName == "p2p"
                 }
-                .first()
+                .singleOrNull()
         assertNotNull(p2pLine262)
         val p2pLine264 =
             tu.allChildren<Reference> {
@@ -2389,29 +2390,32 @@ class PointsToPassTest {
                         it.location?.region?.startColumn == 101 &&
                         it.name.localName == "p2p"
                 }
-                .first()
+                .singleOrNull()
         assertNotNull(p2pLine264)
 
         // Declarations
         val oldvalDecl =
-            tu.allChildren<Declaration> { it.location?.region?.startLine == 256 }.first()
+            tu.allChildren<Declaration> { it.location?.region?.startLine == 256 }.singleOrNull()
         assertNotNull(oldvalDecl)
         val newvalDecl =
-            tu.allChildren<Declaration> { it.location?.region?.startLine == 259 }.first()
+            tu.allChildren<Declaration> { it.location?.region?.startLine == 259 }.singleOrNull()
         assertNotNull(newvalDecl)
         val p_oldvalDecl =
-            tu.allChildren<Declaration> { it.location?.region?.startLine == 257 }.first()
+            tu.allChildren<Declaration> { it.location?.region?.startLine == 257 }.singleOrNull()
         assertNotNull(p_oldvalDecl)
         val p_newvalDecl =
-            tu.allChildren<Declaration> { it.location?.region?.startLine == 260 }.first()
+            tu.allChildren<Declaration> { it.location?.region?.startLine == 260 }.singleOrNull()
         assertNotNull(p_newvalDecl)
-        val p2pDecl = tu.allChildren<Declaration> { it.location?.region?.startLine == 258 }.first()
+        val p2pDecl =
+            tu.allChildren<Declaration> { it.location?.region?.startLine == 258 }.singleOrNull()
         assertNotNull(p2pDecl)
 
         // Literals
-        val literal1 = tu.allChildren<Literal<*>> { it.location?.region?.startLine == 256 }.first()
+        val literal1 =
+            tu.allChildren<Literal<*>> { it.location?.region?.startLine == 256 }.singleOrNull()
         assertNotNull(literal1)
-        val literal2 = tu.allChildren<Literal<*>> { it.location?.region?.startLine == 259 }.first()
+        val literal2 =
+            tu.allChildren<Literal<*>> { it.location?.region?.startLine == 259 }.singleOrNull()
         assertNotNull(literal2)
 
         // Test the FS of changepointer
@@ -2561,14 +2565,14 @@ class PointsToPassTest {
             tu.allChildren<PointerReference> {
                     it.name.localName == "key" && it.location?.region?.startLine == 314
                 }
-                .first()
+                .singleOrNull()
         assertNotNull(keyPointerRefLine314)
 
         val keyPointerRefLine318 =
             tu.allChildren<PointerReference> {
                     it.name.localName == "key" && it.location?.region?.startLine == 318
                 }
-                .first()
+                .singleOrNull()
         assertNotNull(keyPointerRefLine318)
 
         val keyPrevDFGs =
@@ -2613,19 +2617,19 @@ class PointsToPassTest {
 
         // CallExpressions
         val ceLine380 =
-            tu.allChildren<CallExpression> { it.location?.region?.startLine == 380 }.first()
+            tu.allChildren<CallExpression> { it.location?.region?.startLine == 380 }.singleOrNull()
         assertNotNull(ceLine380)
 
         val ceLine384 =
-            tu.allChildren<CallExpression> { it.location?.region?.startLine == 384 }.first()
+            tu.allChildren<CallExpression> { it.location?.region?.startLine == 384 }.singleOrNull()
         assertNotNull(ceLine384)
 
         val ceLine386 =
-            tu.allChildren<CallExpression> { it.location?.region?.startLine == 386 }.first()
+            tu.allChildren<CallExpression> { it.location?.region?.startLine == 386 }.singleOrNull()
         assertNotNull(ceLine386)
 
         val ceLine390 =
-            tu.allChildren<CallExpression> { it.location?.region?.startLine == 390 }.first()
+            tu.allChildren<CallExpression> { it.location?.region?.startLine == 390 }.singleOrNull()
         assertNotNull(ceLine390)
 
         // arguments
@@ -2633,27 +2637,27 @@ class PointsToPassTest {
             tu.allChildren<Reference> {
                     it.location?.region?.startLine == 380 && it.location?.region?.startColumn == 11
                 }
-                .first()
+                .singleOrNull()
         assertNotNull(iArgLine380)
 
         val iArgLine384 =
             tu.allChildren<Reference> {
                     it.location?.region?.startLine == 384 && it.location?.region?.startColumn == 11
                 }
-                .first()
+                .singleOrNull()
         assertNotNull(iArgLine384)
 
         val pArgLine386 =
-            tu.allChildren<Reference> { it.location?.region?.startLine == 386 }.first()
+            tu.allChildren<Reference> { it.location?.region?.startLine == 386 }.singleOrNull()
         assertNotNull(pArgLine386)
 
         // BinaryOperators
         val binOpLine207 =
-            tu.allChildren<BinaryOperator> { it.location?.region?.startLine == 207 }.first()
+            tu.allChildren<BinaryOperator> { it.location?.region?.startLine == 207 }.singleOrNull()
         assertNotNull(binOpLine207)
 
         val binOpLine212 =
-            tu.allChildren<BinaryOperator> { it.location?.region?.startLine == 212 }.first()
+            tu.allChildren<BinaryOperator> { it.location?.region?.startLine == 212 }.singleOrNull()
         assertNotNull(binOpLine212)
 
         // References
@@ -2661,49 +2665,49 @@ class PointsToPassTest {
             tu.allChildren<Reference> {
                     it.location?.region?.startLine == 380 && it.location?.region?.startColumn == 5
                 }
-                .first()
+                .singleOrNull()
         assertNotNull(iRefLeftLine380)
 
         val iRefLeftLine384 =
             tu.allChildren<Reference> {
                     it.location?.region?.startLine == 384 && it.location?.region?.startColumn == 5
                 }
-                .first()
+                .singleOrNull()
         assertNotNull(iRefLeftLine384)
 
         val jLine388 =
             tu.allChildren<Reference> {
                     it.location?.region?.startLine == 388 && it.name.localName == "j"
                 }
-                .first()
+                .singleOrNull()
         assertNotNull(jLine388)
 
         val pDerefLine388 =
             tu.allChildren<PointerDereference> {
                     it.location?.region?.startLine == 388 && it.name.localName == "p"
                 }
-                .first()
+                .singleOrNull()
         assertNotNull(pDerefLine388)
 
         val jLine392 =
             tu.allChildren<Reference> {
                     it.location?.region?.startLine == 392 && it.name.localName == "j"
                 }
-                .first()
+                .singleOrNull()
         assertNotNull(jLine392)
 
         val jLine394 =
             tu.allChildren<Reference> {
                     it.location?.region?.startLine == 394 && it.name.localName == "j"
                 }
-                .first()
+                .singleOrNull()
         assertNotNull(jLine394)
 
         val pDerefLine394 =
             tu.allChildren<PointerDereference> {
                     it.location?.region?.startLine == 394 && it.name.localName == "p"
                 }
-                .first()
+                .singleOrNull()
         assertNotNull(pDerefLine394)
 
         // FunctionDeclarations
@@ -2722,13 +2726,16 @@ class PointsToPassTest {
         assertNotNull(incpDerefValue)
 
         // Literals
-        val literal0 = tu.allChildren<Literal<*>> { it.location?.region?.startLine == 376 }.first()
+        val literal0 =
+            tu.allChildren<Literal<*>> { it.location?.region?.startLine == 376 }.singleOrNull()
         assertNotNull(literal0)
 
-        val literal1 = tu.allChildren<Literal<*>> { it.location?.region?.startLine == 377 }.first()
+        val literal1 =
+            tu.allChildren<Literal<*>> { it.location?.region?.startLine == 377 }.singleOrNull()
         assertNotNull(literal1)
 
-        val literal2 = tu.allChildren<Literal<*>> { it.location?.region?.startLine == 392 }.first()
+        val literal2 =
+            tu.allChildren<Literal<*>> { it.location?.region?.startLine == 392 }.singleOrNull()
         assertNotNull(literal2)
 
         // CallExpression in Line 380
@@ -2881,29 +2888,30 @@ class PointsToPassTest {
             tu.allChildren<Reference> {
                     it.name.localName == "i" && it.location?.region?.startLine == 405
                 }
-                .first()
+                .singleOrNull()
         assertNotNull(iLine405)
 
         val iLine409 =
             tu.allChildren<Reference> {
                     it.name.localName == "i" && it.location?.region?.startLine == 409
                 }
-                .first()
+                .singleOrNull()
         assertNotNull(iLine409)
 
         // UnaryOperators
         val uOPLine403 =
-            tu.allChildren<UnaryOperator> { it.location?.region?.startLine == 403 }.first()
+            tu.allChildren<UnaryOperator> { it.location?.region?.startLine == 403 }.singleOrNull()
         assertNotNull(uOPLine403)
 
         val uOPLine407 =
-            tu.allChildren<UnaryOperator> { it.location?.region?.startLine == 407 }.first()
+            tu.allChildren<UnaryOperator> { it.location?.region?.startLine == 407 }.singleOrNull()
         assertNotNull(uOPLine407)
 
         assertEquals(setOf<Node>(uOPLine407), uOPLine407.memoryValues)
 
         // Literals
-        val literal1 = tu.allChildren<Literal<*>> { it.location?.region?.startLine == 400 }.first()
+        val literal1 =
+            tu.allChildren<Literal<*>> { it.location?.region?.startLine == 400 }.singleOrNull()
         assertNotNull(literal1)
 
         // printf in Line 405
@@ -2933,10 +2941,10 @@ class PointsToPassTest {
         assertNotNull(func)
 
         // Literals
-        val literal0 = func.literals.first { it.value as? Int == 0 }
+        val literal0 = func.literals.singleOrNull { it.value as? Int == 0 }
         assertNotNull(literal0)
 
-        val literal3 = tu.functions["set"].literals.first { it.value as? Int == 3 }
+        val literal3 = tu.functions["set"].literals.singleOrNull { it.value as? Int == 3 }
         assertNotNull(literal3)
 
         // Declarations
@@ -2948,39 +2956,40 @@ class PointsToPassTest {
             tu.allChildren<Reference> {
                     it.location?.region?.startLine == 424 && it.name.localName == "i"
                 }
-                .first()
+                .singleOrNull()
         assertNotNull(iLine424)
 
         val jLine424 =
             tu.allChildren<Reference> {
                     it.location?.region?.startLine == 424 && it.name.localName == "j"
                 }
-                .first()
+                .singleOrNull()
         assertNotNull(jLine424)
 
         val iLine428 =
             tu.allChildren<Reference> {
                     it.location?.region?.startLine == 428 && it.name.localName == "i"
                 }
-                .first()
+                .singleOrNull()
         assertNotNull(iLine428)
 
         val iLine432 =
             tu.allChildren<Reference> {
                     it.location?.region?.startLine == 432 && it.name.localName == "i"
                 }
-                .first()
+                .singleOrNull()
         assertNotNull(iLine432)
 
         val iLine436 =
             tu.allChildren<Reference> {
                     it.location?.region?.startLine == 436 && it.name.localName == "i"
                 }
-                .first()
+                .singleOrNull()
         assertNotNull(iLine436)
 
         // UnaryOperator
-        val binOP = tu.allChildren<BinaryOperator> { it.location?.region?.startLine == 413 }.first()
+        val binOP =
+            tu.allChildren<BinaryOperator> { it.location?.region?.startLine == 413 }.singleOrNull()
         assertNotNull(binOP)
 
         // CallExpressions
