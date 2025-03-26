@@ -91,6 +91,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
      * the [ref].
      */
     private fun handleWriteToReference(ref: Reference): VariableDeclaration? {
+        println("Handle Ref: " + ref)
         if (ref.access != AccessValues.WRITE) {
             return null
         }
@@ -185,6 +186,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
 
         // Make sure we add the declaration at the correct place, i.e. with the scope we set at the
         // creation time
+        println("Declaration Scope: " + decl.scope)
         scopeManager.withScope(decl.scope) {
             scopeManager.addDeclaration(decl)
             (it?.astNode as? DeclarationHolder)?.addDeclaration(decl)
@@ -242,9 +244,6 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
                 assignExpression
                     .findValue(target)
                     ?.registerTypeObserver(InitializerTypePropagation(handled))
-
-                // Add it to our assign expression, so that we can find it in the AST
-                assignExpression.declarations += handled
             }
         }
     }
@@ -279,12 +278,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
     // New variables can also be declared as `variable` in a [ForEachStatement]
     private fun handleForEach(node: ForEachStatement) {
         when (val forVar = node.variable) {
-            is Reference -> {
-                val handled = handleWriteToReference(forVar)
-                if (handled is Declaration) {
-                    handled.let { node.addDeclaration(it) }
-                }
-            }
+            is Reference -> handleWriteToReference(forVar)
         }
     }
 

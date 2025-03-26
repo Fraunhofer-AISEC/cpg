@@ -185,6 +185,28 @@ open class FunctionDeclaration :
     override fun addDeclaration(declaration: Declaration) {
         if (declaration is ParameterDeclaration) {
             addIfNotContains(parameterEdges, declaration)
+        } else if (declaration is VariableDeclaration) {
+            // TODO here we need more of a prepend
+            (body as? Block)?.let { block ->
+                val declStatement =
+                    newDeclarationStatement(declaration.name)
+                        .also { // Todo add implicit, code location etc.
+                            it.singleDeclaration = declaration
+                        }
+                // Adding the declaration statement to create a valid ast edge
+                addIfNotContains(block.statementEdges, declStatement)
+                if (block.statementEdges.last().end == declStatement) {
+                    // Putting the newly created declaration statement at the top of the function
+                    // assuming that they
+                    // have no initializer and their order is therefore not relevant.
+                    block.statementEdges.add(
+                        0,
+                        block.statementEdges.removeAt(block.statementEdges.size - 1),
+                    )
+                }
+            }
+        } else {
+            log.warn("{} was neither a ParameterDeclaration nor a VariableDeclaration", declaration)
         }
     }
 

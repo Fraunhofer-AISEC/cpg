@@ -59,13 +59,7 @@ import de.fraunhofer.aisec.cpg.test.assertLocalName
 import de.fraunhofer.aisec.cpg.test.assertNotRefersTo
 import de.fraunhofer.aisec.cpg.test.assertRefersTo
 import java.nio.file.Path
-import kotlin.test.Ignore
-import kotlin.test.assertContains
-import kotlin.test.assertEquals
-import kotlin.test.assertIs
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
-import kotlin.test.assertSame
+import kotlin.test.*
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
@@ -108,7 +102,7 @@ class CollectionComprehensionTest {
         )
         // The first statement is expected to be an assignment of a list comprehension with an if to
         // a variable "a"
-        val tupleAsVariableAssignment = body.statements[0]
+        val tupleAsVariableAssignment = body.statements[1]
         assertIs<AssignExpression>(
             tupleAsVariableAssignment,
             "The statement is expected to be an AssignExpression",
@@ -263,7 +257,7 @@ class CollectionComprehensionTest {
             "The body of each function is modeled as a Block in the CPG. This must also apply to the function \"list_comp\".",
         )
 
-        val singleWithIfAssignment = body.statements[0]
+        val singleWithIfAssignment = body.statements[4]
         assertIs<AssignExpression>(
             singleWithIfAssignment,
             "The first statement in the body is \"a = [foo(i) for i in x if i == 10}^\" which should be represented by an AssignExpression in the CPG.",
@@ -327,7 +321,7 @@ class CollectionComprehensionTest {
             "The two predicates \"if i == 10\" is expected to be represented by a binary operator \"==\" in the CPG.",
         )
 
-        val singleWithoutIfAssignment = body.statements[1]
+        val singleWithoutIfAssignment = body.statements[5]
         assertIs<AssignExpression>(
             singleWithoutIfAssignment,
             "The second statement in the body is \"b = [foo(i) for i in x]\" which should be represented by an AssignExpression in the CPG.",
@@ -385,7 +379,7 @@ class CollectionComprehensionTest {
             "The comprehension expression \"for i in x\" should not have any predicate.",
         )
 
-        val singleWithDoubleIfAssignment = body.statements[2]
+        val singleWithDoubleIfAssignment = body.statements[6]
         assertIs<AssignExpression>(
             singleWithDoubleIfAssignment,
             "The third statement in the body is \"c = [foo(i) for i in x if i == 10 if i < 20]\" which should be represented by an AssignExpression in the CPG.",
@@ -449,7 +443,7 @@ class CollectionComprehensionTest {
             "The two predicates \"if i == 10 if i < 20\" are expected to be connected with the binary operator \"and\" in the CPG.",
         )
 
-        val doubleAssignment = body.statements[3]
+        val doubleAssignment = body.statements[7]
         assertIs<AssignExpression>(
             doubleAssignment,
             "The third statement in the body is \"d = [foo(i) for z in y if z in x for i in z if i == 10 ]\" which should be represented by an AssignExpression in the CPG.",
@@ -489,7 +483,7 @@ class CollectionComprehensionTest {
             body,
             "The body of each function is modeled as a Block in the CPG. This must also apply to the function \"set_comp\".",
         )
-        val singleWithIfAssignment = body.statements[0]
+        val singleWithIfAssignment = body.statements[4]
         assertIs<AssignExpression>(
             singleWithIfAssignment,
             "The first statement in the body is \"a = {foo(i) for i in x if i == 10}^\" which should be represented by an AssignExpression in the CPG.",
@@ -553,7 +547,7 @@ class CollectionComprehensionTest {
             "The two predicates \"if i == 10\" is expected to be represented by a binary operator \"==\" in the CPG.",
         )
 
-        val singleWithoutIfAssignment = body.statements[1]
+        val singleWithoutIfAssignment = body.statements[5]
         assertIs<AssignExpression>(
             singleWithoutIfAssignment,
             "The second statement in the body is \"b = {foo(i) for i in x}\" which should be represented by an AssignExpression in the CPG.",
@@ -611,7 +605,7 @@ class CollectionComprehensionTest {
             "The comprehension expression \"for i in x\" should not have any predicate.",
         )
 
-        val singleWithDoubleIfAssignment = body.statements[2]
+        val singleWithDoubleIfAssignment = body.statements[6]
         assertIs<AssignExpression>(
             singleWithDoubleIfAssignment,
             "The third statement in the body is \"c = {foo(i) for i in x if i == 10 if i < 20}\" which should be represented by an AssignExpression in the CPG.",
@@ -675,7 +669,7 @@ class CollectionComprehensionTest {
             "The two predicates \"if i == 10 if i < 20\" are expected to be connected with the binary operator \"and\" in the CPG.",
         )
 
-        val doubleAssignment = body.statements[3]
+        val doubleAssignment = body.statements[7]
         assertIs<AssignExpression>(
             doubleAssignment,
             "The third statement in the body is \"d = {foo(i) for z in y if z in x for i in z if i == 10 }\" which should be represented by an AssignExpression in the CPG.",
@@ -715,7 +709,7 @@ class CollectionComprehensionTest {
             body,
             "The body of each function is modeled as a Block in the CPG. This must also apply to the function \"dict_comp\".",
         )
-        val singleWithIfAssignment = body.statements[0]
+        val singleWithIfAssignment = body.statements[4]
         assertIs<AssignExpression>(
             singleWithIfAssignment,
             "The first statement in the body is \"a = {i: foo(i) for i in x if i == 10}^\" which should be represented by an AssignExpression in the CPG.",
@@ -792,7 +786,7 @@ class CollectionComprehensionTest {
             "The two predicates \"if i == 10\" is expected to be represented by a binary operator \"==\" in the CPG.",
         )
 
-        val singleWithoutIfAssignment = body.statements[1]
+        val singleWithoutIfAssignment = body.statements[5]
         assertIs<AssignExpression>(
             singleWithoutIfAssignment,
             "The second statement in the body is \"b = {i: foo(i) for i in x}\" which should be represented by an AssignExpression in the CPG.",
@@ -863,7 +857,7 @@ class CollectionComprehensionTest {
             "The comprehension expression \"for i in x\" should not have any predicate.",
         )
 
-        val singleWithDoubleIfAssignment = body.statements[2]
+        val singleWithDoubleIfAssignment = body.statements[6]
         assertIs<AssignExpression>(
             singleWithDoubleIfAssignment,
             "The third statement in the body is \"c = {i: foo(i) for i in x if i == 10 if i < 20}\" which should be represented by an AssignExpression in the CPG.",
@@ -940,7 +934,7 @@ class CollectionComprehensionTest {
             "The two predicates \"if i == 10 if i < 20\" are expected to be connected with the binary operator \"and\" in the CPG.",
         )
 
-        val doubleAssignment = body.statements[3]
+        val doubleAssignment = body.statements[7]
         assertIs<AssignExpression>(
             doubleAssignment,
             "The third statement in the body is \"d = {i: foo(i) for z in y if z in x for i in z if i == 10 }\" which should be represented by an AssignExpression in the CPG.",
@@ -993,7 +987,7 @@ class CollectionComprehensionTest {
             body,
             "The body of each function is modeled as a Block in the CPG. This must also apply to the function \"generator\".",
         )
-        val singleWithIfAssignment = body.statements[0]
+        val singleWithIfAssignment = body.statements[2]
         assertIs<AssignExpression>(singleWithIfAssignment)
         val singleWithIf = singleWithIfAssignment.rhs[0]
         assertIs<CollectionComprehension>(singleWithIf)
@@ -1016,7 +1010,7 @@ class CollectionComprehensionTest {
         assertIs<BinaryOperator>(ifPredicate)
         assertEquals("==", ifPredicate.operatorCode)
 
-        val singleWithoutIfAssignment = body.statements[1]
+        val singleWithoutIfAssignment = body.statements[3]
         assertIs<AssignExpression>(singleWithoutIfAssignment)
         val singleWithoutIf = singleWithoutIfAssignment.rhs[0]
         assertIs<CollectionComprehension>(singleWithoutIf)
@@ -1186,7 +1180,7 @@ class CollectionComprehensionTest {
             "The body of each function is modeled as a Block in the CPG. This must also apply to the function \"comprehension_with_list_assignment\".",
         )
 
-        val listBInitialization = body.statements[0]
+        val listBInitialization = body.statements[1]
         assertIs<AssignExpression>(
             listBInitialization,
             "The first statement of the function \"comprehension_with_list_assignment\" is expected to be the initialization of list \"b\" by the statement \"b = [0, 1, 2]\" which is expected to be represented by an AssignExpression in the CPG.",
@@ -1201,7 +1195,7 @@ class CollectionComprehensionTest {
             refBFirstStatement,
             "The left hand side of the assignment \"b = [0, 1, 2]\" is expected to be represented by a Reference with localName \"b\" in the CPG.",
         )
-        val bDeclaration = listBInitialization.variables["b"]
+        val bDeclaration = body.variables["b"]
         assertIs<VariableDeclaration>(
             bDeclaration,
             "There must be a VariableDeclaration with the local name \"b\" inside the first statement of the function \"comprehension_with_list_assignment\".",
@@ -1213,7 +1207,7 @@ class CollectionComprehensionTest {
         )
 
         // Check if the AST of the list comprehension fits our expectations.
-        val listComprehensionWithTupleAndAssignmentToListElement = body.statements[1]
+        val listComprehensionWithTupleAndAssignmentToListElement = body.statements[2]
         assertIs<CollectionComprehension>(
             listComprehensionWithTupleAndAssignmentToListElement,
             "The second statement of the function \"comprehension_with_list_assignment\" is expected to be python's list comprehension \"[a for (a, b[0]) in [(1, 2), (2, 4), (3, 6)]]\" which is represented by a CollectionComprehension in the CPG",
@@ -1351,7 +1345,7 @@ class CollectionComprehensionTest {
             "The body of each function is modeled as a Block in the CPG. This must also apply to the function \"comprehension_with_list_assignment_and_index_variable\".",
         )
 
-        val listBInitialization = body.statements[0]
+        val listBInitialization = body.statements[1]
         assertIs<AssignExpression>(
             listBInitialization,
             "The first statement of the function \"comprehension_with_list_assignment_and_index_variable\" is expected to be the initialization of list \"b\" by the statement \"b = [0, 1, 2]\" which is expected to be represented by an AssignExpression in the CPG.",
@@ -1366,7 +1360,7 @@ class CollectionComprehensionTest {
             refBFirstStatement,
             "The left hand side of the assignment \"b = [0, 1, 2]\" is expected to be represented by a Reference with localName \"b\" in the CPG.",
         )
-        val bDeclaration = listBInitialization.variables["b"]
+        val bDeclaration = body.variables["b"]
         assertIs<VariableDeclaration>(
             bDeclaration,
             "There must be a VariableDeclaration with the local name \"b\" inside the first statement of the function \"comprehension_with_list_assignment_and_index_variable\".",
@@ -1378,7 +1372,7 @@ class CollectionComprehensionTest {
         )
 
         // Check if the AST of the list comprehension fits our expectations.
-        val listComprehensionWithTupleAndAssignmentToListElement = body.statements[1]
+        val listComprehensionWithTupleAndAssignmentToListElement = body.statements[2]
         assertIs<CollectionComprehension>(
             listComprehensionWithTupleAndAssignmentToListElement,
             "The second statement of the function \"comprehension_with_list_assignment_and_index_variable\" is expected to be python's list comprehension \"[a for (a, b[a]) in [(0, 'this'), (1, 'is'), (2, 'fun')]]\" which is represented by a CollectionComprehension in the CPG",
@@ -1525,7 +1519,7 @@ class CollectionComprehensionTest {
             "The body of each function is modeled as a Block in the CPG. This must also apply to the function \"comprehension_with_list_assignment_and_index_variable_reversed\".",
         )
 
-        val listBInitialization = body.statements[0]
+        val listBInitialization = body.statements[2]
         assertIs<AssignExpression>(
             listBInitialization,
             "The first statement of the function \"comprehension_with_list_assignment_and_index_variable_reversed\" is expected to be the initialization of list \"b\" by the statement \"b = [0, 1, 2]\" which is expected to be represented by an AssignExpression in the CPG.",
@@ -1540,7 +1534,7 @@ class CollectionComprehensionTest {
             refBFirstStatement,
             "The left hand side of the assignment \"b = [0, 1, 2]\" is expected to be represented by a Reference with localName \"b\" in the CPG.",
         )
-        val bDeclaration = listBInitialization.variables["b"]
+        val bDeclaration = body.variables["b"]
         assertIs<VariableDeclaration>(
             bDeclaration,
             "There must be a VariableDeclaration with the local name \"b\" inside the first statement of the function \"comprehension_with_list_assignment_and_index_variable_reversed\".",
@@ -1551,7 +1545,7 @@ class CollectionComprehensionTest {
             "The reference \"b\" is expected to refer to the variable declaration \"b\" in the same statement.",
         )
 
-        val localAAssignment = body.statements[1]
+        val localAAssignment = body.statements[3]
         assertIs<AssignExpression>(
             localAAssignment,
             "The first statement of the function \"comprehension_with_list_assignment_and_index_variable_reversed\" is expected to be the initialization of the local variable \"a\" by the statement \"a = 1\" which is expected to be represented by an AssignExpression in the CPG.",
@@ -1561,7 +1555,7 @@ class CollectionComprehensionTest {
             localARef,
             "The left hand side of the assignment \"a = 1\" is expected to be represented by a Reference with localName \"a\" in the CPG.",
         )
-        val aDeclaration = localAAssignment.variables["a"]
+        val aDeclaration = body.variables["a"]
         assertIs<VariableDeclaration>(
             aDeclaration,
             "There must be a VariableDeclaration with the local name \"a\" inside the first statement of the function \"comprehension_with_list_assignment_and_index_variable_reversed\".",
@@ -1573,7 +1567,7 @@ class CollectionComprehensionTest {
         )
 
         // Check if the AST of the list comprehension fits our expectations.
-        val listComprehensionWithTupleAndAssignmentToListElement = body.statements[2]
+        val listComprehensionWithTupleAndAssignmentToListElement = body.statements[4]
         assertIs<CollectionComprehension>(
             listComprehensionWithTupleAndAssignmentToListElement,
             "The third statement of the function \"comprehension_with_list_assignment_and_index_variable_reversed\" is expected to be python's list comprehension \"[a for (b[a], a) in [('this', 0), ('is', 1), ('fun', 2)]]\" which is represented by a CollectionComprehension in the CPG",
@@ -1731,7 +1725,7 @@ class CollectionComprehensionTest {
             "The body of each function is modeled as a Block in the CPG. This must also apply to the function \"comprehension_with_list_assignment_and_local_index_variable\".",
         )
 
-        val listBInitialization = body.statements[0]
+        val listBInitialization = body.statements[2]
         assertIs<AssignExpression>(
             listBInitialization,
             "The first statement of the function \"comprehension_with_list_assignment_and_local_index_variable\" is expected to be the initialization of list \"b\" by the statement \"b = [0, 1, 2]\" which is expected to be represented by an AssignExpression in the CPG.",
@@ -1746,7 +1740,7 @@ class CollectionComprehensionTest {
             refBFirstStatement,
             "The left hand side of the assignment \"b = [0, 1, 2]\" is expected to be represented by a Reference with localName \"b\" in the CPG.",
         )
-        val bDeclaration = listBInitialization.variables["b"]
+        val bDeclaration = body.variables["b"]
         assertIs<VariableDeclaration>(
             bDeclaration,
             "There must be a VariableDeclaration with the local name \"b\" inside the first statement of the function \"comprehension_with_list_assignment_and_local_index_variable\".",
@@ -1757,7 +1751,7 @@ class CollectionComprehensionTest {
             "The reference \"b\" is expected to refer to the variable declaration \"b\" in the same statement.",
         )
 
-        val localCAssignment = body.statements[1]
+        val localCAssignment = body.statements[3]
         assertIs<AssignExpression>(
             localCAssignment,
             "The first statement of the function \"comprehension_with_list_assignment_and_local_index_variable\" is expected to be the initialization of the local variable \"c\" by the statement \"c = 1\" which is expected to be represented by an AssignExpression in the CPG.",
@@ -1767,7 +1761,7 @@ class CollectionComprehensionTest {
             localCRef,
             "The left hand side of the assignment \"c = 1\" is expected to be represented by a Reference with localName \"c\" in the CPG.",
         )
-        val cDeclaration = localCAssignment.variables["c"]
+        val cDeclaration = body.variables["c"]
         assertIs<VariableDeclaration>(
             cDeclaration,
             "There must be a VariableDeclaration with the local name \"c\" inside the first statement of the function \"comprehension_with_list_assignment_and_local_index_variable\".",
@@ -1779,7 +1773,7 @@ class CollectionComprehensionTest {
         )
 
         // Check if the AST of the list comprehension fits our expectations.
-        val listComprehensionWithTupleAndAssignmentToListElement = body.statements[2]
+        val listComprehensionWithTupleAndAssignmentToListElement = body.statements[4]
         assertIs<CollectionComprehension>(
             listComprehensionWithTupleAndAssignmentToListElement,
             "The third statement of the function \"comprehension_with_list_assignment_and_local_index_variable\" is expected to be python's list comprehension \"[a for (b[c], a) in [('this', 0), ('is', 1), ('fun', 2)]]\" which is represented by a CollectionComprehension in the CPG",
@@ -1887,7 +1881,7 @@ class CollectionComprehensionTest {
             "The body of each function is modeled as a Block in the CPG. This must also apply to the function \"list_comprehension_to_list_index\".",
         )
 
-        val listBInitialization = body.statements[0]
+        val listBInitialization = body.statements[1]
         assertIs<AssignExpression>(
             listBInitialization,
             "The first statement of the function \"list_comprehension_to_list_index\" is expected to be the initialization of list \"b\" by the statement \"b = [0, 1, 2]\" which is expected to be represented by an AssignExpression in the CPG.",
@@ -1902,7 +1896,7 @@ class CollectionComprehensionTest {
             refBFirstStatement,
             "The left hand side of the assignment \"b = [0, 1, 2]\" is expected to be represented by a Reference with localName \"b\" in the CPG.",
         )
-        val bDeclaration = listBInitialization.variables["b"]
+        val bDeclaration = body.variables["b"]
         assertIs<VariableDeclaration>(
             bDeclaration,
             "There must be a VariableDeclaration with the local name \"b\" inside the first statement of the function \"list_comprehension_to_list_index\".",
@@ -1914,7 +1908,7 @@ class CollectionComprehensionTest {
         )
 
         // Check if the AST of the list comprehension fits our expectations.
-        val listComprehensionWithTupleAndAssignmentToListElement = body.statements[1]
+        val listComprehensionWithTupleAndAssignmentToListElement = body.statements[2]
         assertIs<CollectionComprehension>(
             listComprehensionWithTupleAndAssignmentToListElement,
             "The second statement of the function \"list_comprehension_to_list_index\" is expected to be python's list comprehension \"[b[0] for b[0] in ['this', 'is', 'fun']]\" which is represented by a CollectionComprehension in the CPG",
@@ -1988,7 +1982,7 @@ class CollectionComprehensionTest {
             "The body of each function is modeled as a Block in the CPG. This must also apply to the function \"list_comprehension_to_field\".",
         )
 
-        val listBInitialization = body.statements[0]
+        val listBInitialization = body.statements[1]
         assertIs<AssignExpression>(
             listBInitialization,
             "The first statement of the function \"list_comprehension_to_field\" is expected to be the initialization of list \"b\" by the statement \"b = Magic()\" which is expected to be represented by an AssignExpression in the CPG.",
@@ -2003,7 +1997,7 @@ class CollectionComprehensionTest {
             refBFirstStatement,
             "The left hand side of the assignment \"b = Magic())\" is expected to be represented by a Reference with localName \"b\" in the CPG.",
         )
-        val bDeclaration = listBInitialization.variables["b"]
+        val bDeclaration = body.variables["b"]
         assertIs<VariableDeclaration>(
             bDeclaration,
             "There must be a VariableDeclaration with the local name \"b\" inside the first statement of the function \"list_comprehension_to_field\".",
@@ -2015,7 +2009,7 @@ class CollectionComprehensionTest {
         )
 
         // Check if the AST of the list comprehension fits our expectations.
-        val listComprehensionWithTupleAndAssignmentToListElement = body.statements[1]
+        val listComprehensionWithTupleAndAssignmentToListElement = body.statements[2]
         assertIs<CollectionComprehension>(
             listComprehensionWithTupleAndAssignmentToListElement,
             "The second statement of the function \"list_comprehension_to_field\" is expected to be python's list comprehension \"[b.a for b.a in ['this', 'is', 'fun']]\" which is represented by a CollectionComprehension in the CPG.",
