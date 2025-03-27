@@ -115,10 +115,15 @@ object TranslationUnitSorter : Sorter<TranslationUnitDeclaration>() {
  * might analyze a node multiple times.
  */
 object EOGStarterSorter : Sorter<Node>() {
-    override fun apply(result: TranslationResult): List<Node> =
-        TranslationUnitSorter.apply(result)
-            .flatMap { it.allEOGStarters.filter { it.prevEOGEdges.isEmpty() } }
-            .toList()
+    override fun apply(result: TranslationResult): List<Node> {
+        val returnValue = mutableListOf<Node>()
+        TranslationUnitSorter.apply(result).forEach {
+            it.allEOGStarters
+                .filter { it.prevEOGEdges.isEmpty() }
+                .forEach { if (it !in returnValue) returnValue.add(it) }
+        }
+        return returnValue
+    }
 }
 
 /**

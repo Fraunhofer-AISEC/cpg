@@ -383,16 +383,11 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         return type
     }
 
-    val seenNodes = mutableSetOf<Node?>()
-
     /**
      * The central entry-point for all symbol-resolving. It dispatches the handling of the node to
      * the appropriate function based on the node type.
      */
     protected open fun handle(node: Node?) {
-        if (!seenNodes.add(node)) {
-            log.error("Node $node has been seen before. This shouldn't happen!")
-        }
         when (node) {
             is MemberExpression -> handleMemberExpression(node)
             is Reference -> handleReference(node)
