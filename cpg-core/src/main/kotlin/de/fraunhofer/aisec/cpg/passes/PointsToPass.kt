@@ -388,14 +388,14 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     doubleState.fetchElementFromDeclarationState(index, true).filterTo(
                         identitySetOf()
                     ) {
-                        it.addr.name != param.name
+                        it.value.name != param.name
                     }
                 stateEntries
                     // See if we can find something that is different from the initial value
                     .filterTo(identitySetOf()) {
-                        !(it.addr is ParameterMemoryValue &&
-                            it.addr.name.localName.contains("derefvalue") &&
-                            it.addr.name.parent == param.name)
+                        !(it.value is ParameterMemoryValue &&
+                            it.value.name.localName.contains("derefvalue") &&
+                            it.value.name.parent == param.name)
                     }
                     // If so, store the information for the parameter in the FunctionSummary
                     .forEach { (value, shortFS, subAccessName, lastWrites) ->
@@ -450,38 +450,40 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                              granularity)
                         }*/
 
-                        // Check if the value is influenced by a Parameter and if so, add this
-                        // information to the functionSummary
-                        value
-                            .followDFGEdgesUntilHit(
-                                collectFailedPaths = false,
-                                direction = Backward(GraphToFollow.DFG),
-                                sensitivities = OnlyFullDFG + FieldSensitive + ContextSensitive,
-                                scope = Intraprocedural(),
-                                predicate = { it is ParameterMemoryValue },
-                            )
-                            .fulfilled
-                            .map { it.last() }
-                            .toIdentitySet()
-                            .forEach { sourceParamValue ->
-                                val matchingDeclarations =
-                                    node.parameters.filter {
-                                        it.name == sourceParamValue.name.parent
-                                    }
-                                if (matchingDeclarations.size != 1) TODO()
-                                node.functionSummary
-                                    .computeIfAbsent(param) { mutableSetOf() }
-                                    .add(
-                                        FunctionDeclaration.FSEntry(
-                                            dstValueDepth,
-                                            matchingDeclarations.first(),
-                                            stringToDepth(sourceParamValue.name.localName),
-                                            subAccessName,
-                                            true,
-                                            equalLinkedHashSetOf(param),
+                        if (!shortFS) {
+                            // Check if the value is influenced by a Parameter and if so, add this
+                            // information to the functionSummary
+                            value
+                                .followDFGEdgesUntilHit(
+                                    collectFailedPaths = false,
+                                    direction = Backward(GraphToFollow.DFG),
+                                    sensitivities = OnlyFullDFG + FieldSensitive + ContextSensitive,
+                                    scope = Intraprocedural(),
+                                    predicate = { it is ParameterMemoryValue },
+                                )
+                                .fulfilled
+                                .map { it.last() }
+                                .toIdentitySet()
+                                .forEach { sourceParamValue ->
+                                    val matchingDeclarations =
+                                        node.parameters.filter {
+                                            it.name == sourceParamValue.name.parent
+                                        }
+                                    if (matchingDeclarations.size != 1) TODO()
+                                    node.functionSummary
+                                        .computeIfAbsent(param) { mutableSetOf() }
+                                        .add(
+                                            FunctionDeclaration.FSEntry(
+                                                dstValueDepth,
+                                                matchingDeclarations.first(),
+                                                stringToDepth(sourceParamValue.name.localName),
+                                                subAccessName,
+                                                true,
+                                                equalLinkedHashSetOf(param),
+                                            )
                                         )
-                                    )
-                            }
+                                }
+                        }
                     }
             }
         }
@@ -585,7 +587,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             doubleState,
                             paramVal,
                             GeneralStateEntryElement(
-                                PowersetLattice.Element(paramVal),
+                                PowersetLattice.Element(/*paramVal*/ ),
                                 PowersetLattice.Element(arg),
                                 PowersetLattice.Element(
                                     Pair(arg, equalLinkedHashSetOf(callingContext))
@@ -626,9 +628,13 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                         doubleState.getLastWrites(argVal).mapTo(
                                             equalLinkedHashSetOf()
                                         ) {
+                                            // Check if the value is a shortFS value
+                                            val shortFS =
+                                                true in
+                                                    doubleState.getLastWrites(argVal).first().second
                                             Pair(
                                                 it.first,
-                                                equalLinkedHashSetOf<Any>(callingContext),
+                                                equalLinkedHashSetOf(callingContext, shortFS),
                                             )
                                         }
                                     doubleState =
@@ -636,7 +642,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                             doubleState,
                                             derefPMV,
                                             GeneralStateEntryElement(
-                                                PowersetLattice.Element(paramVal),
+                                                PowersetLattice.Element(/*paramVal*/ ),
                                                 PowersetLattice.Element(argDerefVals),
                                                 PowersetLattice.Element(lastDerefWrites),
                                             ),
@@ -1285,7 +1291,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 addr = value,
                                 excludeShortFSValues = true,
                             )
-                            .map { it.addr }
+                            .map { it.value }
                             .forEach { derefValue ->
                                 if (doubleState.hasDeclarationStateEntry(derefValue)) {
                                     doubleState
@@ -1399,7 +1405,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     ): PointsToStateElement {
         var doubleState = doubleState
         parameters
-            .filter { it.memoryValues.isEmpty() }
+            .filter { it.memoryValues.filterIsInstance<ParameterMemoryValue>().isEmpty() }
             .forEach { param ->
                 // In the first step, we have a triangle of ParameterDeclaration, the
                 // ParameterDeclaration's Memory Address and the ParameterMemoryValue
@@ -1407,6 +1413,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 // both to the ParameterMemoryValue we create in the first step
                 var src: Node = param
                 var addresses = doubleState.getAddresses(src)
+                var prevAddresses = identitySetOf<Node>()
                 // If we have a Pointer as param, we initialize all levels, otherwise, only the
                 // first one
                 val paramDepth =
@@ -1420,12 +1427,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     else 0
                 for (i in 0..paramDepth) {
                     val pmvName = "deref".repeat(i) + "value"
-                    val pmv =
-                        ParameterMemoryValue(Name(pmvName, param.name)).apply {
-                            memoryAddresses.addAll(
-                                addresses.filterIsInstance<MemoryAddress>()
-                            ) /* TODO: might there also be more? */
-                        }
+                    val pmv = ParameterMemoryValue(Name(pmvName, param.name))
+
                     // In the first step, we link the ParameterDeclaration to the PMV to be able to
                     // also access it outside the function
                     if (src is ParameterDeclaration) {
@@ -1435,50 +1438,66 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 doubleState,
                                 src,
                                 GeneralStateEntryElement(
-                                    PowersetLattice.Element(),
+                                    PowersetLattice.Element(addresses),
                                     PowersetLattice.Element(pmv),
-                                    PowersetLattice.Element(),
+                                    PowersetLattice.Element(
+                                        identitySetOf(
+                                            Pair<Node, EqualLinkedHashSet<Any>>(
+                                                pmv,
+                                                equalLinkedHashSetOf(false),
+                                            )
+                                        )
+                                    ),
                                 ),
                             )
                     } else {
                         // Link the PMVs with each other so that we can find them. This is
                         // especially important outside the respective function where we don't have
                         // a state
-                        pmv.memoryAddresses.filterIsInstance<ParameterMemoryValue>().forEach {
-                            // it.memoryValues += pmv
+                        addresses.filterIsInstance<ParameterMemoryValue>().forEach {
                             doubleState =
                                 lattice.push(
                                     doubleState,
                                     it,
                                     GeneralStateEntryElement(
-                                        PowersetLattice.Element(),
+                                        PowersetLattice.Element(prevAddresses),
                                         PowersetLattice.Element(pmv),
-                                        PowersetLattice.Element(),
+                                        PowersetLattice.Element(
+                                            identitySetOf(
+                                                Pair<Node, EqualLinkedHashSet<Any>>(
+                                                    pmv,
+                                                    equalLinkedHashSetOf(false),
+                                                )
+                                            )
+                                        ),
                                     ),
                                 )
                         }
+                        doubleState =
+                            lattice.push(
+                                doubleState,
+                                pmv,
+                                GeneralStateEntryElement(
+                                    PowersetLattice.Element(addresses),
+                                    PowersetLattice.Element(),
+                                    PowersetLattice.Element(),
+                                ),
+                            )
                     }
 
                     // Update the states
                     val declStateElement =
                         DeclarationStateEntryElement(
-                            PowersetLattice.Element(addresses),
+                            PowersetLattice.Element(prevAddresses),
                             PowersetLattice.Element(Pair(pmv, false)),
                             PowersetLattice.Element(Pair(pmv, equalLinkedHashSetOf())),
-                        )
-                    val genStateElement =
-                        GeneralStateEntryElement(
-                            PowersetLattice.Element(addresses),
-                            PowersetLattice.Element(pmv),
-                            PowersetLattice.Element(),
                         )
                     addresses.forEach { addr ->
                         doubleState =
                             lattice.pushToDeclarationsState(doubleState, addr, declStateElement)
                     }
-                    doubleState = lattice.push(doubleState, src, genStateElement)
 
-                    // prepare for next step
+                    prevAddresses = addresses
                     src = pmv
                     addresses = identitySetOf(pmv)
                 }
@@ -1576,7 +1595,7 @@ fun PointsToStateElement.hasDeclarationStateEntry(
 }
 
 data class fetchElementFromDeclarationStateEntry(
-    val addr: Node,
+    val value: Node,
     val shortFS: Boolean,
     val subAccessName: String,
     val lastWrites: IdentitySet<Pair<Node, EqualLinkedHashSet<Any>>>,
@@ -1655,7 +1674,9 @@ fun PointsToStateElement.fetchElementFromDeclarationState(
         // TODO: handle globals
         if (fetchFields) {
             val fields =
-                this.declarationsState[addr]?.first?.filterTo(identitySetOf()) { it != addr }
+                this.declarationsState[addr]?.first?.filterTo(identitySetOf()) {
+                    it != addr && (addr as? HasMemoryAddress)?.memoryAddresses?.contains(it) != true
+                }
             fields?.forEach { field ->
                 this.declarationsState[field]
                     ?.second
@@ -1769,7 +1790,7 @@ fun PointsToStateElement.getValues(node: Node): IdentitySet<Pair<Node, Boolean>>
             val retVal = identitySetOf<Pair<Node, Boolean>>()
             inputVal.forEach { input ->
                 retVal.addAll(
-                    fetchElementFromDeclarationState(input, true).map { Pair(it.addr, it.shortFS) }
+                    fetchElementFromDeclarationState(input, true).map { Pair(it.value, it.shortFS) }
                 )
             }
             retVal
@@ -1782,14 +1803,14 @@ fun PointsToStateElement.getValues(node: Node): IdentitySet<Pair<Node, Boolean>>
             }
             node.memoryAddresses
                 .flatMap { fetchElementFromDeclarationState(it) }
-                .map { it.addr }
+                .map { it.value }
                 //                .toIdentitySet()
                 .mapTo(IdentitySet()) { Pair(it, false) }
         }
         is MemoryAddress,
         is CallExpression -> {
             fetchElementFromDeclarationState(node).mapTo(IdentitySet()) {
-                Pair(it.addr, it.shortFS)
+                Pair(it.value, it.shortFS)
             }
         }
         is MemberExpression -> {
@@ -1798,7 +1819,7 @@ fun PointsToStateElement.getValues(node: Node): IdentitySet<Pair<Node, Boolean>>
             val fieldAddresses = fetchFieldAddresses(baseAddresses, fieldName)
             if (fieldAddresses.isNotEmpty()) {
                 fieldAddresses.flatMapTo(IdentitySet()) {
-                    fetchElementFromDeclarationState(it).map { Pair(it.addr, it.shortFS) }
+                    fetchElementFromDeclarationState(it).map { Pair(it.value, it.shortFS) }
                 }
             } else {
                 val newName = Name(getNodeName(node).localName, base.name)
@@ -1819,7 +1840,7 @@ fun PointsToStateElement.getValues(node: Node): IdentitySet<Pair<Node, Boolean>>
                 // For globals fetch the values from the globalDeref map
                 if (isGlobal(node))
                     retVals.addAll(
-                        fetchElementFromDeclarationState(addr).map { Pair(it.addr, false) }
+                        fetchElementFromDeclarationState(addr).map { Pair(it.value, false) }
                     )
                 else retVals.addAll(this.getValues(addr))
             }
@@ -1944,7 +1965,7 @@ fun PointsToStateElement.getNestedValues(
                         excludeShortFSValues,
                     )
                 }
-                .mapTo(IdentitySet()) { Pair(it.addr, it.shortFS) }
+                .mapTo(IdentitySet()) { Pair(it.value, it.shortFS) }
     }
     return ret
 }

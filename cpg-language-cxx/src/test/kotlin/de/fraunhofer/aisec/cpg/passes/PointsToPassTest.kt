@@ -2681,7 +2681,10 @@ class PointsToPassTest {
         assertNotNull(iArgLine384)
 
         val pArgLine386 =
-            tu.allChildren<Reference> { it.location?.region?.startLine == 386 }.singleOrNull()
+            tu.allChildren<Reference> {
+                    it.location?.region?.startLine == 386 && it.name.localName == "p"
+                }
+                .singleOrNull()
         assertNotNull(pArgLine386)
 
         // BinaryOperators
