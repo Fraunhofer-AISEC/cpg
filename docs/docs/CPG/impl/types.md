@@ -10,7 +10,7 @@ Not all nodes in the CPG have a type. For example, a `NamespaceDeclaration` does
 
 This refers to the type of the node at *compile-time* and is a single `Type` object. For example, when declaring a variable `int i` in C/C++, the `type` of the variable `i` is `int`. 
 
-Often, languages allow to skip setting the explicitly, for example using `var i = 1` in Java. In this case, the type is inferred by the compiler and set to `int`. This still happens at compile-time, since the compiler is able to deduce the type, and it will stay the same during runtime. To simulate this, the initial `type` will be set to `AutoType`. Once we know the correct type, the CPG will also infer the type of the variable `i` to `int` through its type-observer system and replace the `AutoType` with the correct type.
+Often, languages allow to skip setting the types explicitly, for example using `var i = 1` in Java. In this case, the type is inferred by the compiler and set to `int`. This still happens at compile-time, since the compiler is able to deduce the type, and it will stay the same during runtime. To simulate this, the initial `type` will be set to `AutoType`. Once we know the correct type, the CPG will also infer the type of the variable `i` to `int` through its type-observer system and replace the `AutoType` with the correct type.
 
 ### `assignedTypes`
 
