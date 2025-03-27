@@ -179,7 +179,9 @@ class FluentTest {
 
         ImportResolver(result.finalCtx).accept(result)
         EvaluationOrderGraphPass(result.finalCtx).accept(app.translationUnits.first())
-        SymbolResolver(result.finalCtx).accept(app)
+        app.allEOGStarters
+            .filter { it.prevEOGEdges.isEmpty() }
+            .forEach { eogStarter -> SymbolResolver(result.finalCtx).accept(eogStarter) }
 
         // Now the reference should be resolved and the MCE name set
         assertRefersTo(ref, variable)

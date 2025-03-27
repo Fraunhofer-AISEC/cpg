@@ -81,7 +81,7 @@ import org.slf4j.LoggerFactory
 @DependsOn(TypeHierarchyResolver::class)
 @DependsOn(EvaluationOrderGraphPass::class)
 @DependsOn(ImportResolver::class)
-open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
+open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
 
     /** Configuration for the [SymbolResolver]. */
     class Configuration(
@@ -122,11 +122,11 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             null
         }
 
-    override fun accept(component: Component) {
-        ctx.currentComponent = component
+    override fun accept(eogStarter: Node) {
+        ctx.currentComponent = eogStarter.firstParentOrNull<Component>()
         walker = ScopedWalker(scopeManager)
 
-        cacheTemplates(component)
+        cacheTemplates(ctx.currentComponent)
 
         walker.strategy =
             if (passConfig?.skipUnreachableEOG == true) {
@@ -137,34 +137,30 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         walker.clearCallbacks()
         walker.registerHandler(this::handle)
 
-        // Resolve symbols in our translation units in the order depending on their import
-        // dependencies
-        for (tu in (Strategy::TRANSLATION_UNITS_LEAST_IMPORTS)(component)) {
-            log.debug("Resolving symbols of translation unit {}", tu.name)
-
-            // Gather all resolution EOG starters; and make sure they really do not have a
-            // predecessor, otherwise we might analyze a node multiple times
-            val nodes = tu.allEOGStarters.filter { it.prevEOGEdges.isEmpty() }
-
-            for (node in nodes) {
-                walker.iterate(node)
-            }
-        }
+        walker.iterate(eogStarter)
     }
 
     override fun cleanup() {
         templateList.clear()
     }
 
+    val componentsToTemplates = mutableMapOf<Component, MutableList<TemplateDeclaration>>()
+
     /** This function caches all [TemplateDeclaration]s into [templateList]. */
-    private fun cacheTemplates(component: Component) {
+    private fun cacheTemplates(component: Component?) {
+        if (component in componentsToTemplates) {
+            componentsToTemplates[component]?.let { templateList.addAll(it) }
+            return
+        }
+        // TODO: (How) Should this be changed to work for the EOGStarter instead of the component?
         walker.registerHandler { node ->
             if (node is TemplateDeclaration) {
                 templateList.add(node)
             }
         }
-        for (tu in component.translationUnits) {
-            walker.iterate(tu)
+        component?.let {
+            it.translationUnits.forEach { tu -> walker.iterate(tu) }
+            componentsToTemplates[it] = templateList
         }
     }
 
@@ -387,11 +383,16 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         return type
     }
 
+    val seenNodes = mutableSetOf<Node?>()
+
     /**
      * The central entry-point for all symbol-resolving. It dispatches the handling of the node to
      * the appropriate function based on the node type.
      */
     protected open fun handle(node: Node?) {
+        if (!seenNodes.add(node)) {
+            log.error("Node $node has been seen before. This shouldn't happen!")
+        }
         when (node) {
             is MemberExpression -> handleMemberExpression(node)
             is Reference -> handleReference(node)
@@ -434,8 +435,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         }
 
         // Dynamic function invokes (such as function pointers) are handled by an extra pass, so we
-        // are
-        // not resolving them here.
+        // are not resolving them here.
         //
         // We have a dynamic invoke in two cases:
         // a) our callee is not a reference
@@ -678,11 +678,15 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
      */
     protected open fun handleOverloadedOperator(op: HasOverloadedOperation) {
         val result = resolveOperator(op)
-        val decl = result?.bestViable?.singleOrNull() ?: return
+        val functionDeclaration = result?.bestViable?.singleOrNull() ?: return
 
         // If the result was successful, we can replace the node
-        if (result.success == SUCCESSFUL && decl is OperatorDeclaration && op is Expression) {
-            val call = operatorCallFromDeclaration(decl, op)
+        if (
+            result.success == SUCCESSFUL &&
+                functionDeclaration is OperatorDeclaration &&
+                op is Expression
+        ) {
+            val call = operatorCallFromDeclaration(functionDeclaration, op)
             walker.replace(op.astParent, op, call)
         }
     }
