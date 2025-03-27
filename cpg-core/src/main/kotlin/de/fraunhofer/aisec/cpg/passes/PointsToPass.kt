@@ -628,13 +628,12 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                         doubleState.getLastWrites(argVal).mapTo(
                                             equalLinkedHashSetOf()
                                         ) {
-                                            // Check if the value is a shortFS value
-                                            val shortFS =
-                                                true in
-                                                    doubleState.getLastWrites(argVal).first().second
                                             Pair(
                                                 it.first,
-                                                equalLinkedHashSetOf(callingContext, shortFS),
+                                                equalLinkedHashSetOf(
+                                                    callingContext,
+                                                    true in it.second,
+                                                ),
                                             )
                                         }
                                     doubleState =
