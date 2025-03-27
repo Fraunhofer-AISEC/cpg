@@ -63,8 +63,9 @@ class TranslationUnitDeclaration :
             addIfNotContains(includeEdges, declaration)
         } else if (declaration is NamespaceDeclaration) {
             addIfNotContains(namespaceEdges, declaration)
+        } else {
+            addIfNotContains(declarationEdges, declaration)
         }
-        addIfNotContains(declarationEdges, declaration)
     }
 
     override fun toString(): String {
