@@ -81,7 +81,7 @@ abstract class TranslationUnitPass(ctx: TranslationContext) : Pass<TranslationUn
  */
 abstract class EOGStarterPass(ctx: TranslationContext) : Pass<Node>(ctx)
 
-open class PassConfiguration {}
+open class PassConfiguration
 
 /**
  * Represents an abstract class that enhances the graph before it is persisted. Passes can exist at
@@ -292,7 +292,9 @@ fun executePass(
             consumeTargets(
                 (prototype as EOGStarterPass)::class,
                 ctx,
-                result.allEOGStarters,
+                // Gather all resolution EOG starters; and make sure they really do not have a
+                // predecessor, otherwise we might analyze a node multiple times.
+                result.allEOGStarters.filter { it.prevEOGEdges.isEmpty() },
                 executedFrontends,
             )
         }
