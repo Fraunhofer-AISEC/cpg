@@ -175,11 +175,12 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     protected fun handleTranslationUnitDeclaration(node: TranslationUnitDeclaration) {
         handleStatementHolder(node as StatementHolder)
 
-        // loop through functions
-        for (child in node.declarations) {
+        // Build the EOG for all declarations, namespaces have to be added separately
+        for (child in node.declarations.plus(node.namespaces)) {
             currentPredecessors.clear()
             handleEOG(child)
         }
+
         processedListener.clearProcessed()
     }
 
