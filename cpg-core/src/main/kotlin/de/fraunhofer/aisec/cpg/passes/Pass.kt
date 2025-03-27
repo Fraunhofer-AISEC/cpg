@@ -45,6 +45,7 @@ import de.fraunhofer.aisec.cpg.passes.configuration.RequiresLanguageTrait
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.util.concurrent.CompletableFuture
 import java.util.function.Consumer
+import java.util.function.Function
 import kotlin.reflect.KClass
 import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.findAnnotations
@@ -59,29 +60,66 @@ import org.slf4j.LoggerFactory
  * A [TranslationResultPass] is a pass that operates on a [TranslationResult]. If used with
  * [executePass], one [Pass] object is instantiated for the whole [TranslationResult].
  */
-abstract class TranslationResultPass(ctx: TranslationContext) : Pass<TranslationResult>(ctx)
+abstract class TranslationResultPass(ctx: TranslationContext) :
+    Pass<TranslationResult>(ctx, TranslationResultSorter)
 
 /**
  * A [ComponentPass] is a pass that operates on a [Component]. If used with [executePass], one
  * [Pass] object is instantiated for each [Component] in a [TranslationResult].
  */
-abstract class ComponentPass(ctx: TranslationContext) : Pass<Component>(ctx)
+abstract class ComponentPass(ctx: TranslationContext) : Pass<Component>(ctx, ComponentSorter)
 
 /**
  * A [TranslationUnitPass] is a pass that operates on a [TranslationUnitDeclaration]. If used with
  * [executePass], one [Pass] object is instantiated for each [TranslationUnitDeclaration] in a
  * [Component].
  */
-abstract class TranslationUnitPass(ctx: TranslationContext) : Pass<TranslationUnitDeclaration>(ctx)
+abstract class TranslationUnitPass(ctx: TranslationContext) :
+    Pass<TranslationUnitDeclaration>(ctx, TranslationUnitSorter)
 
 /**
  * A [EOGStarterPass] is a pass that operates on nodes that are contained in a [EOGStarterHolder].
  * If used with [executePass], one [Pass] object is instantiated for each [Node] in a
  * [EOGStarterHolder] in each [TranslationUnitDeclaration] in each [Component].
  */
-abstract class EOGStarterPass(ctx: TranslationContext) : Pass<Node>(ctx)
+abstract class EOGStarterPass(ctx: TranslationContext) : Pass<Node>(ctx, EOGStarterSorter)
 
 open class PassConfiguration
+
+abstract class Sorter<T : Node> : Function<TranslationResult, List<T>>
+
+object TranslationResultSorter : Sorter<TranslationResult>() {
+    override fun apply(result: TranslationResult): List<TranslationResult> = listOf(result)
+}
+
+/** Execute the [Component]s in the "sorted" order (if available). */
+object ComponentSorter : Sorter<Component>() {
+    override fun apply(result: TranslationResult): List<Component> =
+        (Strategy::COMPONENTS_LEAST_IMPORTS)(result).asSequence().toList()
+}
+
+/**
+ * Execute the [TranslationUnitDeclaration]s in the "sorted" order (if available). To do so, it
+ * first sorts the [Component]s using the [ComponentSorter].
+ */
+object TranslationUnitSorter : Sorter<TranslationUnitDeclaration>() {
+    override fun apply(result: TranslationResult): List<TranslationUnitDeclaration> =
+        ComponentSorter.apply(result)
+            .flatMap { (Strategy::TRANSLATION_UNITS_LEAST_IMPORTS)(it).asSequence() }
+            .toList()
+}
+
+/**
+ * First, sorts the [TranslationUnitDeclaration]s with the [TranslationUnitSorter] and then gathers
+ * all resolution EOG starters; and make sure they really do not have a predecessor, otherwise we
+ * might analyze a node multiple times.
+ */
+object EOGStarterSorter : Sorter<Node>() {
+    override fun apply(result: TranslationResult): List<Node> =
+        TranslationUnitSorter.apply(result)
+            .flatMap { it.allEOGStarters.filter { it.prevEOGEdges.isEmpty() } }
+            .toList()
+}
 
 /**
  * Represents an abstract class that enhances the graph before it is persisted. Passes can exist at
@@ -94,7 +132,7 @@ open class PassConfiguration
  * passes. Instead of directly subclassing this type, one of the types [TranslationResultPass],
  * [ComponentPass] or [TranslationUnitPass] must be used.
  */
-sealed class Pass<T : Node>(final override val ctx: TranslationContext) :
+sealed class Pass<T : Node>(final override val ctx: TranslationContext, val sorter: Sorter<T>) :
     Consumer<T>, ContextProvider, RawNodeTypeProvider<Nothing>, ScopeProvider {
     var name: String
         protected set
@@ -266,15 +304,14 @@ fun executePass(
             consumeTargets(
                 (prototype as TranslationResultPass)::class,
                 ctx,
-                listOf(result),
+                prototype.sorter.apply(result),
                 executedFrontends,
             )
         is ComponentPass ->
             consumeTargets(
                 (prototype as ComponentPass)::class,
                 ctx,
-                // Execute them in the "sorted" order (if available)
-                (Strategy::COMPONENTS_LEAST_IMPORTS)(result).asSequence().toList(),
+                prototype.sorter.apply(result),
                 executedFrontends,
             )
         is TranslationUnitPass ->
@@ -282,19 +319,14 @@ fun executePass(
                 (prototype as TranslationUnitPass)::class,
                 ctx,
                 // Execute them in the "sorted" order (if available)
-                (Strategy::COMPONENTS_LEAST_IMPORTS)(result)
-                    .asSequence()
-                    .flatMap { (Strategy::TRANSLATION_UNITS_LEAST_IMPORTS)(it).asSequence() }
-                    .toList(),
+                prototype.sorter.apply(result),
                 executedFrontends,
             )
         is EOGStarterPass -> {
             consumeTargets(
                 (prototype as EOGStarterPass)::class,
                 ctx,
-                // Gather all resolution EOG starters; and make sure they really do not have a
-                // predecessor, otherwise we might analyze a node multiple times.
-                result.allEOGStarters.filter { it.prevEOGEdges.isEmpty() },
+                prototype.sorter.apply(result),
                 executedFrontends,
             )
         }
