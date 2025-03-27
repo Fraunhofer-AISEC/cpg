@@ -903,22 +903,31 @@ class PointsToPassTest {
 
         // memcpy PMVs
         val memcpySrcDeref =
-            memcpyFD.parameters[1].memoryValue?.memoryValues?.singleOrNull {
-                it.name.localName == "derefvalue"
-            }
+            memcpyFD.parameters[1]
+                .memoryValues
+                .filterIsInstance<ParameterMemoryValue>()
+                .singleOrNull()
+                ?.memoryValues
+                ?.singleOrNull { it.name.localName == "derefvalue" }
         assertNotNull(memcpySrcDeref)
 
         val memcpyDstDeref =
-            memcpyFD.parameters[0].memoryValue?.memoryValues?.singleOrNull {
-                it.name.localName == "derefvalue"
-            }
+            memcpyFD.parameters[0]
+                .memoryValues
+                .filterIsInstance<ParameterMemoryValue>()
+                .singleOrNull()
+                ?.memoryValues
+                ?.singleOrNull { it.name.localName == "derefvalue" }
         assertNotNull(memcpyDstDeref)
 
         // DFGs for the memcpys
         // We need incoming DFGs from the arguments to the parametermemoryvalues
         for (i in 0..2) {
             assertEquals(
-                memcpyFD.parameters[i].memoryValue,
+                memcpyFD.parameters[i]
+                    .memoryValues
+                    .filterIsInstance<ParameterMemoryValue>()
+                    .singleOrNull(),
                 ceLine112.arguments[i].nextDFG.singleOrNull(),
             )
         }
@@ -1601,7 +1610,10 @@ class PointsToPassTest {
 
         // Line 177
         assertEquals(
-            memsetFD.parameters[1].memoryValue,
+            memsetFD.parameters[1]
+                .memoryValues
+                .filterIsInstance<ParameterMemoryValue>()
+                .singleOrNull(),
             ceLine177.arguments[1]
                 .nextDFGEdges
                 .singleOrNull {
@@ -1610,10 +1622,18 @@ class PointsToPassTest {
                 ?.end,
         )
         assertEquals(
-            memsetFD.parameters[0].memoryValue?.memoryValues?.singleOrNull {
-                it.name.localName == "derefvalue"
-            },
-            memsetFD.parameters[1].memoryValue?.nextDFG?.singleOrNull(),
+            memsetFD.parameters[0]
+                .memoryValues
+                .filterIsInstance<ParameterMemoryValue>()
+                .singleOrNull()
+                ?.memoryValues
+                ?.singleOrNull { it.name.localName == "derefvalue" },
+            memsetFD.parameters[1]
+                .memoryValues
+                .filterIsInstance<ParameterMemoryValue>()
+                .singleOrNull()
+                ?.nextDFG
+                ?.singleOrNull(),
         )
 
         // Line 179
@@ -1642,9 +1662,12 @@ class PointsToPassTest {
         assertEquals(3, local28DerefLine179.prevDFG.size)
         assertEquals(2, local28DerefLine179.prevFullDFG.size)
         assertEquals(
-            memsetFD.parameters[0].memoryValue?.memoryValues?.singleOrNull {
-                it.name.localName == "derefvalue"
-            },
+            memsetFD.parameters[0]
+                .memoryValues
+                .filterIsInstance<ParameterMemoryValue>()
+                .singleOrNull()
+                ?.memoryValues
+                ?.singleOrNull { it.name.localName == "derefvalue" },
             local28DerefLine179.prevDFGEdges
                 .singleOrNull {
                     it is ContextSensitiveDataflow && it.callingContext.calls == setOf(ceLine177)
@@ -1816,9 +1839,14 @@ class PointsToPassTest {
         )
         // the context sensitive edge to the first deref PMV of memcpy_verw_s
         assertEquals(
-            ceLine183.invokes.singleOrNull().parameters[0].memoryValue?.memoryValues?.singleOrNull {
-                it.name.localName == "derefvalue"
-            },
+            ceLine183.invokes
+                .singleOrNull()
+                .parameters[0]
+                .memoryValues
+                .filterIsInstance<ParameterMemoryValue>()
+                .singleOrNull()
+                ?.memoryValues
+                ?.singleOrNull { it.name.localName == "derefvalue" },
             local18DerefLine190.prevDFGEdges
                 .singleOrNull {
                     it.granularity !is PointerDataflowGranularity &&
@@ -1868,9 +1896,14 @@ class PointsToPassTest {
         )
         // the context sensitive edge to the first deref PMV of memcpy_verw_s
         assertEquals(
-            ceLine183.invokes.singleOrNull().parameters[0].memoryValue?.memoryValues?.singleOrNull {
-                it.name.localName == "derefvalue"
-            },
+            ceLine183.invokes
+                .singleOrNull()
+                .parameters[0]
+                .memoryValues
+                .filterIsInstance<ParameterMemoryValue>()
+                .singleOrNull()
+                ?.memoryValues
+                ?.singleOrNull { it.name.localName == "derefvalue" },
             param1DerefDerefLine190.prevDFGEdges
                 .singleOrNull {
                     it is ContextSensitiveDataflow && it.callingContext.calls == setOf(ceLine183)
@@ -2720,9 +2753,13 @@ class PointsToPassTest {
         // ParameterMemoryValues
         // TODO: Any better way to fetch the param's derefvalue?
         val incpDerefValue =
-            (incpFD.parameters.first().memoryValue as ParameterMemoryValue)
-                .memoryValues
-                .firstOrNull { it is ParameterMemoryValue && it.name.localName == "derefvalue" }
+            (incpFD.parameters
+                    .first()
+                    .memoryValues
+                    .filterIsInstance<ParameterMemoryValue>()
+                    .singleOrNull())
+                ?.memoryValues
+                ?.firstOrNull { it is ParameterMemoryValue && it.name.localName == "derefvalue" }
         assertNotNull(incpDerefValue)
 
         // Literals
@@ -2742,7 +2779,11 @@ class PointsToPassTest {
         assertEquals(1, iArgLine380.nextDFGEdges.size)
         // Argument's nextDFG should point to the ParameterMemoryValue of the Function
         assertEquals(
-            incFD.parameters.first().memoryValue,
+            incFD.parameters
+                .first()
+                .memoryValues
+                .filterIsInstance<ParameterMemoryValue>()
+                .singleOrNull(),
             iArgLine380.nextDFGEdges.first().end as? ParameterMemoryValue,
         )
         assertEquals(
@@ -2770,7 +2811,11 @@ class PointsToPassTest {
         // CallExpression in Line 384
         // Argument's nextDFG should point to the ParameterMemoryValue of the Function
         assertEquals(
-            incFD.parameters.first().memoryValue,
+            incFD.parameters
+                .first()
+                .memoryValues
+                .filterIsInstance<ParameterMemoryValue>()
+                .singleOrNull(),
             iArgLine384.nextDFGEdges.first().end as? ParameterMemoryValue,
         )
         assertEquals(
@@ -2805,7 +2850,11 @@ class PointsToPassTest {
                 .calls,
         )
         assertEquals(
-            incpFD.parameters.first().memoryValue,
+            incpFD.parameters
+                .first()
+                .memoryValues
+                .filterIsInstance<ParameterMemoryValue>()
+                .singleOrNull(),
             pArgLine386.nextDFGEdges.first().end as? ParameterMemoryValue,
         )
 

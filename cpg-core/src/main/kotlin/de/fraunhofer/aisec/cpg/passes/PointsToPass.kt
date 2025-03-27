@@ -322,7 +322,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         for ((param, fsEntries) in functionDeclaration.functionSummary) {
             fsEntries.forEach { (dstValueDepth, srcNode, srcValueDepth, subAccessName, shortFS) ->
                 if (param is ParameterDeclaration && srcNode is ParameterDeclaration) {
-                    var dst = param.memoryValue
+                    var dst =
+                        param.memoryValues.filterIsInstance<ParameterMemoryValue>().singleOrNull()
                     for (i in 1..<dstValueDepth) {
                         // hop to the next deref-PMV
                         dst =
@@ -330,7 +331,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 ?.filterIsInstance<ParameterMemoryValue>()
                                 ?.singleOrNull { it.name.localName == "deref".repeat(i) + "value" }
                     }
-                    var src = srcNode.memoryValue
+                    var src =
+                        srcNode.memoryValues.filterIsInstance<ParameterMemoryValue>().singleOrNull()
                     for (i in 1..<srcValueDepth) {
                         src =
                             src?.memoryValues
@@ -575,9 +577,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             if (arg.argumentIndex < functionDeclaration.parameters.size) {
                 // Create a DFG-Edge from the argument to the parameter's memoryValue
                 val p = functionDeclaration.parameters[arg.argumentIndex]
-                if (p.memoryValue == null)
+                if (p.memoryValues.isEmpty())
                     initializeParameters(lattice, mutableListOf(p), doubleState, 2)
-                p.memoryValue?.let { paramVal ->
+                p.memoryValues.filterIsInstance<ParameterMemoryValue>().forEach { paramVal ->
                     doubleState =
                         lattice.push(
                             doubleState,
@@ -817,7 +819,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             if (shortFS) {
                 when (lw) {
                     is FunctionDeclaration -> ret.add(currentNode)
-                    // is ParameterDeclaration -> ret.add(currentNode.arguments[lw.argumentIndex])
+                    is ParameterDeclaration -> ret.add(currentNode.arguments[lw.argumentIndex])
                     else -> ret.add(lw)
                 }
             } else ret.add(lw)
@@ -1397,7 +1399,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     ): PointsToStateElement {
         var doubleState = doubleState
         parameters
-            .filter { it.memoryValue == null }
+            .filter { it.memoryValues.isEmpty() }
             .forEach { param ->
                 // In the first step, we have a triangle of ParameterDeclaration, the
                 // ParameterDeclaration's Memory Address and the ParameterMemoryValue
@@ -1427,7 +1429,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     // In the first step, we link the ParameterDeclaration to the PMV to be able to
                     // also access it outside the function
                     if (src is ParameterDeclaration) {
-                        src.memoryValue = pmv
+                        // src.memoryValue = pmv
                         doubleState =
                             lattice.push(
                                 doubleState,
@@ -1443,7 +1445,17 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         // especially important outside the respective function where we don't have
                         // a state
                         pmv.memoryAddresses.filterIsInstance<ParameterMemoryValue>().forEach {
-                            it.memoryValues += pmv
+                            // it.memoryValues += pmv
+                            doubleState =
+                                lattice.push(
+                                    doubleState,
+                                    it,
+                                    GeneralStateEntryElement(
+                                        PowersetLattice.Element(),
+                                        PowersetLattice.Element(pmv),
+                                        PowersetLattice.Element(),
+                                    ),
+                                )
                         }
                     }
 

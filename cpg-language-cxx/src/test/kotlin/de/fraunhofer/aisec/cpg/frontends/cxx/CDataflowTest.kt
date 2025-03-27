@@ -61,7 +61,9 @@ class CDataflowTest {
         // .memoryValue.memoryValue
         val startVariable =
             startFunction.parameters["ctx"]
-                ?.memoryValue
+                ?.memoryValues
+                ?.filterIsInstance<ParameterMemoryValue>()
+                ?.singleOrNull()
                 ?.memoryValues
                 ?.filterIsInstance<ParameterMemoryValue>()
                 ?.singleOrNull()
