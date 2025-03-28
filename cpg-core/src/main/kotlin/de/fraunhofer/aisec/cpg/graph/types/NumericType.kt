@@ -34,7 +34,14 @@ open class NumericType(
     val bitWidth: Int? = null,
     language: Language<*>,
     val modifier: Modifier = Modifier.SIGNED,
-) : ObjectType(typeName, listOf(), true, language) {
+) :
+    ObjectType(
+        typeName = typeName,
+        generics = listOf(),
+        primitive = true,
+        mutable = false,
+        language = language,
+    ) {
 
     init {
         // Built-in types are always resolved

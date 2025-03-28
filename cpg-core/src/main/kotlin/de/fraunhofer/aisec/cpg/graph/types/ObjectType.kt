@@ -60,16 +60,31 @@ open class ObjectType : Type, HasSecondaryTypeEdge {
         typeName: CharSequence,
         generics: List<Type>,
         primitive: Boolean,
+        mutable: Boolean,
         language: Language<*>,
     ) : super(typeName, language) {
         this.generics = generics
-        isPrimitive = primitive
+        this.isPrimitive = primitive
+        this.isMutable = mutable
+        this.language = language
+    }
+
+    constructor(
+        typeName: CharSequence,
+        generics: List<Type>,
+        primitive: Boolean,
+        language: Language<*>,
+    ) : super(typeName, language) {
+        this.generics = generics
+        this.isPrimitive = primitive
+        this.isMutable = true
         this.language = language
     }
 
     /** Empty default constructor for use in Neo4J persistence. */
     constructor() : super() {
-        isPrimitive = false
+        this.isPrimitive = false
+        this.isMutable = true
         this.generics = mutableListOf<Type>()
     }
 

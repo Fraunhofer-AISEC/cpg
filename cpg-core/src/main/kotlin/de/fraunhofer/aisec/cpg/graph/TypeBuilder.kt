@@ -94,7 +94,14 @@ fun LanguageProvider.objectType(
 
     // Otherwise, we either need to create the type because of the generics or because we do not
     // know the type yet.
-    var type = ObjectType(name, generics, false, language)
+    var type =
+        ObjectType(
+            typeName = name,
+            generics = generics,
+            primitive = false,
+            mutable = true,
+            language = language,
+        )
     // Apply our usual metadata, such as scope, code, location, if we have any. Make sure only
     // to refer by the local name because we will treat types as sort of references when
     // creating them and resolve them later.
