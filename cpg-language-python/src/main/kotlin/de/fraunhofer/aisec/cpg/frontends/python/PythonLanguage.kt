@@ -133,51 +133,87 @@ class PythonLanguage :
     @Transient
     override val builtInTypes =
         mapOf(
-            "bool" to BooleanType("bool", language = this),
+            "bool" to BooleanType(typeName = "bool", language = this),
             "int" to
                 IntegerType(
-                    "int",
-                    Integer.MAX_VALUE,
-                    this,
-                    NumericType.Modifier.NOT_APPLICABLE,
+                    typeName = "int",
+                    bitWidth = Integer.MAX_VALUE,
+                    language = this,
+                    modifier = NumericType.Modifier.NOT_APPLICABLE,
                 ), // Unlimited precision
             "float" to
                 FloatingPointType(
-                    "float",
-                    32,
-                    this,
-                    NumericType.Modifier.NOT_APPLICABLE,
+                    typeName = "float",
+                    bitWidth = 32,
+                    language = this,
+                    modifier = NumericType.Modifier.NOT_APPLICABLE,
                 ), // This depends on the implementation
             "complex" to
                 NumericType(
-                    "complex",
-                    null,
-                    this,
-                    NumericType.Modifier.NOT_APPLICABLE,
+                    typeName = "complex",
+                    bitWidth = null,
+                    language = this,
+                    modifier = NumericType.Modifier.NOT_APPLICABLE,
                 ), // It's two floats
-            "str" to StringType("str", this, listOf()),
+            "str" to
+                StringType(
+                    typeName = "str",
+                    language = this,
+                    generics = listOf(),
+                    primitive = false,
+                    mutable = false,
+                ),
             "list" to
                 ListType(
                     typeName = "list",
-                    elementType = ObjectType("object", listOf(), false, this),
+                    elementType =
+                        ObjectType(
+                            typeName = "object",
+                            generics = listOf(),
+                            primitive = false,
+                            mutable = true,
+                            language = this,
+                        ),
                     language = this,
                 ),
             "tuple" to
                 ListType(
                     typeName = "tuple",
-                    elementType = ObjectType("object", listOf(), false, this),
+                    elementType =
+                        ObjectType(
+                            typeName = "object",
+                            generics = listOf(),
+                            primitive = false,
+                            mutable = true,
+                            language = this,
+                        ),
                     language = this,
+                    primitive = true,
                 ),
             "dict" to
                 MapType(
                     typeName = "dict",
-                    elementType = ObjectType("object", listOf(), false, this),
+                    elementType =
+                        ObjectType(
+                            typeName = "object",
+                            generics = listOf(),
+                            primitive = false,
+                            mutable = true,
+                            language = this,
+                        ),
                     language = this,
                 ),
             "set" to
                 SetType(
                     typeName = "set",
-                    elementType = ObjectType("object", listOf(), false, this),
+                    elementType =
+                        ObjectType(
+                            typeName = "object",
+                            generics = listOf(),
+                            primitive = false,
+                            mutable = true,
+                            language = this,
+                        ),
                     language = this,
                 ),
         )
