@@ -952,21 +952,40 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 // Add the (dereferenced) value of the respective argument
                 // in the CallExpression
                 if (srcNode.argumentIndex < currentNode.arguments.size) {
-                    // If this is a short FunctionSummary, we additionally
+                    // If this is a short FunctionSummary, we also
                     // update the generalState to draw the additional DFG Edges
                     if (shortFS) {
-                        doubleState =
-                            lattice.push(
-                                doubleState,
-                                argument,
-                                GeneralStateEntryElement(
-                                    PowersetLattice.Element(),
-                                    PowersetLattice.Element(
-                                        currentNode.arguments[srcNode.argumentIndex]
-                                    ),
-                                    PowersetLattice.Element(),
-                                ),
+                        val newEntry =
+                            Pair(
+                                currentNode.arguments[srcNode.argumentIndex],
+                                equalLinkedHashSetOf<Any>(true),
                             )
+                        /*                        doubleState =
+                        lattice.push(
+                            doubleState,
+                            currentNode,
+                            GeneralStateEntryElement(
+                                PowersetLattice.Element(),
+                                PowersetLattice.Element(
+                                    //
+                                    // currentNode.arguments[srcNode.argumentIndex]
+                                ),
+                                PowersetLattice.Element(
+                                    Pair(
+                                        currentNode.arguments[srcNode.argumentIndex],
+                                        equalLinkedHashSetOf<Any>(true),
+                                    )
+                                ),
+                            ),
+                        )*/
+                        doubleState.generalState.computeIfAbsent(currentNode) {
+                            TripleLattice.Element(
+                                PowersetLattice.Element(),
+                                PowersetLattice.Element(),
+                                PowersetLattice.Element(),
+                            )
+                        }
+                        doubleState.generalState[currentNode]?.third?.add(newEntry)
                     }
                     val values =
                         if (!shortFS)

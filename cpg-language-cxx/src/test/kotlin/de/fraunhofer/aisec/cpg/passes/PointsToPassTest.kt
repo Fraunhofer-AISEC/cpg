@@ -3070,9 +3070,10 @@ class PointsToPassTest {
         // Line 422
         assertEquals(1, addCE1.arguments[0].fullMemoryValues.size)
         assertTrue(addCE1.arguments[0].fullMemoryValues.contains(iDecl.memoryAddresses.single()))
-        assertEquals(2, addCE1.arguments[0].prevFunctionSummaryDFG.size)
-        assertTrue(addCE1.arguments[0].prevFunctionSummaryDFG.contains(literal0))
-        assertTrue(addCE1.arguments[0].prevFunctionSummaryDFG.contains(addCE1.arguments[0]))
+
+        assertEquals(2, addCE1.prevFunctionSummaryDFG.size)
+        assertTrue(addCE1.prevFunctionSummaryDFG.contains(literal0))
+        assertTrue(addCE1.prevFunctionSummaryDFG.contains(addCE1.arguments[0]))
 
         // Line 424
         assertEquals(1, iLine424.fullMemoryValues.size)
@@ -3080,50 +3081,46 @@ class PointsToPassTest {
         assertEquals(2, iLine424.prevFunctionSummaryDFG.size)
         assertTrue(iLine424.prevFunctionSummaryDFG.contains(addCE1.arguments[0]))
         assertEquals(1, addCE1.invokes.size)
-        assertTrue(iLine424.prevFunctionSummaryDFG.contains(addCE1.invokes.first()))
+        assertTrue(iLine424.prevFunctionSummaryDFG.contains(addCE1))
 
         // Line 426
         assertEquals(1, addCE2.arguments[0].fullMemoryValues.size)
         assertTrue(addCE2.arguments[0].fullMemoryValues.contains(iDecl.memoryAddresses.single()))
-        assertEquals(3, addCE2.arguments[0].prevFunctionSummaryDFG.size)
-        assertTrue(addCE2.arguments[0].prevFunctionSummaryDFG.contains(addCE2.arguments[0]))
-        assertTrue(addCE2.arguments[0].prevFunctionSummaryDFG.contains(addCE2.arguments[1]))
-        assertEquals(1, addCE2.invokes.size)
-        assertTrue(addCE2.arguments[0].prevFunctionSummaryDFG.contains(addCE2.invokes.first()))
+        assertEquals(
+            setOf(addCE2.arguments[0], addCE2.arguments[1]),
+            addCE2.prevFunctionSummaryDFG.toSet(),
+        )
 
         // Line 428
         assertEquals(1, iLine428.fullMemoryValues.size)
         assertTrue(iLine428.fullMemoryValues.contains(binOP))
         assertEquals(2, iLine428.prevFunctionSummaryDFG.size)
         assertTrue(iLine428.prevFunctionSummaryDFG.contains(addCE2.arguments[0]))
-        assertTrue(iLine428.prevFunctionSummaryDFG.contains(addCE2.invokes.first()))
+        assertTrue(iLine428.prevFunctionSummaryDFG.contains(addCE2))
 
         // Line 430
         assertEquals(1, addCE3.arguments[0].fullMemoryValues.size)
         assertTrue(addCE3.arguments[0].fullMemoryValues.contains(iDecl.memoryAddresses.single()))
-        assertEquals(3, addCE3.arguments[0].prevFunctionSummaryDFG.size)
-        assertTrue(addCE3.arguments[0].prevFunctionSummaryDFG.contains(addCE3.arguments[0]))
-        assertTrue(addCE3.arguments[0].prevFunctionSummaryDFG.contains(addCE3.arguments[1]))
-        assertEquals(1, addCE3.invokes.size)
-        assertTrue(addCE3.arguments[0].prevFunctionSummaryDFG.contains(addCE3.invokes.first()))
+        assertEquals(2, addCE3.prevFunctionSummaryDFG.size)
+        assertTrue(addCE3.prevFunctionSummaryDFG.contains(addCE3.arguments[0]))
+        assertTrue(addCE3.prevFunctionSummaryDFG.contains(addCE3.arguments[1]))
 
         // Line 432
         assertEquals(1, iLine432.fullMemoryValues.size)
         assertTrue(iLine432.fullMemoryValues.contains(binOP))
         assertEquals(2, iLine432.prevFunctionSummaryDFG.size)
         assertTrue(iLine432.prevFunctionSummaryDFG.contains(addCE3.arguments[0]))
-        assertTrue(iLine432.prevFunctionSummaryDFG.contains(addCE3.invokes.first()))
+        assertTrue(iLine432.prevFunctionSummaryDFG.contains(addCE3))
 
         // Line 434
         assertEquals(1, setCE.arguments[0].fullMemoryValues.size)
         assertTrue(setCE.arguments[0].fullMemoryValues.contains(iDecl.memoryAddresses.single()))
-        assertEquals(0, setCE.arguments[0].prevFunctionSummaryDFG.size)
+        // No info flows from the parameters to the final result, therefore no shortFS edges
+        assertEquals(0, setCE.prevFunctionSummaryDFG.size)
 
         // Line 436
         assertEquals(1, iLine436.fullMemoryValues.size)
         assertTrue(iLine436.fullMemoryValues.contains(literal3))
-        assertEquals(1, iLine436.prevFunctionSummaryDFG.size)
-        assertEquals(1, setCE.invokes.size)
-        assertTrue(iLine436.prevFunctionSummaryDFG.contains(setCE.invokes.first()))
+        assertEquals(setCE, iLine436.prevFunctionSummaryDFG.singleOrNull())
     }
 }
