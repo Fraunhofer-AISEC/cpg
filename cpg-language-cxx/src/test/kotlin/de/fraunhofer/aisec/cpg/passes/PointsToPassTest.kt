@@ -1710,18 +1710,29 @@ class PointsToPassTest {
                 .size,
         )
 
-        assertEquals(4, local28DerefLine181.prevDFG.size)
-        // One full context sensitive edge to CONCAT71
-        assertLocalName(
-            "CONCAT71",
+        assertEquals(5, local28DerefLine181.prevDFG.size)
+        // One full context sensitive edge to *param_1 in Line 201
+        assertEquals(
+            1,
             local28DerefLine181.prevDFGEdges
-                .singleOrNull {
+                .filter {
                     it is ContextSensitiveDataflow &&
                         it.callingContext.calls == setOf(ceLine180) &&
-                        it.start is UnknownMemoryValue &&
-                        it.granularity !is PartialDataflowGranularity<*>
+                        it.start == param1DerefLine201
                 }
-                ?.start,
+                .size,
+        )
+        // A partial context sensitive edge to param_1[1] in Line 202
+        assertEquals(
+            1,
+            local28DerefLine181.prevDFGEdges
+                .filter {
+                    it is ContextSensitiveDataflow &&
+                        it.callingContext.calls == setOf(ceLine180) &&
+                        it.start == param1SSELine202 &&
+                        it.granularity is PartialDataflowGranularity<*>
+                }
+                .size,
         )
         // A partial edge to the deref's input
         assertEquals(
@@ -1733,20 +1744,29 @@ class PointsToPassTest {
                 }
                 .size,
         )
-        // A partial, contextsensitive edge to DAT_0011b1c8
-        assertLocalName(
-            "DAT_0011b1c8",
+        // Two FS edges to ecall_key_to_out. One partial and one full
+        // Note that we don't have a shortFS edge to local_28, b/c it doesn't contribute to the new
+        // value assigned to it's dereference
+        assertEquals(
+            ceLine180,
+            local28DerefLine181.prevDFGEdges
+                .single {
+                    it.functionSummary &&
+                        it !is ContextSensitiveDataflow &&
+                        it.granularity is FullDataflowGranularity
+                }
+                ?.start,
+        )
+        assertEquals(
+            ceLine180,
             local28DerefLine181.prevDFGEdges
                 .singleOrNull {
-                    it is ContextSensitiveDataflow &&
-                        it.callingContext.calls == setOf(ceLine180) &&
-                        it.start is UnknownMemoryValue &&
+                    it.functionSummary &&
+                        it !is ContextSensitiveDataflow &&
                         it.granularity is PartialDataflowGranularity<*>
                 }
                 ?.start,
         )
-        // One FS edge to ecall_key_to_out
-        assertEquals(fdecallkeytoout, local28DerefLine181.prevFunctionSummaryDFG.singleOrNull())
 
         assertEquals(1, sseLine181.fullMemoryValues.size)
         assertEquals(
@@ -1757,39 +1777,23 @@ class PointsToPassTest {
         )
 
         assertEquals(2, sseLine181.prevDFG.size)
+        // One DFG-Edge to the SSE in Line 202
         assertEquals(
-            2,
-            sseLine181.prevDFGEdges
-                .filter {
-                    it is ContextSensitiveDataflow &&
-                        it.callingContext.calls == setOf(ceLine180) &&
-                        it.granularity == FullDataflowGranularity
-                }
-                .size,
-        )
-        // One DFG-Edge to DAT_0011b1c8
-        assertLocalName(
-            "DAT_0011b1c8",
+            param1SSELine202,
             sseLine181.prevDFGEdges
                 .singleOrNull {
                     it is ContextSensitiveDataflow &&
                         it.callingContext.calls == setOf(ceLine180) &&
                         it.granularity == FullDataflowGranularity &&
-                        !it.functionSummary &&
-                        it.start is UnknownMemoryValue
+                        !it.functionSummary
                 }
                 ?.start,
         )
-        // One Summary edge to the FD
+        // One Summary edge to the CallExpression
         assertEquals(
-            fdecallkeytoout,
+            ceLine180,
             sseLine181.prevDFGEdges
-                .singleOrNull {
-                    it is ContextSensitiveDataflow &&
-                        it.callingContext.calls == setOf(ceLine180) &&
-                        it.granularity == FullDataflowGranularity &&
-                        it.functionSummary
-                }
+                .singleOrNull { it.functionSummary && it.granularity is FullDataflowGranularity }
                 ?.start,
         )
 

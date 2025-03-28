@@ -768,17 +768,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                     )
                                 } else equalLinkedHashSetOf()
 
-                            // If this is a short FunctionSummary, store this info in the
-                            // edgePropertiesMap
-                            if (shortFS) {
-                                val prev =
-                                    (srcNode as? FunctionDeclaration)
-                                        ?: currentNode.arguments[srcNode.argumentIndex]
-                                addEntryToEdgePropertiesMap(
-                                    Pair(argument, prev),
-                                    identitySetOf(shortFS),
-                                )
-                            }
                             // Especially for shortFS, we need to update the prevDFGs with
                             // information we didn't have when creating the functionSummary.
                             // calculatePrev does this for us
@@ -882,7 +871,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
         values.forEach { value ->
             value.second.forEach { lw ->
-                if (value.third.singleOrNull() == true) lastWrites.add(Pair(lw, value.third))
+                // For short FunctionSummaries (AKA one of the lastWrite properties set to 'true',
+                // we don't add the callingcontext
+                if (value.third.any { it == true }) lastWrites.add(Pair(lw, value.third))
                 else
                     lastWrites.add(
                         Pair(
@@ -1262,15 +1253,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             // If we have any information from the dereferenced value, we also fetch that
             values
                 .filterTo(identitySetOf()) { doubleState.hasDeclarationStateEntry(it, true) }
-                /*                .flatMap {
-                 */
-                /*                    doubleState.fetchElementFromDeclarationState(
-                    addr = it,
-                    excludeShortFSValues = true,
-                )*/
-                /*
-                    doubleState.getLastWrites(it).filter { it.second.none { it == true } }
-                }*/
                 .forEach { value ->
                     // draw the DFG Edges
                     val currentderefGranularity =
@@ -1439,12 +1421,12 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                     PowersetLattice.Element(addresses),
                                     PowersetLattice.Element(pmv),
                                     PowersetLattice.Element(
-                                        identitySetOf(
+                                        /*identitySetOf(
                                             Pair<Node, EqualLinkedHashSet<Any>>(
                                                 pmv,
                                                 equalLinkedHashSetOf(false),
                                             )
-                                        )
+                                        )*/
                                     ),
                                 ),
                             )
@@ -1673,7 +1655,7 @@ fun PointsToStateElement.fetchElementFromDeclarationState(
         if (fetchFields) {
             val fields =
                 this.declarationsState[addr]?.first?.filterTo(identitySetOf()) {
-                    it != addr && (addr as? HasMemoryAddress)?.memoryAddresses?.contains(it) != true
+                    it != addr && !this.getAddresses(addr).contains(it)
                 }
             fields?.forEach { field ->
                 this.declarationsState[field]
@@ -1867,7 +1849,14 @@ fun PointsToStateElement.getAddresses(node: Node): IdentitySet<Node> {
             node.memoryAddresses.toIdentitySet()
         }
         is ParameterMemoryValue -> {
-            node.memoryAddresses.toIdentitySet()
+            // Here, it depends on our scope. When we are outside the function to which the PMV
+            // belongs, we assume it has already been initialized and can simply look up the
+            // `memoryAddresses` field
+            // However, if we are dealing with a PMV from the function we are currently in, this
+            // information has not yet been propagated to the node, so we check out the state
+            val ret = node.memoryAddresses.toIdentitySet<Node>()
+            if (ret.isNotEmpty()) return ret
+            else return this.declarationsState[node]?.first?.toIdentitySet() ?: identitySetOf()
         }
         is MemoryAddress -> {
             identitySetOf(node)
