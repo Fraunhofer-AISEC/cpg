@@ -202,7 +202,7 @@ class VisitorTest : BaseTest() {
         )
         fun setup() {
             val cpg = GraphExamples.getVisitorTest()
-            recordDeclaration = cpg.records.firstOrNull()
+            recordDeclaration = cpg.records.firstOrNull { !it.isInferred }
         }
     }
 }
