@@ -117,7 +117,12 @@ class InterproceduralWithDfgTermination(
         analysisDirection: AnalysisDirection,
     ): Boolean {
         val nextNode = analysisDirection.unwrapNextStepFromEdge(edge)
-        if (edge is Invoke && currentNode !is CallExpression && ctx.callStack.isEmpty()) {
+        if (
+            currentNode != nextNode &&
+                edge is Invoke &&
+                currentNode !is CallExpression &&
+                ctx.callStack.isEmpty()
+        ) {
             // We're leaving the current function and will go to a scope we haven't seen before
             // (i.e., not just pop elements from the call stack).
             // In this case, we check if any of the reachable nodes is in the scope we will reach.
