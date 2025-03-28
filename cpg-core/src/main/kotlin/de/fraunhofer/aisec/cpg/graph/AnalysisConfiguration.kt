@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.IndexedDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Invoke
+import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
@@ -94,6 +95,51 @@ class Interprocedural(val maxCallDepth: Int? = null, maxSteps: Int? = null) :
     ): Boolean {
         // Follow the edge if we're still in the maxSteps range and (if maxCallDepth is null or the
         // call stack is not deeper yet)
+        return (this.maxSteps == null || ctx.steps < maxSteps) &&
+            (maxCallDepth == null || ctx.callStack.depth < maxCallDepth)
+    }
+}
+
+/**
+ * It works similar to the normal [Interprocedural] but with one difference for an [Edge] causing us
+ * to leave the current scope: If no [Node] passed in the [allReachableNodes] is in the scope (or a
+ * parent scope) of the new element we reach, then we stop following the edge
+ */
+class InterproceduralWithDfgTermination(
+    val maxCallDepth: Int? = null,
+    maxSteps: Int? = null,
+    val allReachableNodes: Set<Node> = setOf(),
+) : AnalysisScope(maxSteps) {
+    override fun followEdge(
+        currentNode: Node,
+        edge: Edge<Node>,
+        ctx: Context,
+        analysisDirection: AnalysisDirection,
+    ): Boolean {
+        val nextNode = analysisDirection.unwrapNextStepFromEdge(edge)
+        if (edge is Invoke && currentNode !is CallExpression && ctx.callStack.isEmpty()) {
+            // We're leaving the current function and will go to a scope we haven't seen before
+            // (i.e., not just pop elements from the call stack).
+            // In this case, we check if any of the reachable nodes is in the scope we will reach.
+            return (this.maxSteps == null || ctx.steps < maxSteps) &&
+                (maxCallDepth == null || ctx.callStack.depth < maxCallDepth) &&
+                // We also want to check `allReachableNodes`. One of them has to be in the scope we
+                // will reach now.
+                allReachableNodes.any { reachable ->
+                    reachable.scope != null &&
+                        (reachable.scope?.astNode == nextNode ||
+                            reachable.scope == nextNode.scope ||
+                            nextNode.scope?.firstScopeParentOrNull<Scope> {
+                                reachable.scope == it
+                            } != null)
+                }
+        }
+        // We're in the same function, or we may pop elements from the call stack and return to a
+        // function through which we entered this path. Nothing special here, just continue as
+        // always.
+
+        // Follow the edge if we're still in the maxSteps range and (if maxCallDepth is null or the
+        // call stack is not deeper yet). This is the behavior of the normal Interprocedural
         return (this.maxSteps == null || ctx.steps < maxSteps) &&
             (maxCallDepth == null || ctx.callStack.depth < maxCallDepth)
     }

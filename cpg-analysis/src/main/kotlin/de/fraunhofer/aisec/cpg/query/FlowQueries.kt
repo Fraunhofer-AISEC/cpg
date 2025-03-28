@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.AnalysisSensitivity
 import de.fraunhofer.aisec.cpg.graph.FilterUnreachableEOG
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
@@ -357,11 +358,22 @@ fun Node.alwaysFlowsTo(
                     nodeToTrack in n.prevDFG &&
                     (n as? Reference)?.access == AccessValues.WRITE)
         }
+        val eogScope =
+            if (scope is Interprocedural) {
+                InterproceduralWithDfgTermination(
+                    maxCallDepth = scope.maxCallDepth,
+                    maxSteps = scope.maxSteps,
+                    allReachableNodes =
+                        nextDFGPaths
+                            .filter { it.scope != null && it !is FunctionDeclaration }
+                            .toSet(),
+                )
+            } else scope
         val nextEOGEvaluation =
             nodeToTrack.followEOGEdgesUntilHit(
                 collectFailedPaths = true,
                 findAllPossiblePaths = true,
-                scope = scope,
+                scope = eogScope,
                 sensitivities = sensitivities,
                 earlyTermination = earlyTerminationPredicate,
             ) {
