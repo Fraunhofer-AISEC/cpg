@@ -267,7 +267,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             // with a set of properties
             // Let's start with fetching the addresses
             if (key is HasMemoryAddress) {
-                key.memoryAddresses.clear() // TODO: Do we really have to do this??
                 key.memoryAddresses += value.first.filterIsInstance<MemoryAddress>()
             }
 
@@ -320,30 +319,31 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     ): PointsToStateElement {
         var doubleState = startState
         for ((param, fsEntries) in functionDeclaration.functionSummary) {
-            fsEntries.forEach { (dstValueDepth, srcNode, srcValueDepth, subAccessName, shortFS) ->
-                if (param is ParameterDeclaration && srcNode is ParameterDeclaration) {
-                    var dst =
-                        param.memoryValues.filterIsInstance<ParameterMemoryValue>().singleOrNull()
-                    for (i in 1..<dstValueDepth) {
-                        // hop to the next deref-PMV
-                        dst =
-                            dst?.memoryValues
-                                ?.filterIsInstance<ParameterMemoryValue>()
-                                ?.singleOrNull { it.name.localName == "deref".repeat(i) + "value" }
-                    }
-                    var src =
-                        srcNode.memoryValues.filterIsInstance<ParameterMemoryValue>().singleOrNull()
-                    for (i in 1..<srcValueDepth) {
-                        src =
-                            src?.memoryValues
-                                ?.filterIsInstance<ParameterMemoryValue>()
-                                ?.singleOrNull { it.name.localName == "deref".repeat(i) + "value" }
-                    }
+            fsEntries.forEach { entry ->
+                if (param is ParameterDeclaration && entry.srcNode is ParameterDeclaration) {
+                    val dst =
+                        doubleState
+                            .getNestedValues(param, entry.destValueDepth, false, true, true)
+                            .map { it.first }
+                            .singleOrNull()
+                    val src =
+                        doubleState
+                            .getNestedValues(entry.srcNode, entry.srcValueDepth, false, true, true)
+                            .map { it.first }
+                            .singleOrNull()
                     if (src != null && dst != null) {
+                        // We couldn't set the lastWrites when creating the functionSummary (which
+                        // has to be hardcoded b/c we don't have a body), so we do that now
+                        functionDeclaration.functionSummary[param]
+                            ?.singleOrNull { it == entry }
+                            ?.lastWrites
+                            ?.add(dst) // = equalLinkedHashSetOf(dst)
                         val propertySet = equalLinkedHashSetOf<Any>()
-                        if (subAccessName != "")
-                            propertySet.add(FieldDeclaration().apply { name = Name(subAccessName) })
-                        if (shortFS) propertySet.add(shortFS)
+                        if (entry.subAccessName != "")
+                            propertySet.add(
+                                FieldDeclaration().apply { name = Name(entry.subAccessName) }
+                            )
+                        if (entry.shortFunctionSummary) propertySet.add(entry.shortFunctionSummary)
                         doubleState =
                             lattice.push(
                                 doubleState,
@@ -735,7 +735,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             } else null
                         }
                         is ReturnStatement -> {
-                            // param // .returnValue
                             currentNode
                         }
                         else -> null
@@ -1462,12 +1461,12 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                         PowersetLattice.Element(prevAddresses),
                                         PowersetLattice.Element(pmv),
                                         PowersetLattice.Element(
-                                            identitySetOf(
+                                            /*                                            identitySetOf(
                                                 Pair<Node, EqualLinkedHashSet<Any>>(
                                                     pmv,
                                                     equalLinkedHashSetOf(false),
                                                 )
-                                            )
+                                            )*/
                                         ),
                                     ),
                                 )

@@ -1376,12 +1376,6 @@ class PointsToPassTest {
                 .singleOrNull()
         assertNotNull(param1Line159)
 
-        val local30Line160 =
-            tu.allChildren<Reference> {
-                    it.location?.region?.startLine == 160 && it.name.localName == "local_30"
-                }
-                .singleOrNull()
-        assertNotNull(local30Line160)
         val param1Line160 =
             tu.allChildren<Reference> {
                     it.location?.region?.startLine == 160 && it.name.localName == "param_1"
