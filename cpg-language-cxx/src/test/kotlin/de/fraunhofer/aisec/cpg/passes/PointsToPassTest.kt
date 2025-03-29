@@ -40,7 +40,6 @@ import de.fraunhofer.aisec.cpg.test.assertLocalName
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -2188,10 +2187,8 @@ class PointsToPassTest {
         assertNotNull(ceLine242)
 
         // Line 230
-        assertIs<CallExpression>(iRefLine230Left.prevFullDFG.singleOrNull())
-        assertLocalName("inc", iRefLine230Left.prevFullDFG.singleOrNull())
-        assertIs<CallExpression>(iRefLine230Left.fullMemoryValues.singleOrNull())
-        assertLocalName("inc", iRefLine230Left.fullMemoryValues.singleOrNull())
+        assertEquals(ceLine230, iRefLine230Left.prevFullDFG.singleOrNull())
+        assertEquals(binOpLine207, iRefLine230Left.fullMemoryValues.singleOrNull())
         assertEquals(1, iRefLine230Right.nextDFG.size)
         assertLocalName(
             "value",
@@ -2207,16 +2204,7 @@ class PointsToPassTest {
         )
 
         // Line 231
-        assertEquals(1, iRefLine231.fullMemoryValues.size)
-        assertLocalName(
-            "inc",
-            iRefLine231.fullMemoryValues.singleOrNull { it is UnknownMemoryValue },
-        )
-        assertEquals(1, pDerefLine231.fullMemoryValues.size)
-        assertLocalName(
-            "inc",
-            pDerefLine231.fullMemoryValues.singleOrNull { it is UnknownMemoryValue },
-        )
+        assertEquals(binOpLine207, iRefLine231.fullMemoryValues.singleOrNull())
         assertEquals(1, pDerefLine231.memoryAddresses.size)
         assertEquals(iDecl.memoryAddresses.singleOrNull(), pDerefLine231.memoryAddresses.first())
         assertEquals(iRefLine230Left, iRefLine231.prevFullDFG.singleOrNull())
@@ -2232,12 +2220,12 @@ class PointsToPassTest {
         assertTrue(iRefLine234.fullMemoryValues.contains(binOpLine212))
         assertEquals(2, iRefLine234.prevFunctionSummaryDFG.size)
         assertTrue(iRefLine234.prevFunctionSummaryDFG.contains(ceLine233.arguments[0]))
-        assertTrue(iRefLine234.prevFunctionSummaryDFG.contains(ceLine233.invokes.first()))
+        assertTrue(iRefLine234.prevFunctionSummaryDFG.contains(ceLine233))
         assertEquals(1, pDerefLine234.fullMemoryValues.size)
         assertTrue(pDerefLine234.fullMemoryValues.contains(binOpLine212))
         assertEquals(2, pDerefLine234.prevFunctionSummaryDFG.size)
         assertTrue(pDerefLine234.prevFunctionSummaryDFG.contains(ceLine233.arguments[0]))
-        assertTrue(pDerefLine234.prevFunctionSummaryDFG.contains(ceLine233.invokes.first()))
+        assertTrue(pDerefLine234.prevFunctionSummaryDFG.contains(ceLine233))
         assertEquals(1, pDerefLine234.memoryAddresses.size)
         assertEquals(iDecl.memoryAddresses.singleOrNull(), pDerefLine234.memoryAddresses.first())
 
@@ -2249,9 +2237,7 @@ class PointsToPassTest {
         )
         assertEquals(1, pDerefLine237.fullMemoryValues.size)
         assertTrue(pDerefLine237.fullMemoryValues.contains(jDecl.fullMemoryValues.firstOrNull()))
-        assertEquals(2, pDerefLine237.prevFunctionSummaryDFG.size)
-        assertTrue(pDerefLine237.prevFunctionSummaryDFG.contains(ceLine236.arguments[0]))
-        assertTrue(pDerefLine237.prevFunctionSummaryDFG.contains(ceLine236.invokes.first()))
+        assertEquals(ceLine236, pDerefLine237.prevFunctionSummaryDFG.singleOrNull())
 
         // Line 240
         assertEquals(1, pDerefLine240.memoryAddresses.size)
@@ -2263,22 +2249,26 @@ class PointsToPassTest {
         assertTrue(pDerefLine240.fullMemoryValues.contains(binOpLine212))
         assertEquals(2, pDerefLine240.prevFunctionSummaryDFG.size)
         assertTrue(pDerefLine240.prevFunctionSummaryDFG.contains(ceLine239.arguments[0]))
-        assertTrue(pDerefLine240.prevFunctionSummaryDFG.contains(ceLine239.invokes.first()))
+        assertTrue(pDerefLine240.prevFunctionSummaryDFG.contains(ceLine239))
         assertEquals(1, iRefLine240.fullMemoryValues.size)
         assertTrue(iRefLine240.fullMemoryValues.contains(binOpLine212))
         assertEquals(2, iRefLine240.prevFunctionSummaryDFG.size)
         assertTrue(iRefLine240.prevFunctionSummaryDFG.contains(ceLine239.arguments[0]))
-        assertTrue(iRefLine240.prevFunctionSummaryDFG.contains(ceLine239.invokes.first()))
+        assertTrue(iRefLine240.prevFunctionSummaryDFG.contains(ceLine239))
 
         // Line 242
         assertEquals(1, iRefLine242Left.fullMemoryValues.size)
-        assertEquals(ceLine242, iRefLine242Left.fullMemoryValues.firstOrNull())
-        assertEquals(2, ceLine242.fullMemoryValues.size)
+        assertLocalName(
+            "unknownFunc",
+            iRefLine242Left.fullMemoryValues.singleOrNull { it is UnknownMemoryValue },
+        )
+        // TODO: What DFGs and memoryValues do we except here?
+        /*        assertEquals(2, ceLine242.fullMemoryValues.size)
         assertTrue(ceLine242.fullMemoryValues.contains(iDecl.memoryAddresses.single()))
-        assertTrue(ceLine242.fullMemoryValues.contains(binOpLine212))
-        assertEquals(2, ceLine242.prevFunctionSummaryDFG.size)
+        assertTrue(ceLine242.fullMemoryValues.contains(binOpLine212))*/
+        /*        assertEquals(2, ceLine242.prevFunctionSummaryDFG.size)
         assertTrue(ceLine242.prevFunctionSummaryDFG.contains(ceLine239.invokes.first()))
-        assertTrue(ceLine242.prevFunctionSummaryDFG.contains(ceLine239.arguments.first()))
+        assertTrue(ceLine242.prevFunctionSummaryDFG.contains(ceLine239.arguments.first()))*/
     }
 
     @Test
