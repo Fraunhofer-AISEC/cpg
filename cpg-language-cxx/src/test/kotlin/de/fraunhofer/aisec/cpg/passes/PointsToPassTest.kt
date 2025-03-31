@@ -2597,8 +2597,19 @@ class PointsToPassTest {
                 .singleOrNull()
         assertNotNull(keyPointerRefLine318)
 
-        // TODO: Do we want to check the values? Currently, they should always be null b/c we don't
-        // really know what to put for global variables
+        // The values should always be unknown b/c really know what to put for global variables
+        val keyValues =
+            tu.allChildren<Reference> {
+                    it !is PointerDereference &&
+                        it !is PointerReference &&
+                        it.name.localName == "key"
+                }
+                .flatMap { it.memoryValues }
+                .toIdentitySet()
+        assertEquals(
+            1,
+            keyValues.filter { it is UnknownMemoryValue && it.name.localName == "key" }.size,
+        )
 
         // The global Declaration has as prevDFG all possible values
         assertEquals(
