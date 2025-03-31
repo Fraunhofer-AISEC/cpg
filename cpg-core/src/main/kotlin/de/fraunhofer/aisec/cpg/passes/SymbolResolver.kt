@@ -123,7 +123,6 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         }
 
     override fun accept(eogStarter: Node) {
-        println("SymbolResolver: accept($eogStarter)")
         ctx.currentComponent = eogStarter.firstParentOrNull<Component>()
         walker = ScopedWalker(scopeManager)
 
