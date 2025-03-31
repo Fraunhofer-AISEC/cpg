@@ -60,29 +60,35 @@ import org.slf4j.LoggerFactory
  * A [TranslationResultPass] is a pass that operates on a [TranslationResult]. If used with
  * [executePass], one [Pass] object is instantiated for the whole [TranslationResult].
  */
-abstract class TranslationResultPass(ctx: TranslationContext) :
-    Pass<TranslationResult>(ctx, TranslationResultSorter)
+abstract class TranslationResultPass(
+    ctx: TranslationContext,
+    sorter: Sorter<TranslationResult> = TranslationResultSorter,
+) : Pass<TranslationResult>(ctx, sorter)
 
 /**
  * A [ComponentPass] is a pass that operates on a [Component]. If used with [executePass], one
  * [Pass] object is instantiated for each [Component] in a [TranslationResult].
  */
-abstract class ComponentPass(ctx: TranslationContext) : Pass<Component>(ctx, ComponentSorter)
+abstract class ComponentPass(ctx: TranslationContext, sorter: Sorter<Component> = ComponentSorter) :
+    Pass<Component>(ctx, sorter)
 
 /**
  * A [TranslationUnitPass] is a pass that operates on a [TranslationUnitDeclaration]. If used with
  * [executePass], one [Pass] object is instantiated for each [TranslationUnitDeclaration] in a
  * [Component].
  */
-abstract class TranslationUnitPass(ctx: TranslationContext) :
-    Pass<TranslationUnitDeclaration>(ctx, TranslationUnitSorter)
+abstract class TranslationUnitPass(
+    ctx: TranslationContext,
+    sorter: Sorter<TranslationUnitDeclaration> = TranslationUnitSorter,
+) : Pass<TranslationUnitDeclaration>(ctx, sorter)
 
 /**
  * A [EOGStarterPass] is a pass that operates on nodes that are contained in a [EOGStarterHolder].
  * If used with [executePass], one [Pass] object is instantiated for each [Node] in a
  * [EOGStarterHolder] in each [TranslationUnitDeclaration] in each [Component].
  */
-abstract class EOGStarterPass(ctx: TranslationContext) : Pass<Node>(ctx, EOGStarterSorter)
+abstract class EOGStarterPass(ctx: TranslationContext, sorter: Sorter<Node> = EOGStarterSorter) :
+    Pass<Node>(ctx, sorter)
 
 open class PassConfiguration
 
