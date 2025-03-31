@@ -155,20 +155,6 @@ private fun isGlobal(node: Node): Boolean {
     }
 }
 
-private fun addEntryToEdgePropertiesMap(index: Pair<Node, Node>, entries: IdentitySet<Any>) {
-    edgePropertiesMap.computeIfAbsent(index) { identitySetOf() }.addAll(entries)
-}
-
-/**
- * We use this map to store additional information on the DFG edges which we cannot keep in the
- * state. This is for example the case to identify if the resulting edge will receive a
- * context-sensitivity label (i.e., if the node used as key is somehow inside the called function
- * and the next usage happens inside the function under analysis right now). The key of an entry
- * works as follows: The 2nd item in the Pair is the prevDFG of the 1st item. Ultimately, it will be
- * 1st -prevDFG-> 1st.
- */
-val edgePropertiesMap = mutableMapOf<Pair<Node, Node>, IdentitySet<Any>>()
-
 // We also need a place to store the derefs of global variables. The Boolean indicates if this is a
 // value stored for a short function Summary
 var globalDerefs = mutableMapOf<Node, IdentitySet<Pair<Node, Boolean>>>()
@@ -432,23 +418,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         val propertySet = identitySetOf<Any>(true)
                         if (subAccessName != "")
                             propertySet.add(FieldDeclaration().apply { name = Name(subAccessName) })
-                        edgePropertiesMap[Pair(param, node)] = propertySet
-                        // Draw a DFG-Edge from the ParameterMemoryValue to the value
-                        // TODO: I don't think we actually  need to do that
-                        /*                        var pmv = param.memoryValue
-                        for (i in 0..<dstValueDepth - 1) {
-                            pmv = pmv?.memoryValue
-                        }
-                        if (pmv != null) {
-                            val granularity =
-                                if (subAccessName.isNotEmpty()) {
-                                    PartialDataflowGranularity(
-                                        FieldDeclaration().apply { name = Name(subAccessName) }
-                                    )
-                                } else default()
-                                                        pmv.prevDFGEdges += Dataflow(value, pmv,
-                             granularity)
-                        }*/
 
                         if (!shortFS) {
                             // Check if the value is influenced by a Parameter and if so, add this
@@ -1004,12 +973,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             // created for a short function summary. If so, we
                             // have to store that info in the map
                             val updatedPropertySet = propertySet
-                            updatedPropertySet.add(
-                                edgePropertiesMap[
-                                        Pair(currentNode.arguments[srcNode.argumentIndex], value)]
-                                    ?.filterIsInstance<Boolean>()
-                                    ?.any { it } == true || shortFS
-                            )
+                            updatedPropertySet.add(shortFS)
                             val currentSet = mapDstToSrc.computeIfAbsent(d) { identitySetOf() }
                             if (
                                 currentSet.none {
@@ -1325,16 +1289,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         PowersetLattice.Element(prevDFGs),
                     ),
                 )
-
-            // When we stored previously that the address was written to by a function, we use this
-            // information now and attach the edge property to the actual read
-            addresses.forEach { addr ->
-                values.forEach { value ->
-                    edgePropertiesMap[Pair(addr, value)]?.let {
-                        addEntryToEdgePropertiesMap(Pair(currentNode, value), it)
-                    }
-                }
-            }
         } else {
             // We write to this node, but maybe we probably want to store the memory address which
             // it has right now
@@ -2033,11 +1987,6 @@ fun PointsToStateElement.updateValues(
 
     /* Update the declarationState for the addresses */
     destinationAddresses.forEach { destAddr ->
-        // Clear previous entries in edgePropertiesMap
-        edgePropertiesMap
-            .filter { it.key.first === destAddr }
-            .forEach { entry -> edgePropertiesMap.remove(entry.key) }
-
         if (!isGlobal(destAddr)) {
             val currentEntries =
                 this.declarationsState[destAddr]?.first?.toIdentitySet() ?: identitySetOf(destAddr)
