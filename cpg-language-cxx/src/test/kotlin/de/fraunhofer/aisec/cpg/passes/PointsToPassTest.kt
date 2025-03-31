@@ -42,7 +42,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
-import org.junit.jupiter.api.Assertions.assertFalse
 
 class PointsToPassTest {
     companion object {
@@ -2598,30 +2597,29 @@ class PointsToPassTest {
                 .singleOrNull()
         assertNotNull(keyPointerRefLine318)
 
-        val keyValues =
+        // TODO: Do we want to check the values? Currently, they should always be null b/c we don't
+        // really know what to put for global variables
+
+        // The global Declaration has as prevDFG all possible values
+        assertEquals(
+            1,
+            keyDecl.prevDFG
+                .filter { it is UnknownMemoryValue && it.name.localName == "sgx_get_key.secret" }
+                .size,
+        )
+
+        // All references have as prevDFG the global Declaration
+        val keyPrevDFGs =
             tu.allChildren<Reference> {
                     it !is PointerDereference &&
                         it !is PointerReference &&
                         it.name.localName == "key"
                 }
-                .flatMap { it.fullMemoryValues }
+                .flatMap { it.prevDFG }
                 .toIdentitySet()
 
         // Ensure that all key-references point to keyDecl as prevDFG
-        assertEquals(2, keyValues.size)
-        assertEquals(2, keyValues.filterIsInstance<UnknownMemoryValue>().size)
-
-        assertTrue(keyValues.any { it.name.localName == "key" })
-        assertTrue(keyValues.any { it.name.localName == "sgx_get_key.secret" })
-
-        assertTrue(
-            (keyValues.first { it.name.localName == "key" } as? UnknownMemoryValue)?.isGlobal ==
-                true
-        )
-        assertFalse(
-            (keyValues.first { it.name.localName == "sgx_get_key.secret" } as? UnknownMemoryValue)
-                ?.isGlobal != false
-        )
+        assertEquals(keyDecl, keyPrevDFGs.singleOrNull())
     }
 
     @Test
