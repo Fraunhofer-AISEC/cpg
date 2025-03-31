@@ -594,7 +594,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                             )
                                             .mapTo(equalLinkedHashSetOf()) { it.first }
                                     val lastDerefWrites =
-                                        doubleState.getLastWrites(argVal).mapTo(
+                                        doubleState.getLastWrites(argVal, argDerefVals).mapTo(
                                             equalLinkedHashSetOf()
                                         ) {
                                             Pair(
@@ -1648,7 +1648,8 @@ fun PointsToStateElement.fetchElementFromDeclarationState(
 }
 
 fun PointsToStateElement.getLastWrites(
-    node: Node
+    node: Node,
+    derefValues: EqualLinkedHashSet<Node> = equalLinkedHashSetOf(),
 ): EqualLinkedHashSet<Pair<Node, EqualLinkedHashSet<Any>>> {
     if (isGlobal(node)) {
         return when (node) {
@@ -1714,6 +1715,11 @@ fun PointsToStateElement.getLastWrites(
                         )
                     } ?: setOf()
                 }
+        }
+        is ParameterMemoryValue -> {
+            // For parameterMemoryValues, we don't actually have to look up anything, but instead
+            // take the derefValues
+            derefValues.mapTo(EqualLinkedHashSet()) { Pair(it, equalLinkedHashSetOf()) }
         }
         else ->
             // For the rest, we read the declarationState to determine when the memoryAddress of the
