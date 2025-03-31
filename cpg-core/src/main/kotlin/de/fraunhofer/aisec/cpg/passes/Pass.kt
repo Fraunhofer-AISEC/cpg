@@ -59,42 +59,102 @@ import org.slf4j.LoggerFactory
  * A [TranslationResultPass] is a pass that operates on a [TranslationResult]. If used with
  * [executePass], one [Pass] object is instantiated for the whole [TranslationResult].
  */
-abstract class TranslationResultPass(ctx: TranslationContext) : Pass<TranslationResult>(ctx)
+abstract class TranslationResultPass(
+    ctx: TranslationContext,
+    sort: Sorter<TranslationResult> = TranslationResultSorter,
+) : Pass<TranslationResult>(ctx, sort)
 
 /**
  * A [ComponentPass] is a pass that operates on a [Component]. If used with [executePass], one
  * [Pass] object is instantiated for each [Component] in a [TranslationResult].
  */
-abstract class ComponentPass(ctx: TranslationContext) : Pass<Component>(ctx)
+abstract class ComponentPass(
+    ctx: TranslationContext,
+    sort: Sorter<Component> = LeastImportComponentSorter,
+) : Pass<Component>(ctx, sort)
 
 /**
  * A [TranslationUnitPass] is a pass that operates on a [TranslationUnitDeclaration]. If used with
  * [executePass], one [Pass] object is instantiated for each [TranslationUnitDeclaration] in a
  * [Component].
  */
-abstract class TranslationUnitPass(ctx: TranslationContext) : Pass<TranslationUnitDeclaration>(ctx)
+abstract class TranslationUnitPass(
+    ctx: TranslationContext,
+    sort: Sorter<TranslationUnitDeclaration> = LeastImportTranslationUnitSorter,
+) : Pass<TranslationUnitDeclaration>(ctx, sort)
 
 /**
  * A [EOGStarterPass] is a pass that operates on nodes that are contained in a [EOGStarterHolder].
  * If used with [executePass], one [Pass] object is instantiated for each [Node] in a
  * [EOGStarterHolder] in each [TranslationUnitDeclaration] in each [Component].
  */
-abstract class EOGStarterPass(ctx: TranslationContext) : Pass<Node>(ctx)
+abstract class EOGStarterPass(
+    ctx: TranslationContext,
+    sort: Sorter<Node> = EOGStarterLeastTUImportSorter,
+) : Pass<Node>(ctx, sort)
 
 open class PassConfiguration
 
+/** Implementations of this abstract class sort nodes before they are passed to the [Pass]es. */
+abstract class Sorter<T : Node> : (TranslationResult) -> List<T>
+
+/**
+ * This class is only used to provide a common interface also for [TranslationResultPass]es. It will
+ * return a list containing only the [TranslationResult].
+ */
+object TranslationResultSorter : Sorter<TranslationResult>() {
+    override fun invoke(result: TranslationResult): List<TranslationResult> = listOf(result)
+}
+
+/**
+ * Execute the [Component]s in the "sorted" order (if available). They are sorted based on least
+ * import dependencies.
+ */
+object LeastImportComponentSorter : Sorter<Component>() {
+    override fun invoke(result: TranslationResult): List<Component> =
+        (Strategy::COMPONENTS_LEAST_IMPORTS)(result).asSequence().toList()
+}
+
+/**
+ * Execute the [TranslationUnitDeclaration]s in the "sorted" order (if available) w.r.t. less import
+ * dependencies. To do so, it first sorts the [Component]s using the [LeastImportComponentSorter]
+ * and then decides on their [TranslationUnitDeclaration]s.
+ */
+object LeastImportTranslationUnitSorter : Sorter<TranslationUnitDeclaration>() {
+    override fun invoke(result: TranslationResult): List<TranslationUnitDeclaration> =
+        LeastImportComponentSorter.invoke(result)
+            .flatMap { (Strategy::TRANSLATION_UNITS_LEAST_IMPORTS)(it).asSequence() }
+            .toList()
+}
+
+/**
+ * First, sorts the [TranslationUnitDeclaration]s with the [LeastImportTranslationUnitSorter] and
+ * then gathers all resolution EOG starters; and make sure they really do not have a predecessor,
+ * otherwise we might analyze a node multiple times. Note that the [EOGStarterHolder]s are not
+ * sorted.
+ */
+object EOGStarterLeastTUImportSorter : Sorter<Node>() {
+    override fun invoke(result: TranslationResult): List<Node> =
+        LeastImportTranslationUnitSorter.invoke(result)
+            .flatMap { it.allEOGStarters.filter { it.prevEOGEdges.isEmpty() } }
+            .toList()
+}
+
 /**
  * Represents an abstract class that enhances the graph before it is persisted. Passes can exist at
- * three different levels:
+ * different levels:
  * - the overall [TranslationResult]
- * - a [Component], and
- * - a [TranslationUnitDeclaration].
+ * - a [Component],
+ * - a [TranslationUnitDeclaration], and
+ * - a [EOGStarterHolder].
  *
  * A level should be chosen as granular as possible, to allow for the (future) parallel execution of
  * passes. Instead of directly subclassing this type, one of the types [TranslationResultPass],
  * [ComponentPass] or [TranslationUnitPass] must be used.
+ *
+ * [sort] can be used to specify the order in which the Pass will visit/process the nodes.
  */
-sealed class Pass<T : Node>(final override val ctx: TranslationContext) :
+sealed class Pass<T : Node>(final override val ctx: TranslationContext, val sort: Sorter<T>) :
     Consumer<T>, ContextProvider, RawNodeTypeProvider<Nothing>, ScopeProvider {
     var name: String
         protected set
@@ -266,15 +326,14 @@ fun executePass(
             consumeTargets(
                 (prototype as TranslationResultPass)::class,
                 ctx,
-                listOf(result),
+                prototype.sort(result),
                 executedFrontends,
             )
         is ComponentPass ->
             consumeTargets(
                 (prototype as ComponentPass)::class,
                 ctx,
-                // Execute them in the "sorted" order (if available)
-                (Strategy::COMPONENTS_LEAST_IMPORTS)(result).asSequence().toList(),
+                prototype.sort(result),
                 executedFrontends,
             )
         is TranslationUnitPass ->
@@ -282,19 +341,14 @@ fun executePass(
                 (prototype as TranslationUnitPass)::class,
                 ctx,
                 // Execute them in the "sorted" order (if available)
-                (Strategy::COMPONENTS_LEAST_IMPORTS)(result)
-                    .asSequence()
-                    .flatMap { (Strategy::TRANSLATION_UNITS_LEAST_IMPORTS)(it).asSequence() }
-                    .toList(),
+                prototype.sort(result),
                 executedFrontends,
             )
         is EOGStarterPass -> {
             consumeTargets(
                 (prototype as EOGStarterPass)::class,
                 ctx,
-                // Gather all resolution EOG starters; and make sure they really do not have a
-                // predecessor, otherwise we might analyze a node multiple times.
-                result.allEOGStarters.filter { it.prevEOGEdges.isEmpty() },
+                prototype.sort(result),
                 executedFrontends,
             )
         }
