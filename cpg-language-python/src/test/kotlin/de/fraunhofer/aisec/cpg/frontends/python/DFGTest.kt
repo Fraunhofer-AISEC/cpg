@@ -939,25 +939,36 @@ class DFGTest {
             subscriptLine11,
             "We expect that there is a subscript expression simulating \"d.a\" in line 11 of the file.",
         )
-        val dToMemberDA = subscriptLine11.prevDFGEdges.singleOrNull()
+        val dToMemberDAPartial =
+            subscriptLine11.prevDFGEdges.singleOrNull {
+                it.granularity is PartialDataflowGranularity<*>
+            }
         assertNotNull(
-            dToMemberDA,
-            "We expect a single incoming DFG edges: The partial edge from the reference \"d\" with partial granularity and index \"a\".",
+            dToMemberDAPartial,
+            "We expect an incoming DFG edge: The partial edge from the reference \"d\" with partial granularity and index \"a\".",
         )
         assertEquals(
             printDLine11,
-            dToMemberDA.start,
-            "We expect a single incoming DFG edges: The partial edge from the reference \"d\" with partial granularity and index \"a\".",
+            dToMemberDAPartial.start,
+            "We expect an incoming DFG edge: The partial edge from the reference \"d\" with partial granularity and index \"a\".",
         )
-        val dToMemberDAGranularity = dToMemberDA.granularity
-        assertIs<PartialDataflowGranularity<*>>(
-            dToMemberDAGranularity,
-            "We expect a single incoming DFG edges: The partial edge from the reference \"d\" with partial granularity and index \"a\".",
+
+        assertEquals(
+            fieldA,
+            (dToMemberDAPartial.granularity as? PartialDataflowGranularity<*>)?.partialTarget,
+            "We expect an incoming DFG edge: The partial edge from the reference \"d\" with partial granularity and index \"a\".",
+        )
+
+        val dToMemberDAFull =
+            subscriptLine11.prevDFGEdges.singleOrNull { it.granularity is FullDataflowGranularity }
+        assertNotNull(
+            dToMemberDAFull,
+            "We expect a full incoming DFG edge: The edge from the declaration of \"a\" in \"d\".",
         )
         assertEquals(
             fieldA,
-            dToMemberDAGranularity.partialTarget,
-            "We expect a single incoming DFG edges: The partial edge from the reference \"d\" with partial granularity and index \"a\".",
+            dToMemberDAFull.start,
+            "We expect a full incoming DFG edge: The edge from the declaration of \"a\" in \"d\".",
         )
 
         // Test the DFG edges for the reference d printed in line 12 of the file.
