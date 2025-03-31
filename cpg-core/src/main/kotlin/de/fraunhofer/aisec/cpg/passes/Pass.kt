@@ -88,8 +88,10 @@ abstract class TranslationUnitPass(
  * If used with [executePass], one [Pass] object is instantiated for each [Node] in a
  * [EOGStarterHolder] in each [TranslationUnitDeclaration] in each [Component].
  */
-abstract class EOGStarterPass(ctx: TranslationContext, sort: Sorter<Node> = EOGStarterSorter) :
-    Pass<Node>(ctx, sort)
+abstract class EOGStarterPass(
+    ctx: TranslationContext,
+    sort: Sorter<Node> = EOGStarterLeastTUImportSorter,
+) : Pass<Node>(ctx, sort)
 
 open class PassConfiguration
 
@@ -114,9 +116,9 @@ object LeastImportComponentSorter : Sorter<Component>() {
 }
 
 /**
- * Execute the [TranslationUnitDeclaration]s in the "sorted" order (if available) w.r.t. least
- * import dependencies. To do so, it first sorts the [Component]s using the
- * [LeastImportComponentSorter] and then decides on their [TranslationUnitDeclaration]s.
+ * Execute the [TranslationUnitDeclaration]s in the "sorted" order (if available) w.r.t. less import
+ * dependencies. To do so, it first sorts the [Component]s using the [LeastImportComponentSorter]
+ * and then decides on their [TranslationUnitDeclaration]s.
  */
 object LeastImportTranslationUnitSorter : Sorter<TranslationUnitDeclaration>() {
     override fun invoke(result: TranslationResult): List<TranslationUnitDeclaration> =
@@ -131,7 +133,7 @@ object LeastImportTranslationUnitSorter : Sorter<TranslationUnitDeclaration>() {
  * otherwise we might analyze a node multiple times. Note that the [EOGStarterHolder]s are not
  * sorted.
  */
-object EOGStarterSorter : Sorter<Node>() {
+object EOGStarterLeastTUImportSorter : Sorter<Node>() {
     override fun invoke(result: TranslationResult): List<Node> =
         LeastImportTranslationUnitSorter.invoke(result)
             .flatMap { it.allEOGStarters.filter { it.prevEOGEdges.isEmpty() } }
