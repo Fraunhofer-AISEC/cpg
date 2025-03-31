@@ -127,6 +127,8 @@ object EOGStarterSorter : Sorter<Node>() {
             .toList()
 }
 
+open class PassConfiguration
+
 /**
  * Represents an abstract class that enhances the graph before it is persisted. Passes can exist at
  * three different levels:
