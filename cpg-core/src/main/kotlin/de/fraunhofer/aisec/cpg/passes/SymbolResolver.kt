@@ -123,6 +123,7 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         }
 
     override fun accept(eogStarter: Node) {
+        println("SymbolResolver: accept($eogStarter)")
         ctx.currentComponent = eogStarter.firstParentOrNull<Component>()
         walker = ScopedWalker(scopeManager)
 
@@ -143,8 +144,6 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
     override fun cleanup() {
         templateList.clear()
     }
-
-    val componentsToTemplates = mutableMapOf<Component, MutableList<TemplateDeclaration>>()
 
     /** This function caches all [TemplateDeclaration]s into [templateList]. */
     private fun cacheTemplates(component: Component?) {
@@ -807,6 +806,8 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
 
     companion object {
         val LOGGER: Logger = LoggerFactory.getLogger(SymbolResolver::class.java)
+
+        val componentsToTemplates = mutableMapOf<Component, MutableList<TemplateDeclaration>>()
 
         /**
          * Adds implicit duplicates of the TemplateParams to the implicit ConstructExpression
