@@ -144,13 +144,16 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         templateList.clear()
     }
 
-    /** This function caches all [TemplateDeclaration]s into [templateList]. */
+    /**
+     * This function caches all [TemplateDeclaration]s into [templateList]. It either fetches the
+     * existing result from [componentsToTemplates] or fills [templateList] for the first time and
+     * then stores this result.
+     */
     private fun cacheTemplates(component: Component?) {
         if (component in componentsToTemplates) {
             componentsToTemplates[component]?.let { templateList.addAll(it) }
             return
         }
-        // TODO: (How) Should this be changed to work for the EOGStarter instead of the component?
         walker.registerHandler { node ->
             if (node is TemplateDeclaration) {
                 templateList.add(node)
