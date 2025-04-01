@@ -26,6 +26,8 @@
 package de.fraunhofer.aisec.cpg.concepts
 
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
+import de.fraunhofer.aisec.cpg.graph.conceptNodes
+import de.fraunhofer.aisec.cpg.graph.concepts.file.File
 import de.fraunhofer.aisec.cpg.passes.concepts.ConceptSummaries
 import de.fraunhofer.aisec.cpg.test.BaseTest
 import de.fraunhofer.aisec.cpg.test.analyze
@@ -49,5 +51,7 @@ class ConceptSummariesTest : BaseTest() {
                 it.symbols(mapOf("PYTHON_PLATFORM" to "linux"))
             }
         assertNotNull(result)
+        val fileConcept = result.conceptNodes.singleOrNull { it is File }
+        assertNotNull(fileConcept)
     }
 }
