@@ -127,7 +127,7 @@ class ConceptSummaries(ctx: TranslationContext) : TranslationResultPass(ctx) {
 
     private data class ConceptEntry(
         val name: String,
-        val constructorArguments: List<ConstructorArgumentEntry>,
+        val constructorArguments: List<ConstructorArgumentEntry>?,
         val dfg: DFGEntry?,
     )
 
