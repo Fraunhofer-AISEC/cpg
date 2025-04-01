@@ -52,7 +52,7 @@ val nodesCreatingUnknownValues = ConcurrentHashMap<Pair<Node, Name>, MemoryAddre
 typealias GeneralStateEntry =
     TripleLattice<
         PowersetLattice.Element<Node>,
-        PowersetLattice.Element<Node>,
+        PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>>,
         PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>>,
     >
 
@@ -73,7 +73,7 @@ typealias GeneralStateEntryElement =
         // Address
         PowersetLattice.Element<Node>,
         // MemoryValues
-        PowersetLattice.Element<Node>,
+        PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>>,
         // prevDFG
         PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>>,
     >
@@ -258,7 +258,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
             // Then the memoryValues
             if (key is HasMemoryValue && value.second.isNotEmpty()) {
-                value.second.forEach { v -> key.memoryValueEdges += Dataflow(v, key) }
+                value.second.forEach { v -> key.memoryValueEdges += Dataflow(v.first, key) }
             }
 
             // And now the prevDFGs. These are pairs, where the second item is a with a set of
@@ -563,7 +563,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             paramVal,
                             GeneralStateEntryElement(
                                 PowersetLattice.Element(/*paramVal*/ ),
-                                PowersetLattice.Element(arg),
+                                PowersetLattice.Element(Pair(arg, equalLinkedHashSetOf())),
                                 PowersetLattice.Element(
                                     Pair(arg, equalLinkedHashSetOf(callingContext))
                                 ),
@@ -617,7 +617,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                             derefPMV,
                                             GeneralStateEntryElement(
                                                 PowersetLattice.Element(/*paramVal*/ ),
-                                                PowersetLattice.Element(argDerefVals),
+                                                PowersetLattice.Element(
+                                                    argDerefVals.mapTo(EqualLinkedHashSet()) {
+                                                        Pair(it, equalLinkedHashSetOf())
+                                                    }
+                                                ),
                                                 PowersetLattice.Element(lastDerefWrites),
                                             ),
                                         )
@@ -657,7 +661,10 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                                             GeneralStateEntryElement(
                                                                 PowersetLattice.Element(derefPMV),
                                                                 PowersetLattice.Element(
-                                                                    derefderefValue
+                                                                    Pair(
+                                                                        derefderefValue,
+                                                                        equalLinkedHashSetOf(),
+                                                                    )
                                                                 ),
                                                                 PowersetLattice.Element(
                                                                     lastDerefDerefWrites
@@ -1171,7 +1178,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 GeneralStateEntryElement(
                     PowersetLattice.Element(doubleState.getAddresses(currentNode)),
                     PowersetLattice.Element(
-                        doubleState.getValues(currentNode).mapTo(IdentitySet()) { it.first }
+                        doubleState.getValues(currentNode).mapTo(IdentitySet()) {
+                            Pair(it.first, equalLinkedHashSetOf())
+                        }
                     ),
                     PowersetLattice.Element(),
                 ),
@@ -1287,7 +1296,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     currentNode,
                     GeneralStateEntryElement(
                         PowersetLattice.Element(addresses),
-                        PowersetLattice.Element(values),
+                        PowersetLattice.Element(
+                            values.mapTo(EqualLinkedHashSet()) { Pair(it, equalLinkedHashSetOf()) }
+                        ),
                         PowersetLattice.Element(prevDFGs),
                     ),
                 )
@@ -1316,11 +1327,16 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         /* No need to set the address, this already happens in the constructor */
         val addresses = doubleState.getAddresses(currentNode)
 
-        val values = PowersetLattice.Element<Node>()
+        val values = PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>>()
 
         (currentNode as? HasInitializer)?.initializer?.let { initializer ->
-            if (initializer is Literal<*>) values.add(initializer)
-            else values.addAll(doubleState.getValues(initializer).mapTo(IdentitySet()) { it.first })
+            if (initializer is Literal<*>) values.add(Pair(initializer, equalLinkedHashSetOf()))
+            else
+                values.addAll(
+                    doubleState.getValues(initializer).mapTo(IdentitySet()) {
+                        Pair(it.first, equalLinkedHashSetOf())
+                    }
+                )
         }
 
         var doubleState =
@@ -1342,7 +1358,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     addr,
                     DeclarationStateEntryElement(
                         PowersetLattice.Element(addresses),
-                        PowersetLattice.Element(values.map { Pair(it, false) }.toIdentitySet()),
+                        PowersetLattice.Element(
+                            values.mapTo(IdentitySet()) { Pair(it.first, false) }
+                        ),
                         PowersetLattice.Element(Pair(currentNode, equalLinkedHashSetOf<Any>(false))),
                     ),
                 )
@@ -1394,7 +1412,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 src,
                                 GeneralStateEntryElement(
                                     PowersetLattice.Element(addresses),
-                                    PowersetLattice.Element(pmv),
+                                    PowersetLattice.Element(Pair(pmv, equalLinkedHashSetOf())),
                                     PowersetLattice.Element(
                                         /*identitySetOf(
                                             Pair<Node, EqualLinkedHashSet<Any>>(
@@ -1416,15 +1434,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                     it,
                                     GeneralStateEntryElement(
                                         PowersetLattice.Element(prevAddresses),
-                                        PowersetLattice.Element(pmv),
-                                        PowersetLattice.Element(
-                                            /*                                            identitySetOf(
-                                                Pair<Node, EqualLinkedHashSet<Any>>(
-                                                    pmv,
-                                                    equalLinkedHashSetOf(false),
-                                                )
-                                            )*/
-                                        ),
+                                        PowersetLattice.Element(Pair(pmv, equalLinkedHashSetOf())),
+                                        PowersetLattice.Element(),
                                     ),
                                 )
                         }
@@ -2061,7 +2072,9 @@ fun PointsToStateElement.updateValues(
                 newGenState[d] =
                     GeneralStateEntryElement(
                         PowersetLattice.Element(destinationAddresses),
-                        PowersetLattice.Element(sources.mapTo(IdentitySet()) { it.first }),
+                        PowersetLattice.Element(
+                            sources.mapTo(IdentitySet()) { Pair(it.first, equalLinkedHashSetOf()) }
+                        ),
                         PowersetLattice.Element(lastWrites),
                     )
             }
