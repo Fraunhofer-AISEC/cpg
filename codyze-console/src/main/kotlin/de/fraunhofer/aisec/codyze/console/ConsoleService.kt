@@ -160,15 +160,13 @@ class ConsoleService {
                 .singleOrNull { it.id == request.nodeId }
                 ?: throw IllegalArgumentException("Unique target node not found.")
 
-        val concept = node.conceptBuildHelper(request.conceptName, underlyingNode = node)
-
-        // Handle DFG edges if requested
-        if (request.addDFGToConcept) {
-            node.nextDFG += concept
-        }
-        if (request.addDFGFromConcept) {
-            concept.nextDFG += node
-        }
+        val concept =
+            node.conceptBuildHelper(
+                name = request.conceptName,
+                underlyingNode = node,
+                connectDFGUnderlyingNodeToConcept = request.addDFGToConcept,
+                connectDFGConceptToUnderlyingNode = request.addDFGFromConcept,
+            )
     }
 
     /**
