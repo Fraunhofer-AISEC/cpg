@@ -190,8 +190,8 @@ class ConsoleService {
                     "${spacer}concept:\n" +
                     "${spacer}${spacer}name: \"${concept.javaClass.name}\"\n" +
                     "${spacer}${spacer}dfg:\n" +
-                    "${spacer}${spacer}${spacer}fromThisNodeToConcept: ${concept.nextDFG.contains(concept.underlyingNode)}\n" +
-                    "${spacer}${spacer}${spacer}fromConceptToThisNode: ${concept.underlyingNode?.nextDFG?.contains(concept)}\n"
+                    "${spacer}${spacer}${spacer}fromThisNodeToConcept: ${concept.underlyingNode?.nextDFG?.contains(concept)}\n" +
+                    "${spacer}${spacer}${spacer}fromConceptToThisNode: ${concept.nextDFG.contains(concept.underlyingNode)}\n"
         }
         return result
     }
