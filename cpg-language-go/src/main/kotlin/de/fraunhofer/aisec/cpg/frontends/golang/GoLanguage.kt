@@ -235,7 +235,17 @@ class GoLanguage :
         }
 
         // Deal with literals. Numeric literals can also be used in simple arithmetic if the
-        // underlying type is numeric
+        // underlying type is numeric.
+        // According to https://go.dev/ref/spec#Operators, if one operand is a constant, the
+        // resulting type is the type of the other operand.
+        // According to https://go.dev/ref/spec#Constant_expressions, if both operands are a
+        // constant, the resulting type is more tricky:
+        // - Boolean for comparisons
+        // - int for shifts
+        // - if both untyped operands are the same type, it's that one.
+        // - if the untyped operands of a binary operation (other than a shift) are of different
+        // kinds, the result is of the operand's kind that appears later in this list: integer,
+        // rune, floating-point, complex
         return when {
             hint?.lhs is Literal<*> &&
                 lhsType is NumericType &&
