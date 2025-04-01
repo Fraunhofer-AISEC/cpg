@@ -95,6 +95,7 @@ data class ImplicitCast(override var depthDistance: Int) : CastResult(depthDista
  * persisted in the final graph (database) and each node links to its corresponding language using
  * the [Node.language] property.
  */
+@Suppress("CONTEXT_RECEIVERS_DEPRECATED")
 abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
 
     /** The file extensions without the dot */
@@ -172,29 +173,57 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
         return result
     }
 
-    private fun arithmeticOpTypePropagation(lhs: Type, rhs: Type): Type {
+    private fun arithmeticOpTypePropagation(lhsType: Type, rhsType: Type): Type {
         return when {
-            lhs is FloatingPointType && rhs !is FloatingPointType && rhs is NumericType -> lhs
-            lhs !is FloatingPointType && lhs is NumericType && rhs is FloatingPointType -> rhs
-            lhs is FloatingPointType && rhs is FloatingPointType ||
-                lhs is IntegerType && rhs is IntegerType ->
+            lhsType is FloatingPointType &&
+                rhsType !is FloatingPointType &&
+                rhsType is NumericType -> lhsType
+            lhsType !is FloatingPointType &&
+                lhsType is NumericType &&
+                rhsType is FloatingPointType -> rhsType
+            lhsType is FloatingPointType && rhsType is FloatingPointType ||
+                lhsType is IntegerType && rhsType is IntegerType ->
                 // We take the one with the bigger bit-width
-                if ((lhs.bitWidth ?: 0) >= (rhs.bitWidth ?: 0)) {
-                    lhs
+                if ((lhsType.bitWidth ?: 0) >= (rhsType.bitWidth ?: 0)) {
+                    lhsType
                 } else {
-                    rhs
+                    rhsType
                 }
-            lhs is BooleanType && rhs is BooleanType -> lhs
+            lhsType is BooleanType && rhsType is BooleanType -> lhsType
             else -> unknownType()
         }
     }
 
     /**
      * Determines how to propagate types across binary operations since these may differ among the
-     * programming languages.
+     * programming languages. This intentionally uses the [Type] of the left-hand side and
+     * right-hand side to determine the type of the binary operation instead of the [BinaryOperator]
+     * node, because we want to use it in our new symbol resolver that operates on a state that
+     * contains the type, rather than the [HasType.type] directly.
+     *
+     * Optionally, a [BinaryOperator] can be passed as a hint to the function. This is useful for
+     * languages that need access to additional information from the [BinaryOperator] node.
+     * Implementors who override this function must ensure that they do NOT use the [HasType.type]
+     * of the [BinaryOperator.lhs] / [BinaryOperator.rhs] property of [hint], but use the [lhsType]
+     * and [rhsType] instead.
+     *
+     * @param operatorCode The [BinaryOperator.operatorCode]
+     * @param lhsType The type of the left-hand side ([BinaryOperator.lhs])
+     * @param rhsType The type of the right-hand side ([BinaryOperator.rhs])
+     * @param hint The [BinaryOperator] node that is used as a hint for the language to determine
+     *   the type of the binary operation. This is optional and can be null.
      */
-    open fun propagateTypeOfBinaryOperation(operation: BinaryOperator): Type {
-        return when (operation.operatorCode) {
+    open fun propagateTypeOfBinaryOperation(
+        operatorCode: String?,
+        lhsType: Type,
+        rhsType: Type,
+        hint: BinaryOperator? = null,
+    ): Type {
+        return when (operatorCode) {
+            "<",
+            "=<",
+            ">",
+            "<=",
             "==",
             "===" ->
                 // A comparison, so we return the type "boolean"
@@ -202,14 +231,18 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
                     ?: this.builtInTypes.values.firstOrNull { it.name.localName.startsWith("bool") }
                     ?: unknownType()
             "+" ->
-                if (operation.lhs.type is StringType) {
-                    // string + anything => string
-                    operation.lhs.type
-                } else if (operation.rhs.type is StringType) {
-                    // anything + string => string
-                    operation.rhs.type
-                } else {
-                    arithmeticOpTypePropagation(operation.lhs.type, operation.rhs.type)
+                when {
+                    lhsType is StringType -> {
+                        // string + anything => string
+                        lhsType
+                    }
+                    rhsType is StringType -> {
+                        // anything + string => string
+                        rhsType
+                    }
+                    else -> {
+                        arithmeticOpTypePropagation(lhsType, rhsType)
+                    }
                 }
             "-",
             "*",
@@ -219,13 +252,13 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
             "&&",
             "|",
             "||",
-            "^" -> arithmeticOpTypePropagation(operation.lhs.type, operation.rhs.type)
+            "^" -> arithmeticOpTypePropagation(lhsType, rhsType)
             "<<",
             ">>",
             ">>>" ->
-                if (operation.lhs.type.isPrimitive && operation.rhs.type.isPrimitive) {
+                if (lhsType.isPrimitive && rhsType.isPrimitive) {
                     // primitive type 1 OP primitive type 2 => primitive type 1
-                    operation.lhs.type
+                    lhsType
                 } else {
                     unknownType()
                 }
@@ -237,25 +270,28 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
      * When propagating [HasType.assignedTypes] from one node to another, we might want to propagate
      * only certain types. A common example is to truncate [NumericType]s, when they are not "big"
      * enough.
+     *
+     * @param existingType The existing type of the node that should be updated
+     * @param newType The new type that should be propagated
+     * @param hint The node that is used as a hint for the language to determine the type of the
+     *   node that should be updated
      */
-    open fun shouldPropagateType(hasType: HasType, srcType: Type): Boolean {
-        val nodeType = hasType.type
-
+    open fun shouldPropagateType(existingType: Type, newType: Type, hint: HasType): Boolean {
         return when {
             // We only want to add certain types, in case we have a numeric type
-            nodeType is NumericType -> {
+            existingType is NumericType -> {
                 // We do not allow to propagate non-numeric types into numeric types
-                if (srcType !is NumericType) {
+                if (newType !is NumericType) {
                     false
                 } else {
-                    val srcWidth = srcType.bitWidth
-                    val lhsWidth = nodeType.bitWidth
+                    val srcWidth = newType.bitWidth
+                    val lhsWidth = existingType.bitWidth
                     // Do not propagate anything if the new type is too big for the current type.
                     return !(lhsWidth != null && srcWidth != null && lhsWidth < srcWidth)
                 }
             }
             // We do not want to propagate a dynamic type
-            srcType is DynamicType -> {
+            newType is DynamicType -> {
                 false
             }
             else -> {
