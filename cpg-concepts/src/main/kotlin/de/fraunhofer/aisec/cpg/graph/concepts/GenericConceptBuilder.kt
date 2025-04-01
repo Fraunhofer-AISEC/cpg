@@ -206,4 +206,3 @@ fun MetadataProvider.operationBuildHelper(
                 operation.nextDFG += underlyingNode
             }
         } ?: throw IllegalArgumentException("The class $name does not create an Operation.")
-}
