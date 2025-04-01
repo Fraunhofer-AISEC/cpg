@@ -319,7 +319,13 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             .singleOrNull()
                     if (src != null && dst != null) {
                         // We couldn't set the lastWrites when creating the functionSummary (which
-                        // has to be hardcoded b/c we don't have a body), so we do that now
+                        // has to be hardcoded b/c we don't have a body), so we replace that now
+                        entry.lastWrites.forEach {
+                            functionDeclaration.functionSummary[param]
+                                ?.singleOrNull { it == entry }
+                                ?.lastWrites
+                                ?.remove(it)
+                        }
                         functionDeclaration.functionSummary[param]
                             ?.singleOrNull { it == entry }
                             ?.lastWrites
