@@ -157,7 +157,7 @@ nav:
   - "Home": index.md
   - "Getting Started":
       - GettingStarted/index.md
-      - "Using the Codyze CLI": GettingStarted/codyze.md
+      - "Using Codyze": GettingStarted/codyze.md
       - "Usage as library":
           - "Adding the Dependency": GettingStarted/library.md
           - "Using the Query API": GettingStarted/query.md
@@ -169,7 +169,7 @@ nav:
       - "Dataflow Graph (DFG)": CPG/specs/dfg.md
       - "Dataflow Graph (DFG) Function Summaries": CPG/specs/dfg-function-summaries.md
       - "Evaluation Order Graph (EOG)": CPG/specs/eog.md
-      - Program Dependence Graph (PDG)": CPG/specs/pdg.md
+      - "Program Dependence Graph (PDG)": CPG/specs/pdg.md
       - "Inference of new nodes": CPG/specs/inference.md
       - "Overlay Graph": CPG/specs/overlays.md
   - "Implementation":
@@ -179,6 +179,7 @@ nav:
       - "Scopes and Symbols": CPG/impl/scopes.md
       - "Passes": CPG/impl/passes.md
       - "Symbol Resolution": CPG/impl/symbol-resolver.md
+      - "Type System": CPG/impl/types.md
   - "Contributing":
       - "Contributing to the CPG library": Contributing/index.md
     # This assumes that the most recent dokka build was generated with the "main" tag!

@@ -49,6 +49,10 @@ fun LanguageProvider.incompleteType(): Type {
     return IncompleteType(this.language)
 }
 
+fun LanguageProvider.dynamicType(): Type {
+    return DynamicType(this.language)
+}
+
 /** Returns a [PointerType] that describes an array reference to the current type. */
 fun Type.array(): Type {
     val type = this.reference(PointerType.PointerOrigin.ARRAY)

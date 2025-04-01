@@ -81,7 +81,7 @@ import org.slf4j.LoggerFactory
 @DependsOn(TypeHierarchyResolver::class)
 @DependsOn(EvaluationOrderGraphPass::class)
 @DependsOn(ImportResolver::class)
-open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
+open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
 
     /** Configuration for the [SymbolResolver]. */
     class Configuration(
@@ -122,11 +122,11 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             null
         }
 
-    override fun accept(component: Component) {
-        ctx.currentComponent = component
+    override fun accept(eogStarter: Node) {
+        ctx.currentComponent = eogStarter.firstParentOrNull<Component>()
         walker = ScopedWalker(scopeManager)
 
-        cacheTemplates(component)
+        cacheTemplates(ctx.currentComponent)
 
         walker.strategy =
             if (passConfig?.skipUnreachableEOG == true) {
@@ -137,34 +137,31 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         walker.clearCallbacks()
         walker.registerHandler(this::handle)
 
-        // Resolve symbols in our translation units in the order depending on their import
-        // dependencies
-        for (tu in (Strategy::TRANSLATION_UNITS_LEAST_IMPORTS)(component)) {
-            log.debug("Resolving symbols of translation unit {}", tu.name)
-
-            // Gather all resolution EOG starters; and make sure they really do not have a
-            // predecessor, otherwise we might analyze a node multiple times
-            val nodes = tu.allEOGStarters.filter { it.prevEOGEdges.isEmpty() }
-
-            for (node in nodes) {
-                walker.iterate(node)
-            }
-        }
+        walker.iterate(eogStarter)
     }
 
     override fun cleanup() {
         templateList.clear()
     }
 
-    /** This function caches all [TemplateDeclaration]s into [templateList]. */
-    private fun cacheTemplates(component: Component) {
+    /**
+     * This function caches all [TemplateDeclaration]s into [templateList]. It either fetches the
+     * existing result from [componentsToTemplates] or fills [templateList] for the first time and
+     * then stores this result.
+     */
+    private fun cacheTemplates(component: Component?) {
+        if (component in componentsToTemplates) {
+            componentsToTemplates[component]?.let { templateList.addAll(it) }
+            return
+        }
         walker.registerHandler { node ->
             if (node is TemplateDeclaration) {
                 templateList.add(node)
             }
         }
-        for (tu in component.translationUnits) {
-            walker.iterate(tu)
+        component?.let {
+            it.translationUnits.forEach { tu -> walker.iterate(tu) }
+            componentsToTemplates[it] = templateList
         }
     }
 
@@ -228,7 +225,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             }
 
         // Find a list of candidate symbols. In most cases, we can just perform a lookup by name
-        // which either performs an unqualified lookup beginning from the current scope "up-wards",
+        // which either performs an unqualified lookup beginning from the current scope "upwards",
         // or a qualified lookup starting from the scope specified in the name.
         var candidates = scopeManager.lookupSymbolByNodeName(ref, predicate = predicate).toSet()
 
@@ -434,8 +431,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         }
 
         // Dynamic function invokes (such as function pointers) are handled by an extra pass, so we
-        // are
-        // not resolving them here.
+        // are not resolving them here.
         //
         // We have a dynamic invoke in two cases:
         // a) our callee is not a reference
@@ -523,8 +519,20 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             )
         val language = source.language
 
-        // Set the start scope. This can either be the call's scope or a scope specified in an FQN
-        val extractedScope = ctx.scopeManager.extractScope(source, language, source.scope)
+        // Set the start scope. This can either be the call's scope or a scope specified in an FQN.
+        // If our base is a dynamic or unknown type, we can skip the scope extraction because it
+        // will always fail
+        val extractedScope =
+            if (
+                source is MemberCallExpression &&
+                    (source.base?.type is DynamicType ||
+                        source.base?.type is UnknownType ||
+                        source.base?.type is AutoType)
+            ) {
+                ScopeManager.ScopeExtraction(null, Name(""))
+            } else {
+                ctx.scopeManager.extractScope(source, language, source.scope)
+            }
 
         // If we could not extract the scope (even though one was specified), we can only return an
         // empty result
@@ -666,11 +674,15 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
      */
     protected open fun handleOverloadedOperator(op: HasOverloadedOperation) {
         val result = resolveOperator(op)
-        val decl = result?.bestViable?.singleOrNull() ?: return
+        val functionDeclaration = result?.bestViable?.singleOrNull() ?: return
 
         // If the result was successful, we can replace the node
-        if (result.success == SUCCESSFUL && decl is OperatorDeclaration && op is Expression) {
-            val call = operatorCallFromDeclaration(decl, op)
+        if (
+            result.success == SUCCESSFUL &&
+                functionDeclaration is OperatorDeclaration &&
+                op is Expression
+        ) {
+            val call = operatorCallFromDeclaration(functionDeclaration, op)
             walker.replace(op.astParent, op, call)
         }
     }
@@ -800,6 +812,8 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
     companion object {
         val LOGGER: Logger = LoggerFactory.getLogger(SymbolResolver::class.java)
+
+        val componentsToTemplates = mutableMapOf<Component, MutableList<TemplateDeclaration>>()
 
         /**
          * Adds implicit duplicates of the TemplateParams to the implicit ConstructExpression

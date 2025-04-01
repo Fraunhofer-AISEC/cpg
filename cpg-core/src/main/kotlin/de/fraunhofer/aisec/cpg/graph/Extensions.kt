@@ -210,10 +210,19 @@ class StatementNotFound : Exception()
 
 class DeclarationNotFound(message: String) : Exception(message)
 
-class FulfilledAndFailedPaths(val fulfilled: List<List<Node>>, val failed: List<List<Node>>) {
+enum class FailureReason {
+    PATH_ENDED,
+    STEPS_EXCEEDED,
+    HIT_EARLY_TERMINATION,
+}
+
+class FulfilledAndFailedPaths(
+    val fulfilled: List<List<Node>>,
+    val failed: List<Pair<FailureReason, List<Node>>>,
+) {
     operator fun component1(): List<List<Node>> = fulfilled
 
-    operator fun component2(): List<List<Node>> = failed
+    operator fun component2(): List<Pair<FailureReason, List<Node>>> = failed
 
     operator fun plus(other: FulfilledAndFailedPaths): FulfilledAndFailedPaths {
         return FulfilledAndFailedPaths(this.fulfilled + other.fulfilled, this.failed + other.failed)
@@ -260,6 +269,7 @@ fun Node.collectAllPrevFullDFGPaths(): List<List<Node>> {
             false
         }
         .failed
+        .map { it.second }
 }
 
 /**
@@ -434,6 +444,7 @@ fun Node.collectAllNextDFGPaths(
             predicate = { false },
         )
         .failed
+        .map { it.second }
 }
 
 /**
@@ -450,6 +461,7 @@ fun Node.collectAllNextFullDFGPaths(): List<List<Node>> {
             false
         }
         .failed
+        .map { it.second }
 }
 
 /**
@@ -467,6 +479,7 @@ fun Node.collectAllNextEOGPaths(interproceduralAnalysis: Boolean = true): List<L
             false
         }
         .failed
+        .map { it.second }
 }
 
 /**
@@ -485,6 +498,7 @@ fun Node.collectAllPrevEOGPaths(interproceduralAnalysis: Boolean): List<List<Nod
             false
         }
         .failed
+        .map { it.second }
 }
 
 /**
@@ -498,6 +512,7 @@ fun Node.collectAllNextPDGGPaths(): List<List<Node>> {
             false
         }
         .failed
+        .map { it.second }
 }
 
 /**
@@ -515,6 +530,7 @@ fun Node.collectAllPrevPDGPaths(interproceduralAnalysis: Boolean): List<List<Nod
             false
         }
         .failed
+        .map { it.second }
 }
 
 /**
@@ -532,6 +548,7 @@ fun Node.collectAllPrevCDGPaths(interproceduralAnalysis: Boolean): List<List<Nod
             false
         }
         .failed
+        .map { it.second }
 }
 
 /**
@@ -549,6 +566,7 @@ fun Node.collectAllNextCDGPaths(interproceduralAnalysis: Boolean): List<List<Nod
             false
         }
         .failed
+        .map { it.second }
 }
 
 /**
@@ -720,7 +738,7 @@ inline fun Node.followXUntilHit(
     // result: List of paths (between from and to)
     val fulfilledPaths = mutableListOf<List<Node>>()
     // failedPaths: All the paths which do not satisfy "predicate"
-    val failedPaths = mutableListOf<List<Node>>()
+    val failedPaths = mutableListOf<Pair<FailureReason, List<Node>>>()
     val loopingPaths = mutableListOf<List<Node>>()
     // The list of paths where we're not done yet.
     val worklist = identitySetOf<List<Pair<Node, Context>>>()
@@ -740,7 +758,11 @@ inline fun Node.followXUntilHit(
         val nextNodes = x(currentNode, currentContext, currentPathNodes)
 
         // No further nodes in the path and the path criteria are not satisfied.
-        if (nextNodes.isEmpty() && collectFailedPaths) failedPaths.add(currentPathNodes)
+        if (nextNodes.isEmpty() && collectFailedPaths) {
+            // TODO: How to determine if this path is really at the end or if it exceeded the number
+            // of steps?
+            failedPaths.add(FailureReason.PATH_ENDED to currentPath.map { it.first })
+        }
 
         for ((next, newContext) in nextNodes) {
             // Copy the path for each outgoing CDG edge and add the next node
@@ -751,7 +773,9 @@ inline fun Node.followXUntilHit(
                 continue // Don't add this path anymore. The requirement is satisfied.
             }
             if (earlyTermination(next, currentContext)) {
-                failedPaths.add(currentPathNodes.toMutableList() + next)
+                failedPaths.add(
+                    FailureReason.HIT_EARLY_TERMINATION to currentPath.map { it.first } + next
+                )
                 continue // Don't add this path anymore. We already failed.
             }
             // The next node is new in the current path (i.e., there's no loop), so we add the path
@@ -787,10 +811,16 @@ inline fun Node.followXUntilHit(
     }
 
     val failedLoops =
-        loopingPaths.filter { path ->
-            fulfilledPaths.none { it.size > path.size && it.subList(0, path.size - 1) == path } &&
-                failedPaths.none { it.size > path.size && it.subList(0, path.size - 1) == path }
-        }
+        loopingPaths
+            .filter { path ->
+                fulfilledPaths.none {
+                    it.size > path.size && it.subList(0, path.size - 1) == path
+                } &&
+                    failedPaths.none {
+                        it.second.size > path.size && it.second.subList(0, path.size - 1) == path
+                    }
+            }
+            .map { FailureReason.PATH_ENDED to it }
 
     return FulfilledAndFailedPaths(
         fulfilledPaths.toSet().toList(),

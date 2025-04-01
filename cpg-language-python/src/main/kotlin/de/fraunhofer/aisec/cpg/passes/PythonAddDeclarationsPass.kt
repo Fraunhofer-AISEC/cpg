@@ -103,7 +103,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
 
         // Look for a potential scope modifier for this reference
         var targetScope =
-            scopeManager.currentScope?.predefinedLookupScopes[ref.name.toString()]?.targetScope
+            scopeManager.currentScope.predefinedLookupScopes[ref.name.toString()]?.targetScope
 
         // Try to see whether our symbol already exists. There are basically three rules to follow
         // here.

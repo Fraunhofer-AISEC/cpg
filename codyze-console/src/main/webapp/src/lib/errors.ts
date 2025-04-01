@@ -11,9 +11,9 @@ import { error } from '@sveltejs/kit';
  */
 export async function throwError(response: Response) {
   if (!response.ok) {
-    let body = await response.json();
+    const body = await response.json();
     return error(response.status, {
-      message: body.error ?? response.statusText,
+      message: body.error ?? response.statusText
     });
   }
 

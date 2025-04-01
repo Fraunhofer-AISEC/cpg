@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.types.HasType.TypeObserver
 import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.passes.configuration.PassOrderingHelper
 import de.fraunhofer.aisec.cpg.passes.configuration.RegisterExtraPass
@@ -126,6 +127,8 @@ private constructor(
     val exclusionPatternsByString: List<String>,
     /** A list of exclusion patterns using regular expressions to filter files and directories. */
     val exclusionPatternsByRegex: List<Regex>,
+    /** Whether the type propagation system using [TypeObserver] should be disabled. */
+    val disableTypeObserver: Boolean,
 ) {
     /** This list contains all languages which we want to translate. */
     @JsonIgnore val languages: List<KClass<out Language<*>>>
@@ -268,6 +271,7 @@ private constructor(
             mutableMapOf()
         private val exclusionPatternsByRegex = mutableListOf<Regex>()
         private val exclusionPatternsByString = mutableListOf<String>()
+        private var disableTypeObserver = false
 
         fun symbols(symbols: Map<String, String>): Builder {
             this.symbols = symbols
@@ -559,6 +563,12 @@ private constructor(
             return this
         }
 
+        /** Disables the type propagation system using [TypeObserver]. */
+        fun disableTypeObserver(): Builder {
+            disableTypeObserver = true
+            return this
+        }
+
         /**
          * Register extra passes declared by a frontend with [RegisterExtraPass], but only if
          * [useDefaultPasses] is true (which is set to true by invoking [defaultPasses]).
@@ -697,6 +707,7 @@ private constructor(
                 passConfigurations,
                 exclusionPatternsByString,
                 exclusionPatternsByRegex,
+                disableTypeObserver,
             )
         }
 

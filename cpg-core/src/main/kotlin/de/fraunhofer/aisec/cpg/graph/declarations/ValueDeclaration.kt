@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.NodeEntity
 import org.neo4j.ogm.annotation.Relationship
@@ -42,6 +43,8 @@ import org.neo4j.ogm.annotation.Relationship
 /** A declaration who has a type. */
 @NodeEntity
 abstract class ValueDeclaration : Declaration(), HasType {
+
+    @DoNotPersist override var observerEnabled: Boolean = true
 
     override val typeObservers: MutableSet<HasType.TypeObserver> = identitySetOf()
 
