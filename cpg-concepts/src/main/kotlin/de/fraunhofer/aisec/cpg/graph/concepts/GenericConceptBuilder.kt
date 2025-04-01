@@ -70,7 +70,7 @@ fun MetadataProvider.conceptBuildHelper(
     underlyingNode: Node,
     connectDFGUnderlyingNodeToConcept: Boolean = false,
     connectDFGConceptToUnderlyingNode: Boolean = false,
-) {
+): Concept {
     val constructor: (Node) -> Concept =
         when (name) {
             "de.fraunhofer.aisec.cpg.graph.concepts.logging.Log" -> { node ->
@@ -86,7 +86,7 @@ fun MetadataProvider.conceptBuildHelper(
                 throw IllegalArgumentException("Unknown concept: \"${name}\".")
             }
         }
-    this.newConcept(constructor, underlyingNode).also { concept ->
+    return this.newConcept(constructor, underlyingNode).also { concept ->
         if (connectDFGUnderlyingNodeToConcept) {
             underlyingNode.nextDFG += concept
         }
