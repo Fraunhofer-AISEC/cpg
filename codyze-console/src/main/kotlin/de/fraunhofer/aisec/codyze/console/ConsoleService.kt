@@ -162,37 +162,36 @@ class ConsoleService {
                 .singleOrNull { it.id == request.nodeId }
                 ?: throw IllegalArgumentException("Unique target node not found.")
 
-        val concept =
-            node
-                .conceptBuildHelper(
-                    name = request.conceptName,
-                    underlyingNode = node,
-                    connectDFGUnderlyingNodeToConcept = request.addDFGToConcept,
-                    connectDFGConceptToUnderlyingNode = request.addDFGFromConcept,
-                )
-                .also { newConceptNodes += it }
+        node
+            .conceptBuildHelper(
+                name = request.conceptName,
+                underlyingNode = node,
+                connectDFGUnderlyingNodeToConcept = request.addDFGToConcept,
+                connectDFGConceptToUnderlyingNode = request.addDFGFromConcept,
+            )
+            .also { newConceptNodes += it }
     }
 
     /**
      * Exports all new [Concept] nodes (added via [addConcept] and thus stored in [newConceptNodes])
      * as a YAML string.
      *
-     * TODO: YAML schema? extra fields? restrict to current component?
+     * TODO: YAML schema? extra fields? restrict to current component? Use some YAML export library?
      */
     fun exportNewConcepts(): String {
-        val spacer = "  "
+        val spacer = "  " // 2 spaces for indentation
         var result = "conceptsByLocation:\n"
         newConceptNodes.forEach { concept ->
             result +=
                 "${spacer}- location:\n" +
-                    "${spacer}${spacer}${spacer}${spacer}file: \"${concept.location?.artifactLocation?.uri}\"\n" +
-                    "${spacer}${spacer}${spacer}${spacer}region: \"${concept.location?.region}\"\n" +
-                    "${spacer}${spacer}type: \"${concept.underlyingNode?.javaClass?.name}\"\n" +
-                    "${spacer}${spacer}concept:\n" +
-                    "${spacer}${spacer}${spacer}name: \"${concept.javaClass.name}\"\n" +
-                    "${spacer}${spacer}${spacer}dfg:\n" +
-                    "${spacer}${spacer}${spacer}${spacer}fromThisNodeToConcept: ${concept.nextDFG.contains(concept.underlyingNode)}\n" +
-                    "${spacer}${spacer}${spacer}${spacer}fromConceptToThisNode: ${concept.underlyingNode?.nextDFG?.contains(concept)}\n"
+                    "${spacer}${spacer}file: \"${concept.location?.artifactLocation?.uri}\"\n" +
+                    "${spacer}${spacer}region: \"${concept.location?.region}\"\n" +
+                    "${spacer}type: \"${concept.underlyingNode?.javaClass?.name}\"\n" +
+                    "${spacer}concept:\n" +
+                    "${spacer}${spacer}name: \"${concept.javaClass.name}\"\n" +
+                    "${spacer}${spacer}dfg:\n" +
+                    "${spacer}${spacer}${spacer}fromThisNodeToConcept: ${concept.nextDFG.contains(concept.underlyingNode)}\n" +
+                    "${spacer}${spacer}${spacer}fromConceptToThisNode: ${concept.underlyingNode?.nextDFG?.contains(concept)}\n"
         }
         return result
     }
