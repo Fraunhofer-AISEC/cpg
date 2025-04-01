@@ -65,17 +65,39 @@ inline fun <reified OperationClass : Operation, ConceptClass : Concept> Metadata
         NodeBuilder.log(this)
     }
 
-/** TODO */
+/**
+ * Generates an object of the [Concept] with the FQN [name] and the [Concept.underlyingNode]
+ * [underlyingNode]. The constructor arguments of the respective class have to be provided by the
+ * map [constructorArguments] where the key is the name of the argument and the value is the
+ * argument to pass. [connectDFGUnderlyingNodeToConcept] specifies if the created [Concept] should
+ * be in the [Node.nextDFGEdges] edges of the [underlyingNode]. [connectDFGConceptToUnderlyingNode]
+ * specifies if the created [Concept] should be in the [Node.prevDFGEdges] of the [underlyingNode].
+ *
+ * @param name The fully qualified name of the concept class to be created.
+ * @param underlyingNode The underlying node for which the concept is created.
+ * @param constructorArguments A map of constructor arguments to be passed to the concept class
+ *   (excluding the underlyingNode).
+ * @param connectDFGUnderlyingNodeToConcept If true, the created concept will be added to the next
+ *   DFG edges of the underlying node.
+ * @param connectDFGConceptToUnderlyingNode If true, the created concept will be added to the prev
+ *   DFG edges of the underlying node.
+ * @return The created concept with the specified DFG edges.
+ * @throws IllegalArgumentException If the class with the specified [name] does not exist or has not
+ *   exactly one constructor or if one of the arguments in [constructorArguments] is not a valid
+ *   argument name for this constructor.
+ */
 fun MetadataProvider.conceptBuildHelper(
     name: String,
     underlyingNode: Node,
     constructorArguments: Map<String, Any?> = emptyMap(),
     connectDFGUnderlyingNodeToConcept: Boolean = false,
     connectDFGConceptToUnderlyingNode: Boolean = false,
-) {
+): Concept {
     val conceptClass = Class.forName(name).kotlin
-    val constructor = conceptClass.constructors.singleOrNull()
-    (constructor?.callBy(
+    val constructor =
+        conceptClass.constructors.singleOrNull()
+            ?: throw IllegalArgumentException("No class for $name found")
+    return (constructor.callBy(
             mapOf(
                 (constructor.parameters.singleOrNull { it.name == "underlyingNode" }
                     ?: throw IllegalArgumentException(
@@ -103,5 +125,5 @@ fun MetadataProvider.conceptBuildHelper(
             if (connectDFGConceptToUnderlyingNode) {
                 concept.nextDFG += underlyingNode
             }
-        }
+        } ?: throw IllegalArgumentException("The class $name does not create a Concept.")
 }
