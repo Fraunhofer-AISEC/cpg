@@ -32,6 +32,7 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.graph.concepts.conceptBuildHelper
 import de.fraunhofer.aisec.cpg.helpers.getNodesByRegion
 import de.fraunhofer.aisec.cpg.passes.TranslationResultPass
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteFirst
@@ -88,7 +89,13 @@ class ConceptSummaries(ctx: TranslationContext) : TranslationResultPass(ctx) {
                                 )
                             }
                         }
-                        .forEach { underlyingNode -> logger.debug("Found node: $underlyingNode") }
+                        .forEach { underlyingNode ->
+                            logger.debug("Found node: $underlyingNode")
+                            underlyingNode.conceptBuildHelper(
+                                name = entry.concept.name,
+                                underlyingNode = underlyingNode,
+                            )
+                        }
             }
         }
     }

@@ -4,15 +4,15 @@ conceptsByLocation:
       region: "1:6-1:30"
     type: "de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression"
     concept:
-      name: "foo"
-      fields:
+      name: "de.fraunhofer.aisec.cpg.graph.concepts.file.File"
+      fields: # TODO
           - name: "bar"
             type: "string"
             description: "A string field"
           - name: "baz"
             type: "int"
             description: "An integer field"
-      dfg:
+      dfg: # TODO
         fromThisNodeToConcept: false
         fromConceptToThisNode: true
   - location:
