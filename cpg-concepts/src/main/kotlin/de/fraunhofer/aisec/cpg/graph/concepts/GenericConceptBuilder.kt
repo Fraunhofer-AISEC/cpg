@@ -25,18 +25,14 @@
  */
 package de.fraunhofer.aisec.cpg.graph.concepts
 
-import de.fraunhofer.aisec.cpg.graph.MetadataProvider
-import de.fraunhofer.aisec.cpg.graph.Name
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder
-import de.fraunhofer.aisec.cpg.graph.codeAndLocationFrom
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.edges.flows.insertNodeAfterwardInEOGPath
 
 /**
  * This function creates a new [Concept] node based on [ConceptClass]. It is neither connected by
  * the EOG nor the DFG.
  */
-internal inline fun <reified ConceptClass : Concept> MetadataProvider.newConcept(
+inline fun <reified ConceptClass : Concept> MetadataProvider.newConcept(
     constructor: (underlyingNode: Node) -> (ConceptClass),
     underlyingNode: Node,
 ): ConceptClass =
@@ -67,3 +63,23 @@ inline fun <reified OperationClass : Operation, ConceptClass : Concept> Metadata
         underlyingNode.insertNodeAfterwardInEOGPath(this)
         NodeBuilder.log(this)
     }
+
+/** TODO */
+fun MetadataProvider.conceptBuildHelper(name: String, underlyingNode: Node): Concept {
+    val constructor: (Node) -> Concept =
+        when (name) {
+            "de.fraunhofer.aisec.cpg.graph.concepts.logging.Log" -> { node ->
+                    de.fraunhofer.aisec.cpg.graph.concepts.logging.Log(node)
+                }
+            "de.fraunhofer.aisec.cpg.graph.concepts.file.File" -> { node ->
+                    de.fraunhofer.aisec.cpg.graph.concepts.file.File(node, "filename" /* TODO */)
+                }
+            "de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.Secret" -> { node ->
+                    de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.Secret(node)
+                }
+            else -> {
+                throw IllegalArgumentException("Unknown concept: \"${name}\".")
+            }
+        }
+    return newConcept(constructor, underlyingNode)
+}
