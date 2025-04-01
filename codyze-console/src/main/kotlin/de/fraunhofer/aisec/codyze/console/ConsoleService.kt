@@ -180,18 +180,19 @@ class ConsoleService {
      * TODO: YAML schema? extra fields? restrict to current component?
      */
     fun exportNewConcepts(): String {
+        val spacer = "  "
         var result = "conceptsByLocation:\n"
         newConceptNodes.forEach { concept ->
             result +=
-                "\t- location:\n" +
-                    "\t\tfile: \"${concept.location?.artifactLocation?.uri}\"\n" +
-                    "\t\tregion: \"${concept.location?.region}\"\n" +
-                    "\ttype: \"${concept.underlyingNode?.javaClass?.name}\"\n" +
-                    "\tconcept:\n" +
-                    "\t\tname: \"${concept.javaClass.name}\"\n" +
-                    "\t\tdfg:\n" +
-                    "\t\t\tfromThisNodeToConcept: ${concept.nextDFG.contains(concept.underlyingNode)}\n" +
-                    "\t\t\tfromConceptToThisNode: ${concept.underlyingNode?.nextDFG?.contains(concept)}\n"
+                "${spacer}- location:\n" +
+                    "${spacer}${spacer}${spacer}${spacer}file: \"${concept.location?.artifactLocation?.uri}\"\n" +
+                    "${spacer}${spacer}${spacer}${spacer}region: \"${concept.location?.region}\"\n" +
+                    "${spacer}${spacer}type: \"${concept.underlyingNode?.javaClass?.name}\"\n" +
+                    "${spacer}${spacer}concept:\n" +
+                    "${spacer}${spacer}${spacer}name: \"${concept.javaClass.name}\"\n" +
+                    "${spacer}${spacer}${spacer}dfg:\n" +
+                    "${spacer}${spacer}${spacer}${spacer}fromThisNodeToConcept: ${concept.nextDFG.contains(concept.underlyingNode)}\n" +
+                    "${spacer}${spacer}${spacer}${spacer}fromConceptToThisNode: ${concept.underlyingNode?.nextDFG?.contains(concept)}\n"
         }
         return result
     }
