@@ -105,6 +105,12 @@ class ConceptSummaries(ctx: TranslationContext) : TranslationResultPass(ctx) {
                             underlyingNode.conceptBuildHelper(
                                 name = entry.concept.name,
                                 underlyingNode = underlyingNode,
+                                connectDFGUnderlyingNodeToConcept =
+                                    entry.concept.dfg?.fromThisNodeToConcept
+                                        ?: false, // TODO: this `?: false` is not nice
+                                connectDFGConceptToUnderlyingNode =
+                                    entry.concept.dfg?.fromConceptToThisNode
+                                        ?: false, // TODO: this `?: false` is not nice
                             )
                         }
             }

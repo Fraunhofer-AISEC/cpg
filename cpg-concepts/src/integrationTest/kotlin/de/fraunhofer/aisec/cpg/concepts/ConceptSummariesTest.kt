@@ -26,14 +26,18 @@
 package de.fraunhofer.aisec.cpg.concepts
 
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
+import de.fraunhofer.aisec.cpg.graph.calls
 import de.fraunhofer.aisec.cpg.graph.conceptNodes
 import de.fraunhofer.aisec.cpg.graph.concepts.file.File
+import de.fraunhofer.aisec.cpg.graph.invoke
 import de.fraunhofer.aisec.cpg.passes.concepts.ConceptSummaries
 import de.fraunhofer.aisec.cpg.test.BaseTest
 import de.fraunhofer.aisec.cpg.test.analyze
 import java.nio.file.Path
 import kotlin.test.Test
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 class ConceptSummariesTest : BaseTest() {
     @Test
@@ -51,7 +55,20 @@ class ConceptSummariesTest : BaseTest() {
                 it.symbols(mapOf("PYTHON_PLATFORM" to "linux"))
             }
         assertNotNull(result)
+
         val fileConcept = result.conceptNodes.singleOrNull { it is File }
         assertNotNull(fileConcept)
+
+        val openCall = result.calls("open").singleOrNull()
+        assertNotNull(openCall)
+
+        assertTrue(
+            fileConcept.nextDFG.contains(openCall),
+            "NextDFG: `File` concept should contain `open` call.",
+        )
+        assertFalse(
+            openCall.nextDFG.contains(fileConcept),
+            "NextDFG: `open` call should not contain `File` concept.",
+        )
     }
 }
