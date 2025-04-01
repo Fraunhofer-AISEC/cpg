@@ -53,8 +53,8 @@ import de.fraunhofer.aisec.cpg.test.analyze
 import java.io.File
 import kotlin.test.*
 
+@Ignore
 class MemoryTest {
-    @Ignore
     @Test
     fun testMemoryDeleteFunction() {
         val topLevel = File("src/integrationTest/resources/python")
