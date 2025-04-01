@@ -65,7 +65,12 @@ inline fun <reified OperationClass : Operation, ConceptClass : Concept> Metadata
     }
 
 /** TODO */
-fun MetadataProvider.conceptBuildHelper(name: String, underlyingNode: Node) {
+fun MetadataProvider.conceptBuildHelper(
+    name: String,
+    underlyingNode: Node,
+    connectDFGUnderlyingNodeToConcept: Boolean = false,
+    connectDFGConceptToUnderlyingNode: Boolean = false,
+) {
     val constructor: (Node) -> Concept =
         when (name) {
             "de.fraunhofer.aisec.cpg.graph.concepts.logging.Log" -> { node ->
@@ -81,5 +86,12 @@ fun MetadataProvider.conceptBuildHelper(name: String, underlyingNode: Node) {
                 throw IllegalArgumentException("Unknown concept: \"${name}\".")
             }
         }
-    this.newConcept(constructor, underlyingNode)
+    this.newConcept(constructor, underlyingNode).also { concept ->
+        if (connectDFGUnderlyingNodeToConcept) {
+            underlyingNode.nextDFG += concept
+        }
+        if (connectDFGConceptToUnderlyingNode) {
+            concept.nextDFG += underlyingNode
+        }
+    }
 }
