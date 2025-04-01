@@ -28,8 +28,7 @@ package de.fraunhofer.aisec.codyze.console
 import de.fraunhofer.aisec.codyze.AnalysisProject
 import de.fraunhofer.aisec.codyze.AnalysisResult
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
-import de.fraunhofer.aisec.cpg.graph.Name
-import de.fraunhofer.aisec.cpg.graph.concepts.newConcept
+import de.fraunhofer.aisec.cpg.graph.concepts.conceptBuildHelper
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.passes.concepts.config.python.PythonStdLibConfigurationPass
@@ -161,32 +160,7 @@ class ConsoleService {
                 .singleOrNull { it.id == request.nodeId }
                 ?: throw IllegalArgumentException("Unique target node not found.")
 
-        val concept =
-            node.newConcept(
-                constructor =
-                    when (request.conceptName) {
-                        "de.fraunhofer.aisec.cpg.graph.concepts.logging.Log" -> { node ->
-                                de.fraunhofer.aisec.cpg.graph.concepts.logging.Log(node).apply {
-                                    name = Name("Manually added Log" /* TODO */)
-                                }
-                            }
-                        "de.fraunhofer.aisec.cpg.graph.concepts.file.File" -> { node ->
-                                de.fraunhofer.aisec.cpg.graph.concepts.file.File(
-                                    node,
-                                    "filename", /* TODO */
-                                )
-                            }
-                        "de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.Secret" -> { node ->
-                                de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.Secret(node)
-                            }
-                        /* TODO more concepts... */
-                        else ->
-                            throw IllegalArgumentException(
-                                "Unknown concept: \"${request.conceptName}\"."
-                            )
-                    },
-                underlyingNode = node,
-            )
+        val concept = node.conceptBuildHelper(request.conceptName, underlyingNode = node)
 
         // Handle DFG edges if requested
         if (request.addDFGToConcept) {

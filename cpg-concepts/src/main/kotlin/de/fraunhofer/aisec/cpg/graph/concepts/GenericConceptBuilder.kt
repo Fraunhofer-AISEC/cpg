@@ -63,3 +63,23 @@ inline fun <reified OperationClass : Operation, ConceptClass : Concept> Metadata
         underlyingNode.insertNodeAfterwardInEOGPath(this)
         NodeBuilder.log(this)
     }
+
+/** TODO */
+fun MetadataProvider.conceptBuildHelper(name: String, underlyingNode: Node): Concept {
+    val constructor: (Node) -> Concept =
+        when (name) {
+            "de.fraunhofer.aisec.cpg.graph.concepts.logging.Log" -> { node ->
+                    de.fraunhofer.aisec.cpg.graph.concepts.logging.Log(node)
+                }
+            "de.fraunhofer.aisec.cpg.graph.concepts.file.File" -> { node ->
+                    de.fraunhofer.aisec.cpg.graph.concepts.file.File(node, "filename" /* TODO */)
+                }
+            "de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.Secret" -> { node ->
+                    de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.Secret(node)
+                }
+            else -> {
+                throw IllegalArgumentException("Unknown concept: \"${name}\".")
+            }
+        }
+    return newConcept(constructor, underlyingNode)
+}
