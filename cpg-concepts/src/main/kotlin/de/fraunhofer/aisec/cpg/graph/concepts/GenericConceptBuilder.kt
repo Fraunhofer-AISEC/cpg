@@ -37,6 +37,7 @@ inline fun <reified ConceptClass : Concept> MetadataProvider.newConcept(
     underlyingNode: Node,
 ): ConceptClass =
     constructor(underlyingNode).apply {
+        // Note: Update the conceptBuildHelper if you change this.
         this.codeAndLocationFrom(underlyingNode)
         this.name = Name("${ConceptClass::class.simpleName}", underlyingNode.name)
         NodeBuilder.log(this)
@@ -73,16 +74,25 @@ fun MetadataProvider.conceptBuildHelper(
     connectDFGConceptToUnderlyingNode: Boolean = false,
 ) {
     val conceptClass = Class.forName(name).kotlin
-    val constructorF = conceptClass.constructors.first()
-    (constructorF.callBy(
+    val constructor = conceptClass.constructors.singleOrNull()
+    (constructor?.callBy(
             mapOf(
-                constructorF.parameters.single { it.name == "underlyingNode" } to underlyingNode,
+                (constructor.parameters.singleOrNull { it.name == "underlyingNode" }
+                    ?: throw IllegalArgumentException(
+                        "There is no argument with name \"underlyingNode\" which is required for the constructor of concept ${conceptClass.simpleName}"
+                    )) to underlyingNode,
                 *constructorArguments
-                    .map { (k, v) -> constructorF.parameters.single { it.name == k } to v }
+                    .map { (key, value) ->
+                        (constructor.parameters.singleOrNull { it.name == key }
+                            ?: throw IllegalArgumentException(
+                                "There is no argument with name \"key\" which is specified to generate the concept ${conceptClass.simpleName}"
+                            )) to value
+                    }
                     .toTypedArray(),
             )
-        ) as Concept)
-        .also { concept ->
+        ) as? Concept)
+        ?.also { concept ->
+            // Note: Update "newConcept" if you change this.
             concept.codeAndLocationFrom(underlyingNode)
             concept.name = Name("${conceptClass.simpleName}", underlyingNode.name)
             NodeBuilder.log(concept)
