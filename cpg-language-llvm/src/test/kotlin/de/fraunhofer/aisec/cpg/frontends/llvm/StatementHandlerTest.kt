@@ -41,6 +41,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CastExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConditionalExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.PointerDereference
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.variables
@@ -806,8 +807,7 @@ class StatementHandlerTest {
         assertEquals(1, replacementNand.rhs.size)
         assertEquals("=", replacementNand.operatorCode)
         val replacementNandLhs = replacementNand.lhs.first()
-        assertIs<UnaryOperator>(replacementNandLhs)
-        assertEquals("*", replacementNandLhs.operatorCode)
+        assertIs<PointerDereference>(replacementNandLhs)
         assertLocalName("ptr", replacementNandLhs.input)
         // Check that the rhs is equal to ~(*ptr | 1)
         val unaryOp = replacementNand.rhs.first()
@@ -817,8 +817,7 @@ class StatementHandlerTest {
         assertIs<BinaryOperator>(binOp)
         assertEquals("|", binOp.operatorCode)
         val binOpLhs = binOp.lhs
-        assertIs<UnaryOperator>(binOpLhs)
-        assertEquals("*", binOpLhs.operatorCode)
+        assertIs<PointerDereference>(binOpLhs)
         assertLocalName("ptr", binOpLhs.input)
         assertLiteralValue(1L, binOp.rhs)
 
@@ -852,8 +851,7 @@ class StatementHandlerTest {
         assertLocalName(variableName, declaration)
         assertLocalName("i32", declaration.type)
         val initializer = declaration.initializer
-        assertIs<UnaryOperator>(initializer)
-        assertEquals("*", initializer.operatorCode)
+        assertIs<PointerDereference>(initializer)
         assertLocalName("ptr", initializer.input)
 
         // Check that the replacement equals *ptr = (*ptr <cmp> 1) ? *ptr : 1
@@ -863,8 +861,7 @@ class StatementHandlerTest {
         assertEquals(1, replacement.rhs.size)
         assertEquals("=", replacement.operatorCode)
         val replacementLhs = replacement.lhs.first()
-        assertIs<UnaryOperator>(replacementLhs)
-        assertEquals("*", replacementLhs.operatorCode)
+        assertIs<PointerDereference>(replacementLhs)
         assertLocalName("ptr", replacementLhs.input)
 
         // Check that the rhs is equal to (*ptr <cmp> 1) ? *ptr : 1
@@ -879,8 +876,7 @@ class StatementHandlerTest {
             assertEquals("ui32", cmpLhs.castType.typeName)
             cmpLhs = cmpLhs.expression
         }
-        assertIs<UnaryOperator>(cmpLhs)
-        assertEquals("*", cmpLhs.operatorCode)
+        assertIs<PointerDereference>(cmpLhs)
         assertLocalName("ptr", cmpLhs.input)
         var cmpRhs = condition.rhs
         if (requiresUintCast) {
@@ -890,8 +886,7 @@ class StatementHandlerTest {
         }
         assertLiteralValue(1L, cmpRhs)
         val thenExpression = conditionalExpression.thenExpression
-        assertIs<UnaryOperator>(thenExpression)
-        assertEquals("*", thenExpression.operatorCode)
+        assertIs<PointerDereference>(thenExpression)
         assertLocalName("ptr", thenExpression.input)
         assertLiteralValue(1L, conditionalExpression.elseExpression)
     }
@@ -907,8 +902,7 @@ class StatementHandlerTest {
         assertLocalName(variableName, declaration)
         assertLocalName("i32", declaration.type)
         val initializer = declaration.initializer
-        assertIs<UnaryOperator>(initializer)
-        assertEquals("*", initializer.operatorCode)
+        assertIs<PointerDereference>(initializer)
         assertLocalName("ptr", initializer.input)
 
         // Check that the replacement equals *ptr = *ptr <operator> 1
@@ -919,16 +913,14 @@ class StatementHandlerTest {
         assertEquals(1, replacement.rhs.size)
         assertEquals("=", replacement.operatorCode)
         val replacementLhs = replacement.lhs.first()
-        assertIs<UnaryOperator>(replacementLhs)
-        assertEquals("*", replacementLhs.operatorCode)
+        assertIs<PointerDereference>(replacementLhs)
         assertLocalName("ptr", replacementLhs.input)
         // Check that the rhs is equal to *ptr + 1
         val binOp = replacement.rhs.first()
         assertIs<BinaryOperator>(binOp)
         assertEquals(operator, binOp.operatorCode)
         val binOpLhs = binOp.lhs
-        assertIs<UnaryOperator>(binOpLhs)
-        assertEquals("*", binOpLhs.operatorCode)
+        assertIs<PointerDereference>(binOpLhs)
         assertLocalName("ptr", binOpLhs.input)
         assertLiteralValue(1L, binOp.rhs)
     }

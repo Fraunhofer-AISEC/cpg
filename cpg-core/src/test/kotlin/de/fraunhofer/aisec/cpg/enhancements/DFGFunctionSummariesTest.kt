@@ -239,7 +239,8 @@ class DFGFunctionSummariesTest {
         val memcpy = dfgTest.functions["memcpy"]
         assertNotNull(memcpy)
         val param0 = memcpy.parameters[0]
-        assertNotNull(param0.memoryValue)
+        val param0PMV = param0.fullMemoryValues.singleOrNull()
+        assertNotNull(param0PMV)
         val param1 = memcpy.parameters[1]
 
         val call = main.calls["memcpy"]
@@ -264,7 +265,7 @@ class DFGFunctionSummariesTest {
             setOf(call),
             ((nextDfg as? ContextSensitiveDataflow)?.callingContext as? CallingContextIn)?.calls,
         )
-        assertEquals(param0.memoryValue!!, nextDfg.end)
+        assertEquals(param0.fullMemoryValues.singleOrNull(), nextDfg.end)
 
         val variableA = main.variables["a"]
         assertNotNull(variableA)
@@ -284,15 +285,7 @@ class DFGFunctionSummariesTest {
         val literal5 = main.literals.first { it.value?.equals(5) == true }
         assertNotNull(literal5)
 
-        assertEquals(mutableSetOf<Node>(literal5), returnA.prevDFG)
-
-        // Check that also the CallingContext property is set correctly
-        val prevDfgOfReturnA =
-            returnA.prevDFGEdges.singleOrNull {
-                ((it as? ContextSensitiveDataflow)?.callingContext as? CallingContextOut)?.calls ==
-                    setOf(call)
-            }
-        assertEquals(literal5, prevDfgOfReturnA?.start)
+        assertEquals(mutableSetOf<Node>(literal5), returnA.memoryValues)
     }
 
     @Test

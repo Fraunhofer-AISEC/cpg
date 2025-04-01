@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
 import de.fraunhofer.aisec.cpg.graph.edges.flows.FieldDataflowGranularity
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ParameterMemoryValue
+import de.fraunhofer.aisec.cpg.graph.edges.flows.PartialDataflowGranularity
 import de.fraunhofer.aisec.cpg.test.*
 import java.io.File
 import kotlin.test.Test
@@ -61,12 +61,12 @@ class CDataflowTest {
         // .memoryValue.memoryValue
         val startVariable =
             startFunction.parameters["ctx"]
-                ?.memoryValues
-                ?.filterIsInstance<ParameterMemoryValue>()
-                ?.singleOrNull()
-                ?.memoryValues
-                ?.filterIsInstance<ParameterMemoryValue>()
-                ?.singleOrNull()
+                ?.memoryValueEdges
+                ?.singleOrNull {
+                    (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget ==
+                        "derefvalue"
+                }
+                ?.start
         assertNotNull(startVariable)
 
         // In this example we want to have the list of all fields of "ctx" that

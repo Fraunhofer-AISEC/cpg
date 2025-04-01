@@ -1705,8 +1705,9 @@ fun PointsToStateElement.getLastWrites(
     }
     return when (node) {
         is PointerReference -> {
+            // TODO: Handle other input types (e.g. SubscriptExpression, MemberExpression)
             // For pointerReferences, we take the memoryAddress of the refersTo
-            return (node.input as Reference).refersTo?.memoryAddresses?.mapTo(
+            return (node.input as? Reference)?.refersTo?.memoryAddresses?.mapTo(
                 EqualLinkedHashSet()
             ) {
                 Pair<Node, EqualLinkedHashSet<Any>>(it, equalLinkedHashSetOf())
