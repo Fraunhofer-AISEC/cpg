@@ -393,15 +393,15 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 stateEntries
                     // See if we can find something that is different from the initial value
                     .filterTo(identitySetOf()) {
+                        // Filter the PMVs from this parameter
                         !(it.value is ParameterMemoryValue &&
                             it.value.name.localName.contains("derefvalue") &&
                             it.value.name.parent == param.name)
+                        // Filter the unknownMemoryValues that weren't written to
+                        && !(it.value is UnknownMemoryValue && it.lastWrites.isEmpty())
                     }
                     // If so, store the information for the parameter in the FunctionSummary
                     .forEach { (value, shortFS, subAccessName, lastWrites) ->
-                        // TODO: Also extract the last write. To be able to do this for fields, we
-                        //   need the info here on which address we are working, which we currently
-                        //   lost by calling fetchElementsfromDeclarationsState.
                         // Extract the value depth from the value's localName
                         val srcValueDepth = stringToDepth(value.name.localName)
                         // Store the information in the functionSummary

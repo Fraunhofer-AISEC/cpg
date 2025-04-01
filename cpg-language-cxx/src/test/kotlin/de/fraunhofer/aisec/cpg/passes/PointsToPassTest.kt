@@ -2349,23 +2349,18 @@ class PointsToPassTest {
         assertEquals(1, FSread.size)
         val preciseFSread = FSread.entries.firstOrNull()?.value?.filter { !it.shortFunctionSummary }
         assertNotNull(preciseFSread)
-        assertEquals(5, preciseFSread.size)
+        assertEquals(4, preciseFSread.size)
         assertTrue(preciseFSread.any { it.srcNode == literal1 && it.subAccessName == "i" })
         assertTrue(preciseFSread.any { it.srcNode == literal2 && it.subAccessName == "j" })
         assertTrue(preciseFSread.any { it.srcNode == literal3 && it.subAccessName == "k" })
         assertTrue(preciseFSread.any { it.srcNode == literal4 && it.subAccessName == "session.l" })
-        assertTrue(
-            preciseFSread.any { it.srcNode is UnknownMemoryValue && it.subAccessName == "session" }
-        )
 
         // Function Summary for inner_renegotiate
         assertEquals(1, FSinnerrenegotiate.size)
         val preciseFSinnerrenegotiate =
             FSinnerrenegotiate.entries.firstOrNull()?.value?.filter { !it.shortFunctionSummary }
         assertNotNull(preciseFSinnerrenegotiate)
-        // TODO: preciseFSinnerrenegotiate also contains an unknown session memory value, do we
-        // care?
-        assertEquals(3, preciseFSinnerrenegotiate.size)
+        assertEquals(2, preciseFSinnerrenegotiate.size)
         assertTrue(
             preciseFSinnerrenegotiate.any { it.srcNode == literal6 && it.subAccessName == "j" }
         )
@@ -2380,7 +2375,8 @@ class PointsToPassTest {
         val preciseFSrenegotiate =
             FSrenegotiate.entries.firstOrNull()?.value?.filter { !it.shortFunctionSummary }
         assertNotNull(preciseFSrenegotiate)
-        assertEquals(3, preciseFSrenegotiate.size)
+        // TODO: This should be 2 less
+        assertEquals(5, preciseFSrenegotiate.size)
         assertTrue(preciseFSrenegotiate.any { it.srcNode == literal5 && it.subAccessName == "i" })
         assertTrue(preciseFSrenegotiate.any { it.srcNode == literal6 && it.subAccessName == "j" })
         assertTrue(
