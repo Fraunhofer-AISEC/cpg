@@ -37,6 +37,7 @@ inline fun <reified ConceptClass : Concept> MetadataProvider.newConcept(
     underlyingNode: Node,
 ): ConceptClass =
     constructor(underlyingNode).apply {
+        // Note: Update the conceptBuildHelper if you change this.
         this.codeAndLocationFrom(underlyingNode)
         this.name = Name("${ConceptClass::class.simpleName}", underlyingNode.name)
         NodeBuilder.log(this)
@@ -68,30 +69,39 @@ inline fun <reified OperationClass : Operation, ConceptClass : Concept> Metadata
 fun MetadataProvider.conceptBuildHelper(
     name: String,
     underlyingNode: Node,
+    constructorArguments: Map<String, Any?> = emptyMap(),
     connectDFGUnderlyingNodeToConcept: Boolean = false,
     connectDFGConceptToUnderlyingNode: Boolean = false,
-): Concept {
-    val constructor: (Node) -> Concept =
-        when (name) {
-            "de.fraunhofer.aisec.cpg.graph.concepts.logging.Log" -> { node ->
-                    de.fraunhofer.aisec.cpg.graph.concepts.logging.Log(node)
-                }
-            "de.fraunhofer.aisec.cpg.graph.concepts.file.File" -> { node ->
-                    de.fraunhofer.aisec.cpg.graph.concepts.file.File(node, "filename" /* TODO */)
-                }
-            "de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.Secret" -> { node ->
-                    de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.Secret(node)
-                }
-            else -> {
-                throw IllegalArgumentException("Unknown concept: \"${name}\".")
+) {
+    val conceptClass = Class.forName(name).kotlin
+    val constructor = conceptClass.constructors.singleOrNull()
+    (constructor?.callBy(
+            mapOf(
+                (constructor.parameters.singleOrNull { it.name == "underlyingNode" }
+                    ?: throw IllegalArgumentException(
+                        "There is no argument with name \"underlyingNode\" which is required for the constructor of concept ${conceptClass.simpleName}"
+                    )) to underlyingNode,
+                *constructorArguments
+                    .map { (key, value) ->
+                        (constructor.parameters.singleOrNull { it.name == key }
+                            ?: throw IllegalArgumentException(
+                                "There is no argument with name \"key\" which is specified to generate the concept ${conceptClass.simpleName}"
+                            )) to value
+                    }
+                    .toTypedArray(),
+            )
+        ) as? Concept)
+        ?.also { concept ->
+            // Note: Update "newConcept" if you change this.
+            concept.codeAndLocationFrom(underlyingNode)
+            concept.name = Name("${conceptClass.simpleName}", underlyingNode.name)
+            NodeBuilder.log(concept)
+
+            if (connectDFGUnderlyingNodeToConcept) {
+                underlyingNode.nextDFG += concept
+            }
+            if (connectDFGConceptToUnderlyingNode) {
+                concept.nextDFG += underlyingNode
             }
         }
-    return this.newConcept(constructor, underlyingNode).also { concept ->
-        if (connectDFGUnderlyingNodeToConcept) {
-            underlyingNode.nextDFG += concept
-        }
-        if (connectDFGConceptToUnderlyingNode) {
-            concept.nextDFG += underlyingNode
-        }
-    }
 }
