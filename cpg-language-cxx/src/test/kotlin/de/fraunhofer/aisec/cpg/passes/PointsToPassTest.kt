@@ -902,20 +902,22 @@ class PointsToPassTest {
         // memcpy PMVs
         val memcpySrcDeref =
             memcpyFD.parameters[1]
-                .memoryValues
-                .filterIsInstance<ParameterMemoryValue>()
-                .singleOrNull()
-                ?.memoryValues
-                ?.singleOrNull { it.name.localName == "derefvalue" }
+                .memoryValueEdges
+                .singleOrNull {
+                    (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget ==
+                        "derefvalue"
+                }
+                ?.start
         assertNotNull(memcpySrcDeref)
 
         val memcpyDstDeref =
             memcpyFD.parameters[0]
-                .memoryValues
-                .filterIsInstance<ParameterMemoryValue>()
-                .singleOrNull()
-                ?.memoryValues
-                ?.singleOrNull { it.name.localName == "derefvalue" }
+                .memoryValueEdges
+                .singleOrNull {
+                    (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget ==
+                        "derefvalue"
+                }
+                ?.start
         assertNotNull(memcpyDstDeref)
 
         // DFGs for the memcpys
@@ -923,7 +925,7 @@ class PointsToPassTest {
         for (i in 0..2) {
             assertEquals(
                 memcpyFD.parameters[i]
-                    .memoryValues
+                    .fullMemoryValues
                     .filterIsInstance<ParameterMemoryValue>()
                     .singleOrNull(),
                 ceLine112.arguments[i].nextDFG.singleOrNull(),
@@ -1615,13 +1617,14 @@ class PointsToPassTest {
         )
         assertEquals(
             memsetFD.parameters[0]
-                .memoryValues
-                .filterIsInstance<ParameterMemoryValue>()
-                .singleOrNull()
-                ?.memoryValues
-                ?.singleOrNull { it.name.localName == "derefvalue" },
+                .memoryValueEdges
+                .singleOrNull {
+                    (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget ==
+                        "derefvalue"
+                }
+                ?.start,
             memsetFD.parameters[1]
-                .memoryValues
+                .fullMemoryValues
                 .filterIsInstance<ParameterMemoryValue>()
                 .singleOrNull()
                 ?.nextDFG
@@ -1655,11 +1658,12 @@ class PointsToPassTest {
         assertEquals(2, local28DerefLine179.prevFullDFG.size)
         assertEquals(
             memsetFD.parameters[0]
-                .memoryValues
-                .filterIsInstance<ParameterMemoryValue>()
-                .singleOrNull()
-                ?.memoryValues
-                ?.singleOrNull { it.name.localName == "derefvalue" },
+                .memoryValueEdges
+                .singleOrNull {
+                    (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget ==
+                        "derefvalue"
+                }
+                ?.start,
             local28DerefLine179.prevDFGEdges
                 .singleOrNull {
                     it is ContextSensitiveDataflow && it.callingContext.calls == setOf(ceLine177)
@@ -1838,11 +1842,12 @@ class PointsToPassTest {
             ceLine183.invokes
                 .singleOrNull()
                 .parameters[0]
-                .memoryValues
-                .filterIsInstance<ParameterMemoryValue>()
-                .singleOrNull()
-                ?.memoryValues
-                ?.singleOrNull { it.name.localName == "derefvalue" },
+                .memoryValueEdges
+                .singleOrNull {
+                    (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget ==
+                        "derefvalue"
+                }
+                ?.start,
             local18DerefLine190.prevDFGEdges
                 .singleOrNull {
                     it.granularity !is PointerDataflowGranularity &&
@@ -1895,11 +1900,12 @@ class PointsToPassTest {
             ceLine183.invokes
                 .singleOrNull()
                 .parameters[0]
-                .memoryValues
-                .filterIsInstance<ParameterMemoryValue>()
-                .singleOrNull()
-                ?.memoryValues
-                ?.singleOrNull { it.name.localName == "derefvalue" },
+                .memoryValueEdges
+                .singleOrNull {
+                    (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget ==
+                        "derefvalue"
+                }
+                ?.start,
             param1DerefDerefLine190.prevDFGEdges
                 .singleOrNull {
                     it is ContextSensitiveDataflow && it.callingContext.calls == setOf(ceLine183)
@@ -2604,7 +2610,7 @@ class PointsToPassTest {
                         it !is PointerReference &&
                         it.name.localName == "key"
                 }
-                .flatMap { it.memoryValues }
+                .flatMap { it.fullMemoryValues }
                 .toIdentitySet()
         assertEquals(
             1,
@@ -2762,15 +2768,14 @@ class PointsToPassTest {
         assertNotNull(incFD)
 
         // ParameterMemoryValues
-        // TODO: Any better way to fetch the param's derefvalue?
         val incpDerefValue =
-            (incpFD.parameters
-                    .first()
-                    .memoryValues
-                    .filterIsInstance<ParameterMemoryValue>()
-                    .singleOrNull())
-                ?.memoryValues
-                ?.firstOrNull { it is ParameterMemoryValue && it.name.localName == "derefvalue" }
+            incpFD.parameters[0]
+                .memoryValueEdges
+                .singleOrNull {
+                    (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget ==
+                        "derefvalue"
+                }
+                ?.start
         assertNotNull(incpDerefValue)
 
         // Literals
@@ -2792,7 +2797,7 @@ class PointsToPassTest {
         assertEquals(
             incFD.parameters
                 .first()
-                .memoryValues
+                .fullMemoryValues
                 .filterIsInstance<ParameterMemoryValue>()
                 .singleOrNull(),
             iArgLine380.nextDFGEdges.first().end as? ParameterMemoryValue,
@@ -2814,7 +2819,7 @@ class PointsToPassTest {
                 .calls,
         )
 
-        assertEquals(binOpLine207, iRefLeftLine380.memoryValues.singleOrNull())
+        assertEquals(binOpLine207, iRefLeftLine380.fullMemoryValues.singleOrNull())
         // The callexpression flows to the lhs
         assertEquals(1, ceLine380.nextDFG.size)
         assertEquals(iRefLeftLine380, ceLine380.nextDFG.singleOrNull())
@@ -2824,7 +2829,7 @@ class PointsToPassTest {
         assertEquals(
             incFD.parameters
                 .first()
-                .memoryValues
+                .fullMemoryValues
                 .filterIsInstance<ParameterMemoryValue>()
                 .singleOrNull(),
             iArgLine384.nextDFGEdges.first().end as? ParameterMemoryValue,
@@ -2846,7 +2851,7 @@ class PointsToPassTest {
                 .calls,
         )
 
-        assertEquals(binOpLine207, iRefLeftLine384.memoryValues.singleOrNull())
+        assertEquals(binOpLine207, iRefLeftLine384.fullMemoryValues.singleOrNull())
         // The callexpression flows to the lhs
         assertEquals(1, ceLine384.nextDFG.size)
         assertEquals(iRefLeftLine384, ceLine384.nextDFG.singleOrNull())
@@ -2862,9 +2867,8 @@ class PointsToPassTest {
                 .calls,
         )
         assertEquals(
-            incpFD.parameters
-                .first()
-                .memoryValues
+            incpFD.parameters[0]
+                .fullMemoryValues
                 .filterIsInstance<ParameterMemoryValue>()
                 .singleOrNull(),
             pArgLine386.nextDFGEdges.singleOrNull { !it.functionSummary }?.end
@@ -2917,7 +2921,7 @@ class PointsToPassTest {
         assertEquals(1, jLine394.prevDFGEdges.size)
         assertTrue(jLine394.prevDFGEdges.first() !is ContextSensitiveDataflow)
         assertEquals(jLine392, jLine394.prevDFG.singleOrNull())
-        assertEquals(literal2, jLine394.memoryValues.singleOrNull())
+        assertEquals(literal2, jLine394.fullMemoryValues.singleOrNull())
 
         assertEquals(2, pDerefLine394.prevDFGEdges.size)
         assertEquals(
@@ -2932,7 +2936,7 @@ class PointsToPassTest {
                 .singleOrNull { it.granularity !is PartialDataflowGranularity<*> }
                 ?.start,
         )
-        assertEquals(literal2, pDerefLine394.memoryValues.singleOrNull())
+        assertEquals(literal2, pDerefLine394.fullMemoryValues.singleOrNull())
     }
 
     @Test
@@ -2970,7 +2974,7 @@ class PointsToPassTest {
             tu.allChildren<UnaryOperator> { it.location?.region?.startLine == 407 }.singleOrNull()
         assertNotNull(uOPLine407)
 
-        assertEquals(setOf<Node>(uOPLine407), uOPLine407.memoryValues)
+        assertEquals(setOf<Node>(uOPLine407), uOPLine407.fullMemoryValues)
 
         // Literals
         val literal1 =

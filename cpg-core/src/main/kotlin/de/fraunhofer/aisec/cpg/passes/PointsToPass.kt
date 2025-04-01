@@ -258,7 +258,15 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
             // Then the memoryValues
             if (key is HasMemoryValue && value.second.isNotEmpty()) {
-                value.second.forEach { v -> key.memoryValueEdges += Dataflow(v.first, key) }
+                value.second.forEach { (v, properties) ->
+                    var granularity = default()
+                    properties.forEach { p ->
+                        when (p) {
+                            is String -> granularity = PartialDataflowGranularity(p)
+                        }
+                    }
+                    key.memoryValueEdges += Dataflow(v, key, granularity)
+                }
             }
 
             // And now the prevDFGs. These are pairs, where the second item is a with a set of
@@ -554,9 +562,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             if (arg.argumentIndex < functionDeclaration.parameters.size) {
                 // Create a DFG-Edge from the argument to the parameter's memoryValue
                 val p = functionDeclaration.parameters[arg.argumentIndex]
-                if (p.memoryValues.isEmpty())
+                if (p.fullMemoryValues.isEmpty())
                     initializeParameters(lattice, mutableListOf(p), doubleState, 2)
-                p.memoryValues.filterIsInstance<ParameterMemoryValue>().forEach { paramVal ->
+                p.fullMemoryValues.filterIsInstance<ParameterMemoryValue>().forEach { paramVal ->
                     doubleState =
                         lattice.push(
                             doubleState,
@@ -571,12 +579,10 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         )
                     // Also draw the edges for the (deref)derefvalues if we have any and are
                     // dealing with a pointer parameter (AKA memoryValue is not null)
-                    paramVal.memoryValueEdges
+                    p.memoryValueEdges
                         .filter {
-                            /*(it !is ContextSensitiveDataflow ||
-                            it.callingContext.calls == callExpression) &&*/
-                            it.start is ParameterMemoryValue &&
-                                it.start.name.localName == "derefvalue"
+                            (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget ==
+                                "derefvalue"
                         }
                         .map { it.start }
                         .forEach { derefPMV ->
@@ -626,10 +632,13 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                             ),
                                         )
                                     // The same for the derefderef values
-                                    (derefPMV as? HasMemoryValue)
-                                        ?.memoryValues
-                                        ?.filter { it.name.localName == "derefderefvalue" }
-                                        ?.forEach { derefderefPMV ->
+                                    p.memoryValueEdges
+                                        .filter {
+                                            (it.granularity as? PartialDataflowGranularity<*>)
+                                                ?.partialTarget == "derefderefvalue"
+                                        }
+                                        .map { it.start }
+                                        .forEach { derefderefPMV ->
                                             argDerefVals
                                                 .flatMap {
                                                     doubleState.getNestedValues(
@@ -1446,6 +1455,18 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 GeneralStateEntryElement(
                                     PowersetLattice.Element(addresses),
                                     PowersetLattice.Element(),
+                                    PowersetLattice.Element(),
+                                ),
+                            )
+                        doubleState =
+                            lattice.push(
+                                doubleState,
+                                param,
+                                GeneralStateEntryElement(
+                                    PowersetLattice.Element(),
+                                    PowersetLattice.Element(
+                                        Pair(pmv, equalLinkedHashSetOf(pmvName))
+                                    ),
                                     PowersetLattice.Element(),
                                 ),
                             )
