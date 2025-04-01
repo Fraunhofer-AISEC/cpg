@@ -242,7 +242,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
         (target as? Reference)?.let {
             if (setAccessValue) it.access = AccessValues.WRITE
             val handled = handleWriteToReference(target)
-            if (handled != null && handled !is FieldDeclaration) {
+            if (handled != null) {
                 // We cannot assign an initializer here because this will lead to duplicate
                 // DFG edges, but we need to propagate the type information from our value
                 // to the declaration. We therefore add the declaration to the observers of
@@ -252,8 +252,10 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
                     .findValue(target)
                     ?.registerTypeObserver(InitializerTypePropagation(handled))
 
-                // Add it to our assign expression, so that we can find it in the AST
-                assignExpression.declarations += handled
+                if(handled !is FieldDeclaration){
+                    // Add it to our assign expression, so that we can find it in the AST
+                    assignExpression.declarations += handled
+                }
             }
         }
     }
