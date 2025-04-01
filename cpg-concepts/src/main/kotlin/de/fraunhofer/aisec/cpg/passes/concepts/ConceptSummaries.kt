@@ -127,7 +127,7 @@ class ConceptSummaries(ctx: TranslationContext) : TranslationResultPass(ctx) {
 
     private data class ConceptEntry(
         val name: String,
-        val fields: List<FieldEntry>,
+        val constructorArguments: List<ConstructorArgumentEntry>,
         val dfg: DFGEntry?,
     )
 
@@ -136,7 +136,7 @@ class ConceptSummaries(ctx: TranslationContext) : TranslationResultPass(ctx) {
         val fromConceptToThisNode: Boolean?,
     )
 
-    private data class FieldEntry(val name: String, val type: String, val description: String)
+    private data class ConstructorArgumentEntry(val name: String, val value: String)
 
     private data class LocationEntry(val file: String, val region: String)
 
