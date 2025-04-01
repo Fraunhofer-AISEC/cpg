@@ -48,6 +48,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnknownMemoryValue
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.unknownType
+import de.fraunhofer.aisec.cpg.helpers.functional.equalLinkedHashSetOf
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.matchesSignature
 import de.fraunhofer.aisec.cpg.passes.DFGPass
@@ -334,6 +335,8 @@ class DFGFunctionSummaries {
                                         from,
                                         srcValueDepth,
                                         "",
+                                        false,
+                                        equalLinkedHashSetOf<Node>(from),
                                     )
                                 )
                         }
@@ -353,6 +356,8 @@ class DFGFunctionSummaries {
                                         from,
                                         srcValueDepth,
                                         "",
+                                        false,
+                                        equalLinkedHashSetOf<Node>(from),
                                     )
                                 )
                         }
