@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.codyze.console
 import de.fraunhofer.aisec.codyze.AnalysisProject
 import de.fraunhofer.aisec.codyze.AnalysisResult
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.conceptBuildHelper
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.nodes
@@ -50,6 +51,7 @@ private const val AD_HOC_PROJECT_NAME = "ad-hoc"
 class ConsoleService {
     private var analysisResult: AnalysisResultJSON? = null
     var lastProject: AnalysisProject? = null
+    private var newConceptNodes: Set<Concept> = emptySet()
 
     /**
      * Analyzes the given source directory and returns the analysis result as [AnalysisResultJSON].
@@ -161,12 +163,37 @@ class ConsoleService {
                 ?: throw IllegalArgumentException("Unique target node not found.")
 
         val concept =
-            node.conceptBuildHelper(
-                name = request.conceptName,
-                underlyingNode = node,
-                connectDFGUnderlyingNodeToConcept = request.addDFGToConcept,
-                connectDFGConceptToUnderlyingNode = request.addDFGFromConcept,
-            )
+            node
+                .conceptBuildHelper(
+                    name = request.conceptName,
+                    underlyingNode = node,
+                    connectDFGUnderlyingNodeToConcept = request.addDFGToConcept,
+                    connectDFGConceptToUnderlyingNode = request.addDFGFromConcept,
+                )
+                .also { newConceptNodes += it }
+    }
+
+    /**
+     * Exports all new [Concept] nodes (added via [addConcept] and thus stored in [newConceptNodes])
+     * as a YAML string.
+     *
+     * TODO: YAML schema? extra fields? restrict to current component?
+     */
+    fun exportNewConcepts(): String {
+        var result = "conceptsByLocation:\n"
+        newConceptNodes.forEach { concept ->
+            result +=
+                "\t- location:\n" +
+                    "\t\tfile: \"${concept.location?.artifactLocation?.uri}\"\n" +
+                    "\t\tregion: \"${concept.location?.region}\"\n" +
+                    "\ttype: \"${concept.underlyingNode?.javaClass?.name}\"\n" +
+                    "\tconcept:\n" +
+                    "\t\tname: \"${concept.javaClass.name}\"\n" +
+                    "\t\tdfg:\n" +
+                    "\t\t\tfromThisNodeToConcept: ${concept.nextDFG.contains(concept.underlyingNode)}\n" +
+                    "\t\t\tfromConceptToThisNode: ${concept.underlyingNode?.nextDFG?.contains(concept)}\n"
+        }
+        return result
     }
 
     /**

@@ -188,6 +188,14 @@ fun Routing.apiRoutes(service: ConsoleService) {
 
             call.respond(mapOf("classes" to conceptNames))
         }
+
+        /**
+         * The endpoint to get a YAML listing of all manually added [Concept]s (via `POST
+         * /concept`).
+         *
+         * TODO: restrict to current component?
+         */
+        get("/newConcepts") { call.respond(service.exportNewConcepts()) }
     }
 }
 

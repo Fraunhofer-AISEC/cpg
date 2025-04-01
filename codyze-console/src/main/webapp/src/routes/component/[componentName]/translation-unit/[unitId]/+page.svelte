@@ -35,6 +35,12 @@
   const totalLines = data.translationUnit.code.split('\n').length;
   const lineNumberWidth = Math.ceil(Math.log10(totalLines + 1));
   const offsetLeft = baseOffsetLeft + lineNumberWidth * charWidth;
+
+  async function newConcepts() {
+    const res = await fetch(`/api/newConcepts`);
+    const text = await res.text();
+    alert(text); // TODO: download? popup?
+  }
 </script>
 
 <div class="container mx-auto p-4">
@@ -97,6 +103,12 @@
       >
         AST Nodes
       </button>
+      {#if activeTab === 'overlayNodes'}<button
+                class="ml-2 cursor-pointer px-4 py-2 bg-gray-200 text-white"
+                onclick={newConcepts()}
+        ><!--- TODO: spacing. make nice. --->
+          Display New Concepts
+        </button>{/if}
     </div>
 
     <NodeTable
