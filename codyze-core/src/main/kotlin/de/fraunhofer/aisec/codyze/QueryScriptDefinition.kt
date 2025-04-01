@@ -73,7 +73,7 @@ object QueryScriptConfiguration :
             checkNotNull(cp) { "Could not read classpath" }
             updateClasspath(cp.filter { element -> libraries.any { it in element.toString() } })
         }
-        compilerOptions("-Xcontext-receivers", "-jvm-target=17")
+        compilerOptions("-Xcontext-receivers", "-jvm-target=21")
         defaultImports.append(
             "de.fraunhofer.aisec.codyze.*",
             "de.fraunhofer.aisec.cpg.*",

@@ -4,7 +4,7 @@ A simple tool to export a *code property graph* to a neo4j database.
 
 ## Requirements
 
-The application requires Java 17 or higher.
+The application requires Java 21.
 
 Please make sure, that the [APOC](https://neo4j.com/labs/apoc/) plugin is enabled on your neo4j server. It is used in mass-creating nodes and relationships.
 

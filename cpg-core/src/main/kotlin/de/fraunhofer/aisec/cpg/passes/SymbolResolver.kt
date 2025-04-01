@@ -228,7 +228,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             }
 
         // Find a list of candidate symbols. In most cases, we can just perform a lookup by name
-        // which either performs an unqualified lookup beginning from the current scope "up-wards",
+        // which either performs an unqualified lookup beginning from the current scope "upwards",
         // or a qualified lookup starting from the scope specified in the name.
         var candidates = scopeManager.lookupSymbolByNodeName(ref, predicate = predicate).toSet()
 

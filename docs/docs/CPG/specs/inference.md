@@ -63,7 +63,7 @@ the required parameters for this specific call as well as their types.
 The function declaration must be inferred within the scope of a
 `RecordDeclaration`, a `NamespaceDeclaration` or a `TranslationUnitDeclaration`.
 If the function `foo` is inferred within the scope of a `RecordDeclaration`,
-`foo` *may* represent a method but it could also be a static import depending on
+`foo` *may* represent a method, but it could also be a static import depending on
 the `LanguageTraits` of the programming language. If we add a
 `MethodDeclaration` to a `RecordDeclaration` which we treated as a "struct", we
 change its `type` to "class".
@@ -84,8 +84,8 @@ This option can be used to guess the return type of an inferred function
 declaration. We make use of the usage of the returned value (e.g. if it is
 assigned to a variable/reference, used as an input to a unary or binary operator
 or as an argument to another function call) and propagate this type to the
-return type, if it known. One interesting case are unary and binary operators
-which can be overloaded but we assume that they are more likely to treat numeric
+return type, if it is known. One interesting case are unary and binary operators
+which can be overloaded, but we assume that they are more likely to treat numeric
 values (for `+`, `-`, `*`, `/`, `%`, `++`, `--`) and boolean values (for `!`).
 
 ## Inference of DFG edges
