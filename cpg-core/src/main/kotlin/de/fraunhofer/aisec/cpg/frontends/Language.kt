@@ -213,20 +213,13 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
      * @param hint The [BinaryOperator] node that is used as a hint for the language to determine
      *   the type of the binary operation. This is optional and can be null.
      */
-    open fun propagateTypeOfBinaryOperation(operator: BinaryOperator): Type {
-        return propagateTypeOfBinaryOperation(
-            operator.operatorCode,
-            operator.lhs.type,
-            operator.rhs.type,
-        )
-    }
-
-    /**
-     * Determines how to propagate types across binary operations since these may differ among the
-     * programming languages.
-     */
-    open fun propagateTypeOfBinaryOperation(opCode: String?, lhsType: Type, rhsType: Type): Type {
-        return when (opCode) {
+    open fun propagateTypeOfBinaryOperation(
+        operatorCode: String?,
+        lhsType: Type,
+        rhsType: Type,
+        hint: BinaryOperator? = null,
+    ): Type {
+        return when (operatorCode) {
             "<",
             "=<",
             ">",
