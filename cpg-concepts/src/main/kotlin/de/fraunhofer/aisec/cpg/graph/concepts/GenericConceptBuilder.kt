@@ -76,7 +76,7 @@ inline fun <reified OperationClass : Operation, ConceptClass : Concept> Metadata
  * @param name The fully qualified name of the concept class to be created.
  * @param underlyingNode The underlying node for which the concept is created.
  * @param constructorArguments A map of constructor arguments to be passed to the concept class
- *   (excluding the underlyingNode).
+ *   (excluding the `underlyingNode`).
  * @param connectDFGUnderlyingNodeToConcept If true, the created concept will be added to the next
  *   DFG edges of the underlying node.
  * @param connectDFGConceptToUnderlyingNode If true, the created concept will be added to the prev
@@ -129,4 +129,81 @@ fun MetadataProvider.conceptBuildHelper(
                 concept.nextDFG += underlyingNode
             }
         } ?: throw IllegalArgumentException("The class $name does not create a Concept.")
+}
+
+/**
+ * Generates an object of the [Operation] with the FQN [name], the [Operation.underlyingNode]
+ * [underlyingNode], and the [Operation.concept] [concept]. The constructor arguments of the
+ * respective class have to be provided by the map [constructorArguments] where the key is the name
+ * of the argument and the value is the argument to pass. [connectDFGUnderlyingNodeToConcept]
+ * specifies if the created [Operation] should be in the [Node.nextDFGEdges] edges of the
+ * [underlyingNode]. [connectDFGConceptToUnderlyingNode] specifies if the created [Operation] should
+ * be in the [Node.prevDFGEdges] of the [underlyingNode].
+ *
+ * @param name The fully qualified name of the operation class to be created.
+ * @param underlyingNode The underlying node for which the operation is created.
+ * @param concept The [Concept] the [Operation] belongs to. It also has to be explicitly stated in
+ *   the [constructorArguments] as the name of the argument often differ.
+ * @param constructorArguments A map of constructor arguments to be passed to the operation class
+ *   (excluding the `underlyingNode`).
+ * @param connectDFGUnderlyingNodeToConcept If true, the created operation will be added to the next
+ *   DFG edges of the underlying node.
+ * @param connectDFGConceptToUnderlyingNode If true, the created operation will be added to the prev
+ *   DFG edges of the underlying node.
+ * @return The created operation with the specified DFG edges.
+ * @throws ClassNotFoundException If the class with the specified [name] does not exist.
+ * @throws IllegalArgumentException If the class with the given [name] does not have exactly one
+ *   constructor or if one of the arguments in [constructorArguments] is not a valid argument name
+ *   for this constructor.
+ */
+fun MetadataProvider.operationBuildHelper(
+    name: String,
+    underlyingNode: Node,
+    concept: Concept,
+    constructorArguments: Map<String, Any?> = emptyMap(),
+    connectDFGUnderlyingNodeToConcept: Boolean = false,
+    connectDFGConceptToUnderlyingNode: Boolean = false,
+): Operation {
+    val operationClass = Class.forName(name).kotlin
+    val constructor =
+        operationClass.constructors.singleOrNull()
+            ?: throw IllegalArgumentException(
+                "The class with $name does not have exactly one constructor."
+            )
+    return (constructor.callBy(
+            mapOf(
+                (constructor.parameters.singleOrNull { it.name == "underlyingNode" }
+                    ?: throw IllegalArgumentException(
+                        "There is no argument with name \"underlyingNode\" which is required for the constructor of operation ${operationClass.simpleName}"
+                    )) to underlyingNode,
+                *constructorArguments
+                    .map { (key, value) ->
+                        (constructor.parameters.singleOrNull { it.name == key }
+                            ?: throw IllegalArgumentException(
+                                "There is no argument with name \"key\" which is specified to generate the operation ${operationClass.simpleName}"
+                            )) to value
+                    }
+                    .toTypedArray(),
+            )
+        ) as? Operation)
+        ?.also { operation ->
+            // Note: Update "newOperation" if you change this.
+            operation.codeAndLocationFrom(underlyingNode)
+            operation.name =
+                Name(
+                    "${operationClass.simpleName}".replaceFirstChar { it.lowercaseChar() },
+                    concept.name,
+                )
+            concept.ops += operation
+            NodeBuilder.log(operation)
+
+            underlyingNode.insertNodeAfterwardInEOGPath(operation)
+
+            if (connectDFGUnderlyingNodeToConcept) {
+                underlyingNode.nextDFG += operation
+            }
+            if (connectDFGConceptToUnderlyingNode) {
+                operation.nextDFG += underlyingNode
+            }
+        } ?: throw IllegalArgumentException("The class $name does not create an Operation.")
 }
