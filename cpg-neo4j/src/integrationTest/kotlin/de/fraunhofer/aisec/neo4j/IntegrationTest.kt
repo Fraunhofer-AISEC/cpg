@@ -60,7 +60,6 @@ fun createTranslationResult(file: String = "client.cpp"): Pair<Application, Tran
  * integration test. This might be replaced with a language-neutral test at some point.
  */
 @Ignore
-@Tag("integration")
 class IntegrationTest {
 
     @Test
