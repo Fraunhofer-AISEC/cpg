@@ -15,16 +15,3 @@ conceptsByLocation:
       dfg: # TODO
         fromThisNodeToConcept: false
         fromConceptToThisNode: true
-  - location:
-      file: "foo"
-      region: "1:2-3:4"
-    type: "CallExpression"
-    concept:
-       name: "foo"
-       fields:
-         - name: "bar"
-           type: "string"
-           description: "A string field"
-         - name: "baz"
-           type: "int"
-           description: "An integer field"
