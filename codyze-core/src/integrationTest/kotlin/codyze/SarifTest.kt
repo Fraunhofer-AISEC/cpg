@@ -47,6 +47,7 @@ class SarifTest {
                 it.registerLanguage<PythonLanguage>()
             }
         val fullLoc = result.functions["foo"].toSarifLocation()
+
         assertNotNull(fullLoc)
         assertEquals(7, fullLoc.physicalLocation?.region?.endLine)
         assertEquals(15, fullLoc.physicalLocation?.region?.endColumn)
