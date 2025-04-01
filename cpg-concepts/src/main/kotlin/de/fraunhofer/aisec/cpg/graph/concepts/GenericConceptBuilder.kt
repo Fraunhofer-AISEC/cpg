@@ -82,9 +82,10 @@ inline fun <reified OperationClass : Operation, ConceptClass : Concept> Metadata
  * @param connectDFGConceptToUnderlyingNode If true, the created concept will be added to the prev
  *   DFG edges of the underlying node.
  * @return The created concept with the specified DFG edges.
- * @throws IllegalArgumentException If the class with the specified [name] does not exist or has not
- *   exactly one constructor or if one of the arguments in [constructorArguments] is not a valid
- *   argument name for this constructor.
+ * @throws ClassNotFoundException If the class with the specified [name] does not exist
+ * @throws IllegalArgumentException If the class with the given [name] does not have exactly one
+ *   constructor or if one of the arguments in [constructorArguments] is not a valid argument name
+ *   for this constructor.
  */
 fun MetadataProvider.conceptBuildHelper(
     name: String,
@@ -96,7 +97,9 @@ fun MetadataProvider.conceptBuildHelper(
     val conceptClass = Class.forName(name).kotlin
     val constructor =
         conceptClass.constructors.singleOrNull()
-            ?: throw IllegalArgumentException("No class for $name found")
+            ?: throw IllegalArgumentException(
+                "The class with $name does not have exactly one constructor."
+            )
     return (constructor.callBy(
             mapOf(
                 (constructor.parameters.singleOrNull { it.name == "underlyingNode" }
