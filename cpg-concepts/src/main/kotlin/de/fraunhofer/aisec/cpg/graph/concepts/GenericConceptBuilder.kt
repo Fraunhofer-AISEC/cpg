@@ -70,7 +70,7 @@ fun MetadataProvider.conceptBuildHelper(
     underlyingNode: Node,
     connectDFGUnderlyingNodeToConcept: Boolean = false,
     connectDFGConceptToUnderlyingNode: Boolean = false,
-): Concept {
+) {
     val constructor: (Node) -> Concept =
         when (name) {
             "de.fraunhofer.aisec.cpg.graph.concepts.logging.Log" -> { node ->
