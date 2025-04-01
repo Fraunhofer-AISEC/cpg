@@ -68,30 +68,30 @@ inline fun <reified OperationClass : Operation, ConceptClass : Concept> Metadata
 fun MetadataProvider.conceptBuildHelper(
     name: String,
     underlyingNode: Node,
+    constructorArguments: Map<String, Any?> = emptyMap(),
     connectDFGUnderlyingNodeToConcept: Boolean = false,
     connectDFGConceptToUnderlyingNode: Boolean = false,
 ) {
-    val constructor: (Node) -> Concept =
-        when (name) {
-            "de.fraunhofer.aisec.cpg.graph.concepts.logging.Log" -> { node ->
-                    de.fraunhofer.aisec.cpg.graph.concepts.logging.Log(node)
-                }
-            "de.fraunhofer.aisec.cpg.graph.concepts.file.File" -> { node ->
-                    de.fraunhofer.aisec.cpg.graph.concepts.file.File(node, "filename" /* TODO */)
-                }
-            "de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.Secret" -> { node ->
-                    de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.Secret(node)
-                }
-            else -> {
-                throw IllegalArgumentException("Unknown concept: \"${name}\".")
+    val conceptClass = Class.forName(name).kotlin
+    val constructorF = conceptClass.constructors.first()
+    (constructorF.callBy(
+            mapOf(
+                constructorF.parameters.single { it.name == "underlyingNode" } to underlyingNode,
+                *constructorArguments
+                    .map { (k, v) -> constructorF.parameters.single { it.name == k } to v }
+                    .toTypedArray(),
+            )
+        ) as Concept)
+        .also { concept ->
+            concept.codeAndLocationFrom(underlyingNode)
+            concept.name = Name("${conceptClass.simpleName}", underlyingNode.name)
+            NodeBuilder.log(concept)
+
+            if (connectDFGUnderlyingNodeToConcept) {
+                underlyingNode.nextDFG += concept
+            }
+            if (connectDFGConceptToUnderlyingNode) {
+                concept.nextDFG += underlyingNode
             }
         }
-    this.newConcept(constructor, underlyingNode).also { concept ->
-        if (connectDFGUnderlyingNodeToConcept) {
-            underlyingNode.nextDFG += concept
-        }
-        if (connectDFGConceptToUnderlyingNode) {
-            concept.nextDFG += underlyingNode
-        }
-    }
 }
