@@ -34,16 +34,27 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.concepts.conceptBuildHelper
 import de.fraunhofer.aisec.cpg.helpers.getNodesByRegion
+import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass
+import de.fraunhofer.aisec.cpg.passes.DFGPass
+import de.fraunhofer.aisec.cpg.passes.DynamicInvokeResolver
 import de.fraunhofer.aisec.cpg.passes.TranslationResultPass
-import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteFirst
+import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
+import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import java.net.URI
 import org.slf4j.LoggerFactory
 
-/** This parts reads a yaml file and creates a [Concept] for each entry in the yaml file. */
-@ExecuteFirst // TODO: executeBefore foo
+/**
+ * This parts reads a yaml file and creates a [Concept] for each entry in the yaml file.
+ *
+ * TODO: when should this be executed? @oxisto: "after DFG, but before other concept passes" -> this
+ *   is currently an ugly workaround to somewhat achieve this
+ */
+@DependsOn(DFGPass::class, softDependency = false)
+@DependsOn(ControlFlowSensitiveDFGPass::class, softDependency = true)
+@ExecuteBefore(DynamicInvokeResolver::class, softDependency = true)
 class ConceptSummaries(ctx: TranslationContext) : TranslationResultPass(ctx) {
 
     val logger = LoggerFactory.getLogger(ConceptSummaries::class.java)
