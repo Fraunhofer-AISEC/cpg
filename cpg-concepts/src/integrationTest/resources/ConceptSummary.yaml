@@ -5,9 +5,9 @@ conceptsByLocation:
     type: "de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression"
     concept:
       name: "de.fraunhofer.aisec.cpg.graph.concepts.file.File"
-      constructorArguments: # TODO
-          - name: "bar"
-            value: "string"
+      constructorArguments:
+          - name: "fileName"
+            value: "foo"
       dfg:
         fromThisNodeToConcept: false
         fromConceptToThisNode: true

@@ -105,6 +105,10 @@ class ConceptSummaries(ctx: TranslationContext) : TranslationResultPass(ctx) {
                             underlyingNode.conceptBuildHelper(
                                 name = entry.concept.name,
                                 underlyingNode = underlyingNode,
+                                constructorArguments =
+                                    entry.concept.constructorArguments?.associate { arg ->
+                                        arg.name to arg.value
+                                    } ?: emptyMap(),
                                 connectDFGUnderlyingNodeToConcept =
                                     entry.concept.dfg?.fromThisNodeToConcept
                                         ?: false, // TODO: this `?: false` is not nice

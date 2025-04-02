@@ -34,10 +34,7 @@ import de.fraunhofer.aisec.cpg.passes.concepts.ConceptSummaries
 import de.fraunhofer.aisec.cpg.test.BaseTest
 import de.fraunhofer.aisec.cpg.test.analyze
 import java.nio.file.Path
-import kotlin.test.Test
-import kotlin.test.assertFalse
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 class ConceptSummariesTest : BaseTest() {
     @Test
@@ -57,7 +54,7 @@ class ConceptSummariesTest : BaseTest() {
         assertNotNull(result)
 
         val fileConcept = result.conceptNodes.singleOrNull { it is File }
-        assertNotNull(fileConcept)
+        assertIs<File>(fileConcept)
 
         val openCall = result.calls("open").singleOrNull()
         assertNotNull(openCall)
@@ -70,5 +67,7 @@ class ConceptSummariesTest : BaseTest() {
             openCall.nextDFG.contains(fileConcept),
             "NextDFG: `open` call should not contain `File` concept.",
         )
+
+        assertEquals("foo", fileConcept.fileName, "Expected name of the file concept to be `foo`.")
     }
 }
