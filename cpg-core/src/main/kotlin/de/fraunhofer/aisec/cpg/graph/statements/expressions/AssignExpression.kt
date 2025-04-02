@@ -161,6 +161,7 @@ class AssignExpression :
             // We need to see if there is enough room on the left side. Currently, we only support
             // languages that do not allow to mix tuple and non-tuple types luckily, so we can just
             // assume that all arguments on the left side are assignment targets
+            // Todo assume
             if (lhs.size != type.types.size) {
                 log.info("Tuple type size on RHS does not match number of LHS expressions")
                 listOf()

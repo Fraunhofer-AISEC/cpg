@@ -26,6 +26,8 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.*
+import de.fraunhofer.aisec.cpg.assumptions.Assumption
+import de.fraunhofer.aisec.cpg.assumptions.AssumptionType
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.LanguageTrait
@@ -355,6 +357,33 @@ fun executePass(
     }
 
     bench.stop()
+}
+
+/**
+ *
+ * @param assumptionType The type of assumption used to differentiate between assumptions and group similar assumptions.
+ *
+ * @param node The node that cause the assumption to be necessary, even if the assumption has validity for the
+ * entire program, the node serves as location to be reported to the user.
+ *
+ * @param scope The scope that the assumption has validity for, here the scope is a node, because the assumption is
+ * valid for every node in its ast subtree.
+ *
+ * @param message The message describing the assumption that was taken.
+ */
+public fun ContextProvider.assume(
+    assumptionType: AssumptionType,
+    node: Node,
+    scope: Node = node,
+    message: () -> String,
+) {
+    Assumption(assumptionType, node, scope, getCurrentFileAndLine(), message.toString())
+    // Todo Add Assumption to Translation Result
+}
+
+fun getCurrentFileAndLine(): String {
+    val stackTrace = Thread.currentThread().stackTrace
+    return "File: ${stackTrace[3].fileName}, Line: ${stackTrace[3].lineNumber}"
 }
 
 /**
