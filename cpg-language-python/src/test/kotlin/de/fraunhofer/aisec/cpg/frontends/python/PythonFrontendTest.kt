@@ -325,6 +325,7 @@ class PythonFrontendTest : BaseTest() {
         assertIs<AssignExpression>(s1)
         val s2 = body.statements[1]
         assertIs<MemberCallExpression>(s2)
+        s2.arguments.forEach { assertEquals(s2, it.astParent) }
 
         val c1 = s1.declarations.firstOrNull()
         assertNotNull(c1)
@@ -333,6 +334,7 @@ class PythonFrontendTest : BaseTest() {
         assertIs<ConstructExpression>(ctor)
         assertEquals(ctor.constructor, cls.constructors.firstOrNull())
         assertFullName("simple_class.SomeClass", c1.type)
+        ctor.arguments.forEach { assertEquals(ctor, it.astParent) }
 
         assertRefersTo(s2.base, c1)
         assertEquals(1, s2.invokes.size)
