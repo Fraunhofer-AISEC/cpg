@@ -32,12 +32,11 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.graph.calls
+import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.conceptBuildHelper
 import de.fraunhofer.aisec.cpg.helpers.getNodesByRegion
-import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass
-import de.fraunhofer.aisec.cpg.passes.DFGPass
-import de.fraunhofer.aisec.cpg.passes.DynamicInvokeResolver
-import de.fraunhofer.aisec.cpg.passes.TranslationResultPass
+import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -73,51 +72,12 @@ class ConceptSummaries(ctx: TranslationContext) : TranslationResultPass(ctx) {
 
         entries.conceptsByLocation?.let { concepts ->
             // iterate over all conceptsByLocation
-            for (entry in concepts) {
-                val regex =
-                    Regex(
-                        "(?<startLine>\\d+):(?<startColumn>\\d+)-(?<endLine>\\d+):(?<endColumn>\\d+)"
-                    )
-                val region = regex.matchEntire(entry.location.region) ?: TODO()
-                val startLine = region.groups["startLine"]?.value?.toIntOrNull() ?: TODO()
-                val startColumn = region.groups["startColumn"]?.value?.toIntOrNull() ?: TODO()
-                val endLine = region.groups["endLine"]?.value?.toIntOrNull() ?: TODO()
-                val endColumn = region.groups["endColumn"]?.value?.toIntOrNull() ?: TODO()
+            concepts.forEach { concept -> handleConceptByLocation(concept) }
+        }
 
-                val loc =
-                    PhysicalLocation(
-                        uri = URI(entry.location.file),
-                        region = Region(startLine, startColumn, endLine, endColumn),
-                    )
-                // find the matching node
-                val nodes =
-                    translationResult
-                        .getNodesByRegion(location = loc, clsName = entry.type)
-                        .also { nodes ->
-                            if (nodes.size != 1) {
-                                logger.warn(
-                                    "Found ${nodes.size} nodes for location $loc. Expected 1 node." // TODO
-                                )
-                            }
-                        }
-                        .forEach { underlyingNode ->
-                            logger.debug("Found node: $underlyingNode")
-                            underlyingNode.conceptBuildHelper(
-                                name = entry.concept.name,
-                                underlyingNode = underlyingNode,
-                                constructorArguments =
-                                    entry.concept.constructorArguments?.associate { arg ->
-                                        arg.name to arg.value
-                                    } ?: emptyMap(),
-                                connectDFGUnderlyingNodeToConcept =
-                                    entry.concept.dfg?.fromThisNodeToConcept
-                                        ?: false, // TODO: this `?: false` is not nice
-                                connectDFGConceptToUnderlyingNode =
-                                    entry.concept.dfg?.fromConceptToThisNode
-                                        ?: false, // TODO: this `?: false` is not nice
-                            )
-                        }
-            }
+        entries.conceptsBySignature?.let { concepts ->
+            // iterate over all conceptsBySignature
+            concepts.forEach { concept -> handleConceptBySignature(concept) }
         }
     }
 
@@ -133,6 +93,72 @@ class ConceptSummaries(ctx: TranslationContext) : TranslationResultPass(ctx) {
                     "src/integrationTest/resources/ConceptSummary.yaml"
                 ) // TODO make this configurable
         )
+    }
+
+    private fun handleConceptBySignature(concept: ConceptBySignatureEntry) {
+        translationResult.calls
+            .filter { call -> call.reconstructedImportName.toString() == concept.signature.fqn }
+            .forEach { underlyingNode ->
+                logger.debug("Found node: $underlyingNode")
+                underlyingNode.conceptBuildHelper(
+                    name = concept.concept.name,
+                    underlyingNode = underlyingNode,
+                    constructorArguments =
+                        concept.concept.constructorArguments?.associate { arg ->
+                            arg.name to arg.value
+                        } ?: emptyMap(),
+                    connectDFGUnderlyingNodeToConcept =
+                        concept.concept.dfg?.fromThisNodeToConcept
+                            ?: false, // TODO: this `?: false` is not nice
+                    connectDFGConceptToUnderlyingNode =
+                        concept.concept.dfg?.fromConceptToThisNode
+                            ?: false, // TODO: this `?: false` is not nice
+                )
+            }
+    }
+
+    private fun handleConceptByLocation(concept: ConceptByLocationEntry) {
+        val regex =
+            Regex("(?<startLine>\\d+):(?<startColumn>\\d+)-(?<endLine>\\d+):(?<endColumn>\\d+)")
+        val region = regex.matchEntire(concept.location.region) ?: TODO()
+        val startLine = region.groups["startLine"]?.value?.toIntOrNull() ?: TODO()
+        val startColumn = region.groups["startColumn"]?.value?.toIntOrNull() ?: TODO()
+        val endLine = region.groups["endLine"]?.value?.toIntOrNull() ?: TODO()
+        val endColumn = region.groups["endColumn"]?.value?.toIntOrNull() ?: TODO()
+
+        val loc =
+            PhysicalLocation(
+                uri = URI(concept.location.file),
+                region = Region(startLine, startColumn, endLine, endColumn),
+            )
+        // find the matching node
+        val nodes =
+            translationResult
+                .getNodesByRegion(location = loc, clsName = concept.type)
+                .also { nodes ->
+                    if (nodes.size != 1) {
+                        logger.warn(
+                            "Found ${nodes.size} nodes for location $loc. Expected 1 node." // TODO
+                        )
+                    }
+                }
+                .forEach { underlyingNode ->
+                    logger.debug("Found node: $underlyingNode")
+                    underlyingNode.conceptBuildHelper(
+                        name = concept.concept.name,
+                        underlyingNode = underlyingNode,
+                        constructorArguments =
+                            concept.concept.constructorArguments?.associate { arg ->
+                                arg.name to arg.value
+                            } ?: emptyMap(),
+                        connectDFGUnderlyingNodeToConcept =
+                            concept.concept.dfg?.fromThisNodeToConcept
+                                ?: false, // TODO: this `?: false` is not nice
+                        connectDFGConceptToUnderlyingNode =
+                            concept.concept.dfg?.fromConceptToThisNode
+                                ?: false, // TODO: this `?: false` is not nice
+                    )
+                }
     }
 
     private data class YAMLEntry(
@@ -161,5 +187,13 @@ class ConceptSummaries(ctx: TranslationContext) : TranslationResultPass(ctx) {
 
     private data class LocationEntry(val file: String, val region: String)
 
-    private data class ConceptBySignatureEntry(val foo: String)
+    private data class ConceptBySignatureEntry(
+        val signature: SignatureEntry,
+        val concept: ConceptEntry,
+    )
+
+    private data class SignatureEntry(
+        val fqn: String
+        // TODO: arguments, type, ...?
+    )
 }
