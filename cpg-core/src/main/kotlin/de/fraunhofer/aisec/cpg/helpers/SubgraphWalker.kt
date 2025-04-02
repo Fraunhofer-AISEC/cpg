@@ -219,12 +219,25 @@ object SubgraphWalker {
          * @param root The node where we should start
          */
         fun iterate(root: Node) {
+            iterateAll(setOf(root))
+        }
+
+        /**
+         * Iteration starting from several nodes that can explore a joined graph, therefore the
+         * `seen` list is shared between several entries to the potentially joined graph
+         */
+        fun iterateAll(entries: Set<Node>) {
             var todo = ArrayDeque<Pair<Node, Node?>>()
             val seen = identitySetOf<Node>()
 
-            todo.push(Pair<Node, Node?>(root, null))
+            entries.forEach { entry ->
+                todo.push(Pair<Node, Node?>(entry, null))
+                seen.add(entry)
+            }
+
             while (todo.isNotEmpty()) {
                 var (current, parent) = todo.pop()
+                println("current: $current, parent: $parent")
                 onNodeVisit.forEach { it(current, parent) }
 
                 // Check if we have a replacement node
@@ -331,6 +344,24 @@ object SubgraphWalker {
             this.walker = walker
 
             walker.iterate(root)
+        }
+
+        /**
+         * Wraps [IterativeGraphWalker] to handle declaration, in contrast to [iterate], this
+         * function is here to iterate over several nodes that may be entries into a joined graph
+         * reachable by the specified strategy and therefore the internal seen list of nodes has to
+         * be shared to avoid duplicate visits.
+         *
+         * @param entries The nodes where the exploration is started from.
+         */
+        fun iterateAll(entries: Set<Node>) {
+            val walker = IterativeGraphWalker()
+            walker.strategy = this.strategy
+            handlers.forEach { h -> walker.registerOnNodeVisit { n, p -> handleNode(n, p, h) } }
+
+            this.walker = walker
+
+            walker.iterateAll(entries)
         }
 
         private fun handleNode(

@@ -72,6 +72,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : ConceptPass(ctx) {
     }
 
     private fun handleCall(callExpression: CallExpression) {
+        println("CallExpression handled: " + callExpression)
         val name = callExpression.name
 
         if (name.toString() == "open") {
