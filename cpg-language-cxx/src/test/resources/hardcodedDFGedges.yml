@@ -135,3 +135,26 @@
     - from: sgx_unseal_data.secret
       to: param3.deref
       dfgType: full
+
+- functionDeclaration:
+    language: CPPLanguage
+    methodName: strncpy
+  dataFlows:
+    - from: param1.deref
+      to: param0.deref
+      dfgType: full
+
+
+- functionDeclaration:
+    language: CPPLanguage
+    methodName: allocTest
+    signature:
+      - void
+      - void
+  dataFlows:
+    - from: NewMemoryAddress0
+      to: param0.deref
+      dfgType: partial
+    - from: NewMemoryAddress0
+      to: param1.deref
+      dfgType: partial

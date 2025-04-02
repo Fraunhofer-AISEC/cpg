@@ -3131,4 +3131,33 @@ class PointsToPassTest {
         assertTrue(iLine436.fullMemoryValues.contains(literal3))
         assertEquals(setCE, iLine436.prevFunctionSummaryDFG.singleOrNull())
     }
+
+    @Test
+    fun testStrnCopyToDeref() {
+        val file = File("src/test/resources/pointsto.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+                it.registerPass<PointsToPass>()
+                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+            }
+        assertNotNull(tu)
+
+        // FunctionDeclarations
+        val strncpytoderefFD = tu.functions["strncpytoderef"]
+        assertNotNull(strncpytoderefFD)
+
+        val teststrncpyFD = tu.functions["teststrncpy"]
+        assertNotNull(teststrncpyFD)
+
+        val cRefLine461 = teststrncpyFD.calls["printf"]?.arguments?.get(1)
+        assertNotNull(cRefLine461)
+
+        val bInitializer = teststrncpyFD.variables["b"]?.initializer
+        assertNotNull(bInitializer)
+
+        // Final result
+        // TODO: This could also be the original value since there is an if
+        assertEquals(bInitializer, cRefLine461.memoryValues.singleOrNull())
+    }
 }

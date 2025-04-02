@@ -439,3 +439,25 @@ int testShortFS() {
 int set(int* p) {
   *p = 3;
 }
+
+void strncpytoderef(char *param_1,char* param_2,char **param_3)
+{
+  allocTest(param_2,param_3);
+  if (param_1 != (char *)0x0) {
+    strncpy(*param_3,param_1,(size_t)param_3[1]);
+  }
+  printf("%c", **param_3);
+}
+
+int teststrncpy() {
+  char a = 'a';
+  char b = 'b';
+  char c = 'c';
+  char *pb = &b;
+  char *pc = &c;
+  
+  
+  strncpytoderef(pb, &a, &pc); 
+
+  printf("%c\n", c);
+}
