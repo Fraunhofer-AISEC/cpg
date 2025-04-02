@@ -54,7 +54,7 @@ fun FulfilledAndFailedPaths.toQueryTree(
     } +
         this.failed.map { (reason, nodes) ->
             SinglePathResult(
-                true,
+                false,
                 mutableListOf(QueryTree(nodes)),
                 "$queryType from $startNode to ${nodes.last()} fulfills the requirement",
                 startNode,
@@ -287,7 +287,7 @@ fun Node.alwaysFlowsTo(
             // TODO: We can update this too
             QueryTree(
                 value = false,
-                children = mutableListOf(QueryTree(value = it)),
+                children = mutableListOf(QueryTree(value = it.second)),
                 stringRepresentation =
                     "The EOG path reached the end  " +
                         if (earlyTermination != null)
