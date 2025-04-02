@@ -473,6 +473,7 @@ private fun CallExpression.duplicateTo(call: CallExpression, callee: Reference) 
 fun MemberCallExpression.toCallExpression(callee: Reference): CallExpression {
     val call = CallExpression()
     duplicateTo(call, callee)
+    call.arguments.forEach { it.astParent = call }
 
     return call
 }
@@ -484,6 +485,7 @@ fun MemberCallExpression.toCallExpression(callee: Reference): CallExpression {
 fun CallExpression.toMemberCallExpression(callee: MemberExpression): MemberCallExpression {
     val call = MemberCallExpression()
     duplicateTo(call, callee)
+    call.arguments.forEach { it.astParent = call }
 
     return call
 }
@@ -495,6 +497,7 @@ fun CallExpression.toMemberCallExpression(callee: MemberExpression): MemberCallE
 fun CallExpression.toConstructExpression(callee: Reference): ConstructExpression {
     val construct = ConstructExpression()
     duplicateTo(construct, callee)
+    construct.arguments.forEach { it.astParent = construct }
 
     return construct
 }

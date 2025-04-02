@@ -144,6 +144,7 @@ fun SubgraphWalker.ScopedWalker.replaceCallWithCast(
             type
         }
     cast.expression = call.arguments.single()
+    cast.expression.astParent = cast
     cast.name = cast.castType.name
 
     replace(parent, call, cast)
