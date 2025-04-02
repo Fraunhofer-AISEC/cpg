@@ -36,10 +36,29 @@
   const lineNumberWidth = Math.ceil(Math.log10(totalLines + 1));
   const offsetLeft = baseOffsetLeft + lineNumberWidth * charWidth;
 
+  /*
   async function newConcepts() {
     const res = await fetch(`/api/newConcepts`);
     const text = await res.text();
     alert(text); // TODO: download? popup?
+  }
+  */
+  async function newConcepts() {
+    const res = await fetch('/api/newConcepts');
+    if (!res.ok) {
+      console.error('Error fetching new concepts');
+      return;
+    }
+    const content = await res.text();
+    const blob = new Blob([content], { type: 'text/yaml' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'newConcepts.yaml';
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(url);
   }
 </script>
 
@@ -104,10 +123,10 @@
         AST Nodes
       </button>
       {#if activeTab === 'overlayNodes'}<button
-                class="ml-2 cursor-pointer px-4 py-2 bg-gray-200 text-white"
+                class="ml-2 cursor-pointer px-4 py-2 bg-gray-200 text-black"
                 onclick={newConcepts()}
         ><!--- TODO: spacing. make nice. --->
-          Display New Concepts
+          Download New Concepts (.yaml)
         </button>{/if}
     </div>
 
