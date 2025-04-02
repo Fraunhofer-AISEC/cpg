@@ -381,11 +381,9 @@ fun SubgraphWalker.ScopedWalker.replace(parent: Node?, old: Expression, new: Exp
                     // the whole call expression instead.
                     if (parent is MemberCallExpression && new is Reference) {
                         val newCall = parent.toCallExpression(new)
-                        newCall.arguments.forEach { it.astParent = newCall }
                         return replace(parent.astParent, parent, newCall)
                     } else if (new is MemberExpression) {
                         val newCall = parent.toMemberCallExpression(new)
-                        newCall.arguments.forEach { it.astParent = newCall }
                         return replace(parent.astParent, parent, newCall)
                     } else {
                         parent.callee = new
@@ -434,10 +432,16 @@ fun SubgraphWalker.ScopedWalker.replace(parent: Node?, old: Expression, new: Exp
     return success
 }
 
+/**
+ * Copies the properties of this [CallExpression] to the given [call] and sets the `call.callee` to
+ * [callee]. Note that the ast children are not duplicated. This means that their `astParent` will
+ * now point to [call].
+ */
 private fun CallExpression.duplicateTo(call: CallExpression, callee: Reference) {
     call.language = this.language
     call.scope = this.scope
     call.argumentEdges.clear()
+    // This is required to set the astParent of the arguments to the new edge.
     this.argumentEdges.forEach { existingEdge ->
         call.argumentEdges.add(existingEdge.end) { name = existingEdge.name }
     }
