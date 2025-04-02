@@ -372,6 +372,18 @@ fun SubgraphWalker.ScopedWalker.replace(parent: Node?, old: Expression, new: Exp
         return false
     }
 
+    when (new) {
+        is MemberExpression -> {
+            new.base.astParent = new
+        }
+        is MemberCallExpression -> {
+            new.base?.astParent = new
+            new.arguments.forEach { it.astParent = new }
+        }
+        is CallExpression -> new.arguments.forEach { it.astParent = new }
+        is CastExpression -> new.expression.astParent = new
+    }
+
     val success =
         when (parent) {
             is CallExpression -> {
