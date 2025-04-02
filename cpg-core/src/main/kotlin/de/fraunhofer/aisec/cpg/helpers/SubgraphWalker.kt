@@ -237,7 +237,6 @@ object SubgraphWalker {
 
             while (todo.isNotEmpty()) {
                 var (current, parent) = todo.pop()
-                println("current: $current, parent: $parent")
                 onNodeVisit.forEach { it(current, parent) }
 
                 // Check if we have a replacement node
