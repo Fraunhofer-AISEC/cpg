@@ -438,7 +438,9 @@ private fun CallExpression.duplicateTo(call: CallExpression, callee: Reference) 
     call.language = this.language
     call.scope = this.scope
     call.argumentEdges.clear()
-    call.argumentEdges += this.argumentEdges
+    this.argumentEdges.forEach { existingEdge ->
+        call.argumentEdges.add(existingEdge.end) { name = existingEdge.name }
+    }
     call.type = this.type
     call.assignedTypes = this.assignedTypes
     call.code = this.code
@@ -455,7 +457,6 @@ private fun CallExpression.duplicateTo(call: CallExpression, callee: Reference) 
 fun MemberCallExpression.toCallExpression(callee: Reference): CallExpression {
     val call = CallExpression()
     duplicateTo(call, callee)
-    call.arguments.forEach { it.astParent = call }
 
     return call
 }
@@ -463,7 +464,6 @@ fun MemberCallExpression.toCallExpression(callee: Reference): CallExpression {
 fun CallExpression.toMemberCallExpression(callee: MemberExpression): MemberCallExpression {
     val call = MemberCallExpression()
     duplicateTo(call, callee)
-    call.arguments.forEach { it.astParent = call }
 
     return call
 }
@@ -471,7 +471,6 @@ fun CallExpression.toMemberCallExpression(callee: MemberExpression): MemberCallE
 fun CallExpression.toConstructExpression(callee: Reference): ConstructExpression {
     val construct = ConstructExpression()
     duplicateTo(construct, callee)
-    construct.arguments.forEach { it.astParent = construct }
 
     return construct
 }
