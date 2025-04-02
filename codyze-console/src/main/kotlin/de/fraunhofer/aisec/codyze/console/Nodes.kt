@@ -113,6 +113,17 @@ data class TranslationUnitJSON(
     @Transient val cpgTU: TranslationUnitDeclaration? = null,
 )
 
+/** JSON data class holding all relevant information required to instantiate a [Concept]. */
+@Serializable
+data class ConceptInfo(val conceptName: String, val constructorInfo: List<ConstructorInfo>)
+
+@Serializable
+data class ConstructorInfo(
+    val argumentName: String,
+    val argumentType: String,
+    val isOptional: Boolean,
+)
+
 /** JSON data class for a [Node]. */
 @Serializable
 data class NodeJSON(
