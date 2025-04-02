@@ -252,7 +252,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
                     .findValue(target)
                     ?.registerTypeObserver(InitializerTypePropagation(handled))
 
-                if(handled !is FieldDeclaration){
+                if (handled !is FieldDeclaration) {
                     // Add it to our assign expression, so that we can find it in the AST
                     assignExpression.declarations += handled
                 }

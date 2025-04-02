@@ -242,7 +242,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : ConceptPass(ctx) {
      * @param expression The start node.
      * @return A list of all [File] nodes found.
      */
-    internal fun findFile(expression: Expression): List<File> {
+    internal fun findFile(expression: Expression): Set<File> {
         // find all nodes on a prev DFG path which have an [OpenFile] overlay node and return the
         // last node on said path (i.e. the one with the [OpenFile] overlay)
         val nodesWithOpenFileOverlay =
@@ -262,6 +262,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : ConceptPass(ctx) {
                 .flatMap { it.overlays } // collect all "overlay" nodes
                 .filterIsInstance<OpenFile>() // discard not-relevant overlays
                 .map { it.file } // move from [OpenFile] to the corresponding [File] concept node
+                .toSet() // remove duplicates
 
         return files
     }
