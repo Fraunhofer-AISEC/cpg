@@ -2375,7 +2375,8 @@ class PointsToPassTest {
         val preciseFSrenegotiate =
             FSrenegotiate.entries.firstOrNull()?.value?.filter { !it.shortFunctionSummary }
         assertNotNull(preciseFSrenegotiate)
-        // TODO: This should be 2 less
+        // Since we overapproximate, we have 5 entries here: The writes in Line 15 & 16 appear once
+        // with and once w/o the subAccesses
         assertEquals(5, preciseFSrenegotiate.size)
         assertTrue(preciseFSrenegotiate.any { it.srcNode == literal5 && it.subAccessName == "i" })
         assertTrue(preciseFSrenegotiate.any { it.srcNode == literal6 && it.subAccessName == "j" })

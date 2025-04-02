@@ -899,7 +899,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
      * @param lattice The lattice representing the points-to state.
      * @param doubleState The current state of the points-to analysis.
      * @param mapDstToSrc The map that tracks the source nodes for each destination node.
-     * @param destination The set of destination nodes.
+     * @param destinationAddresses The set of destination nodes.
      * @param srcNode The source node to be added to the map.
      * @param shortFS A flag indicating if this is a short function summary.
      * @param argument The argument expression related to the source node.
@@ -912,7 +912,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     private fun addEntryToMap(
         doubleState: PointsToStateElement,
         mapDstToSrc: MutableMap<Node, IdentitySet<MapDstToSrcEntry>>,
-        destination: IdentitySet<Node>,
+        destinationAddresses: IdentitySet<Node>,
         destinations: IdentitySet<Node>,
         srcNode: Node,
         shortFS: Boolean,
@@ -957,7 +957,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 .mapTo(IdentitySet()) { it.first }
                         else identitySetOf(currentNode.arguments[param.argumentIndex])
                     values.forEach { value ->
-                        destination.forEach { d ->
+                        destinationAddresses.forEach { d ->
                             // The extracted value might come from a state we
                             // created for a short function summary. If so, we
                             // have to store that info in the map
@@ -994,7 +994,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     .forEach {
                         if (it.argumentIndex < currentNode.arguments.size) {
                             val arg = currentNode.arguments[it.argumentIndex]
-                            destination.forEach { d ->
+                            destinationAddresses.forEach { d ->
                                 val updatedPropertySet = propertySet
                                 updatedPropertySet.add(shortFS)
                                 val currentSet = mapDstToSrc.computeIfAbsent(d) { identitySetOf() }
@@ -1022,7 +1022,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             }
 
             is MemoryAddress -> {
-                destination.forEach { d ->
+                destinationAddresses.forEach { d ->
                     val currentSet = mapDstToSrc.computeIfAbsent(d) { identitySetOf() }
                     val updatedPropertySet = propertySet
                     updatedPropertySet.add(shortFS)
@@ -1040,7 +1040,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             }
 
             else -> {
-                destination.forEach { d ->
+                destinationAddresses.forEach { d ->
                     val currentSet = mapDstToSrc.computeIfAbsent(d) { identitySetOf() }
                     val newSet =
                         if (srcValueDepth == 0) identitySetOf(Pair(srcNode, shortFS))
@@ -1209,11 +1209,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
          */
         if (currentNode.lhs.size == 1 && currentNode.rhs.size == 1) {
             val sources = currentNode.rhs.flatMapTo(IdentitySet()) { doubleState.getValues(it) }
-            // .map { Pair(it, false) }
-            // .toIdentitySet()
             val destinations: IdentitySet<Node> = currentNode.lhs.toIdentitySet()
             val destinationsAddresses =
-                destinations.flatMap { doubleState.getAddresses(it) }.toIdentitySet()
+                destinations.flatMapTo(IdentitySet()) { doubleState.getAddresses(it) }
             val lastWrites =
                 destinations.mapTo(IdentitySet()) { Pair(it, equalLinkedHashSetOf<Any>(false)) }
             doubleState =
