@@ -54,7 +54,7 @@ abstract class ConceptPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
         // Gather all resolution EOG starters; and make sure they really do not have a
         // predecessor, otherwise we might analyze a node multiple times
         val nodes = tu.allEOGStarters.filter { it.prevEOGEdges.isEmpty() }.toSet()
-        println("Iterate in concepts pass")
+
         walker.iterateAll(nodes)
     }
 
