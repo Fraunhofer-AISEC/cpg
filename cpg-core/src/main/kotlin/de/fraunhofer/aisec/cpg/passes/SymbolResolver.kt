@@ -304,7 +304,7 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
      */
     protected open fun handleMemberExpression(current: MemberExpression) {
         // Some locals for easier smart casting
-        val base = current.base
+        val base = (current.base as? PointerDereference)?.input ?: current.base
         val language = current.language
         val record = scopeManager.currentRecord
 
@@ -468,7 +468,7 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         when (result.success) {
             PROBLEMATIC -> {
                 log.error(
-                    "Resolution of ${call.name} returned an problematic result and we cannot decide correctly, the invokes edge will contain all possible viable functions"
+                    "Resolution of ${call.name} returned a problematic result and we cannot decide correctly, the invokes edge will contain all possible viable functions"
                 )
                 call.invokes = result.bestViable.toMutableList()
             }
@@ -703,7 +703,8 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
     private fun resolveOperator(op: HasOverloadedOperation): CallResolutionResult? {
         val language = op.language
         val base = op.operatorBase
-        if (language !is HasOperatorOverloading || language.isPrimitive(base.type)) {
+        val baseType = (base as? PointerDereference)?.input?.type ?: base.type
+        if (language !is HasOperatorOverloading || language.isPrimitive(baseType)) {
             return null
         }
 
@@ -716,8 +717,11 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         }
 
         val possibleTypes = mutableSetOf<Type>()
-        possibleTypes.add(op.operatorBase.type)
-        possibleTypes.addAll(op.operatorBase.assignedTypes)
+        possibleTypes.add(baseType)
+        val baseAssignedtype =
+            (base as? PointerDereference)?.input?.assignedTypes ?: base.assignedTypes
+
+        possibleTypes.addAll(baseAssignedtype)
 
         val candidates =
             resolveMemberByName(symbol, possibleTypes)
@@ -842,9 +846,10 @@ internal fun Pass<*>.getPossibleContainingTypes(ref: Reference): Pair<Set<Type>,
     val possibleTypes = mutableSetOf<Type>()
     var bestGuess: Type? = null
     if (ref is MemberExpression) {
-        bestGuess = ref.base.type
-        possibleTypes.add(ref.base.type)
-        possibleTypes.addAll(ref.base.assignedTypes)
+        val base = (ref.base as? PointerDereference)?.input ?: ref.base
+        bestGuess = base.type
+        possibleTypes.add(base.type)
+        possibleTypes.addAll(base.assignedTypes)
     } else if (ref.language is HasImplicitReceiver) {
         // This could be a member call with an implicit receiver, so let's add the current class
         // to the possible list
