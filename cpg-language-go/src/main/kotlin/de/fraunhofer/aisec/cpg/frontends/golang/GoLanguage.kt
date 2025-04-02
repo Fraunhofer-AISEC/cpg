@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.unknownType
+import kotlin.math.max
 import org.neo4j.ogm.annotation.Transient
 
 /** The Go language. */
@@ -225,31 +226,64 @@ class GoLanguage :
         return CastNotPossible
     }
 
-    override fun propagateTypeOfBinaryOperation(operation: BinaryOperator): Type {
-        if (operation.operatorCode == "==") {
-            return super.propagateTypeOfBinaryOperation(operation)
-        }
-
-        // Deal with literals. Numeric literals can also be used in simple arithmetic of the
-        // underlying type is numeric
+    override fun propagateTypeOfBinaryOperation(
+        operatorCode: String?,
+        lhsType: Type,
+        rhsType: Type,
+        hint: BinaryOperator?,
+    ): Type {
+        // Deal with literals. Numeric literals can also be used in simple arithmetic if the
+        // underlying type is numeric.
+        // There are two relevant sources of information: https://go.dev/ref/spec#Operators, and
+        // https://go.dev/ref/spec#Constant_expressions which specify the following:
+        // - If one operand is an untyped constant, the resulting type is the type of the other
+        // operand
+        // - Always Boolean for comparisons
+        // - Always integer for shifts
+        // - If both untyped operands are the same type, it's that one.
+        // - If the untyped operands of a binary operation (other than a shift) are of different
+        //   kinds, the result is of the operand's kind that appears later in this list: integer,
+        //   rune, floating-point, complex
         return when {
-            operation.lhs is Literal<*> && (operation.lhs as Literal<*>).type is NumericType -> {
-                val type = operation.rhs.type
-                if (type is NumericType || type.underlyingType is NumericType) {
-                    type
-                } else {
-                    unknownType()
-                }
-            }
-            operation.rhs is Literal<*> && (operation.rhs as Literal<*>).type is NumericType -> {
-                val type = operation.lhs.type
-                if (type is NumericType || type.underlyingType is NumericType) {
-                    type
-                } else {
-                    unknownType()
-                }
-            }
-            else -> super.propagateTypeOfBinaryOperation(operation)
+            // Enforce bool for comparisons
+            operatorCode in listOf("<", "=<", ">", "<=", "==") ->
+                builtInTypes["bool"] ?: unknownType()
+            // Two untyped literals for shift
+            hint?.lhs is Literal<*> &&
+                hint.rhs is Literal<*> &&
+                operatorCode in listOf("<<", ">>") -> builtInTypes["int"] ?: unknownType()
+            // A single (untyped) literal, so we take the other type
+            hint?.lhs is Literal<*> &&
+                lhsType is NumericType &&
+                hint.rhs !is Literal<*> &&
+                rhsType.underlyingType is NumericType -> rhsType
+            hint?.rhs is Literal<*> &&
+                rhsType is NumericType &&
+                hint.lhs !is Literal<*> &&
+                lhsType.underlyingType is NumericType -> lhsType
+            // Two literals: If both are the same type, we take this type
+            hint?.lhs is Literal<*> && hint.rhs is Literal<*> && lhsType == rhsType -> lhsType
+            // Two literals of different type: Take the "higher one" in the list.
+            hint?.lhs is Literal<*> &&
+                hint.rhs is Literal<*> &&
+                lhsType != rhsType &&
+                lhsType is NumericType &&
+                rhsType is NumericType ->
+                max(
+                        listOf("int", "rune", "float64", "complex").indexOf(lhsType.name.localName),
+                        listOf("int", "rune", "float64", "complex").indexOf(rhsType.name.localName),
+                    )
+                    .let { index ->
+                        when (index) {
+                            0 -> builtInTypes["int"] ?: unknownType()
+                            1 -> builtInTypes["rune"] ?: unknownType()
+                            2 -> builtInTypes["float"] ?: unknownType()
+                            3 -> builtInTypes["complex"] ?: unknownType()
+                            else -> unknownType()
+                        }
+                    }
+            // For all the rest, we take the default behavior
+            else -> super.propagateTypeOfBinaryOperation(operatorCode, lhsType, rhsType, hint)
         }
     }
 }

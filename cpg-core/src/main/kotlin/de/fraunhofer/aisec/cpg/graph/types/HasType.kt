@@ -83,7 +83,7 @@ interface HasType : LanguageProvider {
      * change.
      */
     fun addAssignedType(type: Type) {
-        if (!observerEnabled || language.shouldPropagateType(this, type) == false) {
+        if (!observerEnabled || language.shouldPropagateType(this.type, type, this) == false) {
             return
         }
 
@@ -104,7 +104,7 @@ interface HasType : LanguageProvider {
 
         val changed =
             (this.assignedTypes as MutableSet).addAll(
-                types.filter { language.shouldPropagateType(this, it) == true }
+                types.filter { language.shouldPropagateType(this.type, it, this) == true }
             )
         if (changed) {
             informObservers(TypeObserver.ChangeType.ASSIGNED_TYPE)
