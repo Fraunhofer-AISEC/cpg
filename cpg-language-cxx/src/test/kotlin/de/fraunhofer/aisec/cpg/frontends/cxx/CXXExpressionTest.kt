@@ -46,5 +46,9 @@ class CXXExpressionTest {
         val casts = tu.casts
         assertEquals(2, casts.size)
         assertEquals(listOf("int", "long long int"), casts.map { it.name.localName })
+
+        val cast = tu.casts.firstOrNull()
+        assertNotNull(cast)
+        assertEquals(cast, cast.expression.astParent)
     }
 }

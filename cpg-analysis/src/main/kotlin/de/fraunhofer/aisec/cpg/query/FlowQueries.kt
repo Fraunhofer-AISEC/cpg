@@ -61,7 +61,7 @@ fun FulfilledAndFailedPaths.toQueryTree(
     } +
         this.failed.map { (reason, nodes) ->
             SinglePathResult(
-                true,
+                false,
                 mutableListOf(QueryTree(nodes)),
                 "$queryType from $startNode to ${nodes.last()} fulfills the requirement",
                 startNode,

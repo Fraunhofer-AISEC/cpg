@@ -62,7 +62,7 @@ fun QueryTree<Boolean>.toSarif(ruleID: String): List<Result> {
                     Level.Error
                 },
             kind =
-                if (this.value) {
+                if (result) {
                     ResultKind.Pass
                 } else {
                     ResultKind.Fail
