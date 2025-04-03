@@ -219,14 +219,14 @@ object SubgraphWalker {
          * @param root The node where we should start
          */
         fun iterate(root: Node) {
-            iterateAll(setOf(root))
+            iterateAll(listOf(root))
         }
 
         /**
          * Iteration starting from several nodes that can explore a joined graph, therefore the
          * `seen` list is shared between several entries to the potentially joined graph
          */
-        fun iterateAll(entries: Set<Node>) {
+        fun iterateAll(entries: List<Node>) {
             var todo = ArrayDeque<Pair<Node, Node?>>()
             val seen = identitySetOf<Node>()
 
@@ -354,7 +354,7 @@ object SubgraphWalker {
          *
          * @param entries The nodes where the exploration is started from.
          */
-        fun iterateAll(entries: Set<Node>) {
+        fun iterateAll(entries: List<Node>) {
             val walker = IterativeGraphWalker()
             walker.strategy = this.strategy
             handlers.forEach { h -> walker.registerOnNodeVisit { n, p -> handleNode(n, p, h) } }

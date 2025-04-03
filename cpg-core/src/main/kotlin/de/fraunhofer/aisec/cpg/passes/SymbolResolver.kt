@@ -138,7 +138,6 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         walker.registerHandler(this::handle)
 
         walker.iterate(eogStarter)
-
     }
 
     override fun cleanup() {
