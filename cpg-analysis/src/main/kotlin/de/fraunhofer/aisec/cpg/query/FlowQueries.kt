@@ -252,7 +252,15 @@ fun dataFlowWithValidator(
 
 /**
  * This function tries to identify if the data held in [this] node are copied to another memory
- * location. This could happen by
+ * location. This could happen by:
+ * - Constructing a new object where our data flow to: We should track this object and the target of
+ *   the operation separately.
+ * - Operating on immutable objects (e.g. via [BinaryOperator]s): We should track this object and
+ *   the target of the operation separately.
+ * - Modifying an object via an operator (e.g. `+=`) and we are the rhs of the assignment: We should
+ *   track both, this object and the target of the assignment.
+ * - Assigning an immutable object to a new variable: We should track this object and the target of
+ *   the assignment separately.
  */
 fun Node.generatesNewData(): Collection<Node> {
     return when {
@@ -277,8 +285,8 @@ fun Node.generatesNewData(): Collection<Node> {
         }
         this.astParent is AssignExpression &&
             this in (this.astParent as AssignExpression).rhs &&
-            ((this.astParent as AssignExpression).operatorCode != "=" &&
-                (this.astParent as AssignExpression).operatorCode != ":=") -> {
+            (this.astParent as AssignExpression).operatorCode in
+                this.language.compoundAssignmentOperators -> {
             // If we're the rhs of an assignment with an operator like +=, we should track the lhs
             // value separately.
             (this as? HasType)?.let { (this.astParent as AssignExpression).findTargets(it) }
@@ -294,6 +302,15 @@ fun Node.generatesNewData(): Collection<Node> {
     }
 }
 
+/**
+ * Identifies the information to track for the given node based on the data flow graph (DFG). This
+ * function collects all reachable DFG nodes and determines if any of these nodes generate new data.
+ *
+ * @param scope The analysis scope, which can be interprocedural or intraprocedural.
+ * @param sensitivities The analysis sensitivities to be considered, such as context sensitivity,
+ *   field sensitivity, and filtering unreachable EOG.
+ * @return A set of nodes that includes the original node and any nodes that generate new data.
+ */
 fun Node.identifyInfoToTrack(
     scope: AnalysisScope,
     vararg sensitivities: AnalysisSensitivity =
@@ -351,6 +368,8 @@ fun Node.alwaysFlowsTo(
                 .toSet()
         val earlyTerminationPredicate = { n: Node, ctx: Context ->
             earlyTermination?.let { it(n) } == true ||
+                // If we are not allowed to overwrite the value, we need to check if the node may
+                // overwrite the value. In this case, we terminate early.
                 (!allowOverwritingValue &&
                     // TODO: This should be replaced with some check if the memory location/whatever
                     // where the data is kept is (partially) written to.
