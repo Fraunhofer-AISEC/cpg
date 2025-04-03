@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.conceptBuildHelper
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.nodes
+import de.fraunhofer.aisec.cpg.passes.concepts.ConceptSummaries
 import de.fraunhofer.aisec.cpg.passes.concepts.config.python.PythonStdLibConfigurationPass
 import java.io.File
 import java.nio.file.Path
@@ -65,6 +66,7 @@ class ConsoleService {
                     .defaultPasses()
                     .loadIncludes(true)
                     .registerPass<PythonStdLibConfigurationPass>()
+                    .registerPass<ConceptSummaries>()
                     .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage")
                     .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage")
                     .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage")
@@ -85,6 +87,14 @@ class ConsoleService {
 
             if (request.topLevel != null) {
                 builder.topLevel(File(request.topLevel))
+            }
+
+            if (request.conceptSummaries != null) {
+                builder.configurePass<ConceptSummaries>(
+                    ConceptSummaries.Configuration(
+                        conceptSummaryFiles = listOf(File(request.conceptSummaries))
+                    )
+                )
             }
 
             val config = builder.build()

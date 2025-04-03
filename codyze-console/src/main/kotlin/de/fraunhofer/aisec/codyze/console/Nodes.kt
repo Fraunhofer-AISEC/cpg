@@ -55,6 +55,7 @@ data class AnalyzeRequestJSON(
     val sourceDir: String,
     val includeDir: String? = null,
     val topLevel: String? = null,
+    val conceptSummaries: String? = null,
 )
 
 /** JSON data class for an [Edge]. */
