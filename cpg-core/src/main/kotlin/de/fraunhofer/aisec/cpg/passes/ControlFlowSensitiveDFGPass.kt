@@ -142,19 +142,25 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
      * code [node].
      */
     protected fun clearFlowsOfVariableDeclarations(node: Node) {
-        for (varDecl in node.variables /*.filter { it !is FieldDeclaration }*/) {
-            varDecl.prevDFGEdges.clear()
-            varDecl.nextDFGEdges.clear()
+        val childStarters = node.allEOGStarters.filter { it.prevEOG.isEmpty() }.minus(node)
+        for (varDecl in
+            node.variables.filter { it !is FieldDeclaration && it !is TupleDeclaration }) {
+            if (childStarters.none { varDecl in node.variables }) {
+                varDecl.prevDFGEdges.clear()
+                varDecl.nextDFGEdges.clear()
+            }
         }
         val allChildrenOfFunction = node.allChildren<Node>()
         for (varDecl in node.parameters) {
-            // Clear only prev and next inside this function!
-            varDecl.nextDFGEdges
-                .filter { it.end in allChildrenOfFunction }
-                .forEach { varDecl.nextDFGEdges.remove(it) }
-            varDecl.prevDFGEdges
-                .filter { it.start in allChildrenOfFunction }
-                .forEach { varDecl.prevDFGEdges.remove(it) }
+            if (childStarters.none { varDecl in node.parameters }) {
+                // Clear only prev and next inside this function!
+                varDecl.nextDFGEdges
+                    .filter { it.end in allChildrenOfFunction }
+                    .forEach { varDecl.nextDFGEdges.remove(it) }
+                varDecl.prevDFGEdges
+                    .filter { it.start in allChildrenOfFunction }
+                    .forEach { varDecl.prevDFGEdges.remove(it) }
+            }
         }
     }
 
