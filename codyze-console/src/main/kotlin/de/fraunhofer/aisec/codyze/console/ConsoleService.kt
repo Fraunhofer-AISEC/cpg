@@ -180,18 +180,18 @@ class ConsoleService {
      */
     fun exportNewConcepts(): String {
         val spacer = "  " // 2 spaces for indentation
-        var result = "conceptsByLocation:\n"
+        var result = "concepts:\n"
         newConceptNodes.forEach { concept ->
             result +=
-                "${spacer}- location:\n" +
-                    "${spacer}${spacer}file: \"${concept.location?.artifactLocation?.uri}\"\n" +
-                    "${spacer}${spacer}region: \"${concept.location?.region}\"\n" +
-                    "${spacer}type: \"${concept.underlyingNode?.javaClass?.name}\"\n" +
-                    "${spacer}concept:\n" +
+                "${spacer}concept:\n" +
                     "${spacer}${spacer}name: \"${concept.javaClass.name}\"\n" +
                     "${spacer}${spacer}dfg:\n" +
                     "${spacer}${spacer}${spacer}fromThisNodeToConcept: ${concept.underlyingNode?.nextDFG?.contains(concept)}\n" +
-                    "${spacer}${spacer}${spacer}fromConceptToThisNode: ${concept.nextDFG.contains(concept.underlyingNode)}\n"
+                    "${spacer}${spacer}${spacer}fromConceptToThisNode: ${concept.nextDFG.contains(concept.underlyingNode)}\n" +
+                    "${spacer}location:\n" +
+                    "${spacer}${spacer}file: \"${concept.location?.artifactLocation?.uri}\"\n" +
+                    "${spacer}${spacer}region: \"${concept.location?.region}\"\n" +
+                    "${spacer}${spacer}type: \"${concept.underlyingNode?.javaClass?.name}\"\n"
         }
         return result
     }
