@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.firstScopeParentOrNull
+import de.fraunhofer.aisec.cpg.graph.pointer
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
@@ -41,6 +42,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.unknownType
@@ -205,7 +207,6 @@ fun SymbolResolver.transfer(
     currentEdge: EvaluationOrder,
     state: DeclarationStateElement,
 ): DeclarationStateElement {
-
     val node = currentEdge.end
     return when (node) {
         is Declaration -> {
@@ -216,6 +217,9 @@ fun SymbolResolver.transfer(
         }
         is BinaryOperator -> {
             handleBinaryOperator(node, state)
+        }
+        is UnaryOperator -> {
+            handleUnaryOperator(node, state)
         }
         else -> state
     }
@@ -231,6 +235,29 @@ private fun SymbolResolver.handleBinaryOperator(
     val type = binOp.language.propagateTypeOfBinaryOperation(binOp.operatorCode, lhsType, rhsType)
 
     return state.pushType(binOp, type)
+}
+
+private fun SymbolResolver.handleUnaryOperator(
+    op: UnaryOperator,
+    state: DeclarationStateElement,
+): DeclarationStateElement {
+    val inputTypeElement = state.types[op.input]
+    if (inputTypeElement != null) {
+        return state.pushType(
+            op,
+            *inputTypeElement
+                .map { inputType ->
+                    when (op.operatorCode) {
+                        "*" -> inputType.dereference()
+                        "&" -> inputType.pointer()
+                        else -> inputType
+                    }
+                }
+                .toTypedArray(),
+        )
+    } else {
+        return state
+    }
 }
 
 private fun SymbolResolver.handleReference(

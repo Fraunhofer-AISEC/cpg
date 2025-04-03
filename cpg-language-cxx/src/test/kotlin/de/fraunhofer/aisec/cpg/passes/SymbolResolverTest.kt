@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.BooleanType
 import de.fraunhofer.aisec.cpg.test.analyze
 import java.io.File
@@ -40,7 +41,7 @@ class SymbolResolverTest {
     fun testOnlyVariables() {
         val file = File("src/test/resources/cxx/symbols/only_variables.cpp")
         val result =
-            analyze(listOf(file), file.parentFile.toPath(), usePasses = false) {
+            analyze(listOf(file), file.parentFile.toPath(), usePasses = true) {
                 it.registerLanguage<CPPLanguage>()
                 it.configurePass<SymbolResolver>(
                     SymbolResolver.Configuration(experimentalEOGWorklist = true)
@@ -53,6 +54,9 @@ class SymbolResolverTest {
         val ifCondition = result.ifs.firstOrNull()?.condition
         assertNotNull(ifCondition)
         assertIs<BooleanType>(ifCondition.type, "Type of if condition should be BooleanType")
+
+        val unaryOp = result.allChildren<UnaryOperator>().firstOrNull()
+        assertNotNull(unaryOp)
     }
 
     @Test

@@ -13,6 +13,6 @@ int only_variables() {
         return c + d;
     } else {
         // d is not visible in else-branch
-        return c;
+        return -c;
     }
 }
