@@ -65,6 +65,12 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
 
     /** We perform the actions for each [FunctionDeclaration]. */
     override fun accept(node: Node) {
+        if (node is FunctionDeclaration && node.body == null) {
+            // We do not have a body for this function, so we cannot do anything here.
+            // In fact, if we would continue, we would delete function summaries which would harm
+            // more than it helps.
+            return
+        }
 
         // Calculate the complexity of the function and see, if it exceeds our threshold
         val max = passConfig<Configuration>()?.maxComplexity
