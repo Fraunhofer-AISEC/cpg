@@ -756,9 +756,11 @@ class CallResolverTest : BaseTest() {
             analyze(
                 listOf(Path.of(topLevel.toString(), "symbols.cpp").toFile()),
                 topLevel,
-                usePasses = false,
+                usePasses = true,
             ) {
-                it.registerPass<SymbolResolverEOGIteration>()
+                it.configurePass<SymbolResolver>(
+                    SymbolResolver.Configuration(experimentalEOGWorklist = true)
+                )
                 it.registerLanguage<CPPLanguage>()
             }
         assertNotNull(result)

@@ -95,6 +95,13 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
          * are [EvaluationOrder.unreachable].
          */
         val ignoreUnreachableDeclarations: Boolean = false,
+
+        /**
+         * If set to true, the [SymbolResolver] will use an experimental feature that is based on
+         * the EOG iteration. This is not yet finished and will probably not resolve all the symbols
+         * that the regular resolver would resolve.
+         */
+        val experimentalEOGWorklist: Boolean = false,
     ) : PassConfiguration()
 
     protected lateinit var walker: ScopedWalker
@@ -126,20 +133,24 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
 
     override fun accept(eogStarter: Node) {
         ctx.currentComponent = eogStarter.firstParentOrNull<Component>()
-        walker = ScopedWalker(scopeManager)
+        if (passConfig?.experimentalEOGWorklist == true && eogStarter is FunctionDeclaration) {
+            acceptWithIterateEOG(eogStarter)
+        } else {
+            walker = ScopedWalker(scopeManager)
 
-        cacheTemplates(ctx.currentComponent)
+            cacheTemplates(ctx.currentComponent)
 
-        walker.strategy =
-            if (passConfig?.skipUnreachableEOG == true) {
-                Strategy::REACHABLE_EOG_FORWARD
-            } else {
-                Strategy::EOG_FORWARD
-            }
-        walker.clearCallbacks()
-        walker.registerHandler(this::handle)
+            walker.strategy =
+                if (passConfig?.skipUnreachableEOG == true) {
+                    Strategy::REACHABLE_EOG_FORWARD
+                } else {
+                    Strategy::EOG_FORWARD
+                }
+            walker.clearCallbacks()
+            walker.registerHandler(this::handle)
 
-        walker.iterate(eogStarter)
+            walker.iterate(eogStarter)
+        }
     }
 
     override fun cleanup() {

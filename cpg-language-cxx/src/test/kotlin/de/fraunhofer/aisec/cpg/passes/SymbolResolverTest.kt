@@ -42,7 +42,9 @@ class SymbolResolverTest {
         val result =
             analyze(listOf(file), file.parentFile.toPath(), usePasses = false) {
                 it.registerLanguage<CPPLanguage>()
-                it.registerPass<SymbolResolverEOGIteration>()
+                it.configurePass<SymbolResolver>(
+                    SymbolResolver.Configuration(experimentalEOGWorklist = true)
+                )
                 it.disableTypeObserver()
             }
         assertNotNull(result)
@@ -57,9 +59,11 @@ class SymbolResolverTest {
     fun testMemberCalls() {
         val file = File("src/test/resources/cxx/symbols/member_calls.cpp")
         val result =
-            analyze(listOf(file), file.parentFile.toPath(), usePasses = false) {
+            analyze(listOf(file), file.parentFile.toPath(), usePasses = true) {
                 it.registerLanguage<CPPLanguage>()
-                it.registerPass<SymbolResolverEOGIteration>()
+                it.configurePass<SymbolResolver>(
+                    SymbolResolver.Configuration(experimentalEOGWorklist = true)
+                )
                 it.disableTypeObserver()
             }
         assertNotNull(result)
@@ -71,9 +75,11 @@ class SymbolResolverTest {
     fun testSimpleCalls() {
         val file = File("src/test/resources/cxx/symbols/simple_calls.cpp")
         val result =
-            analyze(listOf(file), file.parentFile.toPath(), usePasses = false) {
+            analyze(listOf(file), file.parentFile.toPath(), usePasses = true) {
                 it.registerLanguage<CPPLanguage>()
-                it.registerPass<SymbolResolverEOGIteration>()
+                it.configurePass<SymbolResolver>(
+                    SymbolResolver.Configuration(experimentalEOGWorklist = true)
+                )
                 it.disableTypeObserver()
             }
         assertNotNull(result)
