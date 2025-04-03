@@ -150,7 +150,8 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                 varDecl.nextDFGEdges.clear()
             }
         }
-        val allChildrenOfFunction = node.allChildren<Node>()
+        val allChildrenOfFunction =
+            node.allChildren<Node>().minus(childStarters.flatMap { it.allChildren<Node>() })
         for (varDecl in node.parameters) {
             if (childStarters.none { varDecl in node.parameters }) {
                 // Clear only prev and next inside this function!
