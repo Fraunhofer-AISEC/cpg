@@ -32,6 +32,7 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.calls
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.conceptBuildHelper
@@ -43,6 +44,7 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import java.net.URI
+import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 /**
@@ -58,11 +60,11 @@ class ConceptSummaries(ctx: TranslationContext) : TranslationResultPass(ctx) {
 
     class Configuration(var conceptSummaryFiles: List<File> = listOf()) : PassConfiguration()
 
-    val logger = LoggerFactory.getLogger(ConceptSummaries::class.java)
+    val logger: Logger = LoggerFactory.getLogger(ConceptSummaries::class.java)
     lateinit var translationResult: TranslationResult
 
     /** TODO */
-    private fun addEntriesFromFile(file: File): Unit {
+    private fun addEntriesFromFile(file: File) {
         val mapper =
             if (file.extension.lowercase() in listOf("yaml", "yml")) {
                     ObjectMapper(YAMLFactory())
@@ -72,14 +74,19 @@ class ConceptSummaries(ctx: TranslationContext) : TranslationResultPass(ctx) {
                 .registerKotlinModule()
         val entries = mapper.readValue<YAMLEntry>(file)
 
-        entries.conceptsByLocation?.let { concepts ->
-            // iterate over all conceptsByLocation
-            concepts.forEach { concept -> handleConceptByLocation(concept) }
-        }
-
-        entries.conceptsBySignature?.let { concepts ->
-            // iterate over all conceptsBySignature
-            concepts.forEach { concept -> handleConceptBySignature(concept) }
+        entries.concepts?.let { concepts ->
+            concepts.forEach { concept ->
+                if (concept.signature != null) {
+                    getNodesBySignature(concept.signature).forEach { underlyingNode ->
+                        addConcept(underlyingNode, concept.concept)
+                    }
+                }
+                if (concept.location != null) {
+                    getNodesByLocation(concept.location).forEach { underlyingNode ->
+                        addConcept(underlyingNode, concept.concept)
+                    }
+                }
+            }
         }
     }
 
@@ -95,32 +102,16 @@ class ConceptSummaries(ctx: TranslationContext) : TranslationResultPass(ctx) {
         }
     }
 
-    private fun handleConceptBySignature(concept: ConceptBySignatureEntry) {
-        translationResult.calls
-            .filter { call -> call.reconstructedImportName.toString() == concept.signature.fqn }
-            .forEach { underlyingNode ->
-                logger.debug("Found node: $underlyingNode")
-                underlyingNode.conceptBuildHelper(
-                    name = concept.concept.name,
-                    underlyingNode = underlyingNode,
-                    constructorArguments =
-                        concept.concept.constructorArguments?.associate { arg ->
-                            arg.name to arg.value
-                        } ?: emptyMap(),
-                    connectDFGUnderlyingNodeToConcept =
-                        concept.concept.dfg?.fromThisNodeToConcept
-                            ?: false, // TODO: this `?: false` is not nice
-                    connectDFGConceptToUnderlyingNode =
-                        concept.concept.dfg?.fromConceptToThisNode
-                            ?: false, // TODO: this `?: false` is not nice
-                )
-            }
+    private fun getNodesBySignature(signature: SignatureEntry): List<Node> {
+        return translationResult.calls.filter { call ->
+            call.reconstructedImportName.toString() == signature.fqn
+        }
     }
 
-    private fun handleConceptByLocation(concept: ConceptByLocationEntry) {
+    private fun getNodesByLocation(location: LocationEntry): List<Node> {
         val regex =
             Regex("(?<startLine>\\d+):(?<startColumn>\\d+)-(?<endLine>\\d+):(?<endColumn>\\d+)")
-        val region = regex.matchEntire(concept.location.region) ?: TODO()
+        val region = regex.matchEntire(location.region) ?: TODO()
         val startLine = region.groups["startLine"]?.value?.toIntOrNull() ?: TODO()
         val startColumn = region.groups["startColumn"]?.value?.toIntOrNull() ?: TODO()
         val endLine = region.groups["endLine"]?.value?.toIntOrNull() ?: TODO()
@@ -128,48 +119,41 @@ class ConceptSummaries(ctx: TranslationContext) : TranslationResultPass(ctx) {
 
         val loc =
             PhysicalLocation(
-                uri = URI(concept.location.file),
+                uri = URI(location.file),
                 region = Region(startLine, startColumn, endLine, endColumn),
             )
         // find the matching node
-        val nodes =
-            translationResult
-                .getNodesByRegion(location = loc, clsName = concept.type)
-                .also { nodes ->
-                    if (nodes.size != 1) {
-                        logger.warn(
-                            "Found ${nodes.size} nodes for location $loc. Expected 1 node." // TODO
-                        )
-                    }
-                }
-                .forEach { underlyingNode ->
-                    logger.debug("Found node: $underlyingNode")
-                    underlyingNode.conceptBuildHelper(
-                        name = concept.concept.name,
-                        underlyingNode = underlyingNode,
-                        constructorArguments =
-                            concept.concept.constructorArguments?.associate { arg ->
-                                arg.name to arg.value
-                            } ?: emptyMap(),
-                        connectDFGUnderlyingNodeToConcept =
-                            concept.concept.dfg?.fromThisNodeToConcept
-                                ?: false, // TODO: this `?: false` is not nice
-                        connectDFGConceptToUnderlyingNode =
-                            concept.concept.dfg?.fromConceptToThisNode
-                                ?: false, // TODO: this `?: false` is not nice
-                    )
-                }
+        return translationResult.getNodesByRegion(location = loc, clsName = location.type).also {
+            nodes ->
+            if (nodes.size != 1) {
+                logger.warn(
+                    "Found ${nodes.size} nodes for location $loc. Expected 1 node." // TODO
+                )
+            }
+        }
     }
 
-    private data class YAMLEntry(
-        val conceptsByLocation: List<ConceptByLocationEntry>?,
-        val conceptsBySignature: List<ConceptBySignatureEntry>?,
-    )
+    private fun addConcept(underlyingNode: Node, concept: ConceptEntry) {
+        logger.debug("Found node: {}", underlyingNode)
+        underlyingNode.conceptBuildHelper(
+            name = concept.name,
+            underlyingNode = underlyingNode,
+            constructorArguments =
+                concept.constructorArguments?.associate { arg -> arg.name to arg.value }
+                    ?: emptyMap(),
+            connectDFGUnderlyingNodeToConcept =
+                concept.dfg?.fromThisNodeToConcept ?: false, // TODO: this `?: false` is not nice
+            connectDFGConceptToUnderlyingNode =
+                concept.dfg?.fromConceptToThisNode ?: false, // TODO: this `?: false` is not nice
+        )
+    }
 
-    private data class ConceptByLocationEntry(
-        val location: LocationEntry,
-        val type: String?,
+    private data class YAMLEntry(val concepts: List<ConceptRootEntry>?)
+
+    private data class ConceptRootEntry(
+        val location: LocationEntry?,
         val concept: ConceptEntry,
+        val signature: SignatureEntry?,
     )
 
     private data class ConceptEntry(
@@ -185,12 +169,7 @@ class ConceptSummaries(ctx: TranslationContext) : TranslationResultPass(ctx) {
 
     private data class ConstructorArgumentEntry(val name: String, val value: String)
 
-    private data class LocationEntry(val file: String, val region: String)
-
-    private data class ConceptBySignatureEntry(
-        val signature: SignatureEntry,
-        val concept: ConceptEntry,
-    )
+    private data class LocationEntry(val file: String, val region: String, val type: String?)
 
     private data class SignatureEntry(
         val fqn: String
