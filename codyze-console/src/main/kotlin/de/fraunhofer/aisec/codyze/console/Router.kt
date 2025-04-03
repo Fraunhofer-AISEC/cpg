@@ -31,6 +31,7 @@ import io.ktor.server.http.content.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import kotlin.reflect.KClass
 import org.reflections.Reflections
 
 /**
@@ -184,9 +185,9 @@ fun Routing.apiRoutes(service: ConsoleService) {
                 )
 
             val conceptClasses = reflections.getSubTypesOf(Concept::class.java)
-            val conceptNames = conceptClasses.map { it.name }.toSet()
-
-            call.respond(mapOf("classes" to conceptNames))
+            call.respond(
+                mapOf("info" to conceptClasses.map { it.kotlin.getConstructorArguments() })
+            )
         }
 
         /**
@@ -209,4 +210,20 @@ fun Routing.apiRoutes(service: ConsoleService) {
  */
 fun Routing.frontendRoutes() {
     staticResources("/", "static", "index.html") { default("index.html") }
+}
+
+/**
+ * This function retrieves the constructor arguments of a [KClass]. It returns a list of triples,
+ * where each triple contains the name, type, and whether the argument is optional.
+ *
+ * @return A list of triples containing the constructor argument names, types, and optionality. If
+ *   multiple constructors exist, returns an empty list.
+ */
+fun KClass<*>.getConstructorArguments(): ConceptInfo {
+    return ConceptInfo(
+        this.java.name,
+        this.constructors.singleOrNull()?.parameters?.mapNotNull {
+            it.name?.let { name -> ConstructorInfo(name, it.type.toString(), it.isOptional) }
+        } ?: listOf(),
+    )
 }

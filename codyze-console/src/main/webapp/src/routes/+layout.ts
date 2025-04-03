@@ -9,5 +9,5 @@ import '../app.css';
 export const load: LayoutLoad = async ({ fetch }) => {
   const res = await fetch('/api/classes/concepts');
   const data = await res.json();
-  return { conceptGroups: groupConcepts(data.classes) };
+  return { conceptGroups: groupConcepts(data.info) };
 };
