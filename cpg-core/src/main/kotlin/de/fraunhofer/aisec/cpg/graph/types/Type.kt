@@ -74,6 +74,9 @@ abstract class Type : Node {
     var isPrimitive = false
         protected set
 
+    var isMutable = true
+        protected set
+
     open var typeOrigin: Origin? = null
 
     /**
