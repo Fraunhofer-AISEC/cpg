@@ -322,12 +322,16 @@ fun Node.identifyInfoToTrack(
  * An early termination can be specified by the predicate [earlyTermination].
  * [allowOverwritingValue] can be used to configure if overwriting the value (or part of it) results
  * in a failure of the requirement (if `false`) or if it does not affect the evaluation. The
- * analysis can be configured with [scope] and [sensitivities].
+ * analysis can be configured with [scope] and [sensitivities]. [stopIfImpossible] enables the
+ * option to stop iterating through the EOG if we already left the function where we started and
+ * none of the nodes reaching by the DFG is in the new scope or one of its parents (i.e., the
+ * condition cannot be fulfilled anymore).
  */
 fun Node.alwaysFlowsTo(
     allowOverwritingValue: Boolean = false,
     earlyTermination: ((Node) -> Boolean)? = null,
     identifyCopies: Boolean = true,
+    stopIfImpossible: Boolean = true,
     scope: AnalysisScope,
     vararg sensitivities: AnalysisSensitivity =
         ContextSensitive + FieldSensitive + FilterUnreachableEOG,
@@ -359,7 +363,7 @@ fun Node.alwaysFlowsTo(
                     (n as? Reference)?.access == AccessValues.WRITE)
         }
         val eogScope =
-            if (scope is Interprocedural) {
+            if (stopIfImpossible && scope is Interprocedural) {
                 InterproceduralWithDfgTermination(
                     maxCallDepth = scope.maxCallDepth,
                     maxSteps = scope.maxSteps,
