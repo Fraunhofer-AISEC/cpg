@@ -1,13 +1,16 @@
+import type {ConceptInfo} from "$lib/types";
+
 export interface ConceptGroup {
   path: string;
   concepts: { name: string; fullName: string }[];
 }
 
-export function groupConcepts(concepts: string[]): ConceptGroup[] {
+export function groupConcepts(concepts: ConceptInfo[]): ConceptGroup[] {
   const prefix = 'de.fraunhofer.aisec.cpg.graph.concepts.';
   const groups: Map<string, { name: string; fullName: string }[]> = new Map();
 
-  for (const fullName of concepts) {
+  for (const fullInfo of concepts) {
+    const fullName = fullInfo.conceptName
     if (!fullName.startsWith(prefix)) continue;
 
     const name = fullName.split('.').pop()!;

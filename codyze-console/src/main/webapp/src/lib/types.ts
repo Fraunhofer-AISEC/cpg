@@ -52,3 +52,14 @@ export interface EdgeJSON {
   start: string;
   end: string;
 }
+
+export interface ConceptInfo {
+  conceptName: string;
+  constructorInfo: ConstructorInfo[];
+}
+
+export interface ConstructorInfo {
+  argumentName: string;
+  argumentType: string;
+  isOptional: boolean;
+}
