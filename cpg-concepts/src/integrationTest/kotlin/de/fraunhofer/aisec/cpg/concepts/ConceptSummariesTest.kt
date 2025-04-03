@@ -50,6 +50,12 @@ class ConceptSummariesTest : BaseTest() {
                 it.registerLanguage<PythonLanguage>()
                 it.registerPass<ConceptSummaries>()
                 it.symbols(mapOf("PYTHON_PLATFORM" to "linux"))
+                it.configurePass<ConceptSummaries>(
+                    ConceptSummaries.Configuration(
+                        conceptSummaryFiles =
+                            listOf(topLevel.resolve("ConceptSummary.yaml").toFile())
+                    )
+                )
             }
         assertNotNull(result)
 

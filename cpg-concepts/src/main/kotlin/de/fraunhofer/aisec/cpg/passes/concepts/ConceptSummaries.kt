@@ -56,6 +56,8 @@ import org.slf4j.LoggerFactory
 @ExecuteBefore(DynamicInvokeResolver::class, softDependency = true)
 class ConceptSummaries(ctx: TranslationContext) : TranslationResultPass(ctx) {
 
+    class Configuration(var conceptSummaryFiles: List<File> = listOf()) : PassConfiguration()
+
     val logger = LoggerFactory.getLogger(ConceptSummaries::class.java)
     lateinit var translationResult: TranslationResult
 
@@ -87,12 +89,10 @@ class ConceptSummaries(ctx: TranslationContext) : TranslationResultPass(ctx) {
 
     override fun accept(p0: TranslationResult) {
         translationResult = p0
-        addEntriesFromFile(
-            file =
-                File(
-                    "src/integrationTest/resources/ConceptSummary.yaml"
-                ) // TODO make this configurable
-        )
+
+        passConfig<Configuration>()?.conceptSummaryFiles?.forEach { file ->
+            addEntriesFromFile(file)
+        }
     }
 
     private fun handleConceptBySignature(concept: ConceptBySignatureEntry) {
