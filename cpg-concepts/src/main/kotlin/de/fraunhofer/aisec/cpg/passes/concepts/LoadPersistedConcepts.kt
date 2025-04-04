@@ -61,11 +61,11 @@ class LoadPersistedConcepts(ctx: TranslationContext) : TranslationResultPass(ctx
 
     /**
      * The [PassConfiguration] enabling the user to configure the persisted concepts to be loaded by
-     * setting [conceptSummaryFiles].
+     * setting [persistedConcepts].
      *
-     * @param conceptSummaryFiles A list of files containing the persisted concepts to be loaded.
+     * @param persistedConcepts A list of files containing the persisted concepts to be loaded.
      */
-    class Configuration(var conceptSummaryFiles: List<File> = listOf()) : PassConfiguration()
+    class Configuration(var persistedConcepts: List<File> = listOf()) : PassConfiguration()
 
     val logger: Logger = LoggerFactory.getLogger(LoadPersistedConcepts::class.java)
 
@@ -74,7 +74,7 @@ class LoadPersistedConcepts(ctx: TranslationContext) : TranslationResultPass(ctx
     }
 
     override fun accept(translationResult: TranslationResult) {
-        passConfig<Configuration>()?.conceptSummaryFiles?.forEach { file ->
+        passConfig<Configuration>()?.persistedConcepts?.forEach { file ->
             addEntriesFromFile(file, translationResult)
         }
     }
