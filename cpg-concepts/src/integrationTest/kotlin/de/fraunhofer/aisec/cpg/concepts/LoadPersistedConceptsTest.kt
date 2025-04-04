@@ -52,7 +52,7 @@ class LoadPersistedConceptsTest : BaseTest() {
                 it.symbols(mapOf("PYTHON_PLATFORM" to "linux"))
                 it.configurePass<LoadPersistedConcepts>(
                     LoadPersistedConcepts.Configuration(
-                        persistedConcepts =
+                        conceptFiles =
                             listOf(topLevel.resolve("file-concept-location.yaml").toFile())
                     )
                 )
@@ -92,7 +92,7 @@ class LoadPersistedConceptsTest : BaseTest() {
                 it.symbols(mapOf("PYTHON_PLATFORM" to "linux"))
                 it.configurePass<LoadPersistedConcepts>(
                     LoadPersistedConcepts.Configuration(
-                        persistedConcepts =
+                        conceptFiles =
                             listOf(topLevel.resolve("file-concept-signature.yaml").toFile())
                     )
                 )

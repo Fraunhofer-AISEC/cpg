@@ -45,8 +45,6 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import java.net.URI
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 
 /**
  * This pass reads a yaml or JSON file and creates a [Concept] for each entry in the file. The pass
@@ -61,20 +59,18 @@ class LoadPersistedConcepts(ctx: TranslationContext) : TranslationResultPass(ctx
 
     /**
      * The [PassConfiguration] enabling the user to configure the persisted concepts to be loaded by
-     * setting [persistedConcepts].
+     * setting [conceptFiles].
      *
-     * @param persistedConcepts A list of files containing the persisted concepts to be loaded.
+     * @param conceptFiles A list of files containing the persisted concepts to be loaded.
      */
-    class Configuration(var persistedConcepts: List<File> = listOf()) : PassConfiguration()
-
-    val logger: Logger = LoggerFactory.getLogger(LoadPersistedConcepts::class.java)
+    class Configuration(var conceptFiles: List<File> = listOf()) : PassConfiguration()
 
     override fun cleanup() {
         // nothing to do
     }
 
     override fun accept(translationResult: TranslationResult) {
-        passConfig<Configuration>()?.persistedConcepts?.forEach { file ->
+        passConfig<Configuration>()?.conceptFiles?.forEach { file ->
             addEntriesFromFile(file, translationResult)
         }
     }
@@ -96,12 +92,9 @@ class LoadPersistedConcepts(ctx: TranslationContext) : TranslationResultPass(ctx
                             ObjectMapper(JsonFactory())
                         }
                         .registerKotlinModule()
-                mapper.readValue<PersistedConceptsEntry>(file)
+                mapper.readValue<PersistedConcepts>(file)
             } catch (ex: Exception) {
-                logger.error(
-                    "Error reading persisted concepts from ${file.path}: ${ex.message}",
-                    ex,
-                )
+                log.error("Error reading persisted concepts from ${file.path}: ${ex.message}", ex)
                 return
             }
 
@@ -113,12 +106,12 @@ class LoadPersistedConcepts(ctx: TranslationContext) : TranslationResultPass(ctx
                     )
                     return@forEach
                 } else if (concept.signature != null) {
-                    getNodesBySignature(translationResult, concept.signature).forEach {
+                    translationResult.getNodesBySignature(concept.signature).forEach {
                         underlyingNode ->
                         addConcept(underlyingNode, concept.concept)
                     }
                 } else if (concept.location != null) {
-                    getNodesByLocation(translationResult, concept.location).forEach { underlyingNode
+                    translationResult.getNodesByLocation(concept.location).forEach { underlyingNode
                         ->
                         addConcept(underlyingNode, concept.concept)
                     }
@@ -132,34 +125,25 @@ class LoadPersistedConcepts(ctx: TranslationContext) : TranslationResultPass(ctx
     }
 
     /**
-     * This function retrieves the nodes matching the provided [signature] from the
-     * [translationResult]. Currently, this function only matches on the node being a
-     * [CallExpression] and the [CallExpression.reconstructedImportName] matching the provided FQN.
+     * This function retrieves the nodes matching the provided [signature] from the [this].
+     * Currently, this function only matches on the node being a [CallExpression] and the
+     * [CallExpression.reconstructedImportName] matching the provided FQN.
      *
-     * @param translationResult The [TranslationResult] to search for nodes.
      * @param signature The [SignatureEntry] containing the signature to match.
      * @return A list of nodes matching the provided [SignatureEntry].
      */
-    private fun getNodesBySignature(
-        translationResult: TranslationResult,
-        signature: SignatureEntry,
-    ): List<Node> {
-        return translationResult.getCallsByFQN(signature.fqn)
+    private fun TranslationResult.getNodesBySignature(signature: SignatureEntry): List<Node> {
+        return this.getCallsByFQN(signature.fqn)
     }
 
     /**
-     * This function retrieves the nodes matching the provided [location] from the
-     * [translationResult].
+     * This function retrieves the nodes matching the provided [location] from the [this].
      *
-     * @param translationResult The [TranslationResult] to search for nodes.
      * @param location The [LocationEntry] containing the location to match.
      * @return A list of nodes matching the provided [LocationEntry] or an empty list of the
      *   [location] cannot be parsed.
      */
-    private fun getNodesByLocation(
-        translationResult: TranslationResult,
-        location: LocationEntry,
-    ): List<Node> {
+    private fun TranslationResult.getNodesByLocation(location: LocationEntry): List<Node> {
         val loc =
             try {
                 val regex =
@@ -196,12 +180,9 @@ class LoadPersistedConcepts(ctx: TranslationContext) : TranslationResultPass(ctx
             }
 
         // find the matching node
-        return translationResult.getNodesByRegion(location = loc, clsName = location.type).also {
-            nodes ->
+        return this.getNodesByRegion(location = loc, clsName = location.type).also { nodes ->
             if (nodes.size != 1) {
-                logger.warn(
-                    "Found ${nodes.size} nodes for location $loc. Expected exactly one node."
-                )
+                log.warn("Found ${nodes.size} nodes for location $loc. Expected exactly one node.")
             }
         }
     }
@@ -214,22 +195,20 @@ class LoadPersistedConcepts(ctx: TranslationContext) : TranslationResultPass(ctx
      * @param concept The [ConceptEntry] containing the concept information.
      */
     private fun addConcept(underlyingNode: Node, concept: ConceptEntry) {
-        logger.debug("Adding concept {} to node {}.", concept, underlyingNode)
+        log.debug("Adding concept {} to node {}.", concept, underlyingNode)
         underlyingNode.conceptBuildHelper(
             name = concept.name,
             underlyingNode = underlyingNode,
             constructorArguments =
                 concept.constructorArguments?.associate { arg -> arg.name to arg.value }
                     ?: emptyMap(),
-            connectDFGUnderlyingNodeToConcept =
-                concept.dfg?.fromThisNodeToConcept ?: false, // TODO: this `?: false` is not nice
-            connectDFGConceptToUnderlyingNode =
-                concept.dfg?.fromConceptToThisNode ?: false, // TODO: this `?: false` is not nice
+            connectDFGUnderlyingNodeToConcept = concept.dfg?.fromThisNodeToConcept,
+            connectDFGConceptToUnderlyingNode = concept.dfg?.fromConceptToThisNode,
         )
     }
 
-    /** The root node of our YAML/JSON structure. It contains a list of [ConceptRootEntry]s. */
-    private data class PersistedConceptsEntry(val concepts: List<ConceptRootEntry>?)
+    /** The root node of our YAML/JSON structure. It contains a list of [PersistedConceptEntry]s. */
+    private data class PersistedConcepts(val concepts: List<PersistedConceptEntry>?)
 
     /**
      * This class represents a single entry in the YAML/JSON file. It contains the concept and
@@ -241,7 +220,7 @@ class LoadPersistedConcepts(ctx: TranslationContext) : TranslationResultPass(ctx
      *   against.
      * @param signature The [SignatureEntry] containing the signature of nodes to match.
      */
-    private data class ConceptRootEntry(
+    private data class PersistedConceptEntry(
         val concept: ConceptEntry,
         val location: LocationEntry?,
         val signature: SignatureEntry?,
