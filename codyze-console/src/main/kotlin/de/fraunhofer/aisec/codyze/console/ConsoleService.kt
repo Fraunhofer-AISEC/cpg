@@ -176,6 +176,9 @@ class ConsoleService {
             .conceptBuildHelper(
                 name = request.conceptName,
                 underlyingNode = node,
+                constructorArguments =
+                    request.constructorInfo?.associate { it.argumentName to it.argumentValue }
+                        ?: emptyMap(),
                 connectDFGUnderlyingNodeToConcept = request.addDFGToConcept,
                 connectDFGConceptToUnderlyingNode = request.addDFGFromConcept,
             )

@@ -125,6 +125,13 @@ data class ConstructorInfo(
     val isOptional: Boolean,
 )
 
+@Serializable
+data class ConstructorArguments(
+    val argumentName: String,
+    val argumentValue: String,
+    val argumentType: String?, // currently not used
+)
+
 /** JSON data class for a [Node]. */
 @Serializable
 data class NodeJSON(
@@ -157,6 +164,7 @@ data class ConceptRequestJSON(
     val conceptName: String,
     val addDFGToConcept: Boolean,
     val addDFGFromConcept: Boolean,
+    val constructorInfo: List<ConstructorArguments>?,
 )
 
 /** Converts a [AnalysisResult] into its JSON representation. */
