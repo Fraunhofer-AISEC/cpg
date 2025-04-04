@@ -29,16 +29,14 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
-import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContext
-import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
-import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
-import de.fraunhofer.aisec.cpg.graph.edges.flows.Granularity
-import de.fraunhofer.aisec.cpg.graph.edges.flows.indexed
-import de.fraunhofer.aisec.cpg.graph.statements.*
+import de.fraunhofer.aisec.cpg.graph.edges.flows.*
+import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
+import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.*
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
-import kotlin.collections.set
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
 
@@ -67,20 +65,19 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
 
     /** We perform the actions for each [FunctionDeclaration]. */
     override fun accept(node: Node) {
-        // For now, we only execute this for function declarations, we will support all EOG starters
-        // in the future.
-        if (node !is FunctionDeclaration) {
+        if (node is FunctionDeclaration && node.body == null) {
+            // We do not have a body for this function, so we cannot do anything here.
+            // In fact, if we would continue, we would delete function summaries which would harm
+            // more than it helps.
             return
         }
-
-        // Skip empty functions
-        if (node.body == null) {
-            return
-        }
+        // These are EOGStarterHolders but do not have an EOG which means, they will just cause
+        // problems. Again, if we delete information/edges, we will never be able to recover them.
+        if (node is FunctionTemplateDeclaration) return
 
         // Calculate the complexity of the function and see, if it exceeds our threshold
         val max = passConfig<Configuration>()?.maxComplexity
-        val c = node.body?.cyclomaticComplexity ?: 0
+        val c = (node as? FunctionDeclaration)?.body?.cyclomaticComplexity ?: 0
         if (max != null && c > max) {
             log.info(
                 "Ignoring function ${node.name} because its complexity (${c}) is greater than the configured maximum (${max})"
@@ -94,9 +91,23 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
         val startState = DFGPassState<Set<Node>>()
 
         startState.declarationsState.push(node, PowersetLattice(identitySetOf()))
-        node.parameters.forEach {
-            startState.declarationsState.push(it, PowersetLattice(identitySetOf(it)))
+        // If we start in a FunctionDeclaration, we have to add the parameters at the beginning
+        // because we won't visit them.
+        (node as? FunctionDeclaration)?.parameters?.forEach { param ->
+            startState.declarationsState.push(param, PowersetLattice(identitySetOf(param)))
+            param.default?.let { defaultValue ->
+                startState.push(param, PowersetLattice(identitySetOf(defaultValue)))
+            }
         }
+
+        // If we start in a VariableDeclaration, we have to set the initializer as the last write
+        // because we won't visit the declaration itself.
+        (node as? VariableDeclaration)?.let { varDecl ->
+            varDecl.initializer?.let { initializer ->
+                startState.push(varDecl, PowersetLattice(identitySetOf(initializer)))
+            }
+        }
+
         val finalState =
             iterateEOG(node.nextEOGEdges, startState, ::transfer) as? DFGPassState ?: return
 
@@ -154,19 +165,38 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
      * code [node].
      */
     protected fun clearFlowsOfVariableDeclarations(node: Node) {
-        for (varDecl in node.variables /*.filter { it !is FieldDeclaration }*/) {
-            varDecl.prevDFGEdges.clear()
-            varDecl.nextDFGEdges.clear()
-        }
-        val allChildrenOfFunction = node.allChildren<Node>()
-        for (varDecl in node.parameters) {
-            // Clear only prev and next inside this function!
-            varDecl.nextDFGEdges
-                .filter { it.end in allChildrenOfFunction }
-                .forEach { varDecl.nextDFGEdges.remove(it) }
+        // Get all children of the node which are not part of child EOG starters' children. We need
+        // this to filter out effects on the childStarters' children. We do not want to impact them,
+        // so we later filter out all things which occur in the children or even completely outside
+        // the scope which we can reach. We also do not want to touch anything related to
+        // FunctionTemplateDeclarations.
+        val allChildrenOfFunction =
+            node.allChildren<Node>(
+                stopAtNode = {
+                    it is FunctionTemplateDeclaration ||
+                        it is VariableDeclaration && it.prevEOG.isEmpty() && !it.isImplicit ||
+                        it is EOGStarterHolder && it.prevEOG.isEmpty() && it != node
+                }
+            )
+
+        // Get the local variables and parameters inside the node's astChildren (without the
+        // childStarters' children). For these, we remove prev and next DFG edges from/to nodes
+        // inside the node's astChildren
+        for (varDecl in
+            allChildrenOfFunction.filter {
+                (it is VariableDeclaration &&
+                    !it.isGlobal &&
+                    it !is FieldDeclaration &&
+                    it !is TupleDeclaration) || it is ParameterDeclaration
+            }) {
+            // Clear only prev DFG inside this function!
             varDecl.prevDFGEdges
                 .filter { it.start in allChildrenOfFunction }
                 .forEach { varDecl.prevDFGEdges.remove(it) }
+            // Clear only next DFG inside this function!
+            varDecl.nextDFGEdges
+                .filter { it.end in allChildrenOfFunction }
+                .forEach { varDecl.nextDFGEdges.remove(it) }
         }
     }
 
@@ -430,6 +460,21 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                     doubleState.declarationsState[currentEdge.start],
                 )
             }
+        } else if (
+            (currentNode as? Reference)?.access == AccessValues.WRITE &&
+                (currentNode.refersTo is VariableDeclaration ||
+                    currentNode.refersTo is ParameterDeclaration) &&
+                currentNode.refersTo !is FieldDeclaration
+        ) {
+            // This is a really ugly workaround: Check if the VariableDeclaration which this
+            // reference refers to is used as some sort of non-local (in terms of not reachable via
+            // the connected EOG). For us, an indication of this is that there are some prev or next
+            // DFG edges left which are associated to this variable declaration. In this case, we
+            // add the write operation from this reference to the variable declaration.
+            currentNode.refersTo?.let { variableDecl ->
+                if (variableDecl.prevDFG.isNotEmpty() || variableDecl.nextDFG.isNotEmpty())
+                    doubleState.push(variableDecl, PowersetLattice(identitySetOf(currentNode)))
+            }
         } else {
             doubleState.declarationsState.push(
                 currentNode,
@@ -631,7 +676,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
             }
         }
 
-        override fun needsUpdate(other: State<de.fraunhofer.aisec.cpg.graph.Node, V>): Boolean {
+        override fun needsUpdate(other: State<Node, V>): Boolean {
             return if (other is DFGPassState) {
                 generalState.needsUpdate(other.generalState) ||
                     declarationsState.needsUpdate(other.declarationsState)
@@ -640,10 +685,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
             }
         }
 
-        override fun push(
-            newNode: de.fraunhofer.aisec.cpg.graph.Node,
-            newLatticeElement: LatticeElement<V>?,
-        ): Boolean {
+        override fun push(newNode: Node, newLatticeElement: LatticeElement<V>?): Boolean {
             return generalState.push(newNode, newLatticeElement)
         }
 
