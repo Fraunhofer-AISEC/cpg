@@ -174,6 +174,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
             node.allChildren<Node>(
                 stopAtNode = {
                     it is FunctionTemplateDeclaration ||
+                        it is VariableDeclaration && it.prevEOG.isEmpty() && !it.isImplicit ||
                         it is EOGStarterHolder && it.prevEOG.isEmpty() && it != node
                 }
             )
