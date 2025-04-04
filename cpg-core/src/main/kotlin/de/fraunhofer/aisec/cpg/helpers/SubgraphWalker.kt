@@ -89,10 +89,12 @@ object SubgraphWalker {
      * [Node.accept] with the [Strategy.AST_FORWARD] is encouraged.
      *
      * @param node the start node
+     * @param stopAtNode A predicate to stop the flattening at a specific node (i.e., we won't
+     *   include that node and its ast children)
      * @return a list of children from the node's AST
      */
     @JvmStatic
-    fun getAstChildren(node: Node?): List<Node> {
+    fun getAstChildren(node: Node?, stopAtNode: (Node) -> Boolean = { false }): List<Node> {
         val children = ArrayList<Node>()
         if (node == null) return children
         val classType: Class<*> = node.javaClass
@@ -138,9 +140,11 @@ object SubgraphWalker {
      * Flattens the tree, starting at Node n into a list.
      *
      * @param n the node which contains the ast children to flatten
+     * @param stopAtNode A predicate to stop the flattening at a specific node (i.e., we won't
+     *   include that node and its ast children)
      * @return the flattened nodes
      */
-    fun flattenAST(n: Node?): List<Node> {
+    fun flattenAST(n: Node?, stopAtNode: (Node) -> Boolean = { false }): List<Node> {
         if (n == null) {
             return ArrayList()
         }
@@ -148,17 +152,21 @@ object SubgraphWalker {
         // We are using an identity set here, to avoid placing the *same* node in the identitySet
         // twice, possibly resulting in loops
         val identitySet = IdentitySet<Node>()
-        flattenASTInternal(identitySet, n)
+        flattenASTInternal(identitySet, n, stopAtNode)
         return identitySet.toSortedList()
     }
 
-    private fun flattenASTInternal(identitySet: MutableSet<Node>, n: Node) {
+    private fun flattenASTInternal(
+        identitySet: MutableSet<Node>,
+        n: Node,
+        stopAtNode: (Node) -> Boolean,
+    ) {
         // Add the node itself and abort if its already there, to detect possible loops
-        if (!identitySet.add(n)) {
+        if (stopAtNode(n) || !identitySet.add(n)) {
             return
         }
         for (child in getAstChildren(n)) {
-            flattenASTInternal(identitySet, child)
+            flattenASTInternal(identitySet, child, stopAtNode)
         }
     }
 
