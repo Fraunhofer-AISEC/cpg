@@ -103,39 +103,54 @@ val DeclarationStateElement.types
  * If the [Declaration] is a [HasType], the type is also pushed to the
  * [DeclarationStateElement.types].
  */
-// TODO: alex is lub'ing
 fun DeclarationStateElement.pushDeclarationToScope(
+    lattice: DeclarationState,
     scope: Scope,
     vararg elements: Declaration,
 ): DeclarationStateElement {
-    val newSymbols = this.symbols.duplicate()
-    newSymbols.computeIfAbsent(scope) { PowersetLatticeDeclarationElement() }.addAll(elements)
-
-    val newTypes = this.types.duplicate()
-    elements.forEach { decl ->
-        if (decl is HasType) {
-            newTypes.computeIfAbsent(decl) { PowersetLatticeTypeElement() }.add(decl.type)
-        }
-    }
-
-    return DeclarationStateElement(newSymbols, this.candidates.duplicate(), newTypes)
+    return lattice.lub(
+        this,
+        DeclarationStateElement(
+            ScopeToDeclarationElement(scope to PowersetLatticeDeclarationElement(*elements)),
+            NodeToDeclarationElement(),
+            NodeToTypeElement(
+                *elements
+                    .mapNotNull { it as? HasType }
+                    .map { it as Node to PowersetLatticeTypeElement(it.type) }
+                    .toTypedArray()
+            ),
+        ),
+    )
 }
 
-// TODO: alex is lub'ing
 fun DeclarationStateElement.pushCandidate(
+    lattice: DeclarationState,
     scope: Node,
     vararg elements: Declaration,
 ): DeclarationStateElement {
-    val newCandidates = this.candidates.duplicate()
-    newCandidates.computeIfAbsent(scope) { PowersetLatticeDeclarationElement() }.addAll(elements)
-    return DeclarationStateElement(this.symbols.duplicate(), newCandidates, this.types.duplicate())
+    return lattice.lub(
+        this,
+        DeclarationStateElement(
+            ScopeToDeclarationElement(),
+            NodeToDeclarationElement(scope to PowersetLatticeDeclarationElement(*elements)),
+            NodeToTypeElement(),
+        ),
+    )
 }
 
-// TODO: alex is lub'ing
-fun DeclarationStateElement.pushType(node: Node, vararg elements: Type): DeclarationStateElement {
-    val newTypes = this.types.duplicate()
-    newTypes.computeIfAbsent(node) { PowersetLatticeTypeElement() }.addAll(elements)
-    return DeclarationStateElement(this.symbols.duplicate(), this.candidates.duplicate(), newTypes)
+fun DeclarationStateElement.pushType(
+    lattice: DeclarationState,
+    node: Node,
+    vararg elements: Type,
+): DeclarationStateElement {
+    return lattice.lub(
+        this,
+        DeclarationStateElement(
+            ScopeToDeclarationElement(),
+            NodeToDeclarationElement(),
+            NodeToTypeElement(node to PowersetLatticeTypeElement(*elements)),
+        ),
+    )
 }
 
 /**
@@ -178,6 +193,7 @@ fun SymbolResolver.acceptWithIterateEOG(t: Node) {
     // EOG)
     startState =
         startState.pushDeclarationToScope(
+            lattice,
             ctx.scopeManager.globalScope,
             *ctx.scopeManager.globalScope.symbols.values.flatten().toTypedArray(),
         )
@@ -187,10 +203,14 @@ fun SymbolResolver.acceptWithIterateEOG(t: Node) {
         .filterScopes { it is NameScope }
         .forEach {
             startState =
-                startState.pushDeclarationToScope(it, *it.symbols.values.flatten().toTypedArray())
+                startState.pushDeclarationToScope(
+                    lattice,
+                    it,
+                    *it.symbols.values.flatten().toTypedArray(),
+                )
         }
 
-    t.scope?.let { startState = startState.pushDeclarationToScope(it) }
+    t.scope?.let { startState = startState.pushDeclarationToScope(lattice, it) }
     val finalState = lattice.iterateEOG(t.nextEOGEdges, startState, ::transfer)
 
     finalState.candidates.forEach { node, candidates ->
@@ -227,12 +247,13 @@ fun SymbolResolver.transfer(
     currentEdge: EvaluationOrder,
     state: DeclarationStateElement,
 ): DeclarationStateElement {
+    val lattice = lattice as? DeclarationState ?: return state
     val node = currentEdge.end
     return when (node) {
-        is Declaration -> handleDeclaration(state, node)
-        is Reference -> handleReference(node, state)
-        is BinaryOperator -> handleBinaryOperator(node, state)
-        is UnaryOperator -> handleUnaryOperator(node, state)
+        is Declaration -> handleDeclaration(lattice, state, node)
+        is Reference -> handleReference(lattice, node, state)
+        is BinaryOperator -> handleBinaryOperator(lattice, node, state)
+        is UnaryOperator -> handleUnaryOperator(lattice, node, state)
         else -> state
     }
 }
@@ -242,6 +263,7 @@ fun SymbolResolver.transfer(
  * [BinaryOperator.lhs] and [BinaryOperator.rhs].
  */
 private fun SymbolResolver.handleBinaryOperator(
+    lattice: DeclarationState,
     binOp: BinaryOperator,
     state: DeclarationStateElement,
 ): DeclarationStateElement {
@@ -250,7 +272,7 @@ private fun SymbolResolver.handleBinaryOperator(
 
     val type = binOp.language.propagateTypeOfBinaryOperation(binOp.operatorCode, lhsType, rhsType)
 
-    return state.pushType(binOp, type)
+    return state.pushType(lattice, binOp, type)
 }
 
 /**
@@ -258,12 +280,14 @@ private fun SymbolResolver.handleBinaryOperator(
  * [UnaryOperator.input].
  */
 private fun SymbolResolver.handleUnaryOperator(
+    lattice: DeclarationState,
     op: UnaryOperator,
     state: DeclarationStateElement,
 ): DeclarationStateElement {
     val inputTypeElement = state.types[op.input]
     return if (inputTypeElement != null) {
         state.pushType(
+            lattice,
             op,
             *inputTypeElement
                 .map { inputType ->
@@ -290,6 +314,7 @@ private fun SymbolResolver.handleUnaryOperator(
  * candidates are pushed to the [DeclarationStateElement.candidates].
  */
 private fun SymbolResolver.handleReference(
+    lattice: DeclarationState,
     node: Reference,
     state: DeclarationStateElement,
 ): DeclarationStateElement {
@@ -320,11 +345,12 @@ private fun SymbolResolver.handleReference(
     println(candidates)
 
     // Push candidates to state
-    state = state.pushCandidate(node, *candidates.toTypedArray())
+    state = state.pushCandidate(lattice, node, *candidates.toTypedArray())
 
     // Push the type information
     state =
         state.pushType(
+            lattice,
             node,
             *candidates.mapNotNull { state.types[it]?.toSet() }.flatten().toTypedArray(),
         )
@@ -333,18 +359,14 @@ private fun SymbolResolver.handleReference(
 }
 
 private fun SymbolResolver.handleDeclaration(
+    lattice: DeclarationState,
     state: DeclarationStateElement,
     node: Declaration,
 ): DeclarationStateElement {
     var state = state
 
     // Push declaration into scope
-    state = node.scope?.let { state.pushDeclarationToScope(it, node) } ?: state
-
-    // Push type of declaration
-    /*if (node is HasType) {
-        state = state.pushType(node, node.type)
-    }*/
+    state = node.scope?.let { state.pushDeclarationToScope(lattice, it, node) } ?: state
 
     return state
 }
