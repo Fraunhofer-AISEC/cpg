@@ -25,6 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.helpers
 
+import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.nodes
+import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import kotlin.math.min
 import org.apache.commons.lang3.StringUtils
@@ -65,4 +69,22 @@ fun getCodeOfSubregion(
     // beyond our "end"
     end = min(end, code.length)
     return code.substring(start, end)
+}
+
+/**
+ * This function returns the [Node]s matching the provided [PhysicalLocation] in the given
+ * [TranslationResult].
+ *
+ * @param location The [PhysicalLocation] to match against.
+ * @param clsName The type of [Node] to match against.
+ * @return A list of [Node]s that match the provided [PhysicalLocation] and requested type
+ *   [clsName].
+ */
+fun TranslationResult.getNodesByRegion(
+    location: PhysicalLocation,
+    clsName: String? = null,
+): List<Node> {
+    return this.nodes.filter { node ->
+        node.location == location && (clsName == null || node.javaClass.name == clsName)
+    }
 }

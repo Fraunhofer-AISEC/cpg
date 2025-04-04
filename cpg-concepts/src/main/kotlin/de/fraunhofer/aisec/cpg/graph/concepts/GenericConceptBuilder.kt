@@ -91,8 +91,8 @@ fun MetadataProvider.conceptBuildHelper(
     name: String,
     underlyingNode: Node,
     constructorArguments: Map<String, Any?> = emptyMap(),
-    connectDFGUnderlyingNodeToConcept: Boolean = false,
-    connectDFGConceptToUnderlyingNode: Boolean = false,
+    connectDFGUnderlyingNodeToConcept: Boolean? = false,
+    connectDFGConceptToUnderlyingNode: Boolean? = false,
 ): Concept {
     val conceptClass = Class.forName(name).kotlin
     val constructor =
@@ -122,10 +122,10 @@ fun MetadataProvider.conceptBuildHelper(
             concept.name = Name("${conceptClass.simpleName}", underlyingNode.name)
             NodeBuilder.log(concept)
 
-            if (connectDFGUnderlyingNodeToConcept) {
+            if (connectDFGUnderlyingNodeToConcept == true) {
                 underlyingNode.nextDFG += concept
             }
-            if (connectDFGConceptToUnderlyingNode) {
+            if (connectDFGConceptToUnderlyingNode == true) {
                 concept.nextDFG += underlyingNode
             }
         } ?: throw IllegalArgumentException("The class $name does not create a Concept.")
