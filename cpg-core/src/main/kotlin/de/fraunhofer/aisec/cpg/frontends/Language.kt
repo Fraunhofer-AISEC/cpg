@@ -52,6 +52,7 @@ import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.helpers.Util
@@ -264,6 +265,21 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
                     unknownType()
                 }
             else -> unknownType() // We don't know what is this thing
+        }
+    }
+
+    /**
+     * Determines how to propagate types across unary operations since these may differ among the
+     * programming languages.
+     *
+     * @param operatorCode The [UnaryOperator.operatorCode]
+     * @param inputType The type of the input ([UnaryOperator.input])
+     */
+    open fun propagateTypeOfUnaryOperation(operatorCode: String?, inputType: Type): Type {
+        return when (operatorCode) {
+            "*" -> inputType.dereference()
+            "&" -> inputType.pointer()
+            else -> inputType
         }
     }
 
@@ -503,14 +519,6 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
         }
 
         return tu
-    }
-
-    open fun propagateTypeOfUnaryOperation(operatorCode: String?, inputType: Type): Type {
-        return when (operatorCode) {
-            "*" -> inputType.dereference()
-            "&" -> inputType.pointer()
-            else -> inputType
-        }
     }
 
     companion object {
