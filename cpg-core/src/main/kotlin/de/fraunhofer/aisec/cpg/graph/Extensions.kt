@@ -46,8 +46,11 @@ import kotlin.math.absoluteValue
  * [Collection.filter]
  */
 @JvmOverloads
-inline fun <reified T> Node?.allChildren(noinline predicate: ((T) -> Boolean)? = null): List<T> {
-    val nodes = SubgraphWalker.flattenAST(this)
+inline fun <reified T> Node?.allChildren(
+    noinline stopAtNode: (Node) -> Boolean = { false },
+    noinline predicate: ((T) -> Boolean)? = null,
+): List<T> {
+    val nodes = SubgraphWalker.flattenAST(this, stopAtNode = stopAtNode)
     val filtered = nodes.filterIsInstance<T>()
 
     return if (predicate != null) {
