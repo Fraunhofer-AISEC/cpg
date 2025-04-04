@@ -788,16 +788,6 @@ internal fun Pass<*>.getPossibleContainingTypes(ref: Reference): Pair<Set<Type>,
  * most likely a [CallExpression], but could be other node as well. It is also the source of the
  * scope and language used in the resolution.
  */
-/**
- * This function tries to resolve a set of [candidates] (e.g. coming from a [CallExpression.callee])
- * into the best matching [FunctionDeclaration] (or multiple functions, if applicable) based on the
- * supplied [arguments]. The result is returned in the form of a [CallResolutionResult] which holds
- * detail information about intermediate results as well as the kind of success the resolution had.
- *
- * The [source] expression specifies the node in the graph that triggered this resolution. This is
- * most likely a [CallExpression], but could be other node as well. It is also the source of the
- * scope and language used in the resolution.
- */
 internal fun Pass<*>.resolveWithArguments(
     candidates: Set<Declaration>,
     arguments: List<Expression>,
