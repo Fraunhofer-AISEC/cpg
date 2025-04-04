@@ -259,8 +259,8 @@ fun SymbolResolver.transfer(
 }
 
 /**
- * Handles a [BinaryOperator] and updates the state based on the operator type and the types of the
- * [BinaryOperator.lhs] and [BinaryOperator.rhs].
+ * Handles a [BinaryOperator] and updates the [state] based on the operator type and the types of
+ * the [BinaryOperator.lhs] and [BinaryOperator.rhs].
  */
 private fun SymbolResolver.handleBinaryOperator(
     lattice: DeclarationState,
