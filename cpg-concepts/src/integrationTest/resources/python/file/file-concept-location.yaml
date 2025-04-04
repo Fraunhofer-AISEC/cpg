@@ -1,0 +1,13 @@
+concepts:
+  - concept:
+      name: "de.fraunhofer.aisec.cpg.graph.concepts.file.File"
+      constructorArguments:
+        - name: "fileName"
+          value: "foo"
+      dfg:
+        fromThisNodeToConcept: false
+        fromConceptToThisNode: true
+    location:
+      file: "file:/home/maximilian/git/cpg/cpg-concepts/src/integrationTest/resources/python/file/file_read.py"
+      region: "1:6-1:30"
+      type: "de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression"

@@ -30,15 +30,15 @@ import de.fraunhofer.aisec.cpg.graph.calls
 import de.fraunhofer.aisec.cpg.graph.conceptNodes
 import de.fraunhofer.aisec.cpg.graph.concepts.file.File
 import de.fraunhofer.aisec.cpg.graph.invoke
-import de.fraunhofer.aisec.cpg.passes.concepts.ConceptSummaries
+import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts
 import de.fraunhofer.aisec.cpg.test.BaseTest
 import de.fraunhofer.aisec.cpg.test.analyze
 import java.nio.file.Path
 import kotlin.test.*
 
-class ConceptSummariesTest : BaseTest() {
+class LoadPersistedConceptsTest : BaseTest() {
     @Test
-    fun testRead() {
+    fun testReadConceptByLocation() {
         val topLevel = Path.of("src", "integrationTest", "resources", "python", "file")
 
         val result =
@@ -48,12 +48,52 @@ class ConceptSummariesTest : BaseTest() {
                 usePasses = true,
             ) {
                 it.registerLanguage<PythonLanguage>()
-                it.registerPass<ConceptSummaries>()
+                it.registerPass<LoadPersistedConcepts>()
                 it.symbols(mapOf("PYTHON_PLATFORM" to "linux"))
-                it.configurePass<ConceptSummaries>(
-                    ConceptSummaries.Configuration(
+                it.configurePass<LoadPersistedConcepts>(
+                    LoadPersistedConcepts.Configuration(
                         conceptSummaryFiles =
-                            listOf(topLevel.resolve("ConceptSummary.yaml").toFile())
+                            listOf(topLevel.resolve("file-concept-location.yaml").toFile())
+                    )
+                )
+            }
+        assertNotNull(result)
+
+        val fileConcept = result.conceptNodes.singleOrNull { it is File }
+        assertIs<File>(fileConcept)
+
+        val openCall = result.calls("open").singleOrNull()
+        assertNotNull(openCall)
+
+        assertTrue(
+            fileConcept.nextDFG.contains(openCall),
+            "NextDFG: `File` concept should contain `open` call.",
+        )
+        assertFalse(
+            openCall.nextDFG.contains(fileConcept),
+            "NextDFG: `open` call should not contain `File` concept.",
+        )
+
+        assertEquals("foo", fileConcept.fileName, "Expected name of the file concept to be `foo`.")
+    }
+
+    @Test
+    fun testReadConceptBySignature() {
+        val topLevel = Path.of("src", "integrationTest", "resources", "python", "file")
+
+        val result =
+            analyze(
+                files = listOf(topLevel.resolve("file_read.py").toFile()),
+                topLevel = topLevel,
+                usePasses = true,
+            ) {
+                it.registerLanguage<PythonLanguage>()
+                it.registerPass<LoadPersistedConcepts>()
+                it.symbols(mapOf("PYTHON_PLATFORM" to "linux"))
+                it.configurePass<LoadPersistedConcepts>(
+                    LoadPersistedConcepts.Configuration(
+                        conceptSummaryFiles =
+                            listOf(topLevel.resolve("file-concept-signature.yaml").toFile())
                     )
                 )
             }
