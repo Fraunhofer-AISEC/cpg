@@ -28,8 +28,11 @@ package de.fraunhofer.aisec.codyze.console
 import de.fraunhofer.aisec.codyze.AnalysisProject
 import de.fraunhofer.aisec.codyze.AnalysisResult
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.graph.concepts.Concept
+import de.fraunhofer.aisec.cpg.graph.concepts.conceptBuildHelper
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.nodes
+import de.fraunhofer.aisec.cpg.passes.concepts.ConceptSummaries
 import de.fraunhofer.aisec.cpg.passes.concepts.config.python.PythonStdLibConfigurationPass
 import java.io.File
 import java.nio.file.Path
@@ -49,6 +52,7 @@ private const val AD_HOC_PROJECT_NAME = "ad-hoc"
 class ConsoleService {
     private var analysisResult: AnalysisResultJSON? = null
     var lastProject: AnalysisProject? = null
+    private var newConceptNodes: Set<Concept> = emptySet()
 
     /**
      * Analyzes the given source directory and returns the analysis result as [AnalysisResultJSON].
@@ -62,6 +66,7 @@ class ConsoleService {
                     .defaultPasses()
                     .loadIncludes(true)
                     .registerPass<PythonStdLibConfigurationPass>()
+                    .registerPass<ConceptSummaries>()
                     .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage")
                     .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage")
                     .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage")
@@ -82,6 +87,14 @@ class ConsoleService {
 
             if (request.topLevel != null) {
                 builder.topLevel(File(request.topLevel))
+            }
+
+            if (request.conceptSummaries != null) {
+                builder.configurePass<ConceptSummaries>(
+                    ConceptSummaries.Configuration(
+                        conceptSummaryFiles = listOf(File(request.conceptSummaries))
+                    )
+                )
             }
 
             val config = builder.build()
@@ -135,6 +148,65 @@ class ConsoleService {
             ?.find { it.id == Uuid.parse(id) }
             ?.cpgTU
             ?.let { extractNodes(it, overlayNodes) } ?: emptyList()
+    }
+
+    /**
+     * Adds a new [Concept] node as an [de.fraunhofer.aisec.cpg.graph.OverlayNode] to an existing
+     * node in the analysis result. The DFG edges can be configured to connect the new concept node
+     * to the existing node.
+     *
+     * @param request The request containing node ID, concept name and configuration parameters
+     *   (connect DFG)
+     * @throws IllegalStateException if no analysis result exists
+     * @throws IllegalArgumentException if the target node is not found or the concept name is
+     *   invalid
+     */
+    fun addConcept(request: ConceptRequestJSON) {
+        val analysisResult =
+            this.analysisResult ?: throw IllegalStateException("No analysis result found.")
+
+        val node =
+            analysisResult.components
+                .flatMap { it.translationUnits }
+                .flatMap { it.cpgTU.nodes }
+                .singleOrNull { it.id == request.nodeId }
+                ?: throw IllegalArgumentException("Unique target node not found.")
+
+        node
+            .conceptBuildHelper(
+                name = request.conceptName,
+                underlyingNode = node,
+                constructorArguments =
+                    request.constructorInfo?.associate { it.argumentName to it.argumentValue }
+                        ?: emptyMap(),
+                connectDFGUnderlyingNodeToConcept = request.addDFGToConcept,
+                connectDFGConceptToUnderlyingNode = request.addDFGFromConcept,
+            )
+            .also { newConceptNodes += it }
+    }
+
+    /**
+     * Exports all new [Concept] nodes (added via [addConcept] and thus stored in [newConceptNodes])
+     * as a YAML string.
+     *
+     * TODO: YAML schema? extra fields? restrict to current component? Use some YAML export library?
+     */
+    fun exportNewConcepts(): String {
+        val spacer = "  " // 2 spaces for indentation
+        var result = "concepts:\n"
+        newConceptNodes.forEach { concept ->
+            result +=
+                "${spacer}concept:\n" +
+                    "${spacer}${spacer}name: \"${concept.javaClass.name}\"\n" +
+                    "${spacer}${spacer}dfg:\n" +
+                    "${spacer}${spacer}${spacer}fromThisNodeToConcept: ${concept.underlyingNode?.nextDFG?.contains(concept)}\n" +
+                    "${spacer}${spacer}${spacer}fromConceptToThisNode: ${concept.nextDFG.contains(concept.underlyingNode)}\n" +
+                    "${spacer}location:\n" +
+                    "${spacer}${spacer}file: \"${concept.location?.artifactLocation?.uri}\"\n" +
+                    "${spacer}${spacer}region: \"${concept.location?.region}\"\n" +
+                    "${spacer}${spacer}type: \"${concept.underlyingNode?.javaClass?.name}\"\n"
+        }
+        return result
     }
 
     /**
