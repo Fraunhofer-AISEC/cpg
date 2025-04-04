@@ -33,7 +33,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.firstScopeParentOrNull
-import de.fraunhofer.aisec.cpg.graph.pointer
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
@@ -209,18 +208,10 @@ fun SymbolResolver.transfer(
 ): DeclarationStateElement {
     val node = currentEdge.end
     return when (node) {
-        is Declaration -> {
-            handleDeclaration(state, node)
-        }
-        is Reference -> {
-            handleReference(node, state)
-        }
-        is BinaryOperator -> {
-            handleBinaryOperator(node, state)
-        }
-        is UnaryOperator -> {
-            handleUnaryOperator(node, state)
-        }
+        is Declaration -> handleDeclaration(state, node)
+        is Reference -> handleReference(node, state)
+        is BinaryOperator -> handleBinaryOperator(node, state)
+        is UnaryOperator -> handleUnaryOperator(node, state)
         else -> state
     }
 }
@@ -242,21 +233,17 @@ private fun SymbolResolver.handleUnaryOperator(
     state: DeclarationStateElement,
 ): DeclarationStateElement {
     val inputTypeElement = state.types[op.input]
-    if (inputTypeElement != null) {
-        return state.pushType(
+    return if (inputTypeElement != null) {
+        state.pushType(
             op,
             *inputTypeElement
                 .map { inputType ->
-                    when (op.operatorCode) {
-                        "*" -> inputType.dereference()
-                        "&" -> inputType.pointer()
-                        else -> inputType
-                    }
+                    op.language.propagateTypeOfUnaryOperation(op.operatorCode, inputType)
                 }
                 .toTypedArray(),
         )
     } else {
-        return state
+        state
     }
 }
 

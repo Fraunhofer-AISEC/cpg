@@ -46,6 +46,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.ast.TemplateArguments
+import de.fraunhofer.aisec.cpg.graph.pointer
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
@@ -502,6 +503,14 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
         }
 
         return tu
+    }
+
+    open fun propagateTypeOfUnaryOperation(operatorCode: String?, inputType: Type): Type {
+        return when (operatorCode) {
+            "*" -> inputType.dereference()
+            "&" -> inputType.pointer()
+            else -> inputType
+        }
     }
 
     companion object {
