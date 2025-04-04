@@ -165,25 +165,29 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
      * code [node].
      */
     protected fun clearFlowsOfVariableDeclarations(node: Node) {
-        // Get the children of the node which are also EOG starters. We do not want to impact them,
+        // Get all children of the node which are not part of child EOG starters' children. We need
+        // this to filter out effects on the childStarters' children. We do not want to impact them,
         // so we later filter out all things which occur in the children or even completely outside
-        // the scope which we can reach.
-        val childStarters = node.allEOGStarters.filter { it.prevEOG.isEmpty() }.minus(node)
-        // Get all children of the node which are not part of the childStarters' children. We need
-        // this to filter out effects on the childStarters' children.
+        // the scope which we can reach. We also do not want to touch anything related to
+        // FunctionTemplateDeclarations.
         val allChildrenOfFunction =
-            node.allChildren<Node>().minus(childStarters.flatMap { it.allChildren<Node>() })
+            node.allChildren<Node>(
+                stopAtNode = {
+                    it is FunctionTemplateDeclaration ||
+                        it is EOGStarterHolder && it.prevEOG.isEmpty() && it != node
+                }
+            )
 
         // Get the local variables and parameters inside the node's astChildren (without the
         // childStarters' children). For these, we remove prev and next DFG edges from/to nodes
         // inside the node's astChildren
         for (varDecl in
-            node.variables.filter {
-                it !is FieldDeclaration &&
-                    it !is TupleDeclaration &&
+            allChildrenOfFunction.filter {
+                (it is VariableDeclaration &&
                     !it.isGlobal &&
-                    it in allChildrenOfFunction
-            } + node.parameters.filter { it in allChildrenOfFunction }) {
+                    it !is FieldDeclaration &&
+                    it !is TupleDeclaration) || it is ParameterDeclaration
+            }) {
             // Clear only prev DFG inside this function!
             varDecl.prevDFGEdges
                 .filter { it.start in allChildrenOfFunction }
