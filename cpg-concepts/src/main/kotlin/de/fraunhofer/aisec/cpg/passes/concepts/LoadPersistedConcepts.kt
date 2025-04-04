@@ -33,6 +33,7 @@ import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.byFQN
 import de.fraunhofer.aisec.cpg.graph.calls
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.conceptBuildHelper
@@ -128,7 +129,7 @@ class LoadPersistedConcepts(ctx: TranslationContext) : TranslationResultPass(ctx
      * @return A list of nodes matching the provided [SignatureEntry].
      */
     private fun TranslationResult.getNodesBySignature(signature: SignatureEntry): List<Node> {
-        return this.getCallsByFQN(signature.fqn)
+        return this.calls.byFQN(signature.fqn)
     }
 
     /**
@@ -195,8 +196,7 @@ class LoadPersistedConcepts(ctx: TranslationContext) : TranslationResultPass(ctx
             name = concept.name,
             underlyingNode = underlyingNode,
             constructorArguments =
-                concept.constructorArguments?.associate { arg -> arg.name to arg.value }
-                    ?: emptyMap(),
+                concept.constructorArguments.associate { arg -> arg.name to arg.value },
             connectDFGUnderlyingNodeToConcept = concept.dfg.fromThisNodeToConcept,
             connectDFGConceptToUnderlyingNode = concept.dfg.fromConceptToThisNode,
         )
@@ -232,7 +232,7 @@ class LoadPersistedConcepts(ctx: TranslationContext) : TranslationResultPass(ctx
      */
     private data class ConceptEntry(
         val name: String,
-        val constructorArguments: List<ConstructorArgumentEntry>?,
+        val constructorArguments: List<ConstructorArgumentEntry> = listOf(),
         val dfg: DFGEntry = DFGEntry(fromThisNodeToConcept = false, fromConceptToThisNode = false),
     )
 
@@ -275,15 +275,4 @@ class LoadPersistedConcepts(ctx: TranslationContext) : TranslationResultPass(ctx
      *   `foo.bar.baz`.
      */
     private data class SignatureEntry(val fqn: String)
-
-    /**
-     * This function retrieves the [Node.calls] from the [TranslationResult] by their fully
-     * qualified name (FQN). The match is performed on the [CallExpression.reconstructedImportName].
-     *
-     * @param fqn The fully qualified name of the calls to retrieve.
-     * @return A list of [CallExpression] nodes matching the provided FQN.
-     */
-    private fun TranslationResult.getCallsByFQN(fqn: String): List<Node> {
-        return this.calls.filter { call -> call.reconstructedImportName.toString() == fqn }
-    }
 }
