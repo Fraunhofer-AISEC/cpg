@@ -30,9 +30,17 @@ import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.AnalysisSensitivity
 import de.fraunhofer.aisec.cpg.graph.FilterUnreachableEOG
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CollectionComprehension
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.types.HasType
 import kotlin.collections.all
 
 /**
@@ -236,6 +244,7 @@ fun dataFlowWithValidator(
     return source.alwaysFlowsTo(
         allowOverwritingValue = true,
         earlyTermination = sinkPredicate,
+        identifyCopies = false,
         scope = scope,
         sensitivities = sensitivities,
         predicate = validatorPredicate,
@@ -243,76 +252,199 @@ fun dataFlowWithValidator(
 }
 
 /**
- * This function tracks if the data in [this] always flow through a node which fulfills [predicate].
- * An early termination can be specified by the predicate [earlyTermination].
- * [allowOverwritingValue] can be used to configure if overwriting the value (or part of it) results
- * in a failure of the requirement (if `false`) or if it does not affect the evaluation. The
- * analysis can be configured with [scope] and [sensitivities].
+ * This function tries to identify if the data held in [this] node are copied to another memory
+ * location. This could happen by:
+ * - Constructing a new object where our data flow to: We should track this object and the target of
+ *   the operation separately.
+ * - Operating on immutable objects (e.g. via [BinaryOperator]s): We should track this object and
+ *   the target of the operation separately.
+ * - Modifying an object via an operator (e.g. `+=`) and we are the rhs of the assignment: We should
+ *   track both, this object and the target of the assignment.
+ * - Assigning an immutable object to a new variable: We should track this object and the target of
+ *   the assignment separately.
  */
-fun Node.alwaysFlowsTo(
-    allowOverwritingValue: Boolean = false,
-    earlyTermination: ((Node) -> Boolean)? = null,
+fun Node.generatesNewData(): Collection<Node> {
+    return when {
+        this is BinaryOperator && !this.type.isMutable -> {
+            // If the type of the node is a primitive (more precisely immutable) type, we will
+            // create new "object" that we have to track. But we should find the first declaration
+            // this flows to and track that one. If it flows to a reference first, this will
+            // typically be identified by handling the assignments below which is why we explicitly
+            // exclude such a flow here.
+            this.followDFGEdgesUntilHit(earlyTermination = { node, _ -> node is Reference }) {
+                    it is Declaration
+                }
+                .fulfilled
+                .map { it.last() }
+                .toSet()
+        }
+        /* A new object is constructed and our data flow into this object -> track the new object. */
+        this is ConstructExpression ||
+            /* A collection comprehension (e.g. list, set, dict comprehension) generates a new object similar to calling the constructor. */
+            this is CollectionComprehension -> {
+            setOf(this)
+        }
+        this.astParent is AssignExpression &&
+            this in (this.astParent as AssignExpression).rhs &&
+            (this.astParent as AssignExpression).operatorCode in
+                this.language.compoundAssignmentOperators -> {
+            // If we're the rhs of an assignment with an operator like +=, we should track the lhs
+            // value separately.
+            (this as? HasType)?.let { (this.astParent as AssignExpression).findTargets(it) }
+                ?: setOf()
+        }
+        this is Expression &&
+            this.astParent is AssignExpression &&
+            this in (this.astParent as AssignExpression).rhs &&
+            !this.type.isMutable -> {
+            (this.astParent as AssignExpression).findTargets(this)
+        }
+        else -> emptySet()
+    }
+}
+
+/**
+ * Identifies the information to track for the given node based on the data flow graph (DFG). This
+ * function collects all reachable DFG nodes and determines if any of these nodes generate new data.
+ *
+ * @param scope The analysis scope, which can be interprocedural or intraprocedural.
+ * @param sensitivities The analysis sensitivities to be considered, such as context sensitivity,
+ *   field sensitivity, and filtering unreachable EOG.
+ * @return A set of nodes that includes the original node and any nodes that generate new data.
+ */
+fun Node.identifyInfoToTrack(
     scope: AnalysisScope,
     vararg sensitivities: AnalysisSensitivity =
         ContextSensitive + FieldSensitive + FilterUnreachableEOG,
-    predicate: (Node) -> Boolean,
-): QueryTree<Boolean> {
-    val nextDFGPaths =
+): Set<Node> {
+    // Get all next DFG nodes. These must include all relevant operations to make this work but that
+    // should be the case with our current implementation.
+    val reachableDFGNodes =
         this.collectAllNextDFGPaths(
                 interproceduralAnalysis = scope is Interprocedural,
                 contextSensitive = ContextSensitive in sensitivities,
             )
             .flatten()
             .toSet()
-    val earlyTerminationPredicate = { n: Node, ctx: Context ->
-        earlyTermination?.let { it(n) } == true ||
-            (!allowOverwritingValue &&
-                // TODO: This should be replaced with some check if the memory location/whatever
-                // where the data is kept is (partially) written to.
-                this in n.prevDFG &&
-                (n as? Reference)?.access == AccessValues.WRITE)
+    val result = mutableSetOf<Node>(this)
+    for (node in reachableDFGNodes) {
+        // Is this node a node copying the data? If so, add its targets to the list.
+        result.addAll(node.generatesNewData())
     }
-    val nextEOGEvaluation =
-        this.followEOGEdgesUntilHit(
-            collectFailedPaths = true,
-            findAllPossiblePaths = true,
-            scope = scope,
-            sensitivities = sensitivities,
-            earlyTermination = earlyTerminationPredicate,
-        ) {
-            predicate(it) && it in nextDFGPaths
+    return result
+}
+
+/**
+ * This function tracks if the data in [this] always flow through a node which fulfills [predicate].
+ * An early termination can be specified by the predicate [earlyTermination].
+ * [allowOverwritingValue] can be used to configure if overwriting the value (or part of it) results
+ * in a failure of the requirement (if `false`) or if it does not affect the evaluation. The
+ * analysis can be configured with [scope] and [sensitivities]. [stopIfImpossible] enables the
+ * option to stop iterating through the EOG if we already left the function where we started and
+ * none of the nodes reaching by the DFG is in the new scope or one of its parents (i.e., the
+ * condition cannot be fulfilled anymore).
+ */
+fun Node.alwaysFlowsTo(
+    allowOverwritingValue: Boolean = false,
+    earlyTermination: ((Node) -> Boolean)? = null,
+    identifyCopies: Boolean = true,
+    stopIfImpossible: Boolean = true,
+    scope: AnalysisScope,
+    vararg sensitivities: AnalysisSensitivity =
+        ContextSensitive + FieldSensitive + FilterUnreachableEOG,
+    predicate: (Node) -> Boolean,
+): QueryTree<Boolean> {
+    val nodesToTrack =
+        if (identifyCopies) {
+            this.identifyInfoToTrack(scope = scope, sensitivities = sensitivities)
+        } else {
+            setOf(this)
         }
-    val allChildren =
-        nextEOGEvaluation.failed.map {
-            // TODO: We can update this too
-            QueryTree(
-                value = false,
-                children = mutableListOf(QueryTree(value = it.second)),
-                stringRepresentation =
-                    "The EOG path reached the end  " +
-                        if (earlyTermination != null)
-                            "(or ${it.second.lastOrNull()} which a predicate marking the end) "
-                        else "" + "before passing through a node matching the required predicate.",
-                node = this,
-            )
-        } +
-            nextEOGEvaluation.fulfilled.map {
-                QueryTree(
-                    value = true,
-                    children = mutableListOf(QueryTree(value = it)),
-                    stringRepresentation =
-                        "The EOG path reached the node ${it.lastOrNull()} matching the required predicate" +
-                            if (earlyTermination != null)
-                                " before reaching a node matching the early termination predicate"
-                            else "",
-                    node = this,
+    var nothingFailed = true
+    val allChildren = mutableListOf<QueryTree<Boolean>>()
+    for (nodeToTrack in nodesToTrack) {
+        val nextDFGPaths =
+            nodeToTrack
+                .collectAllNextDFGPaths(
+                    interproceduralAnalysis = scope is Interprocedural,
+                    contextSensitive = ContextSensitive in sensitivities,
                 )
+                .flatten()
+                .toSet()
+        val earlyTerminationPredicate = { n: Node, ctx: Context ->
+            earlyTermination?.let { it(n) } == true ||
+                // If we are not allowed to overwrite the value, we need to check if the node may
+                // overwrite the value. In this case, we terminate early.
+                (!allowOverwritingValue &&
+                    // TODO: This should be replaced with some check if the memory location/whatever
+                    // where the data is kept is (partially) written to.
+                    nodeToTrack in n.prevDFG &&
+                    (n as? Reference)?.access == AccessValues.WRITE)
+        }
+        val eogScope =
+            if (stopIfImpossible && scope is Interprocedural) {
+                InterproceduralWithDfgTermination(
+                    maxCallDepth = scope.maxCallDepth,
+                    maxSteps = scope.maxSteps,
+                    allReachableNodes =
+                        nextDFGPaths
+                            .filter { it.scope != null && it !is FunctionDeclaration }
+                            .toSet(),
+                )
+            } else scope
+        val nextEOGEvaluation =
+            nodeToTrack.followEOGEdgesUntilHit(
+                collectFailedPaths = true,
+                findAllPossiblePaths = true,
+                scope = eogScope,
+                sensitivities = sensitivities,
+                earlyTermination = earlyTerminationPredicate,
+            ) {
+                predicate(it) && it in nextDFGPaths
             }
+        allChildren +=
+            nextEOGEvaluation.failed.map { (failureReason, path) ->
+                SinglePathResult(
+                    value = false,
+                    children = mutableListOf(QueryTree(value = path)),
+                    stringRepresentation =
+                        "The EOG path reached the end  " +
+                            if (earlyTermination != null)
+                                "(or ${path.lastOrNull()} which a predicate marking the end) "
+                            else
+                                "" +
+                                    "before passing through a node matching the required predicate.",
+                    node = nodeToTrack,
+                    terminationReason =
+                        if (failureReason == FailureReason.PATH_ENDED) {
+                            PathEnded(nodes.last())
+                        } else if (failureReason == FailureReason.HIT_EARLY_TERMINATION) {
+                            HitEarlyTermination(nodes.last())
+                        } else {
+                            StepsExceeded(nodes.last())
+                        },
+                )
+            } +
+                nextEOGEvaluation.fulfilled.map {
+                    SinglePathResult(
+                        value = true,
+                        children = mutableListOf(QueryTree(value = it)),
+                        stringRepresentation =
+                            "The EOG path reached the node ${it.lastOrNull()} matching the required predicate" +
+                                if (earlyTermination != null)
+                                    " before reaching a node matching the early termination predicate"
+                                else "",
+                        node = this,
+                        terminationReason = Success(it.last()),
+                    )
+                }
+        nothingFailed = nothingFailed && nextEOGEvaluation.failed.isEmpty()
+    }
     return QueryTree(
-        value = nextEOGEvaluation.failed.isEmpty(),
+        value = nothingFailed,
         children = allChildren.toMutableList(),
         stringRepresentation =
-            if (nextEOGEvaluation.failed.isEmpty()) {
+            if (nothingFailed) {
                 "All EOG paths fulfilled the predicate"
             } else {
                 "Some EOG paths failed to fulfill the predicate"
