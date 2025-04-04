@@ -25,42 +25,34 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.python
 
-import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.calls
+import de.fraunhofer.aisec.cpg.graph.invoke
+import de.fraunhofer.aisec.cpg.query.executionPath
 import de.fraunhofer.aisec.cpg.test.analyze
 import java.nio.file.Path
 import kotlin.test.Test
-import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-class LoadIncludesTest {
-
+class EOGTest {
     @Test
-    fun testLoadIncludes() {
-        val topLevel = Path.of("src", "test", "resources", "python", "load_includes", "example")
+    fun testEOGAfterWithStmt() {
+        val topLevel = Path.of("src", "test", "resources", "python")
         val result =
-            analyze(listOf(topLevel.resolve("program.py").toFile()), topLevel, true) {
+            analyze(listOf(topLevel.resolve("with_stmt_EOG.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
-                it.loadIncludes(true)
-                it.includePath(
-                    Path.of("src", "test", "resources", "python", "load_includes", "stdlib")
-                )
             }
+        assertNotNull(result)
 
-        assertEquals(result.finalCtx.importedSources.size, 3)
+        val read = result.calls("read").singleOrNull()
+        assertNotNull(read, "Expected to find a `read` call.")
 
-        val stdlib = result.components("stdlib").flatMap { it.allChildren<Node>() }
+        val print = result.calls("print").singleOrNull()
+        assertNotNull(print, "Expected to find a `print` call.")
 
-        val jsonloads = result.calls("json.loads").firstOrNull()
-        assertNotNull(jsonloads)
-        assertTrue(jsonloads.invokes.all { !it.isInferred && stdlib.contains(it) })
-
-        val jsonEncoder = result.memberExpressions("item_separator").firstOrNull()
-        assertNotNull(jsonEncoder)
-        assertTrue(jsonEncoder.refersTo?.let { !it.isInferred && stdlib.contains(it) } == true)
-
-        val str = result.calls("str").firstOrNull()
-        assertNotNull(str)
-        assertTrue(str.invokes.all { !it.isInferred && stdlib.contains(it) })
+        assertTrue(
+            executionPath(startNode = read) { it == print }.value,
+            "Expected to find an execution path from read to print.",
+        )
     }
 }

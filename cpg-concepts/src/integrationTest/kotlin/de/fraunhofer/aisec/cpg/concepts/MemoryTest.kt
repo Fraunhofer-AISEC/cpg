@@ -217,7 +217,11 @@ class MemoryTest {
 
     fun mapNodesToConcepts(result: TranslationResult, mapToFunctionDeclaration: Boolean) {
         // Secrets (key) concepts
-        val key = result.newSecret(underlyingNode = assertNotNull(result.variables["key"]))
+        val keyRefLine1 =
+            result.refs.singleOrNull {
+                it.name.localName == "key" && it.location?.region?.startLine == 1
+            }
+        val key = result.newSecret(underlyingNode = assertNotNull(keyRefLine1))
         val getSecretFromServer =
             if (mapToFunctionDeclaration) {
                 result.functions["get_secret_from_server"]
