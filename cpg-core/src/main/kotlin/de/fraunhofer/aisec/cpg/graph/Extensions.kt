@@ -44,6 +44,10 @@ import kotlin.math.absoluteValue
  * Flattens the AST beginning with this node and returns all nodes of type [T]. For convenience, an
  * optional predicate function [predicate] can be supplied, which will be applied via
  * [Collection.filter]
+ *
+ * @param stopAtNode Indicates if the node should be stopped at, i.e., we do not visit this node and
+ *   its children.
+ * @param predicate Indicates if the node should be included in the result.
  */
 @JvmOverloads
 inline fun <reified T> Node?.allChildren(

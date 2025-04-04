@@ -89,6 +89,8 @@ object SubgraphWalker {
      * [Node.accept] with the [Strategy.AST_FORWARD] is encouraged.
      *
      * @param node the start node
+     * @param stopAtNode A predicate to stop the flattening at a specific node (i.e., we won't
+     *   include that node and its ast children)
      * @return a list of children from the node's AST
      */
     @JvmStatic
