@@ -455,6 +455,21 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                     doubleState.declarationsState[currentEdge.start],
                 )
             }
+        } else if (
+            (currentNode as? Reference)?.access == AccessValues.WRITE &&
+                (currentNode.refersTo is VariableDeclaration ||
+                    currentNode.refersTo is ParameterDeclaration) &&
+                currentNode.refersTo !is FieldDeclaration
+        ) {
+            // This is a really ugly workaround: Check if the VariableDeclaration which this
+            // reference refers to is used as some sort of non-local (in terms of not reachable via
+            // the connected EOG). For us, an indication of this is that there are some prev or next
+            // DFG edges left which are associated to this variable declaration. In this case, we
+            // add the write operation from this reference to the variable declaration.
+            currentNode.refersTo?.let { variableDecl ->
+                if (variableDecl.prevDFG.isNotEmpty() || variableDecl.nextDFG.isNotEmpty())
+                    doubleState.push(variableDecl, PowersetLattice(identitySetOf(currentNode)))
+            }
         } else {
             doubleState.declarationsState.push(
                 currentNode,
