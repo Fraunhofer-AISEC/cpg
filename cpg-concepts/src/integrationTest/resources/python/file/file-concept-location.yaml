@@ -7,6 +7,6 @@ concepts:
       dfg:
         fromConceptToThisNode: true
     location:
-      file: "file:/home/maximilian/git/cpg/cpg-concepts/src/integrationTest/resources/python/file/file_read.py"
+      file: "src/integrationTest/resources/python/file/file_read.py"
       region: "1:6-1:30"
       type: "de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression"

@@ -44,7 +44,6 @@ import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
-import java.net.URI
 
 /**
  * This pass reads a yaml or JSON file and creates a [Concept] for each entry in the file. The pass
@@ -167,7 +166,7 @@ class LoadPersistedConcepts(ctx: TranslationContext) : TranslationResultPass(ctx
                         ?: throw IllegalArgumentException("Invalid or missing endColumn in region.")
 
                 PhysicalLocation(
-                    uri = URI(location.file),
+                    uri = File(location.file).toURI(),
                     region = Region(startLine, startColumn, endLine, endColumn),
                 )
             } catch (ex: Exception) {
