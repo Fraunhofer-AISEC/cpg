@@ -113,7 +113,6 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
      * Implemented as listener to connect nodes when the goto appears before the label.
      */
     protected val processedListener = ProcessedListener()
-
     /**
      * Stores all nodes currently handled to add them to the processedListener even if a sub node is
      * the next target of an EOG edge.
@@ -248,8 +247,8 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         // although they can be placed in the same enclosing declaration.
         val code = statementHolder.statements
 
-        val nonStaticCode = code.filter { (it as? Block)?.isStaticBlock == false }
-        val staticCode = code.filter { it !in nonStaticCode }
+        val staticCode = code.filter { (it as? Block)?.isStaticBlock == true }
+        val nonStaticCode = code.filter { it !in staticCode }
 
         attachToEOG(statementHolder as Node)
         for (staticStatement in staticCode) {
@@ -1366,7 +1365,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
                 val toProcess = workList[0]
                 workList.remove(toProcess)
                 passedBy.add(toProcess)
-                if (toProcess is FunctionDeclaration) {
+                if (toProcess is EOGStarterHolder) {
                     return true
                 }
                 for (pred in toProcess.prevEOG) {

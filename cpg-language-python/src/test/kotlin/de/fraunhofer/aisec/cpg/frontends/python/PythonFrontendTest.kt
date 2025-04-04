@@ -449,9 +449,8 @@ class PythonFrontendTest : BaseTest() {
 
         val barBaz = methBarBody.statements[1]
         assertIs<AssignExpression>(barBaz)
-        val barBazInner = barBaz.declarations[0]
+        val barBazInner = recordFoo.fields("baz").firstOrNull()
         assertIs<FieldDeclaration>(barBazInner)
-        assertLocalName("baz", barBazInner)
         assertNotNull(barBazInner.firstAssignment)
     }
 
@@ -505,7 +504,7 @@ class PythonFrontendTest : BaseTest() {
         assertIs<Block>(barBody)
         val barBodyFirstStmt = barBody.statements[0]
         assertIs<AssignExpression>(barBodyFirstStmt)
-        val someVarDeclaration = barBodyFirstStmt.declarations.firstOrNull()
+        val someVarDeclaration = recordFoo.variables.firstOrNull()
         assertIs<FieldDeclaration>(someVarDeclaration)
         assertLocalName("somevar", someVarDeclaration)
         assertRefersTo(someVarDeclaration.firstAssignment, i)
@@ -779,9 +778,8 @@ class PythonFrontendTest : BaseTest() {
         // self.classFieldDeclaredInFunction = 456
         val barStmt0 = barBody.statements[0]
         assertIs<AssignExpression>(barStmt0)
-        val decl0 = barStmt0.declarations[0]
+        val decl0 = clsFoo.fields("classFieldDeclaredInFunction").firstOrNull()
         assertIs<FieldDeclaration>(decl0)
-        assertLocalName("classFieldDeclaredInFunction", decl0)
         assertNotNull(decl0.firstAssignment)
 
         // self.classFieldNoInitializer = 789
@@ -953,7 +951,7 @@ class PythonFrontendTest : BaseTest() {
         val forVariable = forStmt.variable
         assertIs<Reference>(forVariable)
         val forVarDecl =
-            p.declarations.firstOrNull {
+            forStmt.declarations.firstOrNull {
                 it.name.localName.contains((PythonHandler.LOOP_VAR_PREFIX))
             }
         assertNotNull(forVarDecl)
