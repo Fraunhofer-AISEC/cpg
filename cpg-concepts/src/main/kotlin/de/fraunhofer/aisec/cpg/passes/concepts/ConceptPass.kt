@@ -63,9 +63,7 @@ abstract class ConceptPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
         // predecessor, otherwise we might analyze a node multiple times
         val nodes = tu.allEOGStarters.filter { it.prevEOGEdges.isEmpty() }
 
-        for (node in nodes) {
-            walker.iterate(node)
-        }
+        walker.iterateAll(nodes)
     }
 
     /**
