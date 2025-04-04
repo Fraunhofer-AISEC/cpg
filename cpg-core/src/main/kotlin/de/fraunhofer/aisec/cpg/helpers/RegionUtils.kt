@@ -71,7 +71,6 @@ fun getCodeOfSubregion(
     return code.substring(start, end)
 }
 
-// TODO: not sure if this is the right place for this function
 /**
  * This function returns the [Node]s matching the provided [PhysicalLocation] in the given
  * [TranslationResult].

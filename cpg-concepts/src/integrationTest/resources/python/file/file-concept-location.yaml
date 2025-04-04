@@ -5,7 +5,6 @@ concepts:
         - name: "fileName"
           value: "foo"
       dfg:
-        fromThisNodeToConcept: false
         fromConceptToThisNode: true
     location:
       file: "file:/home/maximilian/git/cpg/cpg-concepts/src/integrationTest/resources/python/file/file_read.py"

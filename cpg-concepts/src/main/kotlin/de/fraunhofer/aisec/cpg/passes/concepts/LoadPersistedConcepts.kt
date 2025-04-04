@@ -63,7 +63,7 @@ class LoadPersistedConcepts(ctx: TranslationContext) : TranslationResultPass(ctx
      *
      * @param conceptFiles A list of files containing the persisted concepts to be loaded.
      */
-    class Configuration(var conceptFiles: List<File> = listOf()) : PassConfiguration()
+    class Configuration(val conceptFiles: List<File> = listOf()) : PassConfiguration()
 
     override fun cleanup() {
         // nothing to do
@@ -98,28 +98,24 @@ class LoadPersistedConcepts(ctx: TranslationContext) : TranslationResultPass(ctx
                 return
             }
 
-        entries.concepts?.let { concepts ->
-            concepts.forEach { concept ->
-                if (concept.signature != null && concept.location != null) {
-                    log.error(
-                        "Both signature and location are set. Please use only one of them. The entire entry will be ignored!"
-                    )
-                    return@forEach
-                } else if (concept.signature != null) {
-                    translationResult.getNodesBySignature(concept.signature).forEach {
-                        underlyingNode ->
-                        addConcept(underlyingNode, concept.concept)
-                    }
-                } else if (concept.location != null) {
-                    translationResult.getNodesByLocation(concept.location).forEach { underlyingNode
-                        ->
-                        addConcept(underlyingNode, concept.concept)
-                    }
-                } else {
-                    log.error(
-                        "Neither signature nor location are set. The entire entry will be ignored!"
-                    )
+        entries.concepts?.forEach { concept ->
+            if (concept.signature != null && concept.location != null) {
+                log.error(
+                    "Both signature and location are set. Please use only one of them. The entire entry will be ignored!"
+                )
+                return@forEach
+            } else if (concept.signature != null) {
+                translationResult.getNodesBySignature(concept.signature).forEach { underlyingNode ->
+                    addConcept(underlyingNode, concept.concept)
                 }
+            } else if (concept.location != null) {
+                translationResult.getNodesByLocation(concept.location).forEach { underlyingNode ->
+                    addConcept(underlyingNode, concept.concept)
+                }
+            } else {
+                log.error(
+                    "Neither signature nor location are set. The entire entry will be ignored!"
+                )
             }
         }
     }
@@ -202,8 +198,8 @@ class LoadPersistedConcepts(ctx: TranslationContext) : TranslationResultPass(ctx
             constructorArguments =
                 concept.constructorArguments?.associate { arg -> arg.name to arg.value }
                     ?: emptyMap(),
-            connectDFGUnderlyingNodeToConcept = concept.dfg?.fromThisNodeToConcept,
-            connectDFGConceptToUnderlyingNode = concept.dfg?.fromConceptToThisNode,
+            connectDFGUnderlyingNodeToConcept = concept.dfg.fromThisNodeToConcept,
+            connectDFGConceptToUnderlyingNode = concept.dfg.fromConceptToThisNode,
         )
     }
 
@@ -238,7 +234,7 @@ class LoadPersistedConcepts(ctx: TranslationContext) : TranslationResultPass(ctx
     private data class ConceptEntry(
         val name: String,
         val constructorArguments: List<ConstructorArgumentEntry>?,
-        val dfg: DFGEntry?,
+        val dfg: DFGEntry = DFGEntry(fromThisNodeToConcept = false, fromConceptToThisNode = false),
     )
 
     /**
@@ -251,8 +247,8 @@ class LoadPersistedConcepts(ctx: TranslationContext) : TranslationResultPass(ctx
      *   underlying node.
      */
     private data class DFGEntry(
-        val fromThisNodeToConcept: Boolean?,
-        val fromConceptToThisNode: Boolean?,
+        val fromThisNodeToConcept: Boolean = false,
+        val fromConceptToThisNode: Boolean = false,
     )
 
     /**
@@ -279,10 +275,7 @@ class LoadPersistedConcepts(ctx: TranslationContext) : TranslationResultPass(ctx
      * @param fqn The fully qualified name of the [CallExpression] to match against. E.g.
      *   `foo.bar.baz`.
      */
-    private data class SignatureEntry(
-        val fqn: String
-        // Extend this class with arguments / types as needed in the future
-    )
+    private data class SignatureEntry(val fqn: String)
 
     /**
      * This function retrieves the [Node.calls] from the [TranslationResult] by their fully
