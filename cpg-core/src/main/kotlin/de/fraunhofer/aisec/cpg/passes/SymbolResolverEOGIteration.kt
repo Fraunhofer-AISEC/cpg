@@ -138,6 +138,23 @@ fun DeclarationStateElement.pushType(node: Node, vararg elements: Type): Declara
     return DeclarationStateElement(this.symbols.duplicate(), this.candidates.duplicate(), newTypes)
 }
 
+/**
+ * This method is used to resolve symbols in the AST. It uses the EOG (evaluation order graph) to
+ * iterate over the nodes in the graph and resolve the symbols.
+ *
+ * It uses the power of the [Lattice.iterateEOG] to iterate over the nodes in the graph and built a
+ * state of:
+ * - [ScopeToDeclarationLattice] - a mapping of scopes to declarations
+ * - [NodeToDeclarationLattice] - a mapping of nodes to declarations
+ * - [NodeToTypeLattice] - a mapping of nodes to types
+ *
+ * After the iteration, we set the following based on the final state:
+ * - [Reference.candidates] - the candidates for the reference
+ * - [Reference.refersTo] - the final declaration for the reference
+ * - [CallExpression.invokes] - the final declaration for the call expression
+ * - [HasType.type] - the type of the node
+ * - [HasType.assignedTypes] - the assigned types of the node
+ */
 fun SymbolResolver.acceptWithIterateEOG(t: Node) {
     if (t !is FunctionDeclaration) {
         return
@@ -201,6 +218,10 @@ fun SymbolResolver.acceptWithIterateEOG(t: Node) {
     }
 }
 
+/**
+ * The state-transfer function for the [SymbolResolver]. It is called for each node in the EOG and
+ * is responsible for updating the state based on the node type.
+ */
 fun SymbolResolver.transfer(
     lattice: Lattice<DeclarationStateElement>,
     currentEdge: EvaluationOrder,
@@ -216,6 +237,10 @@ fun SymbolResolver.transfer(
     }
 }
 
+/**
+ * Handles a [BinaryOperator] and updates the state based on the operator type and the types of the
+ * [BinaryOperator.lhs] and [BinaryOperator.rhs].
+ */
 private fun SymbolResolver.handleBinaryOperator(
     binOp: BinaryOperator,
     state: DeclarationStateElement,
@@ -228,6 +253,10 @@ private fun SymbolResolver.handleBinaryOperator(
     return state.pushType(binOp, type)
 }
 
+/**
+ * Handles a [UnaryOperator] and updates the state based on the operator type and the type of the
+ * [UnaryOperator.input].
+ */
 private fun SymbolResolver.handleUnaryOperator(
     op: UnaryOperator,
     state: DeclarationStateElement,
@@ -247,13 +276,25 @@ private fun SymbolResolver.handleUnaryOperator(
     }
 }
 
+/**
+ * Handles a [Reference] and updates the state based on the resolution of the symbol used in the
+ * reference.
+ *
+ * We need to differentiate between a simple reference and a member expression.
+ * - In the case of a member expression, we need to extract the base type(s) from the
+ *   [DeclarationStateElement.types] and lookup the symbol in the scopes of the base type(s).
+ * - In the case of a simple reference, we can look up the symbol directly in the scope of the
+ *   reference.
+ *
+ * In both cases, the symbols are taken from [DeclarationStateElement.symbols] and the symbol
+ * candidates are pushed to the [DeclarationStateElement.candidates].
+ */
 private fun SymbolResolver.handleReference(
     node: Reference,
     state: DeclarationStateElement,
 ): DeclarationStateElement {
     infoWithFileLocation(node, log, "Resolving reference. {} scopes are active", state.symbols.size)
     var state = state
-    // Lookup symbol here or after the final state?
     var candidates =
         if (node is MemberExpression) {
             // We need to extract the scope from the base type(s) and then do a qualified
@@ -278,8 +319,7 @@ private fun SymbolResolver.handleReference(
         }
     println(candidates)
 
-    // Let's set it here for now, but also to the final state, maybe it's helpful for
-    // later
+    // Push candidates to state
     state = state.pushCandidate(node, *candidates.toTypedArray())
 
     // Push the type information
@@ -309,6 +349,9 @@ private fun SymbolResolver.handleDeclaration(
     return state
 }
 
+/**
+ * Resolves the symbol in the given scope and returns the set of declarations that match the symbol.
+ */
 // TODO: we could do this easier if we would have a lattice that combines the symbols across the
 //  scopes and doing the shadowing
 private fun ScopeToDeclarationElement.resolveSymbol(
