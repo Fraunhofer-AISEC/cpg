@@ -54,7 +54,6 @@ import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.TripleLattice
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.passes.Pass.Companion.log
-import kotlin.collections.firstOrNull
 import kotlin.collections.toSet
 
 /**
@@ -224,8 +223,7 @@ fun SymbolResolver.acceptWithIterateEOG(t: Node) {
             if (call != null) {
                 decideInvokesBasedOnCandidates(node, call)
             } else {
-                // Reference to a variable
-                node.refersTo = candidates.firstOrNull()
+                node.refersTo = node.language.bestViableReferenceCandidate(node)
             }
         }
     }

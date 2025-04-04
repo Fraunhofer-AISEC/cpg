@@ -46,6 +46,7 @@ import de.fraunhofer.aisec.cpg.passes.inference.tryFunctionInference
 import de.fraunhofer.aisec.cpg.passes.inference.tryFunctionInferenceFromFunctionPointer
 import de.fraunhofer.aisec.cpg.passes.inference.tryVariableInference
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
+import kotlin.collections.firstOrNull
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -723,6 +724,18 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
     }
 }
 
+/**
+ * This function decides which functions to add to [CallExpression.invokes] based on the candidates
+ * and the arguments. It uses [resolveWithArguments] to resolve the best viable function based on
+ * the candidates and the arguments.
+ *
+ * If the resolution is [SUCCESSFUL], it sets the invokes edge to the best viable functions. If it
+ * is [AMBIGUOUS] or [PROBLEMATIC], it sets the invokes edge to all possible viable functions. If it
+ * is unresolved, it tries to infer the function using [tryFunctionInference].
+ *
+ * @param callee The [Reference] of the callee.
+ * @param call The [CallExpression] to resolve.
+ */
 internal fun Pass<*>.decideInvokesBasedOnCandidates(callee: Reference, call: CallExpression) {
     // Try to resolve the best viable function based on the candidates and the arguments
     val result = resolveWithArguments(callee.candidates, call.arguments, call)
@@ -733,18 +746,15 @@ internal fun Pass<*>.decideInvokesBasedOnCandidates(callee: Reference, call: Cal
             )
             call.invokes = result.bestViable.toMutableList()
         }
-
         AMBIGUOUS -> {
             Pass.Companion.log.warn(
                 "Resolution of ${call.name} returned an ambiguous result and we cannot decide correctly, the invokes edge will contain the the ambiguous functions"
             )
             call.invokes = result.bestViable.toMutableList()
         }
-
         SUCCESSFUL -> {
             call.invokes = result.bestViable.toMutableList()
         }
-
         UNRESOLVED -> {
             call.invokes = tryFunctionInference(call, result).toMutableList()
         }
