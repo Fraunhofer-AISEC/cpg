@@ -71,6 +71,9 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
             // more than it helps.
             return
         }
+        // These are EOGStarterHolders but do not have an EOG which means, they will just cause
+        // problems. Again, if we delete information/edges, we will never be able to recover them.
+        if (node is FunctionTemplateDeclaration) return
 
         // Calculate the complexity of the function and see, if it exceeds our threshold
         val max = passConfig<Configuration>()?.maxComplexity
@@ -88,9 +91,23 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
         val startState = DFGPassState<Set<Node>>()
 
         startState.declarationsState.push(node, PowersetLattice(identitySetOf()))
-        node.parameters.forEach {
-            startState.declarationsState.push(it, PowersetLattice(identitySetOf(it)))
+        // If we start in a FunctionDeclaration, we have to add the parameters at the beginning
+        // because we won't visit them.
+        (node as? FunctionDeclaration)?.parameters?.forEach { param ->
+            startState.declarationsState.push(param, PowersetLattice(identitySetOf(param)))
+            param.default?.let { defaultValue ->
+                startState.push(param, PowersetLattice(identitySetOf(defaultValue)))
+            }
         }
+
+        // If we start in a VariableDeclaration, we have to set the initializer as the last write
+        // because we won't visit the declaration itself.
+        (node as? VariableDeclaration)?.let { varDecl ->
+            varDecl.initializer?.let { initializer ->
+                startState.push(varDecl, PowersetLattice(identitySetOf(initializer)))
+            }
+        }
+
         val finalState =
             iterateEOG(node.nextEOGEdges, startState, ::transfer) as? DFGPassState ?: return
 
@@ -148,26 +165,33 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
      * code [node].
      */
     protected fun clearFlowsOfVariableDeclarations(node: Node) {
+        // Get the children of the node which are also EOG starters. We do not want to impact them,
+        // so we later filter out all things which occur in the children or even completely outside
+        // the scope which we can reach.
         val childStarters = node.allEOGStarters.filter { it.prevEOG.isEmpty() }.minus(node)
-        for (varDecl in
-            node.variables.filter { it !is FieldDeclaration && it !is TupleDeclaration }) {
-            if (childStarters.none { varDecl in node.variables }) {
-                varDecl.prevDFGEdges.clear()
-                varDecl.nextDFGEdges.clear()
-            }
-        }
+        // Get all children of the node which are not part of the childStarters' children. We need
+        // this to filter out effects on the childStarters' children.
         val allChildrenOfFunction =
             node.allChildren<Node>().minus(childStarters.flatMap { it.allChildren<Node>() })
-        for (varDecl in node.parameters) {
-            if (childStarters.none { varDecl in node.parameters }) {
-                // Clear only prev and next inside this function!
-                varDecl.nextDFGEdges
-                    .filter { it.end in allChildrenOfFunction }
-                    .forEach { varDecl.nextDFGEdges.remove(it) }
-                varDecl.prevDFGEdges
-                    .filter { it.start in allChildrenOfFunction }
-                    .forEach { varDecl.prevDFGEdges.remove(it) }
-            }
+
+        // Get the local variables and parameters inside the node's astChildren (without the
+        // childStarters' children). For these, we remove prev and next DFG edges from/to nodes
+        // inside the node's astChildren
+        for (varDecl in
+            node.variables.filter {
+                it !is FieldDeclaration &&
+                    it !is TupleDeclaration &&
+                    !it.isGlobal &&
+                    it in allChildrenOfFunction
+            } + node.parameters.filter { it in allChildrenOfFunction }) {
+            // Clear only prev DFG inside this function!
+            varDecl.prevDFGEdges
+                .filter { it.start in allChildrenOfFunction }
+                .forEach { varDecl.prevDFGEdges.remove(it) }
+            // Clear only next DFG inside this function!
+            varDecl.nextDFGEdges
+                .filter { it.end in allChildrenOfFunction }
+                .forEach { varDecl.nextDFGEdges.remove(it) }
         }
     }
 
