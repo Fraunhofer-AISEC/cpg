@@ -967,7 +967,7 @@ class DFGTest {
 
         assertEquals(
             fieldA,
-            (dToMemberDAPartial.granularity as? PartialDataflowGranularity<*>)?.partialTarget,
+            (dToMemberDA.granularity as? PartialDataflowGranularity<*>)?.partialTarget,
             "We expect an incoming DFG edge: The partial edge from the reference \"d\" with partial granularity and index \"a\".",
         )
 
