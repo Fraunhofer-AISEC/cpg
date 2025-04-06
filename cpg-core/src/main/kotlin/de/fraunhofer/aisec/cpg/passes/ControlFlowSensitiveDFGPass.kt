@@ -125,13 +125,13 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                 // use the defaults (no calling context => null and FullGranularity).
                 var callingContext: CallingContext? = null
                 var granularity: Granularity = FullDataflowGranularity
-                edgePropertiesMap[Pair(it, key)]?.let {
+                edgePropertiesMap[Triple(it, key, true)]?.let {
                     callingContext = it.filterIsInstance<CallingContext>().singleOrNull()
                     granularity =
                         it.filterIsInstance<Granularity>().singleOrNull() ?: FullDataflowGranularity
                 }
 
-                if ((it is VariableDeclaration || it is ParameterDeclaration) && key == it) {
+                /*if ((it is VariableDeclaration || it is ParameterDeclaration) && key == it) {
                     // Nothing to do
                 } else if (callingContext != null) {
                     key.prevDFGEdges.addContextSensitive(
@@ -144,7 +144,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                         Dataflow(start = it, end = key, granularity = edgePropertyMapElement)
                 } else {
                     key.prevDFGEdges.add(it) { this.granularity = granularity }
-                }
+                }*/
             }
         }
     }
