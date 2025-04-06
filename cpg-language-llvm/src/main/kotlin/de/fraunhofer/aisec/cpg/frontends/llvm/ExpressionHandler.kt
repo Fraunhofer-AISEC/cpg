@@ -489,7 +489,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
         // since getelementpr returns the *address*, whereas extractvalue returns a *value*, we need
         // to do a final unary & operation
         if (isGetElementPtr) {
-            val ref = newUnaryOperator("&", postfix = false, prefix = true)
+            val ref = newPointerReference(expr.name)
             ref.input = expr
             expr = ref
         }
