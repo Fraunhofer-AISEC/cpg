@@ -71,7 +71,8 @@ class TupleDeclarationTest {
                                 newCallExpression(newReference("func")),
                             )
                         scopeManager.addDeclaration(tuple)
-                        declarations += tuple
+                        declare { this.singleDeclaration = tuple }
+                        // declarations += tuple
 
                         tuple.elements.forEach { scopeManager.addDeclaration(it) }
 

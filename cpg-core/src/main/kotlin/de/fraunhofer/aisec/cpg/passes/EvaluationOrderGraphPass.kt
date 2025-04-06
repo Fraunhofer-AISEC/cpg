@@ -113,7 +113,6 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
      * Implemented as listener to connect nodes when the goto appears before the label.
      */
     protected val processedListener = ProcessedListener()
-
     /**
      * Stores all nodes currently handled to add them to the processedListener even if a sub node is
      * the next target of an EOG edge.
@@ -248,8 +247,8 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         // although they can be placed in the same enclosing declaration.
         val code = statementHolder.statements
 
-        val nonStaticCode = code.filter { (it as? Block)?.isStaticBlock == false }
-        val staticCode = code.filter { it !in nonStaticCode }
+        val staticCode = code.filter { (it as? Block)?.isStaticBlock == true }
+        val nonStaticCode = code.filter { it !in staticCode }
 
         attachToEOG(statementHolder as Node)
         for (staticStatement in staticCode) {
@@ -729,8 +728,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
                     currentPredecessors.addAll(eogEdges)
                 } else if (throwType.tryCast(catchParam.type) != CastNotPossible) {
                     // If the thrown type can be cast to the type of the catch clause, a valid
-                    // handling of the
-                    // throw can be assumed
+                    // handling of the throw can be assumed
                     currentPredecessors.addAll(eogEdges)
                     toRemove.add(throwType)
                 }
@@ -742,8 +740,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         }
 
         // We need to handle the else block after the catch clauses, as the else could contain a
-        // throw itself
-        // that should not be caught be the catch clauses.
+        // throw itself that should not be caught be the catch clauses.
         if (node.elseBlock != null) {
             currentPredecessors.clear()
             currentPredecessors.addAll(tmpEOGNodes)
@@ -790,8 +787,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             }
         }
         // To Avoid edges out of the try or finally block to the next regular statement if the try
-        // can not be exited
-        // without a throw
+        // can not be exited without a throw
         if (!canTerminateExceptionfree) {
             currentPredecessors.clear()
         }
@@ -1380,7 +1376,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
                 val toProcess = workList[0]
                 workList.remove(toProcess)
                 passedBy.add(toProcess)
-                if (toProcess is FunctionDeclaration) {
+                if (toProcess is EOGStarterHolder) {
                     return true
                 }
                 for (pred in toProcess.prevEOG) {

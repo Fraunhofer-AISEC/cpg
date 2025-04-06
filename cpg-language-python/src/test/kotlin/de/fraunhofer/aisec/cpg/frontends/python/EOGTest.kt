@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,32 +23,36 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.frontends.cxx
+package de.fraunhofer.aisec.cpg.frontends.python
 
-import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.test.*
-import java.io.File
+import de.fraunhofer.aisec.cpg.graph.calls
+import de.fraunhofer.aisec.cpg.graph.invoke
+import de.fraunhofer.aisec.cpg.query.executionPath
+import de.fraunhofer.aisec.cpg.test.analyze
+import java.nio.file.Path
 import kotlin.test.Test
-import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
-class CXXExpressionTest {
+class EOGTest {
     @Test
-    fun testExplicitTypeConversion() {
-        val file = File("src/test/resources/cxx/explicit_type_conversion.cpp")
-        val tu =
-            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
-                it.registerLanguage<CPPLanguage>()
+    fun testEOGAfterWithStmt() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val result =
+            analyze(listOf(topLevel.resolve("with_stmt_EOG.py").toFile()), topLevel, true) {
+                it.registerLanguage<PythonLanguage>()
             }
-        assertNotNull(tu)
+        assertNotNull(result)
 
-        // We should have two calls (int and myint64)
-        val casts = tu.casts
-        assertEquals(2, casts.size)
-        assertEquals(listOf("int", "long long int"), casts.map { it.name.localName })
+        val read = result.calls("read").singleOrNull()
+        assertNotNull(read, "Expected to find a `read` call.")
 
-        val cast = tu.casts.firstOrNull()
-        assertNotNull(cast)
-        assertEquals(cast, cast.expression.astParent)
+        val print = result.calls("print").singleOrNull()
+        assertNotNull(print, "Expected to find a `print` call.")
+
+        assertTrue(
+            executionPath(startNode = read) { it == print }.value,
+            "Expected to find an execution path from read to print.",
+        )
     }
 }

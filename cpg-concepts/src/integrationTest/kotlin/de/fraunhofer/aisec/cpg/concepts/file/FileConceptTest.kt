@@ -337,7 +337,6 @@ class FileConceptTest : BaseTest() {
         }
     }
 
-    @Ignore("Issue https://github.com/Fraunhofer-AISEC/cpg/issues/2121")
     @Test
     fun testDelete() {
         val topLevel = Path.of("src", "integrationTest", "resources", "python", "file")
