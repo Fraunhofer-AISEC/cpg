@@ -182,8 +182,6 @@ operator fun <T : Node> Collection<T>.invoke(predicate: (T) -> Boolean): List<T>
 
 /** A shortcut to filter a list of nodes by their name. */
 operator fun <T : Node> Collection<T>.invoke(lookup: String): List<T> {
-    // TODO: I'm not sure if it wouldn't be more intuitive to use
-    // call.reconstructedImportName.toString().endsWith(lookup) for CallExpressions.
     return this.filter { it.name.lastPartsMatch(lookup) }
 }
 
