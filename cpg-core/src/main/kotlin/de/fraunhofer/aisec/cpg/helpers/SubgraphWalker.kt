@@ -232,7 +232,11 @@ object SubgraphWalker {
 
         /**
          * Iteration starting from several nodes that can explore a joined graph, therefore the
-         * `seen` list is shared between several entries to the potentially joined graph
+         * `seen` list is shared between several entries to the potentially joined graph. The search
+         * works in BFS manner from every single entry, but stops at nodes visited by other entries.
+         * 
+         * If you require a node to be visited multiple times, i.e. once for every entry it is reachable
+         * by, use [iterate].
          */
         fun iterateAll(entries: List<Node>) {
             var todo = ArrayDeque<Pair<Node, Node?>>()
@@ -354,10 +358,13 @@ object SubgraphWalker {
         }
 
         /**
-         * Wraps [IterativeGraphWalker] to handle declaration, in contrast to [iterate], this
+         * Wraps [IterativeGraphWalker] to handle declaration scopes, in contrast to [iterate], this
          * function is here to iterate over several nodes that may be entries into a joined graph
          * reachable by the specified strategy and therefore the internal seen list of nodes has to
          * be shared to avoid duplicate visits.
+         *
+         * If you require a node to be visited multiple times, i.e. once for every entry it is reachable
+         * by, use [iterate].
          *
          * @param entries The nodes where the exploration is started from.
          */
