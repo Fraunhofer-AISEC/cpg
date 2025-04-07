@@ -235,16 +235,17 @@ object SubgraphWalker {
          * `seen` list is shared between several entries to the potentially joined graph. The search
          * works in BFS manner from every single entry, but stops at nodes visited by other entries.
          *
-         * If you require a node to be visited multiple times, i.e. once for every entry it is reachable
-         * by, use [iterate].
+         * If you require a node to be visited multiple times, i.e. once for every entry it is
+         * reachable by, use [iterate].
          */
         fun iterateAll(entries: List<Node>) {
             var todo = ArrayDeque<Pair<Node, Node?>>()
             val seen = identitySetOf<Node>()
 
             entries.forEach { entry ->
-                todo.push(Pair<Node, Node?>(entry, null))
-                seen.add(entry)
+                if (!seen.contains(entry)) {
+                    todo.push(Pair<Node, Node?>(entry, null))
+                }
 
                 while (todo.isNotEmpty()) {
                     var (current, parent) = todo.pop()
@@ -363,8 +364,8 @@ object SubgraphWalker {
          * reachable by the specified strategy and therefore the internal seen list of nodes has to
          * be shared to avoid duplicate visits.
          *
-         * If you require a node to be visited multiple times, i.e. once for every entry it is reachable
-         * by, use [iterate].
+         * If you require a node to be visited multiple times, i.e. once for every entry it is
+         * reachable by, use [iterate].
          *
          * @param entries The nodes where the exploration is started from.
          */
