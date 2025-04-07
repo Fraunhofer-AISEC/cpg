@@ -8,6 +8,7 @@
   import python from 'svelte-highlight/languages/python';
   import 'svelte-highlight/styles/github.css';
   import type { PageProps } from './$types';
+  import { error } from '@sveltejs/kit';
 
   let { data }: PageProps = $props();
 
@@ -36,17 +37,14 @@
   const lineNumberWidth = Math.ceil(Math.log10(totalLines + 1));
   const offsetLeft = baseOffsetLeft + lineNumberWidth * charWidth;
 
-  /*
-  async function newConcepts() {
-    const res = await fetch(`/api/newConcepts`);
-    const text = await res.text();
-    alert(text); // TODO: download? popup?
-  }
-  */
-  async function newConcepts() {
-    const res = await fetch('/api/newConcepts');
+  /**
+   * Export the added concepts to a YAML file.
+   * This function fetches the new concepts from the server and creates a downloadable file.
+   */
+  async function exportConcepts() {
+    const res = await fetch('/api/export-concepts');
     if (!res.ok) {
-      console.error('Error fetching new concepts');
+      console.error('Error exporting concepts');
       return;
     }
     const content = await res.text();
@@ -54,7 +52,7 @@
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = url;
-    anchor.download = 'newConcepts.yaml';
+    anchor.download = 'concepts.yaml';
     document.body.appendChild(anchor);
     anchor.click();
     document.body.removeChild(anchor);
@@ -124,9 +122,9 @@
       </button>
       {#if activeTab === 'overlayNodes'}<button
                 class="ml-2 cursor-pointer px-4 py-2 bg-gray-200 text-black"
-                onclick={newConcepts()}
+                onclick={() => exportConcepts()}
         ><!--- TODO: spacing. make nice. --->
-          Download New Concepts (.yaml)
+          Export Added Concepts (.yaml)
         </button>{/if}
     </div>
 

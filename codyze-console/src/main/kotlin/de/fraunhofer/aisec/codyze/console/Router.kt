@@ -157,7 +157,7 @@ fun Routing.apiRoutes(service: ConsoleService) {
         }
 
         // The endpoint to add a concept node to the current analysis result
-        post("/concept") {
+        post("/concepts") {
             try {
                 val request = call.receive<ConceptRequestJSON>()
                 try {
@@ -191,12 +191,10 @@ fun Routing.apiRoutes(service: ConsoleService) {
         }
 
         /**
-         * The endpoint to get a YAML listing of all manually added [Concept]s (via `POST
+         * The endpoint to export a YAML listing of all manually added [Concept]s (via `POST
          * /concept`).
-         *
-         * TODO: restrict to current component?
          */
-        get("/newConcepts") { call.respond(service.exportNewConcepts()) }
+        get("/export-concepts") { call.respond(service.exportAddedConcepts()) }
     }
 }
 

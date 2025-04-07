@@ -2,15 +2,15 @@ import type {ConceptInfo} from "$lib/types";
 
 export interface ConceptGroup {
   path: string;
-  concepts: { name: string; fullName: string }[];
+  concepts: { name: string; info: ConceptInfo }[];
 }
 
 export function groupConcepts(concepts: ConceptInfo[]): ConceptGroup[] {
   const prefix = 'de.fraunhofer.aisec.cpg.graph.concepts.';
-  const groups: Map<string, { name: string; fullName: string }[]> = new Map();
+  const groups: Map<string, { name: string; info: ConceptInfo }[]> = new Map();
 
-  for (const fullInfo of concepts) {
-    const fullName = fullInfo.conceptName
+  for (const info of concepts) {
+    const fullName = info.conceptName
     if (!fullName.startsWith(prefix)) continue;
 
     const name = fullName.split('.').pop()!;
@@ -19,7 +19,7 @@ export function groupConcepts(concepts: ConceptInfo[]): ConceptGroup[] {
     if (!groups.has(path)) {
       groups.set(path, []);
     }
-    groups.get(path)!.push({ name, fullName });
+    groups.get(path)!.push({ name, info });
   }
 
   return Array.from(groups.entries())

@@ -30,6 +30,7 @@ package de.fraunhofer.aisec.codyze.console
 import de.fraunhofer.aisec.codyze.AnalysisResult
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import io.github.detekt.sarif4k.Result
@@ -55,7 +56,7 @@ data class AnalyzeRequestJSON(
     val sourceDir: String,
     val includeDir: String? = null,
     val topLevel: String? = null,
-    val conceptSummaries: String? = null,
+    val conceptsFile: String? = null,
 )
 
 /** JSON data class for an [Edge]. */
@@ -129,7 +130,7 @@ data class ConstructorInfo(
 data class ConstructorArguments(
     val argumentName: String,
     val argumentValue: String,
-    val argumentType: String?, // currently not used
+    val argumentType: String? = null, // currently not used
 )
 
 /** JSON data class for a [Node]. */
@@ -164,7 +165,7 @@ data class ConceptRequestJSON(
     val conceptName: String,
     val addDFGToConcept: Boolean,
     val addDFGFromConcept: Boolean,
-    val constructorInfo: List<ConstructorArguments>?,
+    val constructorArgs: List<ConstructorArguments>? = null,
 )
 
 /** Converts a [AnalysisResult] into its JSON representation. */

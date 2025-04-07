@@ -32,7 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.conceptBuildHelper
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.nodes
-import de.fraunhofer.aisec.cpg.passes.concepts.ConceptSummaries
+import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts
 import de.fraunhofer.aisec.cpg.passes.concepts.config.python.PythonStdLibConfigurationPass
 import java.io.File
 import java.nio.file.Path
@@ -66,7 +66,7 @@ class ConsoleService {
                     .defaultPasses()
                     .loadIncludes(true)
                     .registerPass<PythonStdLibConfigurationPass>()
-                    .registerPass<ConceptSummaries>()
+                    .registerPass<LoadPersistedConcepts>()
                     .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage")
                     .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage")
                     .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage")
@@ -89,10 +89,10 @@ class ConsoleService {
                 builder.topLevel(File(request.topLevel))
             }
 
-            if (request.conceptSummaries != null) {
-                builder.configurePass<ConceptSummaries>(
-                    ConceptSummaries.Configuration(
-                        conceptSummaryFiles = listOf(File(request.conceptSummaries))
+            if (request.conceptsFile != null) {
+                builder.configurePass<LoadPersistedConcepts>(
+                    LoadPersistedConcepts.Configuration(
+                        conceptFiles = listOf(File(request.conceptsFile))
                     )
                 )
             }
@@ -177,7 +177,7 @@ class ConsoleService {
                 name = request.conceptName,
                 underlyingNode = node,
                 constructorArguments =
-                    request.constructorInfo?.associate { it.argumentName to it.argumentValue }
+                    request.constructorArgs?.associate { it.argumentName to it.argumentValue }
                         ?: emptyMap(),
                 connectDFGUnderlyingNodeToConcept = request.addDFGToConcept,
                 connectDFGConceptToUnderlyingNode = request.addDFGFromConcept,
@@ -191,7 +191,7 @@ class ConsoleService {
      *
      * TODO: YAML schema? extra fields? restrict to current component? Use some YAML export library?
      */
-    fun exportNewConcepts(): String {
+    fun exportAddedConcepts(): String {
         val spacer = "  " // 2 spaces for indentation
         var result = "concepts:\n"
         newConceptNodes.forEach { concept ->
