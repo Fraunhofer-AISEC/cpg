@@ -243,7 +243,7 @@ object SubgraphWalker {
             val seen = identitySetOf<Node>()
 
             entries.forEach { entry ->
-                if (!seen.contains(entry)) {
+                if (entry !in seen) {
                     todo.push(Pair<Node, Node?>(entry, null))
                 }
 
