@@ -52,12 +52,7 @@ abstract class ConceptPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
         ctx.currentComponent = tu.component
         walker = SubgraphWalker.ScopedWalker(ctx.scopeManager)
         walker.strategy = Strategy::EOG_FORWARD
-        walker.registerHandler { node ->
-            if (node !in alreadySeen) {
-                handleNode(node, tu)
-                alreadySeen += node
-            }
-        }
+        walker.registerHandler { node -> handleNode(node, tu) }
 
         // Gather all resolution EOG starters; and make sure they really do not have a
         // predecessor, otherwise we might analyze a node multiple times

@@ -241,25 +241,25 @@ object SubgraphWalker {
             entries.forEach { entry ->
                 todo.push(Pair<Node, Node?>(entry, null))
                 seen.add(entry)
-            }
 
-            while (todo.isNotEmpty()) {
-                var (current, parent) = todo.pop()
-                onNodeVisit.forEach { it(current, parent) }
+                while (todo.isNotEmpty()) {
+                    var (current, parent) = todo.pop()
+                    onNodeVisit.forEach { it(current, parent) }
 
-                // Check if we have a replacement node
-                val toReplace = replacements[current]
-                if (toReplace != null) {
-                    current = toReplace
-                    replacements.remove(toReplace)
-                }
+                    // Check if we have a replacement node
+                    val toReplace = replacements[current]
+                    if (toReplace != null) {
+                        current = toReplace
+                        replacements.remove(toReplace)
+                    }
 
-                val unseenChildren =
-                    strategy(current).asSequence().filter { it !in seen }.toMutableList()
+                    val unseenChildren =
+                        strategy(current).asSequence().filter { it !in seen }.toMutableList()
 
-                seen.addAll(unseenChildren)
-                unseenChildren.asReversed().forEach { child: Node ->
-                    todo.push(Pair(child, current))
+                    seen.addAll(unseenChildren)
+                    unseenChildren.asReversed().forEach { child: Node ->
+                        todo.push(Pair(child, current))
+                    }
                 }
             }
         }
