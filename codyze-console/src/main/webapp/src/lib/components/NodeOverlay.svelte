@@ -1,9 +1,7 @@
 <script lang="ts">
   import { getColorForNodeType } from '$lib/colors';
-  import type { ConceptGroup } from '$lib/concepts';
   import type { FlattenedNode } from '$lib/flatten';
   import type { NodeJSON } from '$lib/types';
-  import type { MouseEventHandler } from 'svelte/elements';
 
   interface Props {
     node: FlattenedNode;
@@ -71,7 +69,7 @@
   style:opacity={highlightedNode?.id === node.id ? 0.6 : 0.3}
   style:min-width="0.25em"
   style:min-height="0.25em"
-  style:z-index={node.depth}
+  style:z-index={node.depth + 1}
   onmouseenter={() => (highlightedNode = node)}
   onmouseleave={() => (highlightedNode = null)}
   onclick={() => onNodeClick(node)}

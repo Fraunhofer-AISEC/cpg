@@ -8,7 +8,6 @@
   import python from 'svelte-highlight/languages/python';
   import 'svelte-highlight/styles/github.css';
   import type { PageProps } from './$types';
-  import { error } from '@sveltejs/kit';
 
   let { data }: PageProps = $props();
 
@@ -121,9 +120,9 @@
         AST Nodes
       </button>
       {#if activeTab === 'overlayNodes'}<button
-                class="ml-2 cursor-pointer px-4 py-2 bg-gray-200 text-black"
-                onclick={() => exportConcepts()}
-        ><!--- TODO: spacing. make nice. --->
+          class="ml-2 cursor-pointer bg-gray-200 px-4 py-2 text-black"
+          onclick={() => exportConcepts()}
+          ><!--- TODO: spacing. make nice. --->
           Export Added Concepts (.yaml)
         </button>{/if}
     </div>

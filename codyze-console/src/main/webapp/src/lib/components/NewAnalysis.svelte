@@ -1,6 +1,11 @@
 <script lang="ts">
   interface Props {
-    submit: (sourceDir: string, includeDir?: string, topLevel?: string, conceptSummaries?: string) => void;
+    submit: (
+      sourceDir: string,
+      includeDir?: string,
+      topLevel?: string,
+      conceptSummaries?: string
+    ) => void;
     loading: boolean;
     error?: string;
   }
@@ -63,11 +68,11 @@
         Concepts File (.yaml) (optional)
       </label>
       <input
-              type="text"
-              id="conceptsFile"
-              bind:value={conceptsFile}
-              class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none"
-              placeholder="/path/to/concept-summaries.yaml"
+        type="text"
+        id="conceptsFile"
+        bind:value={conceptsFile}
+        class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none"
+        placeholder="/path/to/concept-summaries.yaml"
       />
     </div>
     <button

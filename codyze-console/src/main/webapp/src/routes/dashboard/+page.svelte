@@ -8,7 +8,12 @@
   let regenerateEnabled = $state(false);
   let loading = $state(false);
 
-  async function handleSubmit(sourceDir: string, includeDir?: string, topLevel?: string, conceptSummaries?: string) {
+  async function handleSubmit(
+    sourceDir: string,
+    includeDir?: string,
+    topLevel?: string,
+    conceptSummaries?: string
+  ) {
     loading = true;
     try {
       const response = await fetch('/api/analyze', {

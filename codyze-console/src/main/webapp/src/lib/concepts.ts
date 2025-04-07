@@ -1,4 +1,4 @@
-import type {ConceptInfo} from "$lib/types";
+import type { ConceptInfo } from '$lib/types';
 
 export interface ConceptGroup {
   path: string;
@@ -10,7 +10,7 @@ export function groupConcepts(concepts: ConceptInfo[]): ConceptGroup[] {
   const groups: Map<string, { name: string; info: ConceptInfo }[]> = new Map();
 
   for (const info of concepts) {
-    const fullName = info.conceptName
+    const fullName = info.conceptName;
     if (!fullName.startsWith(prefix)) continue;
 
     const name = fullName.split('.').pop()!;

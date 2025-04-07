@@ -2,7 +2,6 @@
   import { invalidate } from '$app/navigation';
   import type { ConceptGroup } from '$lib/concepts';
   import type { FlattenedNode } from '$lib/flatten';
-  import { type ConceptInfo } from '$lib/types';
 
   interface Props {
     showDialog: boolean;
@@ -49,7 +48,7 @@
           constructorArgs: constructorValues.map((value, index) => ({
             argumentName: selectedConcept?.constructorInfo[index + 1].argumentName,
             argumentValue: value,
-            argumentType: selectedConcept?.constructorInfo[index + 1].argumentType,
+            argumentType: selectedConcept?.constructorInfo[index + 1].argumentType
           }))
         })
       });
@@ -89,12 +88,12 @@
       </div>
     </div>
     <div class="mb-4 rounded border p-2">
-      {#each conceptGroups as { path, concepts }}
+      {#each conceptGroups as { path, concepts } (path)}
         <div class="my-1 border-l-2 border-gray-200 pl-4">
           {#if path}
             <div class="text-sm font-medium text-gray-600">{path}</div>
           {/if}
-          {#each concepts as concept}
+          {#each concepts as concept (concept.name)}
             <label class="flex cursor-pointer items-center py-1 hover:bg-gray-50">
               <span class="mr-2 text-gray-400">└─</span>
               <input
@@ -123,10 +122,10 @@
     {#if selectedConcept?.constructorInfo?.length ?? 0 > 1}
       <h4 class="mb-2 text-sm font-medium">Constructor Arguments</h4>
       <div class="-space-y-px">
-        {#each selectedConcept?.constructorInfo?.slice(1) ?? [] as arg, idx}
+        {#each selectedConcept?.constructorInfo?.slice(1) ?? [] as arg, idx (idx)}
           <div
             class="
-            {idx == 0 ? 'rounded-t-md' : ''} 
+            {idx == 0 ? 'rounded-t-md' : ''}
             {idx == (selectedConcept?.constructorInfo?.length ?? 0) - 2 ? 'rounded-b-md' : ''} 
               bg-white px-3 pt-2.5 pb-1.5 outline outline-1 -outline-offset-1 outline-gray-300 focus-within:relative focus-within:outline focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-indigo-600"
           >
@@ -153,10 +152,7 @@
       >
         Cancel
       </button>
-      <button
-        class="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
-        type="submit"
-      >
+      <button class="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700" type="submit">
         Add
       </button>
     </div>
