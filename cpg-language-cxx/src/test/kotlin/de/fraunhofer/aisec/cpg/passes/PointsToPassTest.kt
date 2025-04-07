@@ -2191,6 +2191,10 @@ class PointsToPassTest {
             tu.allChildren<CallExpression> { it.location?.region?.startLine == 242 }.firstOrNull()
         assertNotNull(ceLine242)
 
+        // FunctionDeclarations
+        val unknownFuncFD = tu.functions["unknownFunc"]
+        assertNotNull(unknownFuncFD)
+
         // Line 230
         assertEquals(ceLine230, iRefLine230Left.prevFullDFG.singleOrNull())
         assertEquals(binOpLine207, iRefLine230Left.fullMemoryValues.singleOrNull())
@@ -2262,15 +2266,32 @@ class PointsToPassTest {
         assertTrue(iRefLine240.prevFunctionSummaryDFG.contains(ceLine239))
 
         // Line 242
+        // Make sure that we created a dummy function summary for the unknownFunc
+        assertEquals(1, unknownFuncFD.functionSummary?.entries?.singleOrNull()?.value?.size)
+
         assertEquals(1, iRefLine242Left.fullMemoryValues.size)
         assertLocalName(
             "unknownFunc",
             iRefLine242Left.fullMemoryValues.singleOrNull { it is UnknownMemoryValue },
         )
-        // TODO: What DFGs and memoryValues do we except here?
-        /*        assertEquals(2, ceLine242.fullMemoryValues.size)
-        assertTrue(ceLine242.fullMemoryValues.contains(iDecl.memoryAddresses.single()))
-        assertTrue(ceLine242.fullMemoryValues.contains(binOpLine212))*/
+
+        assertEquals(1, ceLine242.arguments[0].prevFullDFG.size)
+        assertEquals(1, ceLine242.arguments[1].prevFullDFG.size)
+
+        // Both arguments have a nextDFG to the PMV and from there to the functionDeclaration
+        assertEquals(
+            unknownFuncFD,
+            ceLine242.arguments[0].nextDFG.singleOrNull()?.nextDFG?.singleOrNull(),
+        )
+        assertEquals(
+            unknownFuncFD,
+            ceLine242.arguments[1].nextDFG.singleOrNull()?.nextDFG?.singleOrNull(),
+        )
+
+        // And from the callExpression to the functionDeclaration
+        assertEquals(unknownFuncFD, ceLine242.prevDFG.singleOrNull())
+
+        // TODO: functionSummary DFGs
         /*        assertEquals(2, ceLine242.prevFunctionSummaryDFG.size)
         assertTrue(ceLine242.prevFunctionSummaryDFG.contains(ceLine239.invokes.first()))
         assertTrue(ceLine242.prevFunctionSummaryDFG.contains(ceLine239.arguments.first()))*/

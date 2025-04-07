@@ -312,6 +312,36 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         functionDeclaration: FunctionDeclaration,
     ): PointsToStateElement {
         var doubleState = startState
+        if (functionDeclaration.functionSummary.isEmpty()) {
+            // Add a dummy function summary so that we don't try this every time
+            // In this dummy, all parameters point to the return
+            // TODO: This actually generates a new return statement but it's not part of the
+            // function. Wouldn't the edges better point to the FunctionDeclaration and in a
+            // case with a body, all returns flow to the FunctionDeclaration too?
+            // TODO: Also add possible dereference values to the input?
+            functionDeclaration.functionSummary[ReturnStatement()] =
+                mutableSetOf(FunctionDeclaration.FSEntry(0, functionDeclaration, 1, ""))
+            // draw a DFG-Edge from all parameters to the FunctionDeclaration
+            doubleState =
+                lattice.push(
+                    doubleState,
+                    functionDeclaration,
+                    GeneralStateEntryElement(
+                        PowersetLattice.Element(),
+                        PowersetLattice.Element(),
+                        PowersetLattice.Element(
+                            functionDeclaration.parameters.flatMapTo(IdentitySet()) {
+                                doubleState
+                                    .getValues(it)
+                                    .filter { it.first is ParameterMemoryValue }
+                                    .map { Pair(it.first, equalLinkedHashSetOf<Any>()) }
+                            }
+                        ),
+                    ),
+                )
+            return doubleState
+        }
+
         for ((param, fsEntries) in functionDeclaration.functionSummary) {
             fsEntries.forEach { entry ->
                 if (param is ParameterDeclaration && entry.srcNode is ParameterDeclaration) {
@@ -762,7 +792,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             // Especially for shortFS, we need to update the prevDFGs with
                             // information we didn't have when creating the functionSummary.
                             // calculatePrev does this for us
-                            val prev = calculatePrev(lastWrites, shortFS, currentNode)
+                            val prev = calculatePrev(lastWrites, shortFS, currentNode, invoke)
                             mapDstToSrc =
                                 addEntryToMap(
                                     doubleState,
@@ -796,10 +826,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         lastWrites: EqualLinkedHashSet<Node>,
         shortFS: Boolean,
         currentNode: CallExpression,
+        invoke: FunctionDeclaration,
     ): EqualLinkedHashSet<Node> {
         val ret = equalLinkedHashSetOf<Node>()
-        // If we have nothing, the last write is probably the callExpression
-        // if (lastWrites.isEmpty()) ret.add(currentNode)
+        // If we have nothing, the last write is probably the functionDeclaration
+        if (lastWrites.isEmpty()) ret.add(invoke)
         lastWrites.forEach { lw ->
             if (shortFS) {
                 when (lw) {
@@ -1386,6 +1417,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         var doubleState = doubleState
         parameters
             .filter { it.memoryValues.filterIsInstance<ParameterMemoryValue>().isEmpty() }
+            //            .filter {
+            // doubleState.getValues(it).filterIsInstance<ParameterMemoryValue>().isEmpty() }
             .forEach { param ->
                 // In the first step, we have a triangle of ParameterDeclaration, the
                 // ParameterDeclaration's Memory Address and the ParameterMemoryValue
