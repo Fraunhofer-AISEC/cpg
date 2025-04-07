@@ -34,7 +34,6 @@ import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
-import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.passes.TranslationUnitPass
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 
@@ -46,26 +45,17 @@ abstract class ConceptPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
 
     lateinit var walker: SubgraphWalker.ScopedWalker
 
-    val alreadySeen = identitySetOf<Node>()
-
     override fun accept(tu: TranslationUnitDeclaration) {
         ctx.currentComponent = tu.component
         walker = SubgraphWalker.ScopedWalker(ctx.scopeManager)
         walker.strategy = Strategy::EOG_FORWARD
-        walker.registerHandler { node ->
-            if (node !in alreadySeen) {
-                handleNode(node, tu)
-                alreadySeen += node
-            }
-        }
+        walker.registerHandler { node -> handleNode(node, tu) }
 
         // Gather all resolution EOG starters; and make sure they really do not have a
         // predecessor, otherwise we might analyze a node multiple times
         val nodes = tu.allEOGStarters.filter { it.prevEOGEdges.isEmpty() }
 
-        for (node in nodes) {
-            walker.iterate(node)
-        }
+        walker.iterateAll(nodes)
     }
 
     /**
