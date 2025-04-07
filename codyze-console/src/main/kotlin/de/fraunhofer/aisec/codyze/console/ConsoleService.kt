@@ -25,6 +25,9 @@
  */
 package de.fraunhofer.aisec.codyze.console
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.SerializationFeature
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import de.fraunhofer.aisec.codyze.AnalysisProject
 import de.fraunhofer.aisec.codyze.AnalysisResult
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
@@ -33,7 +36,9 @@ import de.fraunhofer.aisec.cpg.graph.concepts.conceptBuildHelper
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts
+import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.PersistedConcepts
 import de.fraunhofer.aisec.cpg.passes.concepts.config.python.PythonStdLibConfigurationPass
+import de.fraunhofer.aisec.cpg.passes.concepts.toPersistedConcept
 import java.io.File
 import java.nio.file.Path
 import kotlin.uuid.Uuid
@@ -188,25 +193,13 @@ class ConsoleService {
     /**
      * Exports all new [Concept] nodes (added via [addConcept] and thus stored in [newConceptNodes])
      * as a YAML string.
-     *
-     * TODO: YAML schema? extra fields? restrict to current component? Use some YAML export library?
      */
     fun exportAddedConcepts(): String {
-        val spacer = "  " // 2 spaces for indentation
-        var result = "concepts:\n"
-        newConceptNodes.forEach { concept ->
-            result +=
-                "${spacer}concept:\n" +
-                    "${spacer}${spacer}name: \"${concept.javaClass.name}\"\n" +
-                    "${spacer}${spacer}dfg:\n" +
-                    "${spacer}${spacer}${spacer}fromThisNodeToConcept: ${concept.underlyingNode?.nextDFG?.contains(concept)}\n" +
-                    "${spacer}${spacer}${spacer}fromConceptToThisNode: ${concept.nextDFG.contains(concept.underlyingNode)}\n" +
-                    "${spacer}location:\n" +
-                    "${spacer}${spacer}file: \"${concept.location?.artifactLocation?.uri}\"\n" +
-                    "${spacer}${spacer}region: \"${concept.location?.region}\"\n" +
-                    "${spacer}${spacer}type: \"${concept.underlyingNode?.javaClass?.name}\"\n"
-        }
-        return result
+        val concepts = PersistedConcepts(concepts = newConceptNodes.map { it.toPersistedConcept() })
+        return ObjectMapper(YAMLFactory())
+            .enable(SerializationFeature.INDENT_OUTPUT)
+            .disable(SerializationFeature.WRITE_NULL_MAP_VALUES)
+            .writeValueAsString(concepts)
     }
 
     /**

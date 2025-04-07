@@ -40,6 +40,8 @@ import de.fraunhofer.aisec.cpg.graph.concepts.conceptBuildHelper
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.helpers.getNodesByRegion
 import de.fraunhofer.aisec.cpg.passes.*
+import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.ConceptEntry
+import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.PersistedConceptEntry
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -203,7 +205,7 @@ class LoadPersistedConcepts(ctx: TranslationContext) : TranslationResultPass(ctx
     }
 
     /** The root node of our YAML/JSON structure. It contains a list of [PersistedConceptEntry]s. */
-    private data class PersistedConcepts(val concepts: List<PersistedConceptEntry>?)
+    data class PersistedConcepts(val concepts: List<PersistedConceptEntry>?)
 
     /**
      * This class represents a single entry in the YAML/JSON file. It contains the concept and
@@ -215,7 +217,7 @@ class LoadPersistedConcepts(ctx: TranslationContext) : TranslationResultPass(ctx
      *   against.
      * @param signature The [SignatureEntry] containing the signature of nodes to match.
      */
-    private data class PersistedConceptEntry(
+    data class PersistedConceptEntry(
         val concept: ConceptEntry,
         val location: LocationEntry?,
         val signature: SignatureEntry?,
@@ -230,7 +232,7 @@ class LoadPersistedConcepts(ctx: TranslationContext) : TranslationResultPass(ctx
      *   constructor.
      * @param dfg The DFG connections to be created between the concept and the underlying node.
      */
-    private data class ConceptEntry(
+    data class ConceptEntry(
         val name: String,
         val constructorArguments: List<ConstructorArgumentEntry> = listOf(),
         val dfg: DFGEntry = DFGEntry(fromThisNodeToConcept = false, fromConceptToThisNode = false),
@@ -245,7 +247,7 @@ class LoadPersistedConcepts(ctx: TranslationContext) : TranslationResultPass(ctx
      * @param fromConceptToThisNode Whether to add a DFG connection from the concept node to the
      *   underlying node.
      */
-    private data class DFGEntry(
+    data class DFGEntry(
         val fromThisNodeToConcept: Boolean = false,
         val fromConceptToThisNode: Boolean = false,
     )
@@ -256,7 +258,7 @@ class LoadPersistedConcepts(ctx: TranslationContext) : TranslationResultPass(ctx
      * @param name The name of the constructor argument.
      * @param value The value of the constructor argument.
      */
-    private data class ConstructorArgumentEntry(val name: String, val value: String)
+    data class ConstructorArgumentEntry(val name: String, val value: String)
 
     /**
      * This class represents a single location entry in the YAML/JSON file.
@@ -266,7 +268,7 @@ class LoadPersistedConcepts(ctx: TranslationContext) : TranslationResultPass(ctx
      * @param type Optionally, the type of the node to match against. E.g.
      *   `de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression`.
      */
-    private data class LocationEntry(val file: String, val region: String, val type: String?)
+    data class LocationEntry(val file: String, val region: String, val type: String?)
 
     /**
      * This class represents a single signature entry in the YAML/JSON file.
@@ -274,5 +276,31 @@ class LoadPersistedConcepts(ctx: TranslationContext) : TranslationResultPass(ctx
      * @param fqn The fully qualified name of the [CallExpression] to match against. E.g.
      *   `foo.bar.baz`.
      */
-    private data class SignatureEntry(val fqn: String)
+    data class SignatureEntry(val fqn: String)
+}
+
+/**
+ * Converts the [Concept] to a [PersistedConceptEntry]. This is used for exporting the concept
+ * information.
+ */
+fun Concept.toPersistedConcept(): PersistedConceptEntry {
+    return PersistedConceptEntry(
+        concept =
+            ConceptEntry(
+                name = this.javaClass.name,
+                dfg =
+                    LoadPersistedConcepts.DFGEntry(
+                        fromThisNodeToConcept =
+                            this.underlyingNode?.nextDFG?.contains(this) == true,
+                        fromConceptToThisNode = this.nextDFG.contains(this.underlyingNode),
+                    ),
+            ),
+        location =
+            LoadPersistedConcepts.LocationEntry(
+                file = this.location?.artifactLocation?.uri.toString(),
+                region = this.location?.region.toString(),
+                type = this.underlyingNode?.javaClass?.name,
+            ),
+        signature = null,
+    )
 }
