@@ -36,6 +36,11 @@ import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.types.DynamicType
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.buildSignature
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
+import de.fraunhofer.aisec.cpg.graph.types.HasSecondaryTypeEdge
+import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import java.util.*
@@ -43,9 +48,14 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /** Represents the declaration or definition of a function. */
-open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder, EOGStarterHolder {
+open class FunctionDeclaration :
+    ValueDeclaration(),
+    DeclarationHolder,
+    EOGStarterHolder,
+    HasType.TypeObserver,
+    HasSecondaryTypeEdge {
     @Relationship("BODY") var bodyEdge = astOptionalEdgeOf<Statement>()
-    /** The function body. Usualfly a [Block]. */
+    /** The function body. Usually a [Block]. */
     var body by unwrapping(FunctionDeclaration::bodyEdge)
 
     /** The list of function parameters. */
@@ -97,18 +107,7 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder, EOGStart
     }
 
     val signature: String
-        get() =
-            name.localName +
-                parameters.joinToString(COMMA + WHITESPACE, BRACKET_LEFT, BRACKET_RIGHT) {
-                    it.type.typeName
-                } +
-                (if (returnTypes.size == 1) {
-                    returnTypes.first().typeName
-                } else {
-                    returnTypes.joinToString(COMMA + WHITESPACE, BRACKET_LEFT, BRACKET_RIGHT) {
-                        it.typeName
-                    }
-                })
+        get() = buildSignature(this, returnTypes)
 
     fun isOverrideCandidate(other: FunctionDeclaration): Boolean {
         return other.name.localName == name.localName &&
@@ -199,6 +198,30 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder, EOGStart
         get() {
             return this.body?.cyclomaticComplexity ?: 0
         }
+
+    override val secondaryTypes: List<Type>
+        get() = returnTypes + throwsTypes + signatureTypes
+
+    override fun typeChanged(newType: Type, src: HasType) {
+        // We cannot really change the "type" of a function declaration, we want to stick to the
+        // assigned type
+    }
+
+    override fun assignedTypeChanged(assignedTypes: Set<Type>, src: HasType) {
+        // We want to propagate the assigned types to the return type of the function and adjust the
+        // function's type accordingly, but we only do this for dynamic types. And we only support
+        // one return type for now.
+        if (returnTypes.singleOrNull() !is DynamicType) {
+            return
+        }
+
+        // Build new function types out of our function declaration and the assigned types
+        var returnFuncTypes =
+            assignedTypes.map { computeType(this, returnTypes = listOf(it)) }.toSet()
+
+        // And assign it us
+        addAssignedTypes(returnFuncTypes)
+    }
 
     companion object {
         const val WHITESPACE = " "

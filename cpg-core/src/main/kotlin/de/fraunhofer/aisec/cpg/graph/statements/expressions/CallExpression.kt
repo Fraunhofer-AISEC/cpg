@@ -47,7 +47,11 @@ import org.neo4j.ogm.annotation.Relationship
  * and is connected via the INVOKES edge to its [FunctionDeclaration].
  */
 open class CallExpression :
-    Expression(), HasOverloadedOperation, HasType.TypeObserver, ArgumentHolder {
+    Expression(),
+    HasOverloadedOperation,
+    HasType.TypeObserver,
+    ArgumentHolder,
+    HasSecondaryTypeEdge {
     /**
      * Connection to its [FunctionDeclaration]. This will be populated by the [SymbolResolver]. This
      * will have an effect on the [type]
@@ -250,7 +254,15 @@ open class CallExpression :
     }
 
     override fun assignedTypeChanged(assignedTypes: Set<Type>, src: HasType) {
-        // Nothing to do
+        // Propagate assigned func types from the function declaration to the call expression
+        val assignedFuncTypes = assignedTypes.filterIsInstance<FunctionType>()
+        assignedFuncTypes.forEach {
+            if (it.returnTypes.size == 1) {
+                addAssignedType(it.returnTypes.single())
+            } else if (it.returnTypes.size > 1) {
+                addAssignedType(TupleType(it.returnTypes))
+            }
+        }
     }
 
     override fun toString(): String {
@@ -286,4 +298,7 @@ open class CallExpression :
     // TODO: Not sure if we can add the template, templateParameters, templateInstantiation fields
     //  here
     override fun hashCode() = Objects.hash(super.hashCode(), arguments)
+
+    override val secondaryTypes: List<Type>
+        get() = signature
 }

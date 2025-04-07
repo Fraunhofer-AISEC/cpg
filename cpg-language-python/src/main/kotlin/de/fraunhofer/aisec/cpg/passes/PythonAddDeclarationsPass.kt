@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.frontends.UnknownLanguage
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
@@ -103,7 +102,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
 
         // Look for a potential scope modifier for this reference
         var targetScope =
-            scopeManager.currentScope?.predefinedLookupScopes[ref.name.toString()]?.targetScope
+            scopeManager.currentScope.predefinedLookupScopes[ref.name.toString()]?.targetScope
 
         // Try to see whether our symbol already exists. There are basically three rules to follow
         // here.
@@ -185,7 +184,13 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
 
         // Make sure we add the declaration at the correct place, i.e. with the scope we set at the
         // creation time
-        scopeManager.withScope(decl.scope) { scopeManager.addDeclaration(decl) }
+        scopeManager.withScope(decl.scope) {
+            scopeManager.addDeclaration(decl)
+            if (decl is FieldDeclaration) {
+                (it?.astNode as? DeclarationHolder)?.addDeclaration(decl)
+            }
+            decl
+        }
 
         return decl
     }
@@ -204,13 +209,21 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
         when (val variable = comprehensionExpression.variable) {
             is Reference -> {
                 variable.access = AccessValues.WRITE
-                handleWriteToReference(variable)
+                handleWriteToReference(variable)?.let {
+                    if (it !is FieldDeclaration) {
+                        comprehensionExpression.addDeclaration(it)
+                    }
+                }
             }
             is InitializerListExpression -> {
                 variable.initializers.forEach {
                     (it as? Reference)?.let { ref ->
                         ref.access = AccessValues.WRITE
-                        handleWriteToReference(ref)
+                        handleWriteToReference(ref)?.let {
+                            if (it !is FieldDeclaration) {
+                                comprehensionExpression.addDeclaration(it)
+                            }
+                        }
                     }
                 }
             }
@@ -229,7 +242,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
         (target as? Reference)?.let {
             if (setAccessValue) it.access = AccessValues.WRITE
             val handled = handleWriteToReference(target)
-            if (handled is Declaration) {
+            if (handled != null) {
                 // We cannot assign an initializer here because this will lead to duplicate
                 // DFG edges, but we need to propagate the type information from our value
                 // to the declaration. We therefore add the declaration to the observers of
@@ -239,8 +252,10 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
                     .findValue(target)
                     ?.registerTypeObserver(InitializerTypePropagation(handled))
 
-                // Add it to our assign expression, so that we can find it in the AST
-                assignExpression.declarations += handled
+                if (handled !is FieldDeclaration) {
+                    // Add it to our assign expression, so that we can find it in the AST
+                    assignExpression.declarations += handled
+                }
             }
         }
     }
@@ -277,7 +292,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
         when (val forVar = node.variable) {
             is Reference -> {
                 val handled = handleWriteToReference(forVar)
-                if (handled is Declaration) {
+                if (handled != null && handled !is FieldDeclaration) {
                     handled.let { node.addDeclaration(it) }
                 }
             }

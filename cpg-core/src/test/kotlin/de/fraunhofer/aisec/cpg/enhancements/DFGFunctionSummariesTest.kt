@@ -35,8 +35,6 @@ import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextIn
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
 import de.fraunhofer.aisec.cpg.graph.edges.flows.ContextSensitiveDataflow
-import de.fraunhofer.aisec.cpg.graph.functions
-import de.fraunhofer.aisec.cpg.graph.pointer
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.recordDeclaration
@@ -88,32 +86,25 @@ class DFGFunctionSummariesTest {
                                 // We need three types with a type hierarchy.
                                 val objectType = t("test.Object")
                                 val listType = t("test.List")
-                                ctx?.let {
-                                    val recordDecl =
-                                        startInference(it)?.inferRecordDeclaration(listType)
-                                    listType.recordDeclaration = recordDecl
-                                    recordDecl?.addSuperClass(objectType)
-                                    listType.superTypes.add(objectType)
-                                }
+                                var recordDecl =
+                                    startInference(ctx)?.inferRecordDeclaration(listType)
+                                listType.recordDeclaration = recordDecl
+                                recordDecl?.addSuperClass(objectType)
+                                listType.superTypes.add(objectType)
 
                                 val specialListType = t("test.SpecialList")
-                                ctx?.let {
-                                    val recordDecl =
-                                        startInference(it)?.inferRecordDeclaration(specialListType)
-                                    specialListType.recordDeclaration = recordDecl
-                                    recordDecl?.addSuperClass(listType)
-                                    specialListType.superTypes.add(listType)
-                                }
+                                recordDecl =
+                                    startInference(ctx)?.inferRecordDeclaration(specialListType)
+                                specialListType.recordDeclaration = recordDecl
+                                recordDecl?.addSuperClass(listType)
+                                specialListType.superTypes.add(listType)
 
                                 val verySpecialListType = t("test.VerySpecialList")
-                                ctx?.let {
-                                    val recordDecl =
-                                        startInference(it)
-                                            ?.inferRecordDeclaration(verySpecialListType)
-                                    verySpecialListType.recordDeclaration = recordDecl
-                                    recordDecl?.addSuperClass(specialListType)
-                                    verySpecialListType.superTypes.add(listType)
-                                }
+                                recordDecl =
+                                    startInference(ctx)?.inferRecordDeclaration(verySpecialListType)
+                                verySpecialListType.recordDeclaration = recordDecl
+                                recordDecl?.addSuperClass(specialListType)
+                                verySpecialListType.superTypes.add(listType)
                             }
 
                             function("main", t("int")) {
@@ -300,7 +291,6 @@ class DFGFunctionSummariesTest {
             registerPass<DynamicInvokeResolver>()
             registerPass<EvaluationOrderGraphPass>()
             registerPass<TypeResolver>()
-            registerPass<FilenameMapper>()
         }
         assertNotNull(dfgTest)
 

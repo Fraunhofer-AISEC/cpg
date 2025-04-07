@@ -25,10 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.query
 
-import de.fraunhofer.aisec.cpg.analysis.MultiValueEvaluator
-import de.fraunhofer.aisec.cpg.analysis.NumberSet
-import de.fraunhofer.aisec.cpg.analysis.SizeEvaluator
-import de.fraunhofer.aisec.cpg.analysis.ValueEvaluator
+import de.fraunhofer.aisec.cpg.evaluation.MultiValueEvaluator
+import de.fraunhofer.aisec.cpg.evaluation.NumberSet
+import de.fraunhofer.aisec.cpg.evaluation.SizeEvaluator
+import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.Type

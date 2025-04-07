@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.concepts.auth
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
+import java.util.Objects
 
 /** Represents a high-level concept for authentication. */
 abstract class Authentication(underlyingNode: Node) : Concept(underlyingNode)
@@ -37,7 +38,13 @@ abstract class Authentication(underlyingNode: Node) : Concept(underlyingNode)
  *
  * @param token The authentication token, which may be an opaque token.
  */
-open class TokenBasedAuth(underlyingNode: Node, val token: Node) : Authentication(underlyingNode)
+open class TokenBasedAuth(underlyingNode: Node, val token: Node) : Authentication(underlyingNode) {
+    override fun equals(other: Any?): Boolean {
+        return other is TokenBasedAuth && super.equals(other) && other.token == this.token
+    }
+
+    override fun hashCode() = Objects.hash(super.hashCode(), token)
+}
 
 /**
  * Represents a JWT-based authentication, which extends the [TokenBasedAuth].
@@ -46,7 +53,16 @@ open class TokenBasedAuth(underlyingNode: Node, val token: Node) : Authenticatio
  * @param payload The payload.
  */
 class JwtAuth(underlyingNode: Node, val jwt: Node, val payload: Node) :
-    TokenBasedAuth(underlyingNode, jwt)
+    TokenBasedAuth(underlyingNode, jwt) {
+    override fun equals(other: Any?): Boolean {
+        return other is JwtAuth &&
+            super.equals(other) &&
+            other.jwt == this.jwt &&
+            other.payload == this.payload
+    }
+
+    override fun hashCode() = Objects.hash(super.hashCode(), jwt, payload)
+}
 
 /** Abstract base class for authentication operations. */
 abstract class AuthenticationOperation(underlyingNode: Node, concept: Authentication) :
@@ -59,4 +75,10 @@ abstract class AuthenticationOperation(underlyingNode: Node, concept: Authentica
  *   variable that holds the value, e.g. the token
  */
 class Authenticate(underlyingNode: Node, concept: Authentication, val credential: Node) :
-    AuthenticationOperation(underlyingNode, concept)
+    AuthenticationOperation(underlyingNode, concept) {
+    override fun equals(other: Any?): Boolean {
+        return other is Authenticate && super.equals(other) && other.credential == this.credential
+    }
+
+    override fun hashCode() = Objects.hash(super.hashCode(), credential)
+}

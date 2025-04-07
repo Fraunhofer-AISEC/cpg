@@ -23,6 +23,8 @@
  *                    \______/ \__|       \______/
  *
  */
+@file:Suppress("CONTEXT_RECEIVERS_DEPRECATED")
+
 package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
@@ -125,6 +127,7 @@ fun MetadataProvider.newOperatorDeclaration(
  * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
  * prepended argument.
  */
+context(ContextProvider)
 @JvmOverloads
 fun MetadataProvider.newConstructorDeclaration(
     name: CharSequence?,
@@ -136,6 +139,7 @@ fun MetadataProvider.newConstructorDeclaration(
     node.applyMetadata(this, name, rawNode, defaultNamespace = recordDeclaration?.name)
 
     node.recordDeclaration = recordDeclaration
+    node.type = recordDeclaration?.toType() ?: unknownType()
 
     log(node)
     return node
@@ -193,6 +197,7 @@ fun MetadataProvider.newVariableDeclaration(
  * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
  * argument.
  */
+context(ContextProvider)
 @JvmOverloads
 fun LanguageProvider.newTupleDeclaration(
     elements: List<VariableDeclaration>,
@@ -455,15 +460,10 @@ fun MetadataProvider.newImportDeclaration(
     rawNode: Any? = null,
 ): ImportDeclaration {
     val node = ImportDeclaration()
-    node.applyMetadata(this, "", rawNode)
+    node.applyMetadata(this, alias ?: import, rawNode, doNotPrependNamespace = true)
     node.import = import
     node.alias = alias
     node.style = style
-    if (alias != null) {
-        node.name = alias
-    } else {
-        node.name = import
-    }
 
     log(node)
     return node

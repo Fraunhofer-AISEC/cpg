@@ -39,7 +39,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.graph.types.FunctionType
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import java.util.function.Supplier
 import kotlin.collections.set
@@ -58,14 +58,14 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
             val resolvedType = frontend.getTypeAsGoodAsPossible(parameter.type)
             val param =
                 newParameterDeclaration(parameter.nameAsString, resolvedType, parameter.isVarArgs)
-            anonymousFunction.parameterEdges += param
             frontend.processAnnotations(param, parameter)
             frontend.scopeManager.addDeclaration(param)
+            anonymousFunction.parameters += param
         }
 
         // TODO: We cannot easily identify the signature of the lambda
         // val type = lambdaExpr.calculateResolvedType()
-        val functionType = FunctionType.computeType(anonymousFunction)
+        val functionType = computeType(anonymousFunction)
         anonymousFunction.type = functionType
         anonymousFunction.body = frontend.statementHandler.handle(lambdaExpr.body)
         frontend.scopeManager.leaveScope(anonymousFunction)
@@ -231,9 +231,9 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         val declarationStatement = newDeclarationStatement(rawNode = expr)
         for (variable in variableDeclarationExpr.variables) {
             val declaration = frontend.declarationHandler.handleVariableDeclarator(variable)
-            declarationStatement.declarationEdges += declaration
             frontend.processAnnotations(declaration, variableDeclarationExpr)
             frontend.scopeManager.addDeclaration(declaration)
+            declarationStatement.declarations += declaration
         }
         return declarationStatement
     }
@@ -613,13 +613,13 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                         .implicit(anonymousRecord.name.localName)
 
                 ctor.arguments.forEachIndexed { i, arg ->
-                    constructorDeclaration.parameterEdges +=
+                    constructorDeclaration.parameters +=
                         newParameterDeclaration("arg${i}", arg.type)
                 }
-                anonymousRecord.addConstructor(constructorDeclaration)
+                frontend.scopeManager.addDeclaration(constructorDeclaration)
+                anonymousRecord.constructors += constructorDeclaration
                 ctor.anonymousClass = anonymousRecord
 
-                frontend.scopeManager.addDeclaration(constructorDeclaration)
                 frontend.scopeManager.leaveScope(anonymousRecord)
             }
         }

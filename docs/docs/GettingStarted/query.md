@@ -61,7 +61,7 @@ all (==> false)
 ## Operators of the detailed mode
 
 The starting point of an analysis is typically one operation inspired by predicate
-logics (**allExtended** or **existsEtended**) which work as follows:
+logics (**allExtended** or **existsExtended**) which work as follows:
 
 - They allow you to specify which type of nodes serve as starting point via
   a reified type parameter.
@@ -103,7 +103,7 @@ For numeric values:
 **Note:** The detailed mode and its operators require the user to take care of
 the correct order. I.e., the user has to put the brackets!
 
-For a full list of available methodsm check the dokka documentation pages functions
+For a full list of available methods, check the dokka documentation pages functions
 and properties and look for the methods which somehow make use of the `QueryTree`
 [here](https://fraunhofer-aisec.github.io/cpg/dokka/main/cpg-analysis/de.fraunhofer.aisec.cpg.query/index.html).
 

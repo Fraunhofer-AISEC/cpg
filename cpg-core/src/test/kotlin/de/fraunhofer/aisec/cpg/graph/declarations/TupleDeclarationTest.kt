@@ -47,12 +47,7 @@ class TupleDeclarationTest {
     fun testTopLevelTuple() {
         with(
             TestLanguageFrontend(
-                ctx =
-                    TranslationContext(
-                        TranslationConfiguration.builder().defaultPasses().build(),
-                        ScopeManager(),
-                        TypeManager(),
-                    )
+                ctx = TranslationContext(TranslationConfiguration.builder().defaultPasses().build())
             )
         ) {
             val result = build {
@@ -71,7 +66,10 @@ class TupleDeclarationTest {
                                 newCallExpression(newReference("func")),
                             )
                         scopeManager.addDeclaration(tuple)
-                        tuple.elements.forEach { scopeManager.addDeclaration(it, addToAST = false) }
+                        declare { this.singleDeclaration = tuple }
+                        // declarations += tuple
+
+                        tuple.elements.forEach { scopeManager.addDeclaration(it) }
 
                         function("main") { body { call("print") { ref("a") } } }
                     }
@@ -132,12 +130,7 @@ class TupleDeclarationTest {
     fun testFunctionLevelTuple() {
         with(
             TestLanguageFrontend(
-                ctx =
-                    TranslationContext(
-                        TranslationConfiguration.builder().defaultPasses().build(),
-                        ScopeManager(),
-                        TypeManager(),
-                    )
+                ctx = TranslationContext(TranslationConfiguration.builder().defaultPasses().build())
             )
         ) {
             val result = build {
@@ -161,11 +154,10 @@ class TupleDeclarationTest {
                                             ),
                                             newCallExpression(newReference("func")),
                                         )
-                                    this.declarationEdges += tuple
                                     scopeManager.addDeclaration(tuple)
-                                    tuple.elements.forEach {
-                                        scopeManager.addDeclaration(it, addToAST = false)
-                                    }
+                                    declarations += tuple
+
+                                    tuple.elements.forEach { scopeManager.addDeclaration(it) }
                                 }
                                 call("print") { ref("a") }
                             }

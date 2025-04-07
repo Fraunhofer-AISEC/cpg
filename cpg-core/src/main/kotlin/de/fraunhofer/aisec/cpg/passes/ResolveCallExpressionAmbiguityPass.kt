@@ -23,6 +23,8 @@
  *                    \______/ \__|       \______/
  *
  */
+@file:Suppress("CONTEXT_RECEIVERS_DEPRECATED")
+
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
@@ -142,6 +144,7 @@ fun SubgraphWalker.ScopedWalker.replaceCallWithCast(
             type
         }
     cast.expression = call.arguments.single()
+    cast.expression.astParent = cast
     cast.name = cast.castType.name
 
     replace(parent, call, cast)

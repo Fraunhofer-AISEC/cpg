@@ -505,7 +505,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                 is Float,
                 is Double -> primitiveType("float")
                 else -> {
-                    autoType()
+                    unknownType()
                 }
             }
         return newLiteral(node.value, type = tpe, rawNode = node)
@@ -568,8 +568,9 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         val function = newFunctionDeclaration(name = "", rawNode = node)
         frontend.scopeManager.enterScope(function)
         for (arg in node.args.args) {
-            this.frontend.declarationHandler.handleArgument(arg)
+            this.frontend.declarationHandler.handleArgument(function, arg)
         }
+
         function.body = handle(node.body)
         frontend.scopeManager.leaveScope(function)
         lambda.function = function

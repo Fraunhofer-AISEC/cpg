@@ -25,10 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.TypeManager
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.builder.translationResult
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
@@ -42,12 +40,7 @@ class StatementBuilderTest {
     fun testNewLookupScopeStatement() {
         val frontend =
             TestLanguageFrontend(
-                ctx =
-                    TranslationContext(
-                        TranslationConfiguration.builder().defaultPasses().build(),
-                        ScopeManager(),
-                        TypeManager(),
-                    )
+                ctx = TranslationContext(TranslationConfiguration.builder().defaultPasses().build())
             )
         val result =
             frontend.build {
@@ -59,6 +52,7 @@ class StatementBuilderTest {
 
                             var globalA = newVariableDeclaration("a")
                             scopeManager.addDeclaration(globalA)
+                            tu.declarations += globalA
 
                             var func = newFunctionDeclaration("main")
                             scopeManager.enterScope(func)
@@ -80,6 +74,8 @@ class StatementBuilderTest {
                             scopeManager.leaveScope(func)
 
                             scopeManager.addDeclaration(func)
+                            tu.declarations += func
+
                             scopeManager.leaveScope(tu)
                             tu
                         }

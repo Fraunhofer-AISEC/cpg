@@ -30,7 +30,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
-import de.fraunhofer.aisec.cpg.graph.scopes.ValueDeclarationScope
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
@@ -93,8 +92,6 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         val import =
             newImportDeclaration(from, style = ImportStyle.IMPORT_NAMESPACE, to, rawNode = ctx)
 
-        frontend.scopeManager.addDeclaration(import)
-
         return import
     }
 
@@ -111,8 +108,6 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 style = ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE,
                 rawNode = ctx,
             )
-
-        frontend.scopeManager.addDeclaration(declaration)
 
         return declaration
     }
@@ -131,8 +126,6 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 rawNode = ctx,
             )
 
-        frontend.scopeManager.addDeclaration(declaration)
-
         return declaration
     }
 
@@ -141,29 +134,31 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
      * into a [NamespaceDeclaration].
      */
     private fun handleNamespace(ctx: CPPASTNamespaceDefinition): NamespaceDeclaration {
-        val declaration = newNamespaceDeclaration(ctx.name.toString(), rawNode = ctx)
-
-        frontend.scopeManager.addDeclaration(declaration)
+        val nsd = newNamespaceDeclaration(ctx.name.toString(), rawNode = ctx)
 
         // Enter the namespace scope
-        frontend.scopeManager.enterScope(declaration)
+        frontend.scopeManager.enterScope(nsd)
 
         // Finally, handle all declarations within that namespace
         for (child in ctx.declarations) {
-            handle(child)
+            val decl = handle(child)
+            if (decl == null) {
+                continue
+            }
+
+            frontend.scopeManager.addDeclaration(decl)
+            nsd.declarations += decl
         }
 
-        frontend.scopeManager.leaveScope(declaration)
+        frontend.scopeManager.leaveScope(nsd)
 
-        return declaration
+        return nsd
     }
 
     private fun handleProblem(ctx: IASTProblemDeclaration): Declaration {
         Util.errorWithFileLocation(frontend, ctx, log, ctx.problem.message)
 
         val problem = newProblemDeclaration(ctx.problem.message)
-
-        frontend.scopeManager.addDeclaration(problem)
 
         return problem
     }
@@ -286,6 +281,11 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
         // Handle Template
         val innerDeclaration = frontend.declarationHandler.handle(ctx.declaration)
+        // Add it to the realization
+        if (innerDeclaration != null) {
+            templateDeclaration.addDeclaration(innerDeclaration)
+        }
+
         frontend.scopeManager.leaveScope(templateDeclaration)
         if (templateDeclaration is FunctionTemplateDeclaration) {
             // Fix typeName
@@ -296,7 +296,6 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             }
 
         addRealizationToScope(templateDeclaration)
-        frontend.scopeManager.addDeclaration(templateDeclaration)
 
         return templateDeclaration
     }
@@ -346,8 +345,8 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                             it.nextDFGEdges += nonTypeTemplateParamDeclaration
                         }
                     }
-                    templateDeclaration.parameters += nonTypeTemplateParamDeclaration
                     frontend.scopeManager.addDeclaration(nonTypeTemplateParamDeclaration)
+                    templateDeclaration.parameters += nonTypeTemplateParamDeclaration
                 }
             }
         }
@@ -575,7 +574,6 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 primaryDeclaration = handleEnum(ctx, declSpecifier)
 
                 sequence.addDeclaration(primaryDeclaration)
-                frontend.scopeManager.addDeclaration(primaryDeclaration)
 
                 // process attributes
                 frontend.processAttributes(primaryDeclaration, ctx)
@@ -634,10 +632,8 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         val (scope, doFqn) =
             if (frontend.scopeManager.currentScope is RecordScope) {
                 Pair(frontend.scopeManager.globalScope, true)
-            } else if (frontend.scopeManager.currentScope is ValueDeclarationScope) {
-                Pair(frontend.scopeManager.currentScope as ValueDeclarationScope, false)
             } else {
-                TODO()
+                Pair(frontend.scopeManager.currentScope, false)
             }
         // TODO(oxisto): What about namespaces?
 
@@ -645,9 +641,6 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             frontend.newTypedefDeclaration(type, frontend.typeOf(aliasName, doFqn = doFqn))
 
         frontend.scopeManager.addTypedef(declaration, scope)
-
-        // Add the declaration to the current scope
-        frontend.scopeManager.addDeclaration(declaration)
 
         return declaration
     }
@@ -670,13 +663,15 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             val enumConst =
                 newEnumConstantDeclaration(enumerator.name.toString(), rawNode = enumerator)
             frontend.scopeManager.addDeclaration(enumConst)
+            entries += enumConst
+
             frontend.scopeManager.leaveScope(enum)
 
             // In C/C++, default enums are of type int
             enumConst.type = primitiveType("int")
 
             // Also put the symbol in the outer scope (but do not add AST nodes)
-            frontend.scopeManager.addDeclaration(enumConst, false)
+            frontend.scopeManager.addDeclaration(enumConst)
         }
 
         enum.entries = entries
@@ -741,12 +736,14 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
         for (declaration in translationUnit.declarations) {
             val decl = handle(declaration) ?: continue
-            (decl as? ProblemDeclaration)?.location?.let {
-                val problems =
-                    problematicIncludes.computeIfAbsent(it.artifactLocation.toString()) {
-                        HashSet()
-                    }
-                problems.add(decl)
+            if (decl is DeclarationSequence) {
+                decl.declarations.forEach {
+                    frontend.scopeManager.addDeclaration(it)
+                    node.addDeclaration(it)
+                }
+            } else {
+                frontend.scopeManager.addDeclaration(decl)
+                node.addDeclaration(decl)
             }
         }
 

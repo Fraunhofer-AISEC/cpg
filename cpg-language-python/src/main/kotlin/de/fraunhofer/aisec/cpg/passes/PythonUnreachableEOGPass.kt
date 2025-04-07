@@ -38,7 +38,4 @@ import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
  */
 @ExecuteBefore(SymbolResolver::class)
 @DependsOn(EvaluationOrderGraphPass::class)
-class PythonUnreachableEOGPass(ctx: TranslationContext) : UnreachableEOGPass(ctx) {
-
-    override val evaluator = PythonValueEvaluator()
-}
+class PythonUnreachableEOGPass(ctx: TranslationContext) : UnreachableEOGPass(ctx)

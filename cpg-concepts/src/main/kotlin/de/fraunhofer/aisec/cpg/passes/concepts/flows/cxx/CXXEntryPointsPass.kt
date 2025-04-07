@@ -30,8 +30,8 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.arch.POSIX
 import de.fraunhofer.aisec.cpg.graph.concepts.arch.Win32
 import de.fraunhofer.aisec.cpg.graph.concepts.flows.EntryPoint
-import de.fraunhofer.aisec.cpg.graph.concepts.flows.LibraryEntryPoint
-import de.fraunhofer.aisec.cpg.graph.concepts.flows.Main
+import de.fraunhofer.aisec.cpg.graph.concepts.flows.newLibraryEntryPoint
+import de.fraunhofer.aisec.cpg.graph.concepts.flows.newMain
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.passes.concepts.ConceptPass
@@ -52,10 +52,10 @@ class CXXEntryPointsPass(ctx: TranslationContext) : ConceptPass(ctx) {
     ) {
         val entry =
             when (func.name.toString()) {
-                "main" -> Main(underlyingNode = func, os = tu.getConceptOrCreate<POSIX>())
-                "WinMain" -> Main(underlyingNode = func, os = tu.getConceptOrCreate<Win32>())
+                "main" -> newMain(underlyingNode = func, os = tu.getConceptOrCreate<POSIX>())
+                "WinMain" -> newMain(underlyingNode = func, os = tu.getConceptOrCreate<Win32>())
                 "DllMain" ->
-                    LibraryEntryPoint(underlyingNode = func, os = tu.getConceptOrCreate<Win32>())
+                    newLibraryEntryPoint(underlyingNode = func, os = tu.getConceptOrCreate<Win32>())
                 else -> return
             }
 

@@ -156,7 +156,7 @@ open class CXXLanguageFrontend(ctx: TranslationContext, language: Language<CXXLa
 
                 // Check for relative path based on the top level and all include paths
                 val includeLocations: MutableList<Path> = ArrayList()
-                val topLevel = ctx.currentComponent?.topLevel
+                val topLevel = ctx.currentComponent?.topLevel()
                 if (topLevel != null) {
                     includeLocations.add(topLevel.toPath().toAbsolutePath())
                 }
@@ -205,7 +205,7 @@ open class CXXLanguageFrontend(ctx: TranslationContext, language: Language<CXXLa
 
         // include paths
         val includePaths = mutableSetOf<String>()
-        ctx.currentComponent?.topLevel?.let {
+        ctx.currentComponent?.topLevel()?.let {
             includePaths.add(it.toPath().toAbsolutePath().toString())
         }
 
@@ -554,9 +554,9 @@ open class CXXLanguageFrontend(ctx: TranslationContext, language: Language<CXXLa
 
         type =
             if (resolveTypeDef) {
-                typeManager.registerType(typeManager.resolvePossibleTypedef(type, scopeManager))
+                typeManager.resolvePossibleTypedef(type, scopeManager)
             } else {
-                typeManager.registerType(type)
+                type
             }
         return type
     }
@@ -782,8 +782,6 @@ open class CXXLanguageFrontend(ctx: TranslationContext, language: Language<CXXLa
         if (declarator.nestedDeclarator != null && type !is FunctionPointerType) {
             type = adjustType(declarator.nestedDeclarator, type)
         }
-
-        type = typeManager.registerType(type)
 
         // Check for parameterized types
         if (type is SecondOrderType) {

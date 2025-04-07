@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption
 
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
+import java.util.Objects
 
 /** Represents a cipher suite. E.g. `AES-XTS-plain64` */
 class Cipher(underlyingNode: Node) : Concept(underlyingNode = underlyingNode), IsDiskEncryption {
@@ -38,4 +39,14 @@ class Cipher(underlyingNode: Node) : Concept(underlyingNode = underlyingNode), I
 
     /** Key size. */
     var keySize: Int? = null
+
+    override fun equals(other: Any?): Boolean {
+        return other is Cipher &&
+            super.equals(other) &&
+            other.cipherName == this.cipherName &&
+            other.blockSize == this.blockSize &&
+            other.keySize == this.keySize
+    }
+
+    override fun hashCode() = Objects.hash(super.hashCode(), cipherName, blockSize, keySize)
 }

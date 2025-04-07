@@ -39,6 +39,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.*
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.types.DynamicType
 import de.fraunhofer.aisec.cpg.graph.types.ListType
 import de.fraunhofer.aisec.cpg.graph.types.MapType
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
@@ -97,13 +98,13 @@ class PythonFrontendTest : BaseTest() {
     @Test
     fun testLiteral() {
         val topLevel = Path.of("src", "test", "resources", "python")
-        val tu =
-            analyzeAndGetFirstTU(listOf(topLevel.resolve("literal.py").toFile()), topLevel, true) {
+        val result =
+            analyze(listOf(topLevel.resolve("literal.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
             }
-        assertNotNull(tu)
-        with(tu) {
-            val p = tu.namespaces["literal"]
+        assertNotNull(result)
+        with(result) {
+            val p = namespaces["literal"]
             assertNotNull(p)
             assertLocalName("literal", p)
 
@@ -190,7 +191,7 @@ class PythonFrontendTest : BaseTest() {
         val s = bar.parameters.firstOrNull()
         assertNotNull(s)
         assertLocalName("s", s)
-        assertEquals(tu.primitiveType("str"), s.type)
+        assertContains(s.assignedTypes, tu.primitiveType("str"))
 
         assertLocalName("bar", bar)
 
@@ -324,6 +325,7 @@ class PythonFrontendTest : BaseTest() {
         assertIs<AssignExpression>(s1)
         val s2 = body.statements[1]
         assertIs<MemberCallExpression>(s2)
+        s2.arguments.forEach { assertEquals(s2, it.astParent) }
 
         val c1 = s1.declarations.firstOrNull()
         assertNotNull(c1)
@@ -332,6 +334,7 @@ class PythonFrontendTest : BaseTest() {
         assertIs<ConstructExpression>(ctor)
         assertEquals(ctor.constructor, cls.constructors.firstOrNull())
         assertFullName("simple_class.SomeClass", c1.type)
+        ctor.arguments.forEach { assertEquals(ctor, it.astParent) }
 
         assertRefersTo(s2.base, c1)
         assertEquals(1, s2.invokes.size)
@@ -446,9 +449,8 @@ class PythonFrontendTest : BaseTest() {
 
         val barBaz = methBarBody.statements[1]
         assertIs<AssignExpression>(barBaz)
-        val barBazInner = barBaz.declarations[0]
+        val barBazInner = recordFoo.fields("baz").firstOrNull()
         assertIs<FieldDeclaration>(barBazInner)
-        assertLocalName("baz", barBazInner)
         assertNotNull(barBazInner.firstAssignment)
     }
 
@@ -502,7 +504,7 @@ class PythonFrontendTest : BaseTest() {
         assertIs<Block>(barBody)
         val barBodyFirstStmt = barBody.statements[0]
         assertIs<AssignExpression>(barBodyFirstStmt)
-        val someVarDeclaration = barBodyFirstStmt.declarations.firstOrNull()
+        val someVarDeclaration = recordFoo.variables.firstOrNull()
         assertIs<FieldDeclaration>(someVarDeclaration)
         assertLocalName("somevar", someVarDeclaration)
         assertRefersTo(someVarDeclaration.firstAssignment, i)
@@ -546,9 +548,10 @@ class PythonFrontendTest : BaseTest() {
         val fromOther = tu.functions["from_other"]
         assertNotNull(fromOther)
 
-        val paramType = fromOther.parameters.firstOrNull()?.type
-        assertNotNull(paramType)
-        assertEquals(other.toType(), paramType)
+        val param = fromOther.parameters.firstOrNull()
+        assertNotNull(param)
+        assertIs<DynamicType>(param.type)
+        assertContains(param.assignedTypes, other.toType())
     }
 
     @Test
@@ -775,9 +778,8 @@ class PythonFrontendTest : BaseTest() {
         // self.classFieldDeclaredInFunction = 456
         val barStmt0 = barBody.statements[0]
         assertIs<AssignExpression>(barStmt0)
-        val decl0 = barStmt0.declarations[0]
+        val decl0 = clsFoo.fields("classFieldDeclaredInFunction").firstOrNull()
         assertIs<FieldDeclaration>(decl0)
-        assertLocalName("classFieldDeclaredInFunction", decl0)
         assertNotNull(decl0.firstAssignment)
 
         // self.classFieldNoInitializer = 789
@@ -949,7 +951,7 @@ class PythonFrontendTest : BaseTest() {
         val forVariable = forStmt.variable
         assertIs<Reference>(forVariable)
         val forVarDecl =
-            p.declarations.firstOrNull {
+            forStmt.declarations.firstOrNull {
                 it.name.localName.contains((PythonHandler.LOOP_VAR_PREFIX))
             }
         assertNotNull(forVarDecl)
@@ -1516,7 +1518,10 @@ class PythonFrontendTest : BaseTest() {
             assertNotNull(bar)
 
             assertEquals(assertResolvedType("int"), bar.returnTypes.singleOrNull())
-            assertEquals(assertResolvedType("int"), bar.parameters.firstOrNull()?.type)
+
+            val param = bar.parameters.firstOrNull()
+            assertNotNull(param)
+            assertContains(param.assignedTypes, assertResolvedType("int"))
             assertEquals(assertResolvedType("complex_class.Foo"), bar.receiver?.type)
         }
     }
@@ -1928,7 +1933,7 @@ class PythonFrontendTest : BaseTest() {
             }
         assertNotNull(result)
 
-        var myClass = result.finalCtx.typeManager.firstOrderTypes["MyClass"]
+        var myClass = result.finalCtx.typeManager.resolvedTypes["MyClass"]
         assertNotNull(myClass)
         assertNotNull(myClass.ancestors)
     }

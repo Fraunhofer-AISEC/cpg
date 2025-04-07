@@ -91,7 +91,7 @@ class IniFileFrontend(ctx: TranslationContext, language: Language<IniFileFronten
          * [de.fraunhofer.aisec.cpg.TranslationConfiguration.topLevel] using
          * [Language.namespaceDelimiter] as a separator
          */
-        val topLevel = ctx.currentComponent?.topLevel?.let { file.relativeToOrNull(it) } ?: file
+        val topLevel = ctx.currentComponent?.topLevel()?.let { file.relativeToOrNull(it) } ?: file
         val parentDir = topLevel.parent
 
         val namespace =
@@ -104,11 +104,18 @@ class IniFileFrontend(ctx: TranslationContext, language: Language<IniFileFronten
 
         val tud = newTranslationUnitDeclaration(name = file.name, rawNode = ini)
         scopeManager.resetToGlobal(tud)
+
         val nsd = newNamespaceDeclaration(name = namespace, rawNode = ini)
         scopeManager.addDeclaration(nsd)
+        tud.namespaces += nsd
+
         scopeManager.enterScope(nsd)
 
-        ini.values.forEach { handleSection(it) }
+        ini.values.forEach {
+            val record = handleSection(it)
+            scopeManager.addDeclaration(record)
+            nsd.addDeclaration(record)
+        }
 
         scopeManager.enterScope(nsd)
         return tud
@@ -118,23 +125,29 @@ class IniFileFrontend(ctx: TranslationContext, language: Language<IniFileFronten
      * Translates a `Section` into a [RecordDeclaration] and handles all `entries` using
      * [handleEntry].
      */
-    private fun handleSection(section: Section) {
+    private fun handleSection(section: Section): RecordDeclaration {
         val record = newRecordDeclaration(name = section.name, kind = "section", rawNode = section)
-        scopeManager.addDeclaration(record)
         scopeManager.enterScope(record)
-        section.entries.forEach { handleEntry(it) }
+        section.entries.forEach {
+            val field = handleEntry(it)
+            scopeManager.addDeclaration(field)
+            record.fields += field
+        }
         scopeManager.leaveScope(record)
+
+        return record
     }
 
     /**
      * Translates an `MutableEntry` to a new [FieldDeclaration] with the
      * [FieldDeclaration.initializer] being set to the `entry`s value.
      */
-    private fun handleEntry(entry: MutableMap.MutableEntry<String?, String?>) {
+    private fun handleEntry(entry: MutableMap.MutableEntry<String?, String?>): FieldDeclaration {
         val field =
             newFieldDeclaration(name = entry.key, type = primitiveType("string"), rawNode = entry)
                 .apply { initializer = newLiteral(value = entry.value, rawNode = entry) }
-        scopeManager.addDeclaration(field)
+
+        return field
     }
 
     override fun typeOf(type: Any?): Type {

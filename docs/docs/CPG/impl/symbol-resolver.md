@@ -35,4 +35,4 @@ Otherwise, we currently take the first entry of the candidate list and set the `
 
 ## Resolve Calls
 
-Prequisite: The `CallExpression::callee` reference must have been resolved (see [Resolving References](#resolving-references)).
+Prerequisite: The `CallExpression::callee` reference must have been resolved (see [Resolving References](#resolving-references)).

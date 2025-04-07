@@ -68,7 +68,7 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
      */
     private val loggers = mutableMapOf<String, Log>()
 
-    private val DEFAULT_LOGGER_NAME = ""
+    private val defaultLoggerName = ""
 
     /** The global `import logging` node. */
     private var loggingLogger: ImportDeclaration? = null
@@ -101,17 +101,13 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
      */
     private fun handleImport(importDeclaration: ImportDeclaration) {
         if (importDeclaration.import.toString() == "logging") {
-            val logger = loggers[DEFAULT_LOGGER_NAME]
-            if (logger == null) { // only add it once
-                val newNode = newLog(underlyingNode = importDeclaration, name = DEFAULT_LOGGER_NAME)
-                loggers += DEFAULT_LOGGER_NAME to newNode
-
-                // also add a [LogGet] node
-                newLogGet(underlyingNode = importDeclaration, logger = newNode)
-            } else {
-                // the logger is already present -> only add a [LogGet] node
-                newLogGet(underlyingNode = importDeclaration, logger = logger)
-            }
+            // Add the GetLog operation to the existing Log concept or generate a new one if there
+            // is nothing available yet.
+            val logger =
+                loggers.computeIfAbsent(defaultLoggerName) {
+                    newLog(underlyingNode = importDeclaration, name = defaultLoggerName)
+                }
+            newLogGet(underlyingNode = importDeclaration, concept = logger)
         }
     }
 
@@ -134,20 +130,16 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 when (loggerName) {
                     "",
                     "null" // Pythons `None` is translated to a Kotlin `null`
-                    -> DEFAULT_LOGGER_NAME
+                    -> defaultLoggerName
                     else -> loggerName
                 }
-            val logger = loggers[normalizedLoggerName]
-            if (logger == null) { // only add it once
-                val newNode = newLog(underlyingNode = callExpression, name = normalizedLoggerName)
-                loggers += normalizedLoggerName to newNode
-                newLogGet(underlyingNode = callExpression, logger = newNode)
-            } else {
-                // the logger is already present -> only add a [LogGet] node
-                newLogGet(underlyingNode = callExpression, logger = logger)
-            }
+            val logger =
+                loggers.computeIfAbsent(normalizedLoggerName) {
+                    newLog(underlyingNode = callExpression, name = normalizedLoggerName)
+                }
+            newLogGet(underlyingNode = callExpression, concept = logger)
         } else if (callee.name.toString().startsWith("logging.")) {
-            loggers[DEFAULT_LOGGER_NAME]?.let { logOpHelper(callExpression, it) }
+            loggers[defaultLoggerName]?.let { logOpHelper(callExpression, it) }
         } else {
             // might be a call like `logger.error`
             val logger = findLogger(callExpression)
@@ -220,7 +212,7 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 val lvl = logLevelStringToEnum(name)
                 newLogWrite(
                     underlyingNode = callExpression,
-                    logger = logger,
+                    concept = logger,
                     logArguments = callExpression.arguments,
                     level = lvl,
                 )

@@ -36,13 +36,15 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.types.HasType.TypeObserver
 import de.fraunhofer.aisec.cpg.passes.*
-import de.fraunhofer.aisec.cpg.passes.configuration.*
+import de.fraunhofer.aisec.cpg.passes.configuration.PassOrderingHelper
+import de.fraunhofer.aisec.cpg.passes.configuration.RegisterExtraPass
+import de.fraunhofer.aisec.cpg.passes.configuration.ReplacePass
 import de.fraunhofer.aisec.cpg.passes.inference.DFGFunctionSummaries
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import java.io.File
 import java.nio.file.Path
-import java.util.*
 import kotlin.reflect.KClass
 import kotlin.reflect.full.findAnnotations
 import kotlin.reflect.full.isSubclassOf
@@ -125,6 +127,8 @@ private constructor(
     val exclusionPatternsByString: List<String>,
     /** A list of exclusion patterns using regular expressions to filter files and directories. */
     val exclusionPatternsByRegex: List<Regex>,
+    /** Whether the type propagation system using [TypeObserver] should be disabled. */
+    val disableTypeObserver: Boolean,
 ) {
     /** This list contains all languages which we want to translate. */
     @JsonIgnore val languages: List<KClass<out Language<*>>>
@@ -267,6 +271,7 @@ private constructor(
             mutableMapOf()
         private val exclusionPatternsByRegex = mutableListOf<Regex>()
         private val exclusionPatternsByString = mutableListOf<String>()
+        private var disableTypeObserver = false
 
         fun symbols(symbols: Map<String, String>): Builder {
             this.symbols = symbols
@@ -538,7 +543,6 @@ private constructor(
          * - [DynamicInvokeResolver]
          * - [TypeResolver]
          * - [ControlFlowSensitiveDFGPass]
-         * - [FilenameMapper]
          * - [ResolveCallExpressionAmbiguityPass]
          * - [ResolveMemberExpressionAmbiguityPass]
          *
@@ -553,10 +557,15 @@ private constructor(
             registerPass<EvaluationOrderGraphPass>() // creates EOG
             registerPass<TypeResolver>()
             registerPass<ControlFlowSensitiveDFGPass>()
-            registerPass<FilenameMapper>()
             registerPass<ResolveCallExpressionAmbiguityPass>()
             registerPass<ResolveMemberExpressionAmbiguityPass>()
             useDefaultPasses = true
+            return this
+        }
+
+        /** Disables the type propagation system using [TypeObserver]. */
+        fun disableTypeObserver(): Builder {
+            disableTypeObserver = true
             return this
         }
 
@@ -698,6 +707,7 @@ private constructor(
                 passConfigurations,
                 exclusionPatternsByString,
                 exclusionPatternsByRegex,
+                disableTypeObserver,
             )
         }
 
@@ -736,7 +746,7 @@ val KClass<out Language<*>>.frontend: KClass<out LanguageFrontend<*, *>>
     get() {
         // Instantiate a temporary object of the language class
         val instance =
-            constructors.firstOrNull()?.call(EmptyTranslationContext)
+            constructors.firstOrNull()?.call()
                 ?: throw IllegalArgumentException(
                     "Could not instantiate temporary object of language class ${this.simpleName}"
                 )

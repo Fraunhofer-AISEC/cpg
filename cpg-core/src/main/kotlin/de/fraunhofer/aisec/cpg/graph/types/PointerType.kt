@@ -35,7 +35,7 @@ import org.neo4j.ogm.annotation.Relationship
  * is no such pointer concept.
  */
 class PointerType : Type, SecondOrderType {
-    @Relationship(value = "ELEMENT_TYPE") override lateinit var elementType: Type
+    @Relationship(value = "ELEMENT_TYPE") override var elementType: Type
 
     enum class PointerOrigin {
         POINTER,
@@ -45,30 +45,20 @@ class PointerType : Type, SecondOrderType {
     var pointerOrigin: PointerOrigin? = null
         private set
 
-    constructor() : super()
-
-    constructor(elementType: Type, pointerOrigin: PointerOrigin?) : super() {
-        language = elementType.language
-        name =
-            if (pointerOrigin == PointerOrigin.ARRAY) {
-                elementType.name.append("[]")
-            } else {
-                elementType.name.append("*")
-            }
+    constructor(
+        elementType: Type,
+        pointerOrigin: PointerOrigin?,
+    ) : super(
+        if (pointerOrigin == PointerOrigin.ARRAY) {
+            elementType.name.append("[]")
+        } else {
+            elementType.name.append("*")
+        },
+        elementType.language,
+    ) {
         this.pointerOrigin = pointerOrigin
         this.elementType = elementType
-    }
-
-    constructor(type: Type?, elementType: Type, pointerOrigin: PointerOrigin?) : super(type) {
-        language = elementType.language
-        name =
-            if (pointerOrigin == PointerOrigin.ARRAY) {
-                elementType.name.append("[]")
-            } else {
-                elementType.name.append("*")
-            }
-        this.pointerOrigin = pointerOrigin
-        this.elementType = elementType
+        this.elementType.secondOrderTypes += this
     }
 
     /**

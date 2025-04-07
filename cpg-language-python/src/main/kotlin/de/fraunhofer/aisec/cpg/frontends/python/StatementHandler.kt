@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.frontends.python.Python.AST.IsAsync
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
@@ -77,8 +76,11 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     problem = "The statement of class ${node.javaClass} is not supported yet",
                     rawNode = node,
                 )
-            is Python.AST.Def ->
-                wrapDeclarationToStatement(frontend.declarationHandler.handleNode(node))
+            is Python.AST.Def -> {
+                val decl = frontend.declarationHandler.handleNode(node)
+                frontend.scopeManager.addDeclaration(decl)
+                wrapDeclarationToStatement(decl)
+            }
         }
     }
 
@@ -550,7 +552,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     )
                 conditionallyAddAdditionalSourcesToAnalysis(decl.import)
                 frontend.scopeManager.addDeclaration(decl)
-                declStmt.declarationEdges += decl
+                declStmt.declarations += decl
             } else {
                 // If we do not have an alias, we import all the packages along the path - unless we
                 // already have an import for the package in the scope
@@ -564,7 +566,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                         )
                     conditionallyAddAdditionalSourcesToAnalysis(decl.import)
                     frontend.scopeManager.addDeclaration(decl)
-                    declStmt.declarationEdges += decl
+                    declStmt.declarations += decl
                     importName = importName.parent
                 }
             }
@@ -642,7 +644,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
             // Finally, add our declaration to the scope and the declaration statement
             frontend.scopeManager.addDeclaration(decl)
-            declStmt.declarationEdges += decl
+            declStmt.declarations += decl
         }
         return declStmt
     }
@@ -654,13 +656,6 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      * manager.
      */
     private fun conditionallyAddAdditionalSourcesToAnalysis(importName: Name) {
-        val ctx = ctx
-        if (ctx == null) {
-            throw TranslationException(
-                "A translation context is needed for the import dependent addition of additional sources."
-            )
-        }
-
         var currentName: Name? = importName
         while (!currentName.isNullOrEmpty()) {
             // Build a set of candidates how files look like for the current name. They are a set of
@@ -794,7 +789,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      */
     private fun handleAnnAssign(node: Python.AST.AnnAssign): AssignExpression {
         val lhs = frontend.expressionHandler.handle(node.target)
-        lhs.type = frontend.typeOf(node.annotation)
+        lhs.assignedTypes += frontend.typeOf(node.annotation)
         val rhs = node.value?.let { listOf(frontend.expressionHandler.handle(it)) } ?: emptyList()
         return newAssignExpression(lhs = listOf(lhs), rhs = rhs, rawNode = node)
     }
@@ -831,7 +826,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         val lhs = node.targets.map { frontend.expressionHandler.handle(it) }
         node.type_comment?.let { typeComment ->
             val tpe = frontend.typeOf(typeComment)
-            lhs.forEach { it.type = tpe }
+            lhs.forEach { it.assignedTypes += tpe }
         }
         val rhs = frontend.expressionHandler.handle(node.value)
         if (rhs is List<*>)
@@ -932,6 +927,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     private fun wrapDeclarationToStatement(decl: Declaration): DeclarationStatement {
         val declStmt = newDeclarationStatement().codeAndLocationFrom(decl)
         declStmt.addDeclaration(decl)
+
         return declStmt
     }
 

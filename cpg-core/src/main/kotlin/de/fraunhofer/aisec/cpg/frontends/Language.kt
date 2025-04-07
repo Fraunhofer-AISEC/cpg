@@ -34,7 +34,9 @@ import de.fraunhofer.aisec.cpg.CallResolutionResult
 import de.fraunhofer.aisec.cpg.SignatureResult
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.ancestors
+import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.Component
+import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
@@ -55,9 +57,13 @@ import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.passes.inference.Inference
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import java.io.File
 import kotlin.reflect.KClass
 import kotlin.reflect.full.primaryConstructor
+import org.neo4j.ogm.annotation.Transient
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 /**
  * [CastResult] is the result of the function [Language.tryCast] and describes whether a cast of one
@@ -89,7 +95,8 @@ data class ImplicitCast(override var depthDistance: Int) : CastResult(depthDista
  * persisted in the final graph (database) and each node links to its corresponding language using
  * the [Node.language] property.
  */
-abstract class Language<T : LanguageFrontend<*, *>> : Node {
+@Suppress("CONTEXT_RECEIVERS_DEPRECATED")
+abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
 
     /** The file extensions without the dot */
     abstract val fileExtensions: List<String>
@@ -123,8 +130,12 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node {
     /** All operators which perform a simple assignment from the rhs to the lhs. */
     open val simpleAssignmentOperators: Set<String> = setOf("=")
 
-    constructor(ctx: TranslationContext? = null) : super() {
-        this.ctx = ctx
+    /** The standard evaluator to be used with this language. */
+    @Transient @DoNotPersist open val evaluator: ValueEvaluator = ValueEvaluator()
+
+    init {
+        this.language = this
+        this.name = Name(this::class.simpleName ?: EMPTY_NAME)
     }
 
     /**
@@ -162,34 +173,57 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node {
         return result
     }
 
-    init {
-        this.language = this
-        this::class.simpleName?.let { this.name = Name(it) }
-    }
-
-    private fun arithmeticOpTypePropagation(lhs: Type, rhs: Type): Type {
+    private fun arithmeticOpTypePropagation(lhsType: Type, rhsType: Type): Type {
         return when {
-            lhs is FloatingPointType && rhs !is FloatingPointType && rhs is NumericType -> lhs
-            lhs !is FloatingPointType && lhs is NumericType && rhs is FloatingPointType -> rhs
-            lhs is FloatingPointType && rhs is FloatingPointType ||
-                lhs is IntegerType && rhs is IntegerType ->
+            lhsType is FloatingPointType &&
+                rhsType !is FloatingPointType &&
+                rhsType is NumericType -> lhsType
+            lhsType !is FloatingPointType &&
+                lhsType is NumericType &&
+                rhsType is FloatingPointType -> rhsType
+            lhsType is FloatingPointType && rhsType is FloatingPointType ||
+                lhsType is IntegerType && rhsType is IntegerType ->
                 // We take the one with the bigger bit-width
-                if ((lhs.bitWidth ?: 0) >= (rhs.bitWidth ?: 0)) {
-                    lhs
+                if ((lhsType.bitWidth ?: 0) >= (rhsType.bitWidth ?: 0)) {
+                    lhsType
                 } else {
-                    rhs
+                    rhsType
                 }
-            lhs is BooleanType && rhs is BooleanType -> lhs
+            lhsType is BooleanType && rhsType is BooleanType -> lhsType
             else -> unknownType()
         }
     }
 
     /**
      * Determines how to propagate types across binary operations since these may differ among the
-     * programming languages.
+     * programming languages. This intentionally uses the [Type] of the left-hand side and
+     * right-hand side to determine the type of the binary operation instead of the [BinaryOperator]
+     * node, because we want to use it in our new symbol resolver that operates on a state that
+     * contains the type, rather than the [HasType.type] directly.
+     *
+     * Optionally, a [BinaryOperator] can be passed as a hint to the function. This is useful for
+     * languages that need access to additional information from the [BinaryOperator] node.
+     * Implementors who override this function must ensure that they do NOT use the [HasType.type]
+     * of the [BinaryOperator.lhs] / [BinaryOperator.rhs] property of [hint], but use the [lhsType]
+     * and [rhsType] instead.
+     *
+     * @param operatorCode The [BinaryOperator.operatorCode]
+     * @param lhsType The type of the left-hand side ([BinaryOperator.lhs])
+     * @param rhsType The type of the right-hand side ([BinaryOperator.rhs])
+     * @param hint The [BinaryOperator] node that is used as a hint for the language to determine
+     *   the type of the binary operation. This is optional and can be null.
      */
-    open fun propagateTypeOfBinaryOperation(operation: BinaryOperator): Type {
-        return when (operation.operatorCode) {
+    open fun propagateTypeOfBinaryOperation(
+        operatorCode: String?,
+        lhsType: Type,
+        rhsType: Type,
+        hint: BinaryOperator? = null,
+    ): Type {
+        return when (operatorCode) {
+            "<",
+            "=<",
+            ">",
+            "<=",
             "==",
             "===" ->
                 // A comparison, so we return the type "boolean"
@@ -197,14 +231,18 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node {
                     ?: this.builtInTypes.values.firstOrNull { it.name.localName.startsWith("bool") }
                     ?: unknownType()
             "+" ->
-                if (operation.lhs.type is StringType) {
-                    // string + anything => string
-                    operation.lhs.type
-                } else if (operation.rhs.type is StringType) {
-                    // anything + string => string
-                    operation.rhs.type
-                } else {
-                    arithmeticOpTypePropagation(operation.lhs.type, operation.rhs.type)
+                when {
+                    lhsType is StringType -> {
+                        // string + anything => string
+                        lhsType
+                    }
+                    rhsType is StringType -> {
+                        // anything + string => string
+                        rhsType
+                    }
+                    else -> {
+                        arithmeticOpTypePropagation(lhsType, rhsType)
+                    }
                 }
             "-",
             "*",
@@ -214,13 +252,13 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node {
             "&&",
             "|",
             "||",
-            "^" -> arithmeticOpTypePropagation(operation.lhs.type, operation.rhs.type)
+            "^" -> arithmeticOpTypePropagation(lhsType, rhsType)
             "<<",
             ">>",
             ">>>" ->
-                if (operation.lhs.type.isPrimitive && operation.rhs.type.isPrimitive) {
+                if (lhsType.isPrimitive && rhsType.isPrimitive) {
                     // primitive type 1 OP primitive type 2 => primitive type 1
-                    operation.lhs.type
+                    lhsType
                 } else {
                     unknownType()
                 }
@@ -232,24 +270,34 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node {
      * When propagating [HasType.assignedTypes] from one node to another, we might want to propagate
      * only certain types. A common example is to truncate [NumericType]s, when they are not "big"
      * enough.
+     *
+     * @param existingType The existing type of the node that should be updated
+     * @param newType The new type that should be propagated
+     * @param hint The node that is used as a hint for the language to determine the type of the
+     *   node that should be updated
      */
-    open fun shouldPropagateType(hasType: HasType, srcType: Type): Boolean {
-        val nodeType = hasType.type
-
-        // We only want to add certain types, in case we have a numeric type
-        if (nodeType is NumericType) {
-            // We do not allow to propagate non-numeric types into numeric types
-            return if (srcType !is NumericType) {
+    open fun shouldPropagateType(existingType: Type, newType: Type, hint: HasType): Boolean {
+        return when {
+            // We only want to add certain types, in case we have a numeric type
+            existingType is NumericType -> {
+                // We do not allow to propagate non-numeric types into numeric types
+                if (newType !is NumericType) {
+                    false
+                } else {
+                    val srcWidth = newType.bitWidth
+                    val lhsWidth = existingType.bitWidth
+                    // Do not propagate anything if the new type is too big for the current type.
+                    return !(lhsWidth != null && srcWidth != null && lhsWidth < srcWidth)
+                }
+            }
+            // We do not want to propagate a dynamic type
+            newType is DynamicType -> {
                 false
-            } else {
-                val srcWidth = srcType.bitWidth
-                val lhsWidth = nodeType.bitWidth
-                // Do not propagate anything if the new type is too big for the current type.
-                return !(lhsWidth != null && srcWidth != null && lhsWidth < srcWidth)
+            }
+            else -> {
+                true
             }
         }
-
-        return true
     }
 
     /**
@@ -313,6 +361,7 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node {
      *   the best. The ranking is determined by the [CastResult.depthDistance] of all cast results
      *   in the signature results.
      */
+    context(ContextProvider)
     open fun bestViableResolution(
         result: CallResolutionResult
     ): Pair<Set<FunctionDeclaration>, CallResolutionResult.SuccessKind> {
@@ -347,7 +396,7 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node {
                     null,
                     source,
                     false,
-                    source.ctx!!,
+                    ctx,
                     null,
                     needsExactMatch = true,
                 )
@@ -422,13 +471,20 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node {
      * @param TypeToInfer the type of the node that should be inferred
      * @param source the source that was responsible for the inference
      */
+    context(ContextProvider)
     fun <TypeToInfer : Node> translationUnitForInference(source: Node): TranslationUnitDeclaration {
         // The easiest way to identify the current component would be traversing the AST, but that
         // does not work for types. But types have a scope and the scope (should) have the
         // connection to the AST. We add several fallbacks here to make sure that we have a
         // component.
         val component =
-            source.scope?.astNode?.component ?: source.component ?: source.ctx?.currentComponent
+            if (source !is Type) {
+                source.component
+                    ?: this@ContextProvider.ctx.currentComponent
+                    ?: source.scope?.astNode?.component
+            } else {
+                this@ContextProvider.ctx.currentComponent ?: source.scope?.astNode?.component
+            }
         if (component == null) {
             val msg =
                 "No suitable component found that should be used for inference. " +
@@ -446,6 +502,10 @@ abstract class Language<T : LanguageFrontend<*, *>> : Node {
         }
 
         return tu
+    }
+
+    companion object {
+        @JvmStatic protected val log: Logger = LoggerFactory.getLogger(Language::class.java)
     }
 }
 
@@ -489,8 +549,7 @@ object NoLanguage : Language<Nothing>() {
  *
  * @property languages A list of languages that are part of this composite language definition.
  */
-class MultipleLanguages(ctx: TranslationContext, val languages: Set<Language<*>>) :
-    Language<Nothing>(ctx) {
+class MultipleLanguages(val languages: Set<Language<*>>) : Language<Nothing>() {
     override val fileExtensions = languages.flatMap { it.fileExtensions }
     override val frontend: KClass<out Nothing> = Nothing::class
     override val builtInTypes: Map<String, Type> = mapOf()
@@ -506,7 +565,7 @@ fun Node.multiLanguage(): Language<*> {
     return if (languages.size == 1) {
         languages.single()
     } else if (languages.size > 1) {
-        MultipleLanguages(ctx!!, languages = languages)
+        MultipleLanguages(languages = languages)
     } else {
         UnknownLanguage
     }

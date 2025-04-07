@@ -23,6 +23,8 @@
  *                    \______/ \__|       \______/
  *
  */
+@file:Suppress("CONTEXT_RECEIVERS_DEPRECATED")
+
 package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.TranslationContext
@@ -32,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.NodeBuilder.LOGGER
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.log
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.helpers.getCodeOfSubregion
 import de.fraunhofer.aisec.cpg.passes.inference.IsImplicitProvider
 import de.fraunhofer.aisec.cpg.passes.inference.IsInferredProvider
@@ -107,23 +110,15 @@ fun Node.applyMetadata(
     doNotPrependNamespace: Boolean = false,
     defaultNamespace: Name? = null,
 ) {
-    // We definitely need a context provider, because otherwise we cannot set the context and the
-    // node cannot access necessary information about the current translation context it lives in.
-    this.ctx =
-        (provider as? ContextProvider)?.ctx
-            ?: throw TranslationException(
-                "Trying to create a node without a ContextProvider. This will fail."
-            )
-
     // We try to set the code and especially the location as soon as possible because the hashCode
     // implementation of the Node class relies on it. Otherwise, we could have a problem that the
     // location is not yet set, but the node is put into a hashmap. In this case the hashCode is
     // calculated based on an empty location and if we would later set the location, we would have a
     // mismatch. Each language frontend and also each handler implements CodeAndLocationProvider, so
     // calling a node builder from these should already set the location.
-    if (provider is CodeAndLocationProvider<*> && rawNode != null) {
+    if (provider is ContextProvider && provider is CodeAndLocationProvider<*> && rawNode != null) {
         @Suppress("UNCHECKED_CAST")
-        setCodeAndLocation(provider as CodeAndLocationProvider<Any>, rawNode)
+        with(provider) { setCodeAndLocation(provider as CodeAndLocationProvider<Any>, rawNode) }
     }
 
     if (provider is LanguageProvider) {
@@ -156,6 +151,11 @@ fun Node.applyMetadata(
             }
         this.name = this.newName(name, doNotPrependNamespace, namespace)
     }
+
+    // Disable the type observer if the config says so.
+    if (this is HasType && provider is ContextProvider && provider.ctx.config.disableTypeObserver) {
+        observerEnabled = false
+    }
 }
 
 /**
@@ -177,7 +177,7 @@ fun LanguageProvider.newName(
     } else if (name.contains(language.namespaceDelimiter)) {
         // Let's check, if this is an FQN as string / char sequence by any chance. Then we need
         // to parse the name. In the future, we might drop compatibility for this
-        language.parseName(name)
+        parseName(name)
     } else {
         // Otherwise, a local name is supplied. Some nodes only want a local name. In this case,
         // we create a new name with the supplied (local) name and set the parent to null.
@@ -234,7 +234,7 @@ fun NamespaceProvider.fqn(localName: String): Name {
 }
 
 interface ContextProvider : MetadataProvider {
-    val ctx: TranslationContext?
+    val ctx: TranslationContext
 }
 
 /**
@@ -282,7 +282,7 @@ fun <T : Node> T.codeAndLocationFrom(other: Node): T {
  * code/location to the statement rather than the expression, after it comes back from the
  * expression handler.
  */
-context(CodeAndLocationProvider<AstNode>)
+context(CodeAndLocationProvider<AstNode>, ContextProvider)
 fun <T : Node, AstNode> T.codeAndLocationFromOtherRawNode(rawNode: AstNode?): T {
     rawNode?.let { setCodeAndLocation(this@CodeAndLocationProvider, it) }
     return this
@@ -374,11 +374,12 @@ fun <T : Node, AstNode> T.codeAndLocationFromChildren(
  * This internal function sets the code and location according to the [CodeAndLocationProvider].
  * This also performs some checks, e.g., if the config disabled setting the code.
  */
+context(ContextProvider)
 private fun <AstNode> Node.setCodeAndLocation(
     provider: CodeAndLocationProvider<AstNode>,
     rawNode: AstNode,
 ) {
-    if (this.ctx?.config?.codeInNodes == true) {
+    if (this@ContextProvider.ctx.config.codeInNodes == true) {
         // only set code, if it's not already set or empty
         val code = provider.codeOf(rawNode)
         if (code != null) {
