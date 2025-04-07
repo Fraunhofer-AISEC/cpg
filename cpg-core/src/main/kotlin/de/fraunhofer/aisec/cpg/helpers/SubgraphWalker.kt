@@ -354,7 +354,7 @@ object SubgraphWalker {
         }
 
         /**
-         * Wraps [IterativeGraphWalker] to handle declaration, in contrast to [iterate], this
+         * Wraps [IterativeGraphWalker] to handle declaration, In contrast to [iterate], this
          * function is here to iterate over several nodes that may be entries into a joined graph
          * reachable by the specified strategy and therefore the internal seen list of nodes has to
          * be shared to avoid duplicate visits.
