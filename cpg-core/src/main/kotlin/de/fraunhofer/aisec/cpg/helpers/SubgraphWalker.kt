@@ -231,7 +231,7 @@ object SubgraphWalker {
         }
 
         /**
-         * Iteration starting from several nodes that can explore a joined graph, therefore the
+         * Iteration starting from several nodes that can explore a joint graph, therefore the
          * `seen` list is shared between several entries to the potentially joined graph
          */
         fun iterateAll(entries: List<Node>) {
