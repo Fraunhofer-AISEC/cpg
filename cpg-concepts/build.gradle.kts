@@ -35,6 +35,9 @@ mavenPublishing {
 dependencies {
     implementation(projects.cpgAnalysis)
 
+    // parsing YAML files
+    implementation(libs.jacksonyml)
+
     // We depend on the Python and C/C++ frontend for the integration tests, but the frontend is
     // only available if enabled.
     // If it's not available, the integration tests fail (which is ok). But if we would directly

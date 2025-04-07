@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.AnalysisSensitivity
 import de.fraunhofer.aisec.cpg.graph.FilterUnreachableEOG
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
@@ -338,12 +339,16 @@ fun Node.identifyInfoToTrack(
  * An early termination can be specified by the predicate [earlyTermination].
  * [allowOverwritingValue] can be used to configure if overwriting the value (or part of it) results
  * in a failure of the requirement (if `false`) or if it does not affect the evaluation. The
- * analysis can be configured with [scope] and [sensitivities].
+ * analysis can be configured with [scope] and [sensitivities]. [stopIfImpossible] enables the
+ * option to stop iterating through the EOG if we already left the function where we started and
+ * none of the nodes reaching by the DFG is in the new scope or one of its parents (i.e., the
+ * condition cannot be fulfilled anymore).
  */
 fun Node.alwaysFlowsTo(
     allowOverwritingValue: Boolean = false,
     earlyTermination: ((Node) -> Boolean)? = null,
     identifyCopies: Boolean = true,
+    stopIfImpossible: Boolean = true,
     scope: AnalysisScope,
     vararg sensitivities: AnalysisSensitivity =
         ContextSensitive + FieldSensitive + FilterUnreachableEOG,
@@ -376,11 +381,22 @@ fun Node.alwaysFlowsTo(
                     nodeToTrack in n.prevDFG &&
                     (n as? Reference)?.access == AccessValues.WRITE)
         }
+        val eogScope =
+            if (stopIfImpossible && scope is Interprocedural) {
+                InterproceduralWithDfgTermination(
+                    maxCallDepth = scope.maxCallDepth,
+                    maxSteps = scope.maxSteps,
+                    allReachableNodes =
+                        nextDFGPaths
+                            .filter { it.scope != null && it !is FunctionDeclaration }
+                            .toSet(),
+                )
+            } else scope
         val nextEOGEvaluation =
             nodeToTrack.followEOGEdgesUntilHit(
                 collectFailedPaths = true,
                 findAllPossiblePaths = true,
-                scope = scope,
+                scope = eogScope,
                 sensitivities = sensitivities,
                 earlyTermination = earlyTerminationPredicate,
             ) {
