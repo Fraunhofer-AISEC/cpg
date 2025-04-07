@@ -4,5 +4,5 @@ int some_func() {
 
 int simple_calls() {
     // call to some_func
-    some_func()
+    some_func();
 }

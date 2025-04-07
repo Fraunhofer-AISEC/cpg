@@ -340,7 +340,6 @@ private fun SymbolResolver.handleReference(
                 qualifiedLookup = false,
             )
         }
-    println(candidates)
 
     // Push candidates to state
     state = state.pushCandidate(lattice, node, *candidates.toTypedArray())
@@ -356,6 +355,12 @@ private fun SymbolResolver.handleReference(
     return state
 }
 
+/**
+ * Handles a [Declaration] and updates the state, so the declaration is pushed to the visible
+ * [DeclarationStateElement.symbols].
+ *
+ * The [DeclarationStateElement.symbols] element is a mapping of scopes to declarations.
+ */
 private fun SymbolResolver.handleDeclaration(
     lattice: DeclarationState,
     state: DeclarationStateElement,
