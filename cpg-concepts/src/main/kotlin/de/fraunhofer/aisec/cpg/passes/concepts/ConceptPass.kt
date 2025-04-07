@@ -46,8 +46,6 @@ abstract class ConceptPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
 
     lateinit var walker: SubgraphWalker.ScopedWalker
 
-    val alreadySeen = identitySetOf<Node>()
-
     override fun accept(tu: TranslationUnitDeclaration) {
         ctx.currentComponent = tu.component
         walker = SubgraphWalker.ScopedWalker(ctx.scopeManager)
