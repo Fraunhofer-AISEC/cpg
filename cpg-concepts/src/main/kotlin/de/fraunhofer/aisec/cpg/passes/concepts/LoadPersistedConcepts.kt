@@ -40,8 +40,6 @@ import de.fraunhofer.aisec.cpg.graph.concepts.conceptBuildHelper
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.helpers.getNodesByRegion
 import de.fraunhofer.aisec.cpg.passes.*
-import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.ConceptEntry
-import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.PersistedConceptEntry
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -277,30 +275,4 @@ class LoadPersistedConcepts(ctx: TranslationContext) : TranslationResultPass(ctx
      *   `foo.bar.baz`.
      */
     data class SignatureEntry(val fqn: String)
-}
-
-/**
- * Converts the [Concept] to a [PersistedConceptEntry]. This is used for exporting the concept
- * information.
- */
-fun Concept.toPersistedConcept(): PersistedConceptEntry {
-    return PersistedConceptEntry(
-        concept =
-            ConceptEntry(
-                name = this.javaClass.name,
-                dfg =
-                    LoadPersistedConcepts.DFGEntry(
-                        fromThisNodeToConcept =
-                            this.underlyingNode?.nextDFG?.contains(this) == true,
-                        fromConceptToThisNode = this.nextDFG.contains(this.underlyingNode),
-                    ),
-            ),
-        location =
-            LoadPersistedConcepts.LocationEntry(
-                file = this.location?.artifactLocation?.uri.toString(),
-                region = this.location?.region.toString(),
-                type = this.underlyingNode?.javaClass?.name,
-            ),
-        signature = null,
-    )
 }

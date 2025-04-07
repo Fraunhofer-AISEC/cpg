@@ -194,7 +194,7 @@ fun Routing.apiRoutes(service: ConsoleService) {
          * The endpoint to export a YAML listing of all manually added [Concept]s (via `POST
          * /concept`).
          */
-        get("/export-concepts") { call.respond(service.exportAddedConcepts()) }
+        get("/export-concepts") { call.respond(service.exportPersistedConcepts()) }
     }
 }
 

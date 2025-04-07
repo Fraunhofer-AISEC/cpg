@@ -36,9 +36,9 @@ import de.fraunhofer.aisec.cpg.graph.concepts.conceptBuildHelper
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts
+import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.PersistedConceptEntry
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.PersistedConcepts
 import de.fraunhofer.aisec.cpg.passes.concepts.config.python.PythonStdLibConfigurationPass
-import de.fraunhofer.aisec.cpg.passes.concepts.toPersistedConcept
 import java.io.File
 import java.nio.file.Path
 import kotlin.uuid.Uuid
@@ -57,7 +57,9 @@ private const val AD_HOC_PROJECT_NAME = "ad-hoc"
 class ConsoleService {
     private var analysisResult: AnalysisResultJSON? = null
     var lastProject: AnalysisProject? = null
+
     private var newConceptNodes: Set<Concept> = emptySet()
+    private var newPersistedConcepts = mutableListOf<PersistedConceptEntry>()
 
     /**
      * Analyzes the given source directory and returns the analysis result as [AnalysisResultJSON].
@@ -177,25 +179,29 @@ class ConsoleService {
                 .singleOrNull { it.id == request.nodeId }
                 ?: throw IllegalArgumentException("Unique target node not found.")
 
-        node
-            .conceptBuildHelper(
-                name = request.conceptName,
-                underlyingNode = node,
-                constructorArguments =
-                    request.constructorArgs?.associate { it.argumentName to it.argumentValue }
-                        ?: emptyMap(),
-                connectDFGUnderlyingNodeToConcept = request.addDFGToConcept,
-                connectDFGConceptToUnderlyingNode = request.addDFGFromConcept,
-            )
-            .also { newConceptNodes += it }
+        val concept =
+            node
+                .conceptBuildHelper(
+                    name = request.conceptName,
+                    underlyingNode = node,
+                    constructorArguments =
+                        request.constructorArgs?.associate { it.argumentName to it.argumentValue }
+                            ?: emptyMap(),
+                    connectDFGUnderlyingNodeToConcept = request.addDFGToConcept,
+                    connectDFGConceptToUnderlyingNode = request.addDFGFromConcept,
+                )
+                .also { newConceptNodes += it }
+
+        // Build the new persisted concept entry and store it, so we can export it later
+        newPersistedConcepts += request.buildPersistedConcept(concept)
     }
 
     /**
      * Exports all new [Concept] nodes (added via [addConcept] and thus stored in [newConceptNodes])
      * as a YAML string.
      */
-    fun exportAddedConcepts(): String {
-        val concepts = PersistedConcepts(concepts = newConceptNodes.map { it.toPersistedConcept() })
+    fun exportPersistedConcepts(): String {
+        val concepts = PersistedConcepts(concepts = newPersistedConcepts)
         return ObjectMapper(YAMLFactory())
             .enable(SerializationFeature.INDENT_OUTPUT)
             .disable(SerializationFeature.WRITE_NULL_MAP_VALUES)

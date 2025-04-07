@@ -33,6 +33,11 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
+import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts
+import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.ConceptEntry
+import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.DFGEntry
+import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.LocationEntry
+import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.PersistedConceptEntry
 import io.github.detekt.sarif4k.Result
 import java.net.URI
 import kotlin.io.path.Path
@@ -150,8 +155,7 @@ data class NodeJSON(
 )
 
 /**
- * JSON data class for an "add new concept" request
- * [de.fraunhofer.aisec.codyze.console.ConsoleService.addConcept].
+ * JSON data class for an "add new concept" request (see [ConsoleService.addConcept]).
  *
  * @param nodeId The UUID of the underlying node.
  * @param conceptName The (Java class) name of the concept.
@@ -166,7 +170,44 @@ data class ConceptRequestJSON(
     val addDFGToConcept: Boolean,
     val addDFGFromConcept: Boolean,
     val constructorArgs: List<ConstructorArguments>? = null,
-)
+) {
+    /**
+     * Converts this JSON structure into a [PersistedConceptEntry] based on the instantiated
+     * [concept].
+     *
+     * The information in the JSON structure is primarily used to create the
+     * [PersistedConceptEntry.concept] (e.g., including the constructor arguments) and the
+     * instantiation of the [concept] is primarily used to build the
+     * [PersistedConceptEntry.location] entry.
+     */
+    fun buildPersistedConcept(concept: Concept): PersistedConceptEntry {
+        return PersistedConceptEntry(
+            concept =
+                ConceptEntry(
+                    name = this.conceptName,
+                    dfg =
+                        DFGEntry(
+                            fromThisNodeToConcept = this.addDFGToConcept,
+                            fromConceptToThisNode = this.addDFGFromConcept,
+                        ),
+                    constructorArguments =
+                        this.constructorArgs?.map {
+                            LoadPersistedConcepts.ConstructorArgumentEntry(
+                                name = it.argumentName,
+                                value = it.argumentValue,
+                            )
+                        } ?: listOf(),
+                ),
+            location =
+                LocationEntry(
+                    file = concept.location?.artifactLocation?.uri.toString(),
+                    region = concept.location?.region.toString(),
+                    type = concept.underlyingNode?.javaClass?.name,
+                ),
+            signature = null,
+        )
+    }
+}
 
 /** Converts a [AnalysisResult] into its JSON representation. */
 fun AnalysisResult.toJSON(): AnalysisResultJSON =
