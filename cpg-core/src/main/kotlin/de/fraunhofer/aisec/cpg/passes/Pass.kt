@@ -360,33 +360,6 @@ fun executePass(
 }
 
 /**
- *
- * @param assumptionType The type of assumption used to differentiate between assumptions and group similar assumptions.
- *
- * @param node The node that cause the assumption to be necessary, even if the assumption has validity for the
- * entire program, the node serves as location to be reported to the user.
- *
- * @param scope The scope that the assumption has validity for, here the scope is a node, because the assumption is
- * valid for every node in its ast subtree.
- *
- * @param message The message describing the assumption that was taken.
- */
-public fun ContextProvider.assume(
-    assumptionType: AssumptionType,
-    node: Node,
-    scope: Node = node,
-    message: () -> String,
-) {
-    Assumption(assumptionType, node, scope, getCurrentFileAndLine(), message.toString())
-    // Todo Add Assumption to Translation Result
-}
-
-fun getCurrentFileAndLine(): String {
-    val stackTrace = Thread.currentThread().stackTrace
-    return "File: ${stackTrace[3].fileName}, Line: ${stackTrace[3].lineNumber}"
-}
-
-/**
  * This function is a wrapper around [consumeTarget] to apply it to all [targets]. This is primarily
  * needed because of very delicate type inference work of the Kotlin compiler.
  *
