@@ -11,6 +11,7 @@
     charWidth: number;
     offsetTop: number;
     offsetLeft: number;
+    onNodeClick: (node: FlattenedNode) => void;
   }
 
   let {
@@ -20,7 +21,8 @@
     lineHeight,
     charWidth,
     offsetTop,
-    offsetLeft
+    offsetLeft,
+    onNodeClick
   }: Props = $props();
 
   /**
@@ -67,7 +69,8 @@
   style:opacity={highlightedNode?.id === node.id ? 0.6 : 0.3}
   style:min-width="0.25em"
   style:min-height="0.25em"
-  style:z-index={node.depth}
+  style:z-index={node.depth + 1}
   onmouseenter={() => (highlightedNode = node)}
   onmouseleave={() => (highlightedNode = null)}
+  onclick={() => onNodeClick(node)}
 ></div>

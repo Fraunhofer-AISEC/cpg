@@ -23,6 +23,9 @@ dependencies {
 
     // Serialization
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.jacksonyml)
+
+    implementation(libs.reflections)
 
     // Testing
     testImplementation(libs.ktor.server.test.host)
