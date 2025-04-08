@@ -64,23 +64,23 @@ abstract class ConceptPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
      */
     abstract fun handleNode(node: Node, tu: TranslationUnitDeclaration)
 
-    /**
-     * Gets concept of type [T] for this [TranslationUnitDeclaration] or creates a new one if it
-     * does not exist.
-     */
-    internal inline fun <reified T : Concept> TranslationUnitDeclaration.getConceptOrCreate(
-        noinline init: ((T) -> Unit)? = null
-    ): T {
-        var concept = this.conceptNodes.filterIsInstance<T>().singleOrNull()
-        if (concept == null) {
-            concept = T::class.constructors.first().call(this)
-            init?.invoke(concept)
-        }
-
-        return concept
-    }
-
     override fun cleanup() {
         // Nothing to do
     }
+}
+
+/**
+ * Gets concept of type [T] for this [TranslationUnitDeclaration] or creates a new one if it does
+ * not exist.
+ */
+internal inline fun <reified T : Concept> TranslationUnitDeclaration.getConceptOrCreate(
+    noinline init: ((T) -> Unit)? = null
+): T {
+    var concept = this.conceptNodes.filterIsInstance<T>().singleOrNull()
+    if (concept == null) {
+        concept = T::class.constructors.first().call(this)
+        init?.invoke(concept)
+    }
+
+    return concept
 }
