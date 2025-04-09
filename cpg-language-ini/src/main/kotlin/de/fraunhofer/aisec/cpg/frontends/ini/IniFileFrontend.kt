@@ -107,7 +107,6 @@ class IniFileFrontend(ctx: TranslationContext, language: Language<IniFileFronten
 
         val nsd = newNamespaceDeclaration(name = namespace, rawNode = ini)
         scopeManager.addDeclaration(nsd)
-        tud.namespaces += nsd
 
         scopeManager.enterScope(nsd)
 
