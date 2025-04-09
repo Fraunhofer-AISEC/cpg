@@ -69,25 +69,52 @@ class ResolveMemberExpressionAmbiguityPass(ctx: TranslationContext) : Translatio
         walker.registerHandler { node ->
             when (node) {
                 is MemberExpression -> resolveAmbiguity(node)
-                is Reference -> resolveReference(node)
+                is Reference -> {
+                    if (node.astParent !is MemberExpression) {
+                        resolveReference(node)
+                    }
+                }
             }
         }
 
         walker.iterate(tu)
     }
 
-    private fun resolveReference(ref: Reference) {
-        val candidates =
-            scopeManager
-                .lookupSymbolByNodeNameOfType<ImportDeclaration>(ref, replaceImports = false)
-                .filter { it.style == ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE }
+    private fun resolveReference(ref: Reference): Boolean {
+        var candidates = scopeManager.lookupSymbolByNodeName(ref, replaceImports = false)
+
+        val singleImports = mutableListOf<ImportDeclaration>()
+        var interesting = false
+        for (candidate in candidates) {
+            // If we have an import declaration in the candidates, then this reference is
+            // definitely "interesting"
+            if (candidate is ImportDeclaration) {
+                interesting = true
+            }
+
+            // If we have an import declaration importing a single symbol, we can add it to the list
+            // of single imports. We will look at them later
+            if (
+                candidate is ImportDeclaration &&
+                    candidate.style == ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE
+            ) {
+                singleImports.add(candidate)
+            }
+        }
+
+        // If the candidates are not interesting, we can abort here
+        if (!interesting) {
+            return false
+        }
 
         // We want to resolve the ambiguity of the reference, if it is a symbol directly imported
         // from a namespace
-        val candidate = candidates.map { it.import }.singleOrNull()
+        val candidate = singleImports.map { it.import }.singleOrNull()
         if (candidate != null && candidate != ref.name) {
             ref.name = candidate
         }
+
+        return true
     }
 
     /**
@@ -97,18 +124,36 @@ class ResolveMemberExpressionAmbiguityPass(ctx: TranslationContext) : Translatio
      *
      * @param me The member expression to disambiguate and potentially replace.
      */
-    private fun resolveAmbiguity(me: MemberExpression) {
+    private fun resolveAmbiguity(me: MemberExpression): Boolean {
+        // Try to resolve the base first
+        val interesting =
+            if (me.base is MemberExpression) {
+                resolveAmbiguity(me.base as MemberExpression)
+            } else if (me.base is Reference) {
+                resolveReference(me.base as Reference)
+            } else {
+                false
+            }
+
+        if (!interesting) {
+            return false
+        }
+
         // We need to check, if our "base" (or our expression) is really a name that refers to an
         // import, because in this case we do not have a member expression, but a reference with a
         // qualified name
         val baseName = me.base.reconstructedImportName
         val importName = referredImportName(baseName, me)
 
-        if (importName != null) {
+        return if (importName != null) {
             with(me) {
                 val ref = newReference(importName.fqn(me.name.localName)).codeAndLocationFrom(this)
                 walker.replace(me.astParent, me, ref)
             }
+
+            true
+        } else {
+            false
         }
     }
 
