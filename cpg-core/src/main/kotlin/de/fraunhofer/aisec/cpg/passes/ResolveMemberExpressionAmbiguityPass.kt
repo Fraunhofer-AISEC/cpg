@@ -70,6 +70,8 @@ class ResolveMemberExpressionAmbiguityPass(ctx: TranslationContext) : Translatio
             when (node) {
                 is MemberExpression -> resolveAmbiguity(node)
                 is Reference -> {
+                    // Only call resolveReference for sole references. For member expressions bases,
+                    // this is done by resolveAmbiguity to simulate EOG order.
                     if (node.astParent !is MemberExpression) {
                         resolveReference(node)
                     }
@@ -80,6 +82,16 @@ class ResolveMemberExpressionAmbiguityPass(ctx: TranslationContext) : Translatio
         walker.iterate(tu)
     }
 
+    /**
+     * This function serves two purposes:
+     * - It checks whether this reference potentially refers to an import of a single symbol. If it
+     *   does, it replaces the reference with the fully qualified name of the import.
+     * - It checks, whether this reference is potentially "interesting" for resolveAmbiguity to
+     *   consider. It is only interesting if it refers to an import at all. If it refers to any
+     *   other symbol, it is not interesting.
+     *
+     * @return True if the reference is "interesting", false otherwise.
+     */
     private fun resolveReference(ref: Reference): Boolean {
         var candidates = scopeManager.lookupSymbolByNodeName(ref, replaceImports = false)
 
@@ -123,20 +135,19 @@ class ResolveMemberExpressionAmbiguityPass(ctx: TranslationContext) : Translatio
      * reference that uses the fully qualified name.
      *
      * @param me The member expression to disambiguate and potentially replace.
+     * @return True if the member expression was replaced with a reference, false otherwise.
      */
     private fun resolveAmbiguity(me: MemberExpression): Boolean {
-        // Try to resolve the base first
-        val interesting =
-            if (me.base is MemberExpression) {
-                resolveAmbiguity(me.base as MemberExpression)
-            } else if (me.base is Reference) {
-                resolveReference(me.base as Reference)
-            } else {
-                false
+        // Try to resolve the base first. This is necessary, since we walk the nodes in AST order,
+        // and therefore we would reach the member expression first. However, we cannot switch to
+        // EOG order since we want to have the return false of the handleReference function.
+        if (me.base is MemberExpression) {
+            resolveAmbiguity(me.base as MemberExpression)
+        } else if (me.base is Reference) {
+            // If resolveReferences yields only an "uninteresting" result, we can abort here
+            if (!resolveReference(me.base as Reference)) {
+                return false
             }
-
-        if (!interesting) {
-            return false
         }
 
         // We need to check, if our "base" (or our expression) is really a name that refers to an
