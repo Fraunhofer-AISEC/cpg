@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.component
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
+import de.fraunhofer.aisec.cpg.graph.edges.flows.insertNodeAfterwardInEOGPath
 import de.fraunhofer.aisec.cpg.helpers.functional.Lattice
 import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
@@ -61,7 +62,19 @@ abstract class EOGConceptPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
 
         // We do not need to use the finalState here as generating the new objects in the iteration
         // already connects them to the underlying nodes.
-        print(finalState)
+        for ((underlyingNode, overlayNodes) in finalState) {
+            overlayNodes.forEach {
+                it.underlyingNode = underlyingNode
+                if (it is Operation) {
+                    // Connect with the EOG
+                    underlyingNode.insertNodeAfterwardInEOGPath(it)
+                    // Call the default DFG method for this operation.
+                    it.setDFG()
+                    // Add the operation to the concept.
+                    it.concept.ops += it
+                }
+            }
+        }
     }
 
     /**
@@ -85,11 +98,18 @@ abstract class EOGConceptPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
     ): NodeToOverlayStateElement {
         val lattice = lattice as? NodeToOverlayState ?: return currentState
         val currentNode = currentEdge.end
-        val addedOverlays = handleNode(lattice, currentState, currentNode)
+        val addedOverlays = handleNode(lattice, currentState, currentNode).toSet()
+
+        val filteredAddedOverlays =
+            addedOverlays.filter { added ->
+                currentState[currentNode]?.none { existing -> added == existing } != false
+            }
+
         return lattice.lub(
             currentState,
             NodeToOverlayStateElement(
-                currentNode to PowersetLattice.Element<OverlayNode>(*addedOverlays.toTypedArray())
+                currentNode to
+                    PowersetLattice.Element<OverlayNode>(*filteredAddedOverlays.toTypedArray())
             ),
         )
     }

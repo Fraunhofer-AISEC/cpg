@@ -109,18 +109,22 @@ class PythonFileEOGConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
                 )
                 return emptySet()
             }
-            val newFileNode: File = getOrCreateFile(fileName, callExpression)
+            val (newFileNode, isNewFile) = getOrCreateFile(fileName, callExpression)
 
             val mode = getBuiltinOpenMode(callExpression) ?: "r" // default is 'r'
             val flags = translateBuiltinOpenMode(mode)
             val setFlagsOp =
-                newFileSetFlags(underlyingNode = callExpression, file = newFileNode, flags = flags)
-            val open = newFileOpen(underlyingNode = callExpression, file = newFileNode)
-            return setOf(setFlagsOp, open)
+                newFileSetFlagsNoConnect(
+                    underlyingNode = callExpression,
+                    file = newFileNode,
+                    flags = flags,
+                )
+            val open = newFileOpenNoConnect(underlyingNode = callExpression, file = newFileNode)
+            return if (isNewFile) setOf(setFlagsOp, open, newFileNode) else setOf(setFlagsOp, open)
         } else if (callExpression is MemberCallExpression) {
             val operations: List<Operation> =
                 callExpression.base
-                    ?.let { findFile(it) }
+                    ?.let { findFile(it, state) }
                     ?.mapNotNull { fileNode ->
                         when (callExpression.name.localName) {
                             "__enter__" -> {
@@ -128,8 +132,15 @@ class PythonFileEOGConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
                                 null
                             }
                             "__exit__" ->
-                                newFileClose(underlyingNode = callExpression, file = fileNode)
-                            "read" -> newFileRead(underlyingNode = callExpression, file = fileNode)
+                                newFileCloseNoConnect(
+                                    underlyingNode = callExpression,
+                                    file = fileNode,
+                                )
+                            "read" ->
+                                newFileReadNoConnect(
+                                    underlyingNode = callExpression,
+                                    file = fileNode,
+                                )
                             "write" -> {
                                 val arg = callExpression.arguments.getOrNull(0)
                                 if (callExpression.arguments.size != 1 || arg == null) {
@@ -140,7 +151,7 @@ class PythonFileEOGConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
                                     )
                                     return emptySet()
                                 }
-                                newFileWrite(
+                                newFileWriteNoConnect(
                                     underlyingNode = callExpression,
                                     file = fileNode,
                                     what = arg,
@@ -171,11 +182,11 @@ class PythonFileEOGConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
                         )
                         return emptySet()
                     }
-                    val newFileNode = getOrCreateFile(fileName, callExpression)
+                    val (newFileNode, isNewFile) = getOrCreateFile(fileName, callExpression)
 
                     val setFlags =
                         getOsOpenFlags(callExpression)?.let { flags ->
-                            newFileSetFlags(
+                            newFileSetFlagsNoConnect(
                                 underlyingNode = callExpression,
                                 file = newFileNode,
                                 flags = translateOsOpenFlags(flags),
@@ -185,17 +196,26 @@ class PythonFileEOGConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
                         getOsOpenMode(callExpression)
                             ?: 329L // default is 511 (assuming this is octet notation)
                     val setMask =
-                        newFileSetMask(
+                        newFileSetMaskNoConnect(
                             underlyingNode = callExpression,
                             file = newFileNode,
                             mask = mode,
                         )
 
-                    val open = newFileOpen(underlyingNode = callExpression, file = newFileNode)
-                    return if (setFlags != null) {
-                        setOf(setFlags, setMask, open)
+                    val open =
+                        newFileOpenNoConnect(underlyingNode = callExpression, file = newFileNode)
+                    return if (isNewFile) {
+                        if (setFlags != null) {
+                            setOf(setFlags, setMask, open, newFileNode)
+                        } else {
+                            setOf(setMask, open, newFileNode)
+                        }
                     } else {
-                        setOf(setMask, open)
+                        if (setFlags != null) {
+                            setOf(setFlags, setMask, open)
+                        } else {
+                            setOf(setMask, open)
+                        }
                     }
                 }
                 "os.chmod" -> {
@@ -213,7 +233,7 @@ class PythonFileEOGConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
                         return emptySet()
                     }
 
-                    val file = getOrCreateFile(fileName, callExpression)
+                    val (file, isNewFile) = getOrCreateFile(fileName, callExpression)
 
                     val mode =
                         callExpression.argumentValueByNameOrPosition<Long>(
@@ -226,11 +246,29 @@ class PythonFileEOGConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
                             log,
                             "Failed to find the corresponding mode. Ignoring the entire `os.chmod` call..",
                         )
-                        return emptySet()
+                        return if (isNewFile) {
+                            setOf(file)
+                        } else {
+                            emptySet()
+                        }
                     }
-                    return setOf(
-                        newFileSetMask(underlyingNode = callExpression, file = file, mask = mode)
-                    )
+                    return if (isNewFile) {
+                        setOf(
+                            file,
+                            newFileSetMaskNoConnect(
+                                underlyingNode = callExpression,
+                                file = file,
+                                mask = mode,
+                            ),
+                        )
+                    } else
+                        setOf(
+                            newFileSetMaskNoConnect(
+                                underlyingNode = callExpression,
+                                file = file,
+                                mask = mode,
+                            )
+                        )
                 }
                 "os.remove" -> {
                     val fileName =
@@ -247,9 +285,14 @@ class PythonFileEOGConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
                         return emptySet()
                     }
 
-                    val file = getOrCreateFile(fileName, callExpression)
+                    val (file, isNewFile) = getOrCreateFile(fileName, callExpression)
 
-                    return setOf(newFileDelete(underlyingNode = callExpression, file = file))
+                    return if (isNewFile)
+                        setOf(
+                            file,
+                            newFileDeleteNoConnect(underlyingNode = callExpression, file = file),
+                        )
+                    else setOf(newFileDeleteNoConnect(underlyingNode = callExpression, file = file))
                 }
             }
         }
@@ -265,11 +308,15 @@ class PythonFileEOGConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
      *   ([File.underlyingNode]) if a new file has to be created.
      * @return The [File] found in the cache or the new file in case it had to be created.
      */
-    internal fun getOrCreateFile(fileName: String, callExpression: CallExpression): File {
-        return fileCache[fileName]
-            ?: newFile(underlyingNode = callExpression, fileName = fileName).also { file ->
+    internal fun getOrCreateFile(
+        fileName: String,
+        callExpression: CallExpression,
+    ): Pair<File, Boolean> {
+        return fileCache[fileName]?.let { it to false }
+            ?: (newFileNoConnect(underlyingNode = callExpression, fileName = fileName).also { file
+                ->
                 fileCache += fileName to file
-            }
+            } to true)
     }
 
     /**
@@ -278,7 +325,10 @@ class PythonFileEOGConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
      * @param expression The start node.
      * @return A list of all [File] nodes found.
      */
-    internal fun findFile(expression: Expression): List<File> {
+    internal fun findFile(
+        expression: Expression,
+        stateElement: NodeToOverlayStateElement,
+    ): List<File> {
         // find all nodes on a prev DFG path which have an [OpenFile] overlay node and return the
         // last node on said path (i.e. the one with the [OpenFile] overlay)
         val nodesWithOpenFileOverlay =
@@ -288,14 +338,14 @@ class PythonFileEOGConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
                     findAllPossiblePaths = false,
                     direction = Backward(GraphToFollow.DFG),
                 ) { node ->
-                    node.overlays.any { overlay -> overlay is OpenFile }
+                    stateElement[node]?.any { it is OpenFile } == true
                 }
                 .fulfilled
                 .map { it.last() }
 
         val files =
             nodesWithOpenFileOverlay
-                .flatMap { it.overlays } // collect all "overlay" nodes
+                .flatMap { stateElement[it] ?: setOf() } // collect all "overlay" nodes
                 .filterIsInstance<OpenFile>() // discard not-relevant overlays
                 .map { it.file } // move from [OpenFile] to the corresponding [File] concept node
 

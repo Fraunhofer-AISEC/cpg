@@ -28,7 +28,9 @@ package de.fraunhofer.aisec.cpg.graph.concepts.file
 import de.fraunhofer.aisec.cpg.graph.MetadataProvider
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.newConcept
+import de.fraunhofer.aisec.cpg.graph.concepts.newConceptNoConnect
 import de.fraunhofer.aisec.cpg.graph.concepts.newOperation
+import de.fraunhofer.aisec.cpg.graph.concepts.newOperationNoConnect
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 
 /**
@@ -45,6 +47,16 @@ fun MetadataProvider.newFile(underlyingNode: Node, fileName: String) =
     )
 
 /**
+ * Creates a new [File] node. This node represents a file on a hard-disk somewhere.
+ *
+ * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
+ * @param fileName The name of the file e.g. `foo/bar/example.txt`
+ * @return The new [File] node.
+ */
+fun MetadataProvider.newFileNoConnect(underlyingNode: Node, fileName: String) =
+    newConceptNoConnect({ File(fileName = fileName) }, underlyingNode = underlyingNode)
+
+/**
  * Creates a new [OpenFile] node. This node represents opening a file.
  *
  * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
@@ -54,6 +66,20 @@ fun MetadataProvider.newFile(underlyingNode: Node, fileName: String) =
 fun MetadataProvider.newFileOpen(underlyingNode: Node, file: File) =
     newOperation(
         { underlyingNode, concept -> OpenFile(underlyingNode = underlyingNode, concept = file) },
+        underlyingNode = underlyingNode,
+        concept = file,
+    )
+
+/**
+ * Creates a new [OpenFile] node. This node represents opening a file.
+ *
+ * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
+ * @param file The [File] this operation is opening.
+ * @return The new [OpenFile] node.
+ */
+fun MetadataProvider.newFileOpenNoConnect(underlyingNode: Node, file: File) =
+    newOperationNoConnect(
+        { concept -> OpenFile(concept = file) },
         underlyingNode = underlyingNode,
         concept = file,
     )
@@ -71,6 +97,21 @@ fun MetadataProvider.newFileSetMask(underlyingNode: Node, file: File, mask: Long
         { underlyingNode, concept ->
             SetFileMask(underlyingNode = underlyingNode, concept = concept, mask = mask)
         },
+        underlyingNode = underlyingNode,
+        concept = file,
+    )
+
+/**
+ * Creates a new [SetFileMask] node. This node represents changing a files permissions.
+ *
+ * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
+ * @param file The [File] this operation is modifying.
+ * @param mask The file mask to set (in UNIX notation).
+ * @return The new [SetFileMask] node.
+ */
+fun MetadataProvider.newFileSetMaskNoConnect(underlyingNode: Node, file: File, mask: Long) =
+    newOperationNoConnect(
+        { concept -> SetFileMask(concept = concept, mask = mask) },
         underlyingNode = underlyingNode,
         concept = file,
     )
@@ -97,6 +138,25 @@ fun MetadataProvider.newFileSetFlags(
     )
 
 /**
+ * Creates a new [SetFileFlags] node.
+ *
+ * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
+ * @param file The [File] this operation is working on.
+ * @param flags The file flags to set (in UNIX notation).
+ * @return The new [SetFileFlags] node.
+ */
+fun MetadataProvider.newFileSetFlagsNoConnect(
+    underlyingNode: Node,
+    file: File,
+    flags: Set<FileAccessModeFlags>,
+) =
+    newOperationNoConnect(
+        { concept -> SetFileFlags(concept = file, flags = flags) },
+        underlyingNode = underlyingNode,
+        concept = file,
+    )
+
+/**
  * Creates a new [CloseFile] node.
  *
  * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
@@ -111,6 +171,20 @@ fun MetadataProvider.newFileClose(underlyingNode: Node, file: File) =
     )
 
 /**
+ * Creates a new [CloseFile] node.
+ *
+ * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
+ * @param file The [File] this operation is closing.
+ * @return The new [CloseFile] node.
+ */
+fun MetadataProvider.newFileCloseNoConnect(underlyingNode: Node, file: File) =
+    newOperationNoConnect(
+        { concept -> CloseFile(concept = file) },
+        underlyingNode = underlyingNode,
+        concept = file,
+    )
+
+/**
  * Creates a new [DeleteFile] node.
  *
  * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
@@ -120,6 +194,20 @@ fun MetadataProvider.newFileClose(underlyingNode: Node, file: File) =
 fun MetadataProvider.newFileDelete(underlyingNode: Node, file: File) =
     newOperation(
         { underlyingNode, concept -> DeleteFile(underlyingNode = underlyingNode, concept = file) },
+        underlyingNode = underlyingNode,
+        concept = file,
+    )
+
+/**
+ * Creates a new [DeleteFile] node.
+ *
+ * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
+ * @param file The [File] this operation is deleting.
+ * @return The new [DeleteFile] node.
+ */
+fun MetadataProvider.newFileDeleteNoConnect(underlyingNode: Node, file: File) =
+    newOperationNoConnect(
+        { concept -> DeleteFile(concept = file) },
         underlyingNode = underlyingNode,
         concept = file,
     )
@@ -140,10 +228,22 @@ fun MetadataProvider.newFileRead(underlyingNode: Node, file: File) =
             underlyingNode = underlyingNode,
             concept = file,
         )
-        .apply {
-            file.nextDFG += this
-            this.nextDFG += underlyingNode
-        }
+        .apply { this.setDFG() }
+
+/**
+ * Creates a new [ReadFile] node and attaches the DFG from the corresponding [file] to the new node
+ * and then from [this] to the created node.
+ *
+ * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
+ * @param file The [File] this operation is reading from.
+ * @return The new [ReadFile] node.
+ */
+fun MetadataProvider.newFileReadNoConnect(underlyingNode: Node, file: File) =
+    newOperationNoConnect(
+        { concept -> ReadFile(concept = file) },
+        underlyingNode = underlyingNode,
+        concept = file,
+    )
 
 /**
  * Creates a new [WriteFile] node and attaches the DFG from [what] to [this] and then from the new
@@ -162,7 +262,20 @@ fun MetadataProvider.newFileWrite(underlyingNode: Node, file: File, what: Node) 
             underlyingNode = underlyingNode,
             concept = file,
         )
-        .apply {
-            what.nextDFG += this
-            this.nextDFG += file
-        }
+        .apply { this.setDFG() }
+
+/**
+ * Creates a new [WriteFile] node and attaches the DFG from [what] to [this] and then from the new
+ * node to the [file].
+ *
+ * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
+ * @param file The [File] this operation is writing to.
+ * @param what A node being written to the [file] (usually the argument of a `write` call).
+ * @return The new [WriteFile] node.
+ */
+fun MetadataProvider.newFileWriteNoConnect(underlyingNode: Node, file: File, what: Node) =
+    newOperationNoConnect(
+        { concept -> WriteFile(concept = file, what = what) },
+        underlyingNode = underlyingNode,
+        concept = file,
+    )
