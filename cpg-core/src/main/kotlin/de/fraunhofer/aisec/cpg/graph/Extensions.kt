@@ -78,14 +78,12 @@ inline fun <reified T> Node?.allChildrenWithOverlays(
 }
 
 /**
- * Searches for all Overlay nodes that are connected to a node in this nodes sub AST and returns all nodes of
- * type [T]. For convenience, an optional predicate function [predicate] can be supplied, which will be applied
- * via [Collection.filter].
+ * Searches for all Overlay nodes that are connected to a node in this nodes sub AST and returns all
+ * nodes of type [T]. For convenience, an optional predicate function [predicate] can be supplied,
+ * which will be applied via [Collection.filter].
  */
 @JvmOverloads
-inline fun <reified T> Node?.allOverlays(
-    noinline predicate: ((T) -> Boolean)? = null
-): List<T> {
+inline fun <reified T> Node?.allOverlays(noinline predicate: ((T) -> Boolean)? = null): List<T> {
     val nodes = SubgraphWalker.flattenAST(this)
     val overlays = nodes.flatMap { it.overlays }
     val filtered = overlays.filterIsInstance<T>()

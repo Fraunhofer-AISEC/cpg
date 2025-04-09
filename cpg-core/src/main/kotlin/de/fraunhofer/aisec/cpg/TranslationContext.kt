@@ -27,14 +27,8 @@ package de.fraunhofer.aisec.cpg
 
 import de.fraunhofer.aisec.cpg.TranslationManager.AdditionalSource
 import de.fraunhofer.aisec.cpg.TranslationManager.Companion.log
-import de.fraunhofer.aisec.cpg.assumptions.Assumption
-import de.fraunhofer.aisec.cpg.assumptions.AssumptionType
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.Component
-import de.fraunhofer.aisec.cpg.graph.ContextProvider
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.scopes.Scope
-import de.fraunhofer.aisec.cpg.passes.Pass
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import java.io.File
 
