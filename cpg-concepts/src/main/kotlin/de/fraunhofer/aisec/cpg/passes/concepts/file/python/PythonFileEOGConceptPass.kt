@@ -338,14 +338,18 @@ class PythonFileEOGConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
                     findAllPossiblePaths = false,
                     direction = Backward(GraphToFollow.DFG),
                 ) { node ->
-                    stateElement[node]?.any { it is OpenFile } == true
+                    stateElement[node]?.any { it is OpenFile } == true ||
+                        node is OpenFile ||
+                        node.overlays.any { it is OpenFile }
                 }
                 .fulfilled
                 .map { it.last() }
 
         val files =
             nodesWithOpenFileOverlay
-                .flatMap { stateElement[it] ?: setOf() } // collect all "overlay" nodes
+                .flatMap {
+                    stateElement[it] ?: setOf(it, *it.overlays.toTypedArray())
+                } // collect all "overlay" nodes
                 .filterIsInstance<OpenFile>() // discard not-relevant overlays
                 .map { it.file } // move from [OpenFile] to the corresponding [File] concept node
 

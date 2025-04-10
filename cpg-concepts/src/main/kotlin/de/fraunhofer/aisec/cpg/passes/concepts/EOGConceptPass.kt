@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.insertNodeAfterwardInEOGPath
 import de.fraunhofer.aisec.cpg.helpers.functional.Lattice
 import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
+import de.fraunhofer.aisec.cpg.passes.EOGStarterLeastTUImportSorterWithCatchAfterTry
 import de.fraunhofer.aisec.cpg.passes.EOGStarterPass
 
 typealias NodeToOverlayStateElement = MapLattice.Element<Node, PowersetLattice.Element<OverlayNode>>
@@ -46,7 +47,8 @@ typealias NodeToOverlayState = MapLattice<Node, PowersetLattice.Element<OverlayN
  * An abstract pass that is used to identify and create [Concept] and [Operation] nodes in the
  * graph.
  */
-abstract class EOGConceptPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
+abstract class EOGConceptPass(ctx: TranslationContext) :
+    EOGStarterPass(ctx, sort = EOGStarterLeastTUImportSorterWithCatchAfterTry) {
 
     override fun cleanup() {
         // Nothing to do
