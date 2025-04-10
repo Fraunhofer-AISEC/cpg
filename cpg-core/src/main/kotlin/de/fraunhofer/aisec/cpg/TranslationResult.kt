@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.helpers.MeasurementHolder
 import de.fraunhofer.aisec.cpg.helpers.StatisticsHolder
+import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.passes.ImportDependencies
 import de.fraunhofer.aisec.cpg.passes.ImportResolver
 import de.fraunhofer.aisec.cpg.passes.Pass
@@ -183,4 +184,26 @@ class TranslationResult(
         const val SOURCE_LOCATIONS_TO_FRONTEND = "sourceLocationsToFrontend"
         const val DEFAULT_APPLICATION_NAME = "application"
     }
+
+    val dirtyNodes = identitySetOf<Node>()
+
+    fun markDirty(node: Node) {
+        dirtyNodes.add(node)
+    }
+
+    fun markClean(node: Node) {
+        dirtyNodes.remove(node)
+    }
+}
+
+fun Node.markDirty() {
+    translationResult?.markDirty(this)
+}
+
+fun Node.isDirty(): Boolean {
+    return translationResult?.dirtyNodes?.contains(this) == true
+}
+
+fun Node.markClean() {
+    translationResult?.markClean(this)
 }
