@@ -309,6 +309,8 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         } else {
             Util.warnWithFileLocation(ref, log, "Did not find a declaration for ${ref.name}")
         }
+
+        ref.markClean()
     }
 
     /**
@@ -370,6 +372,7 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         }
 
         current.refersTo = refersTo
+        current.markClean()
     }
 
     /**
@@ -766,6 +769,7 @@ internal fun Pass<*>.decideInvokesBasedOnCandidates(callee: Reference, call: Cal
 
     // We also set the callee's refersTo
     callee.refersTo = call.invokes.firstOrNull()
+    callee.markClean()
 }
 
 /**

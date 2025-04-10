@@ -97,9 +97,9 @@ interface HasType : LanguageProvider {
      * Adds all [types] to the list of [HasType.assignedTypes] and informs all observers about the
      * change.
      */
-    fun addAssignedTypes(types: Set<Type>) {
+    fun addAssignedTypes(types: Set<Type>): Boolean {
         if (!observerEnabled) {
-            return
+            return false
         }
 
         val changed =
@@ -109,6 +109,8 @@ interface HasType : LanguageProvider {
         if (changed) {
             informObservers(TypeObserver.ChangeType.ASSIGNED_TYPE)
         }
+
+        return changed
     }
 
     /**
@@ -211,6 +213,7 @@ interface HasType : LanguageProvider {
             if (newType is UnknownType) {
                 return
             }
+
             // Inform all type observers about the changes
             for (observer in typeObservers) {
                 observer.typeChanged(newType, this)

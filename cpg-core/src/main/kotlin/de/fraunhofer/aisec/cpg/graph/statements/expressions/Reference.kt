@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.markDirty
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
@@ -141,7 +142,9 @@ open class Reference : Expression(), HasType.TypeObserver, HasAliases {
         // Otherwise, an update in the base's type could propagate to a member (since we have a
         // PARTIAL DFG from the base to the member) and this is BAD.
         if (prevFullDFG.contains(src as Node)) {
-            this.addAssignedTypes(assignedTypes)
+            if (this.addAssignedTypes(assignedTypes)) {
+                markDirty()
+            }
         }
     }
 
