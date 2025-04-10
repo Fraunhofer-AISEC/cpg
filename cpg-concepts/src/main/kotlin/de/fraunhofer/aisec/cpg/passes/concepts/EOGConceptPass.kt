@@ -102,7 +102,10 @@ abstract class EOGConceptPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
 
         val filteredAddedOverlays =
             addedOverlays.filter { added ->
-                currentState[currentNode]?.none { existing -> added == existing } != false
+                currentState[currentNode]?.none { existing -> added == existing } != false &&
+                    currentNode.overlays.none { existing ->
+                        (existing as? OverlayNode)?.equalWithoutUnderlying(added) == true
+                    }
             }
 
         return lattice.lub(

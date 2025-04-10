@@ -49,6 +49,12 @@ abstract class Operation(
         return other is Operation && super.equals(other) && other.concept == this.concept
     }
 
+    override fun equalWithoutUnderlying(other: OverlayNode): Boolean {
+        return other is Operation &&
+            super.equalWithoutUnderlying(other) &&
+            other.concept == this.concept
+    }
+
     override fun hashCode() = Objects.hash(super.hashCode(), concept)
 
     open fun setDFG() {

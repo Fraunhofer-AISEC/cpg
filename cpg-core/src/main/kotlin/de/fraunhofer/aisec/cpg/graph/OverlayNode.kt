@@ -55,4 +55,8 @@ abstract class OverlayNode() : Node() {
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), underlyingNode)
+
+    open fun equalWithoutUnderlying(other: OverlayNode): Boolean {
+        return super.equals(other)
+    }
 }
