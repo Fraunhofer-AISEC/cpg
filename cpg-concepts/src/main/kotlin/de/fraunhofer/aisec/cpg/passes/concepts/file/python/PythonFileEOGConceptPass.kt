@@ -36,7 +36,6 @@ import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.DFGPass
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
 import de.fraunhofer.aisec.cpg.passes.concepts.EOGConceptPass
-import de.fraunhofer.aisec.cpg.passes.concepts.NodeToOverlayState
 import de.fraunhofer.aisec.cpg.passes.concepts.NodeToOverlayStateElement
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLate
@@ -62,33 +61,66 @@ class PythonFileEOGConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
          *
          * should both operate on the same [File] concept node.
          *
-         * This is currently done per [Component]. TODO: Is
-         * [de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration] better?
+         * This is currently done per [Component].
          */
+        // TODO: Is TranslationUnitDeclaration better?
         internal val fileCache = mutableMapOf<Component?, MutableMap<String, File>>()
     }
 
-    override fun handleNode(
-        lattice: NodeToOverlayState,
+    override fun handleMemberCallExpression(
         state: NodeToOverlayStateElement,
-        node: Node,
-    ): Collection<OverlayNode> {
-        // Since we cannot directly depend on the Python frontend, we have to check the language
-        // here based on the node's language.
-        if (node.language.name.localName != "PythonLanguage") {
-            return emptySet()
-        }
-        return when (node) {
-            is CallExpression -> handleCall(lattice, state, node)
-            else -> emptySet()
-        }
-    }
+        callExpression: MemberCallExpression,
+    ): Collection<OverlayNode> =
+        callExpression.base
+            ?.let { findFile(it, state) }
+            ?.mapNotNull { fileNode ->
+                when (callExpression.name.localName) {
+                    "__enter__" -> {
+                        /* TODO: what about this? we handle __exit__ and create a CloseFile. However, we already have a OpenFile attached at the `open` */
+                        null
+                    }
+                    "__exit__" ->
+                        newFileCloseNoConnect(underlyingNode = callExpression, file = fileNode)
+                    "read" -> newFileReadNoConnect(underlyingNode = callExpression, file = fileNode)
+                    "write" -> {
+                        val arg = callExpression.arguments.getOrNull(0)
+                        if (callExpression.arguments.size != 1 || arg == null) {
+                            Util.errorWithFileLocation(
+                                callExpression,
+                                log,
+                                "Failed to identify the write argument. Ignoring the `write` call.",
+                            )
+                            return emptySet()
+                        }
+                        newFileWriteNoConnect(
+                            underlyingNode = callExpression,
+                            file = fileNode,
+                            what = arg,
+                        )
+                    }
+                    else -> {
+                        Util.warnWithFileLocation(
+                            node = callExpression,
+                            log = log,
+                            format =
+                                "Handling of \"{}\" is not yet implemented. No concept node is created.",
+                            callExpression,
+                        )
+                        null
+                    }
+                }
+            } ?: listOf()
 
-    private fun handleCall(
-        lattice: NodeToOverlayState,
+    override fun handleCallExpression(
         state: NodeToOverlayStateElement,
         callExpression: CallExpression,
     ): Collection<OverlayNode> {
+        // Since we cannot directly depend on the Python frontend, we have to check the language
+        // here based on the node's language.
+        if (callExpression.language.name.localName != "PythonLanguage") {
+            return emptySet()
+        }
+
         val name = callExpression.name
 
         if (name.toString() == "open") {
@@ -124,55 +156,6 @@ class PythonFileEOGConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
                 )
             val open = newFileOpenNoConnect(underlyingNode = callExpression, file = newFileNode)
             return if (isNewFile) setOf(setFlagsOp, open, newFileNode) else setOf(setFlagsOp, open)
-        } else if (callExpression is MemberCallExpression) {
-            val operations: List<Operation> =
-                callExpression.base
-                    ?.let { findFile(it, state) }
-                    ?.mapNotNull { fileNode ->
-                        when (callExpression.name.localName) {
-                            "__enter__" -> {
-                                /* TODO: what about this? we handle __exit__ and create a CloseFile. However, we already have a OpenFile attached at the `open` */
-                                null
-                            }
-                            "__exit__" ->
-                                newFileCloseNoConnect(
-                                    underlyingNode = callExpression,
-                                    file = fileNode,
-                                )
-                            "read" ->
-                                newFileReadNoConnect(
-                                    underlyingNode = callExpression,
-                                    file = fileNode,
-                                )
-                            "write" -> {
-                                val arg = callExpression.arguments.getOrNull(0)
-                                if (callExpression.arguments.size != 1 || arg == null) {
-                                    Util.errorWithFileLocation(
-                                        callExpression,
-                                        log,
-                                        "Failed to identify the write argument. Ignoring the `write` call.",
-                                    )
-                                    return emptySet()
-                                }
-                                newFileWriteNoConnect(
-                                    underlyingNode = callExpression,
-                                    file = fileNode,
-                                    what = arg,
-                                )
-                            }
-                            else -> {
-                                Util.warnWithFileLocation(
-                                    node = callExpression,
-                                    log = log,
-                                    format =
-                                        "Handling of \"{}\" is not yet implemented. No concept node is created.",
-                                    callExpression,
-                                )
-                                null
-                            }
-                        }
-                    } ?: listOf()
-            return operations
         } else {
             when (callExpression.callee.name.toString()) {
                 "os.open" -> {

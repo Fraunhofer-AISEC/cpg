@@ -35,6 +35,8 @@ import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.edges.flows.insertNodeAfterwardInEOGPath
 import de.fraunhofer.aisec.cpg.graph.firstParentOrNull
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.helpers.functional.Lattice
 import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
@@ -86,15 +88,54 @@ abstract class EOGConceptPass(ctx: TranslationContext) :
         }
     }
 
+    open fun handleCallExpression(
+        state: NodeToOverlayStateElement,
+        node: CallExpression,
+    ): Collection<OverlayNode> {
+        return emptySet()
+    }
+
+    open fun handleCallExpression(
+        lattice: NodeToOverlayState,
+        state: NodeToOverlayStateElement,
+        node: CallExpression,
+    ): Collection<OverlayNode> {
+        return emptySet()
+    }
+
+    open fun handleMemberCallExpression(
+        state: NodeToOverlayStateElement,
+        node: MemberCallExpression,
+    ): Collection<OverlayNode> {
+        return emptySet()
+    }
+
+    open fun handleMemberCallExpression(
+        lattice: NodeToOverlayState,
+        state: NodeToOverlayStateElement,
+        node: MemberCallExpression,
+    ): Collection<OverlayNode> {
+        return emptySet()
+    }
+
     /**
      * This function is called for each node in the graph. It needs to be overridden by subclasses
      * to handle the specific node.
      */
-    abstract fun handleNode(
+    open fun handleNode(
         lattice: NodeToOverlayState,
         state: NodeToOverlayStateElement,
         node: Node,
-    ): Collection<OverlayNode>
+    ): Collection<OverlayNode> {
+        return when (node) {
+            is MemberCallExpression ->
+                handleMemberCallExpression(lattice, state, node) +
+                    handleMemberCallExpression(state, node)
+            is CallExpression ->
+                handleCallExpression(lattice, state, node) + handleCallExpression(state, node)
+            else -> emptySet()
+        }
+    }
 
     open fun getInitialState(lattice: NodeToOverlayState, node: Node): NodeToOverlayStateElement {
         return lattice.bottom
