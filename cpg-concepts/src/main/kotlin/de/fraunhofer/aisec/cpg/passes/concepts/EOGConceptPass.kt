@@ -40,16 +40,16 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.edges.flows.insertNodeAfterwardInEOGPath
 import de.fraunhofer.aisec.cpg.graph.firstParentOrNull
 import de.fraunhofer.aisec.cpg.graph.followDFGEdgesUntilHit
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.helpers.functional.Lattice
 import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
 import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass
 import de.fraunhofer.aisec.cpg.passes.DFGPass
+import de.fraunhofer.aisec.cpg.passes.EOGIteratorTask
 import de.fraunhofer.aisec.cpg.passes.EOGStarterLeastTUImportSorterWithCatchAfterTry
 import de.fraunhofer.aisec.cpg.passes.EOGStarterPass
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
+import de.fraunhofer.aisec.cpg.passes.TaskBasedPass
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import kotlin.collections.set
 
@@ -75,10 +75,13 @@ typealias NodeToOverlayState = MapLattice<Node, PowersetLattice.Element<OverlayN
 @DependsOn(DFGPass::class)
 @DependsOn(ControlFlowSensitiveDFGPass::class, softDependency = true)
 open class EOGConceptPass(ctx: TranslationContext) :
-    EOGStarterPass(ctx, sort = EOGStarterLeastTUImportSorterWithCatchAfterTry) {
+    EOGStarterPass(ctx, sort = EOGStarterLeastTUImportSorterWithCatchAfterTry), TaskBasedPass {
 
     /** Stores the current component in case we need it to look up some stuff. */
     var currentComponent: Component? = null
+
+    val tasks: List<EOGIteratorTask<Node, EOGConceptPass, OverlayNode>> =
+        this.getTasks().filterIsInstance<EOGIteratorTask<Node, EOGConceptPass, OverlayNode>>()
 
     override fun cleanup() {
         // Nothing to do
@@ -111,78 +114,6 @@ open class EOGConceptPass(ctx: TranslationContext) :
         }
     }
 
-    /**
-     * Generates [OverlayNode]s belonging to the given [node]. The [state] contains a map of nodes
-     * to their respective [OverlayNode]s created by this instance of the pass.
-     */
-    open fun handleCallExpression(
-        state: NodeToOverlayStateElement,
-        node: CallExpression,
-    ): Collection<OverlayNode> {
-        return emptySet()
-    }
-
-    /**
-     * Generates [OverlayNode]s belonging to the given [node]. The [state] contains a map of nodes
-     * to their respective [OverlayNode]s created by this instance of the pass.
-     *
-     * This is the advanced version and passes the [lattice] in case the [state] should be
-     * manipulated. We do not recommend using this!
-     */
-    open fun handleCallExpression(
-        lattice: NodeToOverlayState,
-        state: NodeToOverlayStateElement,
-        node: CallExpression,
-    ): Collection<OverlayNode> {
-        return emptySet()
-    }
-
-    /**
-     * Generates [OverlayNode]s belonging to the given [node]. The [state] contains a map of nodes
-     * to their respective [OverlayNode]s created by this instance of the pass.
-     */
-    open fun handleMemberCallExpression(
-        state: NodeToOverlayStateElement,
-        node: MemberCallExpression,
-    ): Collection<OverlayNode> {
-        return emptySet()
-    }
-
-    /**
-     * Generates [OverlayNode]s belonging to the given [node]. The [state] contains a map of nodes
-     * to their respective [OverlayNode]s created by this instance of the pass.
-     *
-     * This is the advanced version and passes the [lattice] in case the [state] should be
-     * manipulated. We do not recommend using this!
-     */
-    open fun handleMemberCallExpression(
-        lattice: NodeToOverlayState,
-        state: NodeToOverlayStateElement,
-        node: MemberCallExpression,
-    ): Collection<OverlayNode> {
-        return emptySet()
-    }
-
-    /**
-     * This function is called for each node in the graph. The specific nodes are always handled in
-     * the same order. It calls the basic and advanced version of the handleX-methods.
-     */
-    // TODO: Once we use tasks, we iterate over all tasks registered to this pass.
-    fun handleNode(
-        lattice: NodeToOverlayState,
-        state: NodeToOverlayStateElement,
-        node: Node,
-    ): Collection<OverlayNode> {
-        return when (node) {
-            is MemberCallExpression ->
-                handleMemberCallExpression(lattice, state, node) +
-                    handleMemberCallExpression(state, node)
-            is CallExpression ->
-                handleCallExpression(lattice, state, node) + handleCallExpression(state, node)
-            else -> emptySet()
-        }
-    }
-
     /** Generates the initial [NodeToOverlayStateElement] state. */
     // TODO: Provide an interface for Tasks, so each one can modify the state as needed before
     // starting with the iteration or make this method non-open.
@@ -198,7 +129,11 @@ open class EOGConceptPass(ctx: TranslationContext) :
     ): NodeToOverlayStateElement {
         val lattice = lattice as? NodeToOverlayState ?: return currentState
         val currentNode = currentEdge.end
-        val addedOverlays = handleNode(lattice, currentState, currentNode).toSet()
+        val addedOverlays =
+            tasks.fold(mutableSetOf<OverlayNode>()) { set, task ->
+                set.addAll(task.handleNode(lattice, currentState, currentNode))
+                set
+            }
 
         // This is some magic to filter out overlays that are already in the state (equal but not
         // identical) for the same Node. It also filters the nodes if they have already been created

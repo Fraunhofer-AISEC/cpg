@@ -28,7 +28,9 @@ package de.fraunhofer.aisec.cpg.concepts.file
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.file.*
+import de.fraunhofer.aisec.cpg.passes.PassConfiguration
 import de.fraunhofer.aisec.cpg.passes.concepts.file.python.PythonFileConceptPass
+import de.fraunhofer.aisec.cpg.passes.concepts.file.python.PythonFileConceptTask
 import de.fraunhofer.aisec.cpg.query.Must
 import de.fraunhofer.aisec.cpg.query.dataFlow
 import de.fraunhofer.aisec.cpg.query.executionPath
@@ -54,6 +56,9 @@ class FileConceptTest : BaseTest() {
             ) {
                 it.registerLanguage<PythonLanguage>()
                 it.registerPass<PythonFileConceptPass>()
+                it.configurePass<PythonFileConceptPass>(
+                    PassConfiguration().registerTask<PythonFileConceptTask>()
+                )
                 it.symbols(mapOf("PYTHON_PLATFORM" to "linux"))
             }
         assertNotNull(result)
@@ -134,6 +139,9 @@ class FileConceptTest : BaseTest() {
             ) {
                 it.registerLanguage<PythonLanguage>()
                 it.registerPass<PythonFileConceptPass>()
+                it.configurePass<PythonFileConceptPass>(
+                    PassConfiguration().registerTask<PythonFileConceptTask>()
+                )
                 it.symbols(mapOf("PYTHON_PLATFORM" to "linux"))
             }
         assertNotNull(result)
@@ -187,6 +195,9 @@ class FileConceptTest : BaseTest() {
             ) {
                 it.registerLanguage<PythonLanguage>()
                 it.registerPass<PythonFileConceptPass>()
+                it.configurePass<PythonFileConceptPass>(
+                    PassConfiguration().registerTask<PythonFileConceptTask>()
+                )
                 it.symbols(mapOf("PYTHON_PLATFORM" to "linux"))
             }
         assertNotNull(result)
@@ -241,6 +252,9 @@ class FileConceptTest : BaseTest() {
             ) {
                 it.registerLanguage<PythonLanguage>()
                 it.registerPass<PythonFileConceptPass>()
+                it.configurePass<PythonFileConceptPass>(
+                    PassConfiguration().registerTask<PythonFileConceptTask>()
+                )
                 it.symbols(mapOf("PYTHON_PLATFORM" to "linux"))
             }
         assertNotNull(result)
@@ -289,6 +303,9 @@ class FileConceptTest : BaseTest() {
             ) {
                 it.registerLanguage<PythonLanguage>()
                 it.registerPass<PythonFileConceptPass>()
+                it.configurePass<PythonFileConceptPass>(
+                    PassConfiguration().registerTask<PythonFileConceptTask>()
+                )
                 it.symbols(mapOf("PYTHON_PLATFORM" to "linux"))
             }
         assertNotNull(result)
@@ -330,6 +347,9 @@ class FileConceptTest : BaseTest() {
             ) {
                 it.registerLanguage<PythonLanguage>()
                 it.registerPass<PythonFileConceptPass>()
+                it.configurePass<PythonFileConceptPass>(
+                    PassConfiguration().registerTask<PythonFileConceptTask>()
+                )
                 it.symbols(mapOf("PYTHON_PLATFORM" to "linux"))
             }
         assertNotNull(result)
@@ -360,6 +380,9 @@ class FileConceptTest : BaseTest() {
             ) {
                 it.registerLanguage<PythonLanguage>()
                 it.registerPass<PythonFileConceptPass>()
+                it.configurePass<PythonFileConceptPass>(
+                    PassConfiguration().registerTask<PythonFileConceptTask>()
+                )
                 it.symbols(mapOf("PYTHON_PLATFORM" to "linux"))
             }
         assertNotNull(result)
