@@ -44,6 +44,21 @@ inline fun <reified ConceptClass : Concept> MetadataProvider.newConcept(
     }
 
 /**
+ * This function creates a new [Concept] node based on [ConceptClass]. It is neither connected by
+ * the EOG nor the DFG.
+ */
+inline fun <reified ConceptClass : Concept> MetadataProvider.newConceptNoConnect(
+    constructor: () -> (ConceptClass),
+    underlyingNode: Node,
+): ConceptClass =
+    constructor().apply {
+        // Note: Update the conceptBuildHelper if you change this.
+        this.codeAndLocationFrom(underlyingNode)
+        this.name = Name("${ConceptClass::class.simpleName}", underlyingNode.name)
+        NodeBuilder.log(this)
+    }
+
+/**
  * This function creates a new [Operation] node based on [OperationClass]. It is inserted in the EOG
  * after the [underlyingNode] but it is not connected by the DFG.
  */
@@ -62,6 +77,26 @@ inline fun <reified OperationClass : Operation, ConceptClass : Concept> Metadata
             )
         concept.ops += this
         underlyingNode.insertNodeAfterwardInEOGPath(this)
+        NodeBuilder.log(this)
+    }
+
+/**
+ * This function creates a new [Operation] node based on [OperationClass]. It is inserted in the EOG
+ * after the [underlyingNode] but it is not connected by the DFG.
+ */
+inline fun <reified OperationClass : Operation, ConceptClass : Concept> MetadataProvider
+    .newOperationNoConnect(
+    constructor: (concept: ConceptClass) -> (OperationClass),
+    underlyingNode: Node,
+    concept: ConceptClass,
+): OperationClass =
+    constructor(concept).apply {
+        this.codeAndLocationFrom(underlyingNode)
+        this.name =
+            Name(
+                "${OperationClass::class.simpleName}".replaceFirstChar { it.lowercaseChar() },
+                concept.name,
+            )
         NodeBuilder.log(this)
     }
 
