@@ -23,14 +23,18 @@
  *                    \______/ \__|       \______/
  *
  */
+@file:Suppress("CONTEXT_RECEIVERS_DEPRECATED")
+
 package de.fraunhofer.aisec.cpg.passes.concepts.memory.cxx
 
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.arch.OperatingSystemArchitecture
 import de.fraunhofer.aisec.cpg.graph.concepts.arch.POSIX
 import de.fraunhofer.aisec.cpg.graph.concepts.arch.Win32
+import de.fraunhofer.aisec.cpg.graph.concepts.flows.EntryPoint
 import de.fraunhofer.aisec.cpg.graph.concepts.flows.LibraryEntryPoint
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.DynamicLoading
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.LoadLibrary
@@ -48,7 +52,11 @@ import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass
 import de.fraunhofer.aisec.cpg.passes.DynamicInvokeResolver
 import de.fraunhofer.aisec.cpg.passes.concepts.ConceptPass
+import de.fraunhofer.aisec.cpg.passes.concepts.Consumes
+import de.fraunhofer.aisec.cpg.passes.concepts.Produces
+import de.fraunhofer.aisec.cpg.passes.concepts.RequiresLanguage
 import de.fraunhofer.aisec.cpg.passes.concepts.flows.cxx.CXXEntryPointsPass
+import de.fraunhofer.aisec.cpg.passes.concepts.getConceptOrCreate
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 import kotlin.io.path.Path
@@ -62,125 +70,134 @@ class CXXDynamicLoadingPass(ctx: TranslationContext) : ConceptPass(ctx) {
 
     override fun handleNode(node: Node, tu: TranslationUnitDeclaration) {
         when (node) {
-            is CallExpression -> handleCallExpression(node, tu)
+            is CallExpression -> handleCallExpression(node)
         }
     }
 
     /** Handles a [CallExpression] node and checks if it is a dynamic loading operation. */
-    private fun handleCallExpression(call: CallExpression, tu: TranslationUnitDeclaration) {
-        val concept = tu.getConceptOrCreate<DynamicLoading>()
-
-        val ops =
-            when (call.name.toString()) {
-                "dlopen" -> handleLibraryLoad(call, concept, os = tu.getConceptOrCreate<POSIX>())
-                "LoadLibraryA",
-                "LoadLibraryW",
-                "LoadLibraryExA",
-                "LoadLibraryExW" ->
-                    handleLibraryLoad(call, concept, os = tu.getConceptOrCreate<Win32>())
-                "dlsym" -> handleLoadFunction(call, concept)
-                else -> return
-            }
-    }
-
-    /**
-     * This function handles the loading of a function. It creates a [LoadSymbol] concept and adds
-     * it to the [DynamicLoading] concept. The tricky part is to find the [FunctionDeclaration] that
-     * is loaded.
-     */
-    private fun handleLoadFunction(
-        call: CallExpression,
-        concept: DynamicLoading,
-    ): List<LoadSymbol<out ValueDeclaration>> {
-        // The first argument is the handle to the library. We can follow the DFG back to find the
-        // call to dlopen.
-        val path =
-            call.arguments.getOrNull(0)?.followPrevDFG {
-                it is CallExpression && it.operationNodes.any { it is LoadLibrary }
-            }
-
-        val loadLibrary =
-            path?.lastOrNull()?.operationNodes?.filterIsInstance<LoadLibrary>()?.singleOrNull()
-
-        val symbolName = call.arguments.getOrNull(1)?.evaluate() as? String
-        var candidates = loadLibrary?.findSymbol(symbolName)
-
-        // We need to create one operation for each nextDFG (hopefully there is only one). This
-        // helps us to determine the type of the operation.
-        call.nextFullDFG.filterIsInstance<Expression>().forEach { assignee ->
-            if (assignee.type is FunctionPointerType) {
-                candidates = candidates?.filterIsInstance<FunctionDeclaration>()
-                newLoadSymbol(
-                    underlyingNode = call,
-                    concept = concept,
-                    what = candidates?.singleOrNull(),
-                    loader = loadLibrary,
-                    os = loadLibrary?.os,
-                )
-            } else {
-                candidates = candidates?.filterIsInstance<VariableDeclaration>()
-                newLoadSymbol(
-                    underlyingNode = call,
-                    concept = concept,
-                    what = candidates?.singleOrNull(),
-                    loader = loadLibrary,
-                    os = loadLibrary?.os,
-                )
-            }
-
-            // We can help the dynamic invoke resolver by adding a DFG path from the declaration to
-            // the "return value" of dlsym
-            candidates?.forEach {
-                call.prevDFGEdges.addContextSensitive(it, callingContext = CallingContextOut(call))
-            }
-        }
-        return listOf()
-    }
-
-    /**
-     * This function handles the loading of a library. It creates a [LoadLibrary] concept and adds
-     * it to the [DynamicLoading] concept. The tricky part is to find the [Component] that
-     * represents the [LoadLibrary.what].
-     */
-    private fun handleLibraryLoad(
-        call: CallExpression,
-        concept: DynamicLoading,
-        os: OperatingSystemArchitecture,
-    ): List<LoadLibrary> {
-        // The first argument of dlopen is the path to the library. We can try to evaluate the
-        // argument to check if it's a constant string.
-        val path = call.arguments.getOrNull(0)?.evaluate() as? String
-
-        // We can check, whether we have a matching component based on the base filename
-        val component =
-            path?.let {
-                call.translationResult?.findComponentForLibrary(
-                    Path(it).fileName.nameWithoutExtension.toString()
-                )
-            }
-
-        // Look for library entry points that match the operating system architecture
-        val entryPoints =
-            component?.conceptNodes?.filterIsInstance<LibraryEntryPoint>()?.filter { it.os == os }
-                ?: emptyList()
-
-        // Create the op
-        newLoadLibrary(
-            underlyingNode = call,
-            concept = concept,
-            what = component,
-            entryPoints = entryPoints,
-            os = os,
-        )
-
-        return listOf()
-    }
-
-    fun TranslationResult.findComponentForLibrary(libraryName: String): Component? {
-        return this.components.find { it.name.localName == libraryName }
+    private fun handleCallExpression(call: CallExpression) {
+        call.addDynamicLoading()
     }
 
     override fun cleanup() {
         // Nothing to do
     }
+}
+
+/**
+ * Adds the [DynamicLoading] concept to the [CallExpression] if it is a dynamic loading operation.
+ */
+context(ContextProvider)
+@Produces(DynamicLoading::class)
+@Consumes(EntryPoint::class)
+@RequiresLanguage("CPPLanguage")
+fun CallExpression.addDynamicLoading() {
+    val tu = translationUnit ?: throw TranslationException("No translation unit found")
+    val concept = tu.getConceptOrCreate<DynamicLoading>()
+
+    when (name.toString()) {
+        "dlopen" -> handleLibraryLoad(concept, os = tu.getConceptOrCreate<POSIX>())
+        "LoadLibraryA",
+        "LoadLibraryW",
+        "LoadLibraryExA",
+        "LoadLibraryExW" -> handleLibraryLoad(concept, os = tu.getConceptOrCreate<Win32>())
+        "dlsym" -> handleLoadFunction(concept)
+        else -> return
+    }
+}
+
+/**
+ * This function handles the loading of a function. It creates a [LoadSymbol] concept and adds it to
+ * the [DynamicLoading] concept. The tricky part is to find the [FunctionDeclaration] that is
+ * loaded.
+ */
+context(ContextProvider)
+private fun CallExpression.handleLoadFunction(
+    concept: DynamicLoading
+): List<LoadSymbol<out ValueDeclaration>> {
+    // The first argument is the handle to the library. We can follow the DFG back to find the
+    // call to dlopen.
+    val path =
+        arguments.getOrNull(0)?.followPrevDFG {
+            it is CallExpression && it.operationNodes.any { it is LoadLibrary }
+        }
+
+    val loadLibrary =
+        path?.lastOrNull()?.operationNodes?.filterIsInstance<LoadLibrary>()?.singleOrNull()
+
+    val symbolName = arguments.getOrNull(1)?.evaluate() as? String
+    var candidates = loadLibrary?.findSymbol(symbolName)
+
+    // We need to create one operation for each nextDFG (hopefully there is only one). This
+    // helps us to determine the type of the operation.
+    nextFullDFG.filterIsInstance<Expression>().forEach { assignee ->
+        if (assignee.type is FunctionPointerType) {
+            candidates = candidates?.filterIsInstance<FunctionDeclaration>()
+            newLoadSymbol(
+                underlyingNode = this,
+                concept = concept,
+                what = candidates?.singleOrNull(),
+                loader = loadLibrary,
+                os = loadLibrary?.os,
+            )
+        } else {
+            candidates = candidates?.filterIsInstance<VariableDeclaration>()
+            newLoadSymbol(
+                underlyingNode = this,
+                concept = concept,
+                what = candidates?.singleOrNull(),
+                loader = loadLibrary,
+                os = loadLibrary?.os,
+            )
+        }
+
+        // We can help the dynamic invoke resolver by adding a DFG path from the declaration to
+        // the "return value" of dlsym
+        candidates?.forEach {
+            prevDFGEdges.addContextSensitive(it, callingContext = CallingContextOut(this))
+        }
+    }
+    return listOf()
+}
+
+/**
+ * This function handles the loading of a library. It creates a [LoadLibrary] concept and adds it to
+ * the [DynamicLoading] concept. The tricky part is to find the [Component] that represents the
+ * [LoadLibrary.what].
+ */
+private fun CallExpression.handleLibraryLoad(
+    concept: DynamicLoading,
+    os: OperatingSystemArchitecture,
+): List<LoadLibrary> {
+    // The first argument of dlopen is the path to the library. We can try to evaluate the
+    // argument to check if it's a constant string.
+    val path = arguments.getOrNull(0)?.evaluate() as? String
+
+    // We can check, whether we have a matching component based on the base filename
+    val component =
+        path?.let {
+            translationResult?.findComponentForLibrary(
+                Path(it).fileName.nameWithoutExtension.toString()
+            )
+        }
+
+    // Look for library entry points that match the operating system architecture
+    val entryPoints =
+        component?.conceptNodes?.filterIsInstance<LibraryEntryPoint>()?.filter { it.os == os }
+            ?: emptyList()
+
+    // Create the op
+    newLoadLibrary(
+        underlyingNode = this,
+        concept = concept,
+        what = component,
+        entryPoints = entryPoints,
+        os = os,
+    )
+
+    return listOf()
+}
+
+fun TranslationResult.findComponentForLibrary(libraryName: String): Component? {
+    return this.components.find { it.name.localName == libraryName }
 }
