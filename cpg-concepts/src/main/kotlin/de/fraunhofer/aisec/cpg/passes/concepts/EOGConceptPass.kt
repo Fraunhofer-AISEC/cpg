@@ -73,7 +73,7 @@ typealias NodeToOverlayState = MapLattice<Node, PowersetLattice.Element<OverlayN
  */
 @DependsOn(EvaluationOrderGraphPass::class)
 @DependsOn(DFGPass::class)
-@DependsOn(ControlFlowSensitiveDFGPass::class)
+@DependsOn(ControlFlowSensitiveDFGPass::class, softDependency = true)
 open class EOGConceptPass(ctx: TranslationContext) :
     EOGStarterPass(ctx, sort = EOGStarterLeastTUImportSorterWithCatchAfterTry) {
 
