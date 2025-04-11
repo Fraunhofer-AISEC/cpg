@@ -27,14 +27,16 @@ package de.fraunhofer.aisec.cpg.passes.concepts.file.python
 
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.concepts.file.*
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.DFGPass
-import de.fraunhofer.aisec.cpg.passes.concepts.ConceptPass
+import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
+import de.fraunhofer.aisec.cpg.passes.concepts.EOGConceptPass
+import de.fraunhofer.aisec.cpg.passes.concepts.NodeToOverlayStateElement
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLate
 
@@ -45,177 +47,220 @@ import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLate
  */
 @ExecuteLate
 @DependsOn(DFGPass::class)
-class PythonFileConceptPass(ctx: TranslationContext) : ConceptPass(ctx) {
-    /**
-     * Maps file names to [File] nodes. This is required to prevent the creation of multiple [File]
-     * nodes when API calls do not have a file object but a file name.
-     *
-     * ```python
-     * os.chmod("foo.txt", ...
-     * os.open("foo.txt", ...
-     * ```
-     *
-     * should both operate on the same [File] concept node.
-     */
-    internal val fileCache = mutableMapOf<String, File>()
-
-    override fun handleNode(node: Node, tu: TranslationUnitDeclaration) {
-        // Since we cannot directly depend on the Python frontend, we have to check the language
-        // here
-        // based on the node's language.
-        if (node.language.name.localName != "PythonLanguage") {
-            return
-        }
-        when (node) {
-            is CallExpression -> handleCall(node)
-        }
+@DependsOn(EvaluationOrderGraphPass::class)
+class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
+    companion object {
+        /**
+         * Maps file names to [File] nodes. This is required to prevent the creation of multiple
+         * [File] nodes when API calls do not have a file object but a file name.
+         *
+         * ```python
+         * os.chmod("foo.txt", ...
+         * os.open("foo.txt", ...
+         * ```
+         *
+         * should both operate on the same [File] concept node.
+         *
+         * This is currently done per [Component].
+         */
+        // TODO: Is TranslationUnitDeclaration better?
+        internal val fileCache = mutableMapOf<Component?, MutableMap<String, File>>()
     }
 
-    private fun handleCall(callExpression: CallExpression) {
-        val name = callExpression.name
+    override fun handleMemberCallExpression(
+        state: NodeToOverlayStateElement,
+        callExpression: MemberCallExpression,
+    ): Collection<OverlayNode> {
+        // Since we cannot directly depend on the Python frontend, we have to check the language
+        // here based on the node's language.
+        if (callExpression.language.name.localName != "PythonLanguage") {
+            return emptySet()
+        }
 
-        if (name.toString() == "open") {
-            /**
-             * This matches when parsing code like:
-             * ```python
-             * open('foo.bar', 'r')
-             * ```
-             *
-             * We model this with a [File] node to represent the [Concept] and a [OpenFile] node for
-             * the opening operation.
-             *
-             * TODO: opener https://docs.python.org/3/library/functions.html#open
-             */
-            val fileName = getFileName(callExpression, "file")
-            if (fileName == null) {
-                Util.errorWithFileLocation(
-                    callExpression,
-                    log,
-                    "Failed to parse file name. Ignoring the `open` call.",
-                )
-                return
-            }
-            val newFileNode: File = getOrCreateFile(fileName, callExpression)
+        return callExpression.base
+            ?.let { findFile(it, state) }
+            ?.mapNotNull { fileNode ->
+                when (callExpression.name.localName) {
+                    "__enter__" -> {
+                        /* TODO: what about this? we handle __exit__ and create a CloseFile. However, we already have a OpenFile attached at the `open` */
+                        null
+                    }
 
-            val mode = getBuiltinOpenMode(callExpression) ?: "r" // default is 'r'
-            val flags = translateBuiltinOpenMode(mode)
-            newFileSetFlags(underlyingNode = callExpression, file = newFileNode, flags = flags)
-            newFileOpen(underlyingNode = callExpression, file = newFileNode)
-        } else if (callExpression is MemberCallExpression) {
-            callExpression.base
-                ?.let { findFile(it) }
-                ?.forEach { fileNode ->
-                    when (callExpression.name.localName) {
-                        "__enter__" -> {
-                            /* TODO: what about this? we handle __exit__ and create a CloseFile. However, we already have a OpenFile attached at the `open` */
-                        }
-                        "__exit__" -> newFileClose(underlyingNode = callExpression, file = fileNode)
-                        "read" -> newFileRead(underlyingNode = callExpression, file = fileNode)
-                        "write" -> {
-                            val arg = callExpression.arguments.getOrNull(0)
-                            if (callExpression.arguments.size != 1 || arg == null) {
-                                Util.errorWithFileLocation(
-                                    callExpression,
-                                    log,
-                                    "Failed to identify the write argument. Ignoring the `write` call.",
-                                )
-                                return
-                            }
-                            newFileWrite(
-                                underlyingNode = callExpression,
-                                file = fileNode,
-                                what = arg,
-                            )
-                        }
-                        else ->
-                            Util.warnWithFileLocation(
-                                node = callExpression,
-                                log = log,
-                                format =
-                                    "Handling of \"{}\" is not yet implemented. No concept node is created.",
+                    "__exit__" ->
+                        newFileCloseNoConnect(underlyingNode = callExpression, file = fileNode)
+
+                    "read" -> newFileReadNoConnect(underlyingNode = callExpression, file = fileNode)
+                    "write" -> {
+                        val arg = callExpression.arguments.getOrNull(0)
+                        if (callExpression.arguments.size != 1 || arg == null) {
+                            Util.errorWithFileLocation(
                                 callExpression,
+                                log,
+                                "Failed to identify the write argument. Ignoring the `write` call.",
                             )
+                            return emptySet()
+                        }
+                        newFileWriteNoConnect(
+                            underlyingNode = callExpression,
+                            file = fileNode,
+                            what = arg,
+                        )
+                    }
+
+                    else -> {
+                        Util.warnWithFileLocation(
+                            node = callExpression,
+                            log = log,
+                            format =
+                                "Handling of \"{}\" is not yet implemented. No concept node is created.",
+                            callExpression,
+                        )
+                        null
                     }
                 }
-        } else {
-            when (callExpression.callee.name.toString()) {
-                "os.open" -> {
-                    val fileName = getFileName(callExpression, "path")
-                    if (fileName == null) {
-                        Util.errorWithFileLocation(
-                            callExpression,
-                            log,
-                            "Failed to parse file name. Ignoring the `os.open` call.",
-                        )
-                        return
-                    }
-                    val newFileNode = getOrCreateFile(fileName, callExpression)
+            } ?: listOf()
+    }
 
+    override fun handleCallExpression(
+        state: NodeToOverlayStateElement,
+        callExpression: CallExpression,
+    ): Collection<OverlayNode> {
+        // Since we cannot directly depend on the Python frontend, we have to check the language
+        // here based on the node's language.
+        if (callExpression.language.name.localName != "PythonLanguage") {
+            return emptySet()
+        }
+
+        return when (callExpression.callee.name.toString()) {
+            "open" -> {
+                /**
+                 * This matches when parsing code like:
+                 * ```python
+                 * open('foo.bar', 'r')
+                 * ```
+                 *
+                 * We model this with a [File] node to represent the [Concept] and a [OpenFile] node
+                 * for the opening operation.
+                 *
+                 * TODO: opener https://docs.python.org/3/library/functions.html#open
+                 */
+                val fileName = getFileName(callExpression, "file")
+                if (fileName == null) {
+                    Util.errorWithFileLocation(
+                        callExpression,
+                        log,
+                        "Failed to parse file name. Ignoring the `open` call.",
+                    )
+                    return emptySet()
+                }
+                val (newFileNode, isNewFile) = getOrCreateFile(fileName, callExpression)
+
+                val mode = getBuiltinOpenMode(callExpression) ?: "r" // default is 'r'
+                val flags = translateBuiltinOpenMode(mode)
+                val setFlagsOp =
+                    newFileSetFlagsNoConnect(
+                        underlyingNode = callExpression,
+                        file = newFileNode,
+                        flags = flags,
+                    )
+                val open = newFileOpenNoConnect(underlyingNode = callExpression, file = newFileNode)
+
+                setOfNotNull(setFlagsOp, open, if (isNewFile) newFileNode else null)
+            }
+            "os.open" -> {
+                val fileName = getFileName(callExpression, "path")
+                if (fileName == null) {
+                    Util.errorWithFileLocation(
+                        callExpression,
+                        log,
+                        "Failed to parse file name. Ignoring the `os.open` call.",
+                    )
+                    return emptySet()
+                }
+                val (newFileNode, isNewFile) = getOrCreateFile(fileName, callExpression)
+
+                val setFlags =
                     getOsOpenFlags(callExpression)?.let { flags ->
-                        newFileSetFlags(
+                        newFileSetFlagsNoConnect(
                             underlyingNode = callExpression,
                             file = newFileNode,
                             flags = translateOsOpenFlags(flags),
                         )
                     }
-                    val mode =
-                        getOsOpenMode(callExpression)
-                            ?: 329L // default is 511 (assuming this is octet notation)
-                    newFileSetMask(underlyingNode = callExpression, file = newFileNode, mask = mode)
+                val mode =
+                    getOsOpenMode(callExpression)
+                        ?: 329L // default is 511 (assuming this is octet notation)
+                val setMask =
+                    newFileSetMaskNoConnect(
+                        underlyingNode = callExpression,
+                        file = newFileNode,
+                        mask = mode,
+                    )
 
-                    newFileOpen(underlyingNode = callExpression, file = newFileNode)
+                val open = newFileOpenNoConnect(underlyingNode = callExpression, file = newFileNode)
+
+                setOfNotNull(setFlags, setMask, open, if (isNewFile) newFileNode else null)
+            }
+            "os.chmod" -> {
+                val fileName =
+                    callExpression.argumentValueByNameOrPosition<String>(
+                        name = "path",
+                        position = 0,
+                    )
+                if (fileName == null) {
+                    Util.errorWithFileLocation(
+                        callExpression,
+                        log,
+                        "Failed to parse the `path` argument. Ignoring the entire `os.chmod` call.",
+                    )
+                    return emptySet()
                 }
-                "os.chmod" -> {
-                    val fileName =
-                        callExpression.argumentValueByNameOrPosition<String>(
-                            name = "path",
-                            position = 0,
-                        )
-                    if (fileName == null) {
-                        Util.errorWithFileLocation(
-                            callExpression,
-                            log,
-                            "Failed to parse the `path` argument. Ignoring the entire `os.chmod` call.",
-                        )
-                        return
-                    }
 
-                    val file = getOrCreateFile(fileName, callExpression)
+                val (file, isNewFile) = getOrCreateFile(fileName, callExpression)
 
-                    val mode =
-                        callExpression.argumentValueByNameOrPosition<Long>(
-                            name = "mode",
-                            position = 1,
-                        )
-                    if (mode == null) {
-                        Util.errorWithFileLocation(
-                            callExpression,
-                            log,
-                            "Failed to find the corresponding mode. Ignoring the entire `os.chmod` call..",
-                        )
-                        return
-                    }
-                    newFileSetMask(underlyingNode = callExpression, file = file, mask = mode)
+                val mode =
+                    callExpression.argumentValueByNameOrPosition<Long>(name = "mode", position = 1)
+                if (mode == null) {
+                    Util.errorWithFileLocation(
+                        callExpression,
+                        log,
+                        "Failed to find the corresponding mode. Ignoring the entire `os.chmod` call..",
+                    )
+                    return setOfNotNull(if (isNewFile) file else null)
                 }
-                "os.remove" -> {
-                    val fileName =
-                        callExpression.argumentValueByNameOrPosition<String>(
-                            name = "path",
-                            position = 0,
-                        )
-                    if (fileName == null) {
-                        Util.errorWithFileLocation(
-                            callExpression,
-                            log,
-                            "Failed to parse the `path` argument. Ignoring the entire `os.remove` call.",
-                        )
-                        return
-                    }
-
-                    val file = getOrCreateFile(fileName, callExpression)
-
-                    newFileDelete(underlyingNode = callExpression, file = file)
+                setOfNotNull(
+                    if (isNewFile) file else null,
+                    newFileSetMaskNoConnect(
+                        underlyingNode = callExpression,
+                        file = file,
+                        mask = mode,
+                    ),
+                )
+            }
+            "os.remove" -> {
+                val fileName =
+                    callExpression.argumentValueByNameOrPosition<String>(
+                        name = "path",
+                        position = 0,
+                    )
+                if (fileName == null) {
+                    Util.errorWithFileLocation(
+                        callExpression,
+                        log,
+                        "Failed to parse the `path` argument. Ignoring the entire `os.remove` call.",
+                    )
+                    return emptySet()
                 }
+
+                val (file, isNewFile) = getOrCreateFile(fileName, callExpression)
+
+                setOfNotNull(
+                    if (isNewFile) file else null,
+                    newFileDeleteNoConnect(underlyingNode = callExpression, file = file),
+                )
+            }
+            else -> {
+                setOf()
             }
         }
     }
@@ -229,11 +274,18 @@ class PythonFileConceptPass(ctx: TranslationContext) : ConceptPass(ctx) {
      *   ([File.underlyingNode]) if a new file has to be created.
      * @return The [File] found in the cache or the new file in case it had to be created.
      */
-    internal fun getOrCreateFile(fileName: String, callExpression: CallExpression): File {
-        return fileCache[fileName]
-            ?: newFile(underlyingNode = callExpression, fileName = fileName).also { file ->
-                fileCache += fileName to file
-            }
+    internal fun getOrCreateFile(
+        fileName: String,
+        callExpression: CallExpression,
+    ): Pair<File, Boolean> {
+        val currentMap = fileCache.computeIfAbsent(currentComponent) { mutableMapOf() }
+        val existingEntry = currentMap[fileName]
+        if (existingEntry != null) {
+            return existingEntry to false
+        }
+        val newEntry = newFileNoConnect(underlyingNode = callExpression, fileName = fileName)
+        currentMap[fileName] = newEntry
+        return newEntry to true
     }
 
     /**
@@ -242,28 +294,11 @@ class PythonFileConceptPass(ctx: TranslationContext) : ConceptPass(ctx) {
      * @param expression The start node.
      * @return A list of all [File] nodes found.
      */
-    internal fun findFile(expression: Expression): List<File> {
-        // find all nodes on a prev DFG path which have an [OpenFile] overlay node and return the
-        // last node on said path (i.e. the one with the [OpenFile] overlay)
-        val nodesWithOpenFileOverlay =
-            expression
-                .followDFGEdgesUntilHit(
-                    collectFailedPaths = false,
-                    findAllPossiblePaths = false,
-                    direction = Backward(GraphToFollow.DFG),
-                ) { node ->
-                    node.overlays.any { overlay -> overlay is OpenFile }
-                }
-                .fulfilled
-                .map { it.last() }
-
-        val files =
-            nodesWithOpenFileOverlay
-                .flatMap { it.overlays } // collect all "overlay" nodes
-                .filterIsInstance<OpenFile>() // discard not-relevant overlays
-                .map { it.file } // move from [OpenFile] to the corresponding [File] concept node
-
-        return files
+    internal fun findFile(
+        expression: Expression,
+        stateElement: NodeToOverlayStateElement,
+    ): List<File> {
+        return expression.getOverlaysByPrevDFG<OpenFile>(stateElement).map { it.file }
     }
 
     /**
