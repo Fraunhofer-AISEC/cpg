@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes.concepts
 
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.component
@@ -33,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.edges.flows.insertNodeAfterwardInEOGPath
+import de.fraunhofer.aisec.cpg.graph.firstParentOrNull
 import de.fraunhofer.aisec.cpg.helpers.functional.Lattice
 import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
@@ -50,11 +52,16 @@ typealias NodeToOverlayState = MapLattice<Node, PowersetLattice.Element<OverlayN
 abstract class EOGConceptPass(ctx: TranslationContext) :
     EOGStarterPass(ctx, sort = EOGStarterLeastTUImportSorterWithCatchAfterTry) {
 
+    /** Stores the current component in case we need it to look up some stuff. */
+    var currentComponent: Component? = null
+
     override fun cleanup() {
         // Nothing to do
     }
 
     override fun accept(node: Node) {
+        currentComponent = node.firstParentOrNull<Component>()
+
         ctx.currentComponent = node.component
         val lattice = NodeToOverlayState(PowersetLattice<OverlayNode>())
         val startState = getInitialState(lattice, node)

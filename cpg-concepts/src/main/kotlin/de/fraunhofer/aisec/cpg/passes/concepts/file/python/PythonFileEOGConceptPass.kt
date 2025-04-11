@@ -61,8 +61,11 @@ class PythonFileEOGConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
          * ```
          *
          * should both operate on the same [File] concept node.
+         *
+         * This is currently done per [Component]. TODO: Is
+         * [de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration] better?
          */
-        internal val fileCache = mutableMapOf<String, File>()
+        internal val fileCache = mutableMapOf<Component?, MutableMap<String, File>>()
     }
 
     override fun handleNode(
@@ -312,11 +315,14 @@ class PythonFileEOGConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
         fileName: String,
         callExpression: CallExpression,
     ): Pair<File, Boolean> {
-        return fileCache[fileName]?.let { it to false }
-            ?: (newFileNoConnect(underlyingNode = callExpression, fileName = fileName).also { file
-                ->
-                fileCache += fileName to file
-            } to true)
+        val currentMap = fileCache.computeIfAbsent(currentComponent) { mutableMapOf() }
+        val existingEntry = currentMap[fileName]
+        if (existingEntry != null) {
+            return existingEntry to false
+        }
+        val newEntry = newFileNoConnect(underlyingNode = callExpression, fileName = fileName)
+        currentMap[fileName] = newEntry
+        return newEntry to true
     }
 
     /**
