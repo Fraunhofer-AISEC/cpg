@@ -56,6 +56,14 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
+interface TaskBasedPass {
+    fun Pass<*>.getTasks(): List<Task<*, *>> {
+        return this.passConfig<PassConfiguration>()?.taskClasses?.mapNotNull {
+            it.primaryConstructor?.call(ctx, this)
+        } ?: emptyList()
+    }
+}
+
 /**
  * A [TranslationResultPass] is a pass that operates on a [TranslationResult]. If used with
  * [executePass], one [Pass] object is instantiated for the whole [TranslationResult].
@@ -94,7 +102,18 @@ abstract class EOGStarterPass(
     sort: Sorter<Node> = EOGStarterLeastTUImportSorter,
 ) : Pass<Node>(ctx, sort)
 
-open class PassConfiguration
+open class PassConfiguration {
+    internal val taskClasses = mutableListOf<KClass<out Task<*, *>>>()
+
+    inline fun <reified T : Task<*, *>> registerTask(): PassConfiguration {
+        registerTask(T::class)
+        return this
+    }
+
+    fun registerTask(task: KClass<out Task<*, *>>): Boolean {
+        return taskClasses.add(task)
+    }
+}
 
 /** Implementations of this abstract class sort nodes before they are passed to the [Pass]es. */
 abstract class Sorter<T : Node> : (TranslationResult) -> List<T>
