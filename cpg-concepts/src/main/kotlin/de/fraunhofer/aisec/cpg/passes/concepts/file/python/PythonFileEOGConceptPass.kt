@@ -70,8 +70,14 @@ class PythonFileEOGConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
     override fun handleMemberCallExpression(
         state: NodeToOverlayStateElement,
         callExpression: MemberCallExpression,
-    ): Collection<OverlayNode> =
-        callExpression.base
+    ): Collection<OverlayNode> {
+        // Since we cannot directly depend on the Python frontend, we have to check the language
+        // here based on the node's language.
+        if (callExpression.language.name.localName != "PythonLanguage") {
+            return emptySet()
+        }
+
+        return callExpression.base
             ?.let { findFile(it, state) }
             ?.mapNotNull { fileNode ->
                 when (callExpression.name.localName) {
@@ -79,8 +85,10 @@ class PythonFileEOGConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
                         /* TODO: what about this? we handle __exit__ and create a CloseFile. However, we already have a OpenFile attached at the `open` */
                         null
                     }
+
                     "__exit__" ->
                         newFileCloseNoConnect(underlyingNode = callExpression, file = fileNode)
+
                     "read" -> newFileReadNoConnect(underlyingNode = callExpression, file = fileNode)
                     "write" -> {
                         val arg = callExpression.arguments.getOrNull(0)
@@ -98,6 +106,7 @@ class PythonFileEOGConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
                             what = arg,
                         )
                     }
+
                     else -> {
                         Util.warnWithFileLocation(
                             node = callExpression,
@@ -110,6 +119,7 @@ class PythonFileEOGConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
                     }
                 }
             } ?: listOf()
+    }
 
     override fun handleCallExpression(
         state: NodeToOverlayStateElement,
@@ -121,168 +131,138 @@ class PythonFileEOGConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
             return emptySet()
         }
 
-        val name = callExpression.name
+        return when (callExpression.callee.name.toString()) {
+            "open" -> {
+                /**
+                 * This matches when parsing code like:
+                 * ```python
+                 * open('foo.bar', 'r')
+                 * ```
+                 *
+                 * We model this with a [File] node to represent the [Concept] and a [OpenFile] node
+                 * for the opening operation.
+                 *
+                 * TODO: opener https://docs.python.org/3/library/functions.html#open
+                 */
+                val fileName = getFileName(callExpression, "file")
+                if (fileName == null) {
+                    Util.errorWithFileLocation(
+                        callExpression,
+                        log,
+                        "Failed to parse file name. Ignoring the `open` call.",
+                    )
+                    return emptySet()
+                }
+                val (newFileNode, isNewFile) = getOrCreateFile(fileName, callExpression)
 
-        if (name.toString() == "open") {
-            /**
-             * This matches when parsing code like:
-             * ```python
-             * open('foo.bar', 'r')
-             * ```
-             *
-             * We model this with a [File] node to represent the [Concept] and a [OpenFile] node for
-             * the opening operation.
-             *
-             * TODO: opener https://docs.python.org/3/library/functions.html#open
-             */
-            val fileName = getFileName(callExpression, "file")
-            if (fileName == null) {
-                Util.errorWithFileLocation(
-                    callExpression,
-                    log,
-                    "Failed to parse file name. Ignoring the `open` call.",
-                )
-                return emptySet()
+                val mode = getBuiltinOpenMode(callExpression) ?: "r" // default is 'r'
+                val flags = translateBuiltinOpenMode(mode)
+                val setFlagsOp =
+                    newFileSetFlagsNoConnect(
+                        underlyingNode = callExpression,
+                        file = newFileNode,
+                        flags = flags,
+                    )
+                val open = newFileOpenNoConnect(underlyingNode = callExpression, file = newFileNode)
+
+                setOfNotNull(setFlagsOp, open, if (isNewFile) newFileNode else null)
             }
-            val (newFileNode, isNewFile) = getOrCreateFile(fileName, callExpression)
+            "os.open" -> {
+                val fileName = getFileName(callExpression, "path")
+                if (fileName == null) {
+                    Util.errorWithFileLocation(
+                        callExpression,
+                        log,
+                        "Failed to parse file name. Ignoring the `os.open` call.",
+                    )
+                    return emptySet()
+                }
+                val (newFileNode, isNewFile) = getOrCreateFile(fileName, callExpression)
 
-            val mode = getBuiltinOpenMode(callExpression) ?: "r" // default is 'r'
-            val flags = translateBuiltinOpenMode(mode)
-            val setFlagsOp =
-                newFileSetFlagsNoConnect(
-                    underlyingNode = callExpression,
-                    file = newFileNode,
-                    flags = flags,
-                )
-            val open = newFileOpenNoConnect(underlyingNode = callExpression, file = newFileNode)
-            return if (isNewFile) setOf(setFlagsOp, open, newFileNode) else setOf(setFlagsOp, open)
-        } else {
-            when (callExpression.callee.name.toString()) {
-                "os.open" -> {
-                    val fileName = getFileName(callExpression, "path")
-                    if (fileName == null) {
-                        Util.errorWithFileLocation(
-                            callExpression,
-                            log,
-                            "Failed to parse file name. Ignoring the `os.open` call.",
-                        )
-                        return emptySet()
-                    }
-                    val (newFileNode, isNewFile) = getOrCreateFile(fileName, callExpression)
-
-                    val setFlags =
-                        getOsOpenFlags(callExpression)?.let { flags ->
-                            newFileSetFlagsNoConnect(
-                                underlyingNode = callExpression,
-                                file = newFileNode,
-                                flags = translateOsOpenFlags(flags),
-                            )
-                        }
-                    val mode =
-                        getOsOpenMode(callExpression)
-                            ?: 329L // default is 511 (assuming this is octet notation)
-                    val setMask =
-                        newFileSetMaskNoConnect(
+                val setFlags =
+                    getOsOpenFlags(callExpression)?.let { flags ->
+                        newFileSetFlagsNoConnect(
                             underlyingNode = callExpression,
                             file = newFileNode,
-                            mask = mode,
+                            flags = translateOsOpenFlags(flags),
                         )
-
-                    val open =
-                        newFileOpenNoConnect(underlyingNode = callExpression, file = newFileNode)
-                    return if (isNewFile) {
-                        if (setFlags != null) {
-                            setOf(setFlags, setMask, open, newFileNode)
-                        } else {
-                            setOf(setMask, open, newFileNode)
-                        }
-                    } else {
-                        if (setFlags != null) {
-                            setOf(setFlags, setMask, open)
-                        } else {
-                            setOf(setMask, open)
-                        }
                     }
+                val mode =
+                    getOsOpenMode(callExpression)
+                        ?: 329L // default is 511 (assuming this is octet notation)
+                val setMask =
+                    newFileSetMaskNoConnect(
+                        underlyingNode = callExpression,
+                        file = newFileNode,
+                        mask = mode,
+                    )
+
+                val open = newFileOpenNoConnect(underlyingNode = callExpression, file = newFileNode)
+
+                setOfNotNull(setFlags, setMask, open, if (isNewFile) newFileNode else null)
+            }
+            "os.chmod" -> {
+                val fileName =
+                    callExpression.argumentValueByNameOrPosition<String>(
+                        name = "path",
+                        position = 0,
+                    )
+                if (fileName == null) {
+                    Util.errorWithFileLocation(
+                        callExpression,
+                        log,
+                        "Failed to parse the `path` argument. Ignoring the entire `os.chmod` call.",
+                    )
+                    return emptySet()
                 }
-                "os.chmod" -> {
-                    val fileName =
-                        callExpression.argumentValueByNameOrPosition<String>(
-                            name = "path",
-                            position = 0,
-                        )
-                    if (fileName == null) {
-                        Util.errorWithFileLocation(
-                            callExpression,
-                            log,
-                            "Failed to parse the `path` argument. Ignoring the entire `os.chmod` call.",
-                        )
-                        return emptySet()
-                    }
 
-                    val (file, isNewFile) = getOrCreateFile(fileName, callExpression)
+                val (file, isNewFile) = getOrCreateFile(fileName, callExpression)
 
-                    val mode =
-                        callExpression.argumentValueByNameOrPosition<Long>(
-                            name = "mode",
-                            position = 1,
-                        )
-                    if (mode == null) {
-                        Util.errorWithFileLocation(
-                            callExpression,
-                            log,
-                            "Failed to find the corresponding mode. Ignoring the entire `os.chmod` call..",
-                        )
-                        return if (isNewFile) {
-                            setOf(file)
-                        } else {
-                            emptySet()
-                        }
-                    }
-                    return if (isNewFile) {
-                        setOf(
-                            file,
-                            newFileSetMaskNoConnect(
-                                underlyingNode = callExpression,
-                                file = file,
-                                mask = mode,
-                            ),
-                        )
-                    } else
-                        setOf(
-                            newFileSetMaskNoConnect(
-                                underlyingNode = callExpression,
-                                file = file,
-                                mask = mode,
-                            )
-                        )
+                val mode =
+                    callExpression.argumentValueByNameOrPosition<Long>(name = "mode", position = 1)
+                if (mode == null) {
+                    Util.errorWithFileLocation(
+                        callExpression,
+                        log,
+                        "Failed to find the corresponding mode. Ignoring the entire `os.chmod` call..",
+                    )
+                    return setOfNotNull(if (isNewFile) file else null)
                 }
-                "os.remove" -> {
-                    val fileName =
-                        callExpression.argumentValueByNameOrPosition<String>(
-                            name = "path",
-                            position = 0,
-                        )
-                    if (fileName == null) {
-                        Util.errorWithFileLocation(
-                            callExpression,
-                            log,
-                            "Failed to parse the `path` argument. Ignoring the entire `os.remove` call.",
-                        )
-                        return emptySet()
-                    }
-
-                    val (file, isNewFile) = getOrCreateFile(fileName, callExpression)
-
-                    return if (isNewFile)
-                        setOf(
-                            file,
-                            newFileDeleteNoConnect(underlyingNode = callExpression, file = file),
-                        )
-                    else setOf(newFileDeleteNoConnect(underlyingNode = callExpression, file = file))
+                setOfNotNull(
+                    if (isNewFile) file else null,
+                    newFileSetMaskNoConnect(
+                        underlyingNode = callExpression,
+                        file = file,
+                        mask = mode,
+                    ),
+                )
+            }
+            "os.remove" -> {
+                val fileName =
+                    callExpression.argumentValueByNameOrPosition<String>(
+                        name = "path",
+                        position = 0,
+                    )
+                if (fileName == null) {
+                    Util.errorWithFileLocation(
+                        callExpression,
+                        log,
+                        "Failed to parse the `path` argument. Ignoring the entire `os.remove` call.",
+                    )
+                    return emptySet()
                 }
+
+                val (file, isNewFile) = getOrCreateFile(fileName, callExpression)
+
+                setOfNotNull(
+                    if (isNewFile) file else null,
+                    newFileDeleteNoConnect(underlyingNode = callExpression, file = file),
+                )
+            }
+            else -> {
+                setOf()
             }
         }
-        return setOf()
     }
 
     /**
