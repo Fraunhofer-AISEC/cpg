@@ -227,27 +227,44 @@ object SubgraphWalker {
          * @param root The node where we should start
          */
         fun iterate(root: Node) {
+            iterateAll(listOf(root))
+        }
+
+        /**
+         * Iteration starting from several nodes that can explore a joint graph, therefore the
+         * `seen` list is shared between several entries to the potentially joined graph. The search
+         * works in BFS manner from every single entry, but stops at nodes visited by other entries.
+         *
+         * If you require a node to be visited multiple times, i.e. once for every entry it is
+         * reachable by, use [iterate].
+         */
+        fun iterateAll(entries: List<Node>) {
             var todo = ArrayDeque<Pair<Node, Node?>>()
             val seen = identitySetOf<Node>()
 
-            todo.push(Pair<Node, Node?>(root, null))
-            while (todo.isNotEmpty()) {
-                var (current, parent) = todo.pop()
-                onNodeVisit.forEach { it(current, parent) }
-
-                // Check if we have a replacement node
-                val toReplace = replacements[current]
-                if (toReplace != null) {
-                    current = toReplace
-                    replacements.remove(toReplace)
+            entries.forEach { entry ->
+                if (entry !in seen) {
+                    todo.push(Pair<Node, Node?>(entry, null))
                 }
 
-                val unseenChildren =
-                    strategy(current).asSequence().filter { it !in seen }.toMutableList()
+                while (todo.isNotEmpty()) {
+                    var (current, parent) = todo.pop()
+                    onNodeVisit.forEach { it(current, parent) }
 
-                seen.addAll(unseenChildren)
-                unseenChildren.asReversed().forEach { child: Node ->
-                    todo.push(Pair(child, current))
+                    // Check if we have a replacement node
+                    val toReplace = replacements[current]
+                    if (toReplace != null) {
+                        current = toReplace
+                        replacements.remove(toReplace)
+                    }
+
+                    val unseenChildren =
+                        strategy(current).asSequence().filter { it !in seen }.toMutableList()
+
+                    seen.addAll(unseenChildren)
+                    unseenChildren.asReversed().forEach { child: Node ->
+                        todo.push(Pair(child, current))
+                    }
                 }
             }
         }
@@ -339,6 +356,27 @@ object SubgraphWalker {
             this.walker = walker
 
             walker.iterate(root)
+        }
+
+        /**
+         * Wraps [IterativeGraphWalker] to handle declaration scopes, In contrast to [iterate], this
+         * function is here to iterate over several nodes that may be entries into a joint graph
+         * reachable by the specified strategy and therefore the internal seen list of nodes has to
+         * be shared to avoid duplicate visits.
+         *
+         * If you require a node to be visited multiple times, i.e. once for every entry it is
+         * reachable by, use [iterate].
+         *
+         * @param entries The nodes where the exploration is started from.
+         */
+        fun iterateAll(entries: List<Node>) {
+            val walker = IterativeGraphWalker()
+            walker.strategy = this.strategy
+            handlers.forEach { h -> walker.registerOnNodeVisit { n, p -> handleNode(n, p, h) } }
+
+            this.walker = walker
+
+            walker.iterateAll(entries)
         }
 
         private fun handleNode(

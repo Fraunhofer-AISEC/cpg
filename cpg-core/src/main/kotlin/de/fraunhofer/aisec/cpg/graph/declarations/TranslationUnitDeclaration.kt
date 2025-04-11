@@ -44,14 +44,12 @@ class TranslationUnitDeclaration :
     override val declarations by unwrapping(TranslationUnitDeclaration::declarationEdges)
 
     /** A list of includes within this unit. */
-    @Relationship(value = "INCLUDES", direction = Relationship.Direction.OUTGOING)
-    val includeEdges = astEdgesOf<IncludeDeclaration>()
-    val includes by unwrapping(TranslationUnitDeclaration::includeEdges)
+    val includes
+        get() = declarations.filterIsInstance<IncludeDeclaration>()
 
     /** A list of namespaces within this unit. */
-    @Relationship(value = "NAMESPACES", direction = Relationship.Direction.OUTGOING)
-    val namespaceEdges = astEdgesOf<NamespaceDeclaration>()
-    val namespaces by unwrapping(TranslationUnitDeclaration::namespaceEdges)
+    val namespaces
+        get() = declarations.filterIsInstance<NamespaceDeclaration>()
 
     /** The list of statements. */
     @Relationship(value = "STATEMENTS", direction = Relationship.Direction.OUTGOING)
@@ -59,19 +57,12 @@ class TranslationUnitDeclaration :
     override var statements by unwrapping(TranslationUnitDeclaration::statementEdges)
 
     override fun addDeclaration(declaration: Declaration) {
-        if (declaration is IncludeDeclaration) {
-            addIfNotContains(includeEdges, declaration)
-        } else if (declaration is NamespaceDeclaration) {
-            addIfNotContains(namespaceEdges, declaration)
-        }
         addIfNotContains(declarationEdges, declaration)
     }
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)
             .append("declarations", declarationEdges)
-            .append("includes", includeEdges)
-            .append("namespaces", namespaceEdges)
             .toString()
     }
 
@@ -94,12 +85,8 @@ class TranslationUnitDeclaration :
         // more strict than the propertyEqualsList() isn't it?
         return super.equals(other) &&
             declarations == other.declarations &&
-            propertyEqualsList(declarationEdges, other.declarationEdges) &&
-            includes == other.includes &&
-            propertyEqualsList(includeEdges, other.includeEdges) &&
-            namespaces == other.namespaces &&
-            propertyEqualsList(namespaceEdges, other.namespaceEdges)
+            propertyEqualsList(declarationEdges, other.declarationEdges)
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), includes, namespaces, declarations)
+    override fun hashCode() = Objects.hash(super.hashCode(), declarations)
 }

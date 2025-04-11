@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.test.analyze
 import de.fraunhofer.aisec.cpg.test.assertFullName
@@ -106,5 +107,23 @@ class SymbolResolverTest {
         val myClass = result.records["MyClass"]
         assertNotNull(myClass)
         assertFullName("other.myclass.MyClass", myClass.superTypes.singleOrNull())
+    }
+
+    @Test
+    fun testCallVsMemberCallConfusion() {
+        val topLevel = File("src/test/resources/python")
+        val result =
+            analyze(listOf(topLevel.resolve("call_confusion.py")), topLevel.toPath(), true) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(result)
+
+        val someContext = result.records["context.SomeContext"]
+        assertNotNull(someContext)
+        assertTrue(someContext.isInferred, "Expected to infer a record 'context.SomeContext'")
+
+        val doSomething = result.calls("do_something").singleOrNull()
+        assertNotNull(doSomething, "Expected to find a single call to 'do_something'")
+        assertIs<MemberCallExpression>(doSomething, "'do_something' should be a member call")
     }
 }
