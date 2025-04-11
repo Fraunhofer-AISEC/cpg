@@ -26,7 +26,9 @@
 package de.fraunhofer.aisec.cpg.passes.concepts
 
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.graph.Backward
 import de.fraunhofer.aisec.cpg.graph.Component
+import de.fraunhofer.aisec.cpg.graph.GraphToFollow
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.component
@@ -35,6 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.edges.flows.insertNodeAfterwardInEOGPath
 import de.fraunhofer.aisec.cpg.graph.firstParentOrNull
+import de.fraunhofer.aisec.cpg.graph.followDFGEdgesUntilHit
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.helpers.functional.Lattice
@@ -42,6 +45,7 @@ import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
 import de.fraunhofer.aisec.cpg.passes.EOGStarterLeastTUImportSorterWithCatchAfterTry
 import de.fraunhofer.aisec.cpg.passes.EOGStarterPass
+import kotlin.collections.set
 
 typealias NodeToOverlayStateElement = MapLattice.Element<Node, PowersetLattice.Element<OverlayNode>>
 
@@ -51,7 +55,7 @@ typealias NodeToOverlayState = MapLattice<Node, PowersetLattice.Element<OverlayN
  * An abstract pass that is used to identify and create [Concept] and [Operation] nodes in the
  * graph.
  */
-abstract class EOGConceptPass(ctx: TranslationContext) :
+open class EOGConceptPass(ctx: TranslationContext) :
     EOGStarterPass(ctx, sort = EOGStarterLeastTUImportSorterWithCatchAfterTry) {
 
     /** Stores the current component in case we need it to look up some stuff. */
@@ -165,5 +169,38 @@ abstract class EOGConceptPass(ctx: TranslationContext) :
                     PowersetLattice.Element<OverlayNode>(*filteredAddedOverlays.toTypedArray())
             ),
         )
+    }
+
+    /**
+     * Returns a list of nodes of type [T] fulfilling the [predicate] that are reachable from this
+     * node via the backwards DFG.
+     */
+    inline fun <reified T : OverlayNode> Node.getOverlaysByPrevDFG(
+        stateElement: NodeToOverlayStateElement,
+        crossinline predicate: (T) -> Boolean = { true },
+    ): List<T> {
+        return this.followDFGEdgesUntilHit(
+                collectFailedPaths = false,
+                findAllPossiblePaths = false,
+                direction = Backward(GraphToFollow.DFG),
+            ) { node ->
+                // find all nodes on a prev DFG path which an overlay node matching the predicate
+                // either in the state, they are this node already or they have it in their
+                // overlays. We do these three things because nodes may be added to the DFG after
+                // running the pass (and are available only in the state) or they may have been
+                // added before (so they aren't in the state but connected by the DFG or the overlay
+                // edge).
+                stateElement[node]?.filterIsInstance<T>()?.any(predicate) == true ||
+                    node is T && predicate(node) ||
+                    node.overlays.filterIsInstance<T>().any(predicate)
+            }
+            .fulfilled
+            // The last nodes on the path are the ones we are interested in.
+            .map { it.last() }
+            .flatMap {
+                // collect all "overlay" nodes
+                stateElement[it] ?: setOf(it, *it.overlays.toTypedArray())
+            }
+            .filterIsInstance<T>() // discard not-relevant overlays
     }
 }

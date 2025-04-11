@@ -298,31 +298,7 @@ class PythonFileEOGConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
         expression: Expression,
         stateElement: NodeToOverlayStateElement,
     ): List<File> {
-        // find all nodes on a prev DFG path which have an [OpenFile] overlay node and return the
-        // last node on said path (i.e. the one with the [OpenFile] overlay)
-        val nodesWithOpenFileOverlay =
-            expression
-                .followDFGEdgesUntilHit(
-                    collectFailedPaths = false,
-                    findAllPossiblePaths = false,
-                    direction = Backward(GraphToFollow.DFG),
-                ) { node ->
-                    stateElement[node]?.any { it is OpenFile } == true ||
-                        node is OpenFile ||
-                        node.overlays.any { it is OpenFile }
-                }
-                .fulfilled
-                .map { it.last() }
-
-        val files =
-            nodesWithOpenFileOverlay
-                .flatMap {
-                    stateElement[it] ?: setOf(it, *it.overlays.toTypedArray())
-                } // collect all "overlay" nodes
-                .filterIsInstance<OpenFile>() // discard not-relevant overlays
-                .map { it.file } // move from [OpenFile] to the corresponding [File] concept node
-
-        return files
+        return expression.getOverlaysByPrevDFG<OpenFile>(stateElement).map { it.file }
     }
 
     /**
