@@ -68,7 +68,7 @@ interface HasMemoryValue {
     val fullMemoryValues: Set<Node>
         get() =
             memoryValueEdges
-                .filter { it.granularity is FullDataflowGranularity }
+                .filter { it.granularity is FullDataflowGranularity && !it.functionSummary }
                 .map { it.start }
                 .toSet()
 }

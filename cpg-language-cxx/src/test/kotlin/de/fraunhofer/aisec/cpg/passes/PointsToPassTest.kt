@@ -1944,14 +1944,14 @@ class PointsToPassTest {
             .singleOrNull()
             ?.value
             ?.filter { !it.shortFunctionSummary }
-            ?.any { it.srcNode is UnknownMemoryValue && it.srcNode.name.localName == "CONCAT71" }
+            ?.any { it.srcNode is UnknownMemoryValue && it.srcNode?.name?.localName == "CONCAT71" }
             ?.let { assertTrue(it) }
         fsecallkeytoout.entries
             .singleOrNull()
             ?.value
             ?.filter { !it.shortFunctionSummary }
             ?.any {
-                it.srcNode is UnknownMemoryValue && it.srcNode.name.localName == "DAT_0011b1c8"
+                it.srcNode is UnknownMemoryValue && it.srcNode?.name?.localName == "DAT_0011b1c8"
             }
             ?.let { assertTrue(it) }
         fsecallkeytoout.entries
@@ -2009,7 +2009,7 @@ class PointsToPassTest {
                 .firstOrNull()
                 ?.value
                 ?.filter {
-                    it.srcNode is UnknownMemoryValue && it.srcNode.name.localName == "CONCAT71"
+                    it.srcNode is UnknownMemoryValue && it.srcNode?.name?.localName == "CONCAT71"
                 }
                 ?.size,
         )
@@ -2021,7 +2021,8 @@ class PointsToPassTest {
                 .firstOrNull()
                 ?.value
                 ?.filter {
-                    it.srcNode is UnknownMemoryValue && it.srcNode.name.localName == "DAT_0011b1c8"
+                    it.srcNode is UnknownMemoryValue &&
+                        it.srcNode?.name?.localName == "DAT_0011b1c8"
                 }
                 ?.size,
         )
@@ -2267,7 +2268,23 @@ class PointsToPassTest {
 
         // Line 242
         // Make sure that we created a dummy function summary for the unknownFunc
-        assertEquals(1, unknownFuncFD.functionSummary?.entries?.singleOrNull()?.value?.size)
+        assertEquals(3, unknownFuncFD.functionSummary?.entries?.singleOrNull()?.value?.size)
+        assertEquals(
+            2,
+            unknownFuncFD.functionSummary.entries
+                ?.singleOrNull()
+                ?.value
+                ?.filter { it.shortFunctionSummary }
+                ?.size,
+        )
+        assertEquals(
+            1,
+            unknownFuncFD.functionSummary.entries
+                ?.singleOrNull()
+                ?.value
+                ?.filter { !it.shortFunctionSummary }
+                ?.size,
+        )
 
         assertEquals(1, iRefLine242Left.fullMemoryValues.size)
         assertLocalName(
@@ -2281,20 +2298,21 @@ class PointsToPassTest {
         // Both arguments have a nextDFG to the PMV and from there to the functionDeclaration
         assertEquals(
             unknownFuncFD,
-            ceLine242.arguments[0].nextDFG.singleOrNull()?.nextDFG?.singleOrNull(),
+            ceLine242.arguments[0].nextFullDFG.singleOrNull()?.nextDFG?.singleOrNull(),
         )
         assertEquals(
             unknownFuncFD,
-            ceLine242.arguments[1].nextDFG.singleOrNull()?.nextDFG?.singleOrNull(),
+            ceLine242.arguments[1].nextFullDFG.singleOrNull()?.nextDFG?.singleOrNull(),
         )
 
         // And from the callExpression to the functionDeclaration
-        assertEquals(unknownFuncFD, ceLine242.prevDFG.singleOrNull())
-
-        // TODO: functionSummary DFGs
-        /*        assertEquals(2, ceLine242.prevFunctionSummaryDFG.size)
-        assertTrue(ceLine242.prevFunctionSummaryDFG.contains(ceLine239.invokes.first()))
-        assertTrue(ceLine242.prevFunctionSummaryDFG.contains(ceLine239.arguments.first()))*/
+        assertEquals(unknownFuncFD, ceLine242.prevFullDFG.singleOrNull())
+        // TODO
+        //        assertEquals(2, ceLine242.prevFunctionSummaryDFG.size)
+        //        assertEquals(
+        //            mutableSetOf<Node>(ceLine242.arguments[0], ceLine242.arguments[1]),
+        //            ceLine242.prevFunctionSummaryDFG.toMutableSet(),
+        //        )
     }
 
     @Test

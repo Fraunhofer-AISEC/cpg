@@ -117,7 +117,7 @@ open class FunctionDeclaration :
     data class FSEntry(
         val destValueDepth: Int =
             1, // 0: Address, 1: Value, 2: DerefValue, 3: DerefderefValue, ....
-        val srcNode: Node,
+        val srcNode: Node?,
         val srcValueDepth: Int = 1, // 0: Address, 1: Value, 2: DerefValue, 3:
         val subAccessName: String,
         // We use shortFunctionSummaries to draw "short" DFG-Edges that allow us to follow DFG Paths
