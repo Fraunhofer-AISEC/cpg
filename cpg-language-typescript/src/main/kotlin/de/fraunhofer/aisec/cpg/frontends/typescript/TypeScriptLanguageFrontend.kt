@@ -48,9 +48,9 @@ import java.nio.file.StandardCopyOption
 /**
  * This language frontend adds experimental support for TypeScript. It is definitely not feature
  * complete, but can be used to parse simple typescript snippets through the official typescript
- * parser written in TypeScript / nodejs. It includes a simple nodejs script that invokes this
- * parser in `src/main/nodejs`. It basically dumps the AST in a JSON structure on stdout and this
- * input is parsed by this frontend.
+ * parser written in TypeScript. It includes a simple binary (built by deno) that invokes this
+ * parser. It basically dumps the AST in a JSON structure on stdout and this input is parsed by this
+ * frontend.
  *
  * Because TypeScript is a strict super-set of JavaScript, this frontend can also be used to parse
  * JavaScript. However, this is not properly tested. Furthermore, the official TypeScript parser
@@ -83,7 +83,7 @@ class TypeScriptLanguageFrontend(
                     "linux"
                 }
 
-            val link = this::class.java.getResourceAsStream("/nodejs/parser-$os-$arch")
+            val link = this::class.java.getResourceAsStream("/typescript/parser-$os-$arch")
             link?.use {
                 log.info(
                     "Extracting parser out of resources to {}",
