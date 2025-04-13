@@ -38,31 +38,6 @@ mavenPublishing {
     }
 }
 
-/*node {
-    download.set(true)
-    version.set(libs.versions.node)
-    nodeProjectDir.set(file("${project.projectDir.resolve("src/main/nodejs")}"))
-}
-
-val pnpmBuild by
-    tasks.registering(PnpmTask::class) {
-        inputs.file("src/main/nodejs/package.json").withPathSensitivity(PathSensitivity.RELATIVE)
-        inputs.file("src/main/nodejs/pnpm-lock.yaml").withPathSensitivity(PathSensitivity.RELATIVE)
-        inputs.dir("src/main/nodejs/src").withPathSensitivity(PathSensitivity.RELATIVE)
-        outputs.dir("build/resources/main/nodejs")
-        outputs.cacheIf { true }
-
-        workingDir.set(file("src/main/nodejs"))
-        pnpmCommand.set(listOf("run", "bundle"))
-        dependsOn(tasks.getByName("pnpmInstall"))
-    }
-
-tasks.processResources { dependsOn(pnpmBuild) }
-*/
-
-// deno { version.set(libs.versions.node) }
-
-// Build parser
 val compileMacOSx8664 =
     tasks.register<RunDenoTask>("compileMacOSAmd64") {
         dependsOn(tasks.installDeno)
@@ -73,10 +48,10 @@ val compileMacOSx8664 =
             "--target",
             "x86_64-apple-darwin",
             "-o",
-            "build/resources/main/nodejs/parser-macos-amd64",
-            "src/main/nodejs/src/parser.ts",
+            "build/resources/main/typescript/parser-macos-amd64",
+            "src/main/typescript/src/parser.ts",
         )
-        outputs.dir("build/resources/main/nodejs")
+        outputs.dir("build/resources/main/typescript")
         outputs.cacheIf { true }
     }
 
@@ -90,10 +65,10 @@ val compileMacOSArm64 =
             "--target",
             "aarch64-apple-darwin",
             "-o",
-            "build/resources/main/nodejs/parser-macos-arm64",
-            "src/main/nodejs/src/parser.ts",
+            "build/resources/main/typescript/parser-macos-arm64",
+            "src/main/typescript/src/parser.ts",
         )
-        outputs.dir("build/resources/main/nodejs")
+        outputs.dir("build/resources/main/typescript")
         outputs.cacheIf { true }
     }
 
@@ -107,10 +82,10 @@ val compileLinuxX8664 =
             "--target",
             "x86_64-unknown-linux-gnu",
             "-o",
-            "build/resources/main/nodejs/parser-linux-amd64",
-            "src/main/nodejs/src/parser.ts",
+            "build/resources/main/typescript/parser-linux-amd64",
+            "src/main/typescript/src/parser.ts",
         )
-        outputs.dir("build/resources/main/nodejs")
+        outputs.dir("build/resources/main/typescript")
         outputs.cacheIf { true }
     }
 
@@ -124,10 +99,10 @@ val compileLinuxArm64 =
             "--target",
             "aarch64-unknown-linux-gnu",
             "-o",
-            "build/resources/main/nodejs/parser-linux-arm64",
-            "src/main/nodejs/src/parser.ts",
+            "build/resources/main/typescript/parser-linux-arm64",
+            "src/main/typescript/src/parser.ts",
         )
-        outputs.dir("build/resources/main/nodejs")
+        outputs.dir("build/resources/main/typescript")
         outputs.cacheIf { true }
     }
 
