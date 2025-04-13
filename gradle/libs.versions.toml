@@ -13,6 +13,8 @@ kaml = "0.76.0"
 sarif4k = "0.6.0"
 ktor = "3.1.1"
 node = "22.14.0"
+deno-plugin = "0.1.4"
+deno = "2.0.0"
 
 [libraries]
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin"}
@@ -91,5 +93,6 @@ kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin"}
 dokka = { id = "org.jetbrains.dokka", version.ref = "kotlin" }
 spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
 node = { id = "com.github.node-gradle.node", version = "7.1.0"}
+deno = { id = "io.github.masch0212.deno", version.ref = "deno-plugin" }
 ktor = { id = "io.ktor.plugin", version.ref = "ktor" }
 download = { id = "de.undercouch.download", version = "5.6.0" }
