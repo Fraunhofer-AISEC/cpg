@@ -71,13 +71,22 @@ class TypeScriptLanguageFrontend(
     private val mapper = jacksonObjectMapper()
 
     companion object {
-        private val parserFile: File = createTempFile("parser", ".js")
+        private val parserFile: File = createTempFile("parser", "")
 
         init {
-            val link = this::class.java.getResourceAsStream("/nodejs/parser.js")
+            val arch =
+                System.getProperty("os.arch").replace("aarch64", "arm64").replace("x86_64", "amd64")
+            val os: String =
+                if (System.getProperty("os.name").startsWith("Mac")) {
+                    "macos"
+                } else {
+                    "linux"
+                }
+
+            val link = this::class.java.getResourceAsStream("/nodejs/parser-$os-$arch")
             link?.use {
                 log.info(
-                    "Extracting parser.js out of resources to {}",
+                    "Extracting parser out of resources to {}",
                     parserFile.absoluteFile.toPath(),
                 )
                 Files.copy(
@@ -85,6 +94,7 @@ class TypeScriptLanguageFrontend(
                     parserFile.absoluteFile.toPath(),
                     StandardCopyOption.REPLACE_EXISTING,
                 )
+                parserFile.setExecutable(true)
             }
         }
     }
@@ -93,11 +103,10 @@ class TypeScriptLanguageFrontend(
         // Necessary to not read file contents several times
         currentFileContent = file.readText()
         if (!parserFile.exists()) {
-            throw TranslationException("parser.js not found @ ${parserFile.absolutePath}")
+            throw TranslationException("parser not found @ ${parserFile.absolutePath}")
         }
 
-        val p =
-            Runtime.getRuntime().exec(arrayOf("node", parserFile.absolutePath, file.absolutePath))
+        val p = Runtime.getRuntime().exec(arrayOf(parserFile.absolutePath, file.absolutePath))
 
         val node = mapper.readValue(p.inputStream, TypeScriptNode::class.java)
 

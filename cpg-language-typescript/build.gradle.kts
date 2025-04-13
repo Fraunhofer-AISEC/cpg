@@ -23,11 +23,12 @@
  *                    \______/ \__|       \______/
  *
  */
-import com.github.gradle.node.pnpm.task.PnpmTask
+
+import io.github.masch0212.deno.RunDenoTask
 
 plugins {
     id("cpg.frontend-conventions")
-    alias(libs.plugins.node)
+    alias(libs.plugins.deno)
 }
 
 mavenPublishing {
@@ -37,7 +38,7 @@ mavenPublishing {
     }
 }
 
-node {
+/*node {
     download.set(true)
     version.set(libs.versions.node)
     nodeProjectDir.set(file("${project.projectDir.resolve("src/main/nodejs")}"))
@@ -57,3 +58,79 @@ val pnpmBuild by
     }
 
 tasks.processResources { dependsOn(pnpmBuild) }
+*/
+
+// deno { version.set(libs.versions.node) }
+
+// Build parser
+val compileMacOSx8664 =
+    tasks.register<RunDenoTask>("compileMacOSAmd64") {
+        dependsOn(tasks.installDeno)
+        command(
+            "compile",
+            "-E",
+            "-R",
+            "--target",
+            "x86_64-apple-darwin",
+            "-o",
+            "build/resources/main/nodejs/parser-macos-amd64",
+            "src/main/nodejs/src/parser.ts",
+        )
+        outputs.dir("build/resources/main/nodejs")
+        outputs.cacheIf { true }
+    }
+
+val compileMacOSArm64 =
+    tasks.register<RunDenoTask>("compileMacOSArm64") {
+        dependsOn(tasks.installDeno)
+        command(
+            "compile",
+            "-E",
+            "-R",
+            "--target",
+            "aarch64-apple-darwin",
+            "-o",
+            "build/resources/main/nodejs/parser-macos-arm64",
+            "src/main/nodejs/src/parser.ts",
+        )
+        outputs.dir("build/resources/main/nodejs")
+        outputs.cacheIf { true }
+    }
+
+val compileLinuxX8664 =
+    tasks.register<RunDenoTask>("compileLinuxAmd64") {
+        dependsOn(tasks.installDeno)
+        command(
+            "compile",
+            "-E",
+            "-R",
+            "--target",
+            "x86_64-unknown-linux-gnu",
+            "-o",
+            "build/resources/main/nodejs/parser-linux-amd64",
+            "src/main/nodejs/src/parser.ts",
+        )
+        outputs.dir("build/resources/main/nodejs")
+        outputs.cacheIf { true }
+    }
+
+val compileLinuxArm64 =
+    tasks.register<RunDenoTask>("compileLinuxArm64") {
+        dependsOn(tasks.installDeno)
+        command(
+            "compile",
+            "-E",
+            "-R",
+            "--target",
+            "aarch64-unknown-linux-gnu",
+            "-o",
+            "build/resources/main/nodejs/parser-linux-arm64",
+            "src/main/nodejs/src/parser.ts",
+        )
+        outputs.dir("build/resources/main/nodejs")
+        outputs.cacheIf { true }
+    }
+
+tasks.processResources {
+    dependsOn(compileMacOSx8664, compileMacOSArm64, compileLinuxX8664, compileLinuxArm64)
+}
