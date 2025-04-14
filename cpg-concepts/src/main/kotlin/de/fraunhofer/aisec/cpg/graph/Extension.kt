@@ -27,6 +27,8 @@ package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
+import org.reflections.Reflections
+import org.reflections.scanners.Scanners.SubTypes
 
 /**
  * Retrieves a set of all [Concept] nodes associated with this [Node] and its AST children
@@ -47,3 +49,8 @@ val Node.conceptNodes: Set<Concept>
  */
 val Node.operationNodes: Set<Operation>
     get() = this.nodes.flatMapTo(mutableSetOf()) { it.overlays.filterIsInstance<Operation>() }
+
+/** Returns a [Set] of all subclasses of the class [T]. */
+inline fun <reified T : OverlayNode> listOverlayClasses(
+    prefix: String = "de.fraunhofer.aisec"
+): Set<Class<out T>> = Reflections(prefix, SubTypes).getSubTypesOf(T::class.java)

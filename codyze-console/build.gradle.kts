@@ -25,8 +25,6 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.jacksonyml)
 
-    implementation(libs.reflections)
-
     // Testing
     testImplementation(libs.ktor.server.test.host)
     testImplementation(libs.ktor.client.content.negotiation)
