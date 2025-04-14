@@ -71,7 +71,7 @@ fun QueryTree<Boolean>.toSarif(ruleID: String): List<Result> {
             stacks = child.node?.toSarifCallStack(),
             properties =
                 if (child is SinglePathResult) {
-                    PropertyBag(mapOf("Termination reason" to child.terminationReason))
+                    PropertyBag(mapOf("Termination reason" to child.terminationReason.toString()))
                 } else {
                     null
                 },
