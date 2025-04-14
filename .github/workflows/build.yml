@@ -25,7 +25,7 @@ jobs:
           cp gradle.properties.example gradle.properties
       - uses: actions/setup-java@v4
         with:
-          distribution: "zulu"
+          distribution: "corretto"
           java-version: "21"
       - uses: actions/setup-python@v5
         with:
