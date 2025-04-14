@@ -45,7 +45,7 @@ import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
 import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass
 import de.fraunhofer.aisec.cpg.passes.DFGPass
-import de.fraunhofer.aisec.cpg.passes.EOGStarterLeastTUImportSorterWithCatchAfterTry
+import de.fraunhofer.aisec.cpg.passes.EOGStarterLeastTUImportCatchLastSorter
 import de.fraunhofer.aisec.cpg.passes.EOGStarterPass
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
@@ -74,7 +74,7 @@ typealias NodeToOverlayState = MapLattice<Node, PowersetLattice.Element<OverlayN
 @DependsOn(DFGPass::class)
 @DependsOn(ControlFlowSensitiveDFGPass::class, softDependency = true)
 open class EOGConceptPass(ctx: TranslationContext) :
-    EOGStarterPass(ctx, sort = EOGStarterLeastTUImportSorterWithCatchAfterTry) {
+    EOGStarterPass(ctx, sort = EOGStarterLeastTUImportCatchLastSorter) {
 
     /** Stores the current component in case we need it to look up some stuff. */
     var currentComponent: Component? = null

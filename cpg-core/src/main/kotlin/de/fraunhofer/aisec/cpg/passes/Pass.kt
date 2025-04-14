@@ -144,10 +144,12 @@ object EOGStarterLeastTUImportSorter : Sorter<Node>() {
 /**
  * First, sorts the [TranslationUnitDeclaration]s with the [LeastImportTranslationUnitSorter] and
  * then gathers all resolution EOG starters; and make sure they really do not have a predecessor,
- * otherwise we might analyze a node multiple times. Note that the [EOGStarterHolder]s are not
- * sorted.
+ * otherwise we might analyze a node multiple times. The [EOGStarterHolder]s are only sorted as
+ * follows: The [CatchClause]s come last in the order because they actually are executed after a
+ * part of the `try` block and, more importantly, the code before it, which is not guaranteed by the
+ * EOG.
  */
-object EOGStarterLeastTUImportSorterWithCatchAfterTry : Sorter<Node>() {
+object EOGStarterLeastTUImportCatchLastSorter : Sorter<Node>() {
     override fun invoke(result: TranslationResult): List<Node> =
         LeastImportTranslationUnitSorter.invoke(result)
             .flatMap {
