@@ -317,8 +317,6 @@ class FileConceptTest : BaseTest() {
     }
 
     @Test
-    // Needs other traversal of EOG. See #2123
-    @Ignore
     fun testBranching() {
         val topLevel = Path.of("src", "integrationTest", "resources", "python", "file")
 
