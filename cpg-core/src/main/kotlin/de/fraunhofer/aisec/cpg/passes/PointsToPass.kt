@@ -328,7 +328,14 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             functionDeclaration.parameters.forEach { param ->
                 // The short FS
                 newEntries.add(
-                    FunctionDeclaration.FSEntry(0, null, 1, "", true, equalLinkedHashSetOf(param))
+                    FunctionDeclaration.FSEntry(
+                        0,
+                        null,
+                        1,
+                        "",
+                        true,
+                        equalLinkedHashSetOf(Pair(param, equalLinkedHashSetOf())),
+                    )
                 )
                 // The prevDFG edges for the function Declaration
                 doubleState
@@ -376,7 +383,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         functionDeclaration.functionSummary[param]
                             ?.singleOrNull { it == entry }
                             ?.lastWrites
-                            ?.add(dst) // = equalLinkedHashSetOf(dst)
+                            ?.add(Pair(dst, equalLinkedHashSetOf()))
                         val propertySet = equalLinkedHashSetOf<Any>()
                         if (entry.subAccessName != "")
                             propertySet.add(
@@ -449,8 +456,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         val filteredLastWrites =
                             lastWrites
                                 // for shortFS,only use these, and for !shortFS, only those
-                                .filter { shortFS in it.second }
-                                .mapTo(EqualLinkedHashSet()) { it.first }
+                                .filterTo(EqualLinkedHashSet()) { shortFS in it.second }
+                        // .mapTo(EqualLinkedHashSet()) { it.first }
                         existingEntry.add(
                             FunctionDeclaration.FSEntry(
                                 dstValueDepth,
@@ -470,7 +477,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 0,
                                 subAccessName,
                                 true,
-                                equalLinkedHashSetOf(node),
+                                equalLinkedHashSetOf(Pair(node, equalLinkedHashSetOf())),
                             )
                         )
                         val propertySet = identitySetOf<Any>(true)
@@ -506,7 +513,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                                 stringToDepth(sourceParamValue.name.localName),
                                                 subAccessName,
                                                 true,
-                                                equalLinkedHashSetOf(param),
+                                                equalLinkedHashSetOf(
+                                                    Pair(param, equalLinkedHashSetOf())
+                                                ),
                                             )
                                         )
                                 }
@@ -580,7 +589,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                     1,
                                     "",
                                     false,
-                                    equalLinkedHashSetOf(parentFD),
+                                    equalLinkedHashSetOf(Pair(parentFD, equalLinkedHashSetOf())),
                                 )
                             }
                         )
@@ -806,7 +815,13 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             // Especially for shortFS, we need to update the prevDFGs with
                             // information we didn't have when creating the functionSummary.
                             // calculatePrev does this for us
-                            val prev = calculatePrev(lastWrites, shortFS, currentNode, invoke)
+                            val prev =
+                                calculatePrev(
+                                    lastWrites.mapTo(EqualLinkedHashSet()) { it.first },
+                                    shortFS,
+                                    currentNode,
+                                    invoke,
+                                )
                             mapDstToSrc =
                                 addEntryToMap(
                                     doubleState,

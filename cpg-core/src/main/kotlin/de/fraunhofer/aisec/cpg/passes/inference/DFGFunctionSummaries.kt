@@ -336,7 +336,7 @@ class DFGFunctionSummaries {
                                         srcValueDepth,
                                         "",
                                         false,
-                                        equalLinkedHashSetOf<Node>(from),
+                                        equalLinkedHashSetOf(Pair(from, equalLinkedHashSetOf())),
                                     )
                                 )
                         }
@@ -357,7 +357,7 @@ class DFGFunctionSummaries {
                                         srcValueDepth,
                                         "",
                                         false,
-                                        equalLinkedHashSetOf<Node>(from),
+                                        equalLinkedHashSetOf(Pair(from, equalLinkedHashSetOf())),
                                     )
                                 )
                         }

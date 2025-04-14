@@ -3219,5 +3219,11 @@ class PointsToPassTest {
 
         val mainFD = tu.functions["teststackedcallingcontexts"]
         assertNotNull(mainFD)
+
+        val iRefLine479 = mainFD.refs[4]
+        assertNotNull(iRefLine479)
+
+        val pDerefLine479 = mainFD.refs[5]
+        assertNotNull(pDerefLine479)
     }
 }

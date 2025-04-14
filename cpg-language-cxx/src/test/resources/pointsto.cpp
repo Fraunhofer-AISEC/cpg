@@ -472,7 +472,7 @@ int outer_func(int* p_outer){
 
 int teststackedcallingcontexts() {
   int i=0;
-  int p=&i;
+  int* p=&i;
 
   outer_func(p);
 
