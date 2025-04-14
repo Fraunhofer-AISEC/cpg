@@ -52,10 +52,24 @@ class CXXEntryPointsPass(ctx: TranslationContext) : ConceptPass(ctx) {
     ) {
         val entry =
             when (func.name.toString()) {
-                "main" -> newMain(underlyingNode = func, os = tu.getConceptOrCreate<POSIX>())
-                "WinMain" -> newMain(underlyingNode = func, os = tu.getConceptOrCreate<Win32>())
+                "main" ->
+                    newMain(
+                        underlyingNode = func,
+                        os = tu.getConceptOrCreate<POSIX>(),
+                        connect = true,
+                    )
+                "WinMain" ->
+                    newMain(
+                        underlyingNode = func,
+                        os = tu.getConceptOrCreate<Win32>(),
+                        connect = true,
+                    )
                 "DllMain" ->
-                    newLibraryEntryPoint(underlyingNode = func, os = tu.getConceptOrCreate<Win32>())
+                    newLibraryEntryPoint(
+                        underlyingNode = func,
+                        os = tu.getConceptOrCreate<Win32>(),
+                        connect = true,
+                    )
                 else -> return
             }
 

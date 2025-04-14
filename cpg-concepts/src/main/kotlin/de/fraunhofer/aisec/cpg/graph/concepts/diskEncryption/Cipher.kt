@@ -26,11 +26,13 @@
 package de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption
 
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import java.util.Objects
 
 /** Represents a cipher suite. E.g. `AES-XTS-plain64` */
-class Cipher(underlyingNode: Node) : Concept(underlyingNode = underlyingNode), IsDiskEncryption {
+class Cipher(underlyingNode: Node? = null) :
+    Concept(underlyingNode = underlyingNode), IsDiskEncryption {
     /** A string representing the cipher used, e.g. `AES-XTS-plain64`. */
     var cipherName: String? = null
 
@@ -40,9 +42,9 @@ class Cipher(underlyingNode: Node) : Concept(underlyingNode = underlyingNode), I
     /** Key size. */
     var keySize: Int? = null
 
-    override fun equals(other: Any?): Boolean {
+    override fun equalWithoutUnderlying(other: OverlayNode): Boolean {
         return other is Cipher &&
-            super.equals(other) &&
+            super.equalWithoutUnderlying(other) &&
             other.cipherName == this.cipherName &&
             other.blockSize == this.blockSize &&
             other.keySize == this.keySize

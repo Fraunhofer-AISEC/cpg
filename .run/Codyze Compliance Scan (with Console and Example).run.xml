@@ -1,5 +1,7 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Codyze Compliance Scan (with Console and Example)" type="JetRunConfigurationType">
+    <option name="ALTERNATIVE_JRE_PATH" value="21" />
+    <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
     <option name="MAIN_CLASS_NAME" value="de.fraunhofer.aisec.codyze.ApplicationKt" />
     <module name="cpg.codyze.main" />
     <option name="PROGRAM_PARAMETERS" value="compliance scan --project-dir codyze-compliance/src/integrationTest/resources/demo-app --components webapp --components auth --console=true" />
