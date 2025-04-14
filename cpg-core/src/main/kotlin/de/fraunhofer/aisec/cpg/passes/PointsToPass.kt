@@ -1091,9 +1091,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 ) {
                                     Pair(it.first, shortFS)
                                 }
-                            }
+                            } ?: identitySetOf(Pair(srcNode, shortFS))
 
-                    newSet?.forEach { pair ->
+                    newSet.forEach { pair ->
                         if (
                             currentSet.none {
                                 it.srcNode === pair.first &&

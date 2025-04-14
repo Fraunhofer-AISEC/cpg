@@ -2307,12 +2307,11 @@ class PointsToPassTest {
 
         // And from the callExpression to the functionDeclaration
         assertEquals(unknownFuncFD, ceLine242.prevFullDFG.singleOrNull())
-        // TODO
-        //        assertEquals(2, ceLine242.prevFunctionSummaryDFG.size)
-        //        assertEquals(
-        //            mutableSetOf<Node>(ceLine242.arguments[0], ceLine242.arguments[1]),
-        //            ceLine242.prevFunctionSummaryDFG.toMutableSet(),
-        //        )
+        assertEquals(2, ceLine242.prevFunctionSummaryDFG.size)
+        assertEquals(
+            mutableSetOf<Node>(ceLine242.arguments[0], ceLine242.arguments[1]),
+            ceLine242.prevFunctionSummaryDFG.toMutableSet(),
+        )
     }
 
     @Test
