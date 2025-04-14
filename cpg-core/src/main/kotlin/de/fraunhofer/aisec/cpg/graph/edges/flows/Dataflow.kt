@@ -196,10 +196,10 @@ open class Dataflow(
 
 sealed interface CallingContext {
     /** The call expression that affects this dataflow edge. */
-    val calls: Set<CallExpression>
+    val calls: MutableList<CallExpression>
 }
 
-class CallingContextIn(override val calls: Set<CallExpression>) : CallingContext {
+class CallingContextIn(override val calls: MutableList<CallExpression>) : CallingContext {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is CallingContextIn) return false
@@ -215,7 +215,7 @@ class CallingContextIn(override val calls: Set<CallExpression>) : CallingContext
 
 class CallingContextOut(
     /** The call expression that affects this dataflow edge. */
-    override val calls: Set<CallExpression>
+    override val calls: MutableList<CallExpression>
 ) : CallingContext {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

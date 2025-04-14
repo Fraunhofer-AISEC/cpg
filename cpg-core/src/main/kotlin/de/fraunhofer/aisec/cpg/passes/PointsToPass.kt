@@ -457,7 +457,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             lastWrites
                                 // for shortFS,only use these, and for !shortFS, only those
                                 .filterTo(EqualLinkedHashSet()) { shortFS in it.second }
-                        // .mapTo(EqualLinkedHashSet()) { it.first }
                         existingEntry.add(
                             FunctionDeclaration.FSEntry(
                                 dstValueDepth,
@@ -610,7 +609,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         doubleState: PointsToStateElement,
     ): PointsToStateElement {
         var doubleState = doubleState
-        var callingContext = CallingContextIn(setOf(callExpression))
+        var callingContext = CallingContextIn(mutableListOf(callExpression))
         callExpression.arguments.forEach { arg ->
             if (arg.argumentIndex < functionDeclaration.parameters.size) {
                 // Create a DFG-Edge from the argument to the parameter's memoryValue
@@ -745,7 +744,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
     data class MapDstToSrcEntry(
         val srcNode: Node?,
-        val lastWrites: EqualLinkedHashSet<Node>,
+        val lastWrites: EqualLinkedHashSet<Pair<Node, EqualLinkedHashSet<Any>>>,
         val propertySet: EqualLinkedHashSet<Any>,
         val dst: IdentitySet<Node> = identitySetOf(),
     )
@@ -815,13 +814,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             // Especially for shortFS, we need to update the prevDFGs with
                             // information we didn't have when creating the functionSummary.
                             // calculatePrev does this for us
-                            val prev =
-                                calculatePrev(
-                                    lastWrites.mapTo(EqualLinkedHashSet()) { it.first },
-                                    shortFS,
-                                    currentNode,
-                                    invoke,
-                                )
+                            val prev = calculatePrevDFGs(lastWrites, shortFS, currentNode, invoke)
                             mapDstToSrc =
                                 addEntryToMap(
                                     doubleState,
@@ -842,7 +835,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             i++
         }
 
-        val callingContextOut = CallingContextOut(setOf(currentNode))
+        val callingContextOut = CallingContextOut(mutableListOf(currentNode))
         mapDstToSrc.forEach { (dstAddr, values) ->
             doubleState =
                 writeMapEntriesToState(lattice, doubleState, dstAddr, values, callingContextOut)
@@ -851,27 +844,32 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         return doubleState
     }
 
-    private fun calculatePrev(
-        lastWrites: EqualLinkedHashSet<Node>,
+    private fun calculatePrevDFGs(
+        lastWrites: EqualLinkedHashSet<Pair<Node, EqualLinkedHashSet<Any>>>,
         shortFS: Boolean,
         currentNode: CallExpression,
         invoke: FunctionDeclaration,
-    ): EqualLinkedHashSet<Node> {
-        val ret = equalLinkedHashSetOf<Node>()
+    ): EqualLinkedHashSet<Pair<Node, EqualLinkedHashSet<Any>>> {
+        val ret = equalLinkedHashSetOf<Pair<Node, EqualLinkedHashSet<Any>>>()
         // If we have nothing, the last write is probably the functionDeclaration
-        if (lastWrites.isEmpty()) ret.add(invoke)
-        lastWrites.forEach { lw ->
+        if (lastWrites.isEmpty()) ret.add(Pair(invoke, equalLinkedHashSetOf()))
+        lastWrites.forEach { (lw, properties) ->
+            // TODO: Do we also want to deal with other properties?
+            val filteredProperties =
+                properties.filterTo(EqualLinkedHashSet()) { it is CallingContextOut }
             if (shortFS) {
                 when (lw) {
-                    is FunctionDeclaration -> ret.add(currentNode)
+                    is FunctionDeclaration -> ret.add(Pair(currentNode, filteredProperties))
                     is ParameterDeclaration -> {
                         if (lw.argumentIndex < currentNode.arguments.size)
-                            ret.add(currentNode.arguments[lw.argumentIndex])
-                        else ret.add(lw)
+                            ret.add(
+                                Pair(currentNode.arguments[lw.argumentIndex], filteredProperties)
+                            )
+                        else ret.add(Pair(lw, filteredProperties))
                     }
-                    else -> ret.add(lw)
+                    else -> ret.add(Pair(lw, filteredProperties))
                 }
-            } else ret.add(lw)
+            } else ret.add(Pair(lw, filteredProperties))
         }
         return ret
     }
@@ -924,20 +922,21 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         val destinations = identitySetOf<Node>()
 
         values.forEach { value ->
-            value.lastWrites.forEach { lw ->
+            value.lastWrites.forEach { (lw, lwProps) ->
                 // For short FunctionSummaries (AKA one of the lastWrite properties set to 'true',
                 // we don't add the callingcontext
-                if (value.propertySet.any { it == true })
-                    lastWrites.add(Pair(lw, value.propertySet))
-                else
-                    lastWrites.add(
-                        Pair(
-                            lw,
-                            equalLinkedHashSetOf(
-                                *(value.propertySet + callingContextOut).toTypedArray()
-                            ),
-                        )
-                    )
+                val lwPropertySet = value.propertySet
+                // If this is not a shortFS edge, we add the new callingcontext and have to check if
+                // we already have a list of callingcontexts in the properties
+                if (value.propertySet.none { it == true }) {
+                    lwProps.filterIsInstance<CallingContextOut>().singleOrNull()?.calls?.let {
+                        callingContextOut.calls.addAll(it)
+                    }
+                    lwPropertySet.add(callingContextOut)
+                }
+                // Add all other previous properties
+                lwPropertySet.addAll(lwProps.filter { it !is CallingContextOut })
+                lastWrites.add(Pair(lw, lwPropertySet))
             }
             destinations.addAll(value.dst)
         }
@@ -984,7 +983,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         param: Node,
         propertySet: EqualLinkedHashSet<Any>,
         currentNode: CallExpression,
-        lastWrites: EqualLinkedHashSet<Node>,
+        lastWrites: EqualLinkedHashSet<Pair<Node, EqualLinkedHashSet<Any>>>,
     ): MutableMap<Node, IdentitySet<MapDstToSrcEntry>> {
         var doubleState = doubleState
         when (srcNode) {

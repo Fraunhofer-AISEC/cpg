@@ -76,13 +76,13 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                             ?.prevDFGEdges
                             ?.addContextSensitive(
                                 param,
-                                callingContext = CallingContextOut(setOf(call)),
+                                callingContext = CallingContextOut(mutableListOf(call)),
                             )
                     } else if (param is ParameterDeclaration) {
                         val arg = call.arguments[param.argumentIndex]
                         arg.prevDFGEdges.addContextSensitive(
                             param,
-                            callingContext = CallingContextOut(setOf(call)),
+                            callingContext = CallingContextOut(mutableListOf(call)),
                         )
                         arg.access = AccessValues.READWRITE
                         (arg as? Reference)?.let {
@@ -571,7 +571,7 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 Util.attachCallParameters(it, call)
                 call.prevDFGEdges.addContextSensitive(
                     it,
-                    callingContext = CallingContextOut(setOf(call)),
+                    callingContext = CallingContextOut(mutableListOf(call)),
                 )
                 if (it.isInferred) {
                     callsInferredFunctions.add(call)
