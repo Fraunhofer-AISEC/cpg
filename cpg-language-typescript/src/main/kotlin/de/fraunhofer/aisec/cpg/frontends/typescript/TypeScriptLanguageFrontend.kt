@@ -74,13 +74,18 @@ class TypeScriptLanguageFrontend(
         private val parserFile: File = createTempFile("parser", "")
 
         init {
-            val arch =
-                System.getProperty("os.arch").replace("aarch64", "arm64").replace("x86_64", "amd64")
+            val arch = System.getProperty("os.arch")
             val os: String =
-                if (System.getProperty("os.name").startsWith("Mac")) {
-                    "macos"
-                } else {
-                    "linux"
+                when {
+                    System.getProperty("os.name").startsWith("Mac") -> {
+                        "macos"
+                    }
+                    System.getProperty("os.name").startsWith("Linux") -> {
+                        "linux"
+                    }
+                    else -> {
+                        "windows"
+                    }
                 }
 
             val link = this::class.java.getResourceAsStream("/typescript/parser-$os-$arch")

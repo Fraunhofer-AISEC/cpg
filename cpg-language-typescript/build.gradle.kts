@@ -38,8 +38,25 @@ mavenPublishing {
     }
 }
 
-val compileMacOSx8664 =
-    tasks.register<RunDenoTask>("compileMacOSAmd64") {
+val compileWindowsX8664 =
+    tasks.register<RunDenoTask>("compileWindowsX8664") {
+        dependsOn(tasks.installDeno)
+        command(
+            "compile",
+            "-E",
+            "-R",
+            "--target",
+            "x86_64-pc-windows-msvc",
+            "-o",
+            "build/resources/main/typescript/parser-windows-x86_64",
+            "src/main/typescript/src/parser.ts",
+        )
+        outputs.dir("build/resources/main/typescript")
+        outputs.cacheIf { true }
+    }
+
+val compileMacOSX8664 =
+    tasks.register<RunDenoTask>("compileMacOSX8664") {
         dependsOn(tasks.installDeno)
         command(
             "compile",
@@ -48,15 +65,15 @@ val compileMacOSx8664 =
             "--target",
             "x86_64-apple-darwin",
             "-o",
-            "build/resources/main/typescript/parser-macos-amd64",
+            "build/resources/main/typescript/parser-macos-x86_64",
             "src/main/typescript/src/parser.ts",
         )
         outputs.dir("build/resources/main/typescript")
         outputs.cacheIf { true }
     }
 
-val compileMacOSArm64 =
-    tasks.register<RunDenoTask>("compileMacOSArm64") {
+val compileMacOSAarch64 =
+    tasks.register<RunDenoTask>("compileMacOSAarch64") {
         dependsOn(tasks.installDeno)
         command(
             "compile",
@@ -65,7 +82,7 @@ val compileMacOSArm64 =
             "--target",
             "aarch64-apple-darwin",
             "-o",
-            "build/resources/main/typescript/parser-macos-arm64",
+            "build/resources/main/typescript/parser-macos-aarch64",
             "src/main/typescript/src/parser.ts",
         )
         outputs.dir("build/resources/main/typescript")
@@ -73,7 +90,7 @@ val compileMacOSArm64 =
     }
 
 val compileLinuxX8664 =
-    tasks.register<RunDenoTask>("compileLinuxAmd64") {
+    tasks.register<RunDenoTask>("compileLinuxX8664") {
         dependsOn(tasks.installDeno)
         command(
             "compile",
@@ -82,15 +99,15 @@ val compileLinuxX8664 =
             "--target",
             "x86_64-unknown-linux-gnu",
             "-o",
-            "build/resources/main/typescript/parser-linux-amd64",
+            "build/resources/main/typescript/parser-linux-x86_64",
             "src/main/typescript/src/parser.ts",
         )
         outputs.dir("build/resources/main/typescript")
         outputs.cacheIf { true }
     }
 
-val compileLinuxArm64 =
-    tasks.register<RunDenoTask>("compileLinuxArm64") {
+val compileLinuxAarch64 =
+    tasks.register<RunDenoTask>("compileLinuxAarch64") {
         dependsOn(tasks.installDeno)
         command(
             "compile",
@@ -99,7 +116,7 @@ val compileLinuxArm64 =
             "--target",
             "aarch64-unknown-linux-gnu",
             "-o",
-            "build/resources/main/typescript/parser-linux-arm64",
+            "build/resources/main/typescript/parser-linux-aarch64",
             "src/main/typescript/src/parser.ts",
         )
         outputs.dir("build/resources/main/typescript")
@@ -107,5 +124,11 @@ val compileLinuxArm64 =
     }
 
 tasks.processResources {
-    dependsOn(compileMacOSx8664, compileMacOSArm64, compileLinuxX8664, compileLinuxArm64)
+    dependsOn(
+        compileWindowsX8664,
+        compileMacOSX8664,
+        compileMacOSAarch64,
+        compileLinuxX8664,
+        compileLinuxAarch64,
+    )
 }
