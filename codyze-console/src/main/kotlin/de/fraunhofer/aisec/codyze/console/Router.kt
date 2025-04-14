@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.codyze.console
 
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
-import de.fraunhofer.aisec.cpg.graph.listConceptClasses
+import de.fraunhofer.aisec.cpg.graph.listOverlays
 import io.ktor.http.*
 import io.ktor.server.http.content.*
 import io.ktor.server.request.*
@@ -178,7 +178,7 @@ fun Routing.apiRoutes(service: ConsoleService) {
          * an array of concept names (Java class names).
          */
         get("/classes/concepts") {
-            val conceptClasses = listConceptClasses()
+            val conceptClasses = listOverlays<Concept>()
             call.respond(
                 mapOf("info" to conceptClasses.map { it.kotlin.getConstructorArguments() })
             )
