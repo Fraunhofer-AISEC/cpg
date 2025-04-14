@@ -424,7 +424,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
             indexes.forEach { (index, dstValueDepth) ->
                 val stateEntries =
-                    doubleState.fetchElementFromDeclarationState(index, true).filterTo(
+                    doubleState.fetchElementFromDeclarationState(index, true, true).filterTo(
                         identitySetOf()
                     ) {
                         it.value.name != param.name
@@ -446,6 +446,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         // Store the information in the functionSummary
                         val existingEntry =
                             node.functionSummary.computeIfAbsent(param) { mutableSetOf() }
+                        val filteredLastWrites =
+                            lastWrites
+                                // for shortFS,only use these, and for !shortFS, only those
+                                .filter { shortFS in it.second }
+                                .mapTo(EqualLinkedHashSet()) { it.first }
                         existingEntry.add(
                             FunctionDeclaration.FSEntry(
                                 dstValueDepth,
@@ -453,7 +458,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 srcValueDepth,
                                 subAccessName,
                                 shortFS,
-                                lastWrites.mapTo(EqualLinkedHashSet()) { it.first },
+                                filteredLastWrites,
                             )
                         )
                         // Additionally, we store this as a shortFunctionSummary were the Function
