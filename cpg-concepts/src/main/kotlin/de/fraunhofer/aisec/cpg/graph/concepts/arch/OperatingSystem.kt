@@ -31,9 +31,13 @@ import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import kotlin.reflect.full.isSubclassOf
 
 /** Represents an architecture of an operating system. */
-abstract class OperatingSystemArchitecture(underlyingNode: Node) :
+abstract class OperatingSystemArchitecture(underlyingNode: Node?) :
     Concept(underlyingNode = underlyingNode) {
     override fun equalWithoutUnderlying(other: OverlayNode): Boolean {
+        return other::class.isSubclassOf(this::class)
+    }
+
+    override fun equals(other: Any?): Boolean {
         return other != null && other::class.isSubclassOf(this::class)
     }
 
@@ -43,17 +47,19 @@ abstract class OperatingSystemArchitecture(underlyingNode: Node) :
 }
 
 /** Represents an agnostic architecture, which is not tied to a specific operating system. */
-class Agnostic(underlyingNode: Node) : OperatingSystemArchitecture(underlyingNode = underlyingNode)
+class Agnostic(underlyingNode: Node? = null) :
+    OperatingSystemArchitecture(underlyingNode = underlyingNode)
 
 /** Represents a Win32 architecture, commonly found on Windows systems. */
-class Win32(underlyingNode: Node) : OperatingSystemArchitecture(underlyingNode = underlyingNode)
+class Win32(underlyingNode: Node? = null) :
+    OperatingSystemArchitecture(underlyingNode = underlyingNode)
 
 /** Represents a POSIX architecture, commonly found on Linux systems, */
-open class POSIX(underlyingNode: Node) :
+open class POSIX(underlyingNode: Node? = null) :
     OperatingSystemArchitecture(underlyingNode = underlyingNode)
 
 /**
  * Represents a Darwin architecture, commonly found on macOS systems. macOS is a certified
  * [UNIX](https://www.opengroup.org/openbrand/register/apple.htm) and is (mostly) POSIX compatible.
  */
-class Darwin(underlyingNode: Node) : POSIX(underlyingNode = underlyingNode)
+class Darwin(underlyingNode: Node? = null) : POSIX(underlyingNode = underlyingNode)

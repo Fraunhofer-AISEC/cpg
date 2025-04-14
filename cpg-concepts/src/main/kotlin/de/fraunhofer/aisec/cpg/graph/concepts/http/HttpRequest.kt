@@ -30,7 +30,7 @@ import java.util.Objects
 
 /** Represents an [HttpRequest] from the [HttpClient]. */
 class HttpRequest(
-    underlyingNode: Node,
+    underlyingNode: Node? = null,
     val url: String,
     val arguments: List<Node>,
     val httpMethod: HttpMethod,

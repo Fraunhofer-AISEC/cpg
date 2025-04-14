@@ -27,6 +27,8 @@ package de.fraunhofer.aisec.cpg.graph.concepts.logging
 
 import de.fraunhofer.aisec.cpg.graph.MetadataProvider
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.concepts.Concept
+import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.concepts.newConcept
 import de.fraunhofer.aisec.cpg.graph.concepts.newOperation
 
@@ -35,10 +37,14 @@ import de.fraunhofer.aisec.cpg.graph.concepts.newOperation
  *
  * @param underlyingNode The underlying CPG node (e.g. a call expression creating a log).
  * @param name The name of the logger.
+ * @param connect If `true`, the created [Concept] will be connected to the underlying node by
+ *   setting its `underlyingNode`.
  * @return The new [Log].
  */
-fun MetadataProvider.newLog(underlyingNode: Node, name: String) =
-    newConcept(::Log, underlyingNode).apply { this.logName = name }
+fun MetadataProvider.newLog(underlyingNode: Node, name: String, connect: Boolean) =
+    newConcept(::Log, underlyingNode = underlyingNode, connect = connect).apply {
+        this.logName = name
+    }
 
 /**
  * Creates a [LogWrite] node with the same metadata as the [underlyingNode].
@@ -52,6 +58,9 @@ fun MetadataProvider.newLog(underlyingNode: Node, name: String) =
  * @param level The [LogLevel] used for this write operation.
  * @param logArguments The underlying CPG nodes of the logging arguments, i.e. what is written to
  *   the log.
+ * @param connect If `true`, the created [Operation] will be connected to the underlying node by
+ *   setting its `underlyingNode` and inserting it in the EOG , to [concept] by its edge
+ *   [Concept.ops].
  * @return The new [Log].
  */
 fun MetadataProvider.newLogWrite(
@@ -59,30 +68,32 @@ fun MetadataProvider.newLogWrite(
     concept: Log,
     level: LogLevel,
     logArguments: List<Node>,
+    connect: Boolean,
 ) =
     newOperation(
-            { node, concept ->
-                LogWrite(
-                    underlyingNode = underlyingNode,
-                    concept = concept,
-                    logArguments = logArguments,
-                    logLevel = level,
-                )
+            { concept ->
+                LogWrite(concept = concept, logArguments = logArguments, logLevel = level)
             },
             underlyingNode = underlyingNode,
             concept = concept,
+            connect = connect,
         )
-        .apply {
-            this.nextDFG += concept
-            this.prevDFG += logArguments
-        }
+        .apply { if (connect) this.setDFG() }
 
 /**
  * Creates a [LogGet] node with the same metadata as the [underlyingNode].
  *
  * @param underlyingNode The underlying CPG node (e.g. a call expression writing to a log).
  * @param concept The [Log] concept this operation belongs to.
+ * @param connect If `true`, the created [Operation] will be connected to the underlying node by
+ *   setting its `underlyingNode` and inserting it in the EOG , to [concept] by its edge
+ *   [Concept.ops].
  * @return The new [LogGet].
  */
-fun MetadataProvider.newLogGet(underlyingNode: Node, concept: Log) =
-    newOperation(::LogGet, underlyingNode = underlyingNode, concept = concept)
+fun MetadataProvider.newLogGet(underlyingNode: Node, concept: Log, connect: Boolean) =
+    newOperation(
+        { concept -> LogGet(concept = concept) },
+        underlyingNode = underlyingNode,
+        concept = concept,
+        connect = connect,
+    )

@@ -34,8 +34,6 @@ import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.component
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
-import de.fraunhofer.aisec.cpg.graph.concepts.newConceptNoConnect
-import de.fraunhofer.aisec.cpg.graph.concepts.newOperationNoConnect
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.edges.flows.insertNodeAfterwardInEOGPath
 import de.fraunhofer.aisec.cpg.graph.firstParentOrNull
@@ -51,7 +49,6 @@ import de.fraunhofer.aisec.cpg.passes.EOGStarterLeastTUImportSorterWithCatchAfte
 import de.fraunhofer.aisec.cpg.passes.EOGStarterPass
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
-import kotlin.collections.set
 
 typealias NodeToOverlayStateElement = MapLattice.Element<Node, PowersetLattice.Element<OverlayNode>>
 
@@ -70,8 +67,8 @@ typealias NodeToOverlayState = MapLattice<Node, PowersetLattice.Element<OverlayN
  * * These methods must return a collection of [OverlayNode]s that are created for the given node.
  *   They must not create [OverlayNode]s for other nodes than the one passed as an argument!
  * * These methods must not connect the created [OverlayNode]s to the underlying node! This is done
- *   in the pass itself after having collected all overlays. Use a builder based on
- *   [newOperationNoConnect] or [newConceptNoConnect] to do this.
+ *   in the pass itself after having collected all overlays. Use a builder based with the flag
+ *   `connect` set to `false` to do this.
  */
 @DependsOn(EvaluationOrderGraphPass::class)
 @DependsOn(DFGPass::class)

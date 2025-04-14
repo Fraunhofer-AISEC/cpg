@@ -32,14 +32,15 @@ import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import java.util.Objects
 
 /** Represents a high-level concept for authentication. */
-abstract class Authentication(underlyingNode: Node) : Concept(underlyingNode)
+abstract class Authentication(underlyingNode: Node?) : Concept(underlyingNode)
 
 /**
  * Represents a token-based authentication.
  *
  * @param token The authentication token, which may be an opaque token.
  */
-open class TokenBasedAuth(underlyingNode: Node, val token: Node) : Authentication(underlyingNode) {
+open class TokenBasedAuth(underlyingNode: Node? = null, val token: Node) :
+    Authentication(underlyingNode) {
     override fun equalWithoutUnderlying(other: OverlayNode): Boolean {
         return other is TokenBasedAuth &&
             super.equalWithoutUnderlying(other) &&
@@ -55,7 +56,7 @@ open class TokenBasedAuth(underlyingNode: Node, val token: Node) : Authenticatio
  * @param jwt The JWT containing encoded authentication information.
  * @param payload The payload.
  */
-class JwtAuth(underlyingNode: Node, val jwt: Node, val payload: Node) :
+class JwtAuth(underlyingNode: Node? = null, val jwt: Node, val payload: Node) :
     TokenBasedAuth(underlyingNode, jwt) {
     override fun equalWithoutUnderlying(other: OverlayNode): Boolean {
         return other is JwtAuth &&
@@ -68,7 +69,7 @@ class JwtAuth(underlyingNode: Node, val jwt: Node, val payload: Node) :
 }
 
 /** Abstract base class for authentication operations. */
-abstract class AuthenticationOperation(underlyingNode: Node, concept: Authentication) :
+abstract class AuthenticationOperation(underlyingNode: Node? = null, concept: Authentication) :
     Operation(underlyingNode, concept)
 
 /**
@@ -77,7 +78,7 @@ abstract class AuthenticationOperation(underlyingNode: Node, concept: Authentica
  * @param credential The credential can be a call (e.g., a function call that reads a header) or a
  *   variable that holds the value, e.g. the token
  */
-class Authenticate(underlyingNode: Node, concept: Authentication, val credential: Node) :
+class Authenticate(underlyingNode: Node? = null, concept: Authentication, val credential: Node) :
     AuthenticationOperation(underlyingNode, concept) {
     override fun equalWithoutUnderlying(other: OverlayNode): Boolean {
         return other is Authenticate &&

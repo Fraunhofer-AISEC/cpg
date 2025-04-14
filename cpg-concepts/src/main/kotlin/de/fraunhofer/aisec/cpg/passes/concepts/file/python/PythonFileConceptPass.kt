@@ -87,9 +87,18 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
                     }
 
                     "__exit__" ->
-                        newFileCloseNoConnect(underlyingNode = callExpression, file = fileNode)
+                        newFileClose(
+                            underlyingNode = callExpression,
+                            file = fileNode,
+                            connect = false,
+                        )
 
-                    "read" -> newFileReadNoConnect(underlyingNode = callExpression, file = fileNode)
+                    "read" ->
+                        newFileRead(
+                            underlyingNode = callExpression,
+                            file = fileNode,
+                            connect = false,
+                        )
                     "write" -> {
                         val arg = callExpression.arguments.getOrNull(0)
                         if (callExpression.arguments.size != 1 || arg == null) {
@@ -100,10 +109,11 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
                             )
                             return emptySet()
                         }
-                        newFileWriteNoConnect(
+                        newFileWrite(
                             underlyingNode = callExpression,
                             file = fileNode,
                             what = arg,
+                            connect = false,
                         )
                     }
 
@@ -158,12 +168,18 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
                 val mode = getBuiltinOpenMode(callExpression) ?: "r" // default is 'r'
                 val flags = translateBuiltinOpenMode(mode)
                 val setFlagsOp =
-                    newFileSetFlagsNoConnect(
+                    newFileSetFlags(
                         underlyingNode = callExpression,
                         file = newFileNode,
                         flags = flags,
+                        connect = false,
                     )
-                val open = newFileOpenNoConnect(underlyingNode = callExpression, file = newFileNode)
+                val open =
+                    newFileOpen(
+                        underlyingNode = callExpression,
+                        file = newFileNode,
+                        connect = false,
+                    )
 
                 setOfNotNull(setFlagsOp, open, if (isNewFile) newFileNode else null)
             }
@@ -181,23 +197,30 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
 
                 val setFlags =
                     getOsOpenFlags(callExpression)?.let { flags ->
-                        newFileSetFlagsNoConnect(
+                        newFileSetFlags(
                             underlyingNode = callExpression,
                             file = newFileNode,
                             flags = translateOsOpenFlags(flags),
+                            connect = false,
                         )
                     }
                 val mode =
                     getOsOpenMode(callExpression)
                         ?: 329L // default is 511 (assuming this is octet notation)
                 val setMask =
-                    newFileSetMaskNoConnect(
+                    newFileSetMask(
                         underlyingNode = callExpression,
                         file = newFileNode,
                         mask = mode,
+                        connect = false,
                     )
 
-                val open = newFileOpenNoConnect(underlyingNode = callExpression, file = newFileNode)
+                val open =
+                    newFileOpen(
+                        underlyingNode = callExpression,
+                        file = newFileNode,
+                        connect = false,
+                    )
 
                 setOfNotNull(setFlags, setMask, open, if (isNewFile) newFileNode else null)
             }
@@ -230,10 +253,11 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
                 }
                 setOfNotNull(
                     if (isNewFile) file else null,
-                    newFileSetMaskNoConnect(
+                    newFileSetMask(
                         underlyingNode = callExpression,
                         file = file,
                         mask = mode,
+                        connect = false,
                     ),
                 )
             }
@@ -256,7 +280,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
 
                 setOfNotNull(
                     if (isNewFile) file else null,
-                    newFileDeleteNoConnect(underlyingNode = callExpression, file = file),
+                    newFileDelete(underlyingNode = callExpression, file = file, connect = false),
                 )
             }
             else -> {
@@ -283,7 +307,8 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
         if (existingEntry != null) {
             return existingEntry to false
         }
-        val newEntry = newFileNoConnect(underlyingNode = callExpression, fileName = fileName)
+        val newEntry =
+            newFile(underlyingNode = callExpression, fileName = fileName, connect = false)
         currentMap[fileName] = newEntry
         return newEntry to true
     }

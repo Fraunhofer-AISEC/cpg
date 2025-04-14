@@ -52,7 +52,7 @@ enum class LogLevel {
  *   the log.
  */
 class LogWrite(
-    underlyingNode: Node,
+    underlyingNode: Node? = null,
     override val concept: Log,
     val logLevel: LogLevel,
     val logArguments: List<Node>,
@@ -65,4 +65,9 @@ class LogWrite(
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), logLevel, logArguments)
+
+    override fun setDFG() {
+        this.nextDFG += concept
+        this.prevDFG += logArguments
+    }
 }

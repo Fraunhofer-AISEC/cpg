@@ -36,12 +36,12 @@ import java.util.Objects
  * such as a main function, a library initialization function or a "remote" entry point, such as a
  * network endpoint.
  */
-abstract class EntryPoint(underlyingNode: FunctionDeclaration) :
+abstract class EntryPoint(underlyingNode: FunctionDeclaration?) :
     Concept(underlyingNode = underlyingNode)
 
 /** Represents a local entry point into the execution of the program, such as a main function. */
 abstract class LocalEntryPoint(
-    underlyingNode: FunctionDeclaration,
+    underlyingNode: FunctionDeclaration?,
     /**
      * If this entry point is specifically designed to be invoked on a certain
      * [OperatingSystemArchitecture], it can be specified here.
@@ -58,13 +58,15 @@ abstract class LocalEntryPoint(
 }
 
 /** The main function of a program. */
-class Main(underlyingNode: FunctionDeclaration, os: OperatingSystemArchitecture) :
+class Main(underlyingNode: FunctionDeclaration? = null, os: OperatingSystemArchitecture) :
     LocalEntryPoint(underlyingNode = underlyingNode, os = os)
 
 /** Represents an entry point that is triggered if the code is loaded as a (dynamic) library. */
-class LibraryEntryPoint(underlyingNode: FunctionDeclaration, os: OperatingSystemArchitecture) :
-    LocalEntryPoint(underlyingNode = underlyingNode, os = os)
+class LibraryEntryPoint(
+    underlyingNode: FunctionDeclaration? = null,
+    os: OperatingSystemArchitecture,
+) : LocalEntryPoint(underlyingNode = underlyingNode, os = os)
 
 /** Represents an entry point that can be triggered remotely, such as a network endpoint. */
-abstract class RemoteEntryPoint(underlyingNode: FunctionDeclaration) :
+abstract class RemoteEntryPoint(underlyingNode: FunctionDeclaration?) :
     EntryPoint(underlyingNode = underlyingNode)

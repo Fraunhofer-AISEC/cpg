@@ -45,7 +45,7 @@ import java.util.Objects
  * Often, the configuration is loaded from multiple sources, such as INI files, environment
  * variables, and command-line arguments.
  */
-class Configuration(underlyingNode: Node) : Concept(underlyingNode = underlyingNode) {
+class Configuration(underlyingNode: Node? = null) : Concept(underlyingNode = underlyingNode) {
     var groups: MutableList<ConfigurationGroup> = mutableListOf()
 
     /**
@@ -69,7 +69,7 @@ class Configuration(underlyingNode: Node) : Concept(underlyingNode = underlyingN
  * [ConfigurationGroup], and each key-value pair would be mapped to an [ConfigurationOption] within
  * this group.
  */
-class ConfigurationGroup(underlyingNode: Node, var conf: Configuration) :
+class ConfigurationGroup(underlyingNode: Node? = null, var conf: Configuration) :
     Concept(underlyingNode = underlyingNode) {
     var options: MutableList<ConfigurationOption> = mutableListOf()
 
@@ -87,7 +87,7 @@ class ConfigurationGroup(underlyingNode: Node, var conf: Configuration) :
  * in a configuration data structure.
  */
 class ConfigurationOption(
-    underlyingNode: Node,
+    underlyingNode: Node? = null,
     var group: ConfigurationGroup,
     /**
      * The node that represents the "key" of this option. For example, in an INI file, this would be
@@ -117,12 +117,12 @@ class ConfigurationOption(
 /**
  * A common abstract class for configuration operations, such as reading options or a whole file.
  */
-abstract class ConfigurationOperation(underlyingNode: Node, concept: Concept) :
+abstract class ConfigurationOperation(underlyingNode: Node?, concept: Concept) :
     Operation(underlyingNode = underlyingNode, concept = concept)
 
 /** Represents an operation to load a configuration from a source, such as a file. */
 class LoadConfiguration(
-    underlyingNode: Node,
+    underlyingNode: Node? = null,
     var conf: Configuration,
     /** The expression that holds the file that is loaded. */
     val fileExpression: Expression,
@@ -142,7 +142,7 @@ class LoadConfiguration(
  * `conf["GROUP"]`.
  */
 class ReadConfigurationGroup(
-    underlyingNode: Node,
+    underlyingNode: Node? = null,
     /** The config group that is being read with this operation. */
     var group: ConfigurationGroup,
 ) : ConfigurationOperation(underlyingNode = underlyingNode, concept = group)
@@ -152,7 +152,7 @@ class ReadConfigurationGroup(
  * access such as `group.option` or a subscript operation such as `group["option"]`.
  */
 class ReadConfigurationOption(
-    underlyingNode: Node,
+    underlyingNode: Node? = null,
     /** The config option that is being read with this operation. */
     var option: ConfigurationOption,
 ) : ConfigurationOperation(underlyingNode = underlyingNode, concept = option)
@@ -168,7 +168,7 @@ class ReadConfigurationOption(
  * [RegisterConfigurationGroup] and [ReadConfigurationGroup] nodes.
  */
 class RegisterConfigurationGroup(
-    underlyingNode: Node,
+    underlyingNode: Node? = null,
     /** The config group that is being registered with this operation. */
     var group: ConfigurationGroup,
 ) : ConfigurationOperation(underlyingNode = underlyingNode, concept = group)
@@ -184,7 +184,7 @@ class RegisterConfigurationGroup(
  * [RegisterConfigurationOption] and [ReadConfigurationOption] nodes.
  */
 class RegisterConfigurationOption(
-    underlyingNode: Node,
+    underlyingNode: Node? = null,
     /** The config option that is being registered with this operation. */
     var option: ConfigurationOption,
     /** An optional default value of the option. */
@@ -214,7 +214,7 @@ class RegisterConfigurationOption(
  * the [Configuration.ops] as it's an operation of the source, not the target.
  */
 class ProvideConfiguration(
-    underlyingNode: Node,
+    underlyingNode: Node? = null,
     var source: ConfigurationSource,
     var conf: Configuration,
 ) : ConfigurationOperation(underlyingNode = underlyingNode, concept = source) {
@@ -232,7 +232,7 @@ class ProvideConfiguration(
  * [ConfigurationGroupSource] with a [ConfigurationGroup].
  */
 class ProvideConfigurationGroup(
-    underlyingNode: Node,
+    underlyingNode: Node? = null,
     var source: ConfigurationGroupSource,
     var group: ConfigurationGroup,
 ) : ConfigurationOperation(underlyingNode = underlyingNode, concept = source) {
@@ -250,7 +250,7 @@ class ProvideConfigurationGroup(
  * [ConfigurationOptionSource] with a [ConfigurationOption].
  */
 class ProvideConfigurationOption(
-    underlyingNode: Node,
+    underlyingNode: Node? = null,
     var source: ConfigurationOptionSource,
     var option: ConfigurationOption,
     var value: Node?,
@@ -270,7 +270,7 @@ class ProvideConfigurationOption(
  * INI file frontend, the whole file would be represented as a [TranslationUnitDeclaration]. This
  * translation unit declaration would be the source of the configuration.
  */
-class ConfigurationSource(underlyingNode: Node) : Concept(underlyingNode = underlyingNode) {
+class ConfigurationSource(underlyingNode: Node? = null) : Concept(underlyingNode = underlyingNode) {
     val groups: MutableList<ConfigurationGroupSource> = mutableListOf()
 
     /**
@@ -290,7 +290,8 @@ class ConfigurationSource(underlyingNode: Node) : Concept(underlyingNode = under
  * file with our INI file frontend, each section is presented as a [RecordDeclaration]. This record
  * declaration would be the source of the configuration group.
  */
-class ConfigurationGroupSource(underlyingNode: Node) : Concept(underlyingNode = underlyingNode) {
+class ConfigurationGroupSource(underlyingNode: Node? = null) :
+    Concept(underlyingNode = underlyingNode) {
     val options: MutableList<ConfigurationOptionSource> = mutableListOf()
 }
 
@@ -299,7 +300,7 @@ class ConfigurationGroupSource(underlyingNode: Node) : Concept(underlyingNode = 
  * file with our INI file frontend, each key-value pair is presented as a [FieldDeclaration]. This
  * field declaration would be the source to the configuration option.
  */
-class ConfigurationOptionSource(underlyingNode: Node, var group: ConfigurationGroupSource) :
+class ConfigurationOptionSource(underlyingNode: Node? = null, var group: ConfigurationGroupSource) :
     Concept(underlyingNode = underlyingNode) {
     override fun equalWithoutUnderlying(other: OverlayNode): Boolean {
         return other is ConfigurationOptionSource &&

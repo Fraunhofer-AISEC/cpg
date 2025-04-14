@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import java.util.Objects
 
 /** This concept represents an encrypted disk. */
-class DiskEncryption(underlyingNode: Node) :
+class DiskEncryption(underlyingNode: Node? = null) :
     Concept(underlyingNode = underlyingNode), IsDiskEncryption {
     /** The encryption target, i.e. the disk */
     var target: BlockStorage? = null

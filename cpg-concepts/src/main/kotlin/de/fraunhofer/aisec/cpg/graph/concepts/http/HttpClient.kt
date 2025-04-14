@@ -34,7 +34,7 @@ import java.util.Objects
 
 /** Represents an [HttpClient]. */
 class HttpClient(
-    underlyingNode: Node,
+    underlyingNode: Node? = null,
     val isTLS: Boolean? = false,
     val authentication: Authentication? = null,
 ) : Concept(underlyingNode = underlyingNode) {
@@ -49,5 +49,5 @@ class HttpClient(
 }
 
 /** Base class for operations on an [HttpClient]. */
-abstract class HttpClientOperation(underlyingNode: Node, concept: Concept) :
+abstract class HttpClientOperation(underlyingNode: Node?, concept: Concept) :
     Operation(underlyingNode = underlyingNode, concept = concept)
