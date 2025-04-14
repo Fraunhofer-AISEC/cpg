@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption
 
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import java.util.Objects
 
@@ -41,9 +42,9 @@ class DiskEncryption(underlyingNode: Node) :
     /** The encryption key used for disk encryption */
     var key: Secret? = null
 
-    override fun equals(other: Any?): Boolean {
+    override fun equalWithoutUnderlying(other: OverlayNode): Boolean {
         return other is DiskEncryption &&
-            super.equals(other) &&
+            super.equalWithoutUnderlying(other) &&
             other.target == this.cipher &&
             other.cipher == this.cipher &&
             other.key == this.key

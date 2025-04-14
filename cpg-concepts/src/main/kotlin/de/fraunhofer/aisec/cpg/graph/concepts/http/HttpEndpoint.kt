@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.concepts.http
 
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.concepts.auth.Authentication
@@ -41,9 +42,9 @@ class HttpEndpoint(
     val arguments: List<Node>,
     var authentication: Authentication?,
 ) : RemoteEntryPoint(underlyingNode = underlyingNode) {
-    override fun equals(other: Any?): Boolean {
+    override fun equalWithoutUnderlying(other: OverlayNode): Boolean {
         return other is HttpEndpoint &&
-            super.equals(other) &&
+            super.equalWithoutUnderlying(other) &&
             other.httpMethod == this.httpMethod &&
             other.path == this.path &&
             other.arguments == this.arguments &&

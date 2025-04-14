@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.concepts.logging
 
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 
 /**
@@ -35,4 +36,8 @@ import de.fraunhofer.aisec.cpg.graph.concepts.Concept
  */
 class Log(underlyingNode: Node) : Concept(underlyingNode = underlyingNode), IsLogging {
     var logName: String? = null
+
+    override fun equalWithoutUnderlying(other: OverlayNode): Boolean {
+        return other is Log && super.equalWithoutUnderlying(other) && other.logName == this.logName
+    }
 }

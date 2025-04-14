@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption
 
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import java.util.Objects
 
@@ -39,8 +40,8 @@ class Encrypt(
     val key: Secret,
 ) : CipherOperation(underlyingNode = underlyingNode, concept = concept) {
 
-    override fun equals(other: Any?): Boolean {
-        return other is Encrypt && super.equals(other) && other.key == this.key
+    override fun equalWithoutUnderlying(other: OverlayNode): Boolean {
+        return other is Encrypt && super.equalWithoutUnderlying(other) && other.key == this.key
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), key)

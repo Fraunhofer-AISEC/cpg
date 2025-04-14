@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.concepts.logging
 
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import java.util.Objects
 
@@ -56,9 +57,9 @@ class LogWrite(
     val logLevel: LogLevel,
     val logArguments: List<Node>,
 ) : Operation(underlyingNode = underlyingNode, concept = concept), IsLogging {
-    override fun equals(other: Any?): Boolean {
+    override fun equalWithoutUnderlying(other: OverlayNode): Boolean {
         return other is LogWrite &&
-            super.equals(other) &&
+            super.equalWithoutUnderlying(other) &&
             other.logLevel == this.logLevel &&
             other.logArguments == this.logArguments
     }

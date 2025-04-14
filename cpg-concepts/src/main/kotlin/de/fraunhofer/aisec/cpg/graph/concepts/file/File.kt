@@ -71,10 +71,6 @@ const val O_ACCMODE_MODE_MASK = 3L
  */
 class File(underlyingNode: Node? = null, val fileName: String) :
     Concept(underlyingNode = underlyingNode), IsFile {
-    override fun equals(other: Any?): Boolean {
-        return other is File && super.equals(other) && other.fileName == this.fileName
-    }
-
     override fun equalWithoutUnderlying(other: OverlayNode): Boolean {
         return other is File &&
             super.equalWithoutUnderlying(other) &&
@@ -96,10 +92,6 @@ class SetFileFlags(
     concept: File,
     val flags: Set<FileAccessModeFlags>,
 ) : FileOperation(underlyingNode = underlyingNode, file = concept), IsFile {
-    override fun equals(other: Any?): Boolean {
-        return other is SetFileFlags && super.equals(other) && other.flags == this.flags
-    }
-
     override fun equalWithoutUnderlying(other: OverlayNode): Boolean {
         return other is SetFileFlags &&
             super.equalWithoutUnderlying(other) &&
@@ -119,10 +111,6 @@ class SetFileFlags(
  */
 class SetFileMask(underlyingNode: Node? = null, concept: File, val mask: Long) :
     FileOperation(underlyingNode = underlyingNode, file = concept), IsFile {
-    override fun equals(other: Any?): Boolean {
-        return other is SetFileMask && super.equals(other) && other.mask == this.mask
-    }
-
     override fun equalWithoutUnderlying(other: OverlayNode): Boolean {
         return other is SetFileMask &&
             super.equalWithoutUnderlying(other) &&
@@ -199,10 +187,6 @@ class ReadFile(underlyingNode: Node? = null, concept: File) :
  */
 class WriteFile(underlyingNode: Node? = null, concept: File, val what: Node) :
     FileOperation(underlyingNode = underlyingNode, file = concept), IsFile {
-    override fun equals(other: Any?): Boolean {
-        return other is WriteFile && super.equals(other) && other.what == this.what
-    }
-
     override fun equalWithoutUnderlying(other: OverlayNode): Boolean {
         return other is WriteFile && super.equalWithoutUnderlying(other) && other.what == this.what
     }

@@ -50,7 +50,7 @@ abstract class OverlayNode() : Node() {
 
     override fun equals(other: Any?): Boolean {
         return other is OverlayNode &&
-            super.equals(other) &&
+            this.equalWithoutUnderlying(other) &&
             other.underlyingNode == this.underlyingNode
     }
 

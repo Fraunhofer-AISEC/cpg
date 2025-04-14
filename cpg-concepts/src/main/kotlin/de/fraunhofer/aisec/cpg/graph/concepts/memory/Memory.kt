@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.concepts.memory
 
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import java.util.Objects
@@ -72,8 +73,8 @@ class Allocate(
     /** A reference to [what] is allocated, e.g., a variable. */
     var what: Node?,
 ) : MemoryOperation(underlyingNode = underlyingNode, concept = concept) {
-    override fun equals(other: Any?): Boolean {
-        return other is Allocate && super.equals(other) && other.what == this.what
+    override fun equalWithoutUnderlying(other: OverlayNode): Boolean {
+        return other is Allocate && super.equalWithoutUnderlying(other) && other.what == this.what
     }
 
     override fun hashCode(): Int {
@@ -91,8 +92,8 @@ class DeAllocate(
     /** A reference to [what] is de-allocated, e.g., a variable. */
     var what: Node?,
 ) : MemoryOperation(underlyingNode = underlyingNode, concept = concept) {
-    override fun equals(other: Any?): Boolean {
-        return other is Allocate && super.equals(other) && other.what == this.what
+    override fun equalWithoutUnderlying(other: OverlayNode): Boolean {
+        return other is Allocate && super.equalWithoutUnderlying(other) && other.what == this.what
     }
 
     override fun hashCode(): Int {
