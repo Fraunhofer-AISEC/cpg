@@ -1,0 +1,16 @@
+{
+  "version": "4",
+  "specifiers": {
+    "npm:typescript@^5.8.3": "5.8.3"
+  },
+  "npm": {
+    "typescript@5.8.3": {
+      "integrity": "sha512-p1diW6TqL9L07nNxvRMM7hMMw4c5XOo/1ibL4aAIGmSAt9slTE1Xgw5KWuof2uTOvCg9BY7ZRi+GaF+7sfgPeQ=="
+    }
+  },
+  "workspace": {
+    "dependencies": [
+      "npm:typescript@^5.8.3"
+    ]
+  }
+}
