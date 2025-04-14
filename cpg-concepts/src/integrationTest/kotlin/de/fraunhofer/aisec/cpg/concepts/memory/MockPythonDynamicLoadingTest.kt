@@ -53,7 +53,7 @@ class MockPythonDynamicPass(ctx: TranslationContext) : ConceptPass(ctx) {
         when {
             node is CallExpression && node.name.toString() == "loader.Loader" -> {
                 // Create a new DynamicLoading concept
-                val dynamicLoading = newDynamicLoading(node)
+                val dynamicLoading = newDynamicLoading(node, connect = true)
                 node.prevDFG += dynamicLoading
             }
             node is MemberExpression && node.name.localName == "impl" -> {
@@ -76,6 +76,7 @@ class MockPythonDynamicPass(ctx: TranslationContext) : ConceptPass(ctx) {
                             what = null,
                             loader = null,
                             os = null,
+                            connect = true,
                         )
                     node.prevDFGEdges.addContextSensitive(
                         node = construct,
