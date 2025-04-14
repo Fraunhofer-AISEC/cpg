@@ -844,7 +844,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             if (shortFS) {
                 when (lw) {
                     is FunctionDeclaration -> ret.add(currentNode)
-                    is ParameterDeclaration -> ret.add(currentNode.arguments[lw.argumentIndex])
+                    is ParameterDeclaration -> {
+                        if (lw.argumentIndex < currentNode.arguments.size)
+                            ret.add(currentNode.arguments[lw.argumentIndex])
+                        else ret.add(lw)
+                    }
                     else -> ret.add(lw)
                 }
             } else ret.add(lw)
