@@ -185,7 +185,7 @@ class TranslationResult(
         const val DEFAULT_APPLICATION_NAME = "application"
     }
 
-    val dirtyNodes = identitySetOf<Node>()
+    @DoNotPersist val dirtyNodes = identitySetOf<Node>()
 
     fun markDirty(node: Node) {
         dirtyNodes.add(node)
