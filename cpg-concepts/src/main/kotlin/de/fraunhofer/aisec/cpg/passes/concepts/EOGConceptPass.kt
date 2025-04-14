@@ -59,7 +59,9 @@ typealias NodeToOverlayState = MapLattice<Node, PowersetLattice.Element<OverlayN
 
 /**
  * An abstract pass that is used to identify and create [Concept] and [Operation] nodes in the
- * graph. It uses the fixpoint-iteration to traverse the graph and create the nodes.
+ * graph. It uses the fixpoint-iteration to traverse the graph and create the nodes. It accounts for
+ * all possible EOG paths reaching a node. This is different to the [ConceptPass] which fails to
+ * account for the fact that nodes may be reachable by different EOG paths.
  *
  * Important information for classes implementing this pass:
  * * The following methods can be overridden to handle specific nodes:
