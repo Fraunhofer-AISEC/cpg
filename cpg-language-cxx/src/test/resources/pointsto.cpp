@@ -461,3 +461,20 @@ int teststrncpy() {
 
   printf("%c\n", c);
 }
+
+int inner_func(int* p_inner){ 
+  *p_inner = 1;
+}
+
+int outer_func(int* p_outer){
+  inner_func(p_outer);
+}
+
+int teststackedcallingcontexts() {
+  int i=0;
+  int p=&i;
+
+  outer_func(p);
+
+  printf("%d %d\n", i, *p);
+}

@@ -3198,4 +3198,26 @@ class PointsToPassTest {
         // TODO: This could also be the original value since there is an if
         assertEquals(bInitializer, cRefLine461.memoryValues.singleOrNull())
     }
+
+    @Test
+    fun testStackedCallingContexts() {
+        val file = File("src/test/resources/pointsto.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+                it.registerPass<PointsToPass>()
+                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+            }
+        assertNotNull(tu)
+
+        // FunctionDeclarations
+        val innerFuncFD = tu.functions["inner_func"]
+        assertNotNull(innerFuncFD)
+
+        val outerFuncFD = tu.functions["outer_func"]
+        assertNotNull(outerFuncFD)
+
+        val mainFD = tu.functions["teststackedcallingcontexts"]
+        assertNotNull(mainFD)
+    }
 }
