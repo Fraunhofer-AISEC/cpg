@@ -39,7 +39,10 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 
 /**
  * An abstract pass that is used to identify and create [Concept] and [Operation] nodes in the
- * graph.
+ * graph. This pass uses the [SubgraphWalker.ScopedWalker] with [Strategy.EOG_FORWARD] to traverse
+ * the graph. This means it will visit each node exactly once what might result in missing handling
+ * some paths in the EOG which is an issue if two paths lead to different results when generating
+ * the [Concept]s and [Operation]s.
  */
 abstract class ConceptPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
 

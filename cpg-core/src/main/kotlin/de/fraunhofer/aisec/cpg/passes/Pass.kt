@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
+import de.fraunhofer.aisec.cpg.graph.statements.CatchClause
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
@@ -137,6 +138,27 @@ object EOGStarterLeastTUImportSorter : Sorter<Node>() {
     override fun invoke(result: TranslationResult): List<Node> =
         LeastImportTranslationUnitSorter.invoke(result)
             .flatMap { it.allEOGStarters.filter { it.prevEOGEdges.isEmpty() } }
+            .toList()
+}
+
+/**
+ * First, sorts the [TranslationUnitDeclaration]s with the [LeastImportTranslationUnitSorter] and
+ * then gathers all resolution EOG starters; and make sure they really do not have a predecessor,
+ * otherwise we might analyze a node multiple times. The [EOGStarterHolder]s are only sorted as
+ * follows: The [CatchClause]s come last in the order because they actually are executed after a
+ * part of the `try` block and, more importantly, the code before it, which is not guaranteed by the
+ * EOG.
+ */
+object EOGStarterLeastTUImportCatchLastSorter : Sorter<Node>() {
+    override fun invoke(result: TranslationResult): List<Node> =
+        LeastImportTranslationUnitSorter.invoke(result)
+            .flatMap {
+                val allUniqueStarters = it.allEOGStarters.filter { it.prevEOGEdges.isEmpty() }
+                val result = mutableListOf<Node>()
+                result.addAll(allUniqueStarters.filter { it !is CatchClause })
+                result.addAll(allUniqueStarters.filterIsInstance<CatchClause>())
+                result
+            }
             .toList()
 }
 

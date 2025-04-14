@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.concepts.logging
 
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import java.util.Objects
 
@@ -51,17 +52,22 @@ enum class LogLevel {
  *   the log.
  */
 class LogWrite(
-    underlyingNode: Node,
+    underlyingNode: Node? = null,
     override val concept: Log,
     val logLevel: LogLevel,
     val logArguments: List<Node>,
 ) : Operation(underlyingNode = underlyingNode, concept = concept), IsLogging {
-    override fun equals(other: Any?): Boolean {
+    override fun equalWithoutUnderlying(other: OverlayNode): Boolean {
         return other is LogWrite &&
-            super.equals(other) &&
+            super.equalWithoutUnderlying(other) &&
             other.logLevel == this.logLevel &&
             other.logArguments == this.logArguments
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), logLevel, logArguments)
+
+    override fun setDFG() {
+        this.nextDFG += concept
+        this.prevDFG += logArguments
+    }
 }

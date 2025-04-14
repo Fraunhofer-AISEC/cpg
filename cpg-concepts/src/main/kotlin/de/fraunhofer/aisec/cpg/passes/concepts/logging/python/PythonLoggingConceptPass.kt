@@ -105,9 +105,13 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
             // is nothing available yet.
             val logger =
                 loggers.computeIfAbsent(defaultLoggerName) {
-                    newLog(underlyingNode = importDeclaration, name = defaultLoggerName)
+                    newLog(
+                        underlyingNode = importDeclaration,
+                        name = defaultLoggerName,
+                        connect = true,
+                    )
                 }
-            newLogGet(underlyingNode = importDeclaration, concept = logger)
+            newLogGet(underlyingNode = importDeclaration, concept = logger, connect = true)
         }
     }
 
@@ -135,9 +139,13 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 }
             val logger =
                 loggers.computeIfAbsent(normalizedLoggerName) {
-                    newLog(underlyingNode = callExpression, name = normalizedLoggerName)
+                    newLog(
+                        underlyingNode = callExpression,
+                        name = normalizedLoggerName,
+                        connect = true,
+                    )
                 }
-            newLogGet(underlyingNode = callExpression, concept = logger)
+            newLogGet(underlyingNode = callExpression, concept = logger, connect = true)
         } else if (callee.name.toString().startsWith("logging.")) {
             loggers[defaultLoggerName]?.let { logOpHelper(callExpression, it) }
         } else {
@@ -215,6 +223,7 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     concept = logger,
                     logArguments = callExpression.arguments,
                     level = lvl,
+                    connect = true,
                 )
             }
             else -> {

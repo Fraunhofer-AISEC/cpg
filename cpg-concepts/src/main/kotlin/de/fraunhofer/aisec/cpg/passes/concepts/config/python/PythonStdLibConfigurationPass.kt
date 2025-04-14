@@ -69,7 +69,7 @@ class PythonStdLibConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) 
      */
     private fun handleConstructExpression(expr: ConstructExpression): Configuration? {
         if (expr.name.toString() == "configparser.ConfigParser") {
-            val conf = newConfiguration(underlyingNode = expr)
+            val conf = newConfiguration(underlyingNode = expr, connect = true)
             expr.prevDFG += conf
             return conf
         }
@@ -94,7 +94,12 @@ class PythonStdLibConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) 
                 ?.mapNotNull { it.lastOrNull() as? Configuration }
                 ?.toSet()
                 ?.forEach { conf ->
-                    newLoadConfiguration(call, concept = conf, fileExpression = firstArgument)
+                    newLoadConfiguration(
+                        call,
+                        concept = conf,
+                        fileExpression = firstArgument,
+                        connect = true,
+                    )
                 }
         }
 
@@ -150,11 +155,13 @@ class PythonStdLibConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) 
         if (group == null) {
             // If it does not exist, we create it and implicitly add a registration operation
             group =
-                newConfigurationGroup(sub, concept = conf).also { it.name = Name(name) }.implicit()
-            newRegisterConfigurationGroup(sub, concept = group).implicit()
+                newConfigurationGroup(sub, concept = conf, connect = true)
+                    .also { it.name = Name(name) }
+                    .implicit()
+            newRegisterConfigurationGroup(sub, concept = group, connect = true).implicit()
         }
 
-        newReadConfigurationGroup(sub, concept = group)
+        newReadConfigurationGroup(sub, concept = group, connect = true)
 
         // Add an incoming DFG from the option group
         sub.prevDFGEdges.add(group)
@@ -187,13 +194,25 @@ class PythonStdLibConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) 
         if (option == null) {
             // If it does not exist, we create it and implicitly add a registration operation
             option =
-                newConfigurationOption(sub, key = sub, concept = group, value = null)
+                newConfigurationOption(
+                        sub,
+                        key = sub,
+                        concept = group,
+                        value = null,
+                        connect = true,
+                    )
                     .also { it.name = group.name.fqn(name) }
                     .implicit()
-            newRegisterConfigurationOption(sub, concept = option, defaultValue = null).implicit()
+            newRegisterConfigurationOption(
+                    sub,
+                    concept = option,
+                    defaultValue = null,
+                    connect = true,
+                )
+                .implicit()
         }
 
-        newReadConfigurationOption(sub, concept = option)
+        newReadConfigurationOption(sub, concept = option, connect = true)
 
         // Add an incoming DFG from the option
         sub.prevDFGEdges.add(option)

@@ -34,7 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.OverlayNode
  * logging, files, databases. The relevant operations on this concept are modeled as [Operation]s
  * and stored in [ops].
  */
-abstract class Concept(underlyingNode: Node) : OverlayNode() {
+abstract class Concept(underlyingNode: Node?) : OverlayNode() {
     init {
         this.underlyingNode = underlyingNode
         this::class.simpleName?.let { name = Name(it) }
