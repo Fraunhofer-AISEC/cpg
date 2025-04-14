@@ -51,5 +51,6 @@ val Node.operationNodes: Set<Operation>
     get() = this.nodes.flatMapTo(mutableSetOf()) { it.overlays.filterIsInstance<Operation>() }
 
 /** Returns a [Set] of all subclasses of the class [T]. */
-inline fun <reified T : OverlayNode> listOverlays(): Set<Class<out T>> =
-    Reflections("de.fraunhofer.aisec", SubTypes).getSubTypesOf(T::class.java)
+inline fun <reified T : OverlayNode> listOverlayClasses(
+    prefix: String = "de.fraunhofer.aisec"
+): Set<Class<out T>> = Reflections(prefix, SubTypes).getSubTypesOf(T::class.java)
