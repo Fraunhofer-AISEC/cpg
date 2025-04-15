@@ -41,7 +41,7 @@ abstract class Concept(underlyingNode: Node?) : OverlayNode() {
     }
 
     /** All [Operation]s belonging to this concept. */
-    val ops: MutableSet<Operation> = mutableSetOf()
+    val ops: MutableList<Operation> = mutableListOf()
 
     /**
      * This method can be overridden to set the data flow graph (DFG) for this [Concept]. Note that
