@@ -210,7 +210,7 @@ open class EOGConceptPass(ctx: TranslationContext) :
             addedOverlays.filter { added ->
                 currentState[currentNode]?.none { existing -> added == existing } != false &&
                     currentNode.overlays.none { existing ->
-                        (existing as? OverlayNode)?.equalWithoutUnderlying(added) == true
+                        (existing as? OverlayNode)?.equals(added) == true
                     }
             }
 

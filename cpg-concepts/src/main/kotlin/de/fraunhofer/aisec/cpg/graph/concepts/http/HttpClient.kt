@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.graph.concepts.http
 
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.concepts.auth.Authentication
@@ -38,9 +37,8 @@ class HttpClient(
     val isTLS: Boolean? = false,
     val authentication: Authentication? = null,
 ) : Concept(underlyingNode = underlyingNode) {
-    override fun equalWithoutUnderlying(other: OverlayNode): Boolean {
+    override fun equals(other: Any?): Boolean {
         return other is HttpClient &&
-            super.equalWithoutUnderlying(other) &&
             other.isTLS == this.isTLS &&
             other.authentication == this.authentication
     }

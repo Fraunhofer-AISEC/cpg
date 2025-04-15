@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.graph.concepts.file
 
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
@@ -71,10 +70,8 @@ const val O_ACCMODE_MODE_MASK = 3L
  */
 class File(underlyingNode: Node? = null, val fileName: String) :
     Concept(underlyingNode = underlyingNode), IsFile {
-    override fun equalWithoutUnderlying(other: OverlayNode): Boolean {
-        return other is File &&
-            super.equalWithoutUnderlying(other) &&
-            other.fileName == this.fileName
+    override fun equals(other: Any?): Boolean {
+        return other is File && other.fileName == this.fileName
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), fileName)
@@ -92,10 +89,8 @@ class SetFileFlags(
     concept: File,
     val flags: Set<FileAccessModeFlags>,
 ) : FileOperation(underlyingNode = underlyingNode, file = concept), IsFile {
-    override fun equalWithoutUnderlying(other: OverlayNode): Boolean {
-        return other is SetFileFlags &&
-            super.equalWithoutUnderlying(other) &&
-            other.flags == this.flags
+    override fun equals(other: Any?): Boolean {
+        return other is SetFileFlags && other.flags == this.flags
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), flags)
@@ -111,10 +106,8 @@ class SetFileFlags(
  */
 class SetFileMask(underlyingNode: Node? = null, concept: File, val mask: Long) :
     FileOperation(underlyingNode = underlyingNode, file = concept), IsFile {
-    override fun equalWithoutUnderlying(other: OverlayNode): Boolean {
-        return other is SetFileMask &&
-            super.equalWithoutUnderlying(other) &&
-            other.mask == this.mask
+    override fun equals(other: Any?): Boolean {
+        return other is SetFileMask && other.mask == this.mask
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), mask)
@@ -127,11 +120,7 @@ class SetFileMask(underlyingNode: Node? = null, concept: File, val mask: Long) :
  * @param concept The corresponding [File] node.
  */
 class CloseFile(underlyingNode: Node? = null, concept: File) :
-    FileOperation(underlyingNode = underlyingNode, file = concept), IsFile {
-    override fun equalWithoutUnderlying(other: OverlayNode): Boolean {
-        return other is CloseFile && super.equalWithoutUnderlying(other)
-    }
-}
+    FileOperation(underlyingNode = underlyingNode, file = concept), IsFile {}
 
 /**
  * Represents deleting a file.
@@ -140,11 +129,7 @@ class CloseFile(underlyingNode: Node? = null, concept: File) :
  * @param concept The corresponding [File] node.
  */
 class DeleteFile(underlyingNode: Node? = null, concept: File) :
-    FileOperation(underlyingNode = underlyingNode, file = concept), IsFile {
-    override fun equalWithoutUnderlying(other: OverlayNode): Boolean {
-        return other is DeleteFile && super.equalWithoutUnderlying(other)
-    }
-}
+    FileOperation(underlyingNode = underlyingNode, file = concept), IsFile {}
 
 /**
  * Represents opening a file. This is usually done with the same underlying node the [concept] field
@@ -154,11 +139,7 @@ class DeleteFile(underlyingNode: Node? = null, concept: File) :
  * @param concept The corresponding [File] node.
  */
 class OpenFile(underlyingNode: Node? = null, concept: File) :
-    FileOperation(underlyingNode = underlyingNode, file = concept), IsFile {
-    override fun equalWithoutUnderlying(other: OverlayNode): Boolean {
-        return other is OpenFile && super.equalWithoutUnderlying(other)
-    }
-}
+    FileOperation(underlyingNode = underlyingNode, file = concept), IsFile {}
 
 /**
  * Represents reading from a file.
@@ -172,10 +153,6 @@ class ReadFile(underlyingNode: Node? = null, concept: File) :
         this.file.nextDFG += this
         this.underlyingNode?.let { underlyingNode -> this.nextDFG += underlyingNode }
     }
-
-    override fun equalWithoutUnderlying(other: OverlayNode): Boolean {
-        return other is ReadFile && super.equalWithoutUnderlying(other)
-    }
 }
 
 /**
@@ -187,8 +164,8 @@ class ReadFile(underlyingNode: Node? = null, concept: File) :
  */
 class WriteFile(underlyingNode: Node? = null, concept: File, val what: Node) :
     FileOperation(underlyingNode = underlyingNode, file = concept), IsFile {
-    override fun equalWithoutUnderlying(other: OverlayNode): Boolean {
-        return other is WriteFile && super.equalWithoutUnderlying(other) && other.what == this.what
+    override fun equals(other: Any?): Boolean {
+        return other is WriteFile && super.equals(other) && other.what == this.what
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), what)

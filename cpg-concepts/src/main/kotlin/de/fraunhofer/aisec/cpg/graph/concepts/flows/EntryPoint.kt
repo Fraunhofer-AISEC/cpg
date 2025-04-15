@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.graph.concepts.flows
 
-import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.arch.OperatingSystemArchitecture
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
@@ -48,10 +47,8 @@ abstract class LocalEntryPoint(
      */
     var os: OperatingSystemArchitecture,
 ) : EntryPoint(underlyingNode = underlyingNode) {
-    override fun equalWithoutUnderlying(other: OverlayNode): Boolean {
-        return other is LocalEntryPoint &&
-            super.equalWithoutUnderlying(other) &&
-            other.os == this.os
+    override fun equals(other: Any?): Boolean {
+        return other is LocalEntryPoint && other.os == this.os
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), os)

@@ -49,14 +49,8 @@ abstract class OverlayNode() : Node() {
     var underlyingNode by unwrapping(OverlayNode::underlyingNodeEdge)
 
     override fun equals(other: Any?): Boolean {
-        return other is OverlayNode &&
-            this.equalWithoutUnderlying(other) &&
-            other.underlyingNode == this.underlyingNode
+        return other is OverlayNode && super.equals(other)
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), underlyingNode)
-
-    open fun equalWithoutUnderlying(other: OverlayNode): Boolean {
-        return super.equals(other)
-    }
+    override fun hashCode() = Objects.hash(super.hashCode())
 }

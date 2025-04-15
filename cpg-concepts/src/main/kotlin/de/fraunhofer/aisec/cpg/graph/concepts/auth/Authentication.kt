@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.graph.concepts.auth
 
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import java.util.Objects
@@ -41,10 +40,8 @@ abstract class Authentication(underlyingNode: Node?) : Concept(underlyingNode)
  */
 open class TokenBasedAuth(underlyingNode: Node? = null, val token: Node) :
     Authentication(underlyingNode) {
-    override fun equalWithoutUnderlying(other: OverlayNode): Boolean {
-        return other is TokenBasedAuth &&
-            super.equalWithoutUnderlying(other) &&
-            other.token == this.token
+    override fun equals(other: Any?): Boolean {
+        return other is TokenBasedAuth && other.token == this.token
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), token)
@@ -58,11 +55,8 @@ open class TokenBasedAuth(underlyingNode: Node? = null, val token: Node) :
  */
 class JwtAuth(underlyingNode: Node? = null, val jwt: Node, val payload: Node) :
     TokenBasedAuth(underlyingNode, jwt) {
-    override fun equalWithoutUnderlying(other: OverlayNode): Boolean {
-        return other is JwtAuth &&
-            super.equalWithoutUnderlying(other) &&
-            other.jwt == this.jwt &&
-            other.payload == this.payload
+    override fun equals(other: Any?): Boolean {
+        return other is JwtAuth && other.jwt == this.jwt && other.payload == this.payload
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), jwt, payload)
@@ -80,10 +74,8 @@ abstract class AuthenticationOperation(underlyingNode: Node? = null, concept: Au
  */
 class Authenticate(underlyingNode: Node? = null, concept: Authentication, val credential: Node) :
     AuthenticationOperation(underlyingNode, concept) {
-    override fun equalWithoutUnderlying(other: OverlayNode): Boolean {
-        return other is Authenticate &&
-            super.equalWithoutUnderlying(other) &&
-            other.credential == this.credential
+    override fun equals(other: Any?): Boolean {
+        return other is Authenticate && other.credential == this.credential
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), credential)

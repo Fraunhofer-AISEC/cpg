@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption
 
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import java.util.Objects
 
@@ -42,9 +41,8 @@ class Cipher(underlyingNode: Node? = null) :
     /** Key size. */
     var keySize: Int? = null
 
-    override fun equalWithoutUnderlying(other: OverlayNode): Boolean {
+    override fun equals(other: Any?): Boolean {
         return other is Cipher &&
-            super.equalWithoutUnderlying(other) &&
             other.cipherName == this.cipherName &&
             other.blockSize == this.blockSize &&
             other.keySize == this.keySize
