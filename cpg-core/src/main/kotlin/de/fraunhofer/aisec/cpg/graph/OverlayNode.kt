@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph
 import de.fraunhofer.aisec.cpg.frontends.NoLanguage
 import de.fraunhofer.aisec.cpg.graph.edges.overlay.OverlaySingleEdge
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.passes.EOGStarterPass
 import java.util.Objects
 import org.neo4j.ogm.annotation.Relationship
 
@@ -48,11 +49,25 @@ abstract class OverlayNode() : Node() {
 
     var underlyingNode by unwrapping(OverlayNode::underlyingNodeEdge)
 
+    /**
+     * Compares this [OverlayNode] to another object.
+     *
+     * Note: We intentionally exclude the underlying node from the equality check. The main reason
+     * for this is that the [EOGStarterPass] needs to compare overlay nodes independently of their
+     * underlying node. It does so to avoid duplicate overlay nodes that can exist by multiple EOG
+     * iterations over the same node. When comparing, the [other] overlay node does not have its
+     * [OverlayNode.underlyingNode] set yet and therefore a comparison would fail if we include it.
+     * Instead, we only want to know if the values of the overlay node are the same.
+     */
     override fun equals(other: Any?): Boolean {
-        return other is OverlayNode &&
-            // this.underlyingNode == other.underlyingNode &&
-            super.equals(other)
+        return other is OverlayNode && super.equals(other)
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode() /*, this.underlyingNode*/)
+    /**
+     * Returns the hash code of this [OverlayNode].
+     *
+     * Note: We intentionally exclude the underlying node from the hash code calculation, see
+     * [equals].
+     */
+    override fun hashCode() = Objects.hash(super.hashCode())
 }

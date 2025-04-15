@@ -93,8 +93,7 @@ open class EOGConceptPass(ctx: TranslationContext) :
         val nextEog = node.nextEOGEdges.toList()
         val finalState = lattice.iterateEOG(nextEog, startState, ::transfer)
 
-        // We do not need to use the finalState here as generating the new objects in the iteration
-        // already connects them to the underlying nodes.
+        // We set the underlying node based on the final state
         for ((underlyingNode, overlayNodes) in finalState) {
             overlayNodes.forEach {
                 it.underlyingNode = underlyingNode
@@ -204,7 +203,8 @@ open class EOGConceptPass(ctx: TranslationContext) :
 
         // This is some magic to filter out overlays that are already in the state (equal but not
         // identical) for the same Node. It also filters the nodes if they have already been created
-        // by a previous pass over the same code block. This happens if multiple EOG starters reach
+        // by a previous iteration over the same code block. This happens if multiple EOG starters
+        // reach
         // a certain piece of code (frequently happens with the code after catch clauses).
         val filteredAddedOverlays =
             addedOverlays.filter { added ->
