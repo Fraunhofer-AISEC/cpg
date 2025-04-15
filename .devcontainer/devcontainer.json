@@ -19,13 +19,15 @@
 				"vscjava.vscode-gradle"
 			]
 		}
-	}
+	},
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],
 
 	// Use 'postCreateCommand' to run commands after the container is created.
-	// "postCreateCommand": "java -version",
+	"postCreateCommand": [
+		"cp gradle.properties.example gradle.properties"
+	]
 
 	// Configure tool-specific properties.
 	// "customizations": {},
