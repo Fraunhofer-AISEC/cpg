@@ -43,6 +43,7 @@ inline fun <reified ConceptClass : Concept> MetadataProvider.newConcept(
     constructor().apply {
         if (connect) {
             this.underlyingNode = underlyingNode
+            this.setDFG()
         }
         // Note: Update the conceptBuildHelper if you change this.
         this.codeAndLocationFrom(underlyingNode)
@@ -76,6 +77,7 @@ inline fun <reified OperationClass : Operation, ConceptClass : Concept> Metadata
             this.underlyingNode = underlyingNode
             concept.ops += this
             underlyingNode.insertNodeAfterwardInEOGPath(this)
+            this.setDFG()
         }
         NodeBuilder.log(this)
     }
