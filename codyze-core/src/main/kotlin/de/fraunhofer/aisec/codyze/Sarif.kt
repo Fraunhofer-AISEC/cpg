@@ -41,6 +41,7 @@ import de.fraunhofer.aisec.cpg.query.QueryTree
 import de.fraunhofer.aisec.cpg.query.SinglePathResult
 import io.github.detekt.sarif4k.*
 import java.io.File
+import kotlin.io.path.relativeToOrSelf
 import kotlin.io.path.toPath
 
 /**
@@ -219,7 +220,7 @@ fun de.fraunhofer.aisec.cpg.sarif.PhysicalLocation.toSarif(
     var uri = this.artifactLocation.uri.toPath()
     val uriBase = component?.location?.artifactLocation?.uri?.toPath()
     if (uriBase != null) {
-        uri = uriBase.relativize(uri)
+        uri = uri.relativeToOrSelf(uriBase)
     }
 
     return PhysicalLocation(
