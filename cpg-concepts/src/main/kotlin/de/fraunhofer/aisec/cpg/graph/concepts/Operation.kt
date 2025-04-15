@@ -46,7 +46,7 @@ abstract class Operation(
     }
 
     override fun equals(other: Any?): Boolean {
-        return other is Operation && other.concept == this.concept
+        return other is Operation && super.equals(other) && other.concept == this.concept
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), concept)
