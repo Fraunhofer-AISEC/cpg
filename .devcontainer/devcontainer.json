@@ -10,7 +10,8 @@
 			"version": "none",
 			"installMaven": "false",
 			"installGradle": "true"
-		}
+		},
+		"ghcr.io/devcontainers/features/github-cli:1": {}
 	},
 	"customizations": {
 		"vscode": {
