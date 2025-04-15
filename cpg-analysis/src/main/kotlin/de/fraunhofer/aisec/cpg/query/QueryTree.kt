@@ -25,6 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.query
 
+import de.fraunhofer.aisec.cpg.assumptions.Assumption
+import de.fraunhofer.aisec.cpg.assumptions.AssumptionType
+import de.fraunhofer.aisec.cpg.assumptions.getCurrentFileAndLine
 import de.fraunhofer.aisec.cpg.evaluation.compareTo
 import de.fraunhofer.aisec.cpg.graph.Node
 
@@ -67,6 +70,12 @@ open class QueryTree<T>(
      * in [stringRepresentation].
      */
     open var node: Node? = null,
+
+    /**
+     * Assumptions can be created in the QueryTree object with the [assume] function ore by adding
+     * an assumption manually.
+     */
+    open var assumptions: MutableList<Assumption> = mutableListOf(),
 ) : Comparable<QueryTree<T>> {
     fun printNicely(depth: Int = 0): String {
         var res =
@@ -334,6 +343,34 @@ fun QueryTree<*>.successfulLastNodes(): List<Node> {
     val innerPath = successfulPaths.flatMap { it.children }
     val finallyTheEntirePaths = innerPath.map { it.value }
     return finallyTheEntirePaths.mapNotNull { (it as? List<*>)?.last() }.filterIsInstance<Node>()
+}
+
+/**
+ * @param assumptionType The type of assumption used to differentiate between assumptions and group
+ *   similar assumptions.
+ * @param aID an ID chosen by the caller to identify the assumption across translation, e.g.
+ *   filename or classname, with a function name and a potential counter.
+ * @param scope The scope that the assumption has validity for, here the scope is a node, because
+ *   the assumption is valid for every node in its ast subtree.
+ * @param message The message describing the assumption that was taken.
+ */
+fun <T> QueryTree<T>.assume(
+    assumptionType: AssumptionType,
+    message: String,
+    aID: String?,
+    scope: Node? = null,
+): QueryTree<T> {
+    // This connects the assumption as an overlay node to the code graph
+    this.assumptions.add(
+        Assumption(
+            assumptionType,
+            message,
+            getCurrentFileAndLine(),
+            aID = aID,
+            assumptionScope = scope,
+        )
+    )
+    return this
 }
 
 sealed interface TerminationReason {
