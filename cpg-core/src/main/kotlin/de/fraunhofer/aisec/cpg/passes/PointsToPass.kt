@@ -915,7 +915,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         doubleState: PointsToStateElement,
         dstAddr: Node,
         values: IdentitySet<MapDstToSrcEntry>,
-        callingContextOut: CallingContextOut,
+        callingContext: CallingContextOut,
     ): PointsToStateElement {
         val sources = values.mapTo(IdentitySet()) { Pair(it.srcNode, true in it.propertySet) }
         val lastWrites: IdentitySet<Pair<Node, EqualLinkedHashSet<Any>>> = identitySetOf()
@@ -929,10 +929,12 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 // If this is not a shortFS edge, we add the new callingcontext and have to check if
                 // we already have a list of callingcontexts in the properties
                 if (value.propertySet.none { it == true }) {
-                    lwProps.filterIsInstance<CallingContextOut>().singleOrNull()?.calls?.let {
-                        callingContextOut.calls.addAll(it)
-                    }
-                    lwPropertySet.add(callingContextOut)
+                    val existingCallingContext =
+                        lwProps.filterIsInstance<CallingContextOut>().singleOrNull()
+                    if (existingCallingContext != null) {
+                        existingCallingContext.calls.addAll(callingContext.calls)
+                        lwPropertySet.add(existingCallingContext)
+                    } else lwPropertySet.add(callingContext)
                 }
                 // Add all other previous properties
                 lwPropertySet.addAll(lwProps.filter { it !is CallingContextOut })

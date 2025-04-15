@@ -3229,6 +3229,9 @@ class PointsToPassTest {
         assertNotNull(tu)
 
         // FunctionDeclarations
+        val veryInnerFuncFD = tu.functions["very_inner_func"]
+        assertNotNull(veryInnerFuncFD)
+
         val innerFuncFD = tu.functions["inner_func"]
         assertNotNull(innerFuncFD)
 
@@ -3238,10 +3241,108 @@ class PointsToPassTest {
         val mainFD = tu.functions["teststackedcallingcontexts"]
         assertNotNull(mainFD)
 
-        val iRefLine479 = mainFD.refs[4]
-        assertNotNull(iRefLine479)
+        // References
+        val pDerefLine466 = veryInnerFuncFD.refs[0]
+        assertNotNull(pDerefLine466)
 
-        val pDerefLine479 = mainFD.refs[5]
-        assertNotNull(pDerefLine479)
+        val pRefLine466 = veryInnerFuncFD.refs[1]
+        assertNotNull(pRefLine466)
+
+        val iRefLine483 = mainFD.refs[4]
+        assertNotNull(iRefLine483)
+
+        val pDerefLine483 = mainFD.refs[5]
+        assertNotNull(pDerefLine483)
+
+        // Declarations
+        val iDecl = mainFD.variables["i"]
+        assertNotNull(iDecl)
+
+        // CallExpressions
+        val veryInnerFuncCE = innerFuncFD.calls["very_inner_func"]
+        assertNotNull(veryInnerFuncCE)
+
+        val innerFuncCE = outerFuncFD.calls["inner_func"]
+        assertNotNull(innerFuncCE)
+
+        val outerFuncCE = mainFD.calls["outer_func"]
+        assertNotNull(outerFuncCE)
+
+        // The flow for the deref into the very_inner_func
+        val pOuterDerefPMV =
+            mainFD.variables["i"]
+                ?.nextDFGEdges
+                ?.singleOrNull {
+                    it is ContextSensitiveDataflow &&
+                        it.callingContext.calls == mutableListOf(outerFuncCE)
+                }
+                ?.end
+        assertNotNull(pOuterDerefPMV)
+
+        val pInnerDerefPMV =
+            pOuterDerefPMV.nextDFGEdges
+                .singleOrNull {
+                    it is ContextSensitiveDataflow &&
+                        it.callingContext.calls == mutableListOf(innerFuncCE)
+                }
+                ?.end
+        assertNotNull(pInnerDerefPMV)
+
+        val pVeryInnerDerefPMV =
+            pInnerDerefPMV.nextDFGEdges
+                .singleOrNull {
+                    it is ContextSensitiveDataflow &&
+                        it.callingContext.calls == mutableListOf(veryInnerFuncCE)
+                }
+                ?.end
+        assertNotNull(pVeryInnerDerefPMV)
+
+        // for the pointer address
+        val pOuterPMV =
+            outerFuncCE.arguments[0]
+                .nextDFGEdges
+                .singleOrNull {
+                    it is ContextSensitiveDataflow &&
+                        it.callingContext.calls == mutableListOf(outerFuncCE)
+                }
+                ?.end
+        assertNotNull(pOuterPMV)
+
+        val pInnerPMV =
+            pOuterPMV.nextDFG
+                .singleOrNull()
+                ?.nextDFGEdges
+                ?.singleOrNull {
+                    it is ContextSensitiveDataflow &&
+                        it.callingContext.calls == mutableListOf(innerFuncCE)
+                }
+                ?.end
+        assertNotNull(pInnerPMV)
+
+        val pVeryInnerPMV =
+            pInnerPMV.nextDFG
+                .singleOrNull()
+                ?.nextDFGEdges
+                ?.singleOrNull {
+                    it is ContextSensitiveDataflow &&
+                        it.callingContext.calls == mutableListOf(veryInnerFuncCE)
+                }
+                ?.end
+        assertNotNull(pVeryInnerPMV)
+
+        assertEquals(pRefLine466, pVeryInnerPMV.nextDFG.singleOrNull())
+
+        // the flow from *p_very_inner to the printf in Line 483
+        assertEquals(
+            setOf(pDerefLine483, iRefLine483),
+            pDerefLine466.nextDFGEdges
+                .filter {
+                    it is ContextSensitiveDataflow &&
+                        it.callingContext.calls ==
+                            mutableListOf(veryInnerFuncCE, innerFuncCE, outerFuncCE)
+                }
+                .map { it.end }
+                .toSet(),
+        )
     }
 }

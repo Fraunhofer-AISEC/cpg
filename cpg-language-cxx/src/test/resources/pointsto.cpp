@@ -462,8 +462,12 @@ int teststrncpy() {
   printf("%c\n", c);
 }
 
+int very_inner_func(int* p_very_inner){ 
+  *p_very_inner = 1;
+}
+
 int inner_func(int* p_inner){ 
-  *p_inner = 1;
+  very_inner_func(p_inner);
 }
 
 int outer_func(int* p_outer){
