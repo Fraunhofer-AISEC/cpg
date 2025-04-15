@@ -173,6 +173,12 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
         /** This specifies the address length (usually 64bit) */
         var addressLength: Int = 64,
+
+        /**
+         * specifies if we draw the current(deref)derefvalue-DFG Edges. Not sure if we want/need
+         * them
+         */
+        var drawCurrentDerefDFG: Boolean = true,
     ) : PassConfiguration()
 
     // For recursive creation of FunctionSummaries, we have to make sure that we don't run in
@@ -1319,50 +1325,55 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             val prevDFGs = doubleState.getLastWrites(currentNode)
 
             // If we have any information from the dereferenced value, we also fetch that
-            values
-                .filterTo(identitySetOf()) { doubleState.hasDeclarationStateEntry(it, true) }
-                .forEach { value ->
-                    // draw the DFG Edges
-                    val currentderefGranularity =
-                        equalLinkedHashSetOf<Any>(
-                            PointerDataflowGranularity(PointerAccess.currentDerefValue)
-                        )
-                    doubleState
-                        .getLastWrites(value)
-                        .filter { it.second.none { it == true } }
-                        .forEach { prevDFGs.add(Pair(it.first, currentderefGranularity)) }
-
-                    // Let's see if we can deref once more
-                    val derefValues =
-                        doubleState
-                            .fetchElementFromDeclarationState(
-                                addr = value,
-                                excludeShortFSValues = true,
+            if ((passConfig<Configuration>()?.drawCurrentDerefDFG != false)) {
+                values
+                    .filterTo(identitySetOf()) { doubleState.hasDeclarationStateEntry(it, true) }
+                    .forEach { value ->
+                        // draw the DFG Edges
+                        val currentderefGranularity =
+                            equalLinkedHashSetOf<Any>(
+                                PointerDataflowGranularity(PointerAccess.currentDerefValue)
                             )
-                            .map { it.value }
-                            .forEach { derefValue ->
-                                if (doubleState.hasDeclarationStateEntry(derefValue)) {
-                                    doubleState
-                                        .fetchElementFromDeclarationState(derefValue)
-                                        .forEach { (derefDerefValue, _, _) ->
-                                            val currentderefderefGranularity =
-                                                equalLinkedHashSetOf<Any>(
-                                                    PointerDataflowGranularity(
-                                                        PointerAccess.currentDerefDerefValue
+                        doubleState
+                            .getLastWrites(value)
+                            .filter { it.second.none { it == true } }
+                            .forEach { prevDFGs.add(Pair(it.first, currentderefGranularity)) }
+
+                        // Let's see if we can deref once more
+                        val derefValues =
+                            doubleState
+                                .fetchElementFromDeclarationState(
+                                    addr = value,
+                                    excludeShortFSValues = true,
+                                )
+                                .map { it.value }
+                                .forEach { derefValue ->
+                                    if (doubleState.hasDeclarationStateEntry(derefValue)) {
+                                        doubleState
+                                            .fetchElementFromDeclarationState(derefValue)
+                                            .forEach { (derefDerefValue, _, _) ->
+                                                val currentderefderefGranularity =
+                                                    equalLinkedHashSetOf<Any>(
+                                                        PointerDataflowGranularity(
+                                                            PointerAccess.currentDerefDerefValue
+                                                        )
                                                     )
-                                                )
-                                            doubleState
-                                                .getLastWrites(derefValue)
-                                                .filter { it.second.none { it == true } }
-                                                .forEach {
-                                                    prevDFGs.add(
-                                                        Pair(it.first, currentderefderefGranularity)
-                                                    )
-                                                }
-                                        }
+                                                doubleState
+                                                    .getLastWrites(derefValue)
+                                                    .filter { it.second.none { it == true } }
+                                                    .forEach {
+                                                        prevDFGs.add(
+                                                            Pair(
+                                                                it.first,
+                                                                currentderefderefGranularity,
+                                                            )
+                                                        )
+                                                    }
+                                            }
+                                    }
                                 }
-                            }
-                }
+                    }
+            }
 
             doubleState =
                 lattice.push(
