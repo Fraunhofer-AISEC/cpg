@@ -48,7 +48,7 @@ abstract class LocalEntryPoint(
     var os: OperatingSystemArchitecture,
 ) : EntryPoint(underlyingNode = underlyingNode) {
     override fun equals(other: Any?): Boolean {
-        return other is LocalEntryPoint && other.os == this.os
+        return other is LocalEntryPoint && super.equals(other) && other.os == this.os
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), os)

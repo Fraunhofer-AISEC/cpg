@@ -43,6 +43,7 @@ class Cipher(underlyingNode: Node? = null) :
 
     override fun equals(other: Any?): Boolean {
         return other is Cipher &&
+            super.equals(other) &&
             other.cipherName == this.cipherName &&
             other.blockSize == this.blockSize &&
             other.keySize == this.keySize

@@ -58,6 +58,7 @@ class LogWrite(
 ) : Operation(underlyingNode = underlyingNode, concept = concept), IsLogging {
     override fun equals(other: Any?): Boolean {
         return other is LogWrite &&
+            super.equals(other) &&
             other.logLevel == this.logLevel &&
             other.logArguments == this.logArguments
     }

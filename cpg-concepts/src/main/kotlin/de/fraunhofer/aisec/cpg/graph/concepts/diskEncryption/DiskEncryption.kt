@@ -43,6 +43,7 @@ class DiskEncryption(underlyingNode: Node? = null) :
 
     override fun equals(other: Any?): Boolean {
         return other is DiskEncryption &&
+            super.equals(other) &&
             other.target == this.cipher &&
             other.cipher == this.cipher &&
             other.key == this.key

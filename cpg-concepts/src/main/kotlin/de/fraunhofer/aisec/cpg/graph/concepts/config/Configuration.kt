@@ -73,7 +73,7 @@ class ConfigurationGroup(underlyingNode: Node? = null, var conf: Configuration) 
     var options: MutableList<ConfigurationOption> = mutableListOf()
 
     override fun equals(other: Any?): Boolean {
-        return other is ConfigurationGroup && other.conf == this.conf
+        return other is ConfigurationGroup && super.equals(other) && other.conf == this.conf
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), conf)
@@ -102,6 +102,7 @@ class ConfigurationOption(
 
     override fun equals(other: Any?): Boolean {
         return other is ConfigurationOption &&
+            super.equals(other) &&
             other.group == this.group &&
             other.key == this.key &&
             other.value == this.value
@@ -124,7 +125,9 @@ class LoadConfiguration(
     val fileExpression: Expression,
 ) : ConfigurationOperation(underlyingNode = underlyingNode, concept = conf) {
     override fun equals(other: Any?): Boolean {
-        return other is LoadConfiguration && other.fileExpression == this.fileExpression
+        return other is LoadConfiguration &&
+            super.equals(other) &&
+            other.fileExpression == this.fileExpression
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), fileExpression)
@@ -185,7 +188,9 @@ class RegisterConfigurationOption(
     var defaultValue: Node? = null,
 ) : ConfigurationOperation(underlyingNode = underlyingNode, concept = option) {
     override fun equals(other: Any?): Boolean {
-        return other is RegisterConfigurationOption && other.defaultValue == this.defaultValue
+        return other is RegisterConfigurationOption &&
+            super.equals(other) &&
+            other.defaultValue == this.defaultValue
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), defaultValue)
@@ -211,7 +216,7 @@ class ProvideConfiguration(
     var conf: Configuration,
 ) : ConfigurationOperation(underlyingNode = underlyingNode, concept = source) {
     override fun equals(other: Any?): Boolean {
-        return other is ProvideConfiguration && other.conf == this.conf
+        return other is ProvideConfiguration && super.equals(other) && other.conf == this.conf
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), conf)
@@ -227,7 +232,9 @@ class ProvideConfigurationGroup(
     var group: ConfigurationGroup,
 ) : ConfigurationOperation(underlyingNode = underlyingNode, concept = source) {
     override fun equals(other: Any?): Boolean {
-        return other is ProvideConfigurationGroup && other.group == this.group
+        return other is ProvideConfigurationGroup &&
+            super.equals(other) &&
+            other.group == this.group
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), group)
@@ -245,6 +252,7 @@ class ProvideConfigurationOption(
 ) : ConfigurationOperation(underlyingNode = underlyingNode, concept = source) {
     override fun equals(other: Any?): Boolean {
         return other is ProvideConfigurationOption &&
+            super.equals(other) &&
             other.option == this.option &&
             other.value == this.value
     }
@@ -290,7 +298,9 @@ class ConfigurationGroupSource(underlyingNode: Node? = null) :
 class ConfigurationOptionSource(underlyingNode: Node? = null, var group: ConfigurationGroupSource) :
     Concept(underlyingNode = underlyingNode) {
     override fun equals(other: Any?): Boolean {
-        return other is ConfigurationOptionSource && other.group == this.group
+        return other is ConfigurationOptionSource &&
+            super.equals(other) &&
+            other.group == this.group
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), group)

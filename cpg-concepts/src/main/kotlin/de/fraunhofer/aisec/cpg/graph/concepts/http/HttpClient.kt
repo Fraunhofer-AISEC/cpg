@@ -39,6 +39,7 @@ class HttpClient(
 ) : Concept(underlyingNode = underlyingNode) {
     override fun equals(other: Any?): Boolean {
         return other is HttpClient &&
+            super.equals(other) &&
             other.isTLS == this.isTLS &&
             other.authentication == this.authentication
     }

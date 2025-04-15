@@ -43,6 +43,7 @@ class HttpEndpoint(
 ) : RemoteEntryPoint(underlyingNode = underlyingNode) {
     override fun equals(other: Any?): Boolean {
         return other is HttpEndpoint &&
+            super.equals(other) &&
             other.httpMethod == this.httpMethod &&
             other.path == this.path &&
             other.arguments == this.arguments &&
