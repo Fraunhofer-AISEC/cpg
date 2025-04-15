@@ -368,7 +368,6 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         }
 
         current.refersTo = refersTo
-        current.markClean()
     }
 
     /**
@@ -413,6 +412,9 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
             is CallExpression -> handleCallExpression(node)
             is HasOverloadedOperation -> handleOverloadedOperator(node)
         }
+
+        // Mark the node as "clean"
+        node?.markClean()
     }
 
     /**
@@ -765,7 +767,6 @@ internal fun Pass<*>.decideInvokesBasedOnCandidates(callee: Reference, call: Cal
 
     // We also set the callee's refersTo
     callee.refersTo = call.invokes.firstOrNull()
-    callee.markClean()
 }
 
 /**
