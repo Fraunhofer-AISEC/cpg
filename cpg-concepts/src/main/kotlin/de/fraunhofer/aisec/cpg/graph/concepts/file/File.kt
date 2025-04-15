@@ -71,7 +71,7 @@ const val O_ACCMODE_MODE_MASK = 3L
 class File(underlyingNode: Node? = null, val fileName: String) :
     Concept(underlyingNode = underlyingNode), IsFile {
     override fun equals(other: Any?): Boolean {
-        return other is File && other.fileName == this.fileName
+        return other is File && super.equals(other) && other.fileName == this.fileName
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), fileName)
@@ -90,7 +90,7 @@ class SetFileFlags(
     val flags: Set<FileAccessModeFlags>,
 ) : FileOperation(underlyingNode = underlyingNode, file = concept), IsFile {
     override fun equals(other: Any?): Boolean {
-        return other is SetFileFlags && other.flags == this.flags
+        return other is SetFileFlags && super.equals(other) && other.flags == this.flags
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), flags)
@@ -107,7 +107,7 @@ class SetFileFlags(
 class SetFileMask(underlyingNode: Node? = null, concept: File, val mask: Long) :
     FileOperation(underlyingNode = underlyingNode, file = concept), IsFile {
     override fun equals(other: Any?): Boolean {
-        return other is SetFileMask && other.mask == this.mask
+        return other is SetFileMask && super.equals(other) && other.mask == this.mask
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), mask)
