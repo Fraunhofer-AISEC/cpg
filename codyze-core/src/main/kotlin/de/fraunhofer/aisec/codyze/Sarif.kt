@@ -25,7 +25,9 @@
  */
 package de.fraunhofer.aisec.codyze
 
+import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.component
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
@@ -38,6 +40,8 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.query.QueryTree
 import de.fraunhofer.aisec.cpg.query.SinglePathResult
 import io.github.detekt.sarif4k.*
+import java.io.File
+import kotlin.io.path.toPath
 
 /**
  * Converts a [QueryTree] to a list of [Result]s. This expects that the query tree is of type
@@ -181,7 +185,7 @@ fun Node?.toSarifLocation(
         }
         ?.let {
             Location(
-                physicalLocation = it.toSarif(),
+                physicalLocation = it.toSarif(component),
                 logicalLocations =
                     listOf(
                         LogicalLocation(
@@ -196,10 +200,31 @@ fun Node?.toSarifLocation(
         }
 }
 
+/**
+ * Converts a [File] to a [Location]. This is used for top-level locations in the SARIF output.
+ *
+ * We aim to provide all remaining locations in [PhysicalLocation] as relative URLs using
+ * [ArtifactLocation.uriBaseID].
+ */
+fun Map.Entry<String, File>.toSarifLocation(
+    message: Message = Message(text = "Top level location for component $key")
+): ArtifactLocation {
+    return ArtifactLocation(uri = value.absolutePath, description = message)
+}
+
 /** Converts a [de.fraunhofer.aisec.cpg.sarif.PhysicalLocation] to a [PhysicalLocation]. */
-fun de.fraunhofer.aisec.cpg.sarif.PhysicalLocation.toSarif(): PhysicalLocation {
+fun de.fraunhofer.aisec.cpg.sarif.PhysicalLocation.toSarif(
+    component: Component? = null
+): PhysicalLocation {
+    var uri = this.artifactLocation.uri.toPath()
+    val uriBase = component?.location?.artifactLocation?.uri?.toPath()
+    if (uriBase != null) {
+        uri = uriBase.relativize(uri)
+    }
+
     return PhysicalLocation(
-        artifactLocation = ArtifactLocation(uri = "file://${this.artifactLocation.uri.path}"),
+        artifactLocation =
+            ArtifactLocation(uri = uri.toString(), uriBaseID = component?.name?.localName),
         region =
             Region(
                 startLine = this.region.startLine.toLong(),

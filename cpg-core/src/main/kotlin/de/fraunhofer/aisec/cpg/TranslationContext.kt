@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationManager.AdditionalSource
 import de.fraunhofer.aisec.cpg.TranslationManager.Companion.log
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.Component
+import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import java.io.File
 
@@ -52,7 +53,7 @@ open class TranslationContext(
      * the [TranslationResult.finalCtx] this may either be null or the last component analyzed.
      */
     var currentComponent: Component? = null,
-) {
+) : ContextProvider {
     /**
      * The scope manager which comprises the complete translation result. In case of sequential
      * parsing, this scope manager is passed to the individual frontends one after another. In case
@@ -125,6 +126,9 @@ open class TranslationContext(
             }
             return languages.firstOrNull()
         }
+
+    override val ctx: TranslationContext
+        get() = this
 
     /**
      * This is a special [TranslationContext] that is used when no translation context is available.

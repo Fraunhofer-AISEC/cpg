@@ -55,6 +55,8 @@ class SarifTest {
         assertNotNull(fullLoc)
         assertEquals(7, fullLoc.physicalLocation?.region?.endLine)
         assertEquals(15, fullLoc.physicalLocation?.region?.endColumn)
+        assertEquals("simple.py", fullLoc.physicalLocation?.artifactLocation?.uri)
+        assertEquals("application", fullLoc.physicalLocation?.artifactLocation?.uriBaseID)
 
         val logical = fullLoc.logicalLocations?.firstOrNull()
         assertNotNull(logical)
