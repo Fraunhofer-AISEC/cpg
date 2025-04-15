@@ -79,19 +79,10 @@ open class EOGConceptPass(ctx: TranslationContext) :
     /** Stores the current component in case we need it to look up some stuff. */
     var currentComponent: Component? = null
 
+    var intermediateState: NodeToOverlayStateElement? = null
+
     override fun cleanup() {
-        // Nothing to do
-    }
-
-    override fun accept(node: Node) {
-        currentComponent = node.firstParentOrNull<Component>()
-
-        ctx.currentComponent = node.component
-        val lattice = NodeToOverlayState(PowersetLattice<OverlayNode>())
-        val startState = getInitialState(lattice, node)
-
-        val nextEog = node.nextEOGEdges.toList()
-        val finalState = lattice.iterateEOG(nextEog, startState, ::transfer)
+        val finalState = intermediateState ?: return
 
         // We set the underlying node based on the final state
         for ((underlyingNode, overlayNodes) in finalState) {
@@ -110,6 +101,17 @@ open class EOGConceptPass(ctx: TranslationContext) :
                 }
             }
         }
+    }
+
+    override fun accept(node: Node) {
+        currentComponent = node.firstParentOrNull<Component>()
+
+        ctx.currentComponent = node.component
+
+        val lattice = NodeToOverlayState(PowersetLattice<OverlayNode>())
+        val startState = getInitialState(lattice, node)
+        val nextEog = node.nextEOGEdges.toList()
+        intermediateState = lattice.iterateEOG(nextEog, startState, ::transfer)
     }
 
     /**
@@ -213,6 +215,11 @@ open class EOGConceptPass(ctx: TranslationContext) :
                         (existing as? OverlayNode)?.equals(added) == true
                     }
             }
+
+        // If we do not add any new concepts, we can keep the state the same
+        if (filteredAddedOverlays.isEmpty()) {
+            return currentState
+        }
 
         return lattice.lub(
             currentState,

@@ -52,15 +52,18 @@ abstract class OverlayNode() : Node() {
     /**
      * Compares this [OverlayNode] to another object.
      *
-     * Note: We intentionally exclude the underlying node from the equality check. The main reason
-     * for this is that the [EOGStarterPass] needs to compare overlay nodes independently of their
-     * underlying node. It does so to avoid duplicate overlay nodes that can exist by multiple EOG
-     * iterations over the same node. When comparing, the [other] overlay node does not have its
-     * [OverlayNode.underlyingNode] set yet and therefore a comparison would fail if we include it.
-     * Instead, we only want to know if the values of the overlay node are the same.
+     * Note: We intentionally exclude the underlying node from the equality check, unless it is set
+     * on both "this" and [other]. The main reason for this is that the [EOGStarterPass] needs to
+     * compare overlay nodes independently of their underlying node. It does so to avoid duplicate
+     * overlay nodes that can exist by multiple EOG iterations over the same node. When comparing,
+     * the [other] overlay node does not have its [OverlayNode.underlyingNode] set yet and therefore
+     * a comparison would fail if we include it. Instead, we only want to know if the values of the
+     * overlay node are the same.
      */
     override fun equals(other: Any?): Boolean {
-        return other is OverlayNode && super.equals(other)
+        return other is OverlayNode &&
+            super.equals(other) &&
+            this.underlyingNode == other.underlyingNode
     }
 
     /**
@@ -69,5 +72,7 @@ abstract class OverlayNode() : Node() {
      * Note: We intentionally exclude the underlying node from the hash code calculation, see
      * [equals].
      */
-    override fun hashCode() = Objects.hash(super.hashCode())
+    override fun hashCode(): Int {
+        return Objects.hash(super.hashCode(), underlyingNode)
+    }
 }
