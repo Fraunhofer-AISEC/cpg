@@ -38,6 +38,8 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
+import de.fraunhofer.aisec.cpg.markDirty
+import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.passes.concepts.ConceptPass
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
@@ -48,6 +50,7 @@ import kotlin.test.Test
 import kotlin.test.assertNotNull
 
 @DependsOn(SymbolResolver::class)
+@DependsOn(ControlFlowSensitiveDFGPass::class)
 class MockPythonDynamicPass(ctx: TranslationContext) : ConceptPass(ctx) {
     override fun handleNode(node: Node, tu: TranslationUnitDeclaration) {
         when {
@@ -85,6 +88,11 @@ class MockPythonDynamicPass(ctx: TranslationContext) : ConceptPass(ctx) {
                             CallingContextOut(dynamicLoading.underlyingNode as CallExpression),
                     )
                     println(loadSymbol)
+
+                    // Mark it as "dirty" for symbol resolver
+                    node.markDirty<SymbolResolver>()
+
+                    // TODO: all DFG reachable nodes?
                 }
             }
         }
