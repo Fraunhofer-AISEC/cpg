@@ -252,12 +252,12 @@ class StatementNotFound : Exception()
 
 class NodePath(var nodes: List<Node>, var assumptions: MutableList<Assumption>) {
     /**
-     * @param assumptionType The type of assumption used to differentiate between assumptions and group
-     *   similar assumptions.
+     * @param assumptionType The type of assumption used to differentiate between assumptions and
+     *   group similar assumptions.
      * @param aID an ID chosen by the caller to identify the assumption across translation, e.g.
      *   filename or classname, with a function name and a potential counter.
-     * @param scope The scope that the assumption has validity for, here the scope is a node, because
-     *   the assumption is valid for every node in its ast subtree.
+     * @param scope The scope that the assumption has validity for, here the scope is a node,
+     *   because the assumption is valid for every node in its ast subtree.
      * @param message The message describing the assumption that was taken.
      */
     fun <T> NodePath.assume(

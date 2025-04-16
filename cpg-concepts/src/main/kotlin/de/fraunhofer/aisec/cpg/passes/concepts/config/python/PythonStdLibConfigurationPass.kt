@@ -119,7 +119,9 @@ class PythonStdLibConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) 
     ): MutableList<ConfigurationOperation>? {
         // We need to check, whether we access a group or an option
         val path =
-            sub.arrayExpression.followPrevDFG { it is Configuration || it is ConfigurationGroup } // Todo Propagate assumptions
+            sub.arrayExpression.followPrevDFG {
+                it is Configuration || it is ConfigurationGroup
+            } // Todo Propagate assumptions
         val last = path?.nodes?.lastOrNull()
         return when (last) {
             // If we can follow it directly to the configuration node, then we access a group
