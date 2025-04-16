@@ -27,6 +27,8 @@ package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.assumptions.Assumption
+import de.fraunhofer.aisec.cpg.assumptions.AssumptionType
+import de.fraunhofer.aisec.cpg.assumptions.getCurrentFileAndLine
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.flows.ControlDependence
@@ -227,7 +229,35 @@ inline fun <reified T : Statement> FunctionDeclaration.body(n: Int = 0): T {
 
 class StatementNotFound : Exception()
 
-data class NodePath(var path: List<Node>, var assumptions: List<Assumption>)
+class NodePath(var path: List<Node>, var assumptions: MutableList<Assumption>) {
+    /**
+     * @param assumptionType The type of assumption used to differentiate between assumptions and group
+     *   similar assumptions.
+     * @param aID an ID chosen by the caller to identify the assumption across translation, e.g.
+     *   filename or classname, with a function name and a potential counter.
+     * @param scope The scope that the assumption has validity for, here the scope is a node, because
+     *   the assumption is valid for every node in its ast subtree.
+     * @param message The message describing the assumption that was taken.
+     */
+    fun <T> NodePath.assume(
+        assumptionType: AssumptionType,
+        message: String,
+        aID: String?,
+        scope: Node? = null,
+    ): NodePath {
+        // This connects the assumption as an overlay node to the code graph
+        this.assumptions.add(
+            Assumption(
+                assumptionType,
+                message,
+                getCurrentFileAndLine(),
+                aID = aID,
+                assumptionScope = scope,
+            )
+        )
+        return this
+    }
+}
 
 class DeclarationNotFound(message: String) : Exception(message)
 
