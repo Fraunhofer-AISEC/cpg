@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
+import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.passes.executePass
 import de.fraunhofer.aisec.cpg.passes.executePassesInParallel
 import de.fraunhofer.aisec.cpg.sarif.toLocation
@@ -115,6 +116,9 @@ private constructor(
 
                 executedFrontends.forEach { it.cleanup() }
             }
+
+            // We need to clear this map to avoid spilling over into other analysis
+            SymbolResolver.componentsToTemplates.clear()
         }
 
         return result
