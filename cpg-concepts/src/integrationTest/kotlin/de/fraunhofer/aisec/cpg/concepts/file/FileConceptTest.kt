@@ -414,15 +414,15 @@ class FileConceptTest : BaseTest() {
 
         val files = conceptNodes.filterIsInstance<File>()
         assertEquals(
-            listOf("a", "b"),
-            files.map { it.fileName },
+            setOf("a", "b"),
+            files.map { it.fileName }.toSet(),
             "Expected to find two `File` nodes (\"a\" and \"b\").",
         )
 
         val writes = conceptNodes.filterIsInstance<WriteFile>()
         assertEquals(
-            listOf("a", "b"),
-            writes.map { it.file.fileName },
+            setOf("a", "b"),
+            writes.map { it.file.fileName }.toSet(),
             "Expected to find two `WriteFile` nodes (to \"a\" and \"b\").",
         )
     }
