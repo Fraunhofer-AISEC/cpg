@@ -77,19 +77,22 @@ enum class AssumptionStatus {
 }
 
 enum class AssumptionType {
+    SyntaxAmbiguityAssumption,
     InferenceAssumption,
     ClosedMacroAssumption,
     UnsupportedLanguageProblem,
     MissingCodeProblem,
     AmbiguityAssumption,
-    ConceptPlacementAssumption,
+    ConceptAssumption,
     ExhaustiveEnumerationAssumption,
     CompletenessAssumption,
     SoundnessAssumption,
+    ControlFlowAssumption,
     CFIntegrityAssumption,
     NoExceptionsAssumption,
     CFAllOrNothingExecutesAssumption,
     TrustedConfigAssumption,
+    DataFlowAssumption,
     ExternalDataAssumption,
     NetworkAvailableAssumption,
     ResourceExistsAssumption,
