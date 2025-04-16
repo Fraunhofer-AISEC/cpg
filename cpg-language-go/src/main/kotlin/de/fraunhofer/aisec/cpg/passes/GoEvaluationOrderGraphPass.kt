@@ -114,7 +114,8 @@ class GoEvaluationOrderGraphPass(ctx: TranslationContext) : EvaluationOrderGraph
                 // It is a bit philosophical whether the deferred call happens before or after the
                 // return statement in the EOG. For now, it is easier to have it as the last node
                 // AFTER the return statement
-                addEOGEdge(path.last(), defer.input)
+                // Todo Propagate AssumptionsEdge
+                val eogEdge = addEOGEdge(path.path.last(), defer.input)
             }
         }
     }

@@ -161,18 +161,18 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
         if (callee is MemberExpression) {
             // might be a call like `logger.error`
             val base = callee.base
-            val fulfilledPaths: List<List<Node>> =
+            val fulfilledPaths: List<NodePath> =
                 base
                     .followPrevFullDFGEdgesUntilHit(collectFailedPaths = false) {
                         it.overlays.any { overlay ->
                             overlay is LogGet
                         } // we are logging for a node which has a [LogGet] attached to it
                     }
-                    .fulfilled
+                    .fulfilled // Todo Propagate Assumptions as they influence the found logger
             val loggers =
                 fulfilledPaths
                     .map { path ->
-                        path.last()
+                        path.path.last()
                     } // we're interested in the last node of the path, i.e. the node connected to
                     // the [LogGet] node
                     .flatMap { it.overlays } // move to the "overlays" world

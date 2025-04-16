@@ -109,7 +109,7 @@ enum class AssumptionType {
  *   the assumption is valid for every node in its ast subtree.
  * @param message The message describing the assumption that was taken.
  */
-fun assume(assumptionType: AssumptionType, message: String, node: Node, scope: Node?) {
+fun assume(assumptionType: AssumptionType, message: String, node: Node, scope: Node? = null) {
     // This connects the assumption as an overlay node to the code graph
     Assumption(assumptionType, message, getCurrentFileAndLine(), node, assumptionScope = scope)
 }
@@ -124,7 +124,7 @@ fun assume(assumptionType: AssumptionType, message: String, node: Node, scope: N
  *   the assumption is valid for every node in its ast subtree.
  * @param message The message describing the assumption that was taken.
  */
-fun assume(assumptionType: AssumptionType, message: String, edge: Edge<*>?, scope: Node?) {
+fun assume(assumptionType: AssumptionType, message: String, edge: Edge<*>?, scope: Node? = null) {
     // This connects the assumption as an overlay node to the code graph
     Assumption(
         assumptionType,

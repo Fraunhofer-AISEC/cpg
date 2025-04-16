@@ -308,9 +308,11 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 node.variable.variables.lastOrNull()?.prevDFGEdges += iterable
             }
         }
-        assume(AssumptionType.AmbiguityAssumption, node) {
-            "If this is not the case, we assume that the last VariableDeclaration in the statement is the one we care about."
-        }
+        assume(
+            AssumptionType.AmbiguityAssumption,
+            "If this is not the case, we assume that the last VariableDeclaration in the statement is the one we care about.",
+            node,
+        )
         node.variable?.let { node.prevDFGEdges += it }
     }
 

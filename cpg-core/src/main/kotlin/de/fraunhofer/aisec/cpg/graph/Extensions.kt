@@ -227,7 +227,7 @@ inline fun <reified T : Statement> FunctionDeclaration.body(n: Int = 0): T {
 
 class StatementNotFound : Exception()
 
-data class NodePath(var nodes: List<Node>, var assumptions: List<Assumption>)
+data class NodePath(var path: List<Node>, var assumptions: List<Assumption>)
 
 class DeclarationNotFound(message: String) : Exception(message)
 
@@ -827,8 +827,12 @@ inline fun Node.followXUntilHit(
             .map { FailureReason.PATH_ENDED to it }
 
     return FulfilledAndFailedPaths(
-        fulfilledPaths.toSet().toList().map { NodePath(it, listOf()) }, // Todo Add Assumptions to path
-        (failedPaths + failedLoops).toSet().toList().map { NodePath(it, listOf()) },  // Todo Add Assumptions to path
+        fulfilledPaths.toSet().toList().map {
+            NodePath(it, listOf())
+        }, // Todo Add Assumptions to path
+        (failedPaths + failedLoops).toSet().toList().map {
+            Pair(it.first, NodePath(it.second, listOf()))
+        }, // Todo Add Assumptions to path
     )
 }
 
@@ -877,11 +881,12 @@ fun Node.followNextFullDFGEdgesUntilHit(
 
 /**
  * Returns a [Collection] of last nodes in the EOG of this [FunctionDeclaration]. If there's no
- * function body, it will return a list of this function declaration.
+ * function body, it will return a list of this function declaration. This function does not
+ * propagate assumptions currently.
  */
 val FunctionDeclaration.lastEOGNodes: Collection<Node>
     get() {
-        val lastEOG = collectAllNextEOGPaths(false).flatMap { it.last().prevEOGEdges }
+        val lastEOG = collectAllNextEOGPaths(false).flatMap { it.path.last().prevEOGEdges }
         return if (lastEOG.isEmpty()) {
             // In some cases, we do not have a body, so we have to jump directly to the
             // function declaration.
@@ -964,15 +969,14 @@ fun Node.followPrevEOG(predicate: (Edge<*>) -> Boolean): List<Edge<*>>? {
  *
  * It returns only a single possible path even if multiple paths are possible.
  */
-fun Node.followPrevFullDFG(predicate: (Node) -> Boolean): MutableList<Node>? {
+fun Node.followPrevFullDFG(predicate: (Node) -> Boolean): NodePath? {
     return followPrevFullDFGEdgesUntilHit(
             collectFailedPaths = false,
             findAllPossiblePaths = false,
             predicate = predicate,
         )
         .fulfilled
-        .minByOrNull { it.nodes.size }
-        ?.toMutableList()
+        .minByOrNull { it.path.size }
 }
 
 /**
@@ -982,7 +986,7 @@ fun Node.followPrevFullDFG(predicate: (Node) -> Boolean): MutableList<Node>? {
  *
  * It returns only a single possible path even if multiple paths are possible.
  */
-fun Node.followPrevDFG(predicate: (Node) -> Boolean): MutableList<Node>? {
+fun Node.followPrevDFG(predicate: (Node) -> Boolean): NodePath? {
     return followDFGEdgesUntilHit(
             collectFailedPaths = false,
             findAllPossiblePaths = false,
@@ -990,8 +994,7 @@ fun Node.followPrevDFG(predicate: (Node) -> Boolean): MutableList<Node>? {
             direction = Backward(GraphToFollow.DFG),
         )
         .fulfilled
-        .minByOrNull { it.nodes.size }
-        ?.toMutableList()
+        .minByOrNull { it.path.size }
 }
 
 /** Returns all [Node] children in the AST-subgraph, starting with this [Node]. */
