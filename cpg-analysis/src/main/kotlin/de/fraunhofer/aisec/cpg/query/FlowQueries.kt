@@ -370,7 +370,8 @@ fun Node.alwaysFlowsTo(
                     interproceduralAnalysis = scope is Interprocedural,
                     contextSensitive = ContextSensitive in sensitivities,
                 )
-                .map { it.nodes }.flatten()
+                .map { it.nodes }
+                .flatten()
                 .toSet()
         val earlyTerminationPredicate = { n: Node, ctx: Context ->
             earlyTermination?.let { it(n) } == true ||
