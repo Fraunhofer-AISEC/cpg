@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.MetadataProvider
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
+import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.concepts.arch.OperatingSystemArchitecture
 import de.fraunhofer.aisec.cpg.graph.concepts.flows.LibraryEntryPoint
 import de.fraunhofer.aisec.cpg.graph.concepts.newConcept
@@ -40,19 +41,23 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
  *
  * @param underlyingNode The underlying node representing this concept.
  * @param mode The [MemoryManagementMode] which is used to manage the memory.
+ * @param connect If `true`, the created [Concept] will be connected to the underlying node by
+ *   setting its `underlyingNode`.
  * @return The created [Memory] concept.
  */
-fun MetadataProvider.newMemory(underlyingNode: Node, mode: MemoryManagementMode) =
-    newConcept({ Memory(it, mode = mode) }, underlyingNode = underlyingNode)
+fun MetadataProvider.newMemory(underlyingNode: Node, mode: MemoryManagementMode, connect: Boolean) =
+    newConcept({ Memory(mode = mode) }, underlyingNode = underlyingNode, connect = connect)
 
 /**
  * Creates a new [DynamicLoading] concept.
  *
  * @param underlyingNode The underlying node representing this concept.
+ * @param connect If `true`, the created [Concept] will be connected to the underlying node by
+ *   setting its `underlyingNode`.
  * @return The created [DynamicLoading] concept.
  */
-fun MetadataProvider.newDynamicLoading(underlyingNode: Node) =
-    newConcept(::DynamicLoading, underlyingNode = underlyingNode)
+fun MetadataProvider.newDynamicLoading(underlyingNode: Node, connect: Boolean) =
+    newConcept(::DynamicLoading, underlyingNode = underlyingNode, connect = connect)
 
 /**
  * Creates a new [Allocate] operation.
@@ -61,15 +66,22 @@ fun MetadataProvider.newDynamicLoading(underlyingNode: Node) =
  *     * @param concept The [Concept] concept this operation belongs to.
  *
  * @param what Defines the object whose memory is allocated.
+ * @param connect If `true`, the created [Operation] will be connected to the underlying node by
+ *   setting its `underlyingNode` and inserting it in the EOG , to [concept] by its edge
+ *   [Concept.ops].
  * @return The created [Allocate] concept.
  */
-fun MetadataProvider.newAllocate(underlyingNode: Node, concept: Concept, what: Node?) =
+fun MetadataProvider.newAllocate(
+    underlyingNode: Node,
+    concept: Concept,
+    what: Node?,
+    connect: Boolean,
+) =
     newOperation(
-        { underlyingNode, concept ->
-            Allocate(underlyingNode = underlyingNode, concept = concept, what = what)
-        },
+        { concept -> Allocate(concept = concept, what = what) },
         underlyingNode = underlyingNode,
         concept = concept,
+        connect = connect,
     )
 
 /**
@@ -79,15 +91,22 @@ fun MetadataProvider.newAllocate(underlyingNode: Node, concept: Concept, what: N
  *     * @param concept The [Concept] concept this operation belongs to.
  *
  * @param what Defines the object whose memory is deallocated.
+ * @param connect If `true`, the created [Operation] will be connected to the underlying node by
+ *   setting its `underlyingNode` and inserting it in the EOG , to [concept] by its edge
+ *   [Concept.ops].
  * @return The created [DeAllocate] concept.
  */
-fun MetadataProvider.newDeallocate(underlyingNode: Node, concept: Concept, what: Node?) =
+fun MetadataProvider.newDeallocate(
+    underlyingNode: Node,
+    concept: Concept,
+    what: Node?,
+    connect: Boolean,
+) =
     newOperation(
-        { underlyingNode, concept ->
-            DeAllocate(underlyingNode = underlyingNode, concept = concept, what = what)
-        },
+        { concept -> DeAllocate(concept = concept, what = what) },
         underlyingNode = underlyingNode,
         concept = concept,
+        connect = connect,
     )
 
 /**
@@ -99,6 +118,9 @@ fun MetadataProvider.newDeallocate(underlyingNode: Node, concept: Concept, what:
  * @param what Defines which component is loaded.
  * @param entryPoints A list of the entry points of the library.
  * @param os The operating system architecture. Can be `null`.
+ * @param connect If `true`, the created [Operation] will be connected to the underlying node by
+ *   setting its `underlyingNode` and inserting it in the EOG , to [concept] by its edge
+ *   [Concept.ops].
  * @return The created [LoadLibrary] concept.
  */
 fun MetadataProvider.newLoadLibrary(
@@ -107,19 +129,15 @@ fun MetadataProvider.newLoadLibrary(
     what: Component?,
     entryPoints: List<LibraryEntryPoint>,
     os: OperatingSystemArchitecture?,
+    connect: Boolean,
 ) =
     newOperation(
-        { underlyingNode, concept ->
-            LoadLibrary(
-                underlyingNode = underlyingNode,
-                concept = concept,
-                what = what,
-                entryPoints = entryPoints,
-                os = os,
-            )
+        { concept ->
+            LoadLibrary(concept = concept, what = what, entryPoints = entryPoints, os = os)
         },
         underlyingNode = underlyingNode,
         concept = concept,
+        connect = connect,
     )
 
 /**
@@ -139,17 +157,11 @@ fun <T : Declaration> MetadataProvider.newLoadSymbol(
     what: T?,
     loader: LoadLibrary?,
     os: OperatingSystemArchitecture?,
+    connect: Boolean,
 ) =
     newOperation(
-        { underlyingNode, concept ->
-            LoadSymbol<T>(
-                underlyingNode = underlyingNode,
-                concept = concept,
-                what = what,
-                loader = loader,
-                os = os,
-            )
-        },
+        { concept -> LoadSymbol<T>(concept = concept, what = what, loader = loader, os = os) },
         underlyingNode = underlyingNode,
         concept = concept,
+        connect = connect,
     )

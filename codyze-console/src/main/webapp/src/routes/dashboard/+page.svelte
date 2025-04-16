@@ -8,7 +8,12 @@
   let regenerateEnabled = $state(false);
   let loading = $state(false);
 
-  async function handleSubmit(sourceDir: string, includeDir?: string, topLevel?: string) {
+  async function handleSubmit(
+    sourceDir: string,
+    includeDir?: string,
+    topLevel?: string,
+    conceptSummaries?: string
+  ) {
     loading = true;
     try {
       const response = await fetch('/api/analyze', {
@@ -16,7 +21,7 @@
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ sourceDir, includeDir, topLevel })
+        body: JSON.stringify({ sourceDir, includeDir, topLevel, conceptSummaries })
       });
 
       if (!response.ok) {

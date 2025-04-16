@@ -62,7 +62,10 @@ class FileConceptTest : BaseTest() {
         assertTrue(fileNodes.isNotEmpty())
 
         val file = fileNodes.filterIsInstance<File>().singleOrNull()
-        assertNotNull(file, "Expected to find exactly one \"File\" node.")
+        assertNotNull(
+            file,
+            "Expected to find exactly one \"File\" node but found ${fileNodes.filterIsInstance<File>().size}.",
+        )
         assertEquals("example.txt", file.fileName, "Expected to find the filename \"example.txt\".")
         assertEquals(
             5,
@@ -242,6 +245,20 @@ class FileConceptTest : BaseTest() {
             }
         assertNotNull(result)
 
+        val fileWrite = result.allChildrenWithOverlays<WriteFile>().singleOrNull()
+        assertNotNull(fileWrite)
+        assertNotNull(fileWrite.underlyingNode)
+        val fileSetFMask =
+            result.allChildrenWithOverlays<SetFileMask>().singleOrNull {
+                it.underlyingNode?.location?.region?.startLine == 6
+            }
+        assertNotNull(fileSetFMask)
+        assertEquals(fileWrite.file, fileSetFMask.file)
+        val fileWriteEOG = fileWrite.collectAllNextEOGPaths(true).flatten().toSet()
+        assertTrue(fileSetFMask in fileWriteEOG)
+
+        assertEquals(1, result.allChildrenWithOverlays<File>().size)
+
         // Tests mask is set before any write:
         // for all files
         //   for all WriteFile on the current file
@@ -250,13 +267,8 @@ class FileConceptTest : BaseTest() {
             // See also testBadChmodQuery for a failing example
             result.conceptNodes.filterIsInstance<File>().all { file ->
                 file.ops.filterIsInstance<WriteFile>().none { write ->
-                    val startNode =
-                        write.underlyingNode
-                            ?: return@none true // fail if there is no underlyingNode
-                    executionPath(startNode = startNode, direction = Forward(GraphToFollow.EOG)) {
-                            it.overlays.any { overlay ->
-                                overlay is SetFileMask && write.file == overlay.file
-                            }
+                    executionPath(startNode = write, direction = Forward(GraphToFollow.EOG)) {
+                            it is SetFileMask && write.file == it.file
                         }
                         .value == true
                 }
@@ -305,8 +317,6 @@ class FileConceptTest : BaseTest() {
     }
 
     @Test
-    // Needs other traversal of EOG. See #2123
-    @Ignore
     fun testBranching() {
         val topLevel = Path.of("src", "integrationTest", "resources", "python", "file")
 
@@ -336,7 +346,6 @@ class FileConceptTest : BaseTest() {
         }
     }
 
-    @Ignore("Issue https://github.com/Fraunhofer-AISEC/cpg/issues/2121")
     @Test
     fun testDelete() {
         val topLevel = Path.of("src", "integrationTest", "resources", "python", "file")

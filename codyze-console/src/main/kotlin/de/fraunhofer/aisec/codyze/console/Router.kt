@@ -25,11 +25,14 @@
  */
 package de.fraunhofer.aisec.codyze.console
 
+import de.fraunhofer.aisec.cpg.graph.concepts.Concept
+import de.fraunhofer.aisec.cpg.graph.listOverlayClasses
 import io.ktor.http.*
-import io.ktor.server.http.content.staticResources
+import io.ktor.server.http.content.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import kotlin.reflect.KClass
 
 /**
  * This function sets up the API routes for the web application. It defines the endpoints for
@@ -51,6 +54,10 @@ import io.ktor.server.routing.*
  *   for a translation unit.
  * - GET `/api/component/{component_name}/translation-unit/{id}/overlay-nodes`: Retrieves all
  *   overlay nodes for a translation unit.
+ * - GET `/api/concept-classes`: Retrieves a list of all available [Concept] classes (as Java class
+ *   names).
+ * - POST `/api/concept`: Adds a concept node to the current
+ *   [de.fraunhofer.aisec.codyze.AnalysisResult]
  */
 fun Routing.apiRoutes(service: ConsoleService) {
     // The API routes are prefixed with /api
@@ -148,6 +155,40 @@ fun Routing.apiRoutes(service: ConsoleService) {
             val nodes = service.getNodesForTranslationUnit(componentName, id, true)
             call.respond(nodes)
         }
+
+        // The endpoint to add a concept node to the current analysis result
+        post("/concepts") {
+            try {
+                val request = call.receive<ConceptRequestJSON>()
+                try {
+                    call.respond(service.addConcept(request))
+                } catch (e: Exception) {
+                    call.respond(HttpStatusCode.InternalServerError, mapOf("error" to e.message))
+                }
+            } catch (e: Exception) {
+                call.respond(
+                    HttpStatusCode.BadRequest,
+                    mapOf("error" to "Invalid request format: ${e.message}"),
+                )
+            }
+        }
+
+        /**
+         * The endpoint to get a list of all available [Concept] classes. Returns a JSON object with
+         * an array of concept names (Java class names).
+         */
+        get("/classes/concepts") {
+            val conceptClasses = listOverlayClasses<Concept>()
+            call.respond(
+                mapOf("info" to conceptClasses.map { it.kotlin.getConstructorArguments() })
+            )
+        }
+
+        /**
+         * The endpoint to export a YAML listing of all manually added [Concept]s (via `POST
+         * /concept`).
+         */
+        get("/export-concepts") { call.respond(service.exportPersistedConcepts()) }
     }
 }
 
@@ -161,4 +202,20 @@ fun Routing.apiRoutes(service: ConsoleService) {
  */
 fun Routing.frontendRoutes() {
     staticResources("/", "static", "index.html") { default("index.html") }
+}
+
+/**
+ * This function retrieves the constructor arguments of a [KClass]. It returns a list of triples,
+ * where each triple contains the name, type, and whether the argument is optional.
+ *
+ * @return A list of triples containing the constructor argument names, types, and optionality. If
+ *   multiple constructors exist, returns an empty list.
+ */
+fun KClass<*>.getConstructorArguments(): ConceptInfo {
+    return ConceptInfo(
+        this.java.name,
+        this.constructors.singleOrNull()?.parameters?.mapNotNull {
+            it.name?.let { name -> ConstructorInfo(name, it.type.toString(), it.isOptional) }
+        } ?: listOf(),
+    )
 }

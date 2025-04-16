@@ -89,10 +89,12 @@ object SubgraphWalker {
      * [Node.accept] with the [Strategy.AST_FORWARD] is encouraged.
      *
      * @param node the start node
+     * @param stopAtNode A predicate to stop the flattening at a specific node (i.e., we won't
+     *   include that node and its ast children)
      * @return a list of children from the node's AST
      */
     @JvmStatic
-    fun getAstChildren(node: Node?): List<Node> {
+    fun getAstChildren(node: Node?, stopAtNode: (Node) -> Boolean = { false }): List<Node> {
         val children = ArrayList<Node>()
         if (node == null) return children
         val classType: Class<*> = node.javaClass
@@ -138,9 +140,11 @@ object SubgraphWalker {
      * Flattens the tree, starting at Node n into a list.
      *
      * @param n the node which contains the ast children to flatten
+     * @param stopAtNode A predicate to stop the flattening at a specific node (i.e., we won't
+     *   include that node and its ast children)
      * @return the flattened nodes
      */
-    fun flattenAST(n: Node?): List<Node> {
+    fun flattenAST(n: Node?, stopAtNode: (Node) -> Boolean = { false }): List<Node> {
         if (n == null) {
             return ArrayList()
         }
@@ -148,17 +152,21 @@ object SubgraphWalker {
         // We are using an identity set here, to avoid placing the *same* node in the identitySet
         // twice, possibly resulting in loops
         val identitySet = IdentitySet<Node>()
-        flattenASTInternal(identitySet, n)
+        flattenASTInternal(identitySet, n, stopAtNode)
         return identitySet.toSortedList()
     }
 
-    private fun flattenASTInternal(identitySet: MutableSet<Node>, n: Node) {
+    private fun flattenASTInternal(
+        identitySet: MutableSet<Node>,
+        n: Node,
+        stopAtNode: (Node) -> Boolean,
+    ) {
         // Add the node itself and abort if its already there, to detect possible loops
-        if (!identitySet.add(n)) {
+        if (stopAtNode(n) || !identitySet.add(n)) {
             return
         }
         for (child in getAstChildren(n)) {
-            flattenASTInternal(identitySet, child)
+            flattenASTInternal(identitySet, child, stopAtNode)
         }
     }
 
@@ -219,27 +227,44 @@ object SubgraphWalker {
          * @param root The node where we should start
          */
         fun iterate(root: Node) {
+            iterateAll(listOf(root))
+        }
+
+        /**
+         * Iteration starting from several nodes that can explore a joint graph, therefore the
+         * `seen` list is shared between several entries to the potentially joined graph. The search
+         * works in BFS manner from every single entry, but stops at nodes visited by other entries.
+         *
+         * If you require a node to be visited multiple times, i.e. once for every entry it is
+         * reachable by, use [iterate].
+         */
+        fun iterateAll(entries: List<Node>) {
             var todo = ArrayDeque<Pair<Node, Node?>>()
             val seen = identitySetOf<Node>()
 
-            todo.push(Pair<Node, Node?>(root, null))
-            while (todo.isNotEmpty()) {
-                var (current, parent) = todo.pop()
-                onNodeVisit.forEach { it(current, parent) }
-
-                // Check if we have a replacement node
-                val toReplace = replacements[current]
-                if (toReplace != null) {
-                    current = toReplace
-                    replacements.remove(toReplace)
+            entries.forEach { entry ->
+                if (entry !in seen) {
+                    todo.push(Pair<Node, Node?>(entry, null))
                 }
 
-                val unseenChildren =
-                    strategy(current).asSequence().filter { it !in seen }.toMutableList()
+                while (todo.isNotEmpty()) {
+                    var (current, parent) = todo.pop()
+                    onNodeVisit.forEach { it(current, parent) }
 
-                seen.addAll(unseenChildren)
-                unseenChildren.asReversed().forEach { child: Node ->
-                    todo.push(Pair(child, current))
+                    // Check if we have a replacement node
+                    val toReplace = replacements[current]
+                    if (toReplace != null) {
+                        current = toReplace
+                        replacements.remove(toReplace)
+                    }
+
+                    val unseenChildren =
+                        strategy(current).asSequence().filter { it !in seen }.toMutableList()
+
+                    seen.addAll(unseenChildren)
+                    unseenChildren.asReversed().forEach { child: Node ->
+                        todo.push(Pair(child, current))
+                    }
                 }
             }
         }
@@ -333,6 +358,27 @@ object SubgraphWalker {
             walker.iterate(root)
         }
 
+        /**
+         * Wraps [IterativeGraphWalker] to handle declaration scopes, In contrast to [iterate], this
+         * function is here to iterate over several nodes that may be entries into a joint graph
+         * reachable by the specified strategy and therefore the internal seen list of nodes has to
+         * be shared to avoid duplicate visits.
+         *
+         * If you require a node to be visited multiple times, i.e. once for every entry it is
+         * reachable by, use [iterate].
+         *
+         * @param entries The nodes where the exploration is started from.
+         */
+        fun iterateAll(entries: List<Node>) {
+            val walker = IterativeGraphWalker()
+            walker.strategy = this.strategy
+            handlers.forEach { h -> walker.registerOnNodeVisit { n, p -> handleNode(n, p, h) } }
+
+            this.walker = walker
+
+            walker.iterateAll(entries)
+        }
+
         private fun handleNode(
             current: Node,
             previous: Node?,
@@ -381,11 +427,9 @@ fun SubgraphWalker.ScopedWalker.replace(parent: Node?, old: Expression, new: Exp
                     // the whole call expression instead.
                     if (parent is MemberCallExpression && new is Reference) {
                         val newCall = parent.toCallExpression(new)
-                        newCall.arguments.forEach { it.astParent = newCall }
                         return replace(parent.astParent, parent, newCall)
                     } else if (new is MemberExpression) {
                         val newCall = parent.toMemberCallExpression(new)
-                        newCall.arguments.forEach { it.astParent = newCall }
                         return replace(parent.astParent, parent, newCall)
                     } else {
                         parent.callee = new
@@ -434,11 +478,19 @@ fun SubgraphWalker.ScopedWalker.replace(parent: Node?, old: Expression, new: Exp
     return success
 }
 
+/**
+ * Copies the properties of this [CallExpression] to the given [call] and sets the `call.callee` to
+ * [callee]. Note that the ast children are not duplicated. This means that their `astParent` will
+ * now point to [call].
+ */
 private fun CallExpression.duplicateTo(call: CallExpression, callee: Reference) {
     call.language = this.language
     call.scope = this.scope
     call.argumentEdges.clear()
-    call.argumentEdges += this.argumentEdges
+    // This is required to set the astParent of the arguments to the new edge.
+    this.argumentEdges.forEach { existingEdge ->
+        call.argumentEdges.add(existingEdge.end) { name = existingEdge.name }
+    }
     call.type = this.type
     call.assignedTypes = this.assignedTypes
     call.code = this.code
@@ -452,6 +504,10 @@ private fun CallExpression.duplicateTo(call: CallExpression, callee: Reference) 
     call.isInferred = this.isInferred
 }
 
+/**
+ * Creates a new [CallExpression] with the same properties (e.g. ast childre, etc.) except from DFG
+ * and EOG edges as [this]. It sets the [CallExpression.callee] to [callee].
+ */
 fun MemberCallExpression.toCallExpression(callee: Reference): CallExpression {
     val call = CallExpression()
     duplicateTo(call, callee)
@@ -459,6 +515,10 @@ fun MemberCallExpression.toCallExpression(callee: Reference): CallExpression {
     return call
 }
 
+/**
+ * Creates a new [MemberCallExpression] with the same properties (e.g. ast children, etc.) except
+ * from DFG and EOG edges as [this]. It sets the [MemberCallExpression.callee] to [callee].
+ */
 fun CallExpression.toMemberCallExpression(callee: MemberExpression): MemberCallExpression {
     val call = MemberCallExpression()
     duplicateTo(call, callee)
@@ -466,6 +526,10 @@ fun CallExpression.toMemberCallExpression(callee: MemberExpression): MemberCallE
     return call
 }
 
+/**
+ * Creates a new [ConstructExpression] with the same properties (e.g. ast children, etc.) except
+ * from DFG and EOG edges as [this]. It sets the [ConstructExpression.callee] to [callee].
+ */
 fun CallExpression.toConstructExpression(callee: Reference): ConstructExpression {
     val construct = ConstructExpression()
     duplicateTo(construct, callee)

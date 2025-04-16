@@ -1,6 +1,11 @@
 <script lang="ts">
   interface Props {
-    submit: (sourceDir: string, includeDir?: string, topLevel?: string) => void;
+    submit: (
+      sourceDir: string,
+      includeDir?: string,
+      topLevel?: string,
+      conceptSummaries?: string
+    ) => void;
     loading: boolean;
     error?: string;
   }
@@ -10,6 +15,7 @@
   let sourceDir = $state('');
   let includeDir = $state<string | undefined>(undefined);
   let topLevel = $state<string | undefined>(undefined);
+  let conceptsFile = $state<string | undefined>(undefined);
 </script>
 
 <div class="mb-6 rounded bg-white p-6 shadow-md">
@@ -17,7 +23,7 @@
   <form
     onsubmit={(e) => {
       e.preventDefault();
-      submit(sourceDir, includeDir, topLevel);
+      submit(sourceDir, includeDir, topLevel, conceptsFile);
     }}
   >
     <div class="mb-4">
@@ -55,6 +61,18 @@
         bind:value={topLevel}
         class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none"
         placeholder="/path/to/source/code"
+      />
+    </div>
+    <div class="mb-4">
+      <label for="conceptsFile" class="mb-1 block text-sm font-medium text-gray-700">
+        Concepts File (.yaml) (optional)
+      </label>
+      <input
+        type="text"
+        id="conceptsFile"
+        bind:value={conceptsFile}
+        class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none"
+        placeholder="/path/to/concept-summaries.yaml"
       />
     </div>
     <button

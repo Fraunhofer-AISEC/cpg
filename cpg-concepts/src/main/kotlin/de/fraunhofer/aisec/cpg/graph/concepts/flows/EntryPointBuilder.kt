@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.concepts.flows
 
 import de.fraunhofer.aisec.cpg.graph.MetadataProvider
+import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.arch.OperatingSystemArchitecture
 import de.fraunhofer.aisec.cpg.graph.concepts.newConcept
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
@@ -36,10 +37,15 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
  * @param underlyingNode The underlying [FunctionDeclaration] representing the main method.
  * @param os If this entry point is specifically designed to be invoked on a certain
  *   [OperatingSystemArchitecture], it can be specified here.
+ * @param connect If `true`, the created [Concept] will be connected to the underlying node by
+ *   setting its `underlyingNode`.
  * @return The created [Main] concept.
  */
-fun MetadataProvider.newMain(underlyingNode: FunctionDeclaration, os: OperatingSystemArchitecture) =
-    newConcept({ Main(underlyingNode = underlyingNode, os = os) }, underlyingNode = underlyingNode)
+fun MetadataProvider.newMain(
+    underlyingNode: FunctionDeclaration,
+    os: OperatingSystemArchitecture,
+    connect: Boolean,
+) = newConcept({ Main(os = os) }, underlyingNode = underlyingNode, connect = connect)
 
 /**
  * Creates a new [LibraryEntryPoint] concept.
@@ -47,13 +53,12 @@ fun MetadataProvider.newMain(underlyingNode: FunctionDeclaration, os: OperatingS
  * @param underlyingNode The underlying [FunctionDeclaration] representing the main method.
  * @param os If this entry point is specifically designed to be invoked on a certain
  *   [OperatingSystemArchitecture], it can be specified here.
+ * @param connect If `true`, the created [Concept] will be connected to the underlying node by
+ *   setting its `underlyingNode`.
  * @return The created [LibraryEntryPoint] concept.
  */
 fun MetadataProvider.newLibraryEntryPoint(
     underlyingNode: FunctionDeclaration,
     os: OperatingSystemArchitecture,
-) =
-    newConcept(
-        { LibraryEntryPoint(underlyingNode = underlyingNode, os = os) },
-        underlyingNode = underlyingNode,
-    )
+    connect: Boolean,
+) = newConcept({ LibraryEntryPoint(os = os) }, underlyingNode = underlyingNode, connect = connect)

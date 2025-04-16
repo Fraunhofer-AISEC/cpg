@@ -121,6 +121,7 @@ class CXXDynamicLoadingPass(ctx: TranslationContext) : ConceptPass(ctx) {
                     what = candidates?.singleOrNull(),
                     loader = loadLibrary,
                     os = loadLibrary?.os,
+                    connect = true,
                 )
             } else {
                 candidates = candidates?.filterIsInstance<VariableDeclaration>()
@@ -130,6 +131,7 @@ class CXXDynamicLoadingPass(ctx: TranslationContext) : ConceptPass(ctx) {
                     what = candidates?.singleOrNull(),
                     loader = loadLibrary,
                     os = loadLibrary?.os,
+                    connect = true,
                 )
             }
 
@@ -176,6 +178,7 @@ class CXXDynamicLoadingPass(ctx: TranslationContext) : ConceptPass(ctx) {
             what = component,
             entryPoints = entryPoints,
             os = os,
+            connect = true,
         )
 
         return listOf()
