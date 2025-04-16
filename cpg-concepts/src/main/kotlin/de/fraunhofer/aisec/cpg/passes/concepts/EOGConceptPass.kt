@@ -26,28 +26,17 @@
 package de.fraunhofer.aisec.cpg.passes.concepts
 
 import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.graph.Backward
-import de.fraunhofer.aisec.cpg.graph.Component
-import de.fraunhofer.aisec.cpg.graph.GraphToFollow
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.OverlayNode
-import de.fraunhofer.aisec.cpg.graph.component
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.edges.flows.insertNodeAfterwardInEOGPath
-import de.fraunhofer.aisec.cpg.graph.firstParentOrNull
-import de.fraunhofer.aisec.cpg.graph.followDFGEdgesUntilHit
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.helpers.functional.Lattice
 import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
-import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass
-import de.fraunhofer.aisec.cpg.passes.DFGPass
-import de.fraunhofer.aisec.cpg.passes.EOGStarterLeastTUImportCatchLastSorter
-import de.fraunhofer.aisec.cpg.passes.EOGStarterPass
-import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
+import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 
 typealias NodeToOverlayStateElement = MapLattice.Element<Node, PowersetLattice.Element<OverlayNode>>
@@ -79,9 +68,11 @@ open class EOGConceptPass(ctx: TranslationContext) :
     /** Stores the current component in case we need it to look up some stuff. */
     var currentComponent: Component? = null
 
-    var intermediateState: NodeToOverlayStateElement? = null
-
     override fun cleanup() {
+        // Nothing to do
+    }
+
+    override fun finalCleanup() {
         val finalState = intermediateState ?: return
 
         // We set the underlying node based on the final state
@@ -109,7 +100,8 @@ open class EOGConceptPass(ctx: TranslationContext) :
         ctx.currentComponent = node.component
 
         val lattice = NodeToOverlayState(PowersetLattice<OverlayNode>())
-        val startState = getInitialState(lattice, node)
+        val startState = intermediateState ?: getInitialState(lattice, node)
+
         val nextEog = node.nextEOGEdges.toList()
         intermediateState = lattice.iterateEOG(nextEog, startState, ::transfer)
     }
@@ -261,5 +253,9 @@ open class EOGConceptPass(ctx: TranslationContext) :
                 stateElement[it] ?: setOf(it, *it.overlays.toTypedArray())
             }
             .filterIsInstance<T>() // discard not-relevant overlays
+    }
+
+    companion object {
+        var intermediateState: NodeToOverlayStateElement? = null
     }
 }
