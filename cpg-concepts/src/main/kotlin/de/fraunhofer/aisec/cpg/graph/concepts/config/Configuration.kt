@@ -53,7 +53,7 @@ class Configuration(underlyingNode: Node? = null) : Concept(underlyingNode = und
      * the [ConfigurationGroup]'s ops. This property returns all operations of all groups and
      * options as well as the ones targeting the complete configuration.
      */
-    val allOps: List<Operation>
+    val allOps: Set<Operation>
         get() {
             return ops + groups.flatMap { it.ops + it.options.flatMap { option -> option.ops } }
         }
@@ -274,7 +274,7 @@ class ConfigurationSource(underlyingNode: Node? = null) : Concept(underlyingNode
      * the [ConfigurationGroup]'s ops. This property returns all operations of all groups and
      * options as well as the ones targeting the complete configuration.
      */
-    val allOps: List<Operation>
+    val allOps: Set<Operation>
         get() {
             return ops + groups.flatMap { it.ops + it.options.flatMap { option -> option.ops } }
         }
