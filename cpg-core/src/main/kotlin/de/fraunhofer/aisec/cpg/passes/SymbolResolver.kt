@@ -158,6 +158,10 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         templateList.clear()
     }
 
+    override fun finalCleanup() {
+        componentsToTemplates.clear()
+    }
+
     /**
      * This function caches all [TemplateDeclaration]s into [templateList]. It either fetches the
      * existing result from [componentsToTemplates] or fills [templateList] for the first time and
