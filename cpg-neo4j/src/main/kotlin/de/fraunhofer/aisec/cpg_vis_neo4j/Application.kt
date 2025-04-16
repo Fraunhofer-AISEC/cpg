@@ -453,7 +453,6 @@ class Application : Callable<Int> {
     fun setupTranslationConfiguration(): TranslationConfiguration {
         val translationConfiguration =
             TranslationConfiguration.builder()
-                .topLevel(topLevel)
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage")
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage")
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage")
@@ -470,6 +469,8 @@ class Application : Callable<Int> {
                 .debugParser(DEBUG_PARSER)
                 .useUnityBuild(useUnityBuild)
                 .useParallelPasses(false)
+
+        topLevel?.let { translationConfiguration.topLevel(it) }
 
         if (maxComplexity != -1) {
             translationConfiguration.configurePass<ControlFlowSensitiveDFGPass>(

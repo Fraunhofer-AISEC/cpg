@@ -63,7 +63,7 @@ private constructor(
     val symbols: Map<String, String>,
     /** Source code files to parse. */
     val softwareComponents: Map<String, List<File>>,
-    val topLevels: MutableMap<String, File?>,
+    val topLevels: MutableMap<String, File>,
     /** Set to true to generate debug output for the parser. */
     val debugParser: Boolean,
     /**
@@ -244,7 +244,7 @@ private constructor(
     class Builder {
         private var softwareComponents: MutableMap<String, List<File>> = HashMap()
         private val languages = mutableListOf<KClass<out Language<*>>>()
-        private var topLevels = mutableMapOf<String, File?>()
+        private var topLevels = mutableMapOf<String, File>()
         private var debugParser = false
         private var failOnError = false
         private var loadIncludes = false
@@ -319,12 +319,12 @@ private constructor(
             return this
         }
 
-        fun topLevel(topLevel: File?): Builder {
+        fun topLevel(topLevel: File): Builder {
             this.topLevels[DEFAULT_APPLICATION_NAME] = topLevel
             return this
         }
 
-        fun topLevels(topLevels: Map<String, File?>): Builder {
+        fun topLevels(topLevels: Map<String, File>): Builder {
             this.topLevels.clear()
             this.topLevels += topLevels
             return this
