@@ -28,7 +28,6 @@ package de.fraunhofer.aisec.cpg.graph
 import de.fraunhofer.aisec.cpg.frontends.NoLanguage
 import de.fraunhofer.aisec.cpg.graph.edges.overlay.OverlaySingleEdge
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
-import de.fraunhofer.aisec.cpg.passes.EOGStarterPass
 import java.util.Objects
 import org.neo4j.ogm.annotation.Relationship
 
@@ -50,15 +49,9 @@ abstract class OverlayNode() : Node() {
     var underlyingNode by unwrapping(OverlayNode::underlyingNodeEdge)
 
     /**
-     * Compares this [OverlayNode] to another object.
-     *
-     * Note: We intentionally exclude the underlying node from the equality check, unless it is set
-     * on both "this" and [other]. The main reason for this is that the [EOGStarterPass] needs to
-     * compare overlay nodes independently of their underlying node. It does so to avoid duplicate
-     * overlay nodes that can exist by multiple EOG iterations over the same node. When comparing,
-     * the [other] overlay node does not have its [OverlayNode.underlyingNode] set yet and therefore
-     * a comparison would fail if we include it. Instead, we only want to know if the values of the
-     * overlay node are the same.
+     * Compares this [OverlayNode] to another object. We also include the [underlyingNode] in this
+     * process, meaning that two overlay nodes with the equal properties will not be equal if they
+     * have different underlying nodes.
      */
     override fun equals(other: Any?): Boolean {
         return other is OverlayNode &&
@@ -69,8 +62,7 @@ abstract class OverlayNode() : Node() {
     /**
      * Returns the hash code of this [OverlayNode].
      *
-     * Note: We intentionally exclude the underlying node from the hash code calculation, see
-     * [equals].
+     * See [equals] for the properties that are included in this process.
      */
     override fun hashCode(): Int {
         return Objects.hash(super.hashCode(), underlyingNode)
