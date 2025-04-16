@@ -101,7 +101,7 @@ class CXXDynamicLoadingPass(ctx: TranslationContext) : ConceptPass(ctx) {
 
         val loadLibrary =
             path
-                ?.path
+                ?.nodes
                 ?.lastOrNull()
                 ?.operationNodes
                 ?.filterIsInstance<LoadLibrary>()

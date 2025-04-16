@@ -115,7 +115,7 @@ class GoEvaluationOrderGraphPass(ctx: TranslationContext) : EvaluationOrderGraph
                 // return statement in the EOG. For now, it is easier to have it as the last node
                 // AFTER the return statement
                 // Todo Propagate AssumptionsEdge
-                val eogEdge = addEOGEdge(path.path.last(), defer.input)
+                val eogEdge = addEOGEdge(path.nodes.last(), defer.input)
             }
         }
     }

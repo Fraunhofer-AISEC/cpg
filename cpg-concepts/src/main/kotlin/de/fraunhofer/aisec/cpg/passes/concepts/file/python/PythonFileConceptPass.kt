@@ -255,7 +255,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : ConceptPass(ctx) {
                     node.overlays.any { overlay -> overlay is OpenFile }
                 }
                 .fulfilled // Todo Propagate Assumptions
-                .map { it.path.last() }
+                .map { it.nodes.last() }
 
         val files =
             nodesWithOpenFileOverlay

@@ -229,7 +229,7 @@ inline fun <reified T : Statement> FunctionDeclaration.body(n: Int = 0): T {
 
 class StatementNotFound : Exception()
 
-class NodePath(var path: List<Node>, var assumptions: MutableList<Assumption>) {
+class NodePath(var nodes: List<Node>, var assumptions: MutableList<Assumption>) {
     /**
      * @param assumptionType The type of assumption used to differentiate between assumptions and group
      *   similar assumptions.
@@ -858,10 +858,10 @@ inline fun Node.followXUntilHit(
 
     return FulfilledAndFailedPaths(
         fulfilledPaths.toSet().toList().map {
-            NodePath(it, listOf())
+            NodePath(it, mutableListOf())
         }, // Todo Add Assumptions to path
         (failedPaths + failedLoops).toSet().toList().map {
-            Pair(it.first, NodePath(it.second, listOf()))
+            Pair(it.first, NodePath(it.second, mutableListOf()))
         }, // Todo Add Assumptions to path
     )
 }
@@ -916,7 +916,7 @@ fun Node.followNextFullDFGEdgesUntilHit(
  */
 val FunctionDeclaration.lastEOGNodes: Collection<Node>
     get() {
-        val lastEOG = collectAllNextEOGPaths(false).flatMap { it.path.last().prevEOGEdges }
+        val lastEOG = collectAllNextEOGPaths(false).flatMap { it.nodes.last().prevEOGEdges }
         return if (lastEOG.isEmpty()) {
             // In some cases, we do not have a body, so we have to jump directly to the
             // function declaration.
@@ -1006,7 +1006,7 @@ fun Node.followPrevFullDFG(predicate: (Node) -> Boolean): NodePath? {
             predicate = predicate,
         )
         .fulfilled
-        .minByOrNull { it.path.size }
+        .minByOrNull { it.nodes.size }
 }
 
 /**
@@ -1024,7 +1024,7 @@ fun Node.followPrevDFG(predicate: (Node) -> Boolean): NodePath? {
             direction = Backward(GraphToFollow.DFG),
         )
         .fulfilled
-        .minByOrNull { it.path.size }
+        .minByOrNull { it.nodes.size }
 }
 
 /** Returns all [Node] children in the AST-subgraph, starting with this [Node]. */

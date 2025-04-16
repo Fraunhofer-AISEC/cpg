@@ -47,26 +47,26 @@ fun FulfilledAndFailedPaths.toQueryTree(
         SinglePathResult(
             true,
             mutableListOf(QueryTree(it)),
-            "$queryType from $startNode to ${it.path.last()} fulfills the requirement",
+            "$queryType from $startNode to ${it.nodes.last()} fulfills the requirement",
             startNode,
-            Success(it.path.last()),
+            Success(it.nodes.last()),
         )
     } +
         this.failed.map { (reason, nodes) ->
             SinglePathResult(
                 true,
                 mutableListOf(QueryTree(nodes)),
-                "$queryType from $startNode to ${nodes.path.last()} fulfills the requirement",
+                "$queryType from $startNode to ${nodes.nodes.last()} fulfills the requirement",
                 startNode,
                 if (reason == FailureReason.PATH_ENDED) {
-                    PathEnded(nodes.path.last())
+                    PathEnded(nodes.nodes.last())
                 } else if (reason == FailureReason.HIT_EARLY_TERMINATION) {
-                    HitEarlyTermination(nodes.path.last())
+                    HitEarlyTermination(nodes.nodes.last())
                 } else {
                     // TODO: We cannot set this (yet) but it might be useful to differentiate
                     // between "path is really at the end" or "we just stopped". Requires adaptions
                     // in followXUntilHit and all of its callers
-                    StepsExceeded(nodes.path.last())
+                    StepsExceeded(nodes.nodes.last())
                 },
             )
         }
@@ -96,7 +96,7 @@ object Must : AnalysisType() {
         return QueryTree(
             evalRes.failed.isEmpty(),
             allPaths.toMutableList(),
-            "$queryType from $startNode to ${evalRes.fulfilled.map { it.path.last() }}",
+            "$queryType from $startNode to ${evalRes.fulfilled.map { it.nodes.last() }}",
             startNode,
         )
     }
@@ -116,7 +116,7 @@ object May : AnalysisType() {
         return QueryTree(
             evalRes.fulfilled.isNotEmpty(),
             allPaths.toMutableList(),
-            "$queryType from $startNode to ${evalRes.fulfilled.map { it.path.last() }}",
+            "$queryType from $startNode to ${evalRes.fulfilled.map { it.nodes.last() }}",
             startNode,
         )
     }
@@ -262,7 +262,7 @@ fun Node.alwaysFlowsTo(
                 interproceduralAnalysis = scope is Interprocedural,
                 contextSensitive = ContextSensitive in sensitivities,
             )
-            .map { it.path }
+            .map { it.nodes }
             .flatten()
             .toSet()
     val earlyTerminationPredicate = { n: Node, ctx: Context ->
@@ -292,7 +292,7 @@ fun Node.alwaysFlowsTo(
                 stringRepresentation =
                     "The EOG path reached the end  " +
                         if (earlyTermination != null)
-                            "(or ${it.second.path.lastOrNull()} which a predicate marking the end) "
+                            "(or ${it.second.nodes.lastOrNull()} which a predicate marking the end) "
                         else "" + "before passing through a node matching the required predicate.",
                 node = this,
             )
@@ -302,7 +302,7 @@ fun Node.alwaysFlowsTo(
                     value = true,
                     children = mutableListOf(QueryTree(value = it)),
                     stringRepresentation =
-                        "The EOG path reached the node ${it.path.lastOrNull()} matching the required predicate" +
+                        "The EOG path reached the node ${it.nodes.lastOrNull()} matching the required predicate" +
                             if (earlyTermination != null)
                                 " before reaching a node matching the early termination predicate"
                             else "",
