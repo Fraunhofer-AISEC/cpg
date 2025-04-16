@@ -84,6 +84,6 @@ class PhysicalLocation(uri: URI, region: Region) {
 fun Path.toLocation(): PhysicalLocation {
     return PhysicalLocation(
         uri = this.toUri(),
-        region = Region(startLine = 1, startColumn = 1, endLine = 1, endColumn = 1),
+        region = Region(startLine = -1, startColumn = -1, endLine = -1, endColumn = -1),
     )
 }
