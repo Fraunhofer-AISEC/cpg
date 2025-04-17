@@ -23,6 +23,8 @@
  *                    \______/ \__|       \______/
  *
  */
+@file:Suppress("CONTEXT_RECEIVERS_DEPRECATED")
+
 package de.fraunhofer.aisec.cpg
 
 import de.fraunhofer.aisec.cpg.TranslationResult.Companion.DEFAULT_APPLICATION_NAME
@@ -42,6 +44,7 @@ import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.reflect.KClass
 import org.neo4j.ogm.annotation.Relationship
 import org.neo4j.ogm.annotation.Transient
 
@@ -183,4 +186,29 @@ class TranslationResult(
         const val SOURCE_LOCATIONS_TO_FRONTEND = "sourceLocationsToFrontend"
         const val DEFAULT_APPLICATION_NAME = "application"
     }
+
+    @DoNotPersist val dirtyNodes = mutableMapOf<Node, MutableList<KClass<out Pass<*>>>>()
+
+    fun markDirty(node: Node, pass: KClass<out Pass<*>>) {
+        dirtyNodes.computeIfAbsent(node) { mutableListOf() }.add(pass)
+    }
+
+    fun markClean(node: Node, pass: KClass<out Pass<*>>) {
+        dirtyNodes.computeIfAbsent(node) { mutableListOf() }.remove(pass)
+    }
+}
+
+inline fun <reified T : Pass<*>> Node.markDirty() {
+    translationResult?.markDirty(this, T::class)
+}
+
+context(Pass<*>)
+fun Node.isDirty(): Boolean {
+    val list = translationResult?.dirtyNodes?.get(this)
+    return list?.contains(this@Pass::class) == true
+}
+
+context(Pass<*>)
+fun Node.markClean() {
+    translationResult?.markClean(this, this@Pass::class)
 }

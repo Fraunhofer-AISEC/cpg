@@ -309,6 +309,8 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         } else {
             Util.warnWithFileLocation(ref, log, "Did not find a declaration for ${ref.name}")
         }
+
+        ref.markClean()
     }
 
     /**
@@ -414,6 +416,9 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
             is CallExpression -> handleCallExpression(node)
             is HasOverloadedOperation -> handleOverloadedOperator(node)
         }
+
+        // Mark the node as "clean"
+        node?.markClean()
     }
 
     /**

@@ -28,9 +28,11 @@ package de.fraunhofer.aisec.cpg
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Name
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
+import de.fraunhofer.aisec.cpg.passes.Pass
 import de.fraunhofer.aisec.cpg.passes.executePass
 import de.fraunhofer.aisec.cpg.passes.executePassesInParallel
 import de.fraunhofer.aisec.cpg.sarif.toLocation
@@ -43,7 +45,9 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionException
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.collections.ArrayDeque
 import kotlin.io.path.name
+import kotlin.reflect.KClass
 import kotlin.reflect.full.findAnnotation
 import org.slf4j.LoggerFactory
 
@@ -98,9 +102,27 @@ private constructor(
                     }
                 }
             } else {
-                // Execute all passes in sequence
-                for (pass in config.registeredPasses.flatten()) {
+                // Execute all passes in sequence. First convert the list of passes to a queue
+                val queue = ArrayDeque<KClass<out Pass<out Node>>>()
+                queue.addAll(config.registeredPasses.flatten())
+                while (queue.isNotEmpty()) {
+                    // Get the next pass from the queue
+                    val pass = queue.removeFirst()
                     executePass(pass, ctx, result, executedFrontends)
+
+                    // After each pass execution, identify "dirty" nodes and identify which passes
+                    // should be run afterward
+                    var scheduledPasses = result.dirtyNodes.values.flatten()
+                    for (scheduledPass in scheduledPasses) {
+                        // If the pass is already in the queue, ignore it
+                        if (scheduledPass in queue) {
+                            continue
+                        }
+
+                        // Otherwise, add it to the queue
+                        queue.addFirst(scheduledPass)
+                    }
+
                     if (result.isCancelled) {
                         log.warn("Analysis interrupted, stopping Pass evaluation")
                     }
