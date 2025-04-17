@@ -372,7 +372,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
             if (fileName.startsWith("/tmp/")) {
                 FileTempFileStatus.TEMP_FILE
             } else {
-                FileTempFileStatus.UNKNOWN
+                FileTempFileStatus.NOT_A_TEMP_FILE
             }
 
         val currentMap = fileCache.computeIfAbsent(currentComponent) { mutableMapOf() }
