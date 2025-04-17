@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.graph.concepts.config
 
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
@@ -73,10 +72,8 @@ class ConfigurationGroup(underlyingNode: Node? = null, var conf: Configuration) 
     Concept(underlyingNode = underlyingNode) {
     var options: MutableList<ConfigurationOption> = mutableListOf()
 
-    override fun equalWithoutUnderlying(other: OverlayNode): Boolean {
-        return other is ConfigurationGroup &&
-            super.equalWithoutUnderlying(other) &&
-            other.conf == this.conf
+    override fun equals(other: Any?): Boolean {
+        return other is ConfigurationGroup && super.equals(other) && other.conf == this.conf
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), conf)
@@ -103,9 +100,9 @@ class ConfigurationOption(
     var value: Node? = null,
 ) : Concept(underlyingNode = underlyingNode) {
 
-    override fun equalWithoutUnderlying(other: OverlayNode): Boolean {
+    override fun equals(other: Any?): Boolean {
         return other is ConfigurationOption &&
-            super.equalWithoutUnderlying(other) &&
+            super.equals(other) &&
             other.group == this.group &&
             other.key == this.key &&
             other.value == this.value
@@ -127,9 +124,9 @@ class LoadConfiguration(
     /** The expression that holds the file that is loaded. */
     val fileExpression: Expression,
 ) : ConfigurationOperation(underlyingNode = underlyingNode, concept = conf) {
-    override fun equalWithoutUnderlying(other: OverlayNode): Boolean {
+    override fun equals(other: Any?): Boolean {
         return other is LoadConfiguration &&
-            super.equalWithoutUnderlying(other) &&
+            super.equals(other) &&
             other.fileExpression == this.fileExpression
     }
 
@@ -190,9 +187,9 @@ class RegisterConfigurationOption(
     /** An optional default value of the option. */
     var defaultValue: Node? = null,
 ) : ConfigurationOperation(underlyingNode = underlyingNode, concept = option) {
-    override fun equalWithoutUnderlying(other: OverlayNode): Boolean {
+    override fun equals(other: Any?): Boolean {
         return other is RegisterConfigurationOption &&
-            super.equalWithoutUnderlying(other) &&
+            super.equals(other) &&
             other.defaultValue == this.defaultValue
     }
 
@@ -218,10 +215,8 @@ class ProvideConfiguration(
     var source: ConfigurationSource,
     var conf: Configuration,
 ) : ConfigurationOperation(underlyingNode = underlyingNode, concept = source) {
-    override fun equalWithoutUnderlying(other: OverlayNode): Boolean {
-        return other is ProvideConfiguration &&
-            super.equalWithoutUnderlying(other) &&
-            other.conf == this.conf
+    override fun equals(other: Any?): Boolean {
+        return other is ProvideConfiguration && super.equals(other) && other.conf == this.conf
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), conf)
@@ -236,9 +231,9 @@ class ProvideConfigurationGroup(
     var source: ConfigurationGroupSource,
     var group: ConfigurationGroup,
 ) : ConfigurationOperation(underlyingNode = underlyingNode, concept = source) {
-    override fun equalWithoutUnderlying(other: OverlayNode): Boolean {
+    override fun equals(other: Any?): Boolean {
         return other is ProvideConfigurationGroup &&
-            super.equalWithoutUnderlying(other) &&
+            super.equals(other) &&
             other.group == this.group
     }
 
@@ -255,9 +250,9 @@ class ProvideConfigurationOption(
     var option: ConfigurationOption,
     var value: Node?,
 ) : ConfigurationOperation(underlyingNode = underlyingNode, concept = source) {
-    override fun equalWithoutUnderlying(other: OverlayNode): Boolean {
+    override fun equals(other: Any?): Boolean {
         return other is ProvideConfigurationOption &&
-            super.equalWithoutUnderlying(other) &&
+            super.equals(other) &&
             other.option == this.option &&
             other.value == this.value
     }
@@ -302,9 +297,9 @@ class ConfigurationGroupSource(underlyingNode: Node? = null) :
  */
 class ConfigurationOptionSource(underlyingNode: Node? = null, var group: ConfigurationGroupSource) :
     Concept(underlyingNode = underlyingNode) {
-    override fun equalWithoutUnderlying(other: OverlayNode): Boolean {
+    override fun equals(other: Any?): Boolean {
         return other is ConfigurationOptionSource &&
-            super.equalWithoutUnderlying(other) &&
+            super.equals(other) &&
             other.group == this.group
     }
 

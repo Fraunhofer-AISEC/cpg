@@ -26,28 +26,17 @@
 package de.fraunhofer.aisec.cpg.passes.concepts
 
 import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.graph.Backward
-import de.fraunhofer.aisec.cpg.graph.Component
-import de.fraunhofer.aisec.cpg.graph.GraphToFollow
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.OverlayNode
-import de.fraunhofer.aisec.cpg.graph.component
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.edges.flows.insertNodeAfterwardInEOGPath
-import de.fraunhofer.aisec.cpg.graph.firstParentOrNull
-import de.fraunhofer.aisec.cpg.graph.followDFGEdgesUntilHit
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.helpers.functional.Lattice
 import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
-import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass
-import de.fraunhofer.aisec.cpg.passes.DFGPass
-import de.fraunhofer.aisec.cpg.passes.EOGStarterLeastTUImportCatchLastSorter
-import de.fraunhofer.aisec.cpg.passes.EOGStarterPass
-import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
+import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 
 typealias NodeToOverlayStateElement = MapLattice.Element<Node, PowersetLattice.Element<OverlayNode>>
@@ -69,6 +58,8 @@ typealias NodeToOverlayState = MapLattice<Node, PowersetLattice.Element<OverlayN
  * * These methods must not connect the created [OverlayNode]s to the underlying node! This is done
  *   in the pass itself after having collected all overlays. Use a builder based with the flag
  *   `connect` set to `false` to do this.
+ * * If you require the [OverlayNode]s to be created in a specific EOG order, you have to return an
+ *   ordered collection.
  */
 @DependsOn(EvaluationOrderGraphPass::class)
 @DependsOn(DFGPass::class)
@@ -83,18 +74,10 @@ open class EOGConceptPass(ctx: TranslationContext) :
         // Nothing to do
     }
 
-    override fun accept(node: Node) {
-        currentComponent = node.firstParentOrNull<Component>()
+    override fun finalCleanup() {
+        val finalState = intermediateState ?: return
 
-        ctx.currentComponent = node.component
-        val lattice = NodeToOverlayState(PowersetLattice<OverlayNode>())
-        val startState = getInitialState(lattice, node)
-
-        val nextEog = node.nextEOGEdges.toList()
-        val finalState = lattice.iterateEOG(nextEog, startState, ::transfer)
-
-        // We do not need to use the finalState here as generating the new objects in the iteration
-        // already connects them to the underlying nodes.
+        // We set the underlying node based on the final state
         for ((underlyingNode, overlayNodes) in finalState) {
             overlayNodes.forEach {
                 it.underlyingNode = underlyingNode
@@ -113,9 +96,23 @@ open class EOGConceptPass(ctx: TranslationContext) :
         }
     }
 
+    override fun accept(node: Node) {
+        currentComponent = node.firstParentOrNull<Component>()
+
+        ctx.currentComponent = node.component
+
+        val lattice = NodeToOverlayState(PowersetLattice<OverlayNode>())
+        val startState = intermediateState ?: getInitialState(lattice, node)
+
+        val nextEog = node.nextEOGEdges.toList()
+        intermediateState = lattice.iterateEOG(nextEog, startState, ::transfer)
+    }
+
     /**
      * Generates [OverlayNode]s belonging to the given [node]. The [state] contains a map of nodes
      * to their respective [OverlayNode]s created by this instance of the pass.
+     *
+     * Note: see the class documentation for more information about creating [OverlayNode]s.
      */
     open fun handleCallExpression(
         state: NodeToOverlayStateElement,
@@ -130,6 +127,8 @@ open class EOGConceptPass(ctx: TranslationContext) :
      *
      * This is the advanced version and passes the [lattice] in case the [state] should be
      * manipulated. We do not recommend using this!
+     *
+     * Note: see the class documentation for more information about creating [OverlayNode]s.
      */
     open fun handleCallExpression(
         lattice: NodeToOverlayState,
@@ -142,6 +141,8 @@ open class EOGConceptPass(ctx: TranslationContext) :
     /**
      * Generates [OverlayNode]s belonging to the given [node]. The [state] contains a map of nodes
      * to their respective [OverlayNode]s created by this instance of the pass.
+     *
+     * Note: see the class documentation for more information about creating [OverlayNode]s.
      */
     open fun handleMemberCallExpression(
         state: NodeToOverlayStateElement,
@@ -156,6 +157,8 @@ open class EOGConceptPass(ctx: TranslationContext) :
      *
      * This is the advanced version and passes the [lattice] in case the [state] should be
      * manipulated. We do not recommend using this!
+     *
+     * Note: see the class documentation for more information about creating [OverlayNode]s.
      */
     open fun handleMemberCallExpression(
         lattice: NodeToOverlayState,
@@ -168,6 +171,8 @@ open class EOGConceptPass(ctx: TranslationContext) :
     /**
      * This function is called for each node in the graph. The specific nodes are always handled in
      * the same order. It calls the basic and advanced version of the handleX-methods.
+     *
+     * Note: see the class documentation for more information about creating [OverlayNode]s.
      */
     // TODO: Once we use tasks, we iterate over all tasks registered to this pass.
     fun handleNode(
@@ -204,15 +209,21 @@ open class EOGConceptPass(ctx: TranslationContext) :
 
         // This is some magic to filter out overlays that are already in the state (equal but not
         // identical) for the same Node. It also filters the nodes if they have already been created
-        // by a previous pass over the same code block. This happens if multiple EOG starters reach
+        // by a previous iteration over the same code block. This happens if multiple EOG starters
+        // reach
         // a certain piece of code (frequently happens with the code after catch clauses).
         val filteredAddedOverlays =
             addedOverlays.filter { added ->
                 currentState[currentNode]?.none { existing -> added == existing } != false &&
                     currentNode.overlays.none { existing ->
-                        (existing as? OverlayNode)?.equalWithoutUnderlying(added) == true
+                        (existing as? OverlayNode)?.equals(added) == true
                     }
             }
+
+        // If we do not add any new concepts, we can keep the state the same
+        if (filteredAddedOverlays.isEmpty()) {
+            return currentState
+        }
 
         return lattice.lub(
             currentState,
@@ -254,5 +265,9 @@ open class EOGConceptPass(ctx: TranslationContext) :
                 stateElement[it] ?: setOf(it, *it.overlays.toTypedArray())
             }
             .filterIsInstance<T>() // discard not-relevant overlays
+    }
+
+    companion object {
+        var intermediateState: NodeToOverlayStateElement? = null
     }
 }

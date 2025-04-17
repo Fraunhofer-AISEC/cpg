@@ -369,7 +369,7 @@ class FileConceptTest : BaseTest() {
         assertNotNull(file, "Expected to find exactly one `File` node (\"example.txt\").")
 
         val fileRead = conceptNodes.filterIsInstance<ReadFile>().singleOrNull()
-        assertNotNull(fileRead, "Expected to find a file read operation.")
+        assertNotNull(fileRead, "Expected to find a single file read operation.")
 
         val fileDelete = conceptNodes.filterIsInstance<DeleteFile>().singleOrNull()
         assertNotNull(fileDelete, "Expected to find a file delete operation.")
@@ -390,6 +390,95 @@ class FileConceptTest : BaseTest() {
         assertTrue(
             executionPath(startNode = fileDelete, predicate = { it == fileWrite }).value,
             "Expected to find an execution path from remove to write.",
+        )
+    }
+
+    @Test
+    fun testTempfile() {
+        val topLevel = Path.of("src", "integrationTest", "resources", "python", "file")
+
+        val result =
+            analyze(
+                files = listOf(topLevel.resolve("tempfile.py").toFile()),
+                topLevel = topLevel,
+                usePasses = true,
+            ) {
+                it.registerLanguage<PythonLanguage>()
+                it.registerPass<PythonFileConceptPass>()
+                it.symbols(mapOf("PYTHON_PLATFORM" to "linux"))
+            }
+        assertNotNull(result)
+
+        val allTempFiles = result.conceptNodes.filterIsInstance<File>()
+
+        assertEquals(2, allTempFiles.size, "Expected to find two temporary files")
+
+        assertTrue(
+            allTempFiles.all { it.isTempFile == FileTempFileStatus.TEMP_FILE },
+            "Expected the files to be marked as temporary files.",
+        )
+
+        assertTrue(
+            allTempFiles.all { it.deleteOnClose == true },
+            "Expected the files to be marked as \"deleted on close\".",
+        )
+
+        assertEquals( // sanity check
+            2,
+            result.operationNodes.filterIsInstance<OpenFile>().size,
+            "Expected to find two open operations.",
+        )
+
+        assertTrue(
+            allTempFiles.all { tempFile ->
+                val open =
+                    result.operationNodes.first {
+                        it is OpenFile && it.file == tempFile
+                    } // TODO should be a single `open`
+                executionPath(startNode = open, type = Must, predicate = { it is CloseFile }).value
+            },
+            "Expected all temporary files to be closed.",
+        )
+
+        assertTrue(
+            allTempFiles.all { tempFile ->
+                val open =
+                    result.operationNodes.first {
+                        it is OpenFile && it.file == tempFile
+                    } // TODO should be a single `open`
+                executionPath(startNode = open, type = Must, predicate = { it is DeleteFile }).value
+            },
+            "Expected all temporary files to be deleted.",
+        )
+    }
+
+    @Test
+    fun testTempfileInTmp() {
+        val topLevel = Path.of("src", "integrationTest", "resources", "python", "file")
+
+        val result =
+            analyze(
+                files = listOf(topLevel.resolve("tempInTmp.py").toFile()),
+                topLevel = topLevel,
+                usePasses = true,
+            ) {
+                it.registerLanguage<PythonLanguage>()
+                it.registerPass<PythonFileConceptPass>()
+                it.symbols(mapOf("PYTHON_PLATFORM" to "linux"))
+            }
+        assertNotNull(result)
+
+        val file = result.conceptNodes.filterIsInstance<File>().singleOrNull()
+        assertNotNull(file, "Expected to find exactly one `File` node (\"/tmp/example.txt\").")
+
+        assertTrue(
+            file.isTempFile == FileTempFileStatus.TEMP_FILE,
+            "Expected the file to be marked as a temporary file because it lives in `/tmp`.",
+        )
+
+        assertFalse(
+            file.deleteOnClose,
+            "Expected the file to not be marked as \"deleted on close\".",
         )
     }
 }

@@ -26,8 +26,8 @@
 package de.fraunhofer.aisec.cpg.graph.concepts.logging
 
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
+import java.util.Objects
 
 /**
  * A logging node, i.e. a node corresponding to a log where [LogWrite] can write to.
@@ -37,7 +37,9 @@ import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 class Log(underlyingNode: Node? = null) : Concept(underlyingNode = underlyingNode), IsLogging {
     var logName: String? = null
 
-    override fun equalWithoutUnderlying(other: OverlayNode): Boolean {
-        return other is Log && super.equalWithoutUnderlying(other) && other.logName == this.logName
+    override fun equals(other: Any?): Boolean {
+        return other is Log && super.equals(other) && other.logName == this.logName
     }
+
+    override fun hashCode() = Objects.hash(super.hashCode(), logName)
 }
