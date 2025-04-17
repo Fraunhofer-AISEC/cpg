@@ -451,4 +451,34 @@ class FileConceptTest : BaseTest() {
             "Expected all temporary files to be deleted.",
         )
     }
+
+    @Test
+    fun testTempfileInTmp() {
+        val topLevel = Path.of("src", "integrationTest", "resources", "python", "file")
+
+        val result =
+            analyze(
+                files = listOf(topLevel.resolve("tempInTmp.py").toFile()),
+                topLevel = topLevel,
+                usePasses = true,
+            ) {
+                it.registerLanguage<PythonLanguage>()
+                it.registerPass<PythonFileConceptPass>()
+                it.symbols(mapOf("PYTHON_PLATFORM" to "linux"))
+            }
+        assertNotNull(result)
+
+        val file = result.conceptNodes.filterIsInstance<File>().singleOrNull()
+        assertNotNull(file, "Expected to find exactly one `File` node (\"/tmp/example.txt\").")
+
+        assertTrue(
+            file.isTempFile == FileTempFileStatus.TEMP_FILE,
+            "Expected the file to be marked as a temporary file because it lives in `/tmp`.",
+        )
+
+        assertFalse(
+            file.deleteOnClose,
+            "Expected the file to not be marked as \"deleted on close\".",
+        )
+    }
 }
