@@ -26,7 +26,9 @@
 package de.fraunhofer.aisec.cpg.passes.concepts.file.python
 
 import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.Component
+import de.fraunhofer.aisec.cpg.graph.OverlayNode
+import de.fraunhofer.aisec.cpg.graph.argumentValueByNameOrPosition
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.concepts.file.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
@@ -37,6 +39,7 @@ import de.fraunhofer.aisec.cpg.passes.DFGPass
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
 import de.fraunhofer.aisec.cpg.passes.concepts.EOGConceptPass
 import de.fraunhofer.aisec.cpg.passes.concepts.NodeToOverlayStateElement
+import de.fraunhofer.aisec.cpg.passes.concepts.file.python.PythonFileConceptPass.Companion.fileCache
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLate
 
@@ -77,28 +80,26 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
             return emptySet()
         }
 
-        return callExpression.base
+        val stateChanges = mutableListOf<OverlayNode>()
+        callExpression.base
             ?.let { findFile(it, state) }
             ?.mapNotNull { fileNode ->
                 when (callExpression.name.localName) {
                     "__enter__" -> {
-                        /* TODO: what about this? we handle __exit__ and create a CloseFile. However, we already have a OpenFile attached at the `open` */
-                        null
+                        // nothing to do here
                     }
 
-                    "__exit__" ->
-                        newFileClose(
-                            underlyingNode = callExpression,
-                            file = fileNode,
-                            connect = false,
-                        )
+                    "__exit__" -> {
+                        stateChanges.addAll(handleCloseFileObject(callExpression, fileNode))
+                    }
 
                     "read" ->
-                        newFileRead(
-                            underlyingNode = callExpression,
-                            file = fileNode,
-                            connect = false,
-                        )
+                        stateChanges +=
+                            newFileRead(
+                                underlyingNode = callExpression,
+                                file = fileNode,
+                                connect = false,
+                            )
                     "write" -> {
                         val arg = callExpression.arguments.getOrNull(0)
                         if (callExpression.arguments.size != 1 || arg == null) {
@@ -109,12 +110,16 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
                             )
                             return emptySet()
                         }
-                        newFileWrite(
-                            underlyingNode = callExpression,
-                            file = fileNode,
-                            what = arg,
-                            connect = false,
-                        )
+                        stateChanges +=
+                            newFileWrite(
+                                underlyingNode = callExpression,
+                                file = fileNode,
+                                what = arg,
+                                connect = false,
+                            )
+                    }
+                    "close" -> {
+                        stateChanges.addAll(handleCloseFileObject(callExpression, fileNode))
                     }
 
                     else -> {
@@ -125,10 +130,10 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
                                 "Handling of \"{}\" is not yet implemented. No concept node is created.",
                             callExpression,
                         )
-                        null
                     }
                 }
-            } ?: listOf()
+            }
+        return stateChanges
     }
 
     override fun handleCallExpression(
@@ -143,172 +148,242 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
 
         return when (callExpression.callee.name.toString()) {
             "open" -> {
-                /**
-                 * This matches when parsing code like:
-                 * ```python
-                 * open('foo.bar', 'r')
-                 * ```
-                 *
-                 * We model this with a [File] node to represent the [Concept] and a [OpenFile] node
-                 * for the opening operation.
-                 *
-                 * TODO: opener https://docs.python.org/3/library/functions.html#open
-                 */
-                val fileName = getFileName(callExpression, "file")
-                if (fileName == null) {
-                    Util.errorWithFileLocation(
-                        callExpression,
-                        log,
-                        "Failed to parse file name. Ignoring the `open` call.",
-                    )
-                    return emptySet()
-                }
-                val (newFileNode, isNewFile) = getOrCreateFile(fileName, callExpression)
-
-                val mode = getBuiltinOpenMode(callExpression) ?: "r" // default is 'r'
-                val flags = translateBuiltinOpenMode(mode)
-                val setFlagsOp =
-                    newFileSetFlags(
-                        underlyingNode = callExpression,
-                        file = newFileNode,
-                        flags = flags,
-                        connect = false,
-                    )
-                val open =
-                    newFileOpen(
-                        underlyingNode = callExpression,
-                        file = newFileNode,
-                        connect = false,
-                    )
-
-                setOfNotNull(setFlagsOp, open, if (isNewFile) newFileNode else null)
+                handleOpen(callExpression)
             }
             "os.open" -> {
-                val fileName = getFileName(callExpression, "path")
-                if (fileName == null) {
-                    Util.errorWithFileLocation(
-                        callExpression,
-                        log,
-                        "Failed to parse file name. Ignoring the `os.open` call.",
-                    )
-                    return emptySet()
-                }
-                val (newFileNode, isNewFile) = getOrCreateFile(fileName, callExpression)
-
-                val setFlags =
-                    getOsOpenFlags(callExpression)?.let { flags ->
-                        newFileSetFlags(
-                            underlyingNode = callExpression,
-                            file = newFileNode,
-                            flags = translateOsOpenFlags(flags),
-                            connect = false,
-                        )
-                    }
-                val mode =
-                    getOsOpenMode(callExpression)
-                        ?: 329L // default is 511 (assuming this is octet notation)
-                val setMask =
-                    newFileSetMask(
-                        underlyingNode = callExpression,
-                        file = newFileNode,
-                        mask = mode,
-                        connect = false,
-                    )
-
-                val open =
-                    newFileOpen(
-                        underlyingNode = callExpression,
-                        file = newFileNode,
-                        connect = false,
-                    )
-
-                setOfNotNull(setFlags, setMask, open, if (isNewFile) newFileNode else null)
+                handleOsOpen(callExpression)
             }
             "os.chmod" -> {
-                val fileName =
-                    callExpression.argumentValueByNameOrPosition<String>(
-                        name = "path",
-                        position = 0,
-                    )
-                if (fileName == null) {
-                    Util.errorWithFileLocation(
-                        callExpression,
-                        log,
-                        "Failed to parse the `path` argument. Ignoring the entire `os.chmod` call.",
-                    )
-                    return emptySet()
-                }
-
-                val (file, isNewFile) = getOrCreateFile(fileName, callExpression)
-
-                val mode =
-                    callExpression.argumentValueByNameOrPosition<Long>(name = "mode", position = 1)
-                if (mode == null) {
-                    Util.errorWithFileLocation(
-                        callExpression,
-                        log,
-                        "Failed to find the corresponding mode. Ignoring the entire `os.chmod` call..",
-                    )
-                    return setOfNotNull(if (isNewFile) file else null)
-                }
-                setOfNotNull(
-                    if (isNewFile) file else null,
-                    newFileSetMask(
-                        underlyingNode = callExpression,
-                        file = file,
-                        mask = mode,
-                        connect = false,
-                    ),
-                )
+                handleOsChmod(callExpression)
             }
             "os.remove" -> {
-                val fileName =
-                    callExpression.argumentValueByNameOrPosition<String>(
-                        name = "path",
-                        position = 0,
-                    )
-                if (fileName == null) {
-                    Util.errorWithFileLocation(
-                        callExpression,
-                        log,
-                        "Failed to parse the `path` argument. Ignoring the entire `os.remove` call.",
-                    )
-                    return emptySet()
-                }
-
-                val (file, isNewFile) = getOrCreateFile(fileName, callExpression)
-
-                setOfNotNull(
-                    if (isNewFile) file else null,
-                    newFileDelete(underlyingNode = callExpression, file = file, connect = false),
-                )
+                handleOsRemove(callExpression)
+            }
+            "tempfile.TemporaryFile",
+            "tempfile.NamedTemporaryFile"
+            /* TODO filedescriptor support... "tempfile.mkstemp" */ -> {
+                handleTempFile(callExpression)
             }
             else -> {
-                setOf()
+                emptySet()
             }
         }
+    }
+
+    private fun handleCloseFileObject(
+        callExpression: MemberCallExpression,
+        fileNode: File,
+    ): Collection<OverlayNode> {
+        val fileClose =
+            newFileClose(underlyingNode = callExpression, file = fileNode, connect = false)
+        val fileDelete =
+            if (fileNode.deleteOnClose) {
+                newFileDelete(underlyingNode = callExpression, file = fileNode, connect = false)
+            } else {
+                null
+            }
+        return listOfNotNull(fileClose, fileDelete)
+    }
+
+    private fun handleTempFile(callExpression: CallExpression): Collection<OverlayNode> {
+        val deleteOnClose =
+            when (callExpression.callee.name.toString()) {
+                "tempfile.TemporaryFile" -> {
+                    true
+                }
+                "tempfile.NamedTemporaryFile" -> {
+                    callExpression.argumentValueByNameOrPosition<Boolean>(
+                        name = "delete",
+                        position = 8,
+                    ) ?: true
+                }
+                else -> false
+            }
+
+        val file =
+            newFile(
+                    underlyingNode = callExpression,
+                    fileName = "tempfile" + callExpression.id.toString(),
+                    connect = false,
+                ) // TODO: id to model random names
+                .apply { this.isTempFile = FileTempFileStatus.TEMP_FILE }
+                .apply { this.deleteOnClose = deleteOnClose }
+        val openTemp = newFileOpen(underlyingNode = callExpression, file = file, connect = false)
+        return listOf(file, openTemp)
+    }
+
+    /** TODO */
+    private fun handleOpen(callExpression: CallExpression): Collection<OverlayNode> {
+        /**
+         * This matches when parsing code like:
+         * ```python
+         * open('foo.bar', 'r')
+         * ```
+         *
+         * We model this with a [File] node to represent the [Concept] and a [OpenFile] node for the
+         * opening operation.
+         *
+         * TODO: opener https://docs.python.org/3/library/functions.html#open
+         */
+        val (newFileNode, isNewFile) =
+            getOrCreateFile(callExpression = callExpression, argumentName = "file", argumentIdx = 0)
+        if (newFileNode == null) {
+            Util.errorWithFileLocation(
+                callExpression,
+                log,
+                "Failed to parse file name. Ignoring the `open` call.",
+            )
+            return emptySet()
+        }
+
+        val mode = getBuiltinOpenMode(callExpression) ?: "r" // default is 'r'
+        val flags = translateBuiltinOpenMode(mode)
+        val setFlagsOp =
+            newFileSetFlags(
+                underlyingNode = callExpression,
+                file = newFileNode,
+                flags = flags,
+                connect = false,
+            )
+        val open = newFileOpen(underlyingNode = callExpression, file = newFileNode, connect = false)
+
+        return setOfNotNull(setFlagsOp, open, newFileNode.takeIf { isNewFile })
+    }
+
+    /** TODO */
+    private fun handleOsOpen(callExpression: CallExpression): Collection<OverlayNode> {
+        val (newFileNode, isNewFile) =
+            getOrCreateFile(callExpression = callExpression, argumentName = "path", argumentIdx = 0)
+        if (newFileNode == null) {
+            Util.errorWithFileLocation(
+                callExpression,
+                log,
+                "Failed to parse file name. Ignoring the `os.open` call.",
+            )
+            return emptySet()
+        }
+
+        val setFlags =
+            getOsOpenFlags(callExpression)?.let { flags ->
+                newFileSetFlags(
+                    underlyingNode = callExpression,
+                    file = newFileNode,
+                    flags = translateOsOpenFlags(flags),
+                    connect = false,
+                )
+            }
+        val mode =
+            getOsOpenMode(callExpression)
+                ?: 329L // default is 511 (assuming this is octet notation)
+        val setMask =
+            newFileSetMask(
+                underlyingNode = callExpression,
+                file = newFileNode,
+                mask = mode,
+                connect = false,
+            )
+
+        val open = newFileOpen(underlyingNode = callExpression, file = newFileNode, connect = false)
+
+        return setOfNotNull(setFlags, setMask, open, newFileNode.takeIf { isNewFile })
+    }
+
+    /** TODO */
+    private fun handleOsChmod(callExpression: CallExpression): Collection<OverlayNode> {
+        val (file, isNewFile) =
+            getOrCreateFile(callExpression = callExpression, argumentName = "path", argumentIdx = 0)
+        if (file == null) {
+            Util.errorWithFileLocation(
+                callExpression,
+                log,
+                "Failed to parse the `path` argument. Ignoring the entire `os.chmod` call.",
+            )
+            return emptySet()
+        }
+
+        val mode = callExpression.argumentValueByNameOrPosition<Long>(name = "mode", position = 1)
+        if (mode == null) {
+            Util.errorWithFileLocation(
+                callExpression,
+                log,
+                "Failed to find the corresponding mode. Ignoring the entire `os.chmod` call..",
+            )
+            return setOfNotNull(file.takeIf { isNewFile })
+        }
+        return setOfNotNull(
+            file.takeIf { isNewFile },
+            newFileSetMask(
+                underlyingNode = callExpression,
+                file = file,
+                mask = mode,
+                connect = false,
+            ),
+        )
+    }
+
+    /** TODO */
+    private fun handleOsRemove(callExpression: CallExpression): Collection<OverlayNode> {
+        val (file, isNewFile) =
+            getOrCreateFile(callExpression = callExpression, argumentName = "path", argumentIdx = 0)
+        if (file == null) {
+            Util.errorWithFileLocation(
+                callExpression,
+                log,
+                "Failed to parse the `path` argument. Ignoring the entire `os.remove` call.",
+            )
+            return emptySet()
+        }
+
+        return listOfNotNull(
+            file.takeIf { isNewFile },
+            newFileDelete(underlyingNode = callExpression, file = file, connect = false),
+        )
     }
 
     /**
      * Looks for the requested file in the [fileCache]. If none is found, a new [File] is created
      * and added to the cache.
      *
-     * @param fileName The name/path of the file.
      * @param callExpression The [CallExpression] triggering the call lookup. It is used as a basis
      *   ([File.underlyingNode]) if a new file has to be created.
+     * @param argumentName The name of the argument to be used for the file name in the
+     *   [callExpression].
+     * @param argumentIdx The index of the argument to be used for the file name in the
+     *   [callExpression].
      * @return The [File] found in the cache or the new file in case it had to be created.
      */
     internal fun getOrCreateFile(
-        fileName: String,
         callExpression: CallExpression,
-    ): Pair<File, Boolean> {
+        argumentName: String,
+        argumentIdx: Int,
+    ): Pair<File?, Boolean> {
+        val fileName =
+            getFileName(
+                call = callExpression,
+                argumentName = argumentName,
+                argumentIdx = argumentIdx,
+            )
+
+        if (fileName == null) {
+            return null to false // TODO
+        }
+
+        val tempFileStatus =
+            if (fileName.startsWith("/tmp/")) {
+                FileTempFileStatus.TEMP_FILE
+            } else {
+                FileTempFileStatus.UNKNOWN
+            }
+
         val currentMap = fileCache.computeIfAbsent(currentComponent) { mutableMapOf() }
         val existingEntry = currentMap[fileName]
         if (existingEntry != null) {
             return existingEntry to false
         }
         val newEntry =
-            newFile(underlyingNode = callExpression, fileName = fileName, connect = false)
+            newFile(underlyingNode = callExpression, fileName = fileName, connect = false).apply {
+                this.isTempFile = tempFileStatus
+            }
         currentMap[fileName] = newEntry
         return newEntry to true
     }
@@ -332,10 +407,13 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
      * arguments is analyzed.
      *
      * @param call The [CallExpression] (builtin-`open` or `os.open`) to be analyzed.
+     * @param argumentName The name of the argument to be used for the file name in the [call].
+     * @param argumentIdx The index of the argument to be used for the file name in the [call].
      * @return The name or null if no name could be found.
      */
-    private fun getFileName(call: CallExpression, argumentName: String): String? {
-        val name = call.argumentValueByNameOrPosition<String>(name = argumentName, position = 0)
+    private fun getFileName(call: CallExpression, argumentName: String, argumentIdx: Int): String? {
+        val name =
+            call.argumentValueByNameOrPosition<String>(name = argumentName, position = argumentIdx)
         return name
     }
 

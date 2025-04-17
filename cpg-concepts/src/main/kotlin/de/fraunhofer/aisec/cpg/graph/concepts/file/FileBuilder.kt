@@ -51,8 +51,7 @@ fun MetadataProvider.newFile(underlyingNode: Node, fileName: String, connect: Bo
  * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
  * @param file The [File] this operation is opening.
  * @param connect If `true`, the created [Operation] will be connected to the underlying node by
- *   setting its `underlyingNode` and inserting it in the EOG , to [concept] by its edge
- *   [Concept.ops].
+ *   setting its `underlyingNode` and inserting it in the EOG , to [file] by its edge [Concept.ops].
  * @return The new [OpenFile] node.
  */
 fun MetadataProvider.newFileOpen(underlyingNode: Node, file: File, connect: Boolean) =
@@ -70,8 +69,7 @@ fun MetadataProvider.newFileOpen(underlyingNode: Node, file: File, connect: Bool
  * @param file The [File] this operation is modifying.
  * @param mask The file mask to set (in UNIX notation).
  * @param connect If `true`, the created [Operation] will be connected to the underlying node by
- *   setting its `underlyingNode` and inserting it in the EOG , to [concept] by its edge
- *   [Concept.ops].
+ *   setting its `underlyingNode` and inserting it in the EOG , to [file] by its edge [Concept.ops].
  * @return The new [SetFileMask] node.
  */
 fun MetadataProvider.newFileSetMask(
@@ -94,8 +92,7 @@ fun MetadataProvider.newFileSetMask(
  * @param file The [File] this operation is working on.
  * @param flags The file flags to set (in UNIX notation).
  * @param connect If `true`, the created [Operation] will be connected to the underlying node by
- *   setting its `underlyingNode` and inserting it in the EOG , to [concept] by its edge
- *   [Concept.ops].
+ *   setting its `underlyingNode` and inserting it in the EOG , to [file] by its edge [Concept.ops].
  * @return The new [SetFileFlags] node.
  */
 fun MetadataProvider.newFileSetFlags(
@@ -117,8 +114,7 @@ fun MetadataProvider.newFileSetFlags(
  * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
  * @param file The [File] this operation is closing.
  * @param connect If `true`, the created [Operation] will be connected to the underlying node by
- *   setting its `underlyingNode` and inserting it in the EOG , to [concept] by its edge
- *   [Concept.ops].
+ *   setting its `underlyingNode` and inserting it in the EOG , to [file] by its edge [Concept.ops].
  * @return The new [CloseFile] node.
  */
 fun MetadataProvider.newFileClose(underlyingNode: Node, file: File, connect: Boolean) =
@@ -135,8 +131,7 @@ fun MetadataProvider.newFileClose(underlyingNode: Node, file: File, connect: Boo
  * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
  * @param file The [File] this operation is deleting.
  * @param connect If `true`, the created [Operation] will be connected to the underlying node by
- *   setting its `underlyingNode` and inserting it in the EOG , to [concept] by its edge
- *   [Concept.ops].
+ *   setting its `underlyingNode` and inserting it in the EOG , to [file] by its edge [Concept.ops].
  * @return The new [DeleteFile] node.
  */
 fun MetadataProvider.newFileDelete(underlyingNode: Node, file: File, connect: Boolean) =
@@ -154,8 +149,7 @@ fun MetadataProvider.newFileDelete(underlyingNode: Node, file: File, connect: Bo
  * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
  * @param file The [File] this operation is reading from.
  * @param connect If `true`, the created [Operation] will be connected to the underlying node by
- *   setting its `underlyingNode` and inserting it in the EOG , to [concept] by its edge
- *   [Concept.ops].
+ *   setting its `underlyingNode` and inserting it in the EOG , to [file] by its edge [Concept.ops].
  * @return The new [ReadFile] node.
  */
 fun MetadataProvider.newFileRead(underlyingNode: Node, file: File, connect: Boolean) =
@@ -175,8 +169,7 @@ fun MetadataProvider.newFileRead(underlyingNode: Node, file: File, connect: Bool
  * @param file The [File] this operation is writing to.
  * @param what A node being written to the [file] (usually the argument of a `write` call).
  * @param connect If `true`, the created [Operation] will be connected to the underlying node by
- *   setting its `underlyingNode` and inserting it in the EOG , to [concept] by its edge
- *   [Concept.ops].
+ *   setting its `underlyingNode` and inserting it in the EOG , to [file] by its edge [Concept.ops].
  * @return The new [WriteFile] node.
  */
 fun MetadataProvider.newFileWrite(underlyingNode: Node, file: File, what: Node, connect: Boolean) =

@@ -30,8 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import java.util.Objects
-import kotlin.collections.plusAssign
+import java.util.*
 
 /**
  * This interface indicates that the corresponding node is connected to a file concept or operation.
@@ -60,6 +59,15 @@ enum class FileAccessModeFlags(val value: Long) : IsFile {
     O_WRONLY(1),
 }
 
+/**
+ * Represents the status of a file. This is used to determine if a file is a temporary file or not.
+ */
+enum class FileTempFileStatus {
+    TEMP_FILE,
+    NOT_A_TEMP_FILE,
+    UNKNOWN,
+}
+
 /** The bit-mask to be used to get the [FileAccessModeFlags] from an entire flags value. */
 const val O_ACCMODE_MODE_MASK = 3L
 
@@ -68,9 +76,15 @@ const val O_ACCMODE_MODE_MASK = 3L
  *
  * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
  * @param fileName The name of the file e.g. `foo/bar/example.txt`
+ * @param isTempFile Whether this file is a temporary file or not.
+ * @param deleteOnClose Whether this file will be automatically deleted when closed.
  */
-class File(underlyingNode: Node? = null, val fileName: String) :
-    Concept(underlyingNode = underlyingNode), IsFile {
+class File(
+    underlyingNode: Node? = null,
+    val fileName: String,
+    var isTempFile: FileTempFileStatus = FileTempFileStatus.UNKNOWN,
+    var deleteOnClose: Boolean = false,
+) : Concept(underlyingNode = underlyingNode), IsFile {
     override fun equalWithoutUnderlying(other: OverlayNode): Boolean {
         return other is File &&
             super.equalWithoutUnderlying(other) &&

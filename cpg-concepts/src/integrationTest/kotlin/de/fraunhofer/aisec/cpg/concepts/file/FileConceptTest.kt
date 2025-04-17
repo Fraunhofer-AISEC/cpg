@@ -392,4 +392,63 @@ class FileConceptTest : BaseTest() {
             "Expected to find an execution path from remove to write.",
         )
     }
+
+    @Test
+    fun testTempfile() {
+        val topLevel = Path.of("src", "integrationTest", "resources", "python", "file")
+
+        val result =
+            analyze(
+                files = listOf(topLevel.resolve("tempfile.py").toFile()),
+                topLevel = topLevel,
+                usePasses = true,
+            ) {
+                it.registerLanguage<PythonLanguage>()
+                it.registerPass<PythonFileConceptPass>()
+                it.symbols(mapOf("PYTHON_PLATFORM" to "linux"))
+            }
+        assertNotNull(result)
+
+        val allTempFiles = result.conceptNodes.filterIsInstance<File>()
+
+        assertEquals(2, allTempFiles.size, "Expected to find two temporary files")
+
+        assertTrue(
+            allTempFiles.all { it.isTempFile == FileTempFileStatus.TEMP_FILE },
+            "Expected the files to be marked as temporary files.",
+        )
+
+        assertTrue(
+            allTempFiles.all { it.deleteOnClose == true },
+            "Expected the files to be marked as \"deleted on close\".",
+        )
+
+        assertEquals( // sanity check
+            2,
+            result.operationNodes.filterIsInstance<OpenFile>().size,
+            "Expected to find two open operations.",
+        )
+
+        assertTrue(
+            allTempFiles.all { tempFile ->
+                val open =
+                    result.operationNodes.first {
+                        it is OpenFile && it.file == tempFile
+                    } // TODO should be a single `open`
+                executionPath(startNode = open, type = Must, predicate = { it is CloseFile }).value
+            },
+            "Expected all temporary files to be closed.",
+        )
+
+        assertTrue(
+            allTempFiles.all { tempFile ->
+                val open =
+                    result.operationNodes.first {
+                        it is OpenFile && it.file == tempFile
+                    } // TODO should be a single `open`
+                executionPath(startNode = open, type = Must, predicate = { it is DeleteFile }).value
+            },
+            "Expected all temporary files to be deleted.",
+        )
+    }
 }
