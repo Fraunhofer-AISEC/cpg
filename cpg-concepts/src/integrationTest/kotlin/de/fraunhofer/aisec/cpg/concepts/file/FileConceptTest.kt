@@ -369,7 +369,7 @@ class FileConceptTest : BaseTest() {
         assertNotNull(file, "Expected to find exactly one `File` node (\"example.txt\").")
 
         val fileRead = conceptNodes.filterIsInstance<ReadFile>().singleOrNull()
-        assertNotNull(fileRead, "Expected to find a file read operation.")
+        assertNotNull(fileRead, "Expected to find a single file read operation.")
 
         val fileDelete = conceptNodes.filterIsInstance<DeleteFile>().singleOrNull()
         assertNotNull(fileDelete, "Expected to find a file delete operation.")
