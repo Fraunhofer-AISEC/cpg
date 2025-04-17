@@ -74,18 +74,10 @@ open class EOGConceptPass(ctx: TranslationContext) :
         // Nothing to do
     }
 
-    override fun accept(node: Node) {
-        currentComponent = node.firstParentOrNull<Component>()
+    override fun finalCleanup() {
+        val finalState = intermediateState ?: return
 
-        ctx.currentComponent = node.component
-        val lattice = NodeToOverlayState(PowersetLattice<OverlayNode>())
-        val startState = getInitialState(lattice, node)
-
-        val nextEog = node.nextEOGEdges.toList()
-        val finalState = lattice.iterateEOG(nextEog, startState, ::transfer)
-
-        // We do not need to use the finalState here as generating the new objects in the iteration
-        // already connects them to the underlying nodes.
+        // We set the underlying node based on the final state
         for ((underlyingNode, overlayNodes) in finalState) {
             overlayNodes.forEach {
                 it.underlyingNode = underlyingNode
@@ -102,6 +94,18 @@ open class EOGConceptPass(ctx: TranslationContext) :
                 }
             }
         }
+    }
+
+    override fun accept(node: Node) {
+        currentComponent = node.firstParentOrNull<Component>()
+
+        ctx.currentComponent = node.component
+
+        val lattice = NodeToOverlayState(PowersetLattice<OverlayNode>())
+        val startState = intermediateState ?: getInitialState(lattice, node)
+
+        val nextEog = node.nextEOGEdges.toList()
+        intermediateState = lattice.iterateEOG(nextEog, startState, ::transfer)
     }
 
     /**
@@ -205,15 +209,21 @@ open class EOGConceptPass(ctx: TranslationContext) :
 
         // This is some magic to filter out overlays that are already in the state (equal but not
         // identical) for the same Node. It also filters the nodes if they have already been created
-        // by a previous pass over the same code block. This happens if multiple EOG starters reach
+        // by a previous iteration over the same code block. This happens if multiple EOG starters
+        // reach
         // a certain piece of code (frequently happens with the code after catch clauses).
         val filteredAddedOverlays =
             addedOverlays.filter { added ->
                 currentState[currentNode]?.none { existing -> added == existing } != false &&
                     currentNode.overlays.none { existing ->
-                        (existing as? OverlayNode)?.equalWithoutUnderlying(added) == true
+                        (existing as? OverlayNode)?.equals(added) == true
                     }
             }
+
+        // If we do not add any new concepts, we can keep the state the same
+        if (filteredAddedOverlays.isEmpty()) {
+            return currentState
+        }
 
         return lattice.lub(
             currentState,
@@ -255,5 +265,9 @@ open class EOGConceptPass(ctx: TranslationContext) :
                 stateElement[it] ?: setOf(it, *it.overlays.toTypedArray())
             }
             .filterIsInstance<T>() // discard not-relevant overlays
+    }
+
+    companion object {
+        var intermediateState: NodeToOverlayStateElement? = null
     }
 }

@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.concepts
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
-import java.util.*
+import java.util.Objects
 
 /**
  * Represents an operation executed on/with a [Concept] (stored in [concept]). This is typically a
@@ -45,10 +45,8 @@ abstract class Operation(
         this::class.simpleName?.let { name = Name(it) }
     }
 
-    override fun equalWithoutUnderlying(other: OverlayNode): Boolean {
-        return other is Operation &&
-            super.equalWithoutUnderlying(other) &&
-            other.concept.equalWithoutUnderlying(this.concept)
+    override fun equals(other: Any?): Boolean {
+        return other is Operation && super.equals(other) && other.concept == this.concept
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), concept)
