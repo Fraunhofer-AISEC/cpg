@@ -154,12 +154,11 @@ fun MetadataProvider.newFileDelete(underlyingNode: Node, file: File, connect: Bo
  */
 fun MetadataProvider.newFileRead(underlyingNode: Node, file: File, connect: Boolean) =
     newOperation(
-            { concept -> ReadFile(concept = file) },
-            underlyingNode = underlyingNode,
-            concept = file,
-            connect = connect,
-        )
-        .apply { if (connect) this.setDFG() }
+        { concept -> ReadFile(concept = file) },
+        underlyingNode = underlyingNode,
+        concept = file,
+        connect = connect,
+    )
 
 /**
  * Creates a new [WriteFile] node and attaches the DFG from [what] to [this] and then from the new
@@ -174,9 +173,8 @@ fun MetadataProvider.newFileRead(underlyingNode: Node, file: File, connect: Bool
  */
 fun MetadataProvider.newFileWrite(underlyingNode: Node, file: File, what: Node, connect: Boolean) =
     newOperation(
-            { concept -> WriteFile(concept = file, what = what) },
-            underlyingNode = underlyingNode,
-            concept = file,
-            connect = connect,
-        )
-        .apply { if (connect) this.setDFG() }
+        { concept -> WriteFile(concept = file, what = what) },
+        underlyingNode = underlyingNode,
+        concept = file,
+        connect = connect,
+    )

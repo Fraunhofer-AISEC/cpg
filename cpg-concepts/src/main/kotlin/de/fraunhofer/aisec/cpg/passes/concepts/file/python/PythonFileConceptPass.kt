@@ -502,4 +502,8 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
             }
         }
     }
+
+    override fun finalCleanup() {
+        fileCache.clear()
+    }
 }

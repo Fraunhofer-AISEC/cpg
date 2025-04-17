@@ -197,7 +197,14 @@ sealed class Pass<T : Node>(final override val ctx: TranslationContext, val sort
     override val scope: Scope?
         get() = scopeManager.currentScope
 
+    /** This method is called for each "target" that is passed to the pass. */
     abstract fun cleanup()
+
+    /**
+     * This method is called after all targets have been processed. It can be used to do some
+     * cleanup of static fields, e.g., in companion objects.
+     */
+    open fun finalCleanup() {}
 
     /**
      * Check if the pass requires a specific language frontend and if that frontend has been
@@ -376,6 +383,7 @@ fun executePass(
         }
     }
 
+    prototype.finalCleanup()
     bench.stop()
 }
 

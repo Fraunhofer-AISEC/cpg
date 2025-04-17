@@ -141,6 +141,10 @@ class AnalysisProject(
                 tool =
                     Tool(driver = ToolComponent(name = "Codyze", version = "x.x.x", rules = rules)),
                 results = results,
+                originalURIBaseIDS =
+                    config.topLevels
+                        .mapNotNull { Pair(it.key, it.toSarifLocation()) }
+                        .associate { it },
             )
 
         return AnalysisResult(

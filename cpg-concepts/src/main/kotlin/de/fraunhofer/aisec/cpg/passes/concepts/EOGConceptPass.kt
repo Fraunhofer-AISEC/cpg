@@ -96,6 +96,9 @@ open class EOGConceptPass(ctx: TranslationContext) :
                     it.setDFG()
                     // Add the operation to the concept.
                     it.concept.ops += it
+                } else if (it is Concept) {
+                    // Call the default DFG method for this operation.
+                    it.setDFG()
                 }
             }
         }
