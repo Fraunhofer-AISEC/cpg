@@ -860,9 +860,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         // If we have nothing, the last write is probably the functionDeclaration
         if (lastWrites.isEmpty()) ret.add(Pair(invoke, equalLinkedHashSetOf()))
         lastWrites.forEach { (lw, properties) ->
-            // TODO: Do we also want to deal with other properties?
-            val filteredProperties =
-                properties.filterTo(EqualLinkedHashSet()) { it is CallingContextOut }
+            val filteredProperties = properties
             if (shortFS) {
                 when (lw) {
                     is FunctionDeclaration -> ret.add(Pair(currentNode, filteredProperties))
@@ -938,13 +936,26 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     val existingCallingContext =
                         lwProps.filterIsInstance<CallingContextOut>().singleOrNull()
                     if (existingCallingContext != null) {
-                        existingCallingContext.calls.addAll(callingContext.calls)
+                        if (
+                            callingContext.calls.any { call ->
+                                call !in existingCallingContext.calls
+                            }
+                        )
+                            existingCallingContext.calls.addAll(callingContext.calls)
                         lwPropertySet.add(existingCallingContext)
                     } else lwPropertySet.add(callingContext)
                 }
                 // Add all other previous properties
                 lwPropertySet.addAll(lwProps.filter { it !is CallingContextOut })
-                lastWrites.add(Pair(lw, lwPropertySet))
+                // Add them to the set of lastWrites if there is no same element in there yet
+                if (
+                    lastWrites.none {
+                        it.first == lw &&
+                            it.second.all { it in lwPropertySet } &&
+                            it.second.size == lwPropertySet.size
+                    }
+                )
+                    lastWrites.add(Pair(lw, lwPropertySet))
             }
             destinations.addAll(value.dst)
         }
@@ -2151,8 +2162,10 @@ fun PointsToStateElement.updateValues(
             val prevDFG = identitySetOf<Pair<Node, EqualLinkedHashSet<Any>>>()
             lastWrites.forEach { lw ->
                 val existingEntries =
-                    newDeclState[destAddr]?.third?.filter {
-                        it.first === lw.first && it.second == lw.second
+                    newDeclState[destAddr]?.third?.filter { entry ->
+                        entry.first === lw.first &&
+                            lw.second.all { it in entry.second } &&
+                            lw.second.size == entry.second.size
                     }
                 if (existingEntries?.isNotEmpty() == true) prevDFG.addAll(existingEntries)
                 else prevDFG.add(lw)
