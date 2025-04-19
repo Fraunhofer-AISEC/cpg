@@ -155,7 +155,7 @@ enum class AssumptionType {
 }
 
 interface HasAssumptions {
-    val assumptions: MutableList<Assumption>
+    val assumptionNodes: MutableList<Assumption>
 
     /**
      * This function adds a new assumption to the object it is called on. If the object is a node or
@@ -189,7 +189,7 @@ interface HasAssumptions {
             assumptionScope = scope,
         )
 
-        this.assumptions.add(
+        this.assumptionNodes.add(
             Assumption(
                 assumptionType,
                 message,
@@ -216,7 +216,7 @@ interface HasAssumptions {
      * @param haveAssumptions nodes that hold assumptions this object dependent on.
      */
     fun HasAssumptions.addAssumptionDependences(haveAssumptions: Collection<HasAssumptions>) {
-        this.assumptions.addAll(haveAssumptions.flatMap { it.assumptions })
+        this.assumptionNodes.addAll(haveAssumptions.flatMap { it.assumptionNodes })
     }
 
     /**
