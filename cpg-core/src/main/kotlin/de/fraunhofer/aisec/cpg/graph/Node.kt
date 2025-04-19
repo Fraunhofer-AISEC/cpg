@@ -30,6 +30,8 @@ package de.fraunhofer.aisec.cpg.graph
 import com.fasterxml.jackson.annotation.JsonBackReference
 import com.fasterxml.jackson.annotation.JsonIgnore
 import de.fraunhofer.aisec.cpg.PopulatedByPass
+import de.fraunhofer.aisec.cpg.assumptions.Assumption
+import de.fraunhofer.aisec.cpg.assumptions.HasAssumptions
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.UnknownLanguage
@@ -64,7 +66,13 @@ import org.slf4j.LoggerFactory
 
 /** The base class for all graph objects that are going to be persisted in the database. */
 abstract class Node() :
-    IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider, HasNameAndLocation, HasScope {
+    IVisitable<Node>,
+    Persistable,
+    LanguageProvider,
+    ScopeProvider,
+    HasNameAndLocation,
+    HasScope,
+    HasAssumptions {
 
     /** This property holds the full name using our new [Name] class. */
     @Convert(NameConverter::class) override var name: Name = Name(EMPTY_NAME)
@@ -225,6 +233,8 @@ abstract class Node() :
         protected set
 
     var prevPDG by unwrapping(Node::prevDFGEdges)
+
+    @DoNotPersist override val assumptions: MutableList<Assumption> = mutableListOf()
 
     /**
      * If a node is marked as being inferred, it means that it was created artificially and does not

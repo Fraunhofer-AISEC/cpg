@@ -91,7 +91,7 @@ class PythonStdLibConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) 
                 }
             paths
                 ?.fulfilled
-                ?.mapNotNull { it.nodes.lastOrNull() as? Configuration }
+                ?.mapNotNull { it.lastOrNull() as? Configuration }
                 ?.toSet()
                 ?.forEach { conf ->
                     newLoadConfiguration( // Todo Propagate Assumptions to creation of new node
@@ -122,7 +122,7 @@ class PythonStdLibConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) 
             sub.arrayExpression.followPrevDFG {
                 it is Configuration || it is ConfigurationGroup
             } // Todo Propagate assumptions
-        val last = path?.nodes?.lastOrNull()
+        val last = path?.lastOrNull()
         return when (last) {
             // If we can follow it directly to the configuration node, then we access a group
             is Configuration -> {

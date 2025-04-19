@@ -426,7 +426,6 @@ open class ValueEvaluator(
         var condition = expr.condition
 
         // Assume that condition is a binary operator
-        // Todo assume
         if (condition is BinaryOperator) {
             val lhs = evaluateInternal(condition.lhs, depth)
             val rhs = evaluateInternal(condition.rhs, depth)

@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.assumptions.AssumptionType
-import de.fraunhofer.aisec.cpg.assumptions.assume
+import de.fraunhofer.aisec.cpg.frontends.UnknownLanguage.assume
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
@@ -308,12 +308,14 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 node.variable.variables.lastOrNull()?.prevDFGEdges += iterable
             }
         }
-        assume(
-            AssumptionType.AmbiguityAssumption,
-            "If this is not the case, we assume that the last VariableDeclaration in the statement is the one we care about.",
-            node,
-        )
-        node.variable?.let { node.prevDFGEdges += it }
+
+        node.variable?.let {
+            node.prevDFGEdges += it
+            node.assume(
+                AssumptionType.AmbiguityAssumption,
+                "If this is not the case, we assume that the last VariableDeclaration in the statement is the one we care about.",
+            )
+        }
     }
 
     /**

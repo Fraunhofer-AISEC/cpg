@@ -97,15 +97,10 @@ class CXXDynamicLoadingPass(ctx: TranslationContext) : ConceptPass(ctx) {
         val path =
             call.arguments.getOrNull(0)?.followPrevDFG {
                 it is CallExpression && it.operationNodes.any { it is LoadLibrary }
-            } // Todo Propagate assumptions
+            }
 
         val loadLibrary =
-            path
-                ?.nodes
-                ?.lastOrNull()
-                ?.operationNodes
-                ?.filterIsInstance<LoadLibrary>()
-                ?.singleOrNull()
+            path?.lastOrNull()?.operationNodes?.filterIsInstance<LoadLibrary>()?.singleOrNull()
 
         val symbolName = call.arguments.getOrNull(1)?.evaluate() as? String
         var candidates = loadLibrary?.findSymbol(symbolName)
