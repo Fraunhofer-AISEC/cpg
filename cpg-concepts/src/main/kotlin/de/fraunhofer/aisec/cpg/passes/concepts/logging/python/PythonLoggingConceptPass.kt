@@ -176,7 +176,7 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
                             overlay is LogGet
                         } // we are logging for a node which has a [LogGet] attached to it
                     }
-                    .fulfilled
+                    .fulfilled // Todo Propagate Assumptions as they influence the found logger
             val loggers =
                 fulfilledPaths
                     .map { path ->
