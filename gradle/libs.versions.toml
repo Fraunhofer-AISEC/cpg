@@ -13,8 +13,7 @@ kaml = "0.77.0"
 sarif4k = "0.6.0"
 ktor = "3.1.1"
 node = "22.14.0"
-deno-plugin = "0.1.4"
-deno = "2.0.0"
+deno-plugin = "0.1.5"
 
 [libraries]
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin"}
