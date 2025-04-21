@@ -3242,11 +3242,17 @@ class PointsToPassTest {
         assertNotNull(mainFD)
 
         // References
-        val pDerefLine466 = veryInnerFuncFD.refs[0]
-        assertNotNull(pDerefLine466)
+        val pDerefLine466Left = veryInnerFuncFD.refs[0]
+        assertNotNull(pDerefLine466Left)
 
-        val pRefLine466 = veryInnerFuncFD.refs[1]
-        assertNotNull(pRefLine466)
+        val pRefLine466Left = veryInnerFuncFD.refs[1]
+        assertNotNull(pRefLine466Left)
+
+        val pDerefLine466Right = veryInnerFuncFD.refs[2]
+        assertNotNull(pDerefLine466Right)
+
+        val pRefLine466Right = veryInnerFuncFD.refs[3]
+        assertNotNull(pRefLine466Right)
 
         val iRefLine483 = mainFD.refs[4]
         assertNotNull(iRefLine483)
@@ -3330,12 +3336,12 @@ class PointsToPassTest {
                 ?.end
         assertNotNull(pVeryInnerPMV)
 
-        assertEquals(pRefLine466, pVeryInnerPMV.nextDFG.singleOrNull())
+        assertEquals(mutableSetOf<Node>(pRefLine466Left, pRefLine466Right), pVeryInnerPMV.nextDFG)
 
-        // the flow from *p_very_inner to the printf in Line 483
+        // the flow from the left *p_very_inner to the printf in Line 483
         assertEquals(
             setOf(pDerefLine483, iRefLine483),
-            pDerefLine466.nextDFGEdges
+            pDerefLine466Left.nextDFGEdges
                 .filter {
                     it is ContextSensitiveDataflow &&
                         it.callingContext.calls ==
@@ -3344,5 +3350,7 @@ class PointsToPassTest {
                 .map { it.end }
                 .toSet(),
         )
+
+        // TODO: test dataflow function
     }
 }

@@ -497,8 +497,31 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                     collectFailedPaths = false,
                                     direction = Backward(GraphToFollow.DFG),
                                     sensitivities = OnlyFullDFG + FieldSensitive + ContextSensitive,
-                                    scope = Intraprocedural(),
-                                    predicate = { it is ParameterMemoryValue },
+                                    scope = Interprocedural(),
+                                    predicate = {
+                                        it is ParameterMemoryValue &&
+                                            /* If it's a ParameterMemoryValue from the node's
+                                            parameters, it has to have a DFG Node to one
+                                            of the node's parameters. Either partial to a derefvalue or full to the parameterdeclaration */
+                                            it.memoryValueUsageEdges
+                                                .filter {
+                                                    ((it.granularity is
+                                                        PartialDataflowGranularity<*> &&
+                                                        ((it.granularity
+                                                                    as
+                                                                    PartialDataflowGranularity<*>)
+                                                                .partialTarget as? String)
+                                                            ?.endsWith("derefvalue") == true) ||
+                                                        (it.granularity is
+                                                            FullDataflowGranularity &&
+                                                            it.end is ParameterDeclaration)) &&
+                                                        it.end in node.parameters
+                                                }
+                                                .size == 1 &&
+                                            node.parameters.any { param ->
+                                                param.name.localName == it.name.parent?.localName
+                                            }
+                                    },
                                 )
                                 .fulfilled
                                 .map { it.last() }

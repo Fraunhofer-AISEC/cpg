@@ -463,7 +463,7 @@ int teststrncpy() {
 }
 
 int very_inner_func(int* p_very_inner){ 
-  *p_very_inner = 1;
+  *p_very_inner = *p_very_inner + 1;
 }
 
 int inner_func(int* p_inner){ 
