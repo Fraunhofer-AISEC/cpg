@@ -466,9 +466,8 @@ class FileConceptTest : BaseTest() {
         assertTrue(
             allTempFiles.all { tempFile ->
                 val open =
-                    result.operationNodes.first {
-                        it is OpenFile && it.file == tempFile
-                    } // TODO should be a single `open`
+                    result.operationNodes.singleOrNull { it is OpenFile && it.file == tempFile }
+                assertNotNull(open, "Expected to find exactly one corresponding `OpenFile` node.")
                 executionPath(startNode = open, type = Must, predicate = { it is CloseFile }).value
             },
             "Expected all temporary files to be closed.",
@@ -477,12 +476,26 @@ class FileConceptTest : BaseTest() {
         assertTrue(
             allTempFiles.all { tempFile ->
                 val open =
-                    result.operationNodes.first {
-                        it is OpenFile && it.file == tempFile
-                    } // TODO should be a single `open`
+                    result.operationNodes.singleOrNull { it is OpenFile && it.file == tempFile }
+                assertNotNull(open, "Expected to find exactly one corresponding `OpenFile` node.")
                 executionPath(startNode = open, type = Must, predicate = { it is DeleteFile }).value
             },
             "Expected all temporary files to be deleted.",
+        )
+
+        assertTrue(
+            allTempFiles.all { tempFile ->
+                val setPermissions = tempFile.ops.filterIsInstance<SetFileMask>().singleOrNull()
+                assertNotNull(setPermissions)
+                setPermissions.mask == 384L /* 0600 in decimal notation */
+            },
+            "Expected to find 0600 permissions for the temp files.",
+        )
+
+        assertEquals(
+            allTempFiles.size,
+            allTempFiles.map { it.fileName }.toSet().count(),
+            "Expected the temp files to have unique names.",
         )
     }
 

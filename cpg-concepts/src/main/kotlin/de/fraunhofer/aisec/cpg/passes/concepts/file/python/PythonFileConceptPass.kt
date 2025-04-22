@@ -208,8 +208,15 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
                 ) // TODO: id to model random names
                 .apply { this.isTempFile = FileTempFileStatus.TEMP_FILE }
                 .apply { this.deleteOnClose = deleteOnClose }
+        val permissions =
+            newFileSetMask(
+                underlyingNode = callExpression,
+                file = file,
+                mask = 384 /* 0600 octet to decimal */,
+                connect = false,
+            )
         val openTemp = newFileOpen(underlyingNode = callExpression, file = file, connect = false)
-        return listOf(file, openTemp)
+        return listOf(file, permissions, openTemp)
     }
 
     /** TODO */
@@ -433,7 +440,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
     }
 
     /**
-     * Handles the `mask` parameter of `os.open` function.
+     * Handles the `mode` parameter of `os.open` function.
      *
      * Do not confuse with the builtin `open` (see [getBuiltinOpenMode]).
      *
