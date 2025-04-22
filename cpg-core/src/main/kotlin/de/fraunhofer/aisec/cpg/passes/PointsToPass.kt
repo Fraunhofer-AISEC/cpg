@@ -2015,7 +2015,30 @@ fun PointsToStateElement.getAddresses(node: Node): IdentitySet<Node> {
              * PointerDereferences have as address the value of their input.
              * For example, the address of `*a` is the value of `a`
              */
-            this.getValues(node.input).mapTo(IdentitySet()) { it.first }
+            val ret = identitySetOf<Node>()
+            this.getValues(node.input).forEach { (value, _) ->
+                // In case the value is a BinaryOperator (like `*(ptr + 8)`), we treat this as a
+                // SubscriptExpression for now
+                // We assume that the rhs of the BinaryOperator is the pointer, and the rhs is a
+                // literal that describes the offset
+                if (
+                    value is BinaryOperator &&
+                        value.operatorCode == "+" &&
+                        (value.lhs is Reference || value.lhs is CastExpression) &&
+                        value.rhs is Literal<*>
+                ) {
+                    var lhs = value.lhs
+                    // Remove possible casts
+                    while (lhs is CastExpression) {
+                        lhs = lhs.expression
+                    }
+                    val sub = SubscriptExpression()
+                    sub.arrayExpression = lhs
+                    sub.subscriptExpression = value.rhs
+                    ret.addAll(getAddresses(sub))
+                } else ret.add(value)
+            }
+            return ret
         }
         is MemberExpression -> {
             /*
@@ -2119,7 +2142,7 @@ fun PointsToStateElement.fetchFieldAddresses(
             val newEntry =
                 identitySetOf<Node>(
                     nodesCreatingUnknownValues.computeIfAbsent(Pair(addr, nodeName)) {
-                        MemoryAddress(nodeName)
+                        MemoryAddress(nodeName, isGlobal(addr))
                     }
                 )
 

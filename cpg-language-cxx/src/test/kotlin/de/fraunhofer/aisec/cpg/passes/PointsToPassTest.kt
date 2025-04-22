@@ -1668,7 +1668,6 @@ class PointsToPassTest {
                 .size,
         )
 
-        // ATM, we don't have short function Summaries for functions w/o body
         assertEquals(3, local28DerefLine179.prevDFG.size)
         assertEquals(2, local28DerefLine179.prevFullDFG.size)
         assertEquals(
@@ -3351,7 +3350,7 @@ class PointsToPassTest {
                 .toSet(),
         )
 
-        // Check context sensitive DF between literal 0 in Line 478 and *p in Line 483
+        // Check ContextSensitive DF between literal 0 in Line 478 and *p in Line 483
         assertEquals(
             1,
             mainFD.literals
@@ -3366,5 +3365,131 @@ class PointsToPassTest {
                 .fulfilled
                 .size,
         )
+    }
+
+    @Test
+    fun testGhidra2() {
+        val file = File("src/test/resources/pointsto.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+                it.registerPass<PointsToPass>()
+                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+            }
+        assertNotNull(tu)
+
+        // FunctionSummaries
+        val fdecallkeytoout2 =
+            tu.allChildren<FunctionDeclaration> { it.name.localName == "ecall_key_to_out2" }.first()
+        assertNotNull(fdecallkeytoout2)
+
+        val fsecallkeytoout2 = fdecallkeytoout2.functionSummary
+        assertNotNull(fsecallkeytoout2)
+
+        val fssgxecallkeytoout2 =
+            tu.allChildren<FunctionDeclaration> { it.name.localName == "sgx_ecall_key_to_out2" }
+                .first()
+                .functionSummary
+        assertNotNull(fssgxecallkeytoout2)
+
+        assertEquals(1, fsecallkeytoout2.size)
+        assertTrue(fsecallkeytoout2.entries.firstOrNull()?.key is ParameterDeclaration)
+        assertLocalName("outptr", fsecallkeytoout2.entries.firstOrNull()?.key)
+        assertEquals(
+            2,
+            fsecallkeytoout2.entries
+                .singleOrNull()
+                ?.value
+                ?.filter { !it.shortFunctionSummary }
+                ?.size,
+        )
+        assertEquals(
+            2,
+            fsecallkeytoout2.entries.singleOrNull()?.value?.filter { it.shortFunctionSummary }?.size,
+        )
+        fsecallkeytoout2.entries
+            .singleOrNull()
+            ?.value
+            ?.filter { !it.shortFunctionSummary }
+            ?.any { it.srcNode is UnknownMemoryValue && it.srcNode?.name?.localName == "CONCAT71" }
+            ?.let { assertTrue(it) }
+        fsecallkeytoout2.entries
+            .singleOrNull()
+            ?.value
+            ?.filter { !it.shortFunctionSummary }
+            ?.any { it.srcNode is UnknownMemoryValue && it.srcNode?.name?.localName == "_8_8_" }
+            ?.let { assertTrue(it) }
+        fsecallkeytoout2.entries
+            .singleOrNull()
+            ?.value
+            ?.filter { it.shortFunctionSummary }
+            ?.all { it.srcNode == fdecallkeytoout2 }
+            ?.let { assertTrue(it) }
+
+        // FunctionSummary of sgx_ecall_key_to_out
+        /*assertEquals(1, fssgxecallkeytoout2.filter { it.key !is ReturnStatement }.size)
+        assertTrue(
+            fssgxecallkeytoout2.filter { it.key !is ReturnStatement }.entries.firstOrNull()?.key
+                is ParameterDeclaration
+        )
+        assertLocalName(
+            "param_1",
+            fssgxecallkeytoout2.filter { it.key !is ReturnStatement }.entries.firstOrNull()?.key,
+        )
+        assertEquals(
+            3,
+            fssgxecallkeytoout2
+                .filter { it.key !is ReturnStatement }
+                .entries
+                .firstOrNull()
+                ?.value
+                ?.size,
+        )
+        // TODO: Should this really be 3?
+        assertEquals(
+            2,
+            fssgxecallkeytoout2
+                .filter { it.key !is ReturnStatement }
+                .entries
+                .firstOrNull()
+                ?.value
+                ?.filter { !it.shortFunctionSummary }
+                ?.size,
+        )
+        assertEquals(
+            1,
+            fssgxecallkeytoout2
+                .filter { it.key !is ReturnStatement }
+                .entries
+                .firstOrNull()
+                ?.value
+                ?.filter { it.shortFunctionSummary }
+                ?.size,
+        )
+        assertEquals(
+            1,
+            fssgxecallkeytoout2
+                .filter { it.key !is ReturnStatement }
+                .entries
+                .firstOrNull()
+                ?.value
+                ?.filter {
+                    it.srcNode is UnknownMemoryValue && it.srcNode?.name?.localName == "CONCAT71"
+                }
+                ?.size,
+        )
+        assertEquals(
+            1,
+            fssgxecallkeytoout2
+                .filter { it.key !is ReturnStatement }
+                .entries
+                .firstOrNull()
+                ?.value
+                ?.filter {
+                    it.srcNode is UnknownMemoryValue &&
+                        it.srcNode?.name?.localName == "DAT_0011b1c8"
+                }
+                ?.size,
+        )*/
     }
 }

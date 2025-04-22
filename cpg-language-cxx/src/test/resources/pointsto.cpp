@@ -482,3 +482,89 @@ int teststackedcallingcontexts() {
 
   printf("%d %d\n", i, *p);
 }
+
+void ecall_key_to_out2(void *outptr,int i,void *ucptr)
+{
+  undefined8 uVar1;
+  void *ucptr_local;
+  int i_local;
+  void *outptr_local;
+  
+  if (key[0] == '\0') {
+    derive_secret_key();
+  }
+  uVar1 = key._8_8_;
+  *(ulong *)outptr = CONCAT71(key._1_7_,key[0]);
+  *(undefined8 *)((long)outptr + 8) = uVar1;
+  return;
+}
+
+sgx_status_t sgx_ecall_key_to_out2(void *pms)
+{
+  int iVar1;
+  void *pms_local;
+  sgx_status_t status;
+  void *_in_outptr;
+  void *_in_ucptr;
+  ms_ecall_key_to_out_t *ms;
+  void *_tmp_outptr;
+  size_t _len_outptr;
+  void *_tmp_ucptr;
+  size_t _len_ucptr;
+  ms_ecall_key_to_out_t __in_ms;
+  
+  if ((pms == (void *)0x0) || (iVar1 = sgx_is_outside_enclave(pms,0x18), iVar1 == 0)) {
+    return SGX_ERROR_INVALID_PARAMETER;
+  }
+  iVar1 = memcpy_s(&__in_ms,0x18,pms,0x18);
+  if (iVar1 != 0) {
+    return SGX_ERROR_UNEXPECTED;
+  }
+  status = SGX_SUCCESS;
+  _in_outptr = (void *)0x0;
+  _in_ucptr = (void *)0x0;
+  if ((__in_ms.ms_outptr != (void *)0x0) &&
+     (iVar1 = sgx_is_outside_enclave(__in_ms.ms_outptr,0x10), iVar1 == 0)) {
+    return SGX_ERROR_INVALID_PARAMETER;
+  }
+  if ((__in_ms.ms_ucptr != (void *)0x0) &&
+     (iVar1 = sgx_is_outside_enclave(__in_ms.ms_ucptr,0x10), iVar1 == 0)) {
+    return SGX_ERROR_INVALID_PARAMETER;
+  }
+  if (__in_ms.ms_outptr != (void *)0x0) {
+    _in_outptr = dlmalloc(0x10);
+    if (_in_outptr == (void *)0x0) {
+      status = SGX_ERROR_OUT_OF_MEMORY;
+      goto LAB_0010128c;
+    }
+    memset(_in_outptr,0,0x10);
+  }
+  if (__in_ms.ms_ucptr != (void *)0x0) {
+    _in_ucptr = dlmalloc(0x10);
+    if (_in_ucptr == (void *)0x0) {
+      status = SGX_ERROR_OUT_OF_MEMORY;
+      goto LAB_0010128c;
+    }
+    memset(_in_ucptr,0,0x10);
+  }
+  ecall_key_to_out2(_in_outptr,__in_ms.ms_i,_in_ucptr);
+  if ((_in_outptr == (void *)0x0) ||
+     (iVar1 = memcpy_verw_s(__in_ms.ms_outptr,0x10,_in_outptr,0x10), iVar1 == 0)) {
+    if ((_in_ucptr != (void *)0x0) &&
+       (iVar1 = memcpy_verw_s(__in_ms.ms_ucptr,0x10,_in_ucptr,0x10), iVar1 != 0)) {
+      status = SGX_ERROR_UNEXPECTED;
+    }
+  }
+  else {
+    status = SGX_ERROR_UNEXPECTED;
+  }
+LAB_0010128c:
+  if (_in_outptr != (void *)0x0) {
+    free(_in_outptr);
+  }
+  if (_in_ucptr != (void *)0x0) {
+    free(_in_ucptr);
+  }
+  return status;
+}
+
