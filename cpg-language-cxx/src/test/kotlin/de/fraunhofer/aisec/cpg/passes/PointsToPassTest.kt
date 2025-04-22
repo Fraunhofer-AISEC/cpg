@@ -3351,6 +3351,20 @@ class PointsToPassTest {
                 .toSet(),
         )
 
-        // TODO: test dataflow function
+        // Check context sensitive DF between literal 0 in Line 478 and *p in Line 483
+        assertEquals(
+            1,
+            mainFD.literals
+                .first()
+                .followDFGEdgesUntilHit(
+                    collectFailedPaths = false,
+                    direction = Forward(GraphToFollow.DFG),
+                    sensitivities = OnlyFullDFG + FieldSensitive + ContextSensitive,
+                    scope = Interprocedural(),
+                    predicate = { it == mainFD.refs[5] },
+                )
+                .fulfilled
+                .size,
+        )
     }
 }
