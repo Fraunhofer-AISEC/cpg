@@ -394,6 +394,40 @@ class FileConceptTest : BaseTest() {
     }
 
     @Test
+    fun testLoop() {
+        val topLevel = Path.of("src", "integrationTest", "resources", "python", "file")
+
+        val result =
+            analyze(
+                files = listOf(topLevel.resolve("file_loop.py").toFile()),
+                topLevel = topLevel,
+                usePasses = true,
+            ) {
+                it.registerLanguage<PythonLanguage>()
+                it.registerPass<PythonFileConceptPass>()
+                it.symbols(mapOf("PYTHON_PLATFORM" to "linux"))
+            }
+        assertNotNull(result)
+
+        val conceptNodes = result.allChildrenWithOverlays<IsFile>()
+        assertTrue(conceptNodes.isNotEmpty())
+
+        val files = conceptNodes.filterIsInstance<File>()
+        assertEquals(
+            setOf("a", "b"),
+            files.map { it.fileName }.toSet(),
+            "Expected to find two `File` nodes (\"a\" and \"b\").",
+        )
+
+        val writes = conceptNodes.filterIsInstance<WriteFile>()
+        assertEquals(
+            setOf("a", "b"),
+            writes.map { it.file.fileName }.toSet(),
+            "Expected to find two `WriteFile` nodes (to \"a\" and \"b\").",
+        )
+    }
+
+    @Test
     fun testTempfile() {
         val topLevel = Path.of("src", "integrationTest", "resources", "python", "file")
 
