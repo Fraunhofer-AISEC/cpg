@@ -377,6 +377,7 @@ fun executePassesSequentially(
 
         if (result.isCancelled) {
             TranslationManager.Companion.log.warn("Analysis interrupted, stopping Pass evaluation")
+            break
         }
     }
 }
