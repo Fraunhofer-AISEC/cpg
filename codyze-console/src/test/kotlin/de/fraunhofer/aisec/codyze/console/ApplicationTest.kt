@@ -1,4 +1,4 @@
-/*
+package de.fraunhofer.aisec.codyze.console/*
  * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
