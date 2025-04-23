@@ -255,7 +255,11 @@ abstract class Node() :
     @DoNotPersist @Id @GeneratedValue var legacyId: Long? = null
 
     /** Will replace [legacyId] */
-    var id: Uuid = Uuid.random()
+    @OptIn(ExperimentalStdlibApi::class)
+    val id: Uuid
+        get() {
+            return Uuid.parseHex(hashCode().toHexString())
+        }
 
     /** Index of the argument if this node is used in a function call or parameter list. */
     var argumentIndex = 0
