@@ -38,13 +38,14 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
-import de.fraunhofer.aisec.cpg.markDirty
 import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.passes.concepts.ConceptPass
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
+import de.fraunhofer.aisec.cpg.passes.markDirty
 import de.fraunhofer.aisec.cpg.test.analyze
 import de.fraunhofer.aisec.cpg.test.assertFullName
+import de.fraunhofer.aisec.cpg.test.assertInvokes
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertNotNull
@@ -67,9 +68,15 @@ class MockPythonDynamicPass(ctx: TranslationContext) : ConceptPass(ctx) {
                 paths.fulfilled.forEach { path ->
                     val dynamicLoading = path.last() as DynamicLoading
 
+                    val record = node.translationResult.records["impl.simple.SimpleImplClass"]
+                    if (record == null) {
+                        log.error("Could not find impl simple.SimpleImplClass")
+                        return
+                    }
+
                     // Create an implicit construct expression
-                    val construct = newConstructExpression("impl.simple.SimpleImplClass").implicit()
-                    construct.type = with(node) { objectType("impl.simple.SimpleImplClass") }
+                    val construct = newConstructExpression(record.name).implicit()
+                    construct.type = record.toType()
                     node.prevDFG += construct
 
                     val loadSymbol =
@@ -87,12 +94,9 @@ class MockPythonDynamicPass(ctx: TranslationContext) : ConceptPass(ctx) {
                         callingContext =
                             CallingContextOut(dynamicLoading.underlyingNode as CallExpression),
                     )
-                    println(loadSymbol)
 
                     // Mark it as "dirty" for symbol resolver
                     node.markDirty<SymbolResolver>()
-
-                    // TODO: all DFG reachable nodes?
                 }
             }
         }
@@ -108,8 +112,12 @@ class MockPythonDynamicLoadingTest {
                 it.registerLanguage<PythonLanguage>()
                 it.registerPass<MockPythonDynamicPass>()
                 it.softwareComponents(mutableMapOf("memory" to listOf(topLevel.resolve("memory"))))
+                it.topLevels(mapOf("memory" to topLevel.resolve("memory")))
             }
         assertNotNull(result)
+
+        val simpleImplClass = result.records["impl.simple.SimpleImplClass"]
+        assertNotNull(simpleImplClass)
 
         val barRefs = result.refs("bar")
         assertNotNull(barRefs)
@@ -121,5 +129,9 @@ class MockPythonDynamicLoadingTest {
                 "Assigned type should be 'impl.simple.SimpleImplClass'",
             )
         }
+
+        val fooCall = result.calls["foo"]
+        assertNotNull(fooCall)
+        assertInvokes(fooCall, simpleImplClass.methods["foo"])
     }
 }

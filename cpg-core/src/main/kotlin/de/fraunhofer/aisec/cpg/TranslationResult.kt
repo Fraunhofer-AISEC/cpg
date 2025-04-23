@@ -197,18 +197,3 @@ class TranslationResult(
         dirtyNodes.computeIfAbsent(node) { mutableListOf() }.remove(pass)
     }
 }
-
-inline fun <reified T : Pass<*>> Node.markDirty() {
-    translationResult?.markDirty(this, T::class)
-}
-
-context(Pass<*>)
-fun Node.isDirty(): Boolean {
-    val list = translationResult?.dirtyNodes?.get(this)
-    return list?.contains(this@Pass::class) == true
-}
-
-context(Pass<*>)
-fun Node.markClean() {
-    translationResult?.markClean(this, this@Pass::class)
-}
