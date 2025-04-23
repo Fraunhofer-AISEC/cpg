@@ -258,7 +258,7 @@ abstract class Node() :
     @OptIn(ExperimentalStdlibApi::class)
     val id: Uuid
         get() {
-            return Uuid.parseHex(hashCode().toHexString())
+            return Uuid.parseHex(hashCode().toHexString(HexFormat { number.minLength = 32 }))
         }
 
     /** Index of the argument if this node is used in a function call or parameter list. */
