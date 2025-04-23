@@ -254,11 +254,14 @@ abstract class Node() :
     /** Required field for object graph mapping. It contains the node id. */
     @DoNotPersist @Id @GeneratedValue var legacyId: Long? = null
 
-    /** Will replace [legacyId] */
-    @OptIn(ExperimentalStdlibApi::class)
+    /**
+     * A (more or less) unique identifier for this node. It is a [Uuid] derived from
+     * [Node.hashCode]. In this sense, it is definitely deterministic and reproducible, however, in
+     * theory it is not completely unique, as collisions within [Node.hashCode] could occur.
+     */
     val id: Uuid
         get() {
-            return Uuid.parseHex(hashCode().toHexString(HexFormat { number.minLength = 32 }))
+            return Uuid.fromLongs(0, hashCode().toLong())
         }
 
     /** Index of the argument if this node is used in a function call or parameter list. */
