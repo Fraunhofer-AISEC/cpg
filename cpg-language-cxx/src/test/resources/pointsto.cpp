@@ -547,7 +547,7 @@ sgx_status_t sgx_ecall_key_to_out2(void *pms)
     }
     memset(_in_ucptr,0,0x10);
   }
-  ecall_key_to_out2(_in_outptr,__in_ms.ms_i,_in_ucptr);
+  ecall_key_to_out2(_in_outptr,/*__in_ms.ms_i*/ 0,_in_ucptr);
   if ((_in_outptr == (void *)0x0) ||
      (iVar1 = memcpy_verw_s(__in_ms.ms_outptr,0x10,_in_outptr,0x10), iVar1 == 0)) {
     if ((_in_ucptr != (void *)0x0) &&

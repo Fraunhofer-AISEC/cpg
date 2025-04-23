@@ -3417,7 +3417,7 @@ class PointsToPassTest {
             .singleOrNull()
             ?.value
             ?.filter { !it.shortFunctionSummary }
-            ?.any { it.srcNode is UnknownMemoryValue && it.srcNode?.name?.localName == "_8_8_" }
+            ?.any { it.srcNode is UnknownMemoryValue && it.srcNode?.name?.localName == "key" }
             ?.let { assertTrue(it) }
         fsecallkeytoout2.entries
             .singleOrNull()
@@ -3427,16 +3427,16 @@ class PointsToPassTest {
             ?.let { assertTrue(it) }
 
         // FunctionSummary of sgx_ecall_key_to_out
-        /*assertEquals(1, fssgxecallkeytoout2.filter { it.key !is ReturnStatement }.size)
+        assertEquals(1, fssgxecallkeytoout2.filter { it.key !is ReturnStatement }.size)
         assertTrue(
             fssgxecallkeytoout2.filter { it.key !is ReturnStatement }.entries.firstOrNull()?.key
                 is ParameterDeclaration
         )
         assertLocalName(
-            "param_1",
+            "pms",
             fssgxecallkeytoout2.filter { it.key !is ReturnStatement }.entries.firstOrNull()?.key,
         )
-        assertEquals(
+        /*assertEquals(
             3,
             fssgxecallkeytoout2
                 .filter { it.key !is ReturnStatement }
@@ -3465,7 +3465,7 @@ class PointsToPassTest {
                 ?.value
                 ?.filter { it.shortFunctionSummary }
                 ?.size,
-        )
+        )*/
         assertEquals(
             1,
             fssgxecallkeytoout2
@@ -3486,10 +3486,9 @@ class PointsToPassTest {
                 .firstOrNull()
                 ?.value
                 ?.filter {
-                    it.srcNode is UnknownMemoryValue &&
-                        it.srcNode?.name?.localName == "DAT_0011b1c8"
+                    it.srcNode is UnknownMemoryValue && it.srcNode?.name?.localName == "key"
                 }
                 ?.size,
-        )*/
+        )
     }
 }

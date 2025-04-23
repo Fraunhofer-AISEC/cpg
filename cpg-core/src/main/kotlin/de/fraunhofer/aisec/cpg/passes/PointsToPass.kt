@@ -1941,12 +1941,26 @@ fun PointsToStateElement.getValues(node: Node): IdentitySet<Pair<Node, Boolean>>
         }
         is MemberExpression -> {
             val (base, fieldName) = resolveMemberExpression(node)
-            val baseAddresses = getAddresses(base).toIdentitySet()
+            val baseAddresses = getAddresses(base)
             val fieldAddresses = fetchFieldAddresses(baseAddresses, fieldName)
             if (fieldAddresses.isNotEmpty()) {
-                fieldAddresses.flatMapTo(IdentitySet()) {
-                    fetchElementFromDeclarationState(it).map { Pair(it.value, it.shortFS) }
+                val retVal = identitySetOf<Pair<Node, Boolean>>()
+                fieldAddresses.forEach { fa ->
+                    if (hasDeclarationStateEntry(fa)) {
+                        fetchElementFromDeclarationState(fa).map {
+                            retVal.add(Pair(it.value, it.shortFS))
+                        }
+                    } else {
+                        // Let's overapproximate here: In case we find no known value for the field,
+                        // we try again with the baseAddresses
+                        baseAddresses.forEach { ba ->
+                            fetchElementFromDeclarationState(ba).map {
+                                retVal.add(Pair(it.value, it.shortFS))
+                            }
+                        }
+                    }
                 }
+                return retVal
             } else {
                 val newName = Name(getNodeName(node).localName, base.name)
                 identitySetOf(
@@ -2045,7 +2059,7 @@ fun PointsToStateElement.getAddresses(node: Node): IdentitySet<Node> {
              * For MemberExpressions, the fieldAddresses in the MemoryAddress node of the base hold the information we are looking for
              */
             val (base, newName) = resolveMemberExpression(node)
-            fetchFieldAddresses(this.getAddresses(base).toIdentitySet(), newName)
+            fetchFieldAddresses(this.getAddresses(base), newName)
         }
         is Reference -> {
             /*
@@ -2157,7 +2171,6 @@ fun PointsToStateElement.fetchFieldAddresses(
             val newElements = this.declarationsState[addr]?.first
             newElements?.addAll(newEntry)
             fieldAddresses.addAll(newEntry)
-            /*newEntry.map { ret.add(Pair(it, "")) }*/
         } else {
             elements.let { fieldAddresses.addAll(it) }
         }
