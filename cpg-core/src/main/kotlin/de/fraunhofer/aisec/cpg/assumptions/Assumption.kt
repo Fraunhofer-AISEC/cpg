@@ -152,12 +152,12 @@ enum class AssumptionType {
 }
 
 interface HasAssumptions {
-    val assumptionNodes: MutableList<Assumption>
+    val assumptions: MutableList<Assumption>
 
     /**
      * This function adds a new assumption to the object it is called on. If the object is a node or
      * edge. The Assumption is added as an overlaying node for presentation in the graph. The
-     * assumption is also added to the [assumptionNodes] list. In the future the [id] will be
+     * assumption is also added to the [assumptions] list. In the future the [id] will be
      * deterministic across functions.
      *
      * @param assumptionType The type of assumption used to differentiate between assumptions and
@@ -171,7 +171,7 @@ interface HasAssumptions {
         message: String,
         scope: Node? = null,
     ): HasAssumptions {
-        this.assumptionNodes.add(
+        this.assumptions.add(
             Assumption(
                 assumptionType,
                 message,
@@ -197,7 +197,7 @@ interface HasAssumptions {
      * @param haveAssumptions nodes that hold assumptions this object dependent on.
      */
     fun HasAssumptions.addAssumptionDependences(haveAssumptions: Collection<HasAssumptions>) {
-        this.assumptionNodes.addAll(haveAssumptions.flatMap { it.assumptionNodes })
+        this.assumptions.addAll(haveAssumptions.flatMap { it.assumptions })
     }
 
     /**

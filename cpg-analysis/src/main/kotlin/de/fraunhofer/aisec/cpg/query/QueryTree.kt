@@ -74,7 +74,7 @@ open class QueryTree<T>(
      * Assumptions can be created in the QueryTree object with the [assume] function ore by adding
      * an assumption manually.
      */
-    override var assumptionNodes: MutableList<Assumption> = mutableListOf(),
+    override var assumptions: MutableList<Assumption> = mutableListOf(),
 ) : Comparable<QueryTree<T>>, HasAssumptions {
     fun printNicely(depth: Int = 0): String {
         var res =
