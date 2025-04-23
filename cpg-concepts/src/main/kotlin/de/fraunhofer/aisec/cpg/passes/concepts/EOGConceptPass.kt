@@ -163,7 +163,7 @@ open class EOGConceptPass(ctx: TranslationContext) :
      * the same order. It calls the basic and advanced version of the handleX-methods.
      */
     // TODO: Once we use tasks, we iterate over all tasks registered to this pass.
-    fun handleNode(
+    open fun handleNode(
         lattice: NodeToOverlayState,
         state: NodeToOverlayStateElement,
         node: Node,
