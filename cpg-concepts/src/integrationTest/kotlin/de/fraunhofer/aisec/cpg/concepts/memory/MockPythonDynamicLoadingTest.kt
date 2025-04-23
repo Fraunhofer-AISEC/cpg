@@ -132,6 +132,10 @@ class MockPythonDynamicLoadingTest {
 
         val fooCall = result.calls["foo"]
         assertNotNull(fooCall)
-        assertInvokes(fooCall, simpleImplClass.methods["foo"])
+        assertInvokes(
+            fooCall,
+            simpleImplClass.methods["foo"],
+            "The call 'foo()' should invoke 'impl.simple.SimpleImplClass.foo'",
+        )
     }
 }
