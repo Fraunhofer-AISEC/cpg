@@ -746,8 +746,8 @@ fun Node.followPrevCDGUntilHit(
  * Hence, if "fulfilled" is a non-empty list, a path from [this] to such a node is **possible but
  * not mandatory**. If the list "failed" is empty, the path is mandatory.
  */
-inline fun Node.followXUntilHit(
-    noinline x: (Node, Context, List<Node>) -> Collection<Pair<Node, Context>>,
+fun Node.followXUntilHit(
+    x: (Node, Context, List<Node>) -> Collection<Pair<Node, Context>>,
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
     context: Context = Context(steps = 0),
