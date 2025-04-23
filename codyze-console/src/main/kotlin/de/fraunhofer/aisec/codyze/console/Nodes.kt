@@ -319,7 +319,7 @@ val ArtifactLocation.absolutePath: Path?
             }
             // If the URI is already absolute, return it as is
             uriBaseID == null -> {
-                Path(URI.create(uri).path)
+                URI.create(uri).path?.let { Path(it) }
             }
             // Otherwise, try to find the URI base (which is the name of a component) and try to
             // build an absolute path again

@@ -119,7 +119,7 @@ val mockService =
                                                             PhysicalLocation(
                                                                 artifactLocation =
                                                                     ArtifactLocation(
-                                                                        uri = "file:mock.cpp"
+                                                                        uri = "file:/mock.cpp"
                                                                     ),
                                                                 region =
                                                                     Region(
