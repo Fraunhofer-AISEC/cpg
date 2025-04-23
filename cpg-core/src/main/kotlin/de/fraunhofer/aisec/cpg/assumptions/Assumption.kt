@@ -39,7 +39,7 @@ import org.neo4j.ogm.annotation.typeconversion.Convert
 
 /**
  * The minimal properties to identify an assumption, is the assumption type and either node, edge,
- * or assumption ID [assumptionID]. Only one of the three should be provided.
+ * or node [id] if deterministic. Only one of the three should be provided.
  *
  * @param assumptionType One of many finite assumption types used to differentiate between
  *   assumptions and group similar assumptions.
@@ -52,10 +52,6 @@ import org.neo4j.ogm.annotation.typeconversion.Convert
  * @param edge The edge that cause the assumption to be necessary, even if the assumption has
  *   validity for the entire program, the location of the start node can be reported to the user as
  *   the code piece that CAUSED the assumption.
- * @param assumptionID an ID chosen by the caller to identify the assumption across translation,
- *   e.g. filename or classname, with a function name and a potential counter. The assumptionID
- *   should be chosen in a way, such that the id stays the same across CPG runs with addition of
- *   other assumptions.
  * @param assumptionScope The scope that the assumption has validity for, the scope is a node and
  *   the assumption is valid for every node in its ast subtree. It can be equal to [underlyingNode]
  *   or can be connected to its ancestor nodes in the AST if the scope is wider.
@@ -73,7 +69,6 @@ class Assumption(
     @Convert(LocationConverter::class) var assumptionLocation: PhysicalLocation,
     node: Node? = null,
     @DoNotPersist var edge: Edge<*>? = null,
-    var assumptionID: String? = null,
     @Relationship(value = "ASSUMPTION_SCOPE", direction = Relationship.Direction.OUTGOING)
     var assumptionScope: Node? = node,
     var status: AssumptionStatus = AssumptionStatus.Ignored,
@@ -81,9 +76,11 @@ class Assumption(
 
     init {
         super.underlyingNode = node ?: edge?.start
-        if (super.underlyingNode == null && assumptionID == null) {
+        // Currently this condition is always false due to id being initialized, however, this is
+        // may change in the future
+        if (super.underlyingNode == null && id == null) {
             log.warn(
-                "Creating an assumption with no associated node or edge requires setting and assumptionID but was null"
+                "Creating an assumption with no associated node or edge requires having a deterministic ID for identification."
             )
         }
 
@@ -159,15 +156,12 @@ interface HasAssumptions {
 
     /**
      * This function adds a new assumption to the object it is called on. If the object is a node or
-     * edge. The Assumption is added as an overlaying node for presentation in the graph. If the
-     * base object it is neither node nor edge, an assumptionID has to be provided to make
-     * assumptions identifiable across CPG runs.
+     * edge. The Assumption is added as an overlaying node for presentation in the graph. The
+     * assumption is also added to the [assumptionNodes] list. In the future the [id] will be
+     * deterministic across functions.
      *
      * @param assumptionType The type of assumption used to differentiate between assumptions and
      *   group similar assumptions.
-     * @param assumptionID an ID chosen by the caller, e.g. filename or classname, with a function
-     *   name and a potential counter. The assumptionID is needed if the assumption is neither on a
-     *   node, nor on an edge.
      * @param scope The scope that the assumption has validity for, here the scope is a node,
      *   because the assumption is valid for every node in its ast subtree.
      * @param message The message describing the assumption that was taken.
@@ -175,20 +169,8 @@ interface HasAssumptions {
     fun HasAssumptions.assume(
         assumptionType: AssumptionType,
         message: String,
-        assumptionID: String? = null,
         scope: Node? = null,
     ): HasAssumptions {
-        // This connects the assumption as an overlay node to the code graph
-        Assumption(
-            assumptionType,
-            message,
-            getCallerFileAndLine(),
-            node = this as? Node,
-            edge = this as? Edge<*>,
-            assumptionID = assumptionID,
-            assumptionScope = scope,
-        )
-
         this.assumptionNodes.add(
             Assumption(
                 assumptionType,
@@ -196,7 +178,6 @@ interface HasAssumptions {
                 getCallerFileAndLine(),
                 node = this as? Node,
                 edge = this as? Edge<*>,
-                assumptionID = assumptionID,
                 assumptionScope = scope,
             )
         )
