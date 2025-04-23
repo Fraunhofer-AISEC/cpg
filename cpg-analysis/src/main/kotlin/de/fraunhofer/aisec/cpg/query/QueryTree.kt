@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.query
 
+import de.fraunhofer.aisec.cpg.assumptions.Assumption
+import de.fraunhofer.aisec.cpg.assumptions.HasAssumptions
 import de.fraunhofer.aisec.cpg.evaluation.compareTo
 import de.fraunhofer.aisec.cpg.graph.Node
 
@@ -67,7 +69,13 @@ open class QueryTree<T>(
      * in [stringRepresentation].
      */
     open var node: Node? = null,
-) : Comparable<QueryTree<T>> {
+
+    /**
+     * Assumptions can be created in the QueryTree object with the [assume] function ore by adding
+     * an assumption manually.
+     */
+    override var assumptions: MutableList<Assumption> = mutableListOf(),
+) : Comparable<QueryTree<T>>, HasAssumptions {
     fun printNicely(depth: Int = 0): String {
         var res =
             "  ".repeat(depth) +
