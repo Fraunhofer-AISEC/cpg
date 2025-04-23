@@ -38,8 +38,10 @@ import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.ConceptEntr
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.DFGEntry
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.LocationEntry
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.PersistedConceptEntry
+import io.github.detekt.sarif4k.ArtifactLocation
 import io.github.detekt.sarif4k.Result
 import java.net.URI
+import java.nio.file.Path
 import kotlin.io.path.Path
 import kotlin.io.path.toPath
 import kotlin.uuid.Uuid
@@ -280,10 +282,7 @@ fun Edge<*>.toJSON(): EdgeJSON {
  */
 context(TranslationResult)
 fun Result.toJSON(): FindingsJSON {
-    var path =
-        this.locations?.firstOrNull()?.physicalLocation?.artifactLocation?.uri?.let {
-            Path(URI.create(it).toURL().path)
-        }
+    var path = this.locations?.firstOrNull()?.physicalLocation?.artifactLocation?.absolutePath
 
     var translationUnit =
         this@TranslationResult.components
@@ -302,6 +301,35 @@ fun Result.toJSON(): FindingsJSON {
         translationUnit = translationUnit?.id,
     )
 }
+
+/**
+ * Tries to convert the [ArtifactLocation.uri] (which can either be absolute or relative to a
+ * [Component.topLevel]) into an absolute [Path].
+ */
+context(TranslationResult)
+val ArtifactLocation.absolutePath: Path?
+    get() {
+        val uri = this.uri
+        val uriBaseID = this.uriBaseID
+
+        return when {
+            // If the URI is null, return null
+            uri == null -> {
+                null
+            }
+            // If the URI is already absolute, return it as is
+            uriBaseID == null -> {
+                Path(URI.create(uri).path)
+            }
+            // Otherwise, try to find the URI base (which is the name of a component) and try to
+            // build an absolute path again
+            else -> {
+                val componentPath =
+                    this@TranslationResult.components[uriBaseID]?.topLevel()?.absoluteFile?.toPath()
+                return componentPath?.resolve(uri)
+            }
+        }
+    }
 
 /**
  * Custom serializer for [Uuid] to convert it to and from a string representation. This is used for
