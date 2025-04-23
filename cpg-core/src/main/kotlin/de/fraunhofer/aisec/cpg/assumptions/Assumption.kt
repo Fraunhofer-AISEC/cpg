@@ -93,7 +93,7 @@ class Assumption(
 }
 
 /**
- * the [AssumptionStatus] that an assumption can have, default being set to
+ * The [AssumptionStatus] that an assumption can have, default being set to
  * [AssumptionStatus.Undecided]. When an assumption is [AssumptionStatus.Accepted] or
  * [AssumptionStatus.Ignored], the object it is attached to is considered correct, e.g. nodes,
  * edges, paths are considered to exist and results are true or false, if based on a contradiction
@@ -151,6 +151,13 @@ enum class AssumptionType {
     TrustedInputAssumption,
 }
 
+/**
+ * This interface declares that the implementing class can hold assumptions necessary for static
+ * code analysis. The assumptions are stored in a field [assumptions] and can be newly created with
+ * [HasAssumptions.assume]. If an object that implements this interface is created conditionally
+ * from other objects that implement this interface, the assumptions can be carried over by calling
+ * [HasAssumptions.addAssumptionDependences] or [HasAssumptions.addAssumptionDependence].
+ */
 interface HasAssumptions {
     val assumptions: MutableList<Assumption>
 
