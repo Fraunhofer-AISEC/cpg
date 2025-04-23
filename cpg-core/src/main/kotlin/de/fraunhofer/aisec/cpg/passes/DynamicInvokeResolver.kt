@@ -28,16 +28,13 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.IncompatibleSignature
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.AccessValues
-import de.fraunhofer.aisec.cpg.graph.Backward
 import de.fraunhofer.aisec.cpg.graph.Component
-import de.fraunhofer.aisec.cpg.graph.GraphToFollow
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
-import de.fraunhofer.aisec.cpg.graph.followDFGEdgesUntilHit
 import de.fraunhofer.aisec.cpg.graph.pointer
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
@@ -104,12 +101,6 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
      * to have a [FunctionPointerType].
      */
     private fun handleMemberCallExpression(call: MemberCallExpression) {
-
-        val paths =
-            call.followDFGEdgesUntilHit(direction = Backward(GraphToFollow.DFG)) {
-                it.overlays.isNotEmpty()
-            }
-
         val callee = call.callee
         if (callee is BinaryOperator && callee.rhs.type is FunctionPointerType) {
             handleCallee(call, callee.rhs)
