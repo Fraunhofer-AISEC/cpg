@@ -98,8 +98,9 @@ class Assumption(
      * makes the assumption node identifiable across cpg translations.
      */
     override fun hashCode(): Int {
-        val cpgReferenceHash = edge?.hashCode() ?: underlyingNode?.hashCode() ?: 0
-        return Objects.hash(super.hashCode(), cpgReferenceHash, assumptionType, message, assumptionLocation)
+        // The underlying node is already in the hashCode of the super class implementation
+        // If the assumption is created from an edge, the edge is != null and therefore influences the hashCode
+        return Objects.hash(super.hashCode(), edge, assumptionType, message, assumptionLocation)
     }
 }
 
