@@ -5,7 +5,7 @@ class Employee:
 class Team:
     """
     Represents a team of employees. The list of team members is only visible
-    to the team manager and the team members themselves.
+    to the team manager
     """
     def __init__(self, name, manager):
         self.name = name
@@ -17,8 +17,6 @@ class Team:
 
     def list_members(self, whoami: Employee):
         if whoami == self.manager:
-            return self.__members
-        elif whoami in self.__members:
             return self.__members
         else:
             return "You are not authorized to view the members of this team."
