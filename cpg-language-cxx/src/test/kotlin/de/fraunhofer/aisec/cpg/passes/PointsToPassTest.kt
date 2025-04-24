@@ -3436,8 +3436,9 @@ class PointsToPassTest {
             "pms",
             fssgxecallkeytoout2.filter { it.key !is ReturnStatement }.entries.firstOrNull()?.key,
         )
-        /*assertEquals(
-            3,
+        // 5: 3 from the in_outptr, and 2 from the in_ucptr
+        assertEquals(
+            5,
             fssgxecallkeytoout2
                 .filter { it.key !is ReturnStatement }
                 .entries
@@ -3445,9 +3446,8 @@ class PointsToPassTest {
                 ?.value
                 ?.size,
         )
-        // TODO: Should this really be 3?
         assertEquals(
-            2,
+            4,
             fssgxecallkeytoout2
                 .filter { it.key !is ReturnStatement }
                 .entries
@@ -3465,7 +3465,8 @@ class PointsToPassTest {
                 ?.value
                 ?.filter { it.shortFunctionSummary }
                 ?.size,
-        )*/
+        )
+        // From the in_outptr: The unknown value from CONCAT71 in Line 497
         assertEquals(
             1,
             fssgxecallkeytoout2
@@ -3478,6 +3479,7 @@ class PointsToPassTest {
                 }
                 ?.size,
         )
+        // From the in_outptr: The unknown value from the global key variable in Line 498
         assertEquals(
             1,
             fssgxecallkeytoout2
@@ -3488,6 +3490,38 @@ class PointsToPassTest {
                 ?.filter {
                     it.srcNode is UnknownMemoryValue && it.srcNode?.name?.localName == "key"
                 }
+                ?.size,
+        )
+
+        // From the in_ucptr: The literal0 set in Line 548
+        val memsetParam1 =
+            tu.functions["sgx_ecall_key_to_out2"]
+                .calls
+                .filter { it.name.localName == "memset" }[1]
+                .arguments[1]
+        assertNotNull(memsetParam1)
+
+        assertEquals(
+            memsetParam1,
+            fssgxecallkeytoout2
+                .filter { it.key !is ReturnStatement }
+                .entries
+                .firstOrNull()
+                ?.value
+                ?.singleOrNull { it.srcNode is Literal<*> }
+                ?.srcNode,
+        )
+
+        // From the in_ucptr: The deref value of the literal0 set in Line 548 (in case the
+        // memcpy_verw_s in Line 554 is called)
+        assertEquals(
+            1,
+            fssgxecallkeytoout2
+                .filter { it.key !is ReturnStatement }
+                .entries
+                .firstOrNull()
+                ?.value
+                ?.filter { it.srcNode is UnknownMemoryValue && it.srcNode?.name?.localName == "0" }
                 ?.size,
         )
     }
