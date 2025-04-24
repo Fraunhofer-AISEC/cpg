@@ -56,7 +56,7 @@ class UnwrappedEdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
     }
 
     override fun removeAt(index: Int): NodeType {
-        var edge = list.removeAt(index)
+        val edge = list.removeAt(index)
         return if (list.outgoing) {
             edge.end
         } else {
@@ -239,6 +239,14 @@ class UnwrappedEdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
     }
 
     override fun hashCode(): Int {
-        return list.hashCode()
+        var hashCode = 1
+
+        val it = list.iterator()
+        while (it.hasNext()) {
+            val element = it.next()
+            hashCode = 31 * hashCode + element.hashCode()
+        }
+
+        return hashCode
     }
 }
