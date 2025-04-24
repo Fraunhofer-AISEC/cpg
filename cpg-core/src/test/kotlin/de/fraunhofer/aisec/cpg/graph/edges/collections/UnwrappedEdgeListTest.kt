@@ -93,6 +93,25 @@ class UnwrappedEdgeListTest {
     }
 
     @Test
+    fun testRemoveAt() {
+        with(TestLanguageFrontend()) {
+            val node1 = newLiteral(1)
+            val node2 = newLiteral(2)
+            val node3 = newLiteral(3)
+
+            node1.nextEOG += node2
+            node1.nextEOG += node3
+
+            assertEquals(2, node1.nextEOGEdges.size)
+
+            // remove the element at index 1 (node3)
+            node1.nextEOG.removeAt(1)
+
+            assertEquals(node2, node1.nextEOG.singleOrNull())
+        }
+    }
+
+    @Test
     fun testIterator() {
         with(TestLanguageFrontend()) {
             val node1 = newLiteral(1)
