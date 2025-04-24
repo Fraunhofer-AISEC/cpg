@@ -43,7 +43,7 @@ class UnwrappedEdgeListTest {
 
             node1.nextEOGEdges += node2
 
-            // this should trigger add of the edge underneath (node1.nextEOGEdges += node3)
+            // this should trigger "add" of the edge underneath (node1.nextEOGEdges += node3)
             node1.nextEOG += node3
 
             // should contain 2 nodes now
