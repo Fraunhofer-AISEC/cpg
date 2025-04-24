@@ -78,4 +78,20 @@ class UnwrappedEdgeSet<NodeType : Node, EdgeType : Edge<NodeType>>(
     ): Delegate<ThisType> {
         return Delegate()
     }
+
+    override fun equals(other: Any?): Boolean {
+        return other is Set<*> && this.iterator().asSequence().toSet() == other
+    }
+
+    override fun hashCode(): Int {
+        var hashCode = super.hashCode()
+
+        val it = set.iterator()
+        while (it.hasNext()) {
+            val element = it.next()
+            hashCode += 31 * element.hashCode()
+        }
+
+        return hashCode
+    }
 }

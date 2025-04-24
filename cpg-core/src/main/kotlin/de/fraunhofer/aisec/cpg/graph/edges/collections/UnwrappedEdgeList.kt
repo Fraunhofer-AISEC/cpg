@@ -233,4 +233,12 @@ class UnwrappedEdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
     ): Delegate<ThisType> {
         return Delegate()
     }
+
+    override fun equals(other: Any?): Boolean {
+        return other is List<*> && this.iterator().asSequence().toList() == other
+    }
+
+    override fun hashCode(): Int {
+        return list.hashCode()
+    }
 }
