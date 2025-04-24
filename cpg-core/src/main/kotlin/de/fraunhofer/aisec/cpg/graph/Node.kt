@@ -261,7 +261,11 @@ abstract class Node() :
      */
     val id: Uuid
         get() {
-            return Uuid.fromLongs(0, hashCode().toLong())
+            val parent =
+                astParent?.id?.toLongs { mostSignificantBits, leastSignificantBits ->
+                    leastSignificantBits
+                }
+            return Uuid.fromLongs(parent ?: 0, hashCode().toLong())
         }
 
     /** Index of the argument if this node is used in a function call or parameter list. */

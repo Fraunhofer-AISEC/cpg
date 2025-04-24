@@ -101,12 +101,20 @@ abstract class UnwrappedEdgeCollection<NodeType : Node, EdgeType : Edge<NodeType
 
         @Suppress("UNCHECKED_CAST")
         override fun next(): NodeType {
-            var next = edgeIterator.next()
+            val next = edgeIterator.next()
             return if (collection.outgoing) {
                 next.end
             } else {
                 next.start as NodeType
             }
         }
+    }
+
+    override fun equals(other: Any?): Boolean {
+        return other is UnwrappedEdgeCollection<*, *> && collection == other.collection
+    }
+
+    override fun hashCode(): Int {
+        return collection.hashCode()
     }
 }
