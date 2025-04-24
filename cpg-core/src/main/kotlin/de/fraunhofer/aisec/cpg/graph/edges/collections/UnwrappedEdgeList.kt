@@ -35,6 +35,7 @@ import org.neo4j.ogm.annotation.Transient
  * An intelligent [MutableList] wrapper around an [EdgeList] which supports iterating, adding and
  * removing [Node] elements.
  */
+@Suppress("EqualsOrHashCode")
 class UnwrappedEdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
     var list: EdgeList<NodeType, EdgeType>
 ) : UnwrappedEdgeCollection<NodeType, EdgeType>(list), MutableList<NodeType> {
@@ -236,17 +237,5 @@ class UnwrappedEdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
 
     override fun equals(other: Any?): Boolean {
         return other is List<*> && this.iterator().asSequence().toList() == other
-    }
-
-    override fun hashCode(): Int {
-        var hashCode = 1
-
-        val it = iterator()
-        while (it.hasNext()) {
-            val element = it.next()
-            hashCode = 31 * hashCode + element.hashCode()
-        }
-
-        return hashCode
     }
 }
