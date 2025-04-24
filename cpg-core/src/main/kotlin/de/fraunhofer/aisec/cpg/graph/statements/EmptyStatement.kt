@@ -30,5 +30,4 @@ class EmptyStatement : Statement() {
     override fun equals(other: Any?): Boolean {
         return other is EmptyStatement && super.equals(other)
     }
-
 }
