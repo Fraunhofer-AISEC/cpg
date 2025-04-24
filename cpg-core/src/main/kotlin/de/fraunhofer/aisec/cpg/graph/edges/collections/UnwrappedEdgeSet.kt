@@ -86,7 +86,7 @@ class UnwrappedEdgeSet<NodeType : Node, EdgeType : Edge<NodeType>>(
     override fun hashCode(): Int {
         var hashCode = 1
 
-        val it = set.iterator()
+        val it = iterator()
         while (it.hasNext()) {
             val element = it.next()
             hashCode = 31 * hashCode + element.hashCode()
