@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.sarif.Region
 import java.net.URI
 import org.neo4j.ogm.annotation.Relationship
 import org.neo4j.ogm.annotation.typeconversion.Convert
+import java.util.*
 
 /**
  * The minimal properties to identify an assumption, is the assumption type and either node, edge,
@@ -89,6 +90,16 @@ class Assumption(
         }
         name = Name(assumptionType.name)
         location = node?.location
+    }
+
+    /**
+     * The hash code of this [Assumption]. It is based on the hash code of the [underlyingNode] or the [edge] that
+     * caused the assumption to be necessary, the [assumptionType], the [message], and the [assumptionLocation]. This
+     * makes the assumption node identifiable across cpg translations.
+     */
+    override fun hashCode(): Int {
+        val cpgReferenceHash = edge?.hashCode() ?: underlyingNode?.hashCode() ?: 0
+        return Objects.hash(super.hashCode(), cpgReferenceHash, assumptionType, message, assumptionLocation)
     }
 }
 
