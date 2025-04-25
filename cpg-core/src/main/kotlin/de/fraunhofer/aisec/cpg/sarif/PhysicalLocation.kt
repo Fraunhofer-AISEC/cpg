@@ -25,7 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.sarif
 
+import java.io.File
 import java.net.URI
+import java.nio.file.Path
 import java.util.*
 
 /** A SARIF compatible location referring to a location, i.e. file and region within the file. */
@@ -76,4 +78,12 @@ class PhysicalLocation(uri: URI, region: Region) {
             } else "unknown"
         }
     }
+}
+
+/** Converts a [File] to a [PhysicalLocation]. */
+fun Path.toLocation(): PhysicalLocation {
+    return PhysicalLocation(
+        uri = this.toUri(),
+        region = Region(startLine = -1, startColumn = -1, endLine = -1, endColumn = -1),
+    )
 }

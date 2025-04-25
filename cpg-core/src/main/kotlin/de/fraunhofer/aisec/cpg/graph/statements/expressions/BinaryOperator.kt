@@ -95,7 +95,8 @@ open class BinaryOperator :
             this.type = newType
         } else {
             // Otherwise, we have a special language-specific function to deal with type propagation
-            val type = language.propagateTypeOfBinaryOperation(this)
+            val type =
+                language.propagateTypeOfBinaryOperation(this.operatorCode, lhs.type, rhs.type, this)
             this.type = type
         }
     }

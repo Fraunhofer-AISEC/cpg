@@ -35,7 +35,7 @@ import java.util.Objects
  * `write` on a file or log object or an `execute` on a database.
  */
 abstract class Operation(
-    underlyingNode: Node,
+    underlyingNode: Node?,
     /** The [Concept] this operation belongs to. */
     open val concept: Concept,
 ) : OverlayNode() {
@@ -50,4 +50,15 @@ abstract class Operation(
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), concept)
+
+    /**
+     * This method can be overridden to set the data flow graph (DFG) for this [Operation]. Note
+     * that this must hold for all implementations of this node and that it should only use
+     * attributes of this [Operation].
+     *
+     * Note: The default implementation does nothing.
+     */
+    open fun setDFG() {
+        // The default implementation does nothing
+    }
 }

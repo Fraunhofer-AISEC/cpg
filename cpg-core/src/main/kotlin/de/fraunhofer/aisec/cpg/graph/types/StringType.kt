@@ -31,7 +31,16 @@ class StringType(
     typeName: CharSequence = "",
     language: Language<*>,
     generics: List<Type> = listOf(),
-) : ObjectType(typeName, generics, false, language) {
+    primitive: Boolean = false,
+    mutable: Boolean = false,
+) :
+    ObjectType(
+        typeName = typeName,
+        generics = generics,
+        primitive = primitive,
+        mutable = mutable,
+        language = language,
+    ) {
 
     init {
         // Built-in types are always resolved

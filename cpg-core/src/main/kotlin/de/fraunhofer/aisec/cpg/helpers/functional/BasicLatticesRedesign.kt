@@ -149,19 +149,19 @@ interface Lattice<T : Lattice.Element> {
             // state.
             val nextGlobal = globalState[nextEdge] ?: continue
             val newState = transformation(this, nextEdge, nextGlobal)
-            if (nextEdge.end.nextEOGEdges.isEmpty()) {
-                finalState[nextEdge] = newState
-            }
             nextEdge.end.nextEOGEdges.forEach {
                 // We continue with the nextEOG edge if we haven't seen it before or if we updated
-                // the
-                // state in comparison to the previous time we were there.
+                // the state in comparison to the previous time we were there.
                 val oldGlobalIt = globalState[it]
                 val newGlobalIt = (oldGlobalIt?.let { this.lub(newState, it) } ?: newState)
                 globalState[it] = newGlobalIt
                 if (it !in edgesList && (oldGlobalIt == null || newGlobalIt != oldGlobalIt)) {
                     edgesList.add(0, it)
                 }
+            }
+
+            if (nextEdge.end.nextEOGEdges.isEmpty() || edgesList.isEmpty()) {
+                finalState[nextEdge] = newState
             }
         }
 

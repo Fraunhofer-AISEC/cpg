@@ -35,7 +35,7 @@ import java.util.Objects
 
 /** Represents a single [HttpEndpoint] on the server */
 class HttpEndpoint(
-    underlyingNode: FunctionDeclaration,
+    underlyingNode: FunctionDeclaration? = null,
     val httpMethod: HttpMethod,
     val path: String,
     val arguments: List<Node>,

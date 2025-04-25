@@ -30,6 +30,8 @@ package de.fraunhofer.aisec.cpg.graph
 import com.fasterxml.jackson.annotation.JsonBackReference
 import com.fasterxml.jackson.annotation.JsonIgnore
 import de.fraunhofer.aisec.cpg.PopulatedByPass
+import de.fraunhofer.aisec.cpg.assumptions.Assumption
+import de.fraunhofer.aisec.cpg.assumptions.HasAssumptions
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.UnknownLanguage
@@ -64,7 +66,13 @@ import org.slf4j.LoggerFactory
 
 /** The base class for all graph objects that are going to be persisted in the database. */
 abstract class Node() :
-    IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider, HasNameAndLocation, HasScope {
+    IVisitable<Node>,
+    Persistable,
+    LanguageProvider,
+    ScopeProvider,
+    HasNameAndLocation,
+    HasScope,
+    HasAssumptions {
 
     /** This property holds the full name using our new [Name] class. */
     @Convert(NameConverter::class) override var name: Name = Name(EMPTY_NAME)
@@ -226,6 +234,8 @@ abstract class Node() :
 
     var prevPDG by unwrapping(Node::prevDFGEdges)
 
+    @DoNotPersist override val assumptions: MutableList<Assumption> = mutableListOf()
+
     /**
      * If a node is marked as being inferred, it means that it was created artificially and does not
      * necessarily have a real counterpart in the scanned source code. However, the nodes
@@ -314,12 +324,6 @@ abstract class Node() :
                 code == other.code &&
                 comment == other.comment &&
                 location == other.location &&
-                // We need to exclude "file" here, because in C++ the same header node can be
-                // imported in two different files and in this case, the "file" property will be
-                // different. Since want to squash those equal nodes, we will only consider all the
-                // other attributes, including "location" (which contains the *original* file
-                // location in the header file), but not "file".
-                // file == other.file &&
                 isImplicit == other.isImplicit
     }
 

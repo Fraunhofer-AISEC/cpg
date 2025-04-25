@@ -27,6 +27,8 @@ package de.fraunhofer.aisec.cpg.graph.concepts.iam
 
 import de.fraunhofer.aisec.cpg.graph.MetadataProvider
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.concepts.Concept
+import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.concepts.newConcept
 import de.fraunhofer.aisec.cpg.graph.concepts.newOperation
 
@@ -35,10 +37,16 @@ import de.fraunhofer.aisec.cpg.graph.concepts.newOperation
  *
  * @param underlyingNode The underlying node representing this concept.
  * @param token The authentication token, which may be an opaque token.
+ * @param connect If `true`, the created [Concept] will be connected to the underlying node by
+ *   setting its `underlyingNode`.
  * @return The created [TokenBasedAuth] concept.
  */
-fun MetadataProvider.newTokenBasedAuth(underlyingNode: Node, token: Node) =
-    newConcept({ TokenBasedAuth(it, token = token) }, underlyingNode = underlyingNode)
+fun MetadataProvider.newTokenBasedAuth(underlyingNode: Node, token: Node, connect: Boolean) =
+    newConcept(
+        { TokenBasedAuth(token = token) },
+        underlyingNode = underlyingNode,
+        connect = connect,
+    )
 
 /**
  * Creates a new [JwtAuth] concept.
@@ -46,10 +54,16 @@ fun MetadataProvider.newTokenBasedAuth(underlyingNode: Node, token: Node) =
  * @param underlyingNode The underlying node representing this concept.
  * @param jwt The JWT containing encoded authentication information.
  * @param payload The payload.
+ * @param connect If `true`, the created [Concept] will be connected to the underlying node by
+ *   setting its `underlyingNode`.
  * @return The created [JwtAuth] concept.
  */
-fun MetadataProvider.newJwtAuth(underlyingNode: Node, jwt: Node, payload: Node) =
-    newConcept({ JwtAuth(it, jwt = jwt, payload = payload) }, underlyingNode = underlyingNode)
+fun MetadataProvider.newJwtAuth(underlyingNode: Node, jwt: Node, payload: Node, connect: Boolean) =
+    newConcept(
+        { JwtAuth(jwt = jwt, payload = payload) },
+        underlyingNode = underlyingNode,
+        connect = connect,
+    )
 
 /**
  * Creates a new [Authenticate] operation belonging to a certain [IdentityAccessManagement] concept.
@@ -58,22 +72,22 @@ fun MetadataProvider.newJwtAuth(underlyingNode: Node, jwt: Node, payload: Node) 
  * @param concept The [IdentityAccessManagement] concept to which the operation belongs.
  * @param credential The credential can be a call (e.g., a function call that reads a header) or a
  *   variable that holds the value, e.g. the token * @return The created [Authenticate] operation.
+ * @param connect If `true`, the created [Operation] will be connected to the underlying node by
+ *   setting its `underlyingNode` and inserting it in the EOG , to [concept] by its edge
+ *   [Concept.ops].
+ * @return The created [Authenticate] operation.
  */
 fun MetadataProvider.newAuthenticate(
     underlyingNode: Node,
     concept: IdentityAccessManagement,
     credential: Node,
+    connect: Boolean,
 ) =
     newOperation(
-        { underlyingNode, concept ->
-            Authenticate(
-                underlyingNode = underlyingNode,
-                concept = concept,
-                credential = credential,
-            )
-        },
+        { concept -> Authenticate(concept = concept, credential = credential) },
         underlyingNode = underlyingNode,
         concept = concept,
+        connect = connect,
     )
 
 /**

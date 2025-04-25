@@ -23,6 +23,8 @@
  *                    \______/ \__|       \______/
  *
  */
+@file:Suppress("CONTEXT_RECEIVERS_DEPRECATED")
+
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.*
@@ -44,6 +46,7 @@ import de.fraunhofer.aisec.cpg.passes.inference.tryFunctionInference
 import de.fraunhofer.aisec.cpg.passes.inference.tryFunctionInferenceFromFunctionPointer
 import de.fraunhofer.aisec.cpg.passes.inference.tryVariableInference
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
+import kotlin.collections.firstOrNull
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -81,7 +84,7 @@ import org.slf4j.LoggerFactory
 @DependsOn(TypeHierarchyResolver::class)
 @DependsOn(EvaluationOrderGraphPass::class)
 @DependsOn(ImportResolver::class)
-open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
+open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
 
     /** Configuration for the [SymbolResolver]. */
     class Configuration(
@@ -93,6 +96,13 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
          * are [EvaluationOrder.unreachable].
          */
         val ignoreUnreachableDeclarations: Boolean = false,
+
+        /**
+         * If set to true, the [SymbolResolver] will use an experimental feature that is based on
+         * the EOG iteration. This is not yet finished and will probably not resolve all the symbols
+         * that the regular resolver would resolve.
+         */
+        val experimentalEOGWorklist: Boolean = false,
     ) : PassConfiguration()
 
     protected lateinit var walker: ScopedWalker
@@ -122,33 +132,25 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             null
         }
 
-    override fun accept(component: Component) {
-        ctx.currentComponent = component
-        walker = ScopedWalker(scopeManager)
+    override fun accept(eogStarter: Node) {
+        ctx.currentComponent = eogStarter.firstParentOrNull<Component>()
+        if (passConfig?.experimentalEOGWorklist == true && eogStarter is FunctionDeclaration) {
+            acceptWithIterateEOG(eogStarter)
+        } else {
+            walker = ScopedWalker(scopeManager)
 
-        cacheTemplates(component)
+            cacheTemplates(ctx.currentComponent)
 
-        walker.strategy =
-            if (passConfig?.skipUnreachableEOG == true) {
-                Strategy::REACHABLE_EOG_FORWARD
-            } else {
-                Strategy::EOG_FORWARD
-            }
-        walker.clearCallbacks()
-        walker.registerHandler(this::handle)
+            walker.strategy =
+                if (passConfig?.skipUnreachableEOG == true) {
+                    Strategy::REACHABLE_EOG_FORWARD
+                } else {
+                    Strategy::EOG_FORWARD
+                }
+            walker.clearCallbacks()
+            walker.registerHandler(this::handle)
 
-        // Resolve symbols in our translation units in the order depending on their import
-        // dependencies
-        for (tu in (Strategy::TRANSLATION_UNITS_LEAST_IMPORTS)(component)) {
-            log.debug("Resolving symbols of translation unit {}", tu.name)
-
-            // Gather all resolution EOG starters; and make sure they really do not have a
-            // predecessor, otherwise we might analyze a node multiple times
-            val nodes = tu.allEOGStarters.filter { it.prevEOGEdges.isEmpty() }
-
-            for (node in nodes) {
-                walker.iterate(node)
-            }
+            walker.iterate(eogStarter)
         }
     }
 
@@ -156,15 +158,28 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         templateList.clear()
     }
 
-    /** This function caches all [TemplateDeclaration]s into [templateList]. */
-    private fun cacheTemplates(component: Component) {
+    override fun finalCleanup() {
+        componentsToTemplates.clear()
+    }
+
+    /**
+     * This function caches all [TemplateDeclaration]s into [templateList]. It either fetches the
+     * existing result from [componentsToTemplates] or fills [templateList] for the first time and
+     * then stores this result.
+     */
+    private fun cacheTemplates(component: Component?) {
+        if (component in componentsToTemplates) {
+            componentsToTemplates[component]?.let { templateList.addAll(it) }
+            return
+        }
         walker.registerHandler { node ->
             if (node is TemplateDeclaration) {
                 templateList.add(node)
             }
         }
-        for (tu in component.translationUnits) {
-            walker.iterate(tu)
+        component?.let {
+            it.translationUnits.forEach { tu -> walker.iterate(tu) }
+            componentsToTemplates[it] = templateList
         }
     }
 
@@ -228,7 +243,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             }
 
         // Find a list of candidate symbols. In most cases, we can just perform a lookup by name
-        // which either performs an unqualified lookup beginning from the current scope "up-wards",
+        // which either performs an unqualified lookup beginning from the current scope "upwards",
         // or a qualified lookup starting from the scope specified in the name.
         var candidates = scopeManager.lookupSymbolByNodeName(ref, predicate = predicate).toSet()
 
@@ -434,8 +449,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         }
 
         // Dynamic function invokes (such as function pointers) are handled by an extra pass, so we
-        // are
-        // not resolving them here.
+        // are not resolving them here.
         //
         // We have a dynamic invoke in two cases:
         // a) our callee is not a reference
@@ -467,130 +481,7 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             }
         }
 
-        // Try to resolve the best viable function based on the candidates and the arguments
-        val result = resolveWithArguments(callee.candidates, call.arguments, call)
-        when (result.success) {
-            PROBLEMATIC -> {
-                log.error(
-                    "Resolution of ${call.name} returned an problematic result and we cannot decide correctly, the invokes edge will contain all possible viable functions"
-                )
-                call.invokes = result.bestViable.toMutableList()
-            }
-            AMBIGUOUS -> {
-                log.warn(
-                    "Resolution of ${call.name} returned an ambiguous result and we cannot decide correctly, the invokes edge will contain the the ambiguous functions"
-                )
-                call.invokes = result.bestViable.toMutableList()
-            }
-            SUCCESSFUL -> {
-                call.invokes = result.bestViable.toMutableList()
-            }
-            UNRESOLVED -> {
-                call.invokes = tryFunctionInference(call, result).toMutableList()
-            }
-        }
-
-        // We also set the callee's refersTo
-        callee.refersTo = call.invokes.firstOrNull()
-    }
-
-    /**
-     * This function tries to resolve a set of [candidates] (e.g. coming from a
-     * [CallExpression.callee]) into the best matching [FunctionDeclaration] (or multiple functions,
-     * if applicable) based on the supplied [arguments]. The result is returned in the form of a
-     * [CallResolutionResult] which holds detail information about intermediate results as well as
-     * the kind of success the resolution had.
-     *
-     * The [source] expression specifies the node in the graph that triggered this resolution. This
-     * is most likely a [CallExpression], but could be other node as well. It is also the source of
-     * the scope and language used in the resolution.
-     */
-    private fun resolveWithArguments(
-        candidates: Set<Declaration>,
-        arguments: List<Expression>,
-        source: Expression,
-    ): CallResolutionResult {
-        val result =
-            CallResolutionResult(
-                source,
-                arguments,
-                candidates.filterIsInstance<FunctionDeclaration>().toSet(),
-                setOf(),
-                mapOf(),
-                setOf(),
-                UNRESOLVED,
-                source.scope,
-            )
-        val language = source.language
-
-        // Set the start scope. This can either be the call's scope or a scope specified in an FQN.
-        // If our base is a dynamic or unknown type, we can skip the scope extraction because it
-        // will always fail
-        val extractedScope =
-            if (
-                source is MemberCallExpression &&
-                    (source.base?.type is DynamicType ||
-                        source.base?.type is UnknownType ||
-                        source.base?.type is AutoType)
-            ) {
-                ScopeManager.ScopeExtraction(null, Name(""))
-            } else {
-                ctx.scopeManager.extractScope(source, language, source.scope)
-            }
-
-        // If we could not extract the scope (even though one was specified), we can only return an
-        // empty result
-        if (extractedScope == null) {
-            return result
-        }
-
-        val scope = extractedScope.scope
-        result.actualStartScope = scope ?: source.scope
-
-        // If there are no candidates, we can stop here
-        if (candidates.isEmpty()) {
-            return result
-        }
-
-        // If the function does not allow function overloading, and we have multiple candidate
-        // symbols, the result is "problematic"
-        if (source.language !is HasFunctionOverloading && result.candidateFunctions.size > 1) {
-            result.success = PROBLEMATIC
-        }
-
-        // Filter functions that match the signature of our call, either directly or with casts;
-        // those functions are "viable". Take default arguments into account if the language has
-        // them.
-        result.signatureResults =
-            result.candidateFunctions
-                .map {
-                    Pair(
-                        it,
-                        it.matchesSignature(
-                            arguments.map(Expression::type),
-                            arguments,
-                            source.language is HasDefaultArguments,
-                        ),
-                    )
-                }
-                .filter { it.second is SignatureMatches }
-                .associate { it }
-        result.viableFunctions = result.signatureResults.keys
-
-        // If we have a "problematic" result, we can stop here. In this case we cannot really
-        // determine anything more.
-        if (result.success == PROBLEMATIC) {
-            result.bestViable = result.viableFunctions
-            return result
-        }
-
-        // Otherwise, give the language a chance to narrow down the result (ideally to one) and set
-        // the success kind.
-        val pair = language.bestViableResolution(result)
-        result.bestViable = pair.first
-        result.success = pair.second
-
-        return result
+        decideInvokesBasedOnCandidates(callee, call)
     }
 
     private fun resolveMemberByName(
@@ -678,11 +569,15 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
      */
     protected open fun handleOverloadedOperator(op: HasOverloadedOperation) {
         val result = resolveOperator(op)
-        val decl = result?.bestViable?.singleOrNull() ?: return
+        val functionDeclaration = result?.bestViable?.singleOrNull() ?: return
 
         // If the result was successful, we can replace the node
-        if (result.success == SUCCESSFUL && decl is OperatorDeclaration && op is Expression) {
-            val call = operatorCallFromDeclaration(decl, op)
+        if (
+            result.success == SUCCESSFUL &&
+                functionDeclaration is OperatorDeclaration &&
+                op is Expression
+        ) {
+            val call = operatorCallFromDeclaration(functionDeclaration, op)
             walker.replace(op.astParent, op, call)
         }
     }
@@ -809,6 +704,8 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     companion object {
         val LOGGER: Logger = LoggerFactory.getLogger(SymbolResolver::class.java)
 
+        val componentsToTemplates = mutableMapOf<Component, MutableList<TemplateDeclaration>>()
+
         /**
          * Adds implicit duplicates of the TemplateParams to the implicit ConstructExpression
          *
@@ -829,6 +726,46 @@ open class SymbolResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             }
         }
     }
+}
+
+/**
+ * This function decides which functions to add to [CallExpression.invokes] based on the candidates
+ * and the arguments. It uses [resolveWithArguments] to resolve the best viable function based on
+ * the candidates and the arguments.
+ *
+ * If the resolution is [SUCCESSFUL], it sets the invokes edge to the best viable functions. If it
+ * is [AMBIGUOUS] or [PROBLEMATIC], it sets the invokes edge to all possible viable functions. If it
+ * is unresolved, it tries to infer the function using [tryFunctionInference].
+ *
+ * @param callee The [Reference] of the callee.
+ * @param call The [CallExpression] to resolve.
+ */
+internal fun Pass<*>.decideInvokesBasedOnCandidates(callee: Reference, call: CallExpression) {
+    // Try to resolve the best viable function based on the candidates and the arguments
+    val result = resolveWithArguments(callee.candidates, call.arguments, call)
+    when (result.success) {
+        PROBLEMATIC -> {
+            Pass.Companion.log.error(
+                "Resolution of ${call.name} returned an problematic result and we cannot decide correctly, the invokes edge will contain all possible viable functions"
+            )
+            call.invokes = result.bestViable.toMutableList()
+        }
+        AMBIGUOUS -> {
+            Pass.Companion.log.warn(
+                "Resolution of ${call.name} returned an ambiguous result and we cannot decide correctly, the invokes edge will contain the the ambiguous functions"
+            )
+            call.invokes = result.bestViable.toMutableList()
+        }
+        SUCCESSFUL -> {
+            call.invokes = result.bestViable.toMutableList()
+        }
+        UNRESOLVED -> {
+            call.invokes = tryFunctionInference(call, result).toMutableList()
+        }
+    }
+
+    // We also set the callee's refersTo
+    callee.refersTo = call.invokes.firstOrNull()
 }
 
 /**
@@ -853,4 +790,102 @@ internal fun Pass<*>.getPossibleContainingTypes(ref: Reference): Pair<Set<Type>,
     }
 
     return Pair(possibleTypes, bestGuess)
+}
+
+/**
+ * This function tries to resolve a set of [candidates] (e.g. coming from a [CallExpression.callee])
+ * into the best matching [FunctionDeclaration] (or multiple functions, if applicable) based on the
+ * supplied [arguments]. The result is returned in the form of a [CallResolutionResult] which holds
+ * detail information about intermediate results as well as the kind of success the resolution had.
+ *
+ * The [source] expression specifies the node in the graph that triggered this resolution. This is
+ * most likely a [CallExpression], but could be other node as well. It is also the source of the
+ * scope and language used in the resolution.
+ */
+internal fun Pass<*>.resolveWithArguments(
+    candidates: Set<Declaration>,
+    arguments: List<Expression>,
+    source: Expression,
+): CallResolutionResult {
+    val result =
+        CallResolutionResult(
+            source,
+            arguments,
+            candidates.filterIsInstance<FunctionDeclaration>().toSet(),
+            setOf(),
+            mapOf(),
+            setOf(),
+            UNRESOLVED,
+            source.scope,
+        )
+    val language = source.language
+
+    // Set the start scope. This can either be the call's scope or a scope specified in an FQN.
+    // If our base is a dynamic or unknown type, we can skip the scope extraction because it
+    // will always fail
+    val extractedScope =
+        if (
+            source is MemberCallExpression &&
+                (source.base?.type is DynamicType ||
+                    source.base?.type is UnknownType ||
+                    source.base?.type is AutoType)
+        ) {
+            ScopeManager.ScopeExtraction(null, Name(""))
+        } else {
+            ctx.scopeManager.extractScope(source, language, source.scope)
+        }
+
+    // If we could not extract the scope (even though one was specified), we can only return an
+    // empty result
+    if (extractedScope == null) {
+        return result
+    }
+
+    val scope = extractedScope.scope
+    result.actualStartScope = scope ?: source.scope
+
+    // If there are no candidates, we can stop here
+    if (candidates.isEmpty()) {
+        return result
+    }
+
+    // If the function does not allow function overloading, and we have multiple candidate
+    // symbols, the result is "problematic"
+    if (source.language !is HasFunctionOverloading && result.candidateFunctions.size > 1) {
+        result.success = PROBLEMATIC
+    }
+
+    // Filter functions that match the signature of our call, either directly or with casts;
+    // those functions are "viable". Take default arguments into account if the language has
+    // them.
+    result.signatureResults =
+        result.candidateFunctions
+            .map {
+                Pair(
+                    it,
+                    it.matchesSignature(
+                        arguments.map(Expression::type),
+                        arguments,
+                        source.language is HasDefaultArguments,
+                    ),
+                )
+            }
+            .filter { it.second is SignatureMatches }
+            .associate { it }
+    result.viableFunctions = result.signatureResults.keys
+
+    // If we have a "problematic" result, we can stop here. In this case we cannot really
+    // determine anything more.
+    if (result.success == PROBLEMATIC) {
+        result.bestViable = result.viableFunctions
+        return result
+    }
+
+    // Otherwise, give the language a chance to narrow down the result (ideally to one) and set
+    // the success kind.
+    val pair = language.bestViableResolution(result)
+    result.bestViable = pair.first
+    result.success = pair.second
+
+    return result
 }

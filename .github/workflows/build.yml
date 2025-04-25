@@ -15,6 +15,10 @@ on:
     paths-ignore:
       - "docs/**"
 
+permissions:
+  id-token: write
+  contents: write
+
 jobs:
   build:
     timeout-minutes: 15
@@ -25,7 +29,7 @@ jobs:
           cp gradle.properties.example gradle.properties
       - uses: actions/setup-java@v4
         with:
-          distribution: "zulu"
+          distribution: "corretto"
           java-version: "21"
       - uses: actions/setup-python@v5
         with:

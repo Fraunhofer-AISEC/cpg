@@ -1,0 +1,11 @@
+concepts:
+  - concept:
+      name: "de.fraunhofer.aisec.cpg.graph.concepts.file.File"
+      constructorArguments:
+        - name: "fileName"
+          value: "foo"
+      dfg:
+        fromThisNodeToConcept: false
+        fromConceptToThisNode: true
+    signature:
+      fqn: "open"

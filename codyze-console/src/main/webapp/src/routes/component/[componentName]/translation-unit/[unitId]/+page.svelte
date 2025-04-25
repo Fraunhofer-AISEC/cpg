@@ -18,7 +18,11 @@
 
   let activeTab = $state('overlayNodes');
   let nodes = $derived(
-    flattenNodes(activeTab === 'overlayNodes' ? data.overlayNodes : data.astNodes)
+    flattenNodes(
+      activeTab === 'overlayNodes' ? data.overlayNodes : data.astNodes,
+      data.component.name,
+      data.translationUnit.id
+    )
   );
   let tableTitle = $derived(activeTab === 'overlayNodes' ? 'Overlay Nodes' : 'AST Nodes');
   let highlightedNode = $state<NodeJSON | null>(null);
@@ -31,6 +35,28 @@
   const totalLines = data.translationUnit.code.split('\n').length;
   const lineNumberWidth = Math.ceil(Math.log10(totalLines + 1));
   const offsetLeft = baseOffsetLeft + lineNumberWidth * charWidth;
+
+  /**
+   * Export the added concepts to a YAML file.
+   * This function fetches the new concepts from the server and creates a downloadable file.
+   */
+  async function exportConcepts() {
+    const res = await fetch('/api/export-concepts');
+    if (!res.ok) {
+      console.error('Error exporting concepts');
+      return;
+    }
+    const content = await res.text();
+    const blob = new Blob([content], { type: 'text/yaml' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'concepts.yaml';
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(url);
+  }
 </script>
 
 <div class="container mx-auto p-4">
@@ -72,6 +98,7 @@
         {charWidth}
         {offsetTop}
         {offsetLeft}
+        conceptGroups={data.conceptGroups}
       />
     </div>
   </div>
@@ -92,6 +119,12 @@
       >
         AST Nodes
       </button>
+      {#if activeTab === 'overlayNodes'}<button
+          class="ml-2 cursor-pointer bg-gray-200 px-4 py-2 text-black"
+          onclick={() => exportConcepts()}
+        >
+          Export Added Concepts (.yaml)
+        </button>{/if}
     </div>
 
     <NodeTable

@@ -50,7 +50,7 @@ data class SecurityGoal(
     @Serializable(with = NameSerializer::class) override var name: Name,
     val description: String,
     val components: List<@Contextual Component?> = listOf(),
-    val assumptions: List<String> = listOf(),
+    val legacyAssumptions: List<String> = listOf(),
     val restrictions: List<String> = listOf(),
     val objectives: List<SecurityObjective>,
 ) : OverlayNode()
@@ -61,7 +61,7 @@ class SecurityObjective(
     val description: String,
     val statements: List<String>,
     val components: List<@Contextual Component?> = listOf(),
-    val assumptions: List<String> = listOf(),
+    val legacyAssumptions: List<String> = listOf(),
     val restrictions: List<String> = listOf(),
 ) : OverlayNode()
 
