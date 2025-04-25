@@ -28,8 +28,10 @@ package de.fraunhofer.aisec.cpg.passes.inference
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.TypeManager
+import de.fraunhofer.aisec.cpg.assumptions.AssumptionType
 import de.fraunhofer.aisec.cpg.frontends.HasClasses
 import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.frontends.NoLanguage.assume
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
@@ -175,7 +177,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
             }
 
             inferred
-        }
+        }.assume(AssumptionType.InferenceAssumption, "Assuming the start of inference is a record, namespace or translation unit")
     }
 
     fun createInferredConstructor(signature: List<Type?>): ConstructorDeclaration {

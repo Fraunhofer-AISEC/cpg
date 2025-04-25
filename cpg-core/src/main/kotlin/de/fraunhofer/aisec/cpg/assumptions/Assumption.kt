@@ -185,11 +185,11 @@ interface HasAssumptions {
      *   because the assumption is valid for every node in its ast subtree.
      * @param message The message describing the assumption that was taken.
      */
-    fun HasAssumptions.assume(
+    fun <T : HasAssumptions> T.assume(
         assumptionType: AssumptionType,
         message: String,
         scope: Node? = null,
-    ): HasAssumptions {
+    ): T {
         this.assumptions.add(
             Assumption(
                 assumptionType,
@@ -215,8 +215,9 @@ interface HasAssumptions {
      *
      * @param haveAssumptions nodes that hold assumptions this object dependent on.
      */
-    fun HasAssumptions.addAssumptionDependences(haveAssumptions: Collection<HasAssumptions>) {
+    fun <T : HasAssumptions> T.addAssumptionDependences(haveAssumptions: Collection<HasAssumptions>): T {
         this.assumptions.addAll(haveAssumptions.flatMap { it.assumptions })
+        return this
     }
 
     /**
@@ -225,8 +226,9 @@ interface HasAssumptions {
      *
      * @param hasAssumptions add dependence to assumptions of a single other node.
      */
-    fun HasAssumptions.addAssumptionDependence(hasAssumptions: HasAssumptions) {
+    fun <T : HasAssumptions> T.addAssumptionDependence(hasAssumptions: HasAssumptions): T {
         this.addAssumptionDependences(listOf(hasAssumptions))
+        return this
     }
 
     /**
