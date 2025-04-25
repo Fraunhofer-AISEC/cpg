@@ -23,7 +23,7 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.concepts.iam
+package de.fraunhofer.aisec.cpg.graph.concepts.auth
 
 import de.fraunhofer.aisec.cpg.graph.MetadataProvider
 import de.fraunhofer.aisec.cpg.graph.Node
@@ -66,10 +66,10 @@ fun MetadataProvider.newJwtAuth(underlyingNode: Node, jwt: Node, payload: Node, 
     )
 
 /**
- * Creates a new [Authenticate] operation belonging to a certain [IdentityAccessManagement] concept.
+ * Creates a new [Authenticate] operation belonging to a certain [Authentication] concept.
  *
  * @param underlyingNode The underlying node representing this concept.
- * @param concept The [IdentityAccessManagement] concept to which the operation belongs.
+ * @param concept The [Authentication] concept to which the operation belongs.
  * @param credential The credential can be a call (e.g., a function call that reads a header) or a
  *   variable that holds the value, e.g. the token * @return The created [Authenticate] operation.
  * @param connect If `true`, the created [Operation] will be connected to the underlying node by
@@ -79,7 +79,7 @@ fun MetadataProvider.newJwtAuth(underlyingNode: Node, jwt: Node, payload: Node, 
  */
 fun MetadataProvider.newAuthenticate(
     underlyingNode: Node,
-    concept: IdentityAccessManagement,
+    concept: Authentication,
     credential: Node,
     connect: Boolean,
 ) =

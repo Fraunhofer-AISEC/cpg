@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.MetadataProvider
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
-import de.fraunhofer.aisec.cpg.graph.concepts.iam.IdentityAccessManagement
+import de.fraunhofer.aisec.cpg.graph.concepts.auth.Authentication
 import de.fraunhofer.aisec.cpg.graph.concepts.newConcept
 import de.fraunhofer.aisec.cpg.graph.concepts.newOperation
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
@@ -39,7 +39,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
  *
  * @param underlyingNode The underlying node representing this concept.
  * @param isTLS Whether the client uses TLS.
- * @param authentication The [IdentityAccessManagement] method used by the client.
+ * @param authentication The [Authentication] method used by the client.
  * @param connect If `true`, the created [Concept] will be connected to the underlying node by
  *   setting its `underlyingNode`.
  * @return The created [HttpClient] concept.
@@ -47,7 +47,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 fun MetadataProvider.newHttpClient(
     underlyingNode: Node,
     isTLS: Boolean?,
-    authentication: IdentityAccessManagement?,
+    authentication: Authentication?,
     connect: Boolean,
 ) =
     newConcept(
@@ -85,7 +85,7 @@ fun MetadataProvider.newHttpRequestHandler(
  * @param httpMethod The [HttpMethod] the created [HttpEndpoint] listens to.
  * @param path The path of the created [HttpEndpoint].
  * @param arguments A list of the [Node]s representing the arguments passed to the [HttpEndpoint].
- * @param authentication The [IdentityAccessManagement] method used by the [HttpEndpoint].
+ * @param authentication The [Authentication] method used by the [HttpEndpoint].
  * @param connect If `true`, the created [Concept] will be connected to the underlying node by
  *   setting its `underlyingNode`.
  * @return The created [HttpEndpoint] concept.
@@ -95,7 +95,7 @@ fun MetadataProvider.newHttpEndpoint(
     httpMethod: HttpMethod,
     path: String,
     arguments: List<Node>,
-    authentication: IdentityAccessManagement?,
+    authentication: Authentication?,
     connect: Boolean,
 ) =
     newConcept(
