@@ -1195,8 +1195,16 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         // so we leave it empty
         val destination: IdentitySet<Node> =
             if (argument is CallExpression) identitySetOf(argument)
+            // if the argument is PointerReference for a global variable, the destination is it's
+            // referesTo
+            // It might also be the case that argument is a Reference to an array, so then we treat
+            // it like a PointerReference
             else if (
-                argument is PointerReference && isGlobal(argument) && argument.refersTo != null
+                (argument is PointerReference ||
+                    argument is Reference &&
+                        (argument.type as? PointerType)?.pointerOrigin?.name == "ARRAY") &&
+                    isGlobal(argument) &&
+                    argument.refersTo != null
             )
                 identitySetOf(argument.refersTo!!)
             else identitySetOf()
