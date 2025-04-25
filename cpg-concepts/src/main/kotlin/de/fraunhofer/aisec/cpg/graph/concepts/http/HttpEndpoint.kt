@@ -39,7 +39,7 @@ class HttpEndpoint(
     val httpMethod: HttpMethod,
     val path: String,
     val arguments: List<Node>,
-    val authentication: Authentication?,
+    var authentication: Authentication?,
 ) : RemoteEntryPoint(underlyingNode = underlyingNode) {
     override fun equals(other: Any?): Boolean {
         return other is HttpEndpoint &&
