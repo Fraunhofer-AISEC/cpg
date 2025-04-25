@@ -95,12 +95,15 @@ fun MetadataProvider.newAuthenticate(
  *
  * @param underlyingNode The underlying node representing this concept.
  * @param concept The [JwtAuth] concept to which the operation belongs.
+ * @param connect If `true`, the created [Concept] will be connected to the underlying node by
+ *   setting its `underlyingNode`.
  */
-fun MetadataProvider.newIssueJwt(underlyingNode: Node, concept: JwtAuth) =
+fun MetadataProvider.newIssueJwt(underlyingNode: Node, concept: JwtAuth, connect: Boolean) =
     newOperation(
-        { underlyingNode, concept -> IssueJwt(underlyingNode = underlyingNode, jwt = concept) },
+        { concept -> IssueJwt(underlyingNode = underlyingNode, jwt = concept) },
         underlyingNode = underlyingNode,
         concept = concept,
+        connect = connect,
     )
 
 /**
@@ -108,12 +111,15 @@ fun MetadataProvider.newIssueJwt(underlyingNode: Node, concept: JwtAuth) =
  *
  * @param underlyingNode The underlying node representing this concept.
  * @param concept The [JwtAuth] concept to which the operation belongs.
+ * @param connect If `true`, the created [Concept] will be connected to the underlying node by
+ *   setting its `underlyingNode`.
  */
-fun MetadataProvider.newValidateJwt(underlyingNode: Node, concept: JwtAuth) =
+fun MetadataProvider.newValidateJwt(underlyingNode: Node, concept: JwtAuth, connect: Boolean) =
     newOperation(
-        { underlyingNode, concept -> ValidateJwt(underlyingNode = underlyingNode, jwt = concept) },
+        { concept -> ValidateJwt(underlyingNode = underlyingNode, jwt = concept) },
         underlyingNode = underlyingNode,
         concept = concept,
+        connect = connect,
     )
 
 /**
@@ -121,10 +127,13 @@ fun MetadataProvider.newValidateJwt(underlyingNode: Node, concept: JwtAuth) =
  *
  * @param underlyingNode The underlying node representing this concept.
  * @param concept The [JwtAuth] concept to which the operation belongs.
+ * @param connect If `true`, the created [Concept] will be connected to the underlying node by
+ *   setting its `underlyingNode`.
  */
-fun MetadataProvider.newAuthorizeJwt(underlyingNode: Node, concept: JwtAuth) =
+fun MetadataProvider.newAuthorizeJwt(underlyingNode: Node, concept: JwtAuth, connect: Boolean) =
     newOperation(
-        { underlyingNode, concept -> AuthorizeJwt(underlyingNode = underlyingNode, jwt = concept) },
+        { concept -> AuthorizeJwt(underlyingNode = underlyingNode, jwt = concept) },
         underlyingNode = underlyingNode,
         concept = concept,
+        connect = connect,
     )
