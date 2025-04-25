@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnknownMemoryValue
 import de.fraunhofer.aisec.cpg.graph.types.NumericType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.functional.*
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
@@ -149,6 +150,7 @@ fun resolveMemberExpression(node: MemberExpression): Pair<Node, Name> {
 private fun isGlobal(node: Node): Boolean {
     return when (node) {
         is VariableDeclaration -> node.isGlobal
+        is MemberExpression -> isGlobal(node.base)
         is Reference -> (node.refersTo as? VariableDeclaration)?.isGlobal == true
         is MemoryAddress -> node.isGlobal
         else -> false
@@ -1521,6 +1523,10 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 val paramDepth =
                     if (
                         param.type is PointerType ||
+                            // If the type is unknown, we also initialize all levels to be sure
+                            param.type is UnknownType ||
+                            // Another guess we take: If the length is the same as the
+                            // addressLength, again, to be sure we initialize all levels
                             (param.type as? NumericType)?.bitWidth ==
                                 // TODO: passConfig<Configuration> should never be null?
                                 (passConfig<Configuration>()?.addressLength ?: 64)
@@ -1813,6 +1819,17 @@ fun PointsToStateElement.getLastWrites(
     if (isGlobal(node)) {
         return when (node) {
             //            is PointerReference -> { TODO()}
+            is MemberExpression -> {
+                // We overapproximate here: For memberExpressions, we ignore the field and only
+                // consider the base
+                val (base, _) = resolveMemberExpression(node)
+                equalLinkedHashSetOf(
+                    Pair<Node, EqualLinkedHashSet<Any>>(
+                        (base as? Reference)?.refersTo ?: base,
+                        equalLinkedHashSetOf(),
+                    )
+                )
+            }
             is Reference ->
                 equalLinkedHashSetOf(
                     Pair<Node, EqualLinkedHashSet<Any>>(
