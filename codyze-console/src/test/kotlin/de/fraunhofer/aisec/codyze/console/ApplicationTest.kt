@@ -33,11 +33,13 @@ import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.arch.Agnostic
-import de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.Secret
+import de.fraunhofer.aisec.cpg.graph.concepts.file.File
 import de.fraunhofer.aisec.cpg.graph.concepts.flows.Main
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import io.github.detekt.sarif4k.*
 import io.ktor.client.call.*
 import io.ktor.client.plugins.contentnegotiation.*
@@ -46,11 +48,11 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.testing.*
-import java.io.File
 import kotlin.test.*
 
 /** A mock configuration for the translation manager. */
-val mockConfig = TranslationConfiguration.builder().sourceLocations(File("some/path")).build()
+val mockConfig =
+    TranslationConfiguration.builder().sourceLocations(java.io.File("some/path")).build()
 
 /** A mock translation unit. */
 val mockTu =
@@ -60,6 +62,13 @@ val mockTu =
             FunctionDeclaration().apply {
                 name = Name("main")
                 Main(this, os = Agnostic(this))
+                body =
+                    Block().apply {
+                        statements +=
+                            CallExpression().apply {
+                                callee = Reference().apply { name = Name("open") }
+                            }
+                    }
             }
         declarations += func
         statements +=
@@ -248,7 +257,7 @@ class ApplicationTest {
 
     @Test
     fun testAddConcept() = testApplication {
-        val main = assertNotNull(mockTu.functions["main"])
+        val open = assertNotNull(mockTu.calls["open"])
 
         application { configureWebconsole(mockService) }
         val client = createClient { install(ContentNegotiation) { json() } }
@@ -257,21 +266,62 @@ class ApplicationTest {
                 contentType(ContentType.Application.Json)
                 setBody(
                     ConceptRequestJSON(
-                        nodeId = main.id,
-                        conceptName = Secret::class.java.name,
+                        nodeId = open.id,
+                        conceptName = File::class.java.name,
                         addDFGToConcept = false,
                         addDFGFromConcept = false,
-                        constructorArgs = emptyList(),
+                        constructorArgs =
+                            listOf(
+                                ConstructorArguments(
+                                    argumentName = "fileName",
+                                    argumentValue = "path/to/file",
+                                )
+                            ),
                     )
                 )
             }
         assertEquals(HttpStatusCode.OK, response.status)
-        assertTrue(main.conceptNodes.any { it is Secret })
+        assertTrue(open.conceptNodes.any { it is File })
 
         response = client.get("/api/export-concepts")
         assertEquals(HttpStatusCode.OK, response.status)
 
         val yaml = response.bodyAsText()
         assertNotNull(yaml)
+    }
+
+    @Test
+    fun testAddConceptWrongConstructorKey() = testApplication {
+        val open = assertNotNull(mockTu.calls["open"])
+
+        application { configureWebconsole(mockService) }
+        val client = createClient { install(ContentNegotiation) { json() } }
+        var response =
+            client.post("/api/concepts") {
+                contentType(ContentType.Application.Json)
+                setBody(
+                    ConceptRequestJSON(
+                        nodeId = open.id,
+                        conceptName = File::class.java.name,
+                        addDFGToConcept = false,
+                        addDFGFromConcept = false,
+                        constructorArgs =
+                            listOf(
+                                ConstructorArguments(
+                                    argumentName = "path",
+                                    argumentValue = "path/to/file",
+                                )
+                            ),
+                    )
+                )
+            }
+        assertEquals(HttpStatusCode.InternalServerError, response.status)
+        val body = response.bodyAsText()
+        assertEquals(
+            "{\n" +
+                "    \"error\": \"There is no argument with name \\\"path\\\" which is specified to generate the concept File\"\n" +
+                "}",
+            body,
+        )
     }
 }
