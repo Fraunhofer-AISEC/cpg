@@ -58,6 +58,8 @@ typealias NodeToOverlayState = MapLattice<Node, PowersetLattice.Element<OverlayN
  * * These methods must not connect the created [OverlayNode]s to the underlying node! This is done
  *   in the pass itself after having collected all overlays. Use a builder based with the flag
  *   `connect` set to `false` to do this.
+ * * If you require the [OverlayNode]s to be created in a specific EOG order, you have to return an
+ *   ordered collection.
  */
 @DependsOn(EvaluationOrderGraphPass::class)
 @DependsOn(DFGPass::class)
@@ -109,6 +111,8 @@ open class EOGConceptPass(ctx: TranslationContext) :
     /**
      * Generates [OverlayNode]s belonging to the given [node]. The [state] contains a map of nodes
      * to their respective [OverlayNode]s created by this instance of the pass.
+     *
+     * Note: see the class documentation for more information about creating [OverlayNode]s.
      */
     open fun handleCallExpression(
         state: NodeToOverlayStateElement,
@@ -123,6 +127,8 @@ open class EOGConceptPass(ctx: TranslationContext) :
      *
      * This is the advanced version and passes the [lattice] in case the [state] should be
      * manipulated. We do not recommend using this!
+     *
+     * Note: see the class documentation for more information about creating [OverlayNode]s.
      */
     open fun handleCallExpression(
         lattice: NodeToOverlayState,
@@ -135,6 +141,8 @@ open class EOGConceptPass(ctx: TranslationContext) :
     /**
      * Generates [OverlayNode]s belonging to the given [node]. The [state] contains a map of nodes
      * to their respective [OverlayNode]s created by this instance of the pass.
+     *
+     * Note: see the class documentation for more information about creating [OverlayNode]s.
      */
     open fun handleMemberCallExpression(
         state: NodeToOverlayStateElement,
@@ -149,6 +157,8 @@ open class EOGConceptPass(ctx: TranslationContext) :
      *
      * This is the advanced version and passes the [lattice] in case the [state] should be
      * manipulated. We do not recommend using this!
+     *
+     * Note: see the class documentation for more information about creating [OverlayNode]s.
      */
     open fun handleMemberCallExpression(
         lattice: NodeToOverlayState,
@@ -161,6 +171,8 @@ open class EOGConceptPass(ctx: TranslationContext) :
     /**
      * This function is called for each node in the graph. The specific nodes are always handled in
      * the same order. It calls the basic and advanced version of the handleX-methods.
+     *
+     * Note: see the class documentation for more information about creating [OverlayNode]s.
      */
     // TODO: Once we use tasks, we iterate over all tasks registered to this pass.
     fun handleNode(
