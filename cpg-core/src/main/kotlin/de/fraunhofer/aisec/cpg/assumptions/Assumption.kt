@@ -34,9 +34,9 @@ import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.net.URI
+import java.util.*
 import org.neo4j.ogm.annotation.Relationship
 import org.neo4j.ogm.annotation.typeconversion.Convert
-import java.util.*
 
 /**
  * The minimal properties to identify an assumption, is the assumption type and either node, edge,
@@ -93,13 +93,15 @@ class Assumption(
     }
 
     /**
-     * The hash code of this [Assumption]. It is based on the hash code of the [underlyingNode] or the [edge] that
-     * caused the assumption to be necessary, the [assumptionType], the [message], and the [assumptionLocation]. This
-     * makes the assumption node identifiable across cpg translations.
+     * The hash code of this [Assumption]. It is based on the hash code of the [underlyingNode] or
+     * the [edge] that caused the assumption to be necessary, the [assumptionType], the [message],
+     * and the [assumptionLocation]. This makes the assumption node identifiable across cpg
+     * translations.
      */
     override fun hashCode(): Int {
         // The underlying node is already in the hashCode of the super class implementation
-        // If the assumption is created from an edge, the edge is != null and therefore influences the hashCode
+        // If the assumption is created from an edge, the edge is != null and therefore influences
+        // the hashCode
         return Objects.hash(super.hashCode(), edge, assumptionType, message, assumptionLocation)
     }
 }
@@ -215,7 +217,9 @@ interface HasAssumptions {
      *
      * @param haveAssumptions nodes that hold assumptions this object dependent on.
      */
-    fun <T : HasAssumptions> T.addAssumptionDependences(haveAssumptions: Collection<HasAssumptions>): T {
+    fun <T : HasAssumptions> T.addAssumptionDependences(
+        haveAssumptions: Collection<HasAssumptions>
+    ): T {
         this.assumptions.addAll(haveAssumptions.flatMap { it.assumptions })
         return this
     }
