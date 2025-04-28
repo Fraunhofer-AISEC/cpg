@@ -238,12 +238,12 @@ enum class FailureReason {
 }
 
 class FulfilledAndFailedPaths(
-    val fulfilled: List<List<Node>>,
-    val failed: List<Pair<FailureReason, List<Node>>>,
+    val fulfilled: List<List<Edge<*>>>,
+    val failed: List<Pair<FailureReason, List<Edge<*>>>>,
 ) {
-    operator fun component1(): List<List<Node>> = fulfilled
+    operator fun component1(): List<List<Edge<*>>> = fulfilled
 
-    operator fun component2(): List<Pair<FailureReason, List<Node>>> = failed
+    operator fun component2(): List<Pair<FailureReason, List<Edge<*>>>> = failed
 
     operator fun plus(other: FulfilledAndFailedPaths): FulfilledAndFailedPaths {
         return FulfilledAndFailedPaths(this.fulfilled + other.fulfilled, this.failed + other.failed)
@@ -280,7 +280,7 @@ fun Node.followPrevFullDFGEdgesUntilHit(
  * Iterates the prev full DFG edges until there are no more edges available (or until a loop is
  * detected). Returns a list of possible paths (each path is represented by a list of nodes).
  */
-fun Node.collectAllPrevFullDFGPaths(): List<List<Node>> {
+fun Node.collectAllPrevFullDFGPaths(): List<List<Edge<*>>> {
     // We make everything fail to reach the end of the DFG. Then, we use the stuff collected in the
     // failed paths (everything)
     return this.followPrevFullDFGEdgesUntilHit(
@@ -443,7 +443,7 @@ class SimpleStack<T> {
 fun Node.collectAllNextDFGPaths(
     interproceduralAnalysis: Boolean = true,
     contextSensitive: Boolean = true,
-): List<List<Node>> {
+): List<List<Edge<*>>> {
     // We make everything fail to reach the end of the CDG. Then, we use the stuff collected in the
     // failed paths (everything)
     return followDFGEdgesUntilHit(
@@ -472,7 +472,7 @@ fun Node.collectAllNextDFGPaths(
  * Iterates the next full DFG edges until there are no more edges available (or until a loop is
  * detected). Returns a list of possible paths (each path is represented by a list of nodes).
  */
-fun Node.collectAllNextFullDFGPaths(): List<List<Node>> {
+fun Node.collectAllNextFullDFGPaths(): List<List<Edge<*>>> {
     // We make everything fail to reach the end of the CDG. Then, we use the stuff collected in the
     // failed paths (everything)
     return this.followNextFullDFGEdgesUntilHit(
@@ -489,7 +489,7 @@ fun Node.collectAllNextFullDFGPaths(): List<List<Node>> {
  * Iterates the next EOG edges until there are no more edges available (or until a loop is
  * detected). Returns a list of possible paths (each path is represented by a list of nodes).
  */
-fun Node.collectAllNextEOGPaths(interproceduralAnalysis: Boolean = true): List<List<Node>> {
+fun Node.collectAllNextEOGPaths(interproceduralAnalysis: Boolean = true): List<List<Edge<*>>> {
     // We make everything fail to reach the end of the CDG. Then, we use the stuff collected in the
     // failed paths (everything)
     return this.followEOGEdgesUntilHit(
@@ -507,7 +507,7 @@ fun Node.collectAllNextEOGPaths(interproceduralAnalysis: Boolean = true): List<L
  * Iterates the prev PDG edges until there are no more edges available (or until a loop is
  * detected). Returns a list of possible paths (each path is represented by a list of nodes).
  */
-fun Node.collectAllPrevEOGPaths(interproceduralAnalysis: Boolean): List<List<Node>> {
+fun Node.collectAllPrevEOGPaths(interproceduralAnalysis: Boolean): List<List<Edge<*>>> {
     // We make everything fail to reach the end of the CDG. Then, we use the stuff collected in the
     // failed paths (everything)
     return this.followEOGEdgesUntilHit(
@@ -526,7 +526,7 @@ fun Node.collectAllPrevEOGPaths(interproceduralAnalysis: Boolean): List<List<Nod
  * Iterates the next PDG edges until there are no more edges available (or until a loop is
  * detected). Returns a list of possible paths (each path is represented by a list of nodes).
  */
-fun Node.collectAllNextPDGGPaths(): List<List<Node>> {
+fun Node.collectAllNextPDGGPaths(): List<List<Edge<*>>> {
     // We make everything fail to reach the end of the CDG. Then, we use the stuff collected in the
     // failed paths (everything)
     return this.followNextPDGUntilHit(collectFailedPaths = true, findAllPossiblePaths = true) {
@@ -540,7 +540,7 @@ fun Node.collectAllNextPDGGPaths(): List<List<Node>> {
  * Iterates the prev PDG edges until there are no more edges available (or until a loop is
  * detected). Returns a list of possible paths (each path is represented by a list of nodes).
  */
-fun Node.collectAllPrevPDGPaths(interproceduralAnalysis: Boolean): List<List<Node>> {
+fun Node.collectAllPrevPDGPaths(interproceduralAnalysis: Boolean): List<List<Edge<*>>> {
     // We make everything fail to reach the end of the CDG. Then, we use the stuff collected in the
     // failed paths (everything)
     return this.followPrevPDGUntilHit(
@@ -558,7 +558,7 @@ fun Node.collectAllPrevPDGPaths(interproceduralAnalysis: Boolean): List<List<Nod
  * Iterates the prev CDG edges until there are no more edges available (or until a loop is
  * detected). Returns a list of possible paths (each path is represented by a list of nodes).
  */
-fun Node.collectAllPrevCDGPaths(interproceduralAnalysis: Boolean): List<List<Node>> {
+fun Node.collectAllPrevCDGPaths(interproceduralAnalysis: Boolean): List<List<Edge<*>>> {
     // We make everything fail to reach the end of the CDG. Then, we use the stuff collected in the
     // failed paths (everything)
     return this.followPrevCDGUntilHit(
@@ -576,7 +576,7 @@ fun Node.collectAllPrevCDGPaths(interproceduralAnalysis: Boolean): List<List<Nod
  * Iterates the next CDG edges until there are no more edges available (or until a loop is
  * detected). Returns a list of possible paths (each path is represented by a list of nodes).
  */
-fun Node.collectAllNextCDGPaths(interproceduralAnalysis: Boolean): List<List<Node>> {
+fun Node.collectAllNextCDGPaths(interproceduralAnalysis: Boolean): List<List<Edge<*>>> {
     // We make everything fail to reach the end of the CDG. Then, we use the stuff collected in the
     // failed paths (everything)
     return this.followNextCDGUntilHit(
@@ -756,10 +756,10 @@ fun Node.followXUntilHit(
 ): FulfilledAndFailedPaths {
     // Looks complicated but at least it's not recursive...
     // result: List of paths (between from and to)
-    val fulfilledPaths = mutableListOf<List<Node>>()
+    val fulfilledPaths = mutableListOf<List<Edge<*>>>()
     // failedPaths: All the paths which do not satisfy "predicate"
-    val failedPaths = mutableListOf<Pair<FailureReason, List<Node>>>()
-    val loopingPaths = mutableListOf<List<Node>>()
+    val failedPaths = mutableListOf<Pair<FailureReason, List<Edge<*>>>>()
+    val loopingPaths = mutableListOf<List<Edge<*>>>()
     // The list of paths where we're not done yet.
     val worklist = identitySetOf<List<Pair<Node, Context>>>()
     worklist.add(listOf(this to context)) // We start only with the "from" node (=this)
@@ -882,7 +882,7 @@ fun Node.followNextFullDFGEdgesUntilHit(
  */
 val FunctionDeclaration.lastEOGNodes: Collection<Node>
     get() {
-        val lastEOG = collectAllNextEOGPaths(false).flatMap { it.last().prevEOGEdges }
+        val lastEOG = collectAllNextEOGPaths(false).flatMap { it.last().end.prevEOGEdges }
         return if (lastEOG.isEmpty()) {
             // In some cases, we do not have a body, so we have to jump directly to the
             // function declaration.
@@ -965,7 +965,7 @@ fun Node.followPrevEOG(predicate: (Edge<*>) -> Boolean): List<Edge<*>>? {
  *
  * It returns only a single possible path even if multiple paths are possible.
  */
-fun Node.followPrevFullDFG(predicate: (Node) -> Boolean): List<Node>? {
+fun Node.followPrevFullDFG(predicate: (Node) -> Boolean): List<Edge<*>>? {
     return followPrevFullDFGEdgesUntilHit(
             collectFailedPaths = false,
             findAllPossiblePaths = false,
@@ -982,7 +982,7 @@ fun Node.followPrevFullDFG(predicate: (Node) -> Boolean): List<Node>? {
  *
  * It returns only a single possible path even if multiple paths are possible.
  */
-fun Node.followPrevDFG(predicate: (Node) -> Boolean): List<Node>? {
+fun Node.followPrevDFG(predicate: (Node) -> Boolean): List<Edge<*>>? {
     return followDFGEdgesUntilHit(
             collectFailedPaths = false,
             findAllPossiblePaths = false,
