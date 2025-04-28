@@ -34,6 +34,7 @@ import org.neo4j.ogm.annotation.Transient
  * An intelligent [MutableSet] wrapper around an [EdgeSet] which supports iterating, adding and
  * removing [Node] elements.
  */
+@Suppress("EqualsOrHashCode")
 class UnwrappedEdgeSet<NodeType : Node, EdgeType : Edge<NodeType>>(
     var set: EdgeSet<NodeType, EdgeType>
 ) : UnwrappedEdgeCollection<NodeType, EdgeType>(set), MutableSet<NodeType> {
@@ -77,5 +78,9 @@ class UnwrappedEdgeSet<NodeType : Node, EdgeType : Edge<NodeType>>(
         prop: KProperty<*>,
     ): Delegate<ThisType> {
         return Delegate()
+    }
+
+    override fun equals(other: Any?): Boolean {
+        return other is Set<*> && this.iterator().asSequence().toSet() == other
     }
 }

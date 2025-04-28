@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
@@ -81,11 +80,7 @@ class TranslationUnitDeclaration :
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is TranslationUnitDeclaration) return false
-        // TODO: This statement doesn't make sense to me. The declarationsPropertyEdge comparison is
-        // more strict than the propertyEqualsList() isn't it?
-        return super.equals(other) &&
-            declarations == other.declarations &&
-            propertyEqualsList(declarationEdges, other.declarationEdges)
+        return super.equals(other) && declarations == other.declarations
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), declarations)

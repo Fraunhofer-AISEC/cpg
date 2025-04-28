@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,28 +27,26 @@ package de.fraunhofer.aisec.cpg.graph.edges.collections
 
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
-import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.newLiteral
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import kotlin.test.Test
-import kotlin.test.assertNull
-import kotlin.test.assertSame
+import kotlin.test.assertEquals
 
-class EdgeSingletonListTest {
+class UnwrappedEdgeSetTest {
     @Test
-    fun testNullable() {
+    fun testEquals() {
         with(TestLanguageFrontend()) {
-            class MyNode : Node() {
-                var edge = astOptionalEdgeOf<Expression>()
-                var unwrapped by unwrapping(MyNode::edge)
-            }
+            val node1 = newLiteral(1)
+            val node2 = newLiteral(2)
+            val node3 = newLiteral(3)
 
-            val node = MyNode()
-            assertNull(node.unwrapped)
+            node1.nextDFG += node2
+            node1.nextDFG += node3
 
-            node.unwrapped = newLiteral(1)
-            assertSame(node.unwrapped, node.edge.element?.end)
+            val dfgSet = node1.nextDFG
+            val nodeSet = setOf<Node>(node3, node2)
+
+            assertEquals(nodeSet, dfgSet)
+            assertEquals(dfgSet, nodeSet)
         }
     }
 }

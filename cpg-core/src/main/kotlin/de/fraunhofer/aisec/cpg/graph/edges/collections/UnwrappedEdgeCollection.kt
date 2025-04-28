@@ -32,7 +32,8 @@ import de.fraunhofer.aisec.cpg.graph.edges.Edge
  * An intelligent [MutableCollection] wrapper around an [EdgeCollection] which supports iterating,
  * adding and removing [Node] elements. Basis for [UnwrappedEdgeList] and [UnwrappedEdgeSet].
  */
-abstract class UnwrappedEdgeCollection<NodeType : Node, EdgeType : Edge<NodeType>>(
+@Suppress("EqualsOrHashCode")
+sealed class UnwrappedEdgeCollection<NodeType : Node, EdgeType : Edge<NodeType>>(
     var collection: EdgeCollection<NodeType, EdgeType>
 ) : MutableCollection<NodeType> {
 
@@ -101,7 +102,7 @@ abstract class UnwrappedEdgeCollection<NodeType : Node, EdgeType : Edge<NodeType
 
         @Suppress("UNCHECKED_CAST")
         override fun next(): NodeType {
-            var next = edgeIterator.next()
+            val next = edgeIterator.next()
             return if (collection.outgoing) {
                 next.end
             } else {
@@ -109,4 +110,18 @@ abstract class UnwrappedEdgeCollection<NodeType : Node, EdgeType : Edge<NodeType
             }
         }
     }
+
+    override fun hashCode(): Int {
+        var hashCode = 1
+
+        val it = iterator()
+        while (it.hasNext()) {
+            val element = it.next()
+            hashCode = 31 * hashCode + element.hashCode()
+        }
+
+        return hashCode
+    }
+
+    abstract override fun equals(other: Any?): Boolean
 }
