@@ -26,6 +26,8 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.assumptions.Assumption
+import de.fraunhofer.aisec.cpg.assumptions.HasAssumptions
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.flows.ControlDependence
@@ -237,13 +239,21 @@ enum class FailureReason {
     HIT_EARLY_TERMINATION,
 }
 
-class FulfilledAndFailedPaths(
-    val fulfilled: List<List<Edge<*>>>,
-    val failed: List<Pair<FailureReason, List<Edge<*>>>>,
-) {
-    operator fun component1(): List<List<Edge<*>>> = fulfilled
+/**
+ * This data class represents a path of nodes as some paths are not just lists of edges, but instead can be traversed by
+ * a predicate.
+ */
+data class NodePath(val path: List<Node>): HasAssumptions {
+    override val assumptions: MutableList<Assumption> = mutableListOf()
+}
 
-    operator fun component2(): List<Pair<FailureReason, List<Edge<*>>>> = failed
+class FulfilledAndFailedPaths(
+    val fulfilled: List<NodePath>,
+    val failed: List<Pair<FailureReason, NodePath>>,
+) {
+    operator fun component1(): List<NodePath> = fulfilled
+
+    operator fun component2(): List<Pair<FailureReason, NodePath>> = failed
 
     operator fun plus(other: FulfilledAndFailedPaths): FulfilledAndFailedPaths {
         return FulfilledAndFailedPaths(this.fulfilled + other.fulfilled, this.failed + other.failed)
@@ -363,7 +373,10 @@ class Context(
     val indexStack: SimpleStack<IndexedDataflowGranularity> = SimpleStack(),
     val callStack: SimpleStack<CallExpression> = SimpleStack(),
     var steps: Int,
-) {
+): HasAssumptions {
+
+    override val assumptions: MutableList<Assumption> = mutableListOf()
+
     fun clone(): Context {
         return Context(indexStack = indexStack.clone(), callStack = callStack.clone(), steps)
     }
