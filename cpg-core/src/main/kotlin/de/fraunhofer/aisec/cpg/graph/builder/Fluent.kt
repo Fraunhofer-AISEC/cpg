@@ -39,8 +39,8 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.CollectionComprehens
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
-import de.fraunhofer.aisec.cpg.passes.executePass
 import de.fraunhofer.aisec.cpg.passes.executePassesInParallel
+import de.fraunhofer.aisec.cpg.passes.executePassesSequentially
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.net.URI
@@ -59,7 +59,7 @@ fun LanguageFrontend<*, *>.translationResult(
             executePassesInParallel(list, ctx, node, listOf())
         }
     } else {
-        ctx.config.registeredPasses.flatten().forEach { executePass(it, ctx, node, listOf()) }
+        executePassesSequentially(ctx, node, mutableSetOf())
     }
 
     return node

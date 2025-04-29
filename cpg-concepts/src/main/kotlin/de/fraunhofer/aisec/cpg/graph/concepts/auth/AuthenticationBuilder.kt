@@ -89,3 +89,51 @@ fun MetadataProvider.newAuthenticate(
         concept = concept,
         connect = connect,
     )
+
+/**
+ * Creates a new [IssueJwt] operation belonging to a certain [JwtAuth] concept.
+ *
+ * @param underlyingNode The underlying node representing this concept.
+ * @param concept The [JwtAuth] concept to which the operation belongs.
+ * @param connect If `true`, the created [Concept] will be connected to the underlying node by
+ *   setting its `underlyingNode`.
+ */
+fun MetadataProvider.newIssueJwt(underlyingNode: Node, concept: JwtAuth, connect: Boolean) =
+    newOperation(
+        { concept -> IssueJwt(underlyingNode = underlyingNode, jwt = concept) },
+        underlyingNode = underlyingNode,
+        concept = concept,
+        connect = connect,
+    )
+
+/**
+ * Creates a new [ValidateJwt] operation belonging to a certain [JwtAuth] concept.
+ *
+ * @param underlyingNode The underlying node representing this concept.
+ * @param concept The [JwtAuth] concept to which the operation belongs.
+ * @param connect If `true`, the created [Concept] will be connected to the underlying node by
+ *   setting its `underlyingNode`.
+ */
+fun MetadataProvider.newValidateJwt(underlyingNode: Node, concept: JwtAuth, connect: Boolean) =
+    newOperation(
+        { concept -> ValidateJwt(underlyingNode = underlyingNode, jwt = concept) },
+        underlyingNode = underlyingNode,
+        concept = concept,
+        connect = connect,
+    )
+
+/**
+ * Creates a new [AuthorizeJwt] operation belonging to a certain [JwtAuth] concept.
+ *
+ * @param underlyingNode The underlying node representing this concept.
+ * @param concept The [JwtAuth] concept to which the operation belongs.
+ * @param connect If `true`, the created [Concept] will be connected to the underlying node by
+ *   setting its `underlyingNode`.
+ */
+fun MetadataProvider.newAuthorizeJwt(underlyingNode: Node, concept: JwtAuth, connect: Boolean) =
+    newOperation(
+        { concept -> AuthorizeJwt(underlyingNode = underlyingNode, jwt = concept) },
+        underlyingNode = underlyingNode,
+        concept = concept,
+        connect = connect,
+    )

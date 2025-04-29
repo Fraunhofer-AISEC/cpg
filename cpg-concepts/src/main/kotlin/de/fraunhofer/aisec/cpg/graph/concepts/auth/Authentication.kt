@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.concepts.auth
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
+import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import java.util.Objects
 
 /** Represents a high-level concept for authentication. */
@@ -82,4 +83,53 @@ class Authenticate(underlyingNode: Node? = null, concept: Authentication, val cr
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), credential)
+}
+
+/**
+ * Represents an operation to issue a new JWT token.
+ *
+ * @param jwt The JWT containing encoded authentication information.
+ */
+class IssueJwt(underlyingNode: Node, jwt: JwtAuth) : AuthenticationOperation(underlyingNode, jwt) {
+    override fun equals(other: Any?): Boolean {
+        return other is IssueJwt && super.equals(other)
+    }
+
+    override fun hashCode() = super.hashCode()
+}
+
+/**
+ * Represents an operation to check the validity of a JWT token.
+ *
+ * @param jwt The JWT containing encoded authentication information.
+ */
+class ValidateJwt(underlyingNode: Node, jwt: JwtAuth) :
+    AuthenticationOperation(underlyingNode, jwt) {
+    override fun equals(other: Any?): Boolean {
+        return other is ValidateJwt && super.equals(other)
+    }
+
+    override fun hashCode() = super.hashCode()
+}
+
+/**
+ * Represents an authorization operation based on JWT tokens.
+ *
+ * @param jwt The JWT containing encoded authentication information.
+ */
+class AuthorizeJwt(underlyingNode: Node, jwt: JwtAuth) :
+    AuthenticationOperation(underlyingNode, jwt) {
+    /** The next EOG edges which are followed if the authorization was successful. */
+    val nextGrantedEOGEdges: List<EvaluationOrder>
+        get() = nextEOGEdges.filter { it.branch == true }
+
+    /** The next EOG edges which are followed if the authorization was not successful. */
+    val nextDeniedEOGEdges: List<EvaluationOrder>
+        get() = nextEOGEdges.filter { it.branch == false }
+
+    override fun equals(other: Any?): Boolean {
+        return other is AuthorizeJwt && super.equals(other)
+    }
+
+    override fun hashCode() = super.hashCode()
 }

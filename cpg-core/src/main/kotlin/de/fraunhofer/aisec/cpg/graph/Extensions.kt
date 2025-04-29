@@ -1354,19 +1354,20 @@ fun Expression?.unwrapReference(): Reference? {
 /** Returns the [TranslationUnitDeclaration] where this node is located in. */
 val Node.translationUnit: TranslationUnitDeclaration?
     get() {
-        return firstParentOrNull<TranslationUnitDeclaration>()
+        return this as? TranslationUnitDeclaration
+            ?: firstParentOrNull<TranslationUnitDeclaration>()
     }
 
 /** Returns the [TranslationResult] where this node is located in. */
 val Node.translationResult: TranslationResult?
     get() {
-        return firstParentOrNull<TranslationResult>()
+        return this as? TranslationResult ?: firstParentOrNull<TranslationResult>()
     }
 
 /** Returns the [Component] where this node is located in. */
 val Node.component: Component?
     get() {
-        return firstParentOrNull<Component>()
+        return this as? Component ?: firstParentOrNull<Component>()
     }
 
 /**
