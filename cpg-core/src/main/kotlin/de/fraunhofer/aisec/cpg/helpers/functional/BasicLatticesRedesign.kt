@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.helpers.functional
 
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
+import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice.Element
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import java.io.Serializable
 import java.util.IdentityHashMap
@@ -100,8 +101,12 @@ interface Lattice<T : Lattice.Element> {
     /** The smallest possible element in the lattice */
     val bottom: T
 
-    /** Computes the least upper bound (join) of [one] and [two] */
-    fun lub(one: T, two: T): T
+    /**
+     * Computes the least upper bound (join) of [one] and [two]. [allowModify] determines if [one]
+     * is modified if there is no element greater than each other (if set to `true`) or if a new
+     * [Lattice.Element] is returned (if set to `false`).
+     */
+    fun lub(one: T, two: T, allowModify: Boolean = false): T
 
     /** Computes the greatest lower bound (meet) of [one] and [two] */
     fun glb(one: T, two: T): T
@@ -148,24 +153,48 @@ interface Lattice<T : Lattice.Element> {
             // Compute the effects of "nextEdge" on the state by applying the transformation to its
             // state.
             val nextGlobal = globalState[nextEdge] ?: continue
-            val newState = transformation(this, nextEdge, nextGlobal)
+
+            val isNotNearStartOrEndOfBasicBlock =
+                nextEdge.end.nextEOGEdges.size == 1 &&
+                    nextEdge.end.prevEOGEdges.size == 1 &&
+                    nextEdge.start.nextEOGEdges.size == 1 &&
+                    nextEdge.start.prevEOGEdges.size == 1 &&
+                    nextEdge.end.nextEOGEdges.single().end.nextEOGEdges.size == 1 &&
+                    nextEdge.end.nextEOGEdges.single().end.prevEOGEdges.size == 1 &&
+                    nextEdge.start.prevEOGEdges.single().start.nextEOGEdges.size == 1 &&
+                    nextEdge.start.prevEOGEdges.single().start.prevEOGEdges.size == 1
+
+            val newState =
+                transformation(
+                    this,
+                    nextEdge,
+                    if (isNotNearStartOrEndOfBasicBlock) nextGlobal else nextGlobal.duplicate() as T,
+                )
             if (nextEdge.end.nextEOGEdges.isEmpty()) {
                 finalState[nextEdge] = newState
             }
             nextEdge.end.nextEOGEdges.forEach {
                 // We continue with the nextEOG edge if we haven't seen it before or if we updated
                 // the state in comparison to the previous time we were there.
+
                 val oldGlobalIt = globalState[it]
-                val newGlobalIt = (oldGlobalIt?.let { this.lub(newState, it) } ?: newState)
+                val newGlobalIt =
+                    (oldGlobalIt?.let { this.lub(newState, it, isNotNearStartOrEndOfBasicBlock) }
+                        ?: newState)
                 globalState[it] = newGlobalIt
-                if (it !in edgesList && (oldGlobalIt == null || newGlobalIt != oldGlobalIt)) {
+                if (
+                    it !in edgesList &&
+                        (oldGlobalIt == null ||
+                            newGlobalIt != oldGlobalIt ||
+                            isNotNearStartOrEndOfBasicBlock)
+                ) {
                     edgesList.add(0, it)
                 }
             }
         }
 
         return finalState.values.fold(finalState.values.firstOrNull()) { state, value ->
-            state?.let { lub(it, value) }
+            state?.let { lub(it, value, true) }
         } ?: startState
     }
 }
@@ -214,16 +243,21 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
     override val bottom: Element<T>
         get() = Element()
 
-    override fun lub(one: Element<T>, two: Element<T>): Element<T> {
+    override fun lub(one: Element<T>, two: Element<T>, allowModify: Boolean): Element<T> {
         return when (compare(one, two)) {
             Order.LESSER -> two
             Order.EQUAL,
             Order.GREATER -> one
             Order.UNEQUAL -> {
-                val result = Element<T>(one.size + two.size)
-                result += one
-                result += two
-                result
+                if (allowModify) {
+                    one += two
+                    one
+                } else {
+                    val result = Element<T>(one.size + two.size)
+                    result += one
+                    result += two
+                    result
+                }
             }
         }
     }
@@ -309,21 +343,42 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
     override val bottom: Element<K, V>
         get() = MapLattice.Element()
 
-    override fun lub(one: Element<K, V>, two: Element<K, V>): Element<K, V> {
-        val allKeys = one.keys.toIdentitySet()
-        allKeys += two.keys
-        val newMap =
-            allKeys.fold(Element<K, V>(allKeys.size)) { current, key ->
-                val otherValue = two[key]
-                val thisValue = one[key]
-                val newValue =
-                    if (thisValue != null && otherValue != null) {
-                        innerLattice.lub(thisValue, otherValue)
-                    } else thisValue ?: otherValue
-                newValue?.let { current[key] = it }
-                current
+    override fun lub(one: Element<K, V>, two: Element<K, V>, allowModify: Boolean): Element<K, V> {
+        return when (compare(one, two)) {
+            Order.LESSER -> two
+            Order.EQUAL,
+            Order.GREATER -> one
+            Order.UNEQUAL -> {
+                if (allowModify) {
+                    val newKeys = two.keys.filter { it !in one.keys }
+                    val existingKeys = one.keys.filter { it in newKeys }
+                    newKeys.forEach { key -> one[key] = two[key] }
+                    existingKeys.forEach { key ->
+                        one[key]?.let { oneValue ->
+                            two[key]?.let { twoValue ->
+                                one[key] = innerLattice.lub(oneValue, twoValue, true)
+                            }
+                        }
+                    }
+                    one
+                } else {
+                    val allKeys = one.keys.toIdentitySet()
+                    allKeys += two.keys
+                    val newMap =
+                        allKeys.fold(Element<K, V>(allKeys.size)) { current, key ->
+                            val otherValue = two[key]
+                            val thisValue = one[key]
+                            val newValue =
+                                if (thisValue != null && otherValue != null) {
+                                    innerLattice.lub(thisValue, otherValue)
+                                } else thisValue ?: otherValue
+                            newValue?.let { current[key] = it }
+                            current
+                        }
+                    newMap
+                }
             }
-        return newMap
+        }
     }
 
     override fun glb(one: Element<K, V>, two: Element<K, V>): Element<K, V> {
@@ -399,11 +454,17 @@ class TupleLattice<S : Lattice.Element, T : Lattice.Element>(
     override val bottom: Element<S, T>
         get() = Element(innerLattice1.bottom, innerLattice2.bottom)
 
-    override fun lub(one: Element<S, T>, two: Element<S, T>): Element<S, T> {
-        return Element(
-            innerLattice1.lub(one.first, two.first),
-            innerLattice2.lub(one.second, two.second),
-        )
+    override fun lub(one: Element<S, T>, two: Element<S, T>, allowModify: Boolean): Element<S, T> {
+        return if (allowModify) {
+            innerLattice1.lub(one.first, two.first, true)
+            innerLattice2.lub(one.second, two.second, true)
+            one
+        } else {
+            Element(
+                innerLattice1.lub(one.first, two.first),
+                innerLattice2.lub(one.second, two.second),
+            )
+        }
     }
 
     override fun glb(one: Element<S, T>, two: Element<S, T>): Element<S, T> {
@@ -474,12 +535,23 @@ class TripleLattice<R : Lattice.Element, S : Lattice.Element, T : Lattice.Elemen
     override val bottom: Element<R, S, T>
         get() = Element(innerLattice1.bottom, innerLattice2.bottom, innerLattice3.bottom)
 
-    override fun lub(one: Element<R, S, T>, two: Element<R, S, T>): Element<R, S, T> {
-        return Element(
-            innerLattice1.lub(one.first, two.first),
-            innerLattice2.lub(one.second, two.second),
-            innerLattice3.lub(one.third, two.third),
-        )
+    override fun lub(
+        one: Element<R, S, T>,
+        two: Element<R, S, T>,
+        allowModify: Boolean,
+    ): Element<R, S, T> {
+        return if (allowModify) {
+            innerLattice1.lub(one.first, two.first, true)
+            innerLattice2.lub(one.second, two.second, true)
+            innerLattice3.lub(one.third, two.third, true)
+            one
+        } else {
+            Element(
+                innerLattice1.lub(one.first, two.first),
+                innerLattice2.lub(one.second, two.second),
+                innerLattice3.lub(one.third, two.third),
+            )
+        }
     }
 
     override fun glb(one: Element<R, S, T>, two: Element<R, S, T>): Element<R, S, T> {

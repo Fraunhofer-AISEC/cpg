@@ -305,7 +305,7 @@ fun transfer(
 
         val map = PrevEOGLatticeElement(currentStart to PowersetLattice.Element(currentEnd))
 
-        val newPath = lattice.innerLattice.lub(map, prevPathLattice)
+        val newPath = lattice.innerLattice.lub(map, prevPathLattice, true)
         newState = lattice.push(newState, currentEnd, newPath)
     } else {
         // We did not start in a branching node, so for the next node, we have the same path
@@ -389,5 +389,5 @@ fun PrevEOGState.push(
     newNode: Node,
     newEOGLattice: PrevEOGLatticeElement,
 ): PrevEOGStateElement {
-    return this.lub(currentElement, PrevEOGStateElement(newNode to newEOGLattice))
+    return this.lub(currentElement, PrevEOGStateElement(newNode to newEOGLattice), true)
 }

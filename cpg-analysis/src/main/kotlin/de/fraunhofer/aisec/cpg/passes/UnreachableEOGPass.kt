@@ -287,7 +287,7 @@ class ReachabilityLattice() : Lattice<ReachabilityLattice.Element> {
     override val bottom: Element
         get() = Element(Reachability.BOTTOM)
 
-    override fun lub(one: Element, two: Element): Element {
+    override fun lub(one: Element, two: Element, allowModify: Boolean): Element {
         return Element(maxOf(one.reachability, two.reachability))
     }
 
