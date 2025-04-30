@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.query
 
+import de.fraunhofer.aisec.cpg.assumptions.AssumptionType
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.AnalysisSensitivity
@@ -264,43 +265,62 @@ fun dataFlowWithValidator(
  *   the assignment separately.
  */
 fun Node.generatesNewData(): Collection<Node> {
-    return when {
-        this is BinaryOperator && !this.type.isMutable -> {
-            // If the type of the node is a primitive (more precisely immutable) type, we will
-            // create new "object" that we have to track. But we should find the first declaration
-            // this flows to and track that one. If it flows to a reference first, this will
-            // typically be identified by handling the assignments below which is why we explicitly
-            // exclude such a flow here.
-            this.followDFGEdgesUntilHit(earlyTermination = { node, _ -> node is Reference }) {
-                    it is Declaration
-                }
-                .fulfilled
-                .map { it.last() }
-                .toSet()
-        }
-        /* A new object is constructed and our data flow into this object -> track the new object. */
-        this is ConstructExpression ||
-            /* A collection comprehension (e.g. list, set, dict comprehension) generates a new object similar to calling the constructor. */
-            this is CollectionComprehension -> {
-            setOf(this)
-        }
-        this.astParent is AssignExpression &&
-            this in (this.astParent as AssignExpression).rhs &&
-            (this.astParent as AssignExpression).operatorCode in
-                this.language.compoundAssignmentOperators -> {
-            // If we're the rhs of an assignment with an operator like +=, we should track the lhs
-            // value separately.
-            (this as? HasType)?.let { (this.astParent as AssignExpression).findTargets(it) }
-                ?: setOf()
-        }
-        this is Expression &&
+    val splitNodes =
+        when {
+            this is BinaryOperator && !this.type.isMutable -> {
+                // If the type of the node is a primitive (more precisely immutable) type, we will
+                // create new "object" that we have to track. But we should find the first
+                // declaration
+                // this flows to and track that one. If it flows to a reference first, this will
+                // typically be identified by handling the assignments below which is why we
+                // explicitly
+                // exclude such a flow here.
+                this.followDFGEdgesUntilHit(earlyTermination = { node, _ -> node is Reference }) {
+                        it is Declaration
+                    }
+                    .fulfilled
+                    .map { it.last() }
+                    .toSet()
+            }
+            /* A new object is constructed and our data flow into this object -> track the new object. */
+            this is ConstructExpression ||
+                /* A collection comprehension (e.g. list, set, dict comprehension) generates a new object similar to calling the constructor. */
+                this is CollectionComprehension -> {
+                setOf(this)
+            }
             this.astParent is AssignExpression &&
-            this in (this.astParent as AssignExpression).rhs &&
-            !this.type.isMutable -> {
-            (this.astParent as AssignExpression).findTargets(this)
+                this in (this.astParent as AssignExpression).rhs &&
+                (this.astParent as AssignExpression).operatorCode in
+                    this.language.compoundAssignmentOperators -> {
+                // If we're the rhs of an assignment with an operator like +=, we should track the
+                // lhs
+                // value separately.
+                (this as? HasType)?.let { (this.astParent as AssignExpression).findTargets(it) }
+                    ?: setOf()
+            }
+            this is Expression &&
+                this.astParent is AssignExpression &&
+                this in (this.astParent as AssignExpression).rhs &&
+                !this.type.isMutable -> {
+                (this.astParent as AssignExpression).findTargets(this)
+            }
+            else -> emptySet()
         }
-        else -> emptySet()
-    }
+
+    this.assume(
+        AssumptionType.DataFlowAssumption,
+        "The node generates the following new \"objects\" which require separate handling as they represent copies/clones of the original \"object\": $splitNodes.\n\n" +
+            "We assume that this list is complete and does not contain additional elements.\n" +
+            "This assumption can be split up into the following (global) sub-assumptions, where all of them have to hold:\n" +
+            "1. The list of mutable and immutable types is complete and sound for each programming language used in the analyzed project.\n" +
+            "2. Copies of data happen exclusively by one of the following patterns:\n" +
+            "2.a) Constructing a new object where our data flow to by a constructor invocation or by a collection comprehension: We should track this object and the target of the operation separately." +
+            "2.b) Operating on immutable objects (via BinaryOperators): We should track this object and the target of the operation separately." +
+            "2.c) Modifying an object via an operator (e.g. `+=`) and the \"object\" is the rhs of the assignment: We should track both, this object and the target of the assignment." +
+            "2.d) Assigning an immutable object to a new variable: We should track this object and the target of the assignment separately.",
+    )
+
+    return splitNodes
 }
 
 /**
