@@ -53,6 +53,11 @@ val enableINIFrontend: Boolean by extra {
     val enableINIFrontend: String? by settings
     enableINIFrontend.toBoolean()
 }
+// Add a new property check for Svelte
+val enableSvelteFrontend: Boolean by extra {
+    val enableSvelteFrontend: String? by settings
+    enableSvelteFrontend.toBoolean()
+}
 
 if (enableJavaFrontend) include(":cpg-language-java")
 if (enableCXXFrontend) include(":cpg-language-cxx")
@@ -63,6 +68,7 @@ if (enableTypeScriptFrontend) include(":cpg-language-typescript")
 if (enableRubyFrontend) include(":cpg-language-ruby")
 if (enableJVMFrontend) include(":cpg-language-jvm")
 if (enableINIFrontend) include(":cpg-language-ini")
+if (enableSvelteFrontend) include(":cpg-language-svelte")
 
 kover {
     enableCoverage()
