@@ -1,0 +1,22 @@
+{
+  "name": "cpg-svelte-parser",
+  "version": "1.0.0",
+  "description": "Node.js script to parse Svelte files for CPG",
+  "main": "dist/parser.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "cpg",
+    "svelte",
+    "parser"
+  ],
+  "author": "",
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "@types/node": "^18.0.0",
+    "svelte": "^5.28.2",
+    "typescript": "^5.0.0"
+  }
+} 
