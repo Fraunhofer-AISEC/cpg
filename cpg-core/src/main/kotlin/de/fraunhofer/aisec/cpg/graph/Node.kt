@@ -30,6 +30,8 @@ package de.fraunhofer.aisec.cpg.graph
 import com.fasterxml.jackson.annotation.JsonBackReference
 import com.fasterxml.jackson.annotation.JsonIgnore
 import de.fraunhofer.aisec.cpg.PopulatedByPass
+import de.fraunhofer.aisec.cpg.assumptions.Assumption
+import de.fraunhofer.aisec.cpg.assumptions.HasAssumptions
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.UnknownLanguage
@@ -64,7 +66,13 @@ import org.slf4j.LoggerFactory
 
 /** The base class for all graph objects that are going to be persisted in the database. */
 abstract class Node() :
-    IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider, HasNameAndLocation, HasScope {
+    IVisitable<Node>,
+    Persistable,
+    LanguageProvider,
+    ScopeProvider,
+    HasNameAndLocation,
+    HasScope,
+    HasAssumptions {
 
     /** This property holds the full name using our new [Name] class. */
     @Convert(NameConverter::class) override var name: Name = Name(EMPTY_NAME)
@@ -226,6 +234,8 @@ abstract class Node() :
 
     var prevPDG by unwrapping(Node::prevDFGEdges)
 
+    @DoNotPersist override val assumptions: MutableList<Assumption> = mutableListOf()
+
     /**
      * If a node is marked as being inferred, it means that it was created artificially and does not
      * necessarily have a real counterpart in the scanned source code. However, the nodes
@@ -244,8 +254,19 @@ abstract class Node() :
     /** Required field for object graph mapping. It contains the node id. */
     @DoNotPersist @Id @GeneratedValue var legacyId: Long? = null
 
-    /** Will replace [legacyId] */
-    var id: Uuid = Uuid.random()
+    /**
+     * A (more or less) unique identifier for this node. It is a [Uuid] derived from
+     * [Node.hashCode]. In this sense, it is definitely deterministic and reproducible, however, in
+     * theory it is not completely unique, as collisions within [Node.hashCode] could occur.
+     */
+    val id: Uuid
+        get() {
+            val parent =
+                astParent?.id?.toLongs { mostSignificantBits, leastSignificantBits ->
+                    leastSignificantBits
+                }
+            return Uuid.fromLongs(parent ?: 0, hashCode().toLong())
+        }
 
     /** Index of the argument if this node is used in a function call or parameter list. */
     var argumentIndex = 0

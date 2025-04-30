@@ -26,17 +26,12 @@
 package de.fraunhofer.aisec.cpg.graph.concepts.arch
 
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import kotlin.reflect.full.isSubclassOf
 
 /** Represents an architecture of an operating system. */
 abstract class OperatingSystemArchitecture(underlyingNode: Node?) :
     Concept(underlyingNode = underlyingNode) {
-    override fun equalWithoutUnderlying(other: OverlayNode): Boolean {
-        return other::class.isSubclassOf(this::class)
-    }
-
     override fun equals(other: Any?): Boolean {
         return other != null && other::class.isSubclassOf(this::class)
     }

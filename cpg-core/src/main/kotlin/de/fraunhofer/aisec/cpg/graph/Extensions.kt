@@ -746,8 +746,8 @@ fun Node.followPrevCDGUntilHit(
  * Hence, if "fulfilled" is a non-empty list, a path from [this] to such a node is **possible but
  * not mandatory**. If the list "failed" is empty, the path is mandatory.
  */
-inline fun Node.followXUntilHit(
-    noinline x: (Node, Context, List<Node>) -> Collection<Pair<Node, Context>>,
+fun Node.followXUntilHit(
+    x: (Node, Context, List<Node>) -> Collection<Pair<Node, Context>>,
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
     context: Context = Context(steps = 0),
@@ -828,7 +828,7 @@ inline fun Node.followXUntilHit(
 
     return FulfilledAndFailedPaths(
         fulfilledPaths.toSet().toList(),
-        (failedPaths + failedLoops).toSet().toList(),
+        (failedPaths + failedLoops).toSet().toList().map { Pair(it.first, it.second) },
     )
 }
 
@@ -877,7 +877,8 @@ fun Node.followNextFullDFGEdgesUntilHit(
 
 /**
  * Returns a [Collection] of last nodes in the EOG of this [FunctionDeclaration]. If there's no
- * function body, it will return a list of this function declaration.
+ * function body, it will return a list of this function declaration. This function does not
+ * propagate assumptions currently.
  */
 val FunctionDeclaration.lastEOGNodes: Collection<Node>
     get() {
@@ -964,7 +965,7 @@ fun Node.followPrevEOG(predicate: (Edge<*>) -> Boolean): List<Edge<*>>? {
  *
  * It returns only a single possible path even if multiple paths are possible.
  */
-fun Node.followPrevFullDFG(predicate: (Node) -> Boolean): MutableList<Node>? {
+fun Node.followPrevFullDFG(predicate: (Node) -> Boolean): List<Node>? {
     return followPrevFullDFGEdgesUntilHit(
             collectFailedPaths = false,
             findAllPossiblePaths = false,
@@ -972,7 +973,6 @@ fun Node.followPrevFullDFG(predicate: (Node) -> Boolean): MutableList<Node>? {
         )
         .fulfilled
         .minByOrNull { it.size }
-        ?.toMutableList()
 }
 
 /**
@@ -982,7 +982,7 @@ fun Node.followPrevFullDFG(predicate: (Node) -> Boolean): MutableList<Node>? {
  *
  * It returns only a single possible path even if multiple paths are possible.
  */
-fun Node.followPrevDFG(predicate: (Node) -> Boolean): MutableList<Node>? {
+fun Node.followPrevDFG(predicate: (Node) -> Boolean): List<Node>? {
     return followDFGEdgesUntilHit(
             collectFailedPaths = false,
             findAllPossiblePaths = false,
@@ -991,7 +991,6 @@ fun Node.followPrevDFG(predicate: (Node) -> Boolean): MutableList<Node>? {
         )
         .fulfilled
         .minByOrNull { it.size }
-        ?.toMutableList()
 }
 
 /** Returns all [Node] children in the AST-subgraph, starting with this [Node]. */
@@ -1342,19 +1341,20 @@ fun Expression?.unwrapReference(): Reference? {
 /** Returns the [TranslationUnitDeclaration] where this node is located in. */
 val Node.translationUnit: TranslationUnitDeclaration?
     get() {
-        return firstParentOrNull<TranslationUnitDeclaration>()
+        return this as? TranslationUnitDeclaration
+            ?: firstParentOrNull<TranslationUnitDeclaration>()
     }
 
 /** Returns the [TranslationResult] where this node is located in. */
 val Node.translationResult: TranslationResult?
     get() {
-        return firstParentOrNull<TranslationResult>()
+        return this as? TranslationResult ?: firstParentOrNull<TranslationResult>()
     }
 
 /** Returns the [Component] where this node is located in. */
 val Node.component: Component?
     get() {
-        return firstParentOrNull<Component>()
+        return this as? Component ?: firstParentOrNull<Component>()
     }
 
 /**

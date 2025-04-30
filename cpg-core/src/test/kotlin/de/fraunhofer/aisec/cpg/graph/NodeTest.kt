@@ -23,25 +23,20 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption
+package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.concepts.Operation
-import java.util.Objects
+import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
+import kotlin.test.Test
 
-abstract class CipherOperation(underlyingNode: Node?, override val concept: Cipher) :
-    Operation(underlyingNode = underlyingNode, concept = concept), IsDiskEncryption
+class NodeTest {
+    @Test
+    fun testId() {
+        with(TestLanguageFrontend()) {
+            val node1 = newLiteral(1)
+            val node2 = newLiteral(2)
 
-class Encrypt(
-    underlyingNode: Node? = null,
-    concept: Cipher,
-    /** The key used for encryption */
-    val key: Secret,
-) : CipherOperation(underlyingNode = underlyingNode, concept = concept) {
-
-    override fun equals(other: Any?): Boolean {
-        return other is Encrypt && super.equals(other) && other.key == this.key
+            // Check that the IDs are unique
+            assert(node1.id != node2.id) { "Node IDs should be unique" }
+        }
     }
-
-    override fun hashCode() = Objects.hash(super.hashCode(), key)
 }
