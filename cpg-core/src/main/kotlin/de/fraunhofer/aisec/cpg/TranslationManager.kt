@@ -31,8 +31,8 @@ import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
-import de.fraunhofer.aisec.cpg.passes.executePass
 import de.fraunhofer.aisec.cpg.passes.executePassesInParallel
+import de.fraunhofer.aisec.cpg.passes.executePassesSequentially
 import de.fraunhofer.aisec.cpg.sarif.toLocation
 import java.io.File
 import java.io.PrintWriter
@@ -98,13 +98,7 @@ private constructor(
                     }
                 }
             } else {
-                // Execute all passes in sequence
-                for (pass in config.registeredPasses.flatten()) {
-                    executePass(pass, ctx, result, executedFrontends)
-                    if (result.isCancelled) {
-                        log.warn("Analysis interrupted, stopping Pass evaluation")
-                    }
-                }
+                executePassesSequentially(ctx, result, executedFrontends)
             }
         } catch (ex: TranslationException) {
             throw CompletionException(ex)
