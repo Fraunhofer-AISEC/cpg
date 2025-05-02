@@ -246,7 +246,11 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
 
     override fun lub(one: Element<T>, two: Element<T>, allowModify: Boolean): Element<T> {
         return when (compare(one, two)) {
-            Order.LESSER -> two
+            Order.LESSER ->
+                if (allowModify) {
+                    one += two
+                    one
+                } else two
             Order.EQUAL,
             Order.GREATER -> one
             Order.UNEQUAL -> {
@@ -345,23 +349,23 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
         get() = MapLattice.Element()
 
     override fun lub(one: Element<K, V>, two: Element<K, V>, allowModify: Boolean): Element<K, V> {
-        return when (compare(one, two)) {
-            Order.LESSER -> two
+        return when (val comp = compare(one, two)) {
             Order.EQUAL,
             Order.GREATER -> one
+            Order.LESSER,
             Order.UNEQUAL -> {
                 if (allowModify) {
                     val newKeys = two.keys.filter { it !in one.keys }
-                    val existingKeys = one.keys.filter { it in newKeys }
+                    val existingKeys = two.keys.minus(newKeys)
                     newKeys.forEach { key -> one[key] = two[key] }
                     existingKeys.forEach { key ->
                         one[key]?.let { oneValue ->
-                            two[key]?.let { twoValue ->
-                                one[key] = innerLattice.lub(oneValue, twoValue, true)
-                            }
+                            two[key]?.let { twoValue -> innerLattice.lub(oneValue, twoValue, true) }
                         }
                     }
                     one
+                } else if (comp == Order.LESSER) {
+                    two
                 } else {
                     val allKeys = one.keys.toIdentitySet()
                     allKeys += two.keys
