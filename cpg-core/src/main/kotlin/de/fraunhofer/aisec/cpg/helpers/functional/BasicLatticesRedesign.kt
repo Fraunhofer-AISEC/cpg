@@ -153,7 +153,7 @@ interface Lattice<T : Lattice.Element> {
         transformation: (Lattice<T>, EvaluationOrder, T) -> T,
     ): T {
         val globalState = IdentityHashMap<EvaluationOrder, T>()
-        val finalState = IdentityHashMap<EvaluationOrder, T>()
+        val finalState: T = this.bottom
         for (startEdge in startEdges) {
             globalState[startEdge] = startState
         }
@@ -213,13 +213,11 @@ interface Lattice<T : Lattice.Element> {
             }
 
             if (nextEdge.end.nextEOGEdges.isEmpty() || edgesList.isEmpty()) {
-                finalState[nextEdge] = newState
+                this.lub(finalState, newState, true)
             }
         }
 
-        return finalState.values.fold(finalState.values.firstOrNull()) { state, value ->
-            state?.let { lub(it, value, true) }
-        } ?: startState
+        return finalState
     }
 }
 
@@ -430,8 +428,6 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
                         }
                     }
                     one
-                } else if (comp == Order.LESSER) {
-                    two
                 } else {
                     val allKeys = one.keys.toIdentitySet()
                     allKeys += two.keys
