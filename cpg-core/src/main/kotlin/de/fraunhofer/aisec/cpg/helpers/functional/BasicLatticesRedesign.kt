@@ -204,9 +204,9 @@ interface Lattice<T : Lattice.Element> {
                 globalState[it] = newGlobalIt
                 if (
                     it !in edgesList &&
-                        (oldGlobalIt == null ||
-                            newGlobalIt.compare(oldGlobalIt) == Order.GREATER ||
-                            isNoBranchingPoint)
+                        (isNoBranchingPoint ||
+                            oldGlobalIt == null ||
+                            newGlobalIt.compare(oldGlobalIt) == Order.GREATER)
                 ) {
                     edgesList.add(0, it)
                 }
