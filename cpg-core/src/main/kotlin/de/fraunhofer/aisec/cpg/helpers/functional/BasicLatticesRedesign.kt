@@ -369,8 +369,6 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
                         }
                     }
                     one
-                } else if (comp == Order.LESSER) {
-                    two
                 } else {
                     val allKeys = one.keys.toIdentitySet()
                     allKeys += two.keys

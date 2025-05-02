@@ -103,7 +103,8 @@ open class EOGConceptPass(ctx: TranslationContext) :
         val startState = intermediateState ?: getInitialState(lattice, node)
 
         val nextEog = node.nextEOGEdges.toList()
-        intermediateState = lattice.iterateEOG(nextEog, startState, ::transfer)
+        intermediateState =
+            lattice.lub(startState, lattice.iterateEOG(nextEog, startState, ::transfer), true)
     }
 
     /**
