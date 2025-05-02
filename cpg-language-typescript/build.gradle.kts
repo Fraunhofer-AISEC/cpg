@@ -128,8 +128,7 @@ val compileLinuxAarch64 =
 // --- Deno Integration for Svelte Parser ---
 val compileSvelteParserWindowsX8664 = tasks.register<RunDenoTask>("compileSvelteParserWindowsX8664") {
     dependsOn(tasks.installDeno)
-    // Point to the new svelte parser directory
-    workingDir.set(file("src/main/svelte-parser")) 
+    workingDir = "src/main/svelte-parser" 
     command(
         "compile",
         "-E",
@@ -148,7 +147,7 @@ val compileSvelteParserWindowsX8664 = tasks.register<RunDenoTask>("compileSvelte
 
 val compileSvelteParserMacOSX8664 = tasks.register<RunDenoTask>("compileSvelteParserMacOSX8664") {
     dependsOn(tasks.installDeno)
-    workingDir.set(file("src/main/svelte-parser"))
+    workingDir = "src/main/svelte-parser"
     command(
         "compile", "-E", "-R", "--allow-read", "--allow-env",
         "--target", "x86_64-apple-darwin",
@@ -161,7 +160,7 @@ val compileSvelteParserMacOSX8664 = tasks.register<RunDenoTask>("compileSveltePa
 
 val compileSvelteParserMacOSAarch64 = tasks.register<RunDenoTask>("compileSvelteParserMacOSAarch64") {
     dependsOn(tasks.installDeno)
-    workingDir.set(file("src/main/svelte-parser"))
+    workingDir = "src/main/svelte-parser"
     command(
         "compile", "-E", "-R", "--allow-read", "--allow-env",
         "--target", "aarch64-apple-darwin",
@@ -174,7 +173,7 @@ val compileSvelteParserMacOSAarch64 = tasks.register<RunDenoTask>("compileSvelte
 
 val compileSvelteParserLinuxX8664 = tasks.register<RunDenoTask>("compileSvelteParserLinuxX8664") {
     dependsOn(tasks.installDeno)
-    workingDir.set(file("src/main/svelte-parser"))
+    workingDir = "src/main/svelte-parser"
     command(
         "compile", "-E", "-R", "--allow-read", "--allow-env",
         "--target", "x86_64-unknown-linux-gnu",
@@ -187,7 +186,7 @@ val compileSvelteParserLinuxX8664 = tasks.register<RunDenoTask>("compileSveltePa
 
 val compileSvelteParserLinuxAarch64 = tasks.register<RunDenoTask>("compileSvelteParserLinuxAarch64") {
     dependsOn(tasks.installDeno)
-    workingDir.set(file("src/main/svelte-parser"))
+    workingDir = "src/main/svelte-parser"
     command(
         "compile", "-E", "-R", "--allow-read", "--allow-env",
         "--target", "aarch64-unknown-linux-gnu",
