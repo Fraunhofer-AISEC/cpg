@@ -154,11 +154,20 @@ interface Lattice<T : Lattice.Element> {
             // state.
             val nextGlobal = globalState[nextEdge] ?: continue
 
-            val isNotNearStartOrEndOfBasicBlock =
+            // Either immediately before or after this edge, there's a branching node. In these
+            // cases, we definitely want to check if there's an update to the state.
+            val isNoBranchingPoint =
                 nextEdge.end.nextEOGEdges.size == 1 &&
                     nextEdge.end.prevEOGEdges.size == 1 &&
                     nextEdge.start.nextEOGEdges.size == 1 &&
-                    nextEdge.start.prevEOGEdges.size == 1 &&
+                    nextEdge.start.prevEOGEdges.size == 1
+            //  Either before or after this edge, there's a branching node within two steps (start,
+            // end and the nodes before/after these). We have to ensure that we copy the state for
+            // all these nodes to enable the update checks conducted ib the branching edges. We need
+            // one more step for this, otherwise we will fail recognizing the updates for a node "x"
+            // which is a branching edge because the next node would already modify the state of x.
+            val isNotNearStartOrEndOfBasicBlock =
+                isNoBranchingPoint &&
                     nextEdge.end.nextEOGEdges.single().end.nextEOGEdges.size == 1 &&
                     nextEdge.end.nextEOGEdges.single().end.prevEOGEdges.size == 1 &&
                     nextEdge.start.prevEOGEdges.single().start.nextEOGEdges.size == 1 &&
@@ -181,9 +190,7 @@ interface Lattice<T : Lattice.Element> {
                 globalState[it] = newGlobalIt
                 if (
                     it !in edgesList &&
-                        (oldGlobalIt == null ||
-                            newGlobalIt != oldGlobalIt ||
-                            isNotNearStartOrEndOfBasicBlock)
+                        (oldGlobalIt == null || newGlobalIt != oldGlobalIt || isNoBranchingPoint)
                 ) {
                     edgesList.add(0, it)
                 }
