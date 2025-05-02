@@ -23,11 +23,12 @@
  *                    \______/ \__|       \______/
  *
  */
-import com.github.gradle.node.pnpm.task.PnpmTask
+
+import io.github.masch0212.deno.RunDenoTask
 
 plugins {
     id("cpg.frontend-conventions")
-    alias(libs.plugins.node)
+    alias(libs.plugins.deno)
 }
 
 mavenPublishing {
@@ -37,23 +38,97 @@ mavenPublishing {
     }
 }
 
-node {
-    download.set(true)
-    version.set(libs.versions.node)
-    nodeProjectDir.set(file("${project.projectDir.resolve("src/main/nodejs")}"))
-}
-
-val pnpmBuild by
-    tasks.registering(PnpmTask::class) {
-        inputs.file("src/main/nodejs/package.json").withPathSensitivity(PathSensitivity.RELATIVE)
-        inputs.file("src/main/nodejs/pnpm-lock.yaml").withPathSensitivity(PathSensitivity.RELATIVE)
-        inputs.dir("src/main/nodejs/src").withPathSensitivity(PathSensitivity.RELATIVE)
-        outputs.dir("build/resources/main/nodejs")
+val compileWindowsX8664 =
+    tasks.register<RunDenoTask>("compileWindowsX8664") {
+        dependsOn(tasks.installDeno)
+        command(
+            "compile",
+            "-E",
+            "-R",
+            "--target",
+            "x86_64-pc-windows-msvc",
+            "-o",
+            "build/resources/main/typescript/parser-windows-x86_64",
+            "src/main/typescript/src/parser.ts",
+        )
+        outputs.dir("build/resources/main/typescript")
         outputs.cacheIf { true }
-
-        workingDir.set(file("src/main/nodejs"))
-        pnpmCommand.set(listOf("run", "bundle"))
-        dependsOn(tasks.getByName("pnpmInstall"))
     }
 
-tasks.processResources { dependsOn(pnpmBuild) }
+val compileMacOSX8664 =
+    tasks.register<RunDenoTask>("compileMacOSX8664") {
+        dependsOn(tasks.installDeno)
+        command(
+            "compile",
+            "-E",
+            "-R",
+            "--target",
+            "x86_64-apple-darwin",
+            "-o",
+            "build/resources/main/typescript/parser-macos-x86_64",
+            "src/main/typescript/src/parser.ts",
+        )
+        outputs.dir("build/resources/main/typescript")
+        outputs.cacheIf { true }
+    }
+
+val compileMacOSAarch64 =
+    tasks.register<RunDenoTask>("compileMacOSAarch64") {
+        dependsOn(tasks.installDeno)
+        command(
+            "compile",
+            "-E",
+            "-R",
+            "--target",
+            "aarch64-apple-darwin",
+            "-o",
+            "build/resources/main/typescript/parser-macos-aarch64",
+            "src/main/typescript/src/parser.ts",
+        )
+        outputs.dir("build/resources/main/typescript")
+        outputs.cacheIf { true }
+    }
+
+val compileLinuxX8664 =
+    tasks.register<RunDenoTask>("compileLinuxX8664") {
+        dependsOn(tasks.installDeno)
+        command(
+            "compile",
+            "-E",
+            "-R",
+            "--target",
+            "x86_64-unknown-linux-gnu",
+            "-o",
+            "build/resources/main/typescript/parser-linux-x86_64",
+            "src/main/typescript/src/parser.ts",
+        )
+        outputs.dir("build/resources/main/typescript")
+        outputs.cacheIf { true }
+    }
+
+val compileLinuxAarch64 =
+    tasks.register<RunDenoTask>("compileLinuxAarch64") {
+        dependsOn(tasks.installDeno)
+        command(
+            "compile",
+            "-E",
+            "-R",
+            "--target",
+            "aarch64-unknown-linux-gnu",
+            "-o",
+            "build/resources/main/typescript/parser-linux-aarch64",
+            "src/main/typescript/src/parser.ts",
+        )
+        outputs.dir("build/resources/main/typescript")
+        outputs.cacheIf { true }
+    }
+
+tasks.processResources {
+    dependsOn(
+        compileWindowsX8664,
+        compileMacOSX8664,
+        compileMacOSAarch64,
+        compileLinuxX8664,
+        compileLinuxAarch64,
+    )
+}

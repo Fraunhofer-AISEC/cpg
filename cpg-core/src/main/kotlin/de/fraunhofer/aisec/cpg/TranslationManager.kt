@@ -31,8 +31,9 @@ import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
-import de.fraunhofer.aisec.cpg.passes.executePass
 import de.fraunhofer.aisec.cpg.passes.executePassesInParallel
+import de.fraunhofer.aisec.cpg.passes.executePassesSequentially
+import de.fraunhofer.aisec.cpg.sarif.toLocation
 import java.io.File
 import java.io.PrintWriter
 import java.lang.reflect.InvocationTargetException
@@ -97,13 +98,7 @@ private constructor(
                     }
                 }
             } else {
-                // Execute all passes in sequence
-                for (pass in config.registeredPasses.flatten()) {
-                    executePass(pass, ctx, result, executedFrontends)
-                    if (result.isCancelled) {
-                        log.warn("Analysis interrupted, stopping Pass evaluation")
-                    }
-                }
+                executePassesSequentially(ctx, result, executedFrontends)
             }
         } catch (ex: TranslationException) {
             throw CompletionException(ex)
@@ -154,6 +149,7 @@ private constructor(
         for (sc in ctx.config.softwareComponents.keys) {
             val component = Component()
             component.name = Name(sc)
+            component.location = with(ctx) { component.topLevel()?.toPath()?.toLocation() }
             result.addComponent(component)
 
             var sourceLocations: List<File> = ctx.config.softwareComponents[sc] ?: listOf()
@@ -304,6 +300,7 @@ private constructor(
                     if (component == null) {
                         component = Component()
                         component.name = compName
+                        component.location = includePath.toLocation()
                         result.addComponent(component)
                         ctx.config.topLevels.put(includePath.name, includePath.toFile())
                     }

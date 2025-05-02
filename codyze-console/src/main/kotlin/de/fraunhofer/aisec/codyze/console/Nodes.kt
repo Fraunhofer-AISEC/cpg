@@ -29,15 +29,19 @@ package de.fraunhofer.aisec.codyze.console
 
 import de.fraunhofer.aisec.codyze.AnalysisResult
 import de.fraunhofer.aisec.cpg.TranslationResult
-import de.fraunhofer.aisec.cpg.graph.Component
-import de.fraunhofer.aisec.cpg.graph.ContextProvider
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.component
+import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
-import de.fraunhofer.aisec.cpg.graph.nodes
+import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts
+import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.ConceptEntry
+import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.DFGEntry
+import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.LocationEntry
+import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.PersistedConceptEntry
+import io.github.detekt.sarif4k.ArtifactLocation
 import io.github.detekt.sarif4k.Result
 import java.net.URI
+import java.nio.file.Path
 import kotlin.io.path.Path
 import kotlin.io.path.toPath
 import kotlin.uuid.Uuid
@@ -59,6 +63,7 @@ data class AnalyzeRequestJSON(
     val sourceDir: String,
     val includeDir: String? = null,
     val topLevel: String? = null,
+    val conceptsFile: String? = null,
 )
 
 /** JSON data class for an [Edge]. */
@@ -117,6 +122,24 @@ data class TranslationUnitJSON(
     @Transient val cpgTU: TranslationUnitDeclaration? = null,
 )
 
+/** JSON data class holding all relevant information required to instantiate a [Concept]. */
+@Serializable
+data class ConceptInfo(val conceptName: String, val constructorInfo: List<ConstructorInfo>)
+
+@Serializable
+data class ConstructorInfo(
+    val argumentName: String,
+    val argumentType: String,
+    val isOptional: Boolean,
+)
+
+@Serializable
+data class ConstructorArguments(
+    val argumentName: String,
+    val argumentValue: String,
+    val argumentType: String? = null, // currently not used
+)
+
 /** JSON data class for a [Node]. */
 @Serializable
 data class NodeJSON(
@@ -132,6 +155,61 @@ data class NodeJSON(
     val prevDFG: List<EdgeJSON> = emptyList(),
     val nextDFG: List<EdgeJSON> = emptyList(),
 )
+
+/**
+ * JSON data class for an "add new concept" request (see [ConsoleService.addConcept]).
+ *
+ * @param nodeId The UUID of the underlying node.
+ * @param conceptName The (Java class) name of the concept.
+ * @param addDFGToConcept Whether to add DFG edges from the underlying node to the new concept node.
+ * @param addDFGFromConcept Whether to add DFG edges from the new concept node to the underlying
+ *   node.
+ */
+@Serializable
+data class ConceptRequestJSON(
+    val nodeId: Uuid,
+    val conceptName: String,
+    val addDFGToConcept: Boolean,
+    val addDFGFromConcept: Boolean,
+    val constructorArgs: List<ConstructorArguments>? = null,
+) {
+    /**
+     * Converts this JSON structure into a [PersistedConceptEntry] based on the instantiated
+     * [concept].
+     *
+     * The information in the JSON structure is primarily used to create the
+     * [PersistedConceptEntry.concept] (e.g., including the constructor arguments) and the
+     * instantiation of the [concept] is primarily used to build the
+     * [PersistedConceptEntry.location] entry.
+     */
+    fun buildPersistedConcept(concept: Concept): PersistedConceptEntry {
+        return PersistedConceptEntry(
+            concept =
+                ConceptEntry(
+                    name = this.conceptName,
+                    dfg =
+                        DFGEntry(
+                            fromThisNodeToConcept = this.addDFGToConcept,
+                            fromConceptToThisNode = this.addDFGFromConcept,
+                        ),
+                    constructorArguments =
+                        this.constructorArgs?.map {
+                            LoadPersistedConcepts.ConstructorArgumentEntry(
+                                name = it.argumentName,
+                                value = it.argumentValue,
+                            )
+                        } ?: listOf(),
+                ),
+            location =
+                LocationEntry(
+                    file = concept.location?.artifactLocation?.uri.toString(),
+                    region = concept.location?.region.toString(),
+                    type = concept.underlyingNode?.javaClass?.name,
+                ),
+            signature = null,
+        )
+    }
+}
 
 /** Converts a [AnalysisResult] into its JSON representation. */
 fun AnalysisResult.toJSON(): AnalysisResultJSON =
@@ -204,10 +282,7 @@ fun Edge<*>.toJSON(): EdgeJSON {
  */
 context(TranslationResult)
 fun Result.toJSON(): FindingsJSON {
-    var path =
-        this.locations?.firstOrNull()?.physicalLocation?.artifactLocation?.uri?.let {
-            Path(URI.create(it).toURL().path)
-        }
+    var path = this.locations?.firstOrNull()?.physicalLocation?.artifactLocation?.absolutePath
 
     var translationUnit =
         this@TranslationResult.components
@@ -226,6 +301,35 @@ fun Result.toJSON(): FindingsJSON {
         translationUnit = translationUnit?.id,
     )
 }
+
+/**
+ * Tries to convert the [ArtifactLocation.uri] (which can either be absolute or relative to a
+ * [Component.topLevel]) into an absolute [Path].
+ */
+context(TranslationResult)
+val ArtifactLocation.absolutePath: Path?
+    get() {
+        val uri = this.uri
+        val uriBaseID = this.uriBaseID
+
+        return when {
+            // If the URI is null, return null
+            uri == null -> {
+                null
+            }
+            // If the URI is already absolute, return it as is
+            uriBaseID == null -> {
+                URI.create(uri).path?.let { Path(it) }
+            }
+            // Otherwise, try to find the URI base (which is the name of a component) and try to
+            // build an absolute path again
+            else -> {
+                val componentPath =
+                    this@TranslationResult.components[uriBaseID]?.topLevel()?.absoluteFile?.toPath()
+                return componentPath?.resolve(uri)
+            }
+        }
+    }
 
 /**
  * Custom serializer for [Uuid] to convert it to and from a string representation. This is used for

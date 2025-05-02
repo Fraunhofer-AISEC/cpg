@@ -152,7 +152,7 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             val isLambda = curr is VariableDeclaration && curr.initializer is LambdaExpression
             val currentFunction =
                 if (isLambda) {
-                    ((curr as VariableDeclaration).initializer as LambdaExpression).function
+                    (curr.initializer as LambdaExpression).function
                 } else {
                     curr
                 }

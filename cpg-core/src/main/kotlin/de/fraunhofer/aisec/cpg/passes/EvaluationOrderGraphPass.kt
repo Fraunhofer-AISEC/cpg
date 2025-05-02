@@ -1031,16 +1031,17 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     }
 
     /**
-     * Builds an EOG edge from prev to next.
+     * Builds an EOG edge from prev to next. And returns the edge that was created.
      *
      * @param prev the previous node
      * @param next the next node
      */
-    protected fun addEOGEdge(prev: Node, next: Node) {
+    protected fun addEOGEdge(prev: Node, next: Node): EvaluationOrder {
         val propertyEdge = EvaluationOrder(prev, next, unreachable = false)
         propertyEdge.branch = nextEdgeBranch
 
         prev.nextEOGEdges += propertyEdge
+        return propertyEdge
     }
 
     protected fun addMultipleIncomingEOGEdges(prevs: List<Node>, next: Node) {

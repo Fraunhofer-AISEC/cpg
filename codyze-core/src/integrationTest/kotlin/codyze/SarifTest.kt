@@ -28,8 +28,10 @@ package codyze
 import de.fraunhofer.aisec.codyze.toSarif
 import de.fraunhofer.aisec.codyze.toSarifLocation
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
-import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.functions
+import de.fraunhofer.aisec.cpg.graph.get
+import de.fraunhofer.aisec.cpg.graph.literals
 import de.fraunhofer.aisec.cpg.query.dataFlow
 import de.fraunhofer.aisec.cpg.test.analyze
 import io.github.detekt.sarif4k.ResultKind
@@ -37,6 +39,8 @@ import kotlin.io.path.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 class SarifTest {
     @Test
@@ -51,6 +55,8 @@ class SarifTest {
         assertNotNull(fullLoc)
         assertEquals(7, fullLoc.physicalLocation?.region?.endLine)
         assertEquals(15, fullLoc.physicalLocation?.region?.endColumn)
+        assertEquals("simple.py", fullLoc.physicalLocation?.artifactLocation?.uri)
+        assertEquals("application", fullLoc.physicalLocation?.artifactLocation?.uriBaseID)
 
         val logical = fullLoc.logicalLocations?.firstOrNull()
         assertNotNull(logical)
@@ -98,5 +104,8 @@ class SarifTest {
             sarifResult.codeFlows?.firstOrNull()?.threadFlows?.firstOrNull()?.locations?.size,
             "Expected 5 locations",
         )
+
+        val json = Json.encodeToString(sarif)
+        assertNotNull(json)
     }
 }

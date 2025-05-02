@@ -63,7 +63,10 @@ class FileConceptTest : BaseTest() {
         assertTrue(fileNodes.isNotEmpty())
 
         val file = fileNodes.filterIsInstance<File>().singleOrNull()
-        assertNotNull(file, "Expected to find exactly one \"File\" node.")
+        assertNotNull(
+            file,
+            "Expected to find exactly one \"File\" node but found ${fileNodes.filterIsInstance<File>().size}.",
+        )
         assertEquals("example.txt", file.fileName, "Expected to find the filename \"example.txt\".")
         assertEquals(
             5,
@@ -243,6 +246,20 @@ class FileConceptTest : BaseTest() {
             }
         assertNotNull(result)
 
+        val fileWrite = result.allChildrenWithOverlays<WriteFile>().singleOrNull()
+        assertNotNull(fileWrite)
+        assertNotNull(fileWrite.underlyingNode)
+        val fileSetFMask =
+            result.allChildrenWithOverlays<SetFileMask>().singleOrNull {
+                it.underlyingNode?.location?.region?.startLine == 6
+            }
+        assertNotNull(fileSetFMask)
+        assertEquals(fileWrite.file, fileSetFMask.file)
+        val fileWriteEOG = fileWrite.collectAllNextEOGPaths(true).flatten().toSet()
+        assertTrue(fileSetFMask in fileWriteEOG)
+
+        assertEquals(1, result.allChildrenWithOverlays<File>().size)
+
         // Tests mask is set before any write:
         // for all files
         //   for all WriteFile on the current file
@@ -251,13 +268,8 @@ class FileConceptTest : BaseTest() {
             // See also testBadChmodQuery for a failing example
             result.conceptNodes.filterIsInstance<File>().all { file ->
                 file.ops.filterIsInstance<WriteFile>().none { write ->
-                    val startNode =
-                        write.underlyingNode
-                            ?: return@none true // fail if there is no underlyingNode
-                    executionPath(startNode = startNode, direction = Forward(GraphToFollow.EOG)) {
-                            it.overlays.any { overlay ->
-                                overlay is SetFileMask && write.file == overlay.file
-                            }
+                    executionPath(startNode = write, direction = Forward(GraphToFollow.EOG)) {
+                            it is SetFileMask && write.file == it.file
                         }
                         .value == true
                 }
@@ -306,8 +318,6 @@ class FileConceptTest : BaseTest() {
     }
 
     @Test
-    // Needs other traversal of EOG. See #2123
-    @Ignore
     fun testBranching() {
         val topLevel = Path.of("src", "integrationTest", "resources", "python", "file")
 
@@ -360,7 +370,7 @@ class FileConceptTest : BaseTest() {
         assertNotNull(file, "Expected to find exactly one `File` node (\"example.txt\").")
 
         val fileRead = conceptNodes.filterIsInstance<ReadFile>().singleOrNull()
-        assertNotNull(fileRead, "Expected to find a file read operation.")
+        assertNotNull(fileRead, "Expected to find a single file read operation.")
 
         val fileDelete = conceptNodes.filterIsInstance<DeleteFile>().singleOrNull()
         assertNotNull(fileDelete, "Expected to find a file delete operation.")
@@ -381,6 +391,40 @@ class FileConceptTest : BaseTest() {
         assertTrue(
             executionPath(startNode = fileDelete, predicate = { it == fileWrite }).value,
             "Expected to find an execution path from remove to write.",
+        )
+    }
+
+    @Test
+    fun testLoop() {
+        val topLevel = Path.of("src", "integrationTest", "resources", "python", "file")
+
+        val result =
+            analyze(
+                files = listOf(topLevel.resolve("file_loop.py").toFile()),
+                topLevel = topLevel,
+                usePasses = true,
+            ) {
+                it.registerLanguage<PythonLanguage>()
+                it.registerPass<PythonFileConceptPass>()
+                it.symbols(mapOf("PYTHON_PLATFORM" to "linux"))
+            }
+        assertNotNull(result)
+
+        val conceptNodes = result.allChildrenWithOverlays<IsFile>()
+        assertTrue(conceptNodes.isNotEmpty())
+
+        val files = conceptNodes.filterIsInstance<File>()
+        assertEquals(
+            setOf("a", "b"),
+            files.map { it.fileName }.toSet(),
+            "Expected to find two `File` nodes (\"a\" and \"b\").",
+        )
+
+        val writes = conceptNodes.filterIsInstance<WriteFile>()
+        assertEquals(
+            setOf("a", "b"),
+            writes.map { it.file.fileName }.toSet(),
+            "Expected to find two `WriteFile` nodes (to \"a\" and \"b\").",
         )
     }
 }

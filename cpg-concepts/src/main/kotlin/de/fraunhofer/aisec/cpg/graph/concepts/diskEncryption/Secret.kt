@@ -29,7 +29,8 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 
 /** Represents a "secret key", e.g. used in hard disk encryption. */
-class Secret(underlyingNode: Node) : Concept(underlyingNode = underlyingNode), IsDiskEncryption {
+class Secret(underlyingNode: Node? = null) :
+    Concept(underlyingNode = underlyingNode), IsDiskEncryption {
     /** Key size. */
     var keySize: Int? = null
 }

@@ -43,16 +43,28 @@ abstract class OverlayNode() : Node() {
 
     @Relationship(value = "OVERLAY", direction = Relationship.Direction.INCOMING)
     /** All [OverlayNode]s nodes are connected to an original cpg [Node] by this. */
-    val underlyingNodeEdge: OverlaySingleEdge =
+    var underlyingNodeEdge: OverlaySingleEdge =
         OverlaySingleEdge(this, of = null, mirrorProperty = Node::overlayEdges, outgoing = false)
 
     var underlyingNode by unwrapping(OverlayNode::underlyingNodeEdge)
 
+    /**
+     * Compares this [OverlayNode] to another object. We also include the [underlyingNode] in this
+     * process, meaning that two overlay nodes with the equal properties will not be equal if they
+     * have different underlying nodes.
+     */
     override fun equals(other: Any?): Boolean {
         return other is OverlayNode &&
             super.equals(other) &&
-            other.underlyingNode == this.underlyingNode
+            this.underlyingNode == other.underlyingNode
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), underlyingNode)
+    /**
+     * Returns the hash code of this [OverlayNode].
+     *
+     * See [equals] for the properties that are included in this process.
+     */
+    override fun hashCode(): Int {
+        return Objects.hash(super.hashCode(), underlyingNode)
+    }
 }

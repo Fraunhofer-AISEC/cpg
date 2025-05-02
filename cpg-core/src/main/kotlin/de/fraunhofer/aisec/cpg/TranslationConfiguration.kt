@@ -63,7 +63,7 @@ private constructor(
     val symbols: Map<String, String>,
     /** Source code files to parse. */
     val softwareComponents: Map<String, List<File>>,
-    val topLevels: MutableMap<String, File?>,
+    val topLevels: MutableMap<String, File>,
     /** Set to true to generate debug output for the parser. */
     val debugParser: Boolean,
     /**
@@ -123,6 +123,8 @@ private constructor(
     matchCommentsToNodes: Boolean,
     addIncludesToGraph: Boolean,
     passConfigurations: Map<KClass<out Pass<*>>, PassConfiguration>,
+    /** The maximum number a pass will get executed, in order to prevent loops. */
+    val maxPassExecutions: Int,
     /** A list of exclusion patterns used to filter files and directories. */
     val exclusionPatternsByString: List<String>,
     /** A list of exclusion patterns using regular expressions to filter files and directories. */
@@ -244,7 +246,7 @@ private constructor(
     class Builder {
         private var softwareComponents: MutableMap<String, List<File>> = HashMap()
         private val languages = mutableListOf<KClass<out Language<*>>>()
-        private var topLevels = mutableMapOf<String, File?>()
+        private var topLevels = mutableMapOf<String, File>()
         private var debugParser = false
         private var failOnError = false
         private var loadIncludes = false
@@ -269,6 +271,7 @@ private constructor(
         private var useDefaultPasses = false
         private var passConfigurations: MutableMap<KClass<out Pass<*>>, PassConfiguration> =
             mutableMapOf()
+        private var maxPassExecutions = 5
         private val exclusionPatternsByRegex = mutableListOf<Regex>()
         private val exclusionPatternsByString = mutableListOf<String>()
         private var disableTypeObserver = false
@@ -319,12 +322,12 @@ private constructor(
             return this
         }
 
-        fun topLevel(topLevel: File?): Builder {
+        fun topLevel(topLevel: File): Builder {
             this.topLevels[DEFAULT_APPLICATION_NAME] = topLevel
             return this
         }
 
-        fun topLevels(topLevels: Map<String, File?>): Builder {
+        fun topLevels(topLevels: Map<String, File>): Builder {
             this.topLevels.clear()
             this.topLevels += topLevels
             return this
@@ -474,6 +477,15 @@ private constructor(
 
         inline fun <reified T : Pass<*>> configurePass(config: PassConfiguration): Builder {
             return this.configurePass(T::class, config)
+        }
+
+        /**
+         * Sets the maximum number of times a pass will be executed. This is useful to prevent
+         * infinite loops in the pass execution, when one pass triggers the execution of another.
+         */
+        fun maxPassExecutions(max: Int): Builder {
+            this.maxPassExecutions = max
+            return this
         }
 
         /**
@@ -705,6 +717,7 @@ private constructor(
                 matchCommentsToNodes,
                 addIncludesToGraph,
                 passConfigurations,
+                maxPassExecutions,
                 exclusionPatternsByString,
                 exclusionPatternsByRegex,
                 disableTypeObserver,

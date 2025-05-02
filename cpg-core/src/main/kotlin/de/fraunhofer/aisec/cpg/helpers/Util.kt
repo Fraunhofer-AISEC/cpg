@@ -214,6 +214,23 @@ object Util {
      * [Logger] will use the location of the callee of this function, rather than the [Util] class.
      */
     @Suppress("NOTHING_TO_INLINE")
+    inline fun infoWithFileLocation(
+        node: Node,
+        log: Logger,
+        format: String?,
+        vararg arguments: Any?,
+    ) {
+        log.info(
+            String.format("%s: %s", PhysicalLocation.locationLink(node.location), format),
+            *arguments,
+        )
+    }
+
+    /**
+     * Logs a warning with the specified file location. This is intentionally inlined, so that the
+     * [Logger] will use the location of the callee of this function, rather than the [Util] class.
+     */
+    @Suppress("NOTHING_TO_INLINE")
     inline fun warnWithFileLocation(
         location: PhysicalLocation?,
         log: Logger,

@@ -34,7 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.OverlayNode
  * logging, files, databases. The relevant operations on this concept are modeled as [Operation]s
  * and stored in [ops].
  */
-abstract class Concept(underlyingNode: Node) : OverlayNode() {
+abstract class Concept(underlyingNode: Node?) : OverlayNode() {
     init {
         this.underlyingNode = underlyingNode
         this::class.simpleName?.let { name = Name(it) }
@@ -42,4 +42,15 @@ abstract class Concept(underlyingNode: Node) : OverlayNode() {
 
     /** All [Operation]s belonging to this concept. */
     val ops: MutableSet<Operation> = mutableSetOf()
+
+    /**
+     * This method can be overridden to set the data flow graph (DFG) for this [Concept]. Note that
+     * this must hold for all implementations of this node and that it should only use attributes of
+     * this [Concept].
+     *
+     * Note: The default implementation does nothing.
+     */
+    open fun setDFG() {
+        // The default implementation does nothing
+    }
 }

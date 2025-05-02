@@ -23,6 +23,8 @@
  *                    \______/ \__|       \______/
  *
  */
+@file:Suppress("CONTEXT_RECEIVERS_DEPRECATED")
+
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.*
@@ -33,6 +35,7 @@ import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
+import de.fraunhofer.aisec.cpg.graph.statements.CatchClause
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
 import de.fraunhofer.aisec.cpg.helpers.orderEOGStartersBasedOnDependencies
@@ -143,6 +146,27 @@ object EOGStarterLeastTUImportSorter : Sorter<Node>() {
 }
 
 /**
+ * First, sorts the [TranslationUnitDeclaration]s with the [LeastImportTranslationUnitSorter] and
+ * then gathers all resolution EOG starters; and make sure they really do not have a predecessor,
+ * otherwise we might analyze a node multiple times. The [EOGStarterHolder]s are only sorted as
+ * follows: The [CatchClause]s come last in the order because they actually are executed after a
+ * part of the `try` block and, more importantly, the code before it, which is not guaranteed by the
+ * EOG.
+ */
+object EOGStarterLeastTUImportCatchLastSorter : Sorter<Node>() {
+    override fun invoke(result: TranslationResult): List<Node> =
+        LeastImportTranslationUnitSorter.invoke(result)
+            .flatMap {
+                val allUniqueStarters = it.allEOGStarters.filter { it.prevEOGEdges.isEmpty() }
+                val result = mutableListOf<Node>()
+                result.addAll(allUniqueStarters.filter { it !is CatchClause })
+                result.addAll(allUniqueStarters.filterIsInstance<CatchClause>())
+                result
+            }
+            .toList()
+}
+
+/**
  * Represents an abstract class that enhances the graph before it is persisted. Passes can exist at
  * different levels:
  * - the overall [TranslationResult]
@@ -177,7 +201,14 @@ sealed class Pass<T : Node>(final override val ctx: TranslationContext, val sort
     override val scope: Scope?
         get() = scopeManager.currentScope
 
+    /** This method is called for each "target" that is passed to the pass. */
     abstract fun cleanup()
+
+    /**
+     * This method is called after all targets have been processed. It can be used to do some
+     * cleanup of static fields, e.g., in companion objects.
+     */
+    open fun finalCleanup() {}
 
     /**
      * Check if the pass requires a specific language frontend and if that frontend has been
@@ -298,6 +329,62 @@ fun executePassesInParallel(
 }
 
 /**
+ * Executes all passes in [TranslationConfiguration.registeredPasses] of [ctx] sequentially. This
+ * also takes care of re-running passes using the [markDirty] / [markClean] system.
+ */
+fun executePassesSequentially(
+    ctx: TranslationContext,
+    result: TranslationResult,
+    executedFrontends: Set<LanguageFrontend<*, *>>,
+) {
+    // Execute all passes in sequence. First convert the list of passes to a queue
+    val queue = ArrayDeque<KClass<out Pass<out Node>>>()
+    queue.addAll(ctx.config.registeredPasses.flatten())
+
+    // Keep a map of pass executions, in order to prevent loops
+    val executions = mutableMapOf<KClass<out Pass<out Node>>, Int>()
+
+    while (queue.isNotEmpty()) {
+        // Get the next pass from the queue
+        val pass = queue.removeFirst()
+
+        // Check, if we pass the max executions
+        val numExec = executions[pass] ?: 0
+        if (numExec >= ctx.config.maxPassExecutions) {
+            TranslationManager.Companion.log.warn(
+                "Pass {} reached max executions, skipping",
+                pass.simpleName,
+            )
+            continue
+        }
+
+        // Execute it
+        executePass(pass, ctx, result, executedFrontends)
+
+        // Increment executions
+        executions[pass] = numExec + 1
+
+        // After each pass execution, identify "dirty" nodes and identify which passes
+        // should be run afterward
+        var scheduledPasses = result.dirtyNodes.values.flatten()
+        for (scheduledPass in scheduledPasses) {
+            // If the pass is already in the queue, ignore it
+            if (scheduledPass in queue) {
+                continue
+            }
+
+            // Otherwise, add it to the queue
+            queue.addFirst(scheduledPass)
+        }
+
+        if (result.isCancelled) {
+            TranslationManager.Companion.log.warn("Analysis interrupted, stopping Pass evaluation")
+            break
+        }
+    }
+}
+
+/**
  * Creates a new [Pass] (based on [cls]) and executes it sequentially on all target nodes of
  * [result].
  *
@@ -360,6 +447,7 @@ fun executePass(
         }
     }
 
+    prototype.finalCleanup()
     bench.stop()
 }
 
@@ -481,3 +569,20 @@ val KClass<out Pass<*>>.hardExecuteBefore: Set<KClass<out Pass<*>>>
             .map { it.other }
             .toSet()
     }
+
+/**
+ * Mark the node as dirty for the given pass. This is used to mark nodes that have been changed and
+ * need to be re-analyzed by a specific pass. The pass is specified by the type parameter [T].
+ */
+inline fun <reified T : Pass<*>> Node.markDirty() {
+    translationResult?.markDirty(this, T::class)
+}
+
+/**
+ * Mark the node as clean from the invoked pass. This is used to mark nodes that have been analyzed
+ * and do not need to be re-analyzed anymore. The pass is specified by the context parameter.
+ */
+context(Pass<*>)
+fun Node.markClean() {
+    translationResult?.markClean(this, this@Pass::class)
+}

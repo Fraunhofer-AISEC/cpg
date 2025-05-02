@@ -23,9 +23,10 @@
  *                    \______/ \__|       \______/
  *
  */
+package de.fraunhofer.aisec.codyze.console
+
 import de.fraunhofer.aisec.codyze.AnalysisProject
 import de.fraunhofer.aisec.codyze.AnalysisResult
-import de.fraunhofer.aisec.codyze.console.*
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.TranslationManager
@@ -42,6 +43,7 @@ import io.github.detekt.sarif4k.Location
 import io.github.detekt.sarif4k.Message
 import io.github.detekt.sarif4k.PhysicalLocation
 import io.github.detekt.sarif4k.Region
+import io.github.detekt.sarif4k.Result
 import io.github.detekt.sarif4k.Run
 import io.github.detekt.sarif4k.SarifSchema210
 import io.github.detekt.sarif4k.Tool
@@ -59,10 +61,26 @@ import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
-import kotlin.uuid.Uuid
 
 /** A mock configuration for the translation manager. */
 val mockConfig = TranslationConfiguration.builder().sourceLocations(File("some/path")).build()
+
+/** A mock translation unit. */
+val mockTu =
+    TranslationUnitDeclaration().apply {
+        name = Name("tu1")
+        var func =
+            FunctionDeclaration().apply {
+                name = Name("main")
+                Main(this, os = Agnostic(this))
+            }
+        declarations += func
+        statements +=
+            CallExpression().apply {
+                name = Name("main")
+                prevDFG += func
+            }
+    }
 
 /**
  * A mock version of the [ConsoleService] that returns a mock analysis result containing of a few
@@ -81,22 +99,7 @@ val mockService =
                         components +=
                             Component().apply {
                                 name = Name("mock")
-                                translationUnits +=
-                                    TranslationUnitDeclaration().apply {
-                                        name = Name("tu1")
-                                        id = Uuid.parse("00000000-0000-0000-0000-000000000001")
-                                        var func =
-                                            FunctionDeclaration().apply {
-                                                name = Name("main")
-                                                Main(this, os = Agnostic(this))
-                                            }
-                                        declarations += func
-                                        statements +=
-                                            CallExpression().apply {
-                                                name = Name("main")
-                                                prevDFG += func
-                                            }
-                                    }
+                                translationUnits += mockTu
                             }
                     },
             project = AnalysisProject(name = "mock", projectDir = null, config = mockConfig),
@@ -109,7 +112,7 @@ val mockService =
                                 tool = Tool(driver = ToolComponent(name = "mock")),
                                 results =
                                     listOf(
-                                        io.github.detekt.sarif4k.Result(
+                                        Result(
                                             ruleID = "mock",
                                             message = Message(text = "mock"),
                                             locations =
@@ -119,7 +122,7 @@ val mockService =
                                                             PhysicalLocation(
                                                                 artifactLocation =
                                                                     ArtifactLocation(
-                                                                        uri = "file:mock.cpp"
+                                                                        uri = "file:/mock.cpp"
                                                                     ),
                                                                 region =
                                                                     Region(
@@ -218,8 +221,7 @@ class ApplicationTest {
     fun testGetTranslationUnit() = testApplication {
         application { configureWebconsole(mockService) }
         val client = createClient { install(ContentNegotiation) { json() } }
-        val response =
-            client.get("/api/component/mock/translation-unit/00000000-0000-0000-0000-000000000001")
+        val response = client.get("/api/component/mock/translation-unit/${mockTu.id}")
         assertEquals(HttpStatusCode.OK, response.status)
 
         val translationUnit = response.body<TranslationUnitJSON>()
@@ -239,10 +241,7 @@ class ApplicationTest {
     fun testGetAstNodes() = testApplication {
         application { configureWebconsole(mockService) }
         val client = createClient { install(ContentNegotiation) { json() } }
-        val response =
-            client.get(
-                "/api/component/mock/translation-unit/00000000-0000-0000-0000-000000000001/ast-nodes"
-            )
+        val response = client.get("/api/component/mock/translation-unit/${mockTu.id}/ast-nodes")
         assertEquals(HttpStatusCode.OK, response.status)
 
         val nodes = response.body<List<NodeJSON>>()
@@ -253,10 +252,7 @@ class ApplicationTest {
     fun testGetOverlayNodes() = testApplication {
         application { configureWebconsole(mockService) }
         val client = createClient { install(ContentNegotiation) { json() } }
-        val response =
-            client.get(
-                "/api/component/mock/translation-unit/00000000-0000-0000-0000-000000000001/overlay-nodes"
-            )
+        val response = client.get("/api/component/mock/translation-unit/${mockTu.id}/overlay-nodes")
         assertEquals(HttpStatusCode.OK, response.status)
 
         val nodes = response.body<List<NodeJSON>>()

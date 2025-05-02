@@ -187,7 +187,7 @@ class BasicLatticesRedesignTest {
         assertEquals(aBlaBFooLattice, aBlaBFooLatticeDuplicate)
 
         val emptyLubEmpty = mapLattice.lub(emptyLattice1, emptyLattice1)
-        assertNotSame(emptyLattice1, emptyLubEmpty)
+        assertSame(emptyLattice1, emptyLubEmpty)
         assertEquals(emptyLattice1, emptyLubEmpty)
         assertEquals(Order.EQUAL, mapLattice.compare(emptyLattice1, emptyLubEmpty))
         assertNotSame(emptyLattice2, emptyLubEmpty)
@@ -198,7 +198,7 @@ class BasicLatticesRedesignTest {
         assertNotSame(emptyLattice1, mapLattice.bottom)
         assertNotEquals<Map<String, Set<String>>>(emptyLattice1, emptyLubABla)
         assertEquals(Order.LESSER, mapLattice.compare(emptyLattice1, emptyLubABla))
-        assertNotSame(aBlaLattice1, emptyLubABla)
+        assertSame(aBlaLattice1, emptyLubABla)
         assertEquals(aBlaLattice1, emptyLubABla)
         assertEquals(Order.EQUAL, mapLattice.compare(aBlaLattice1, emptyLubABla))
 

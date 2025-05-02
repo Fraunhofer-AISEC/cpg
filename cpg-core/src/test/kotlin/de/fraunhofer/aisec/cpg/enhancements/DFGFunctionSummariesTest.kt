@@ -262,7 +262,7 @@ class DFGFunctionSummariesTest {
 
         val nextDfg = argA.nextDFGEdges.single()
         assertEquals(
-            setOf(call),
+            mutableListOf(call),
             ((nextDfg as? ContextSensitiveDataflow)?.callingContext as? CallingContextIn)?.calls,
         )
         assertEquals(param0.fullMemoryValues.singleOrNull(), nextDfg.end)

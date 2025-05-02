@@ -23,8 +23,11 @@
  *                    \______/ \__|       \______/
  *
  */
+@file:Suppress("CONTEXT_RECEIVERS_DEPRECATED")
+
 package de.fraunhofer.aisec.cpg
 
+import de.fraunhofer.aisec.cpg.TranslationResult.Companion.DEFAULT_APPLICATION_NAME
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.multiLanguage
@@ -37,10 +40,12 @@ import de.fraunhofer.aisec.cpg.helpers.StatisticsHolder
 import de.fraunhofer.aisec.cpg.passes.ImportDependencies
 import de.fraunhofer.aisec.cpg.passes.ImportResolver
 import de.fraunhofer.aisec.cpg.passes.Pass
+import de.fraunhofer.aisec.cpg.passes.executePassesSequentially
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.reflect.KClass
 import org.neo4j.ogm.annotation.Relationship
 import org.neo4j.ogm.annotation.Transient
 
@@ -181,5 +186,31 @@ class TranslationResult(
     companion object {
         const val SOURCE_LOCATIONS_TO_FRONTEND = "sourceLocationsToFrontend"
         const val DEFAULT_APPLICATION_NAME = "application"
+    }
+
+    /**
+     * A map of nodes that are dirty for a specific pass. This is used to track which nodes need to
+     * be reprocessed again by a specific pass. The function [executePassesSequentially] will use
+     * this in order to populate the queue of passes accordingly.
+     *
+     * Users should not access this directly, but rather use the [markDirty] and [markClean] methods
+     * or the [Node.markDirty] and [Node.markClean] extension function.
+     */
+    @DoNotPersist val dirtyNodes = mutableMapOf<Node, MutableList<KClass<out Pass<*>>>>()
+
+    /**
+     * Marks a node as dirty for a specific pass. This is used to indicate that the node needs to be
+     * reprocessed by the specified pass.
+     */
+    fun markDirty(node: Node, pass: KClass<out Pass<*>>) {
+        dirtyNodes.computeIfAbsent(node) { mutableListOf() }.add(pass)
+    }
+
+    /**
+     * Marks a node as clean for a specific pass. This is used to indicate that the node was
+     * reprocessed by the specified pass anymore.
+     */
+    fun markClean(node: Node, pass: KClass<out Pass<*>>) {
+        dirtyNodes.computeIfAbsent(node) { mutableListOf() }.remove(pass)
     }
 }

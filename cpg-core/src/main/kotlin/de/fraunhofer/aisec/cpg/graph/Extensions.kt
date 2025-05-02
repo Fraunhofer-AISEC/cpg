@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
+import de.fraunhofer.aisec.cpg.passes.reconstructedImportName
 import kotlin.collections.filter
 import kotlin.collections.firstOrNull
 import kotlin.math.absoluteValue
@@ -114,6 +115,17 @@ inline fun <reified T : Node> Node.dfgFrom(): List<T> {
     return this.prevDFG.toList().filterIsInstance<T>()
 }
 
+/**
+ * This function retrieves the [CallExpression]s of [this] by their fully qualified name (FQN). The
+ * match is performed on the [CallExpression.reconstructedImportName].
+ *
+ * @param fqn The fully qualified name of the calls to retrieve.
+ * @return A list of [CallExpression] nodes matching the provided FQN.
+ */
+fun <T : CallExpression> Collection<T>.byFQN(fqn: String): List<T> {
+    return this.filter { call -> call.reconstructedImportName.toString() == fqn }
+}
+
 /** This function returns the *first* node that matches the name on the supplied list of nodes. */
 fun <T : Node> Collection<T>?.byNameOrNull(lookup: String, modifier: SearchModifier): T? {
     return if (modifier == SearchModifier.NONE) {
@@ -170,6 +182,8 @@ operator fun <T : Node> Collection<T>.invoke(predicate: (T) -> Boolean): List<T>
 
 /** A shortcut to filter a list of nodes by their name. */
 operator fun <T : Node> Collection<T>.invoke(lookup: String): List<T> {
+    // TODO: I'm not sure if it wouldn't be more intuitive to use
+    // call.reconstructedImportName.toString().endsWith(lookup) for CallExpressions.
     return this.filter { it.name.lastPartsMatch(lookup) }
 }
 
@@ -732,8 +746,8 @@ fun Node.followPrevCDGUntilHit(
  * Hence, if "fulfilled" is a non-empty list, a path from [this] to such a node is **possible but
  * not mandatory**. If the list "failed" is empty, the path is mandatory.
  */
-inline fun Node.followXUntilHit(
-    noinline x: (Node, Context, List<Node>) -> Collection<Pair<Node, Context>>,
+fun Node.followXUntilHit(
+    x: (Node, Context, List<Node>) -> Collection<Pair<Node, Context>>,
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
     continueAfterHit: Boolean = false,
@@ -831,7 +845,7 @@ inline fun Node.followXUntilHit(
 
     return FulfilledAndFailedPaths(
         fulfilledPaths.toSet().toList(),
-        (failedPaths + failedLoops).toSet().toList(),
+        (failedPaths + failedLoops).toSet().toList().map { Pair(it.first, it.second) },
     )
 }
 
@@ -880,7 +894,8 @@ fun Node.followNextFullDFGEdgesUntilHit(
 
 /**
  * Returns a [Collection] of last nodes in the EOG of this [FunctionDeclaration]. If there's no
- * function body, it will return a list of this function declaration.
+ * function body, it will return a list of this function declaration. This function does not
+ * propagate assumptions currently.
  */
 val FunctionDeclaration.lastEOGNodes: Collection<Node>
     get() {
@@ -967,7 +982,7 @@ fun Node.followPrevEOG(predicate: (Edge<*>) -> Boolean): List<Edge<*>>? {
  *
  * It returns only a single possible path even if multiple paths are possible.
  */
-fun Node.followPrevFullDFG(predicate: (Node) -> Boolean): MutableList<Node>? {
+fun Node.followPrevFullDFG(predicate: (Node) -> Boolean): List<Node>? {
     return followPrevFullDFGEdgesUntilHit(
             collectFailedPaths = false,
             findAllPossiblePaths = false,
@@ -975,7 +990,6 @@ fun Node.followPrevFullDFG(predicate: (Node) -> Boolean): MutableList<Node>? {
         )
         .fulfilled
         .minByOrNull { it.size }
-        ?.toMutableList()
 }
 
 /**
@@ -985,7 +999,7 @@ fun Node.followPrevFullDFG(predicate: (Node) -> Boolean): MutableList<Node>? {
  *
  * It returns only a single possible path even if multiple paths are possible.
  */
-fun Node.followPrevDFG(predicate: (Node) -> Boolean): MutableList<Node>? {
+fun Node.followPrevDFG(predicate: (Node) -> Boolean): List<Node>? {
     return followDFGEdgesUntilHit(
             collectFailedPaths = false,
             findAllPossiblePaths = false,
@@ -994,7 +1008,6 @@ fun Node.followPrevDFG(predicate: (Node) -> Boolean): MutableList<Node>? {
         )
         .fulfilled
         .minByOrNull { it.size }
-        ?.toMutableList()
 }
 
 /** Returns all [Node] children in the AST-subgraph, starting with this [Node]. */
@@ -1345,19 +1358,20 @@ fun Expression?.unwrapReference(): Reference? {
 /** Returns the [TranslationUnitDeclaration] where this node is located in. */
 val Node.translationUnit: TranslationUnitDeclaration?
     get() {
-        return firstParentOrNull<TranslationUnitDeclaration>()
+        return this as? TranslationUnitDeclaration
+            ?: firstParentOrNull<TranslationUnitDeclaration>()
     }
 
 /** Returns the [TranslationResult] where this node is located in. */
 val Node.translationResult: TranslationResult?
     get() {
-        return firstParentOrNull<TranslationResult>()
+        return this as? TranslationResult ?: firstParentOrNull<TranslationResult>()
     }
 
 /** Returns the [Component] where this node is located in. */
 val Node.component: Component?
     get() {
-        return firstParentOrNull<Component>()
+        return this as? Component ?: firstParentOrNull<Component>()
     }
 
 /**
