@@ -1660,12 +1660,12 @@ fun PointsToState.push(
         } == true
     }
 
-    val newGeneralState =
-        this.innerLattice1.lub(
-            currentState.generalState,
-            MapLattice.Element(newNode to newLatticeCopy),
-        )
-    return PointsToStateElement(newGeneralState, currentState.declarationsState)
+    this.innerLattice1.lub(
+        currentState.generalState,
+        MapLattice.Element(newNode to newLatticeCopy),
+        true,
+    )
+    return currentState
 }
 
 /** Pushes the [newNode] and its [newLatticeElement] to the [declarationsState]. */
@@ -1688,12 +1688,12 @@ fun PointsToState.pushToDeclarationsState(
         } == true
     }
 
-    val newDeclarationsState =
-        this.innerLattice2.lub(
-            currentState.declarationsState,
-            MapLattice.Element(newNode to newLatticeCopy),
-        )
-    return PointsToStateElement(currentState.generalState, newDeclarationsState)
+    this.innerLattice2.lub(
+        currentState.declarationsState,
+        MapLattice.Element(newNode to newLatticeCopy),
+        true,
+    )
+    return currentState
 }
 
 /** Check if `node` has an entry in the DeclarationState */
@@ -2216,8 +2216,8 @@ fun PointsToStateElement.updateValues(
     // Node and short FS yes or no
     lastWrites: IdentitySet<Pair<Node, EqualLinkedHashSet<Any>>>,
 ): PointsToStateElement {
-    val newDeclState = this.declarationsState.duplicate()
-    val newGenState = this.generalState.duplicate()
+    val newDeclState = this.declarationsState
+    val newGenState = this.generalState
 
     /* Update the declarationState for the addresses */
     destinationAddresses.forEach { destAddr ->
@@ -2307,7 +2307,5 @@ fun PointsToStateElement.updateValues(
         }
     }
 
-    var doubleState = PointsToStateElement(newGenState, newDeclState)
-
-    return doubleState
+    return this
 }
