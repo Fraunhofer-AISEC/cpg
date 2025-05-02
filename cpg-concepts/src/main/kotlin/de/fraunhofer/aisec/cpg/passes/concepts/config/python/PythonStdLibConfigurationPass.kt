@@ -91,7 +91,7 @@ class PythonStdLibConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) 
                 }
             paths
                 ?.fulfilled
-                ?.mapNotNull { it.lastOrNull() as? Configuration }
+                ?.mapNotNull { it.nodes.lastOrNull() as? Configuration }
                 ?.toSet()
                 ?.forEach { conf ->
                     newLoadConfiguration(
@@ -120,7 +120,7 @@ class PythonStdLibConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) 
         // We need to check, whether we access a group or an option
         val path =
             sub.arrayExpression.followPrevDFG { it is Configuration || it is ConfigurationGroup }
-        val last = path?.lastOrNull()
+        val last = path?.nodes?.lastOrNull()
         return when (last) {
             // If we can follow it directly to the configuration node, then we access a group
             is Configuration -> {

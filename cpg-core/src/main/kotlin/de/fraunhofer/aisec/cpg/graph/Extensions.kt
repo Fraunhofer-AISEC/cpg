@@ -240,10 +240,10 @@ enum class FailureReason {
 }
 
 /**
- * This data class represents a path of nodes as some paths are not just lists of edges, but instead can be traversed by
- * a predicate.
+ * This data class represents a path of nodes as some paths are not just lists of edges, but instead
+ * can be traversed by a predicate.
  */
-data class NodePath(val path: List<Node>): HasAssumptions {
+data class NodePath(val nodes: List<Node>) : HasAssumptions {
     override val assumptions: MutableList<Assumption> = mutableListOf()
 }
 
@@ -290,7 +290,7 @@ fun Node.followPrevFullDFGEdgesUntilHit(
  * Iterates the prev full DFG edges until there are no more edges available (or until a loop is
  * detected). Returns a list of possible paths (each path is represented by a list of nodes).
  */
-fun Node.collectAllPrevFullDFGPaths(): List<List<Edge<*>>> {
+fun Node.collectAllPrevFullDFGPaths(): List<NodePath> {
     // We make everything fail to reach the end of the DFG. Then, we use the stuff collected in the
     // failed paths (everything)
     return this.followPrevFullDFGEdgesUntilHit(
@@ -373,7 +373,7 @@ class Context(
     val indexStack: SimpleStack<IndexedDataflowGranularity> = SimpleStack(),
     val callStack: SimpleStack<CallExpression> = SimpleStack(),
     var steps: Int,
-): HasAssumptions {
+) : HasAssumptions {
 
     override val assumptions: MutableList<Assumption> = mutableListOf()
 
@@ -456,7 +456,7 @@ class SimpleStack<T> {
 fun Node.collectAllNextDFGPaths(
     interproceduralAnalysis: Boolean = true,
     contextSensitive: Boolean = true,
-): List<List<Edge<*>>> {
+): List<NodePath> {
     // We make everything fail to reach the end of the CDG. Then, we use the stuff collected in the
     // failed paths (everything)
     return followDFGEdgesUntilHit(
@@ -485,7 +485,7 @@ fun Node.collectAllNextDFGPaths(
  * Iterates the next full DFG edges until there are no more edges available (or until a loop is
  * detected). Returns a list of possible paths (each path is represented by a list of nodes).
  */
-fun Node.collectAllNextFullDFGPaths(): List<List<Edge<*>>> {
+fun Node.collectAllNextFullDFGPaths(): List<NodePath> {
     // We make everything fail to reach the end of the CDG. Then, we use the stuff collected in the
     // failed paths (everything)
     return this.followNextFullDFGEdgesUntilHit(
@@ -502,7 +502,7 @@ fun Node.collectAllNextFullDFGPaths(): List<List<Edge<*>>> {
  * Iterates the next EOG edges until there are no more edges available (or until a loop is
  * detected). Returns a list of possible paths (each path is represented by a list of nodes).
  */
-fun Node.collectAllNextEOGPaths(interproceduralAnalysis: Boolean = true): List<List<Edge<*>>> {
+fun Node.collectAllNextEOGPaths(interproceduralAnalysis: Boolean = true): List<NodePath> {
     // We make everything fail to reach the end of the CDG. Then, we use the stuff collected in the
     // failed paths (everything)
     return this.followEOGEdgesUntilHit(
@@ -520,7 +520,7 @@ fun Node.collectAllNextEOGPaths(interproceduralAnalysis: Boolean = true): List<L
  * Iterates the prev PDG edges until there are no more edges available (or until a loop is
  * detected). Returns a list of possible paths (each path is represented by a list of nodes).
  */
-fun Node.collectAllPrevEOGPaths(interproceduralAnalysis: Boolean): List<List<Edge<*>>> {
+fun Node.collectAllPrevEOGPaths(interproceduralAnalysis: Boolean): List<NodePath> {
     // We make everything fail to reach the end of the CDG. Then, we use the stuff collected in the
     // failed paths (everything)
     return this.followEOGEdgesUntilHit(
@@ -539,7 +539,7 @@ fun Node.collectAllPrevEOGPaths(interproceduralAnalysis: Boolean): List<List<Edg
  * Iterates the next PDG edges until there are no more edges available (or until a loop is
  * detected). Returns a list of possible paths (each path is represented by a list of nodes).
  */
-fun Node.collectAllNextPDGGPaths(): List<List<Edge<*>>> {
+fun Node.collectAllNextPDGGPaths(): List<NodePath> {
     // We make everything fail to reach the end of the CDG. Then, we use the stuff collected in the
     // failed paths (everything)
     return this.followNextPDGUntilHit(collectFailedPaths = true, findAllPossiblePaths = true) {
@@ -553,7 +553,7 @@ fun Node.collectAllNextPDGGPaths(): List<List<Edge<*>>> {
  * Iterates the prev PDG edges until there are no more edges available (or until a loop is
  * detected). Returns a list of possible paths (each path is represented by a list of nodes).
  */
-fun Node.collectAllPrevPDGPaths(interproceduralAnalysis: Boolean): List<List<Edge<*>>> {
+fun Node.collectAllPrevPDGPaths(interproceduralAnalysis: Boolean): List<NodePath> {
     // We make everything fail to reach the end of the CDG. Then, we use the stuff collected in the
     // failed paths (everything)
     return this.followPrevPDGUntilHit(
@@ -571,7 +571,7 @@ fun Node.collectAllPrevPDGPaths(interproceduralAnalysis: Boolean): List<List<Edg
  * Iterates the prev CDG edges until there are no more edges available (or until a loop is
  * detected). Returns a list of possible paths (each path is represented by a list of nodes).
  */
-fun Node.collectAllPrevCDGPaths(interproceduralAnalysis: Boolean): List<List<Edge<*>>> {
+fun Node.collectAllPrevCDGPaths(interproceduralAnalysis: Boolean): List<NodePath> {
     // We make everything fail to reach the end of the CDG. Then, we use the stuff collected in the
     // failed paths (everything)
     return this.followPrevCDGUntilHit(
@@ -589,7 +589,7 @@ fun Node.collectAllPrevCDGPaths(interproceduralAnalysis: Boolean): List<List<Edg
  * Iterates the next CDG edges until there are no more edges available (or until a loop is
  * detected). Returns a list of possible paths (each path is represented by a list of nodes).
  */
-fun Node.collectAllNextCDGPaths(interproceduralAnalysis: Boolean): List<List<Edge<*>>> {
+fun Node.collectAllNextCDGPaths(interproceduralAnalysis: Boolean): List<NodePath> {
     // We make everything fail to reach the end of the CDG. Then, we use the stuff collected in the
     // failed paths (everything)
     return this.followNextCDGUntilHit(
@@ -769,10 +769,10 @@ fun Node.followXUntilHit(
 ): FulfilledAndFailedPaths {
     // Looks complicated but at least it's not recursive...
     // result: List of paths (between from and to)
-    val fulfilledPaths = mutableListOf<List<Edge<*>>>()
+    val fulfilledPaths = mutableListOf<NodePath>()
     // failedPaths: All the paths which do not satisfy "predicate"
-    val failedPaths = mutableListOf<Pair<FailureReason, List<Edge<*>>>>()
-    val loopingPaths = mutableListOf<List<Edge<*>>>()
+    val failedPaths = mutableListOf<Pair<FailureReason, NodePath>>()
+    val loopingPaths = mutableListOf<NodePath>()
     // The list of paths where we're not done yet.
     val worklist = identitySetOf<List<Pair<Node, Context>>>()
     worklist.add(listOf(this to context)) // We start only with the "from" node (=this)
@@ -794,7 +794,11 @@ fun Node.followXUntilHit(
         if (nextNodes.isEmpty() && collectFailedPaths) {
             // TODO: How to determine if this path is really at the end or if it exceeded the number
             // of steps?
-            failedPaths.add(FailureReason.PATH_ENDED to currentPath.map { it.first })
+            failedPaths.add(
+                FailureReason.PATH_ENDED to
+                    NodePath(currentPath.map { it.first })
+                        .addAssumptionDependences(currentPath.map { it.second }.toList())
+            )
         }
 
         for ((next, newContext) in nextNodes) {
@@ -802,12 +806,17 @@ fun Node.followXUntilHit(
             if (predicate(next)) {
                 // We ended up in the node fulfilling "predicate", so we're done for this path. Add
                 // the path to the results.
-                fulfilledPaths.add(currentPathNodes.toMutableList() + next)
+                fulfilledPaths.add(
+                    NodePath(currentPathNodes.toMutableList() + next)
+                        .addAssumptionDependences(currentPath.map { it.second } + newContext)
+                )
                 continue // Don't add this path anymore. The requirement is satisfied.
             }
             if (earlyTermination(next, currentContext)) {
                 failedPaths.add(
-                    FailureReason.HIT_EARLY_TERMINATION to currentPath.map { it.first } + next
+                    FailureReason.HIT_EARLY_TERMINATION to
+                        NodePath(currentPath.map { it.first } + next)
+                            .addAssumptionDependences(currentPath.map { it.second } + newContext)
                 )
                 continue // Don't add this path anymore. We already failed.
             }
@@ -822,7 +831,10 @@ fun Node.followXUntilHit(
                 worklist.add(currentPath.toMutableList() + (next to newContext.inc()))
             } else {
                 // There's a loop.
-                loopingPaths.add(currentPathNodes.toMutableList() + next)
+                loopingPaths.add(
+                    NodePath(currentPathNodes + next)
+                        .addAssumptionDependences(currentPath.map { it.second } + newContext)
+                )
             }
         }
     }
@@ -831,10 +843,12 @@ fun Node.followXUntilHit(
         loopingPaths
             .filter { path ->
                 fulfilledPaths.none {
-                    it.size > path.size && it.subList(0, path.size - 1) == path
+                    it.nodes.size > path.nodes.size &&
+                        it.nodes.subList(0, path.nodes.size - 1) == path.nodes
                 } &&
                     failedPaths.none {
-                        it.second.size > path.size && it.second.subList(0, path.size - 1) == path
+                        it.second.nodes.size > path.nodes.size &&
+                            it.second.nodes.subList(0, path.nodes.size - 1) == path.nodes
                     }
             }
             .map { FailureReason.PATH_ENDED to it }
@@ -895,7 +909,7 @@ fun Node.followNextFullDFGEdgesUntilHit(
  */
 val FunctionDeclaration.lastEOGNodes: Collection<Node>
     get() {
-        val lastEOG = collectAllNextEOGPaths(false).flatMap { it.last().end.prevEOGEdges }
+        val lastEOG = collectAllNextEOGPaths(false).flatMap { it.nodes.last().prevEOGEdges }
         return if (lastEOG.isEmpty()) {
             // In some cases, we do not have a body, so we have to jump directly to the
             // function declaration.
@@ -978,14 +992,14 @@ fun Node.followPrevEOG(predicate: (Edge<*>) -> Boolean): List<Edge<*>>? {
  *
  * It returns only a single possible path even if multiple paths are possible.
  */
-fun Node.followPrevFullDFG(predicate: (Node) -> Boolean): List<Edge<*>>? {
+fun Node.followPrevFullDFG(predicate: (Node) -> Boolean): NodePath? {
     return followPrevFullDFGEdgesUntilHit(
             collectFailedPaths = false,
             findAllPossiblePaths = false,
             predicate = predicate,
         )
         .fulfilled
-        .minByOrNull { it.size }
+        .minByOrNull { it.nodes.size }
 }
 
 /**
@@ -995,7 +1009,7 @@ fun Node.followPrevFullDFG(predicate: (Node) -> Boolean): List<Edge<*>>? {
  *
  * It returns only a single possible path even if multiple paths are possible.
  */
-fun Node.followPrevDFG(predicate: (Node) -> Boolean): List<Edge<*>>? {
+fun Node.followPrevDFG(predicate: (Node) -> Boolean): NodePath? {
     return followDFGEdgesUntilHit(
             collectFailedPaths = false,
             findAllPossiblePaths = false,
@@ -1003,7 +1017,7 @@ fun Node.followPrevDFG(predicate: (Node) -> Boolean): List<Edge<*>>? {
             direction = Backward(GraphToFollow.DFG),
         )
         .fulfilled
-        .minByOrNull { it.size }
+        .minByOrNull { it.nodes.size }
 }
 
 /** Returns all [Node] children in the AST-subgraph, starting with this [Node]. */
