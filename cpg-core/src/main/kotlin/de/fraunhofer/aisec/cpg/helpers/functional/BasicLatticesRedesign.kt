@@ -316,6 +316,7 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
                     throw IllegalArgumentException(
                         "$other should be of type MapLattice.Element<K, V> but is of type ${other.javaClass}"
                     )
+                this === other -> Order.EQUAL
                 this.keys == other.keys &&
                     this.entries.all { (k, v) ->
                         other[k]?.let { v.compare(it) == Order.EQUAL } == true
@@ -339,6 +340,8 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
                 one: Element<K, V>,
                 two: Element<K, V>,
             ): Boolean {
+                if (one === two) return true
+
                 return one.keys.size >= two.keys.size &&
                     one.keys.containsAll(two.keys) &&
                     one.entries.all { (k, v) ->
@@ -369,6 +372,8 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
                         }
                     }
                     one
+                } else if (comp == Order.LESSER) {
+                    two
                 } else {
                     val allKeys = one.keys.toIdentitySet()
                     allKeys += two.keys
@@ -444,6 +449,7 @@ class TupleLattice<S : Lattice.Element, T : Lattice.Element>(
                 throw IllegalArgumentException(
                     "$other should be of type TupleLattice.Element<S, T> but is of type ${other.javaClass}"
                 )
+            if (this === other) return Order.EQUAL
 
             val result1 = this.first.compare(other.first)
             val result2 = this.second.compare(other.second)
@@ -524,6 +530,7 @@ class TripleLattice<R : Lattice.Element, S : Lattice.Element, T : Lattice.Elemen
                 throw IllegalArgumentException(
                     "$other should be of type TripleLattice.Element<R, S, T> but is of type ${other.javaClass}"
                 )
+            if (this === other) return Order.EQUAL
 
             val result1 = this.first.compare(other.first)
             val result2 = this.second.compare(other.second)
