@@ -219,6 +219,7 @@ open class EOGConceptPass(ctx: TranslationContext) :
                 currentNode to
                     PowersetLattice.Element<OverlayNode>(*filteredAddedOverlays.toTypedArray())
             ),
+            true,
         )
     }
 
