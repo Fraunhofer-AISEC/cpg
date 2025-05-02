@@ -527,7 +527,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 )
                                 .fulfilled
                                 .map { it.last() }
-                                .toIdentitySet()
                                 .forEach { sourceParamValue ->
                                     val matchingDeclarations =
                                         node.parameters.filter {
@@ -1351,7 +1350,10 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
          * In C(++), both the lhs and the rhs should only have one element
          */
         if (currentNode.lhs.size == 1 && currentNode.rhs.size == 1) {
-            val sources = currentNode.rhs.flatMapTo(IdentitySet()) { doubleState.getValues(it) }
+            val sources =
+                currentNode.rhs.flatMapTo(IdentitySet<Pair<Node?, Boolean>>()) {
+                    doubleState.getValues(it)
+                }
             val destinations: IdentitySet<Node> = currentNode.lhs.toIdentitySet()
             val destinationsAddresses =
                 destinations.flatMapTo(IdentitySet()) { doubleState.getAddresses(it) }
@@ -1360,7 +1362,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             doubleState =
                 doubleState.updateValues(
                     lattice,
-                    sources.toIdentitySet<Pair<Node?, Boolean>>(),
+                    sources,
                     destinations,
                     destinationsAddresses,
                     lastWrites,
@@ -2067,7 +2069,7 @@ fun PointsToStateElement.getAddresses(node: Node): IdentitySet<Node> {
             // information has not yet been propagated to the node, so we check out the state
             val ret = node.memoryAddresses.toIdentitySet<Node>()
             if (ret.isNotEmpty()) return ret
-            else return this.declarationsState[node]?.first?.toIdentitySet() ?: identitySetOf()
+            else return this.declarationsState[node]?.first ?: identitySetOf()
         }
         is MemoryAddress -> {
             identitySetOf(node)
@@ -2133,14 +2135,12 @@ fun PointsToStateElement.getAddresses(node: Node): IdentitySet<Node> {
         }
         is SubscriptExpression -> {
             val localName = getNodeName(node.subscriptExpression)
-            this.getValues(node.base)
-                .flatMap {
-                    fetchFieldAddresses(
-                        identitySetOf(it.first),
-                        Name(localName.localName, getNodeName(it.first)),
-                    )
-                }
-                .toIdentitySet()
+            this.getValues(node.base).flatMapTo(identitySetOf()) {
+                fetchFieldAddresses(
+                    identitySetOf(it.first),
+                    Name(localName.localName, getNodeName(it.first)),
+                )
+            }
         }
         else -> identitySetOf(node)
     }
