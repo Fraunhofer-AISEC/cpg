@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.concepts.auth.Authentication
+import de.fraunhofer.aisec.cpg.graph.concepts.auth.Authorization
 import de.fraunhofer.aisec.cpg.graph.concepts.newConcept
 import de.fraunhofer.aisec.cpg.graph.concepts.newOperation
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
@@ -96,6 +97,7 @@ fun MetadataProvider.newHttpEndpoint(
     path: String,
     arguments: List<Node>,
     authentication: Authentication?,
+    authorization: Authorization?,
     connect: Boolean,
 ) =
     newConcept(
@@ -105,6 +107,7 @@ fun MetadataProvider.newHttpEndpoint(
                 path = path,
                 arguments = arguments,
                 authentication = authentication,
+                authorization = authorization,
             )
         },
         underlyingNode = underlyingNode,
