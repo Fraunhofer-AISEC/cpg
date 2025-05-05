@@ -257,7 +257,7 @@ class DFGTest {
         assertNotNull(paths)
         assertEquals(1, paths.fulfilled.size)
         val path = paths.fulfilled.first()
-        assertEquals(22, path.size)
+        assertEquals(22, path.nodes.size)
     }
 
     @Test
