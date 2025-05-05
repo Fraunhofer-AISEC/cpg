@@ -120,7 +120,11 @@ class SetFileMask(underlyingNode: Node? = null, concept: File, val mask: Long) :
  * @param concept The corresponding [File] node.
  */
 class CloseFile(underlyingNode: Node? = null, concept: File) :
-    FileOperation(underlyingNode = underlyingNode, file = concept), IsFile {}
+    FileOperation(underlyingNode = underlyingNode, file = concept), IsFile {
+    override fun equals(other: Any?): Boolean {
+        return other is CloseFile && super.equals(other)
+    }
+}
 
 /**
  * Represents deleting a file.
@@ -129,7 +133,11 @@ class CloseFile(underlyingNode: Node? = null, concept: File) :
  * @param concept The corresponding [File] node.
  */
 class DeleteFile(underlyingNode: Node? = null, concept: File) :
-    FileOperation(underlyingNode = underlyingNode, file = concept), IsFile {}
+    FileOperation(underlyingNode = underlyingNode, file = concept), IsFile {
+    override fun equals(other: Any?): Boolean {
+        return other is DeleteFile && super.equals(other)
+    }
+}
 
 /**
  * Represents opening a file. This is usually done with the same underlying node the [concept] field
@@ -139,7 +147,11 @@ class DeleteFile(underlyingNode: Node? = null, concept: File) :
  * @param concept The corresponding [File] node.
  */
 class OpenFile(underlyingNode: Node? = null, concept: File) :
-    FileOperation(underlyingNode = underlyingNode, file = concept), IsFile {}
+    FileOperation(underlyingNode = underlyingNode, file = concept), IsFile {
+    override fun equals(other: Any?): Boolean {
+        return other is OpenFile && super.equals(other)
+    }
+}
 
 /**
  * Represents reading from a file.
@@ -152,6 +164,10 @@ class ReadFile(underlyingNode: Node? = null, concept: File) :
     override fun setDFG() {
         this.file.nextDFG += this
         this.underlyingNode?.let { underlyingNode -> this.nextDFG += underlyingNode }
+    }
+
+    override fun equals(other: Any?): Boolean {
+        return other is ReadFile && super.equals(other)
     }
 }
 

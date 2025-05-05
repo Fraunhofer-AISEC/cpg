@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase.Companion.fromFile
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.passes.concepts.file.python.PythonFileConceptPass
+import de.fraunhofer.aisec.cpg.passes.concepts.file.python.PythonFileConceptTask
 import de.fraunhofer.aisec.cpg.persistence.persist
 import java.io.File
 import java.net.ConnectException
@@ -496,6 +497,9 @@ class Application : Callable<Int> {
             translationConfiguration.registerPass<ControlDependenceGraphPass>()
             translationConfiguration.registerPass<ProgramDependenceGraphPass>()
             translationConfiguration.registerPass<PythonFileConceptPass>()
+            translationConfiguration.configurePass<PythonFileConceptPass>(
+                PassConfiguration().registerTask<PythonFileConceptTask>()
+            )
             // translationConfiguration.registerPass<PythonEncryptionPass>()
         }
         if (customPasses != "DEFAULT") {
