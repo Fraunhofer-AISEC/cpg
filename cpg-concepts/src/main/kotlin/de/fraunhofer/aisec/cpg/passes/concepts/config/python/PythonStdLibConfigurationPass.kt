@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.passes.concepts.config.python
 
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.evaluation.MultiValueEvaluator
+import de.fraunhofer.aisec.cpg.frontends.UnknownLanguage.addAssumptionDependence
 import de.fraunhofer.aisec.cpg.graph.Backward
 import de.fraunhofer.aisec.cpg.graph.GraphToFollow
 import de.fraunhofer.aisec.cpg.graph.Name
@@ -91,15 +92,18 @@ class PythonStdLibConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) 
                 }
             paths
                 ?.fulfilled
-                ?.mapNotNull { it.lastOrNull() as? Configuration }
+                ?.map { Pair(it, it.nodes.lastOrNull() as? Configuration) }
                 ?.toSet()
-                ?.forEach { conf ->
-                    newLoadConfiguration(
-                        call,
-                        concept = conf,
-                        fileExpression = firstArgument,
-                        connect = true,
-                    )
+                ?.forEach { pathToConfig ->
+                    pathToConfig.second?.let {
+                        newLoadConfiguration(
+                                call,
+                                concept = it,
+                                fileExpression = firstArgument,
+                                connect = true,
+                            )
+                            .addAssumptionDependence(pathToConfig.first)
+                    }
                 }
         }
 
@@ -120,14 +124,14 @@ class PythonStdLibConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) 
         // We need to check, whether we access a group or an option
         val path =
             sub.arrayExpression.followPrevDFG { it is Configuration || it is ConfigurationGroup }
-        val last = path?.lastOrNull()
+        val last = path?.nodes?.lastOrNull()
         return when (last) {
             // If we can follow it directly to the configuration node, then we access a group
             is Configuration -> {
-                handleGroupAccess(last, sub)
+                handleGroupAccess(last, sub)?.onEach { it.addAssumptionDependence(path) }
             }
             is ConfigurationGroup -> {
-                handleOptionAccess(last, sub)
+                handleOptionAccess(last, sub).onEach { it.addAssumptionDependence(path) }
             }
             else -> null
         }

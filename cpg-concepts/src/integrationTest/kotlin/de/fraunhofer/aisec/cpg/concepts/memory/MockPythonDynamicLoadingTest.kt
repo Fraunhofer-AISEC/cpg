@@ -66,7 +66,7 @@ class MockPythonDynamicPass(ctx: TranslationContext) : ConceptPass(ctx) {
                         it is DynamicLoading
                     }
                 paths.fulfilled.forEach { path ->
-                    val dynamicLoading = path.last() as DynamicLoading
+                    val dynamicLoading = path.nodes.last() as DynamicLoading
 
                     val record = node.translationResult.records["impl.simple.SimpleImplClass"]
                     if (record == null) {

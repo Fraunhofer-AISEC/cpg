@@ -77,9 +77,9 @@ class DataflowQueriesTest {
         queryResultMayA.children.forEach {
             // There are multiple paths which have their own query tree. The children here hold the
             // list of visited nodes in the value.
-            val path = it.children.singleOrNull()?.value as? List<*>
+            val path = it.children.singleOrNull()?.value as? NodePath
             assertNotNull(path, "There should be a path represented by a list of nodes")
-            path.forEach { node ->
+            path.nodes.forEach { node ->
                 assertIs<Node>(node, "The list should contain nodes")
                 assertLocalName(
                     "main",
@@ -135,9 +135,9 @@ class DataflowQueriesTest {
         queryResultMustA.children.forEach {
             // There are multiple paths which have their own query tree. The children here hold the
             // list of visited nodes in the value.
-            val path = it.children.singleOrNull()?.value as? List<*>
+            val path = it.children.singleOrNull()?.value as? NodePath
             assertNotNull(path, "There should be a path represented by a list of nodes")
-            path.forEach { node ->
+            path.nodes.forEach { node ->
                 assertIs<Node>(node, "The list should contain nodes")
                 assertLocalName(
                     "main",
@@ -164,9 +164,9 @@ class DataflowQueriesTest {
         queryResultMayB.children.forEach {
             // There are multiple paths which have their own query tree. The children here hold the
             // list of visited nodes in the value.
-            val path = it.children.singleOrNull()?.value as? List<*>
+            val path = it.children.singleOrNull()?.value as? NodePath
             assertNotNull(path, "There should be a path represented by a list of nodes")
-            path.forEach { node ->
+            path.nodes.forEach { node ->
                 assertIs<Node>(node, "The list should contain nodes")
                 assertLocalName(
                     "main",
@@ -193,9 +193,9 @@ class DataflowQueriesTest {
         queryResultMustB.children.forEach {
             // There are multiple paths which have their own query tree. The children here hold the
             // list of visited nodes in the value.
-            val path = it.children.singleOrNull()?.value as? List<*>
+            val path = it.children.singleOrNull()?.value as? NodePath
             assertNotNull(path, "There should be a path represented by a list of nodes")
-            path.forEach { node ->
+            path.nodes.forEach { node ->
                 assertIs<Node>(node, "The list should contain nodes")
                 assertLocalName(
                     "main",
@@ -242,9 +242,9 @@ class DataflowQueriesTest {
         queryResultMay.children.forEach {
             // There are multiple paths which have their own query tree. The children here hold the
             // list of visited nodes in the value.
-            val path = it.children.singleOrNull()?.value as? List<*>
+            val path = it.children.singleOrNull()?.value as? NodePath
             assertNotNull(path, "There should be a path represented by a list of nodes")
-            path.forEach { node ->
+            path.nodes.forEach { node ->
                 assertIs<Node>(node, "The list should contain nodes")
                 assertLocalName(
                     "main",
@@ -274,9 +274,9 @@ class DataflowQueriesTest {
         queryResultMust.children.forEach {
             // There are multiple paths which have their own query tree. The children here hold the
             // list of visited nodes in the value.
-            val path = it.children.singleOrNull()?.value as? List<*>
+            val path = it.children.singleOrNull()?.value as? NodePath
             assertNotNull(path, "There should be a path represented by a list of nodes")
-            path.forEach { node ->
+            path.nodes.forEach { node ->
                 assertIs<Node>(node, "The list should contain nodes")
                 assertLocalName(
                     "main",
@@ -336,9 +336,9 @@ class DataflowQueriesTest {
         queryResultMayA.children.forEach {
             // There are multiple paths which have their own query tree. The children here hold the
             // list of visited nodes in the value.
-            val path = it.children.singleOrNull()?.value as? List<*>
+            val path = it.children.singleOrNull()?.value as? NodePath
             assertNotNull(path, "There should be a path represented by a list of nodes")
-            path.forEach { node ->
+            path.nodes.forEach { node ->
                 assertIs<Node>(node, "The list should contain nodes")
                 assertLocalName(
                     "main",
@@ -397,9 +397,9 @@ class DataflowQueriesTest {
         queryResultMustA.children.forEach {
             // There are multiple paths which have their own query tree. The children here hold the
             // list of visited nodes in the value.
-            val path = it.children.singleOrNull()?.value as? List<*>
+            val path = it.children.singleOrNull()?.value as? NodePath
             assertNotNull(path, "There should be a path represented by a list of nodes")
-            path.forEach { node ->
+            path.nodes.forEach { node ->
                 assertIs<Node>(node, "The list should contain nodes")
                 assertLocalName(
                     "main",
@@ -426,9 +426,9 @@ class DataflowQueriesTest {
         queryResultMayBTo5.children.forEach {
             // There are multiple paths which have their own query tree. The children here hold the
             // list of visited nodes in the value.
-            val path = it.children.singleOrNull()?.value as? List<*>
+            val path = it.children.singleOrNull()?.value as? NodePath
             assertNotNull(path, "There should be a path represented by a list of nodes")
-            path.forEach { node ->
+            path.nodes.forEach { node ->
                 assertIs<Node>(node, "The list should contain nodes")
                 assertLocalName(
                     "main",
@@ -455,9 +455,9 @@ class DataflowQueriesTest {
         queryResultMustBTo5.children.forEach {
             // There are multiple paths which have their own query tree. The children here hold the
             // list of visited nodes in the value.
-            val path = it.children.singleOrNull()?.value as? List<*>
+            val path = it.children.singleOrNull()?.value as? NodePath
             assertNotNull(path, "There should be a path represented by a list of nodes")
-            path.forEach { node ->
+            path.nodes.forEach { node ->
                 assertIs<Node>(node, "The list should contain nodes")
                 assertLocalName(
                     "main",
@@ -484,9 +484,9 @@ class DataflowQueriesTest {
         queryResultMayBToBla.children.forEach {
             // There are multiple paths which have their own query tree. The children here hold the
             // list of visited nodes in the value.
-            val path = it.children.singleOrNull()?.value as? List<*>
+            val path = it.children.singleOrNull()?.value as? NodePath
             assertNotNull(path, "There should be a path represented by a list of nodes")
-            path.forEach { node ->
+            path.nodes.forEach { node ->
                 assertIs<Node>(node, "The list should contain nodes")
                 assertLocalName(
                     "main",
@@ -513,9 +513,9 @@ class DataflowQueriesTest {
         queryResultMustBToBla.children.forEach {
             // There are multiple paths which have their own query tree. The children here hold the
             // list of visited nodes in the value.
-            val path = it.children.singleOrNull()?.value as? List<*>
+            val path = it.children.singleOrNull()?.value as? NodePath
             assertNotNull(path, "There should be a path represented by a list of nodes")
-            path.forEach { node ->
+            path.nodes.forEach { node ->
                 assertIs<Node>(node, "The list should contain nodes")
                 assertLocalName(
                     "main",

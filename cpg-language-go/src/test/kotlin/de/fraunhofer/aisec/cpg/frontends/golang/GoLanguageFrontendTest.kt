@@ -90,7 +90,7 @@ class GoLanguageFrontendTest : BaseTest() {
         val path = data.firstAssignment?.followPrevDFG { it is KeyValueExpression }
 
         assertNotNull(path)
-        assertEquals(3, path.size)
+        assertEquals(3, path.nodes.size)
     }
 
     @Test

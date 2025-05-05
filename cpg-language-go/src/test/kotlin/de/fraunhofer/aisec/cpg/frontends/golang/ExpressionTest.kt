@@ -177,7 +177,7 @@ class ExpressionTest {
         assertNotNull(x)
 
         val paths = x.followPrevFullDFGEdgesUntilHit { it == lit5 }
-        assertEquals(3, paths.fulfilled.firstOrNull()?.size)
+        assertEquals(3, paths.fulfilled.firstOrNull()?.nodes?.size)
 
         assertEquals(5, x.evaluate())
     }

@@ -74,7 +74,7 @@ class DynamicLoadingTest {
         assertNotNull(path)
 
         val loadLibrary =
-            path.lastOrNull()?.operationNodes?.filterIsInstance<LoadLibrary>()?.singleOrNull()
+            path.nodes.lastOrNull()?.operationNodes?.filterIsInstance<LoadLibrary>()?.singleOrNull()
         assertNotNull(loadLibrary)
         assertIs<POSIX>(loadLibrary.os)
         assertEquals(

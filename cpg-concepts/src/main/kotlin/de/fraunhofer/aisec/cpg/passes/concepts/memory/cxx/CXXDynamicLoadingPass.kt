@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.passes.concepts.memory.cxx
 
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.frontends.NoLanguage.addAssumptionDependence
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.arch.OperatingSystemArchitecture
 import de.fraunhofer.aisec.cpg.graph.concepts.arch.POSIX
@@ -100,7 +101,12 @@ class CXXDynamicLoadingPass(ctx: TranslationContext) : ConceptPass(ctx) {
             }
 
         val loadLibrary =
-            path?.lastOrNull()?.operationNodes?.filterIsInstance<LoadLibrary>()?.singleOrNull()
+            path
+                ?.nodes
+                ?.lastOrNull()
+                ?.operationNodes
+                ?.filterIsInstance<LoadLibrary>()
+                ?.singleOrNull()
 
         val symbolName = call.arguments.getOrNull(1)?.evaluate() as? String
         var candidates = loadLibrary?.findSymbol(symbolName)
@@ -111,23 +117,25 @@ class CXXDynamicLoadingPass(ctx: TranslationContext) : ConceptPass(ctx) {
             if (assignee.type is FunctionPointerType) {
                 candidates = candidates?.filterIsInstance<FunctionDeclaration>()
                 newLoadSymbol(
-                    underlyingNode = call,
-                    concept = concept,
-                    what = candidates?.singleOrNull(),
-                    loader = loadLibrary,
-                    os = loadLibrary?.os,
-                    connect = true,
-                )
+                        underlyingNode = call,
+                        concept = concept,
+                        what = candidates?.singleOrNull(),
+                        loader = loadLibrary,
+                        os = loadLibrary?.os,
+                        connect = true,
+                    )
+                    .apply { path?.let { addAssumptionDependence(path) } }
             } else {
                 candidates = candidates?.filterIsInstance<VariableDeclaration>()
                 newLoadSymbol(
-                    underlyingNode = call,
-                    concept = concept,
-                    what = candidates?.singleOrNull(),
-                    loader = loadLibrary,
-                    os = loadLibrary?.os,
-                    connect = true,
-                )
+                        underlyingNode = call,
+                        concept = concept,
+                        what = candidates?.singleOrNull(),
+                        loader = loadLibrary,
+                        os = loadLibrary?.os,
+                        connect = true,
+                    )
+                    .apply { path?.let { addAssumptionDependence(path) } }
             }
 
             // We can help the dynamic invoke resolver by adding a DFG path from the declaration to
