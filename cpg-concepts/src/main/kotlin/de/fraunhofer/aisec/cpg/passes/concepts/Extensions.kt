@@ -30,72 +30,9 @@ package de.fraunhofer.aisec.cpg.passes.concepts
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
-import de.fraunhofer.aisec.cpg.graph.concepts.Operation
-import de.fraunhofer.aisec.cpg.graph.edges.flows.insertNodeAfterwardInEOGPath
-import de.fraunhofer.aisec.cpg.passes.Pass.Companion.log
-import kotlin.collections.set
 import kotlin.reflect.KClass
 
-class ConceptAssignmentContext {
-
-    internal val assignments: MutableList<OverlayAssignment<*>> = mutableListOf()
-
-    fun <T : Concept> ops(
-        assign: OverlayAssignment<T>,
-        block: OperationAssignmentContext<T>.(T) -> Unit,
-    ) {
-        assign.assigned.forEach { concept ->
-            val ctx = OperationAssignmentContext(concept)
-            block(ctx, concept)
-        }
-    }
-
-    internal fun build() {}
-}
-
-class OperationAssignmentContext<ConceptClass : Concept>(val concept: ConceptClass) {}
-
-/**  */
-class OverlayAssignment<T : OverlayNode>(val assigned: List<T>) {
-
-    companion object {
-        fun <T : OverlayNode> fromBuilder(
-            builder: () -> T,
-            nodes: List<Node>,
-        ): OverlayAssignment<T> {
-            return OverlayAssignment(
-                nodes.map { node ->
-                    // Create the overlay from the constructor
-                    val overlay = builder()
-
-                    log.debug(
-                        "Added overlay of type {} to {} '{}'",
-                        overlay::class.simpleName,
-                        node::class.simpleName,
-                        node.name,
-                    )
-
-                    // Add overlay to underlying node
-                    node.overlayEdges += overlay
-
-                    // Set DFG (and others), if needed
-                    when (node) {
-                        is Concept -> node.setDFG()
-                        is Operation -> {
-                            node.concept.ops += node
-                            node.underlyingNode?.insertNodeAfterwardInEOGPath(node)
-                            node.setDFG()
-                        }
-                    }
-
-                    overlay
-                }
-            )
-        }
-    }
-}
-
-class TaggingContext(val mapOfEach: MutableMap<KClass<out Node>, EachContext<*>> = mutableMapOf()) {
+class TaggingContext(val listOfEach: MutableList<EachContext<*>> = mutableListOf()) {
     fun collect(
         lattice: NodeToOverlayState,
         state: NodeToOverlayStateElement,
@@ -103,21 +40,24 @@ class TaggingContext(val mapOfEach: MutableMap<KClass<out Node>, EachContext<*>>
     ): List<OverlayNode> {
         val list = mutableListOf<OverlayNode>()
 
-        for (each in mapOfEach) {
+        for (each in listOfEach) {
             // Check, if the node is assignable to the "each"
-            if (each.key.isInstance(node)) {
-                val overlay = each.value.collect(lattice, state, node)
-                list += overlay
-            }
+            val overlay = each.collect(lattice, state, node)
+            list += overlay
         }
 
         return list
     }
 }
 
-class Selector<T : Node>(val namePredicate: CharSequence?, val predicate: ((T) -> Boolean)?) {
+class Selector<T : Node>(
+    val klass: KClass<T>,
+    val namePredicate: CharSequence?,
+    val predicate: ((T) -> Boolean)?,
+) {
     operator fun invoke(node: T): Boolean {
-        return node.name == namePredicate || predicate?.invoke(node) == true
+        return klass.isInstance(node) &&
+            (node.name == namePredicate || predicate?.invoke(node) == true)
     }
 }
 
@@ -158,59 +98,25 @@ fun tag(body: TaggingContext.() -> Unit): TaggingContext {
     return ctx
 }
 
-fun <T : Node> TaggingContext.each(
+inline fun <reified T : Node> TaggingContext.each(
     namePredicate: CharSequence? = null,
-    predicate: ((T) -> Boolean)? = null,
+    noinline predicate: ((T) -> Boolean)? = null,
 ): Selector<T> {
-    return Selector(namePredicate = namePredicate, predicate = predicate)
+    return Selector(T::class, namePredicate = namePredicate, predicate = predicate)
 }
 
 context(TaggingContext)
-inline fun <reified T : Node> Selector<T>.with(
-    noinline builder: BuilderContext<T>.() -> Concept
-): EachContext<T> {
+fun <T : Node> Selector<T>.with(builder: BuilderContext<T>.() -> Concept): EachContext<T> {
     val ctx = EachContext(selector = this, with = { listOf(builder(it)) })
-    mapOfEach[T::class] = ctx
+    listOfEach += ctx
     return ctx
 }
 
 context(TaggingContext)
-inline fun <reified T : Node> Selector<T>.withMultiple(
-    noinline builder: BuilderContext<T>.() -> List<OverlayNode>
+fun <T : Node> Selector<T>.withMultiple(
+    builder: BuilderContext<T>.() -> List<OverlayNode>
 ): EachContext<T> {
     val ctx = EachContext(selector = this, with = builder)
-    mapOfEach[T::class] = ctx
+    listOfEach += ctx
     return ctx
-}
-
-fun assign(block: ConceptAssignmentContext.() -> Unit) {
-    ConceptAssignmentContext().apply(block)
-}
-
-context(ConceptAssignmentContext)
-infix fun <T : Concept> (() -> T).to(nodes: List<Node>): OverlayAssignment<T> {
-    val pairs = mutableListOf<Pair<List<Node>, List<Node>>>()
-    pairs
-
-    val assignment = OverlayAssignment.fromBuilder(this, nodes)
-    this@ConceptAssignmentContext.assignments += assignment
-
-    return assignment
-}
-
-context(ConceptAssignmentContext)
-infix fun <T : Concept> T.to(node: Node?): OverlayAssignment<T> {
-    val assignment = OverlayAssignment.fromBuilder({ this }, listOfNotNull(node))
-
-    this@ConceptAssignmentContext.assignments += assignment
-
-    return assignment
-}
-
-infix fun <T : Operation> (() -> T).to(nodes: List<Node>): OverlayAssignment<T> {
-    return OverlayAssignment.fromBuilder(this, nodes)
-}
-
-infix fun <T : Operation> T.to(node: Node): OverlayAssignment<T> {
-    return OverlayAssignment.fromBuilder({ this }, listOf(node))
 }

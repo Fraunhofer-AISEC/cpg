@@ -26,16 +26,14 @@
 package de.fraunhofer.aisec.codyze
 
 import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.graph.Component
-import de.fraunhofer.aisec.cpg.passes.ComponentPass
 import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass
-import de.fraunhofer.aisec.cpg.passes.Pass.Companion.log
-import de.fraunhofer.aisec.cpg.passes.PassConfiguration
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
+import de.fraunhofer.aisec.cpg.passes.concepts.ConceptTagPass
+import de.fraunhofer.aisec.cpg.passes.concepts.TaggingContext
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import java.io.File
+import kotlin.script.experimental.api.ResultValue
 import kotlin.script.experimental.api.ResultWithDiagnostics
-import kotlin.script.experimental.api.constructorArgs
 import kotlin.script.experimental.host.toScriptSource
 import kotlin.script.experimental.jvmhost.BasicJvmScriptingHost
 import kotlin.script.experimental.jvmhost.createJvmCompilationConfigurationFromTemplate
@@ -43,35 +41,34 @@ import kotlin.script.experimental.jvmhost.createJvmEvaluationConfigurationFromTe
 
 @DependsOn(SymbolResolver::class)
 @DependsOn(ControlFlowSensitiveDFGPass::class)
-class ConceptScriptPass(ctx: TranslationContext) : ComponentPass(ctx) {
+class ConceptScriptPass(ctx: TranslationContext) : ConceptTagPass(ctx) {
 
-    class Configuration(val scripts: List<File> = listOf()) : PassConfiguration() {}
+    class Configuration(val scriptFile: File) :
+        ConceptTagPass.Configuration(tag = TaggingContext()) {
+        init {
+            val compilationConfiguration =
+                createJvmCompilationConfigurationFromTemplate<ConceptScript>()
+            val evaluationConfiguration =
+                createJvmEvaluationConfigurationFromTemplate<ConceptScript>()
 
-    override fun accept(t: Component) {
-        for (script in passConfig<Configuration>()?.scripts ?: emptyList()) {
-            t.executeScript(script)
+            val scriptResult =
+                BasicJvmScriptingHost()
+                    .eval(
+                        scriptFile.toScriptSource(),
+                        compilationConfiguration,
+                        evaluationConfiguration,
+                    )
+
+            if (scriptResult is ResultWithDiagnostics.Success) {
+                val ctx =
+                    (scriptResult.value.returnValue as? ResultValue.Value)?.value as? TaggingContext
+                if (ctx != null) {
+                    tag = ctx
+                    log.info("Fetched tagging concept from script")
+                }
+            } else {
+                log.error("Error while evaluating script: {}", scriptResult)
+            }
         }
-    }
-
-    override fun cleanup() {
-        // Nothing to do
-    }
-}
-
-fun Component.executeScript(scriptFile: File) {
-    val compilationConfiguration = createJvmCompilationConfigurationFromTemplate<QueryScript>()
-    val evaluationConfiguration =
-        createJvmEvaluationConfigurationFromTemplate<QueryScript>(
-            body = { constructorArgs(this@executeScript) }
-        )
-
-    val scriptResult =
-        BasicJvmScriptingHost()
-            .eval(scriptFile.toScriptSource(), compilationConfiguration, evaluationConfiguration)
-
-    if (scriptResult is ResultWithDiagnostics.Failure) {
-        log.error("Failed evaluating script: {}", scriptResult)
-    } else {
-        log.info("Evaluated concept script successfully evaluated")
     }
 }

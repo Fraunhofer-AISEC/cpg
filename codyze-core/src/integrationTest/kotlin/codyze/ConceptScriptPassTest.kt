@@ -45,7 +45,7 @@ class ConceptScriptPassTest {
                 it.registerPass<ConceptScriptPass>()
                 it.configurePass<ConceptScriptPass>(
                     ConceptScriptPass.Configuration(
-                        scripts = listOf(topLevel.resolve("encryption.concept.kts").toFile())
+                        scriptFile = topLevel.resolve("encryption.concept.kts").toFile()
                     )
                 )
             }

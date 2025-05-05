@@ -25,8 +25,6 @@
  */
 package de.fraunhofer.aisec.codyze
 
-import de.fraunhofer.aisec.cpg.graph.Component
-import de.fraunhofer.aisec.cpg.passes.concepts.ConceptAssignmentContext
 import kotlin.script.experimental.annotations.KotlinScript
 import kotlin.script.experimental.api.*
 import kotlin.script.experimental.jvm.jvm
@@ -48,12 +46,7 @@ import kotlin.script.templates.ScriptTemplateDefinition
     // Compilation configuration for the script type
     compilationConfiguration = ConceptScriptConfiguration::class,
 )
-abstract class ConceptScript(val c: Component) {
-
-    fun assign(block: ConceptAssignmentContext.() -> Unit) {
-        return de.fraunhofer.aisec.cpg.passes.concepts.assign(block)
-    }
-}
+abstract class ConceptScript() {}
 
 /**
  * Configuration for the Kotlin compiler to compile concept scripts.

@@ -28,11 +28,16 @@ package de.fraunhofer.aisec.cpg.passes.concepts
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
+import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass
 import de.fraunhofer.aisec.cpg.passes.PassConfiguration
+import de.fraunhofer.aisec.cpg.passes.SymbolResolver
+import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 
-class ConceptTagPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
+@DependsOn(SymbolResolver::class)
+@DependsOn(ControlFlowSensitiveDFGPass::class)
+open class ConceptTagPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
 
-    class Configuration(val tag: TaggingContext) : PassConfiguration()
+    open class Configuration(var tag: TaggingContext) : PassConfiguration()
 
     override fun handleNode(
         lattice: NodeToOverlayState,
