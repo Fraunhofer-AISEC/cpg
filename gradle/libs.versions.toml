@@ -65,7 +65,7 @@ ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negoti
 
 # test
 junit-params = { module = "org.junit.jupiter:junit-jupiter-params", version = "5.12.0"}
-mockito = { module = "org.mockito:mockito-core", version = "5.16.0"}
+mockito = { module = "org.mockito:mockito-core", version = "5.17.0"}
 
 # plugins needed for build.gradle.kts in buildSrc
 publish-central = { module = "com.vanniktech:gradle-maven-publish-plugin", version.ref = "publish" }
