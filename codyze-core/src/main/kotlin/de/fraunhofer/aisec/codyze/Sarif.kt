@@ -25,9 +25,8 @@
  */
 package de.fraunhofer.aisec.codyze
 
-import de.fraunhofer.aisec.cpg.graph.Component
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.component
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
@@ -35,7 +34,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.firstParentOrNull
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.query.QueryTree
 import de.fraunhofer.aisec.cpg.query.SinglePathResult
@@ -104,6 +102,8 @@ fun QueryTree<*>.getCodeflow(): List<List<Node>> {
         this.children.flatMap { it.getCodeflow() }
     } else if (this.value is List<*>) {
         listOf((this.value as Iterable<*>).filterIsInstance<Node>())
+    } else if (this.value is NodePath) {
+        listOf(((this.value as NodePath).nodes as Iterable<*>).filterIsInstance<Node>())
     } else if (this.value is Boolean) {
         this.children.flatMap { it.getCodeflow() }
     } else {
