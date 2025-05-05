@@ -28,24 +28,16 @@ package codyze
 import de.fraunhofer.aisec.codyze.ConceptScriptPass
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.concepts.Concept
-import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.test.analyze
 import kotlin.io.path.Path
 import kotlin.test.Test
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 class ConceptScriptPassTest {
 
     @Test
     fun testConceptScriptPass() {
-        class MySpecialSecret() : Concept(null)
-
-        class SpecialOperation(underlyingNode: Node?, concept: MySpecialSecret) :
-            Operation(underlyingNode, concept)
-
-        class Encrypt(concept: MySpecialSecret) : Concept(concept)
-
         val topLevel = Path("src/integrationTest/resources")
         val result =
             analyze(listOf(topLevel.resolve("encrypt.py").toFile()), topLevel, true) {
@@ -59,52 +51,7 @@ class ConceptScriptPassTest {
             }
         assertNotNull(result)
 
-        with(result) {
-            assign {
-                val secrets = { MySpecialSecret() } to calls("get_secret_from_server")
-
-                ops(secrets) { secret ->
-                    Encrypt(concept = secret) to calls("encrypt").reachableFrom(secret)
-                }
-            }
-        }
+        val encrypt = result.calls("encrypt")
+        encrypt.forEach { assertTrue(it.operationNodes.isNotEmpty()) }
     }
-
-    class ConceptAssignmentContext {
-
-        fun <T : Concept> ops(
-            assign: ConceptAssignment<T>,
-            blocks: OperationAssignmentContext.(T) -> Unit,
-        ) {}
-    }
-
-    class OperationAssignmentContext {}
-
-    class ConceptAssignment<T : Concept>(var concepts: List<T>) {}
-
-    class OperationAssignment(var op: Operation? = null) {}
-
-    private fun assign(blocks: ConceptAssignmentContext.() -> Unit) {
-        TODO("Not yet implemented")
-    }
-
-    infix fun <T : Concept> (() -> T).to(nodes: List<Node>): ConceptAssignment<T> {
-        return ConceptAssignment(nodes.map { this() })
-    }
-
-    infix fun <T : Concept> T.to(node: Node): ConceptAssignment<T> {
-        return ConceptAssignment(listOf(this))
-    }
-
-    infix fun Operation.to(nodes: List<Node>): OperationAssignment {
-        return OperationAssignment()
-    }
-
-    infix fun Operation.to(node: Node): OperationAssignment {
-        return OperationAssignment()
-    }
-}
-
-private fun List<Node>.reachableFrom(secret: Node): List<Node> {
-    TODO("Not yet implemented")
 }

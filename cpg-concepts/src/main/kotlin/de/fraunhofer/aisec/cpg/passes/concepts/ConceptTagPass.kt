@@ -23,26 +23,26 @@
  *                    \______/ \__|       \______/
  *
  */
-package encrypt
+package de.fraunhofer.aisec.cpg.passes.concepts
 
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.passes.concepts.*
+import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.OverlayNode
+import de.fraunhofer.aisec.cpg.passes.PassConfiguration
 
-class MySpecialSecret() : Concept(null) {
-    override fun setDFG() {
-        underlyingNode?.nextDFG += this
+class ConceptTagPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
+
+    class Configuration(val tag: TaggingContext) : PassConfiguration()
+
+    override fun handleNode(
+        lattice: NodeToOverlayState,
+        state: NodeToOverlayStateElement,
+        node: Node,
+    ): Collection<OverlayNode> {
+        // Collect all concept / operation nodes in the context. For now this will just be in the
+        // order they are specified in the context.
+        val nodes = passConfig<Configuration>()?.tag?.collect(lattice, state, node) ?: emptyList()
+
+        return nodes
     }
-}
-
-class SpecialOperation(concept: MySpecialSecret) : Operation(null, concept)
-
-tag {
-    each<CallExpression>("get_secret_from_server").with { MySpecialSecret() }
-
-    each<CallExpression> { it.name.localName == "encrypt" && it.arguments.size == 3 }
-        .withMultiple {
-            node.getOverlaysByPrevDFG<MySpecialSecret>(state).map { secret ->
-                SpecialOperation(concept = secret)
-            }
-        }
 }

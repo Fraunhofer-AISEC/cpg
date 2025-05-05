@@ -26,10 +26,7 @@
 package de.fraunhofer.aisec.codyze
 
 import de.fraunhofer.aisec.cpg.graph.Component
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.concepts.Concept
-import de.fraunhofer.aisec.cpg.graph.concepts.newConcept
-import kotlin.reflect.full.primaryConstructor
+import de.fraunhofer.aisec.cpg.passes.concepts.ConceptAssignmentContext
 import kotlin.script.experimental.annotations.KotlinScript
 import kotlin.script.experimental.api.*
 import kotlin.script.experimental.jvm.jvm
@@ -53,24 +50,9 @@ import kotlin.script.templates.ScriptTemplateDefinition
 )
 abstract class ConceptScript(val c: Component) {
 
-    fun test() {
-        println("hello")
-        println(c)
+    fun assign(block: ConceptAssignmentContext.() -> Unit) {
+        return de.fraunhofer.aisec.cpg.passes.concepts.assign(block)
     }
-
-    fun concepts(builder: (Unit) -> Unit) {}
-
-    inline fun <reified T : Concept> tag(collector: Component.() -> List<Node>) {
-        val nodes = collector(c)
-
-        nodes.forEach {
-            with(it) { newConcept<T>({ T::class.primaryConstructor!!.call() }, it, true) }
-        }
-    }
-}
-
-inline fun <reified T : Concept> List<Node>.tagAs() {
-    this.forEach { with(it) { newConcept<T>({ T::class.primaryConstructor!!.call() }, it, true) } }
 }
 
 /**
@@ -100,7 +82,6 @@ object ConceptScriptConfiguration :
             "de.fraunhofer.aisec.codyze.*",
             "de.fraunhofer.aisec.cpg.*",
             "de.fraunhofer.aisec.cpg.graph.*",
-            "de.fraunhofer.aisec.cpg.graph.concepts.*",
         )
         ide { acceptedLocations(ScriptAcceptedLocation.Everywhere) }
     }) {

@@ -39,7 +39,7 @@ dependencies {
     api(libs.sarif4k)
     implementation(libs.clikt)
     implementation(projects.cpgCore)
-    implementation(projects.cpgConcepts)
+    api(projects.cpgConcepts)
     api(projects.cpgAnalysis)
     testImplementation(kotlin("test"))
 
@@ -56,6 +56,4 @@ dependencies {
     // reference the project here, the build system would fail any task since it will not find a
     // non-enabled project.
     findProject(":cpg-language-python")?.also { integrationTestImplementation(it) }
-    integrationTestImplementation(projects.cpgAnalysis)
-    integrationTestImplementation(projects.cpgConcepts)
 }

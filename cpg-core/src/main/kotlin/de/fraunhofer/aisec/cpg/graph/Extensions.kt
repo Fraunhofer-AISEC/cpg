@@ -351,6 +351,12 @@ fun Node.followDFGEdgesUntilHit(
     )
 }
 
+fun List<Node>.hasDataflowFrom(secret: Node): List<Node> {
+    return this.filter { node ->
+        secret.followDFGEdgesUntilHit { it == node }.fulfilled.isNotEmpty()
+    }
+}
+
 /**
  * This class holds the context for the [followXUntilHit] function. It is used to keep track of the
  * current index stack and call stack.

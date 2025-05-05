@@ -29,12 +29,13 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.passes.ComponentPass
 import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass
+import de.fraunhofer.aisec.cpg.passes.Pass.Companion.log
 import de.fraunhofer.aisec.cpg.passes.PassConfiguration
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import java.io.File
+import kotlin.script.experimental.api.ResultWithDiagnostics
 import kotlin.script.experimental.api.constructorArgs
-import kotlin.script.experimental.api.valueOrThrow
 import kotlin.script.experimental.host.toScriptSource
 import kotlin.script.experimental.jvmhost.BasicJvmScriptingHost
 import kotlin.script.experimental.jvmhost.createJvmCompilationConfigurationFromTemplate
@@ -68,7 +69,9 @@ fun Component.executeScript(scriptFile: File) {
         BasicJvmScriptingHost()
             .eval(scriptFile.toScriptSource(), compilationConfiguration, evaluationConfiguration)
 
-    val value = scriptResult.valueOrThrow()
-    val klass = value.returnValue.scriptClass
-    println(klass)
+    if (scriptResult is ResultWithDiagnostics.Failure) {
+        log.error("Failed evaluating script: {}", scriptResult)
+    } else {
+        log.info("Evaluated concept script successfully evaluated")
+    }
 }
