@@ -669,16 +669,32 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         }
                         .map { it.start }
                         .forEach { derefPMV ->
-                            doubleState
-                                .getNestedValues(
-                                    arg,
-                                    1,
-                                    fetchFields = false,
-                                    onlyFetchExistingEntries = true,
-                                    excludeShortFSValues = true,
+                            val argVals =
+                                // In C(++), the reference to an array is a pointer, leading to the
+                                // situation that handing "arg" or "&arg" as argument is the same
+                                // We deal with this by drawing a DFG-Edge from the arg to the
+                                // derefPMV in case of an array pointerType.
+                                if (
+                                    (arg.type as? PointerType)?.pointerOrigin ==
+                                        PointerType.PointerOrigin.ARRAY
                                 )
-                                .forEach { (argVal, _) ->
-                                    val argDerefVals =
+                                    identitySetOf(Pair(arg, true))
+                                else
+                                    doubleState.getNestedValues(
+                                        arg,
+                                        1,
+                                        fetchFields = false,
+                                        onlyFetchExistingEntries = true,
+                                        excludeShortFSValues = true,
+                                    )
+                            argVals.forEach { (argVal, _) ->
+                                val argDerefVals =
+                                    if (
+                                        (arg.type as? PointerType)?.pointerOrigin ==
+                                            PointerType.PointerOrigin.ARRAY
+                                    )
+                                        equalLinkedHashSetOf<Node>(arg)
+                                    else {
                                         doubleState
                                             .getNestedValues(
                                                 argVal,
@@ -688,7 +704,16 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                                 excludeShortFSValues = true,
                                             )
                                             .mapTo(equalLinkedHashSetOf()) { it.first }
-                                    val lastDerefWrites =
+                                    }
+                                val lastDerefWrites =
+                                    if (
+                                        (arg.type as? PointerType)?.pointerOrigin ==
+                                            PointerType.PointerOrigin.ARRAY
+                                    )
+                                        equalLinkedHashSetOf<Pair<Node, EqualLinkedHashSet<Any>>>(
+                                            Pair(arg, equalLinkedHashSetOf(callingContext, false))
+                                        )
+                                    else {
                                         doubleState.getLastWrites(argVal).mapTo(
                                             equalLinkedHashSetOf()
                                         ) {
@@ -700,72 +725,73 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                                 ),
                                             )
                                         }
-                                    doubleState =
-                                        lattice.push(
-                                            doubleState,
-                                            derefPMV,
-                                            GeneralStateEntryElement(
-                                                PowersetLattice.Element(/*paramVal*/ ),
-                                                PowersetLattice.Element(
-                                                    argDerefVals.mapTo(EqualLinkedHashSet()) {
-                                                        Pair(it, equalLinkedHashSetOf())
-                                                    }
-                                                ),
-                                                PowersetLattice.Element(lastDerefWrites),
+                                    }
+                                doubleState =
+                                    lattice.push(
+                                        doubleState,
+                                        derefPMV,
+                                        GeneralStateEntryElement(
+                                            PowersetLattice.Element(/*paramVal*/ ),
+                                            PowersetLattice.Element(
+                                                argDerefVals.mapTo(EqualLinkedHashSet()) {
+                                                    Pair(it, equalLinkedHashSetOf())
+                                                }
                                             ),
-                                        )
-                                    // The same for the derefderef values
-                                    p.memoryValueEdges
-                                        .filter {
-                                            (it.granularity as? PartialDataflowGranularity<*>)
-                                                ?.partialTarget == "derefderefvalue"
-                                        }
-                                        .map { it.start }
-                                        .forEach { derefderefPMV ->
-                                            argDerefVals
-                                                .flatMap {
-                                                    doubleState.getNestedValues(
-                                                        it,
-                                                        1,
-                                                        fetchFields = false,
-                                                        onlyFetchExistingEntries = true,
-                                                        excludeShortFSValues = true,
-                                                    )
-                                                }
-                                                .forEach { (derefderefValue, _) ->
-                                                    val lastDerefDerefWrites =
-                                                        argDerefVals
-                                                            .flatMapTo(IdentitySet()) {
-                                                                doubleState.getLastWrites(it)
-                                                            }
-                                                            .mapTo(IdentitySet()) {
+                                            PowersetLattice.Element(lastDerefWrites),
+                                        ),
+                                    )
+                                // The same for the derefderef values
+                                p.memoryValueEdges
+                                    .filter {
+                                        (it.granularity as? PartialDataflowGranularity<*>)
+                                            ?.partialTarget == "derefderefvalue"
+                                    }
+                                    .map { it.start }
+                                    .forEach { derefderefPMV ->
+                                        argDerefVals
+                                            .flatMap {
+                                                doubleState.getNestedValues(
+                                                    it,
+                                                    1,
+                                                    fetchFields = false,
+                                                    onlyFetchExistingEntries = true,
+                                                    excludeShortFSValues = true,
+                                                )
+                                            }
+                                            .forEach { (derefderefValue, _) ->
+                                                val lastDerefDerefWrites =
+                                                    argDerefVals
+                                                        .flatMapTo(IdentitySet()) {
+                                                            doubleState.getLastWrites(it)
+                                                        }
+                                                        .mapTo(IdentitySet()) {
+                                                            Pair(
+                                                                it.first,
+                                                                equalLinkedHashSetOf<Any>(
+                                                                    callingContext
+                                                                ),
+                                                            )
+                                                        }
+                                                doubleState =
+                                                    lattice.push(
+                                                        doubleState,
+                                                        derefderefPMV,
+                                                        GeneralStateEntryElement(
+                                                            PowersetLattice.Element(derefPMV),
+                                                            PowersetLattice.Element(
                                                                 Pair(
-                                                                    it.first,
-                                                                    equalLinkedHashSetOf<Any>(
-                                                                        callingContext
-                                                                    ),
+                                                                    derefderefValue,
+                                                                    equalLinkedHashSetOf(),
                                                                 )
-                                                            }
-                                                    doubleState =
-                                                        lattice.push(
-                                                            doubleState,
-                                                            derefderefPMV,
-                                                            GeneralStateEntryElement(
-                                                                PowersetLattice.Element(derefPMV),
-                                                                PowersetLattice.Element(
-                                                                    Pair(
-                                                                        derefderefValue,
-                                                                        equalLinkedHashSetOf(),
-                                                                    )
-                                                                ),
-                                                                PowersetLattice.Element(
-                                                                    lastDerefDerefWrites
-                                                                ),
                                                             ),
-                                                        )
-                                                }
-                                        }
-                                }
+                                                            PowersetLattice.Element(
+                                                                lastDerefDerefWrites
+                                                            ),
+                                                        ),
+                                                    )
+                                            }
+                                    }
+                            }
                         }
                 }
             }
