@@ -255,7 +255,7 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
                 if (allowModify) {
                     one += two
                     one
-                } else two
+                } else two.duplicate()
             Order.EQUAL,
             Order.GREATER -> one
             Order.UNEQUAL -> {
@@ -373,7 +373,7 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
                     }
                     one
                 } else if (comp == Order.LESSER) {
-                    two
+                    two.duplicate()
                 } else {
                     val allKeys = one.keys.toIdentitySet()
                     allKeys += two.keys
