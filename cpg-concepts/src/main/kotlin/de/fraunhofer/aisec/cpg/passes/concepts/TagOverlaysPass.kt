@@ -33,9 +33,14 @@ import de.fraunhofer.aisec.cpg.passes.PassConfiguration
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 
+/**
+ * This pass can be used to "tag" [OverlayNode]s to a specific "underlying" [Node] using the
+ * [EOGConceptPass]. It basically uses the [handleNode] function to introduce the individual items
+ * of a [TaggingContext] into the state of the [EOGConceptPass].
+ */
 @DependsOn(SymbolResolver::class)
 @DependsOn(ControlFlowSensitiveDFGPass::class)
-open class ConceptTagPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
+open class TagOverlaysPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
 
     open class Configuration(var tag: TaggingContext) : PassConfiguration()
 

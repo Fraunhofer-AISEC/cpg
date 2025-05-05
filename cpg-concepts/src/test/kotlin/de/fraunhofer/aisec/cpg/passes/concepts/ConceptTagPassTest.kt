@@ -49,9 +49,9 @@ class ConceptTagPassTest {
                         TranslationContext(
                             config =
                                 TranslationConfiguration.builder()
-                                    .registerPass<ConceptTagPass>()
-                                    .configurePass<ConceptTagPass>(
-                                        ConceptTagPass.Configuration(
+                                    .registerPass<TagOverlaysPass>()
+                                    .configurePass<TagOverlaysPass>(
+                                        TagOverlaysPass.Configuration(
                                             tag =
                                                 tag {
                                                     each<VariableDeclaration>("key").with {

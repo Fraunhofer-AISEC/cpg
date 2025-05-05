@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.codyze
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
-import de.fraunhofer.aisec.cpg.passes.concepts.ConceptTagPass
+import de.fraunhofer.aisec.cpg.passes.concepts.TagOverlaysPass
 import de.fraunhofer.aisec.cpg.passes.concepts.TaggingContext
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import java.io.File
@@ -41,10 +41,10 @@ import kotlin.script.experimental.jvmhost.createJvmEvaluationConfigurationFromTe
 
 @DependsOn(SymbolResolver::class)
 @DependsOn(ControlFlowSensitiveDFGPass::class)
-class ConceptScriptPass(ctx: TranslationContext) : ConceptTagPass(ctx) {
+class ConceptScriptPass(ctx: TranslationContext) : TagOverlaysPass(ctx) {
 
     class Configuration(val scriptFile: File) :
-        ConceptTagPass.Configuration(tag = TaggingContext()) {
+        TagOverlaysPass.Configuration(tag = TaggingContext()) {
         init {
             val compilationConfiguration =
                 createJvmCompilationConfigurationFromTemplate<ConceptScript>()
