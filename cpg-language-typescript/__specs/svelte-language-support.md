@@ -20,5 +20,13 @@ This document tracks the progress of integrating Svelte language support into th
 
 ## Progress Notes
 
-*   Baseline build (`assemble`) confirmed working after reverting previous attempts.
-*   Baseline test execution (`test`) fails due to a Kover configuration issue (`kover-agent.args not found`), which is unrelated to the frontend logic and will be ignored for now.
+*   **Strategy Shift:** Decided to integrate Svelte support directly into `cpg-language-typescript` instead of a separate module, based on maintainer feedback.
+*   **Kotlin Stubs:** Created initial Kotlin classes within `cpg-language-typescript`:
+    *   `SvelteLanguage.kt`: Defines the language properties.
+    *   `SvelteAST.kt`: Placeholder interface for AST nodes.
+    *   `SvelteLanguageFrontend.kt`: Stub implementation for the frontend, including basic `parse` method structure.
+*   **Parser Setup:**
+    *   Modified the existing Deno-based parser script (`src/main/typescript/parser.ts`) to include `svelte.parse()` for handling `.svelte` files.
+    *   The build process in `cpg-language-typescript/build.gradle.kts` will need to be adjusted to handle Deno execution for the combined parser (specific tasks to be defined).
+*   **Frontend Integration:** Modified `TypeScriptLanguageFrontend.kt`'s `parse` method to detect `.svelte` files and delegate to `SvelteLanguageFrontend` (when instantiated).
+*   **Build Status (Current):** Successfully added Kotlin stubs. Next step is to resolve Kotlin compilation errors in the new Svelte files and attempt a build (`./gradlew :cpg-language-typescript:build`).
