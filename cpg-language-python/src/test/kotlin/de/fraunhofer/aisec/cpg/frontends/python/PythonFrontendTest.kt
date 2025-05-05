@@ -54,6 +54,32 @@ import kotlin.test.*
 class PythonFrontendTest : BaseTest() {
 
     @Test
+    fun testNodeID() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+
+        val tu1 =
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("fields.py").toFile()), topLevel, true) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(tu1)
+        val myClass1 = tu1.records["fields.MyClass"]
+        assertNotNull(myClass1)
+
+        val tu2 =
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("fields.py").toFile()), topLevel, true) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(tu2)
+        val myClass2 = tu2.records["fields.MyClass"]
+        assertNotNull(myClass2)
+        assertEquals(
+            myClass1.id,
+            myClass2.id,
+            "Expecting the same ID for the same class across two different analysis runs",
+        )
+    }
+
+    @Test
     fun test1740EndlessCDG() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val tu =

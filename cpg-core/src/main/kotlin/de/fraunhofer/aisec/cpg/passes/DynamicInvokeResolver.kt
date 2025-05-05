@@ -87,7 +87,7 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     private fun handleCallExpression(call: CallExpression) {
         val callee = call.callee
         if (
-            callee?.type is FunctionPointerType ||
+            callee.type is FunctionPointerType ||
                 ((callee as? Reference)?.refersTo is ParameterDeclaration ||
                     (callee as? Reference)?.refersTo is VariableDeclaration)
         ) {
@@ -151,7 +151,7 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             val isLambda = curr is VariableDeclaration && curr.initializer is LambdaExpression
             val currentFunction =
                 if (isLambda) {
-                    ((curr as VariableDeclaration).initializer as LambdaExpression).function
+                    (curr.initializer as LambdaExpression).function
                 } else {
                     curr
                 }

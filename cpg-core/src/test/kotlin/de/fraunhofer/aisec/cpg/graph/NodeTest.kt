@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,32 +23,20 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.edges.collections
+package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
-import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
-import de.fraunhofer.aisec.cpg.graph.newLiteral
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import kotlin.test.Test
-import kotlin.test.assertNull
-import kotlin.test.assertSame
 
-class EdgeSingletonListTest {
+class NodeTest {
     @Test
-    fun testNullable() {
+    fun testId() {
         with(TestLanguageFrontend()) {
-            class MyNode : Node() {
-                var edge = astOptionalEdgeOf<Expression>()
-                var unwrapped by unwrapping(MyNode::edge)
-            }
+            val node1 = newLiteral(1)
+            val node2 = newLiteral(2)
 
-            val node = MyNode()
-            assertNull(node.unwrapped)
-
-            node.unwrapped = newLiteral(1)
-            assertSame(node.unwrapped, node.edge.element?.end)
+            // Check that the IDs are unique
+            assert(node1.id != node2.id) { "Node IDs should be unique" }
         }
     }
 }
