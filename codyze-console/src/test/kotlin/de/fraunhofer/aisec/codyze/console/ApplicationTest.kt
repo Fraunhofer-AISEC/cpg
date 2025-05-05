@@ -78,23 +78,6 @@ val mockTu =
             }
     }
 
-/** A mock translation unit. */
-val mockTu =
-    TranslationUnitDeclaration().apply {
-        name = Name("tu1")
-        var func =
-            FunctionDeclaration().apply {
-                name = Name("main")
-                Main(this, os = Agnostic(this))
-            }
-        declarations += func
-        statements +=
-            CallExpression().apply {
-                name = Name("main")
-                prevDFG += func
-            }
-    }
-
 /**
  * A mock version of the [ConsoleService] that returns a mock analysis result containing of a few
  * nodes.
