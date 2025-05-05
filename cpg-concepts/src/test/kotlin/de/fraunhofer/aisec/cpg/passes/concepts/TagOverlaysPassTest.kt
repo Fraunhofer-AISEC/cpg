@@ -36,9 +36,10 @@ import de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.Secret
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import kotlin.test.Test
+import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 
-class ConceptTagPassTest {
+class TagOverlaysPassTest {
 
     @Test
     fun testTag() {
@@ -90,7 +91,8 @@ class ConceptTagPassTest {
 
         val key = result.variables["key"]
         assertNotNull(key)
-        val secret = key.conceptNodes.singleOrNull() as? Secret
-        assertNotNull(secret)
+
+        val secret = key.conceptNodes.singleOrNull()
+        assertIs<Secret>(secret)
     }
 }

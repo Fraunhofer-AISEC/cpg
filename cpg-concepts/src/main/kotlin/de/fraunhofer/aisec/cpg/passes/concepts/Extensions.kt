@@ -61,7 +61,7 @@ fun tag(body: TaggingContext.() -> Unit): TaggingContext {
 }
 
 /**
- * each: Applies the specified overlay nodes to "each" of the nodes selected. A node is first of all
+ * Applies the specified overlay nodes to "each" of the nodes selected. A node is first of all
  * selected by its type [T]. Furthermore, the node selection can be further restricted by either a
  * [namePredicate] or a general [predicate] over all the node's properties.
  *
@@ -75,8 +75,8 @@ inline fun <reified T : Node> TaggingContext.each(
 }
 
 /**
- * with: Specifies a [builder] that creates the actual overlay node. It is used to assign a single
- * overlay node to a single selected "underlying" node.
+ * Specifies a [builder] that creates the actual overlay node. It is used to assign a single overlay
+ * node to a single selected "underlying" node.
  */
 context(TaggingContext)
 fun <T : Node> Selector<T>.with(builder: BuilderContext<T>.() -> OverlayNode): EachContext<T> {
@@ -86,7 +86,7 @@ fun <T : Node> Selector<T>.with(builder: BuilderContext<T>.() -> OverlayNode): E
 }
 
 /**
- * with: Specifies a [builder] that creates the actual overlay nodes. It is used to assign multiple
+ * Specifies a [builder] that creates the actual overlay nodes. It is used to assign multiple
  * overlay nodes to a single selected "underlying" node.
  */
 context(TaggingContext)
@@ -162,8 +162,9 @@ data class BuilderContext<T : Node>(
 
 /**
  * A selector that describes a possible selection of a CPG [Node] by the following properties:
- * - its [KClass] (mandatory, see [klass])
- * - either its [Node.name] (see [namePredicate]) or any other property (see [predicate])
+ * - its [KClass] (mandatory, see [klass]),
+ * - its [Node.name] (see [namePredicate]),
+ * - any other property (see [predicate])
  */
 data class Selector<T : Node>(
     val klass: KClass<T>,
@@ -175,6 +176,7 @@ data class Selector<T : Node>(
      */
     operator fun invoke(node: T): Boolean {
         return klass.isInstance(node) &&
-            (node.name == namePredicate || predicate?.invoke(node) == true)
+            (namePredicate == null || node.name == namePredicate) &&
+            predicate?.invoke(node) != false
     }
 }

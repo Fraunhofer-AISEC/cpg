@@ -39,6 +39,10 @@ import kotlin.script.experimental.jvmhost.BasicJvmScriptingHost
 import kotlin.script.experimental.jvmhost.createJvmCompilationConfigurationFromTemplate
 import kotlin.script.experimental.jvmhost.createJvmEvaluationConfigurationFromTemplate
 
+/**
+ * This pass extends on the [TagOverlaysPass] and allows to use the tagging API in a KotlinScript
+ * file (with ending .concept.kts) that is specified in [Configuration.scriptFile].
+ */
 @DependsOn(SymbolResolver::class)
 @DependsOn(ControlFlowSensitiveDFGPass::class)
 class ConceptScriptPass(ctx: TranslationContext) : TagOverlaysPass(ctx) {
