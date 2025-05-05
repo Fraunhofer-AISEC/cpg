@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 
 /**
- * Represents an authorization.
+ * Represents an abstract concept of `authorization`.
  *
  * @param underlyingNode The underlying CPG node.
  */
