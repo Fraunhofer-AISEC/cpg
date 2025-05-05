@@ -65,7 +65,7 @@ class PythonFileConceptTask(ctx: TranslationContext, pass: PythonFileConceptPass
          * This is currently done per [Component].
          */
         // TODO: Is TranslationUnitDeclaration better?
-        internal val fileCache = mutableMapOf<Component?, MutableMap<String, File>>()
+        val fileCache = mutableMapOf<Component?, MutableMap<String, File>>()
     }
 
     override fun handleMemberCallExpression(
