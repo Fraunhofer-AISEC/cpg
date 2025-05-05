@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.concepts.auth.Authentication
+import de.fraunhofer.aisec.cpg.graph.concepts.auth.Authorization
 import de.fraunhofer.aisec.cpg.graph.concepts.flows.RemoteEntryPoint
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import java.util.Objects
@@ -40,6 +41,7 @@ class HttpEndpoint(
     val path: String,
     val arguments: List<Node>,
     var authentication: Authentication?,
+    var authorization: Authorization?,
 ) : RemoteEntryPoint(underlyingNode = underlyingNode) {
     override fun equals(other: Any?): Boolean {
         return other is HttpEndpoint &&
@@ -47,11 +49,12 @@ class HttpEndpoint(
             other.httpMethod == this.httpMethod &&
             other.path == this.path &&
             other.arguments == this.arguments &&
-            other.authentication == this.authentication
+            other.authentication == this.authentication &&
+            other.authorization == this.authorization
     }
 
     override fun hashCode() =
-        Objects.hash(super.hashCode(), httpMethod, path, arguments, authentication)
+        Objects.hash(super.hashCode(), httpMethod, path, arguments, authentication, authorization)
 }
 
 enum class HttpMethod {
