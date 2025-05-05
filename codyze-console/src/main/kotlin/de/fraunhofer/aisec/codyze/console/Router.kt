@@ -26,13 +26,13 @@
 package de.fraunhofer.aisec.codyze.console
 
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
+import de.fraunhofer.aisec.cpg.graph.listOverlayClasses
 import io.ktor.http.*
 import io.ktor.server.http.content.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlin.reflect.KClass
-import org.reflections.Reflections
 
 /**
  * This function sets up the API routes for the web application. It defines the endpoints for
@@ -178,13 +178,7 @@ fun Routing.apiRoutes(service: ConsoleService) {
          * an array of concept names (Java class names).
          */
         get("/classes/concepts") {
-            val reflections =
-                Reflections(
-                    "de.fraunhofer.aisec.cpg.graph.concepts",
-                    org.reflections.scanners.Scanners.SubTypes,
-                )
-
-            val conceptClasses = reflections.getSubTypesOf(Concept::class.java)
+            val conceptClasses = listOverlayClasses<Concept>()
             call.respond(
                 mapOf("info" to conceptClasses.map { it.kotlin.getConstructorArguments() })
             )

@@ -31,27 +31,20 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.insertNodeAfterwardInEOGPath
 /**
  * This function creates a new [Concept] node based on [ConceptClass]. It is neither connected by
  * the EOG nor the DFG.
+ *
+ * @param connect If `true`, the created [Concept] will be connected to the underlying node by
+ *   setting its `underlyingNode`.
  */
 inline fun <reified ConceptClass : Concept> MetadataProvider.newConcept(
-    constructor: (underlyingNode: Node) -> (ConceptClass),
-    underlyingNode: Node,
-): ConceptClass =
-    constructor(underlyingNode).apply {
-        // Note: Update the conceptBuildHelper if you change this.
-        this.codeAndLocationFrom(underlyingNode)
-        this.name = Name("${ConceptClass::class.simpleName}", underlyingNode.name)
-        NodeBuilder.log(this)
-    }
-
-/**
- * This function creates a new [Concept] node based on [ConceptClass]. It is neither connected by
- * the EOG nor the DFG.
- */
-inline fun <reified ConceptClass : Concept> MetadataProvider.newConceptNoConnect(
     constructor: () -> (ConceptClass),
     underlyingNode: Node,
+    connect: Boolean,
 ): ConceptClass =
     constructor().apply {
+        if (connect) {
+            this.underlyingNode = underlyingNode
+            this.setDFG()
+        }
         // Note: Update the conceptBuildHelper if you change this.
         this.codeAndLocationFrom(underlyingNode)
         this.name = Name("${ConceptClass::class.simpleName}", underlyingNode.name)
@@ -59,36 +52,19 @@ inline fun <reified ConceptClass : Concept> MetadataProvider.newConceptNoConnect
     }
 
 /**
- * This function creates a new [Operation] node based on [OperationClass]. It is inserted in the EOG
- * after the [underlyingNode] but it is not connected by the DFG.
+ * This function creates a new [Operation] node based on [OperationClass]. It can be inserted in the
+ * EOG after the [underlyingNode] but it is not connected by the DFG.
+ *
+ * @param connect If `true`, the created [Operation] will be connected to the underlying node by
+ *   setting its `underlyingNode` and inserting it in the EOG , to [concept] by its edge
+ *   [Concept.ops].
  */
 inline fun <reified OperationClass : Operation, ConceptClass : Concept> MetadataProvider
     .newOperation(
-    constructor: (underlyingNode: Node, concept: ConceptClass) -> (OperationClass),
-    underlyingNode: Node,
-    concept: ConceptClass,
-): OperationClass =
-    constructor(underlyingNode, concept).apply {
-        this.codeAndLocationFrom(underlyingNode)
-        this.name =
-            Name(
-                "${OperationClass::class.simpleName}".replaceFirstChar { it.lowercaseChar() },
-                concept.name,
-            )
-        concept.ops += this
-        underlyingNode.insertNodeAfterwardInEOGPath(this)
-        NodeBuilder.log(this)
-    }
-
-/**
- * This function creates a new [Operation] node based on [OperationClass]. It is inserted in the EOG
- * after the [underlyingNode] but it is not connected by the DFG.
- */
-inline fun <reified OperationClass : Operation, ConceptClass : Concept> MetadataProvider
-    .newOperationNoConnect(
     constructor: (concept: ConceptClass) -> (OperationClass),
     underlyingNode: Node,
     concept: ConceptClass,
+    connect: Boolean,
 ): OperationClass =
     constructor(concept).apply {
         this.codeAndLocationFrom(underlyingNode)
@@ -97,6 +73,12 @@ inline fun <reified OperationClass : Operation, ConceptClass : Concept> Metadata
                 "${OperationClass::class.simpleName}".replaceFirstChar { it.lowercaseChar() },
                 concept.name,
             )
+        if (connect) {
+            this.underlyingNode = underlyingNode
+            concept.ops += this
+            underlyingNode.insertNodeAfterwardInEOGPath(this)
+            this.setDFG()
+        }
         NodeBuilder.log(this)
     }
 

@@ -29,11 +29,11 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import java.util.Objects
 
-abstract class CipherOperation(underlyingNode: Node, override val concept: Cipher) :
+abstract class CipherOperation(underlyingNode: Node?, override val concept: Cipher) :
     Operation(underlyingNode = underlyingNode, concept = concept), IsDiskEncryption
 
 class Encrypt(
-    underlyingNode: Node,
+    underlyingNode: Node? = null,
     concept: Cipher,
     /** The key used for encryption */
     val key: Secret,

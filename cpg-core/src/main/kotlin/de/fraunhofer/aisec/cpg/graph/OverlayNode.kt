@@ -48,15 +48,23 @@ abstract class OverlayNode() : Node() {
 
     var underlyingNode by unwrapping(OverlayNode::underlyingNodeEdge)
 
+    /**
+     * Compares this [OverlayNode] to another object. We also include the [underlyingNode] in this
+     * process, meaning that two overlay nodes with the equal properties will not be equal if they
+     * have different underlying nodes.
+     */
     override fun equals(other: Any?): Boolean {
         return other is OverlayNode &&
             super.equals(other) &&
-            other.underlyingNode == this.underlyingNode
+            this.underlyingNode == other.underlyingNode
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), underlyingNode)
-
-    open fun equalWithoutUnderlying(other: OverlayNode): Boolean {
-        return super.equals(other)
+    /**
+     * Returns the hash code of this [OverlayNode].
+     *
+     * See [equals] for the properties that are included in this process.
+     */
+    override fun hashCode(): Int {
+        return Objects.hash(super.hashCode(), underlyingNode)
     }
 }

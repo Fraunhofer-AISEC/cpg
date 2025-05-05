@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase.Companion.fromFile
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.passes.*
-import de.fraunhofer.aisec.cpg.passes.concepts.file.python.PythonFileConceptTask
+import de.fraunhofer.aisec.cpg.passes.concepts.file.python.PythonFileConceptPass
 import de.fraunhofer.aisec.cpg.persistence.persist
 import java.io.File
 import java.net.ConnectException
@@ -453,7 +453,6 @@ class Application : Callable<Int> {
     fun setupTranslationConfiguration(): TranslationConfiguration {
         val translationConfiguration =
             TranslationConfiguration.builder()
-                .topLevel(topLevel)
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage")
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage")
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage")
@@ -470,6 +469,8 @@ class Application : Callable<Int> {
                 .debugParser(DEBUG_PARSER)
                 .useUnityBuild(useUnityBuild)
                 .useParallelPasses(false)
+
+        topLevel?.let { translationConfiguration.topLevel(it) }
 
         if (maxComplexity != -1) {
             translationConfiguration.configurePass<ControlFlowSensitiveDFGPass>(
@@ -494,7 +495,7 @@ class Application : Callable<Int> {
             translationConfiguration.defaultPasses()
             translationConfiguration.registerPass<ControlDependenceGraphPass>()
             translationConfiguration.registerPass<ProgramDependenceGraphPass>()
-            translationConfiguration.registerPass<PythonFileConceptTask>()
+            translationConfiguration.registerPass<PythonFileConceptPass>()
             // translationConfiguration.registerPass<PythonEncryptionPass>()
         }
         if (customPasses != "DEFAULT") {

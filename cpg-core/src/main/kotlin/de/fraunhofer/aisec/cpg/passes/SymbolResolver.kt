@@ -158,6 +158,10 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         templateList.clear()
     }
 
+    override fun finalCleanup() {
+        componentsToTemplates.clear()
+    }
+
     /**
      * This function caches all [TemplateDeclaration]s into [templateList]. It either fetches the
      * existing result from [componentsToTemplates] or fills [templateList] for the first time and
@@ -305,6 +309,8 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         } else {
             Util.warnWithFileLocation(ref, log, "Did not find a declaration for ${ref.name}")
         }
+
+        ref.markClean()
     }
 
     /**
@@ -410,6 +416,9 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
             is CallExpression -> handleCallExpression(node)
             is HasOverloadedOperation -> handleOverloadedOperator(node)
         }
+
+        // Mark the node as "clean"
+        node?.markClean()
     }
 
     /**
@@ -435,7 +444,11 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         val language = call.language
 
         // If the base type is unknown, we cannot resolve the call
-        if (callee is MemberExpression && callee.base.type is UnknownType) {
+        if (
+            callee is MemberExpression &&
+                callee.base.type is UnknownType &&
+                callee.base.assignedTypes.isEmpty()
+        ) {
             Util.warnWithFileLocation(
                 call,
                 log,
