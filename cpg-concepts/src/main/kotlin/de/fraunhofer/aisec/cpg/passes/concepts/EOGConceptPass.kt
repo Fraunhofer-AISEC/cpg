@@ -247,6 +247,7 @@ open class EOGConceptPass(ctx: TranslationContext) :
             }
             .fulfilled
             // The last nodes on the path are the ones we are interested in.
+            // Assumptions are lost when returning single results as single nodes.
             .map { it.nodes.last() }
             .flatMap {
                 // collect all "overlay" nodes
