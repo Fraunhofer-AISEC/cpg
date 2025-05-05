@@ -41,6 +41,7 @@ import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import java.io.File.createTempFile
 import java.io.FileReader
+import java.io.InputStreamReader
 import java.io.LineNumberReader
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
@@ -68,7 +69,7 @@ class TypeScriptLanguageFrontend(
 
     private var currentFileContent: String? = null
 
-    private val mapper = jacksonObjectMapper()
+    internal val mapper = jacksonObjectMapper()
 
     companion object {
         private val parserFile: File = createTempFile("parser", "")
@@ -105,19 +106,64 @@ class TypeScriptLanguageFrontend(
     }
 
     override fun parse(file: File): TranslationUnitDeclaration {
-        // Necessary to not read file contents several times
         currentFileContent = file.readText()
         if (!parserFile.exists()) {
-            throw TranslationException("parser not found @ ${parserFile.absolutePath}")
+            throw TranslationException("Unified parser not found @ ${parserFile.absolutePath}")
         }
 
-        val p = Runtime.getRuntime().exec(arrayOf(parserFile.absolutePath, file.absolutePath))
+        val isSvelte = file.extension == "svelte"
+        val languageFlag = if (isSvelte) "--language=svelte" else "--language=typescript"
 
-        val node = mapper.readValue(p.inputStream, TypeScriptNode::class.java)
+        log.info("Executing unified parser for {} with flag: {}", file.absolutePath, languageFlag)
+        val process =
+            try {
+                Runtime.getRuntime()
+                    .exec(arrayOf(parserFile.absolutePath, languageFlag, file.absolutePath))
+            } catch (e: Exception) {
+                throw de.fraunhofer.aisec.cpg.frontends.TranslationException("Error executing unified parser: ${e.message}", e)
+            }
 
-        val translationUnit = this.declarationHandler.handle(node) as TranslationUnitDeclaration
+        val stdInput = InputStreamReader(process.inputStream)
+        val stdError = InputStreamReader(process.errorStream)
+        val jsonResult = stdInput.readText()
+        val errors = stdError.readText()
+        stdInput.close()
+        stdError.close()
 
-        handleComments(file, translationUnit)
+        val exitCode = process.waitFor()
+
+        if (exitCode != 0) {
+            log.error("Unified parser exited with code {}: {}", exitCode, errors)
+            throw de.fraunhofer.aisec.cpg.frontends.TranslationException("Unified parser failed: $errors")
+        }
+        if (errors.isNotEmpty()) {
+            log.warn("Unified parser reported errors/warnings: {}", errors)
+        }
+
+        // Decide how to handle the result based on the language
+        val translationUnit: TranslationUnitDeclaration
+        if (isSvelte) {
+            log.debug("Parsing Svelte AST from JSON")
+            // Access languageRegistry via ctx
+            val svelteLang = ctx.languageRegistry.getLanguage(SvelteLanguage::class.java)
+            if (svelteLang == null) {
+                throw de.fraunhofer.aisec.cpg.frontends.TranslationException("Svelte language frontend not registered.")
+            }
+            // Instantiate SvelteLanguageFrontend - Requires it to have a matching constructor
+            val svelteFrontend =
+                SvelteLanguageFrontend(ctx, svelteLang as SvelteLanguage) // Explicit cast
+
+            // Let SvelteFrontend handle the JSON AST
+            translationUnit = svelteFrontend.handleSvelteJsonAst(jsonResult, file)
+        } else {
+            log.debug("Parsing TypeScript AST from JSON")
+            // Deserialize directly into TypeScriptNode for existing TS handling
+            val node = mapper.readValue(jsonResult, TypeScriptNode::class.java)
+
+            // Use existing TypeScript handlers
+            translationUnit = this.declarationHandler.handle(node) as TranslationUnitDeclaration
+            handleComments(file, translationUnit) // Handle TS comments
+        }
 
         return translationUnit
     }
