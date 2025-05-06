@@ -25,7 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.query
 
+import de.fraunhofer.aisec.cpg.assumptions.Assumption
 import de.fraunhofer.aisec.cpg.assumptions.AssumptionType
+import de.fraunhofer.aisec.cpg.assumptions.HasAssumptions
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.AnalysisSensitivity
@@ -252,6 +254,15 @@ fun dataFlowWithValidator(
     )
 }
 
+data class NodeWithAssumption(val node: Node, override val assumptions: MutableList<Assumption>) :
+    HasAssumptions
+
+data class NodeCollectionWithAssumption(
+    val startNode: Node,
+    val nodes: Collection<Node>,
+    override val assumptions: MutableList<Assumption>,
+) : HasAssumptions
+
 /**
  * This function tries to identify if the data held in [this] node are copied to another memory
  * location. This could happen by:
@@ -264,7 +275,8 @@ fun dataFlowWithValidator(
  * - Assigning an immutable object to a new variable: We should track this object and the target of
  *   the assignment separately.
  */
-fun Node.generatesNewData(): Collection<Node> {
+fun Node.generatesNewData(): NodeCollectionWithAssumption {
+    val tempAssumptions = mutableSetOf<HasAssumptions>()
     val splitNodes =
         when {
             this is BinaryOperator && !this.type.isMutable -> {
@@ -273,14 +285,16 @@ fun Node.generatesNewData(): Collection<Node> {
                 // declaration
                 // this flows to and track that one. If it flows to a reference first, this will
                 // typically be identified by handling the assignments below which is why we
-                // explicitly
-                // exclude such a flow here.
-                this.followDFGEdgesUntilHit(earlyTermination = { node, _ -> node is Reference }) {
+                // explicitly exclude such a flow here.
+                val tmp =
+                    this.followDFGEdgesUntilHit(
+                        earlyTermination = { node, _ -> node is Reference }
+                    ) {
                         it is Declaration
                     }
-                    .fulfilled
-                    .map { it.last() }
-                    .toSet()
+                tempAssumptions.addAll(tmp.fulfilled.flatten())
+
+                tmp.fulfilled.map { it.last() }.toSet()
             }
             /* A new object is constructed and our data flow into this object -> track the new object. */
             this is ConstructExpression ||
@@ -293,8 +307,7 @@ fun Node.generatesNewData(): Collection<Node> {
                 (this.astParent as AssignExpression).operatorCode in
                     this.language.compoundAssignmentOperators -> {
                 // If we're the rhs of an assignment with an operator like +=, we should track the
-                // lhs
-                // value separately.
+                // lhs value separately.
                 (this as? HasType)?.let { (this.astParent as AssignExpression).findTargets(it) }
                     ?: setOf()
             }
@@ -306,8 +319,14 @@ fun Node.generatesNewData(): Collection<Node> {
             }
             else -> emptySet()
         }
+    val returnValue =
+        NodeCollectionWithAssumption(
+            startNode = this,
+            splitNodes,
+            mutableListOf(*(tempAssumptions + splitNodes).flatMap { it.assumptions }.toTypedArray()),
+        )
 
-    this.assume(
+    returnValue.assume(
         AssumptionType.DataFlowAssumption,
         "The node generates the following new \"objects\" which require separate handling as they represent copies/clones of the original \"object\": $splitNodes.\n\n" +
             "We assume that this list is complete and does not contain additional elements.\n" +
@@ -320,7 +339,7 @@ fun Node.generatesNewData(): Collection<Node> {
             "2.d) Assigning an immutable object to a new variable: We should track this object and the target of the assignment separately.",
     )
 
-    return splitNodes
+    return returnValue
 }
 
 /**
@@ -336,7 +355,7 @@ fun Node.identifyInfoToTrack(
     scope: AnalysisScope,
     vararg sensitivities: AnalysisSensitivity =
         ContextSensitive + FieldSensitive + FilterUnreachableEOG,
-): Set<Node> {
+): Set<NodeWithAssumption> {
     // Get all next DFG nodes. These must include all relevant operations to make this work but that
     // should be the case with our current implementation.
     val reachableDFGNodes =
@@ -346,10 +365,11 @@ fun Node.identifyInfoToTrack(
             )
             .flatten()
             .toSet()
-    val result = mutableSetOf<Node>(this)
+    val result = mutableSetOf<NodeWithAssumption>(NodeWithAssumption(this, mutableListOf()))
     for (node in reachableDFGNodes) {
         // Is this node a node copying the data? If so, add its targets to the list.
-        result.addAll(node.generatesNewData())
+        val targets = node.generatesNewData()
+        result.addAll(targets.nodes.map { NodeWithAssumption(it, targets.assumptions) })
     }
     return result
 }
@@ -378,13 +398,13 @@ fun Node.alwaysFlowsTo(
         if (identifyCopies) {
             this.identifyInfoToTrack(scope = scope, sensitivities = sensitivities)
         } else {
-            setOf(this)
+            setOf(NodeWithAssumption(this, mutableListOf()))
         }
     var nothingFailed = true
     val allChildren = mutableListOf<QueryTree<Boolean>>()
     for (nodeToTrack in nodesToTrack) {
         val nextDFGPaths =
-            nodeToTrack
+            nodeToTrack.node
                 .collectAllNextDFGPaths(
                     interproceduralAnalysis = scope is Interprocedural,
                     contextSensitive = ContextSensitive in sensitivities,
@@ -398,7 +418,7 @@ fun Node.alwaysFlowsTo(
                 (!allowOverwritingValue &&
                     // TODO: This should be replaced with some check if the memory location/whatever
                     // where the data is kept is (partially) written to.
-                    nodeToTrack in n.prevDFG &&
+                    nodeToTrack.node in n.prevDFG &&
                     (n as? Reference)?.access == AccessValues.WRITE)
         }
         val eogScope =
@@ -413,7 +433,7 @@ fun Node.alwaysFlowsTo(
                 )
             } else scope
         val nextEOGEvaluation =
-            nodeToTrack.followEOGEdgesUntilHit(
+            nodeToTrack.node.followEOGEdgesUntilHit(
                 collectFailedPaths = true,
                 findAllPossiblePaths = true,
                 scope = eogScope,
@@ -434,7 +454,7 @@ fun Node.alwaysFlowsTo(
                             else
                                 "" +
                                     "before passing through a node matching the required predicate.",
-                    node = nodeToTrack,
+                    node = nodeToTrack.node,
                     terminationReason =
                         if (failureReason == FailureReason.PATH_ENDED) {
                             PathEnded(nodes.last())
@@ -470,6 +490,7 @@ fun Node.alwaysFlowsTo(
                 "Some EOG paths failed to fulfill the predicate"
             },
         node = this,
+        assumptions = nodesToTrack.flatMap { it.assumptions }.toMutableList(),
     )
 }
 
