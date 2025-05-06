@@ -63,6 +63,7 @@ enum class FileAccessModeFlags(val value: Long) : IsFile {
  */
 enum class FileTempFileStatus {
     TEMP_FILE,
+    TEMP_OR_NOT_TEMP,
     NOT_A_TEMP_FILE,
     UNKNOWN,
 }
@@ -93,6 +94,18 @@ class File(
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), fileName, isTempFile, deleteOnClose)
+}
+
+/** TODO */
+class Path(
+    underlyingNode: Node? = null,
+    var isTempFile: FileTempFileStatus = FileTempFileStatus.UNKNOWN,
+) : Concept(underlyingNode = underlyingNode), IsFile {
+    override fun equals(other: Any?): Boolean {
+        return other is Path && super.equals(other) && other.isTempFile == this.isTempFile
+    }
+
+    override fun hashCode() = Objects.hash(super.hashCode(), isTempFile)
 }
 
 /**

@@ -45,6 +45,10 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 fun MetadataProvider.newFile(underlyingNode: Node, fileName: String, connect: Boolean) =
     newConcept({ File(fileName = fileName) }, underlyingNode = underlyingNode, connect = connect)
 
+/** TODO */
+fun MetadataProvider.newFileName(underlyingNode: Node, connect: Boolean) =
+    newConcept({ Path() }, underlyingNode = underlyingNode, connect = connect)
+
 /**
  * Creates a new [OpenFile] node. This node represents opening a file.
  *

@@ -26,11 +26,11 @@
 package de.fraunhofer.aisec.cpg.passes.concepts.file.python
 
 import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.graph.Component
-import de.fraunhofer.aisec.cpg.graph.OverlayNode
-import de.fraunhofer.aisec.cpg.graph.argumentValueByNameOrPosition
+import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.concepts.file.*
+import de.fraunhofer.aisec.cpg.graph.edges.get
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
@@ -49,8 +49,9 @@ import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLate
  * corresponding reading and writing functions.
  */
 @ExecuteLate
-@DependsOn(DFGPass::class)
-@DependsOn(EvaluationOrderGraphPass::class)
+@DependsOn(DFGPass::class, false)
+@DependsOn(EvaluationOrderGraphPass::class, false)
+@DependsOn(PythonFileConceptPrePass::class, false)
 class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
     companion object {
         /**
@@ -148,21 +149,25 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
 
         return when (callExpression.callee.name.toString()) {
             "open" -> {
-                handleOpen(callExpression)
+                handleOpen(callExpression = callExpression, stateElement = state)
             }
             "os.open" -> {
-                handleOsOpen(callExpression)
+                handleOsOpen(callExpression, stateElement = state)
             }
             "os.chmod" -> {
-                handleOsChmod(callExpression)
+                handleOsChmod(callExpression, stateElement = state)
             }
             "os.remove" -> {
-                handleOsRemove(callExpression)
+                handleOsRemove(callExpression, stateElement = state)
             }
             "tempfile.TemporaryFile",
             "tempfile.NamedTemporaryFile"
             /* TODO filedescriptor support... "tempfile.mkstemp" */ -> {
                 handleTempFile(callExpression)
+            }
+            "tempfile.gettempdir" -> {
+                emptySet()
+                /** see [PythonFileConceptPrePass] */
             }
             else -> {
                 emptySet()
@@ -220,7 +225,10 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
     }
 
     /** TODO */
-    private fun handleOpen(callExpression: CallExpression): Collection<OverlayNode> {
+    private fun handleOpen(
+        callExpression: CallExpression,
+        stateElement: NodeToOverlayStateElement,
+    ): Collection<OverlayNode> {
         /**
          * This matches when parsing code like:
          * ```python
@@ -233,7 +241,12 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
          * TODO: opener https://docs.python.org/3/library/functions.html#open
          */
         val (newFileNode, isNewFile) =
-            getOrCreateFile(callExpression = callExpression, argumentName = "file", argumentIdx = 0)
+            getOrCreateFile(
+                callExpression = callExpression,
+                argumentName = "file",
+                argumentIdx = 0,
+                stateElement = stateElement,
+            )
         if (newFileNode == null) {
             Util.errorWithFileLocation(
                 callExpression,
@@ -258,9 +271,17 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
     }
 
     /** TODO */
-    private fun handleOsOpen(callExpression: CallExpression): Collection<OverlayNode> {
+    private fun handleOsOpen(
+        callExpression: CallExpression,
+        stateElement: NodeToOverlayStateElement,
+    ): Collection<OverlayNode> {
         val (newFileNode, isNewFile) =
-            getOrCreateFile(callExpression = callExpression, argumentName = "path", argumentIdx = 0)
+            getOrCreateFile(
+                callExpression = callExpression,
+                argumentName = "path",
+                argumentIdx = 0,
+                stateElement = stateElement,
+            )
         if (newFileNode == null) {
             Util.errorWithFileLocation(
                 callExpression,
@@ -296,9 +317,17 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
     }
 
     /** TODO */
-    private fun handleOsChmod(callExpression: CallExpression): Collection<OverlayNode> {
+    private fun handleOsChmod(
+        callExpression: CallExpression,
+        stateElement: NodeToOverlayStateElement,
+    ): Collection<OverlayNode> {
         val (file, isNewFile) =
-            getOrCreateFile(callExpression = callExpression, argumentName = "path", argumentIdx = 0)
+            getOrCreateFile(
+                callExpression = callExpression,
+                argumentName = "path",
+                argumentIdx = 0,
+                stateElement = stateElement,
+            )
         if (file == null) {
             Util.errorWithFileLocation(
                 callExpression,
@@ -329,9 +358,17 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
     }
 
     /** TODO */
-    private fun handleOsRemove(callExpression: CallExpression): Collection<OverlayNode> {
+    private fun handleOsRemove(
+        callExpression: CallExpression,
+        stateElement: NodeToOverlayStateElement,
+    ): Collection<OverlayNode> {
         val (file, isNewFile) =
-            getOrCreateFile(callExpression = callExpression, argumentName = "path", argumentIdx = 0)
+            getOrCreateFile(
+                callExpression = callExpression,
+                argumentName = "path",
+                argumentIdx = 0,
+                stateElement = stateElement,
+            )
         if (file == null) {
             Util.errorWithFileLocation(
                 callExpression,
@@ -363,6 +400,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
         callExpression: CallExpression,
         argumentName: String,
         argumentIdx: Int,
+        stateElement: NodeToOverlayStateElement,
     ): Pair<File?, Boolean> {
         val fileName =
             getFileName(
@@ -379,7 +417,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
             if (fileName.startsWith("/tmp/")) {
                 FileTempFileStatus.TEMP_FILE
             } else {
-                FileTempFileStatus.NOT_A_TEMP_FILE
+                getTempFileStatus(callExpression, argumentName, argumentIdx, stateElement)
             }
 
         val currentMap = fileCache.computeIfAbsent(currentComponent) { mutableMapOf() }
@@ -393,6 +431,94 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
             }
         currentMap[fileName] = newEntry
         return newEntry to true
+    }
+
+    /** TODO */
+    private fun getTempFileStatus(
+        callExpression: CallExpression,
+        argumentName: String,
+        argumentIdx: Int,
+        stateElement: NodeToOverlayStateElement,
+    ): FileTempFileStatus {
+        val arg =
+            callExpression.argumentEdges[argumentName]?.end
+                ?: callExpression.arguments.getOrNull(argumentIdx)
+        if (arg == null) {
+            Util.errorWithFileLocation(
+                node = callExpression,
+                log,
+                "Failed to find the file argument.",
+            )
+            return FileTempFileStatus.UNKNOWN
+        }
+
+        // **************
+        val foobarbaz =
+            arg.followDFGEdgesUntilHit(
+                collectFailedPaths = true,
+                findAllPossiblePaths = true,
+                direction = Backward(GraphToFollow.DFG),
+            ) { outerNode ->
+                outerNode
+                    .followDFGEdgesUntilHit(
+                        collectFailedPaths = false,
+                        direction = Backward(GraphToFollow.DFG),
+                    ) { innerNode ->
+                        innerNode.overlays.any {
+                            it is Path && it.isTempFile == FileTempFileStatus.TEMP_FILE
+                        }
+                    }
+                    .fulfilled
+                    .isNotEmpty()
+            }
+        return if (foobarbaz.failed.isNotEmpty()) {
+            FileTempFileStatus.TEMP_FILE
+        } else if (foobarbaz.fulfilled.isEmpty()) {
+            FileTempFileStatus.NOT_A_TEMP_FILE
+        } else {
+            FileTempFileStatus.TEMP_OR_NOT_TEMP
+        }
+        // **************
+
+        val fileNames =
+            arg.followDFGEdgesUntilHit(
+                collectFailedPaths = true,
+                findAllPossiblePaths = true,
+                direction = Backward(GraphToFollow.DFG),
+            ) { node ->
+                node.overlays.any { it is Path }
+            }
+
+        // TODO: refactor this madness
+        return if (fileNames.fulfilled.isEmpty()) {
+            FileTempFileStatus.NOT_A_TEMP_FILE
+        } else if (fileNames.failed.isEmpty()) {
+            if (
+                fileNames.fulfilled
+                    .map { it.last() }
+                    .all { it !is Path || it.isTempFile == FileTempFileStatus.TEMP_FILE }
+            ) {
+                FileTempFileStatus.TEMP_FILE
+            } else if (
+                fileNames.fulfilled
+                    .map { it.last() }
+                    .any { it !is Path || it.isTempFile == FileTempFileStatus.TEMP_FILE }
+            ) {
+                FileTempFileStatus.TEMP_OR_NOT_TEMP
+            } else {
+                FileTempFileStatus.NOT_A_TEMP_FILE
+            }
+        } else {
+            if (
+                fileNames.fulfilled
+                    .map { it.last() }
+                    .any { it !is Path || it.isTempFile == FileTempFileStatus.TEMP_FILE }
+            ) {
+                FileTempFileStatus.TEMP_OR_NOT_TEMP
+            } else {
+                FileTempFileStatus.NOT_A_TEMP_FILE
+            }
+        }
     }
 
     /**

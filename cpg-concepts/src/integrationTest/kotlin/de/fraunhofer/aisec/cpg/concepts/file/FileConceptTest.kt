@@ -478,7 +478,9 @@ class FileConceptTest : BaseTest() {
                 val open =
                     result.operationNodes.singleOrNull { it is OpenFile && it.file == tempFile }
                 assertNotNull(open, "Expected to find exactly one corresponding `OpenFile` node.")
-                executionPath(startNode = open, type = Must, predicate = { it is DeleteFile }).value
+                executionPath(startNode = open, type = Must, predicate = { it is DeleteFile })
+                    .value // TODO: ASSUMPTION: this only works with `with` because we currently
+                // only model `close` here.
             },
             "Expected all temporary files to be deleted.",
         )
@@ -607,6 +609,59 @@ class FileConceptTest : BaseTest() {
             allTempFiles.size,
             allTempFiles.map { it.fileName }.toSet().count(),
             "Expected the temp files to have unique names.",
+        )
+    }
+
+    @Test
+    fun testTempfilesGettmpdirBAD() {
+        val topLevel = Path.of("src", "integrationTest", "resources", "python", "file")
+
+        val result =
+            analyze(
+                files = listOf(topLevel.resolve("tempfile_bad_gettmpdir.py").toFile()),
+                topLevel = topLevel,
+                usePasses = true,
+            ) {
+                it.registerLanguage<PythonLanguage>()
+                it.registerPass<PythonFileConceptPass>()
+                it.symbols(mapOf("PYTHON_PLATFORM" to "linux"))
+            }
+        assertNotNull(result)
+
+        val file = result.conceptNodes.filterIsInstance<File>().singleOrNull()
+        assertNotNull(file)
+
+        assertEquals(
+            FileTempFileStatus.TEMP_FILE,
+            file.isTempFile,
+            "Expected the file to be marked as temp.",
+        )
+    }
+
+    @Test
+    fun testTempOrNot2() {
+        val topLevel = Path.of("src", "integrationTest", "resources", "python", "file")
+
+        val result =
+            analyze(
+                files = listOf(topLevel.resolve("tempOrNot2.py").toFile()),
+                topLevel = topLevel,
+                usePasses = true,
+            ) {
+                it.registerLanguage<PythonLanguage>()
+                it.registerPass<PythonFileConceptPass>()
+                // it.registerPass<PythonFileConceptPrePass>()
+                it.symbols(mapOf("PYTHON_PLATFORM" to "linux"))
+            }
+        assertNotNull(result)
+
+        val file = result.conceptNodes.filterIsInstance<File>().singleOrNull()
+        assertNotNull(file)
+
+        assertEquals(
+            FileTempFileStatus.TEMP_OR_NOT_TEMP,
+            file.isTempFile,
+            "Expected the file to be marked as temp or not temp.",
         )
     }
 }
