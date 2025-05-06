@@ -258,7 +258,6 @@ data class NodeWithAssumption(val node: Node, override val assumptions: MutableL
     HasAssumptions
 
 data class NodeCollectionWithAssumption(
-    val startNode: Node,
     val nodes: Collection<Node>,
     override val assumptions: MutableList<Assumption>,
 ) : HasAssumptions
@@ -321,9 +320,10 @@ fun Node.generatesNewData(): NodeCollectionWithAssumption {
         }
     val returnValue =
         NodeCollectionWithAssumption(
-            startNode = this,
             splitNodes,
-            mutableListOf(*(tempAssumptions + splitNodes).flatMap { it.assumptions }.toTypedArray()),
+            mutableListOf(
+                *(tempAssumptions + splitNodes + this).flatMap { it.assumptions }.toTypedArray()
+            ),
         )
 
     returnValue.assume(
