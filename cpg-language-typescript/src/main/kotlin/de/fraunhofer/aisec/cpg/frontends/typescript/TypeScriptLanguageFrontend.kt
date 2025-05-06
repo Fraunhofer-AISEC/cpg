@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.FrontendUtils
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
-import de.fraunhofer.aisec.cpg.frontends.TranslationException
+import de.fraunhofer.aisec.cpg.frontends.TranslationException as CpgTranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
@@ -72,7 +72,7 @@ class TypeScriptLanguageFrontend(
     internal val mapper = jacksonObjectMapper()
 
     companion object {
-        private val parserFile: File = createTempFile("parser", "")
+        internal val parserFile: File = createTempFile("parser", "")
 
         init {
             val arch = System.getProperty("os.arch")
@@ -89,18 +89,45 @@ class TypeScriptLanguageFrontend(
                     }
                 }
 
-            val link = this::class.java.getResourceAsStream("/typescript/parser-$os-$arch")
-            link?.use {
+            // Note: Path adjusted to always look in /typescript/
+            val resourcePath = "/typescript/parser-$os-$arch"
+            val link = this::class.java.getResourceAsStream(resourcePath)
+
+            if (link == null) {
+                // Handle case where parser binary is not found
+                log.error("TypeScript parser binary not found at resource path: {}", resourcePath)
+                // Optionally attempt fallback or throw an exception
+                val fallbackResourcePath = "/typescript/parser-$os-x86_64"
+                val fallbackStream = this::class.java.getResourceAsStream(fallbackResourcePath)
+                if (fallbackStream != null) {
+                    log.warn("Could not find parser for specific arch $arch, using fallback x86_64")
+                    Files.copy(
+                        fallbackStream,
+                        parserFile.toPath(),
+                        StandardCopyOption.REPLACE_EXISTING,
+                    )
+                    parserFile.setExecutable(true)
+                    fallbackStream.close()
+                } else {
+                    log.error(
+                        "TypeScript parser binary also not found at fallback path: {}",
+                        fallbackResourcePath,
+                    )
+                    throw CpgTranslationException("TypeScript parser binary not found")
+                }
+            } else {
                 log.info(
-                    "Extracting parser out of resources to {}",
+                    "Extracting TypeScript parser from resources ({}) to {}",
+                    resourcePath,
                     parserFile.absoluteFile.toPath(),
                 )
                 Files.copy(
-                    it,
+                    link,
                     parserFile.absoluteFile.toPath(),
                     StandardCopyOption.REPLACE_EXISTING,
                 )
                 parserFile.setExecutable(true)
+                link.close() // Close the stream
             }
         }
     }
@@ -108,19 +135,25 @@ class TypeScriptLanguageFrontend(
     override fun parse(file: File): TranslationUnitDeclaration {
         currentFileContent = file.readText()
         if (!parserFile.exists()) {
-            throw TranslationException("Unified parser not found @ ${parserFile.absolutePath}")
+            throw CpgTranslationException(
+                "TypeScript parser not found @ ${parserFile.absolutePath}"
+            )
         }
 
-        val isSvelte = file.extension == "svelte"
-        val languageFlag = if (isSvelte) "--language=svelte" else "--language=typescript"
+        // Always use the typescript language flag for this frontend
+        val languageFlag = "--language=typescript"
 
-        log.info("Executing unified parser for {} with flag: {}", file.absolutePath, languageFlag)
+        log.info(
+            "Executing TypeScript parser for {} with flag: {}",
+            file.absolutePath,
+            languageFlag,
+        )
         val process =
             try {
                 Runtime.getRuntime()
                     .exec(arrayOf(parserFile.absolutePath, languageFlag, file.absolutePath))
             } catch (e: Exception) {
-                throw de.fraunhofer.aisec.cpg.frontends.TranslationException("Error executing unified parser: ${e.message}", e)
+                throw CpgTranslationException("Error executing TypeScript parser: ${e.message}", e)
             }
 
         val stdInput = InputStreamReader(process.inputStream)
@@ -133,37 +166,19 @@ class TypeScriptLanguageFrontend(
         val exitCode = process.waitFor()
 
         if (exitCode != 0) {
-            log.error("Unified parser exited with code {}: {}", exitCode, errors)
-            throw de.fraunhofer.aisec.cpg.frontends.TranslationException("Unified parser failed: $errors")
+            log.error("TypeScript parser exited with code {}: {}", exitCode, errors)
+            throw CpgTranslationException("TypeScript parser failed: $errors")
         }
         if (errors.isNotEmpty()) {
-            log.warn("Unified parser reported errors/warnings: {}", errors)
+            log.warn("TypeScript parser reported errors/warnings: {}", errors)
         }
 
-        // Decide how to handle the result based on the language
-        val translationUnit: TranslationUnitDeclaration
-        if (isSvelte) {
-            log.debug("Parsing Svelte AST from JSON")
-            // Access languageRegistry via ctx
-            val svelteLang = ctx.languageRegistry.getLanguage(SvelteLanguage::class.java)
-            if (svelteLang == null) {
-                throw de.fraunhofer.aisec.cpg.frontends.TranslationException("Svelte language frontend not registered.")
-            }
-            // Instantiate SvelteLanguageFrontend - Requires it to have a matching constructor
-            val svelteFrontend =
-                SvelteLanguageFrontend(ctx, svelteLang as SvelteLanguage) // Explicit cast
+        // Deserialize directly into TypeScriptNode for existing TS handling
+        val node = mapper.readValue(jsonResult, TypeScriptNode::class.java)
 
-            // Let SvelteFrontend handle the JSON AST
-            translationUnit = svelteFrontend.handleSvelteJsonAst(jsonResult, file)
-        } else {
-            log.debug("Parsing TypeScript AST from JSON")
-            // Deserialize directly into TypeScriptNode for existing TS handling
-            val node = mapper.readValue(jsonResult, TypeScriptNode::class.java)
-
-            // Use existing TypeScript handlers
-            translationUnit = this.declarationHandler.handle(node) as TranslationUnitDeclaration
-            handleComments(file, translationUnit) // Handle TS comments
-        }
+        // Use existing TypeScript handlers
+        val translationUnit = this.declarationHandler.handle(node) as TranslationUnitDeclaration
+        handleComments(file, translationUnit) // Handle TS comments
 
         return translationUnit
     }
