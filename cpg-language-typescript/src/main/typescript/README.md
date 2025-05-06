@@ -23,7 +23,6 @@ The Gradle build process (`cpg-language-typescript/build.gradle.kts`) uses the `
 
 ## Frontend Usage
 
-The `TypeScriptLanguageFrontend.kt` invokes the appropriate compiled Deno executable based on the host OS/architecture. It passes the `--language` flag and the input file path. Based on the flag:
+The `TypeScriptLanguageFrontend.kt` invokes the appropriate compiled Deno executable based on the host OS/architecture for `.ts` and `.js` files, passing the `--language=typescript` flag. It receives the TS AST JSON, deserializes it into `TypeScriptNode` objects, and processes it using its internal handlers.
 
-*   For TypeScript/JavaScript: It receives the TS AST JSON, deserializes it into `TypeScriptNode` objects, and processes it using its internal handlers.
-*   For Svelte: It receives the Svelte AST JSON, deserializes it into `SvelteNode` objects (defined in `SvelteAST.kt`), and then delegates the CPG construction logic to `SvelteLanguageFrontend.handleSvelteJsonAst()`.
+The `SvelteLanguageFrontend.kt` (when invoked by the CPG TranslationManager for `.svelte` files) similarly invokes the same compiled Deno executable. It passes the `--language=svelte` flag, receives the Svelte AST JSON, deserializes it into `SvelteNode` objects (defined in `SvelteAST.kt`), and then directly constructs the CPG within its `parse()` method.
