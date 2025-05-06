@@ -153,7 +153,7 @@ class TypeScriptLanguageFrontend(
                 Runtime.getRuntime()
                     .exec(arrayOf(parserFile.absolutePath, languageFlag, file.absolutePath))
             } catch (e: Exception) {
-                throw CpgTranslationException("Error executing TypeScript parser: ${e.message}", e)
+                throw CpgTranslationException("Error executing TypeScript parser: ${e.message}")
             }
 
         val stdInput = InputStreamReader(process.inputStream)

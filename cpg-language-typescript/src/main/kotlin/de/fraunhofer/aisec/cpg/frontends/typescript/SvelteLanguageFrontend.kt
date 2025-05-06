@@ -81,8 +81,7 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: SvelteLanguage =
                     .exec(arrayOf(parserFile.absolutePath, languageFlag, file.absolutePath))
             } catch (e: Exception) {
                 throw CpgTranslationException(
-                    "Error executing unified parser for Svelte: ${e.message}",
-                    e,
+                    "Error executing unified parser for Svelte: ${e.message}"
                 )
             }
 
