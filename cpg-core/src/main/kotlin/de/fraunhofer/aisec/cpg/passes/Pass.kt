@@ -28,9 +28,11 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.*
+import de.fraunhofer.aisec.cpg.assumptions.AssumptionType
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.LanguageTrait
+import de.fraunhofer.aisec.cpg.frontends.NoLanguage.assume
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
@@ -352,6 +354,10 @@ fun executePassesSequentially(
             TranslationManager.Companion.log.warn(
                 "Pass {} reached max executions, skipping",
                 pass.simpleName,
+            )
+            result.assume(
+                AssumptionType.CompletenessAssumption,
+                "We assume that after $numExec repeated executions of the ${pass.simpleName} no new information is obtained and skip further executions.",
             )
             continue
         }
