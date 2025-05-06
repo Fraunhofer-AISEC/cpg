@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import kotlin.reflect.KClass
+import kotlin.reflect.safeCast
 
 /**
  * The core DSL function of our tagging API. It represents a configuration-style DSL to define a
@@ -102,8 +103,9 @@ fun <T : Node> Selector<T>.withMultiple(
  * This class holds the context used in the [tag] DSL function. It basically contains a list of
  * [EachContext], which represent a call to [each] within the tagging context.
  */
-data class TaggingContext(val listOfEach: MutableList<EachContext<*>> = mutableListOf()) {
-    fun collect(
+data class TaggingContext(val listOfEach: MutableList<EachContext<*>> = mutableListOf()) :
+    OverlayCollector {
+    override fun collect(
         lattice: NodeToOverlayState,
         state: NodeToOverlayStateElement,
         node: Node,
@@ -113,7 +115,7 @@ data class TaggingContext(val listOfEach: MutableList<EachContext<*>> = mutableL
         for (each in listOfEach) {
             // Check, if the node is assignable to the "each"
             val overlay = each.collect(lattice, state, node)
-            list += overlay
+            overlay?.let { list += it }
         }
 
         return list
@@ -125,22 +127,20 @@ data class TaggingContext(val listOfEach: MutableList<EachContext<*>> = mutableL
  * used to select a node that is brought into the [EachContext] as well as a [builder] that
  * specifies how and which [OverlayNode] is constructed based on the selected node(s).
  */
-@Suppress("UNCHECKED_CAST")
 data class EachContext<T : Node>(
     val selector: Selector<T>,
     val builder: (BuilderContext<T>) -> List<OverlayNode>,
-) {
-    fun collect(
+) : OverlayCollector {
+    override fun collect(
         lattice: NodeToOverlayState,
         state: NodeToOverlayStateElement,
         node: Node,
-    ): List<OverlayNode> {
-        // Check, if our selector matches
-        return if (selector(node as T)) {
-            val ctx = BuilderContext(lattice, state, node, builder)
+    ): List<OverlayNode>? {
+        // Check if the selector returns a node, and if so, then build the overlay node using the
+        // builder context.
+        return selector(node)?.let {
+            val ctx = BuilderContext(lattice, state, it, builder)
             ctx.build()
-        } else {
-            emptyList()
         }
     }
 }
@@ -173,10 +173,22 @@ data class Selector<T : Node>(
 ) {
     /**
      * Allows the selector to be invoked to "test", whether [node] fulfills this selector or not.
+     *
+     * It returns the [node] cast to [T] or null, if the predicate fails.
      */
-    operator fun invoke(node: T): Boolean {
-        return klass.isInstance(node) &&
+    operator fun invoke(node: Node): T? {
+        // Try to cast the node to T, if it's not an instance of T, it is null
+        val tNode = klass.safeCast(node)
+        if (tNode == null) return null
+
+        // Check, if predicate matches
+        return if (
             (namePredicate == null || node.name == namePredicate) &&
-            predicate?.invoke(node) != false
+                predicate?.invoke(tNode) != false
+        ) {
+            tNode
+        } else {
+            null
+        }
     }
 }

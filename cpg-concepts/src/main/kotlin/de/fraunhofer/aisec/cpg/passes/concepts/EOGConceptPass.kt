@@ -261,3 +261,22 @@ inline fun <reified T : OverlayNode> Node.getOverlaysByPrevDFG(
         }
         .filterIsInstance<T>() // discard not-relevant overlays
 }
+
+/**
+ * This interfaces describes a generic structure that "collects" a list of [OverlayNode]s that
+ * should be pushed to the state based on the current node in the EOG iteration.
+ */
+interface OverlayCollector {
+    /**
+     * This function needs to return a list of [OverlayNode]s that are considered to be added to the
+     * [state], given the current [node] in the EOG iteration.
+     *
+     * In order to safe some memory, instead of an [emptyList], a null object can also be returned
+     * if no overlay nodes are suitable for the given [node].
+     */
+    fun collect(
+        lattice: NodeToOverlayState,
+        state: NodeToOverlayStateElement,
+        node: Node,
+    ): List<OverlayNode>?
+}
