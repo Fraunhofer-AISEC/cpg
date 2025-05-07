@@ -77,7 +77,7 @@ class Assumption(
 
     init {
         super.underlyingNode = node ?: edge?.start
-        // Currently, this condition is always false due to id being initialized, however, this is
+        // Currently this condition is always false due to id being initialized, however, this
         // may change in the future
         @Suppress("SENSELESS_COMPARISON")
         if (super.underlyingNode == null && id == null) {
@@ -108,7 +108,7 @@ class Assumption(
      */
     override fun hashCode(): Int {
         // The underlying node is already in the hashCode of the super class implementation.
-        // If the assumption is created from an edge, the edge is != null and therefore influences
+        // If the assumption is created from an edge, the edge is not null and therefore influences
         // the hashCode.
         return Objects.hash(super.hashCode(), edge, assumptionType, message, assumptionLocation)
     }
@@ -226,7 +226,7 @@ interface HasAssumptions {
 
     /**
      * This function is supposed to be used when a new object is created after searching through the
-     * graph that can depend on assumptions made on other objects. On example is when creating
+     * graph that can depend on assumptions made on other objects. One example is when creating
      * concepts after following a DFG path. Concepts are added to the graph and then serve as nodes
      * for further queries, and therefore indirect assumptions would be lost if not copied over with
      * this function.
