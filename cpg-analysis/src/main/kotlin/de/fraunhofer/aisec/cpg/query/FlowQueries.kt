@@ -259,20 +259,18 @@ fun dataFlowWithValidator(
  * needed to add additional information on the result, such as [assumptions] that were taken when
  * computing this node as the result of a function.
  */
-data class NodeWithAssumption(
-    val node: Node,
-    override val assumptions: MutableList<Assumption> = mutableListOf(),
-) : HasAssumptions
+data class NodeWithAssumption(val node: Node) : HasAssumptions {
+    override val assumptions: MutableList<Assumption> = mutableListOf()
+}
 
 /**
  * This data class serves as a wrapper for a collection of [Node] that is returned as a result. The
  * wrapper is needed to add additional information on the result, such as [assumptions] that were
  * taken when computing this collection of nodes as the result of a function.
  */
-data class NodeCollectionWithAssumption(
-    val nodes: Collection<Node>,
-    override val assumptions: MutableList<Assumption> = mutableListOf(),
-) : HasAssumptions
+data class NodeCollectionWithAssumption(val nodes: Collection<Node>) : HasAssumptions {
+    override val assumptions: MutableList<Assumption> = mutableListOf()
+}
 
 /**
  * This function tries to identify if the data held in [this] node are copied to another memory
@@ -330,12 +328,8 @@ fun Node.generatesNewData(): NodeCollectionWithAssumption {
             }
             else -> emptySet()
         }
-    return NodeCollectionWithAssumption(
-            splitNodes,
-            mutableListOf(
-                *(tempAssumptions + splitNodes + this).flatMap { it.assumptions }.toTypedArray()
-            ),
-        )
+    return NodeCollectionWithAssumption(splitNodes)
+        .addAssumptionDependences(tempAssumptions + splitNodes + this)
         .assume(
             AssumptionType.DataFlowAssumption,
             "The node generates the following new \"objects\" which require separate handling as they represent copies/clones of the original \"object\": $splitNodes.\n\n" +
