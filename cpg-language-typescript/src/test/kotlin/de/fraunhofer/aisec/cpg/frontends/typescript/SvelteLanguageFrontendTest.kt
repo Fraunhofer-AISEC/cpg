@@ -27,6 +27,8 @@ package de.fraunhofer.aisec.cpg.frontends.typescript
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertNotNull
@@ -35,7 +37,7 @@ import kotlin.test.assertTrue
 class SvelteLanguageFrontendTest {
 
     @Test
-    fun `test parsing a simple Svelte component to get AST JSON`() {
+    fun `test parsing a simple Svelte component`() {
         val topLevel = File("src/test/resources/svelte").absoluteFile
         val file = File(topLevel, "SimpleComponent.svelte")
         assertTrue(file.exists() && file.isFile, "Test Svelte file exists")
@@ -45,16 +47,41 @@ class SvelteLanguageFrontendTest {
                 .sourceLocations(file)
                 .topLevel(topLevel)
                 .registerLanguage("de.fraunhofer.aisec.cpg.frontends.typescript.SvelteLanguage")
-                .debugParser(true) // May provide more detailed logs
-                .failOnError(false) // Continue even if CPG construction isn't perfect yet
+                .registerLanguage(
+                    "de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguageFrontend"
+                )
+                .debugParser(true)
+                .failOnError(false)
                 .build()
 
         val manager = TranslationManager.builder().config(config).build()
         val result = manager.analyze().get()
 
         assertNotNull(result)
-        // We don't need to assert much about the CPG yet,
-        // the main goal is to trigger parsing and print the JSON via the modified frontend.
-        println("Test completed. Check console output for 'SVELTE AST JSON START/END' markers.")
+        val tud =
+            result.components.flatMap { it.translationUnits }.firstOrNull { it.name == file.name }
+        assertNotNull(tud, "TUD for SimpleComponent.svelte should exist")
+
+        val varName =
+            tud.declarations.filterIsInstance<VariableDeclaration>().firstOrNull { declaration ->
+                val nameProperty = declaration.name
+                val localNameString = nameProperty.localName
+                localNameString == "name"
+            }
+        assertNotNull(varName, "Variable 'name' should be declared")
+
+        val varCount =
+            tud.declarations.filterIsInstance<VariableDeclaration>().firstOrNull {
+                it.name.localName == "count"
+            }
+        assertNotNull(varCount, "Variable 'count' should be declared")
+
+        val funcHandleClick =
+            tud.declarations.filterIsInstance<FunctionDeclaration>().firstOrNull {
+                it.name.localName == "handleClick"
+            }
+        assertNotNull(funcHandleClick, "Function 'handleClick' should be declared")
+
+        println("Basic assertions passed. Further implementation needed.")
     }
 }
