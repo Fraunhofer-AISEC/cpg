@@ -330,23 +330,24 @@ fun Node.generatesNewData(): NodeCollectionWithAssumption {
             }
             else -> emptySet()
         }
-    val returnValue =
-        NodeCollectionWithAssumption(splitNodes)
-            .addAssumptionDependences(tempAssumptions + splitNodes + this)
-            .assume(
-                AssumptionType.DataFlowAssumption,
-                "The node generates the following new \"objects\" which require separate handling as they represent copies/clones of the original \"object\": $splitNodes.\n\n" +
-                    "We assume that this list is complete and does not contain additional elements.\n" +
-                    "This assumption can be split up into the following (global) sub-assumptions, where all of them have to hold:\n" +
-                    "1. The list of mutable and immutable types is complete and sound for each programming language used in the analyzed project.\n" +
-                    "2. Copies of data happen exclusively by one of the following patterns:\n" +
-                    "2.a) Constructing a new object where our data flow to by a constructor invocation or by a collection comprehension: We should track this object and the target of the operation separately." +
-                    "2.b) Operating on immutable objects (via BinaryOperators): We should track this object and the target of the operation separately." +
-                    "2.c) Modifying an object via an operator (e.g. `+=`) and the \"object\" is the rhs of the assignment: We should track both, this object and the target of the assignment." +
-                    "2.d) Assigning an immutable object to a new variable: We should track this object and the target of the assignment separately.",
-            )
-
-    return returnValue
+    return NodeCollectionWithAssumption(
+            splitNodes,
+            mutableListOf(
+                *(tempAssumptions + splitNodes + this).flatMap { it.assumptions }.toTypedArray()
+            ),
+        )
+        .assume(
+            AssumptionType.DataFlowAssumption,
+            "The node generates the following new \"objects\" which require separate handling as they represent copies/clones of the original \"object\": $splitNodes.\n\n" +
+                "We assume that this list is complete and does not contain additional elements.\n" +
+                "This assumption can be split up into the following (global) sub-assumptions, where all of them have to hold:\n" +
+                "1. The list of mutable and immutable types is complete and sound for each programming language used in the analyzed project.\n" +
+                "2. Copies of data happen exclusively by one of the following patterns:\n" +
+                "2.a) Constructing a new object where our data flow to by a constructor invocation or by a collection comprehension: We should track this object and the target of the operation separately." +
+                "2.b) Operating on immutable objects (via BinaryOperators): We should track this object and the target of the operation separately." +
+                "2.c) Modifying an object via an operator (e.g. `+=`) and the \"object\" is the rhs of the assignment: We should track both, this object and the target of the assignment." +
+                "2.d) Assigning an immutable object to a new variable: We should track this object and the target of the assignment separately.",
+        )
 }
 
 /**
