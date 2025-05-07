@@ -254,12 +254,24 @@ fun dataFlowWithValidator(
     )
 }
 
-data class NodeWithAssumption(val node: Node, override val assumptions: MutableList<Assumption>) :
-    HasAssumptions
+/**
+ * This data class serves as a wrapper for a [Node] that is returned as a result. The wrapper is
+ * needed to add additional information on the result, such as [assumptions] that were taken when
+ * computing this node as the result of a function.
+ */
+data class NodeWithAssumption(
+    val node: Node,
+    override val assumptions: MutableList<Assumption> = mutableListOf(),
+) : HasAssumptions
 
+/**
+ * This data class serves as a wrapper for a collection of [Node] that is returned as a result. The
+ * wrapper is needed to add additional information on the result, such as [assumptions] that were
+ * taken when computing this collection of nodes as the result of a function.
+ */
 data class NodeCollectionWithAssumption(
     val nodes: Collection<Node>,
-    override val assumptions: MutableList<Assumption>,
+    override val assumptions: MutableList<Assumption> = mutableListOf(),
 ) : HasAssumptions
 
 /**
@@ -319,25 +331,20 @@ fun Node.generatesNewData(): NodeCollectionWithAssumption {
             else -> emptySet()
         }
     val returnValue =
-        NodeCollectionWithAssumption(
-            splitNodes,
-            mutableListOf(
-                *(tempAssumptions + splitNodes + this).flatMap { it.assumptions }.toTypedArray()
-            ),
-        )
-
-    returnValue.assume(
-        AssumptionType.DataFlowAssumption,
-        "The node generates the following new \"objects\" which require separate handling as they represent copies/clones of the original \"object\": $splitNodes.\n\n" +
-            "We assume that this list is complete and does not contain additional elements.\n" +
-            "This assumption can be split up into the following (global) sub-assumptions, where all of them have to hold:\n" +
-            "1. The list of mutable and immutable types is complete and sound for each programming language used in the analyzed project.\n" +
-            "2. Copies of data happen exclusively by one of the following patterns:\n" +
-            "2.a) Constructing a new object where our data flow to by a constructor invocation or by a collection comprehension: We should track this object and the target of the operation separately." +
-            "2.b) Operating on immutable objects (via BinaryOperators): We should track this object and the target of the operation separately." +
-            "2.c) Modifying an object via an operator (e.g. `+=`) and the \"object\" is the rhs of the assignment: We should track both, this object and the target of the assignment." +
-            "2.d) Assigning an immutable object to a new variable: We should track this object and the target of the assignment separately.",
-    )
+        NodeCollectionWithAssumption(splitNodes)
+            .addAssumptionDependences(tempAssumptions + splitNodes + this)
+            .assume(
+                AssumptionType.DataFlowAssumption,
+                "The node generates the following new \"objects\" which require separate handling as they represent copies/clones of the original \"object\": $splitNodes.\n\n" +
+                    "We assume that this list is complete and does not contain additional elements.\n" +
+                    "This assumption can be split up into the following (global) sub-assumptions, where all of them have to hold:\n" +
+                    "1. The list of mutable and immutable types is complete and sound for each programming language used in the analyzed project.\n" +
+                    "2. Copies of data happen exclusively by one of the following patterns:\n" +
+                    "2.a) Constructing a new object where our data flow to by a constructor invocation or by a collection comprehension: We should track this object and the target of the operation separately." +
+                    "2.b) Operating on immutable objects (via BinaryOperators): We should track this object and the target of the operation separately." +
+                    "2.c) Modifying an object via an operator (e.g. `+=`) and the \"object\" is the rhs of the assignment: We should track both, this object and the target of the assignment." +
+                    "2.d) Assigning an immutable object to a new variable: We should track this object and the target of the assignment separately.",
+            )
 
     return returnValue
 }
@@ -365,11 +372,11 @@ fun Node.identifyInfoToTrack(
             )
             .flatten()
             .toSet()
-    val result = mutableSetOf<NodeWithAssumption>(NodeWithAssumption(this, mutableListOf()))
+    val result = mutableSetOf(NodeWithAssumption(this))
     for (node in reachableDFGNodes) {
         // Is this node a node copying the data? If so, add its targets to the list.
         val targets = node.generatesNewData()
-        result.addAll(targets.nodes.map { NodeWithAssumption(it, targets.assumptions) })
+        result.addAll(targets.nodes.map { NodeWithAssumption(it).addAssumptionDependence(targets) })
     }
     return result
 }
@@ -398,7 +405,7 @@ fun Node.alwaysFlowsTo(
         if (identifyCopies) {
             this.identifyInfoToTrack(scope = scope, sensitivities = sensitivities)
         } else {
-            setOf(NodeWithAssumption(this, mutableListOf()))
+            setOf(NodeWithAssumption(this))
         }
     var nothingFailed = true
     val allChildren = mutableListOf<QueryTree<Boolean>>()
