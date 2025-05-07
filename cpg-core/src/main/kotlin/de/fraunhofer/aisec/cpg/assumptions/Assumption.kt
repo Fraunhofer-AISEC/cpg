@@ -156,6 +156,7 @@ enum class AssumptionStatus {
     Ignored,
 }
 
+@Suppress("unused")
 enum class AssumptionType {
     SyntaxAmbiguityAssumption,
     InferenceAssumption,
