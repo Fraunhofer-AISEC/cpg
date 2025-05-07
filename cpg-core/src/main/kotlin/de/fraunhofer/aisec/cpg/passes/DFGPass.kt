@@ -261,7 +261,7 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         node: FunctionDeclaration,
         functionSummaries: DFGFunctionSummaries,
     ) {
-        if (node.isInferred) {
+        if (node.isInferred || node.body == null) {
             val summaryExists = with(functionSummaries) { addFlowsToFunctionDeclaration(node) }
 
             if (!summaryExists) {
