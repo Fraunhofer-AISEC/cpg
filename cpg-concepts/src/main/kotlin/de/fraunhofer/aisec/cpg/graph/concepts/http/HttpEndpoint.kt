@@ -35,7 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import java.util.Objects
 
 /** Represents a single [HttpEndpoint] on the server */
-class HttpEndpoint(
+open class HttpEndpoint(
     underlyingNode: FunctionDeclaration? = null,
     val httpMethod: HttpMethod,
     val path: String,
