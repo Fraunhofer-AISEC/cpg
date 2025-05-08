@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.helpers.functional
 
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
+import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import java.io.Serializable
 import java.util.IdentityHashMap
@@ -426,8 +427,8 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
             Order.LESSER,
             Order.UNEQUAL -> {
                 if (allowModify) {
-                    val newKeys = two.keys.filter { it !in one.keys }
-                    val existingKeys = two.keys.minus(newKeys)
+                    val newKeys = two.keys.filterTo(identitySetOf()) { it !in one.keys }
+                    val existingKeys = two.keys.toList().minus(newKeys)
                     newKeys.forEach { key -> one[key] = two[key] }
                     existingKeys.forEach { key ->
                         one[key]?.let { oneValue ->
