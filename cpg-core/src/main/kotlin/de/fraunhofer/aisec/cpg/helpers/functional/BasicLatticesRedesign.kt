@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.helpers.functional
 
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
-import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice.Element
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import java.io.Serializable
 import java.util.IdentityHashMap
@@ -42,6 +41,10 @@ class EqualLinkedHashSet<T> : LinkedHashSet<T>() {
         return other is LinkedHashSet<*> &&
             this.size == other.size &&
             this.all { t -> other.any { it == t } }
+    }
+
+    override fun hashCode(): Int {
+        return super.hashCode()
     }
 }
 
@@ -175,7 +178,7 @@ interface Lattice<T : Lattice.Element> {
                     nextEdge.end.prevEOGEdges.size == 1 &&
                     nextEdge.start.nextEOGEdges.size == 1 &&
                     nextEdge.start.prevEOGEdges.size == 1
-            //  Either before or after this edge, there's a branching node within two steps (start,
+            // Either before or after this edge, there's a branching node within two steps (start,
             // end and the nodes before/after these). We have to ensure that we copy the state for
             // all these nodes to enable the update checks conducted ib the branching edges. We need
             // one more step for this, otherwise we will fail recognizing the updates for a node "x"
@@ -199,8 +202,9 @@ interface Lattice<T : Lattice.Element> {
 
                 val oldGlobalIt = globalState[it]
                 val newGlobalIt =
-                    (oldGlobalIt?.let { this.lub(newState, it, isNotNearStartOrEndOfBasicBlock) }
-                        ?: newState)
+                    (oldGlobalIt?.let { old ->
+                        this.lub(newState, old, isNotNearStartOrEndOfBasicBlock)
+                    } ?: newState)
                 globalState[it] = newGlobalIt
                 if (
                     it !in edgesList &&
@@ -237,15 +241,16 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
         }
 
         override fun equals(other: Any?): Boolean {
-            return other is Element<T> &&
-                this.size == other.size &&
-                this.all { t ->
-                    if (t is Pair<*, *>)
-                        other.any {
-                            it is Pair<*, *> && it.first === t.first && it.second == t.second
-                        }
-                    else t in other
-                }
+            return this === other ||
+                (other is Element<T> &&
+                    this.size == other.size &&
+                    this.all { t ->
+                        if (t is Pair<*, *>)
+                            other.any {
+                                it is Pair<*, *> && it.first === t.first && it.second == t.second
+                            }
+                        else t in other
+                    })
         }
 
         override fun compare(other: Lattice.Element): Order {
@@ -254,6 +259,7 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
                     throw IllegalArgumentException(
                         "$other should be of type PowersetLattice.Element<T> but is of type ${other.javaClass}"
                     )
+                this === other -> Order.EQUAL
                 this.size == other.size &&
                     this.all { t ->
                         if (t is Pair<*, *>)
@@ -375,6 +381,7 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
                     throw IllegalArgumentException(
                         "$other should be of type MapLattice.Element<K, V> but is of type ${other.javaClass}"
                     )
+                this === other -> Order.EQUAL
                 this.keys == other.keys &&
                     this.entries.all { (k, v) ->
                         other[k]?.let { v.compare(it) == Order.EQUAL } == true
@@ -413,7 +420,7 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
         get() = MapLattice.Element()
 
     override fun lub(one: Element<K, V>, two: Element<K, V>, allowModify: Boolean): Element<K, V> {
-        return when (val comp = compare(one, two)) {
+        return when (compare(one, two)) {
             Order.EQUAL,
             Order.GREATER -> one
             Order.LESSER,
