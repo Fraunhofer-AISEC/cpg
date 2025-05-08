@@ -979,7 +979,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             value.lastWrites.forEach { (lw, lwProps) ->
                 // For short FunctionSummaries (AKA one of the lastWrite properties set to 'true',
                 // we don't add the callingcontext
-                val lwPropertySet = value.propertySet
+                val lwPropertySet = EqualLinkedHashSet<Any>()
+                lwPropertySet.addAll(value.propertySet)
                 // If this is not a shortFS edge, we add the new callingcontext and have to check if
                 // we already have a list of callingcontexts in the properties
                 if (value.propertySet.none { it == true }) {
@@ -990,9 +991,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             callingContext.calls.any { call ->
                                 call !in existingCallingContext.calls
                             }
-                        )
-                            existingCallingContext.calls.addAll(callingContext.calls)
-                        lwPropertySet.add(existingCallingContext)
+                        ) {
+                            val cpy = existingCallingContext.calls.toMutableList()
+                            cpy.addAll(callingContext.calls)
+                            lwPropertySet.add(CallingContextOut(cpy))
+                        }
                     } else lwPropertySet.add(callingContext)
                 }
                 // Add all other previous properties
@@ -1402,14 +1405,22 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     .filterTo(identitySetOf()) { doubleState.hasDeclarationStateEntry(it, true) }
                     .forEach { value ->
                         // draw the DFG Edges
-                        val currentderefGranularity =
-                            equalLinkedHashSetOf<Any>(
-                                PointerDataflowGranularity(PointerAccess.currentDerefValue)
-                            )
                         doubleState
                             .getLastWrites(value)
                             .filter { it.second.none { it == true } }
-                            .forEach { prevDFGs.add(Pair(it.first, currentderefGranularity)) }
+                            .forEach {
+                                prevDFGs.add(
+                                    Pair(
+                                        it.first,
+                                        equalLinkedHashSetOf(
+                                            PointerDataflowGranularity(
+                                                PointerAccess.currentDerefValue
+                                            ),
+                                            *it.second.toTypedArray(),
+                                        ),
+                                    )
+                                )
+                            }
 
                         // Let's see if we can deref once more
                         val derefValues =
@@ -1424,12 +1435,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                         doubleState
                                             .fetchElementFromDeclarationState(derefValue)
                                             .forEach { (derefDerefValue, _, _) ->
-                                                val currentderefderefGranularity =
-                                                    equalLinkedHashSetOf<Any>(
-                                                        PointerDataflowGranularity(
-                                                            PointerAccess.currentDerefDerefValue
-                                                        )
-                                                    )
                                                 doubleState
                                                     .getLastWrites(derefValue)
                                                     .filter { it.second.none { it == true } }
@@ -1437,7 +1442,13 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                                         prevDFGs.add(
                                                             Pair(
                                                                 it.first,
-                                                                currentderefderefGranularity,
+                                                                equalLinkedHashSetOf<Any>(
+                                                                    PointerDataflowGranularity(
+                                                                        PointerAccess
+                                                                            .currentDerefDerefValue
+                                                                    ),
+                                                                    *it.second.toTypedArray(),
+                                                                ),
                                                             )
                                                         )
                                                     }
