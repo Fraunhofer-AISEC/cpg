@@ -25,45 +25,30 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.typescript
 
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
-import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import java.io.File
+import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
+import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
 
 class SvelteLanguageFrontendTest {
 
     @Test
     fun `test parsing a simple Svelte component`() {
-        val topLevel = File("src/test/resources/svelte").absoluteFile
-        val file = File(topLevel, "SimpleComponent.svelte")
-        assertTrue(file.exists() && file.isFile, "Test Svelte file exists")
+        val topLevel = Path.of("src", "test", "resources", "svelte")
 
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(file)
-                .topLevel(topLevel)
-                .registerLanguage("de.fraunhofer.aisec.cpg.frontends.typescript.SvelteLanguage")
-                .registerLanguage(
-                    "de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguageFrontend"
-                )
-                .debugParser(true)
-                .failOnError(false)
-                .build()
-
-        val manager = TranslationManager.builder().config(config).build()
-        val result = manager.analyze().get()
-
-        assertNotNull(result)
-        val tud =
-            result.components.flatMap { it.translationUnits }.firstOrNull { it.name == file.name }
-        assertNotNull(tud, "TUD for SimpleComponent.svelte should exist")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("SimpleComponent.svelte").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<SvelteLanguage>()
+            }
 
         val varName =
-            tud.declarations.filterIsInstance<VariableDeclaration>().firstOrNull { declaration ->
+            tu.declarations.filterIsInstance<VariableDeclaration>().firstOrNull { declaration ->
                 val nameProperty = declaration.name
                 val localNameString = nameProperty.localName
                 localNameString == "name"
@@ -71,13 +56,13 @@ class SvelteLanguageFrontendTest {
         assertNotNull(varName, "Variable 'name' should be declared")
 
         val varCount =
-            tud.declarations.filterIsInstance<VariableDeclaration>().firstOrNull {
+            tu.declarations.filterIsInstance<VariableDeclaration>().firstOrNull {
                 it.name.localName == "count"
             }
         assertNotNull(varCount, "Variable 'count' should be declared")
 
         val funcHandleClick =
-            tud.declarations.filterIsInstance<FunctionDeclaration>().firstOrNull {
+            tu.declarations.filterIsInstance<FunctionDeclaration>().firstOrNull {
                 it.name.localName == "handleClick"
             }
         assertNotNull(funcHandleClick, "Function 'handleClick' should be declared")

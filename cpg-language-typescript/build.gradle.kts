@@ -134,5 +134,3 @@ tasks.processResources {
         compileLinuxAarch64,
     )
 }
-
-dependencies { implementation(project(":cpg-core")) }

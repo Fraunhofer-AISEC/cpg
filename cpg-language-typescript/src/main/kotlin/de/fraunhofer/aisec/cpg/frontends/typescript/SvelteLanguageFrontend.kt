@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
+import de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguageFrontend.Companion.parserFile
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
@@ -45,7 +46,6 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import java.io.InputStreamReader // For reading process output
-import kotlin.text.isBlank
 import org.slf4j.LoggerFactory
 
 /**
@@ -58,6 +58,8 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
     LanguageFrontend<SvelteNode, SvelteNode>(ctx, language) {
 
     internal val mapper = jacksonObjectMapper()
+    lateinit var currentFile: File
+    lateinit var code: String
 
     companion object {
         private val LOGGER = LoggerFactory.getLogger(SvelteLanguageFrontend::class.java)
@@ -65,69 +67,45 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
 
     @Throws(TranslationException::class)
     override fun parse(file: File): TranslationUnitDeclaration {
-        TypeManager.getInstance().setLanguageFrontend(this)
+        this.currentFile = file
+        this.code = file.readText()
 
-        val tud = ctx.newTranslationUnitDeclaration(file.absolutePath, file.readText())
-        ctx.scopeManager.resetToGlobal(tud)
+        val tud = newTranslationUnitDeclaration(file.absolutePath)
+        scopeManager.resetToGlobal(tud)
         this.currentTU = tud
         this.currentFile = file
-        this.code = tud.code
 
-        val parserFile = TypeScriptLanguageFrontend.parserFile
-        if (parserFile == null || !parserFile.exists()) {
-            LOGGER.error("Svelte parser script not found at expected location.")
-            throw TranslationException(
-                "Svelte parser script not found. TypeScript Deno setup might be incomplete."
-            )
-        }
+        // Always use the svelte language flag for this frontend
+        val languageFlag = "--language=svelte"
 
-        LOGGER.info("Invoking Svelte Deno parser for file: {}", file.absolutePath)
-        LOGGER.debug("Parser script path: {}", parserFile.absolutePath)
-
-        val commandArray =
-            arrayOf(
-                "deno",
-                "run",
-                "--allow-read",
-                "--allow-env",
-                parserFile.absolutePath,
-                "--file",
-                file.absolutePath,
-                "--language",
-                "svelte",
-            )
-
-        try {
-            val process = Runtime.getRuntime().exec(commandArray)
-            val stdInput = InputStreamReader(process.inputStream)
-            val stdError = InputStreamReader(process.errorStream)
-
-            val output = stdInput.readText()
-            val errorOutput = stdError.readText()
-
-            stdInput.close()
-            stdError.close()
-
-            val returnCode = process.waitFor() // Wait for the process to complete
-
-            if (returnCode != 0) {
-                LOGGER.error("Svelte Deno parser failed with exit code $returnCode.")
-                LOGGER.error("Parser output: $output")
-                LOGGER.error("Parser error: $errorOutput")
-                throw TranslationException("Svelte Deno parser execution failed for ${file.name}")
+        log.info("Executing Svelte parser for {} with flag: {}", file.absolutePath, languageFlag)
+        val process =
+            try {
+                Runtime.getRuntime()
+                    .exec(arrayOf(parserFile.absolutePath, languageFlag, file.absolutePath))
+            } catch (e: Exception) {
+                throw TranslationException("Error executing TypeScript parser: ${e.message}")
             }
 
-            if (output == null || output.isBlank()) {
-                LOGGER.warn("Svelte Deno parser returned empty output for ${file.name}.")
-                return tud
-            }
+        val stdInput = InputStreamReader(process.inputStream)
+        val stdError = InputStreamReader(process.errorStream)
+        val jsonResult = stdInput.readText()
+        val errors = stdError.readText()
+        stdInput.close()
+        stdError.close()
 
-            val svelteProgram = mapper.readValue<SvelteProgram>(output)
-            handleSvelteProgram(svelteProgram, tud, file)
-        } catch (e: Exception) {
-            LOGGER.error("Error parsing Svelte file ${file.name}: ${e.message}", e)
-            throw TranslationException("Error processing Svelte file ${file.name}: ${e.message}")
+        val exitCode = process.waitFor()
+
+        if (exitCode != 0) {
+            log.error("TypeScript parser exited with code {}: {}", exitCode, errors)
+            throw TranslationException("TypeScript parser failed: $errors")
         }
+        if (errors.isNotEmpty()) {
+            log.warn("TypeScript parser reported errors/warnings: {}", errors)
+        }
+
+        val svelteProgram = mapper.readValue<SvelteProgram>(jsonResult)
+        handleSvelteProgram(svelteProgram, tud, file)
 
         return tud
     }
@@ -179,7 +157,7 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
                 val cpgDeclarations = handleVariableDeclaration(stmtNode, currentFile)
                 for (cpgDecl in cpgDeclarations) {
                     parent.addDeclaration(cpgDecl)
-                    ctx.scopeManager.addDeclaration(cpgDecl)
+                    scopeManager.addDeclaration(cpgDecl)
                 }
             }
             else ->
@@ -200,12 +178,10 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
             mutableListOf<de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration>()
 
         for (declarator in varDeclNode.declarations) {
-            val name = ctx.nameOf(declarator.id.name)
-            val type = ctx.unknownType()
-            val cpgVarDecl = ctx.newVariableDeclaration(name, type)
+            val name = parseName(declarator.id.name)
+            val type = unknownType()
+            val cpgVarDecl = newVariableDeclaration(name, type, rawNode = declarator)
             cpgVarDecl.isImplicit = false
-            val astNodeForRaw: EsTreeNode = declarator.id.rawNode()
-            cpgVarDecl.rawNode = astNodeForRaw
 
             declarator.init?.let { initExprNode ->
                 val initializer = handleExpression(initExprNode, currentFile)
@@ -253,12 +229,9 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
                 is Float -> value?.javaClass?.simpleName ?: "double"
                 else -> null
             }
-        val cpgType =
-            if (typeName != null) TypeParser.createFrom(typeName, language) else ctx.unknownType()
+        val cpgType = if (typeName != null) objectType(typeName) else unknownType()
 
-        val literal = ctx.newLiteral(value, cpgType)
-        val astNodeForRawLiteral: EsTreeNode = literalNode.rawNode()
-        literal.rawNode = astNodeForRawLiteral
+        val literal = newLiteral(value, cpgType, rawNode = literalNode)
         return literal
     }
 
@@ -266,15 +239,14 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
         identifierNode: EsTreeIdentifier,
         currentFile: File,
     ): Reference {
-        val name = ctx.nameOf(identifierNode.name)
-        val type = ctx.unknownType()
-        val reference = ctx.newReference(name, type)
-        val astNodeForRawRef: EsTreeNode = identifierNode.rawNode()
-        reference.rawNode = astNodeForRawRef
+        val name = parseName(identifierNode.name)
+        val type = unknownType()
+        val reference = newReference(name, type, rawNode = identifierNode)
+
         return reference
     }
 
-    override fun typeOf(typeNode: SvelteNode): Type = ctx.unknownType()
+    override fun typeOf(typeNode: SvelteNode): Type = unknownType()
 
     override fun codeOf(astNode: SvelteNode): String? {
         if (astNode.start != null && astNode.end != null && this.code != null) {
@@ -311,13 +283,9 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
         }
 
         val region =
-            Region(
-                getLineOfCode(startOffset),
-                getColumnOfCode(startOffset),
-                getLineOfCode(endOffset - 1),
-                getColumnOfCode(endOffset - 1),
-            )
-        return PhysicalLocation(this.currentFile!!.toURI(), region)
+            getRegionFromStartEnd(currentFile, code, startOffset, endOffset)
+                ?: Region(-1, -1, -1, -1)
+        return PhysicalLocation(this.currentFile.toURI(), region)
     }
 
     private fun locationOfEsTreeNode(astNode: EsTreeNode): PhysicalLocation? {
@@ -343,13 +311,9 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
         }
 
         val region =
-            Region(
-                getLineOfCode(startOffset),
-                getColumnOfCode(startOffset),
-                getLineOfCode(endOffset - 1),
-                getColumnOfCode(endOffset - 1),
-            )
-        return PhysicalLocation(this.currentFile!!.toURI(), region)
+            getRegionFromStartEnd(currentFile, code, startOffset, endOffset)
+                ?: Region(-1, -1, -1, -1)
+        return PhysicalLocation(this.currentFile.toURI(), region)
     }
 
     private fun EsTreeNode.rawNode(): EsTreeNode = this

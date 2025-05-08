@@ -206,7 +206,8 @@ class TypeScriptLanguageFrontend(
         matches?.toList()?.forEach { result ->
             val groups = result.groups
             groups[0]?.let {
-                val commentRegion = getRegionFromStartEnd(file, it.range.first, it.range.last)
+                val commentRegion =
+                    getRegionFromStartEnd(file, currentFileContent, it.range.first, it.range.last)
 
                 // We only want the actual comment text and therefore take the value we captured in
                 // the first, or second group.
@@ -242,34 +243,13 @@ class TypeScriptLanguageFrontend(
         // From here on the invariant 'astNode.location.end - position != astNode.code!!.length'
         // should hold, only exceptions are mispositioned empty ast elements
         val region =
-            getRegionFromStartEnd(File(astNode.location.file), position, astNode.location.end)
+            getRegionFromStartEnd(
+                File(astNode.location.file),
+                currentFileContent,
+                position,
+                astNode.location.end,
+            )
         return PhysicalLocation(File(astNode.location.file).toURI(), region ?: Region())
-    }
-
-    fun getRegionFromStartEnd(file: File, start: Int, end: Int): Region? {
-        val lineNumberReader = LineNumberReader(FileReader(file))
-
-        // Start and end position given by the parser are sometimes including spaces in front of the
-        // code and loc.end - loc.pos > code.length. This is caused by the parser and results in
-        // unexpected
-        // but correct regions if the start and end positions are assumed to be correct.
-        lineNumberReader.skip(start.toLong())
-        val startLine = lineNumberReader.lineNumber + 1
-        lineNumberReader.skip((end - start).toLong())
-        val endLine = lineNumberReader.lineNumber + 1
-
-        val translationUnitSignature = currentFileContent
-        val region =
-            translationUnitSignature?.let {
-                FrontendUtils.parseColumnPositionsFromFile(
-                    it,
-                    end - start,
-                    start,
-                    startLine,
-                    endLine,
-                )
-            }
-        return region
     }
 
     override fun setComment(node: Node, astNode: TypeScriptNode) {
@@ -336,4 +316,24 @@ class TypeScriptNode(
     fun firstChild(type: String): TypeScriptNode? {
         return this.children?.firstOrNull { it.type == type }
     }
+}
+
+fun getRegionFromStartEnd(file: File, currentFileContent: String?, start: Int, end: Int): Region? {
+    val lineNumberReader = LineNumberReader(FileReader(file))
+
+    // Start and end position given by the parser are sometimes including spaces in front of the
+    // code and loc.end - loc.pos > code.length. This is caused by the parser and results in
+    // unexpected
+    // but correct regions if the start and end positions are assumed to be correct.
+    lineNumberReader.skip(start.toLong())
+    val startLine = lineNumberReader.lineNumber + 1
+    lineNumberReader.skip((end - start).toLong())
+    val endLine = lineNumberReader.lineNumber + 1
+
+    val translationUnitSignature = currentFileContent
+    val region =
+        translationUnitSignature?.let {
+            FrontendUtils.parseColumnPositionsFromFile(it, end - start, start, startLine, endLine)
+        }
+    return region
 }
