@@ -29,8 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import java.util.Objects
-import kotlin.collections.plusAssign
+import java.util.*
 
 /**
  * This interface indicates that the corresponding node is connected to a file concept or operation.
@@ -193,3 +192,6 @@ abstract class FileOperation(underlyingNode: Node? = null, file: File) :
     val file: File
         get() = this.concept as File
 }
+
+/** TODO */
+class FileHandle(underlyingNode: Node? = null) : Concept(underlyingNode = underlyingNode), IsFile
