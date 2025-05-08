@@ -28,6 +28,10 @@ package de.fraunhofer.aisec.cpg.passes.concepts.file.python
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
+import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
+import de.fraunhofer.aisec.cpg.graph.Component
+import de.fraunhofer.aisec.cpg.graph.OverlayNode
+import de.fraunhofer.aisec.cpg.graph.argumentValueByNameOrPosition
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.concepts.file.*
 import de.fraunhofer.aisec.cpg.graph.edges.get
@@ -35,9 +39,11 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.helpers.Util
+import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
 import de.fraunhofer.aisec.cpg.passes.DFGPass
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
 import de.fraunhofer.aisec.cpg.passes.concepts.EOGConceptPass
+import de.fraunhofer.aisec.cpg.passes.concepts.NodeToOverlayState
 import de.fraunhofer.aisec.cpg.passes.concepts.NodeToOverlayStateElement
 import de.fraunhofer.aisec.cpg.passes.concepts.file.python.PythonFileConceptPass.Companion.fileCache
 import de.fraunhofer.aisec.cpg.passes.concepts.getOverlaysByPrevDFG
@@ -73,13 +79,14 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
     }
 
     override fun handleMemberCallExpression(
+        lattice: NodeToOverlayState,
         state: NodeToOverlayStateElement,
         callExpression: MemberCallExpression,
     ): Collection<OverlayNode> {
         // Since we cannot directly depend on the Python frontend, we have to check the language
         // here based on the node's language.
         if (callExpression.language.name.localName != "PythonLanguage") {
-            return emptySet()
+            return emptyList()
         }
 
         val stateChanges = mutableListOf<OverlayNode>()
@@ -110,7 +117,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
                                 log,
                                 "Failed to identify the write argument. Ignoring the `write` call.",
                             )
-                            return emptySet()
+                            return emptyList()
                         }
                         stateChanges +=
                             newFileWrite(
@@ -139,13 +146,14 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
     }
 
     override fun handleCallExpression(
+        lattice: NodeToOverlayState,
         state: NodeToOverlayStateElement,
         callExpression: CallExpression,
     ): Collection<OverlayNode> {
         // Since we cannot directly depend on the Python frontend, we have to check the language
         // here based on the node's language.
         if (callExpression.language.name.localName != "PythonLanguage") {
-            return emptySet()
+            return emptyList()
         }
 
         return when (callExpression.callee.name.toString()) {
@@ -163,7 +171,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
             }
             "tempfile.TemporaryFile",
             "tempfile.NamedTemporaryFile"
-            /* TODO filedescriptor support... "tempfile.mkstemp" */ -> {
+                /* TODO filedescriptor support... "tempfile.mkstemp" */ -> {
                 handleTempFile(callExpression)
             }
             "tempfile.gettempdir" -> {
@@ -208,10 +216,10 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
 
         val file =
             newFile(
-                    underlyingNode = callExpression,
-                    fileName = "tempfile" + callExpression.id.toString(),
-                    connect = false,
-                ) // TODO: id to model random names
+                underlyingNode = callExpression,
+                fileName = "tempfile" + callExpression.id.toString(),
+                connect = false,
+            ) // TODO: id to model random names
                 .apply { this.isTempFile = FileTempFileStatus.TEMP_FILE }
                 .apply { this.deleteOnClose = deleteOnClose }
         val permissions =
@@ -226,77 +234,54 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
     }
 
     /** TODO */
-    private fun handleOpen(
+    private fun handleOpen(lattice: NodeToOverlayState,
+                           state: NodeToOverlayStateElement,
         callExpression: CallExpression,
-        stateElement: NodeToOverlayStateElement,
     ): Collection<OverlayNode> {
+
         /**
          * This matches when parsing code like:
          * ```python
          * open('foo.bar', 'r')
          * ```
          *
-         * We model this with a [File] node to represent the [Concept] and a [OpenFile] node for the
-         * opening operation.
+         * We model this with a [File] node to represent the [Concept] and a [OpenFile] node
+         * for the opening operation.
          *
          * TODO: opener https://docs.python.org/3/library/functions.html#open
          */
-        val (newFileNode, isNewFile) =
-            getOrCreateFile(
-                callExpression = callExpression,
-                argumentName = "file",
-                argumentIdx = 0,
-                stateElement = stateElement,
-            )
-        if (newFileNode == null) {
-            Util.errorWithFileLocation(
-                callExpression,
-                log,
-                "Failed to parse file name. Ignoring the `open` call.",
-            )
-            return emptySet()
-        }
+        val file = getOrCreateFile(callExpression, "file", lattice, state)
 
         val mode = getBuiltinOpenMode(callExpression) ?: "r" // default is 'r'
         val flags = translateBuiltinOpenMode(mode)
         val setFlagsOp =
             newFileSetFlags(
                 underlyingNode = callExpression,
-                file = newFileNode,
+                file = file,
                 flags = flags,
                 connect = false,
             )
-        val open = newFileOpen(underlyingNode = callExpression, file = newFileNode, connect = false)
+        val open =
+            newFileOpen(underlyingNode = callExpression, file = file, connect = false)
 
-        return setOfNotNull(setFlagsOp, open, newFileNode.takeIf { isNewFile })
+        val fileHandle =
+            newFileHandle(underlyingNode = callExpression, file = file, connect = false)
+
+        setOfNotNull(setFlagsOp, open, fileHandle)
     }
 
     /** TODO */
-    private fun handleOsOpen(
+    private fun handleOsOpen(lattice: NodeToOverlayState,
+                             state: NodeToOverlayStateElement,
         callExpression: CallExpression,
-        stateElement: NodeToOverlayStateElement,
     ): Collection<OverlayNode> {
-        val (newFileNode, isNewFile) =
-            getOrCreateFile(
-                callExpression = callExpression,
-                argumentName = "path",
-                argumentIdx = 0,
-                stateElement = stateElement,
-            )
-        if (newFileNode == null) {
-            Util.errorWithFileLocation(
-                callExpression,
-                log,
-                "Failed to parse file name. Ignoring the `os.open` call.",
-            )
-            return emptySet()
-        }
+        val file = getOrCreateFile(callExpression, "path", lattice, state)
 
         val setFlags =
             getOsOpenFlags(callExpression)?.let { flags ->
                 newFileSetFlags(
                     underlyingNode = callExpression,
-                    file = newFileNode,
+                    file = file,
                     flags = translateOsOpenFlags(flags),
                     connect = false,
                 )
@@ -307,84 +292,58 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
         val setMask =
             newFileSetMask(
                 underlyingNode = callExpression,
-                file = newFileNode,
+                file = file,
                 mask = mode,
                 connect = false,
             )
 
-        val open = newFileOpen(underlyingNode = callExpression, file = newFileNode, connect = false)
+        val open =
+            newFileOpen(underlyingNode = callExpression, file = file, connect = false)
 
-        return setOfNotNull(setFlags, setMask, open, newFileNode.takeIf { isNewFile })
+        val fh =
+            newFileHandle(underlyingNode = callExpression, file = file, connect = false)
+
+        setOfNotNull(setFlags, setMask, open, fh)
     }
 
     /** TODO */
-    private fun handleOsChmod(
+    private fun handleOsChmod(lattice: NodeToOverlayState,
+                              state: NodeToOverlayStateElement,
         callExpression: CallExpression,
-        stateElement: NodeToOverlayStateElement,
     ): Collection<OverlayNode> {
-        val (file, isNewFile) =
-            getOrCreateFile(
-                callExpression = callExpression,
-                argumentName = "path",
-                argumentIdx = 0,
-                stateElement = stateElement,
-            )
-        if (file == null) {
-            Util.errorWithFileLocation(
-                callExpression,
-                log,
-                "Failed to parse the `path` argument. Ignoring the entire `os.chmod` call.",
-            )
-            return emptySet()
-        }
+        val file = getOrCreateFile(callExpression, "path", lattice, state)
 
-        val mode = callExpression.argumentValueByNameOrPosition<Long>(name = "mode", position = 1)
+        val mode =
+            callExpression.argumentValueByNameOrPosition<Long>(name = "mode", position = 1)
         if (mode == null) {
             Util.errorWithFileLocation(
                 callExpression,
                 log,
                 "Failed to find the corresponding mode. Ignoring the entire `os.chmod` call..",
             )
-            return setOfNotNull(file.takeIf { isNewFile })
+            return emptyList()
         }
-        return setOfNotNull(
-            file.takeIf { isNewFile },
+        setOfNotNull(
             newFileSetMask(
                 underlyingNode = callExpression,
                 file = file,
-                mask = mode,
+                mask = mode.result,
                 connect = false,
-            ),
+            )
         )
     }
 
     /** TODO */
-    private fun handleOsRemove(
+    private fun handleOsRemove(lattice: NodeToOverlayState,
+                               state: NodeToOverlayStateElement,
         callExpression: CallExpression,
-        stateElement: NodeToOverlayStateElement,
     ): Collection<OverlayNode> {
-        val (file, isNewFile) =
-            getOrCreateFile(
-                callExpression = callExpression,
-                argumentName = "path",
-                argumentIdx = 0,
-                stateElement = stateElement,
-            )
-        if (file == null) {
-            Util.errorWithFileLocation(
-                callExpression,
-                log,
-                "Failed to parse the `path` argument. Ignoring the entire `os.remove` call.",
-            )
-            return emptySet()
-        }
+        val file = getOrCreateFile(callExpression, "path", lattice, state)
 
-        return listOfNotNull(
-            file.takeIf { isNewFile },
-            newFileDelete(underlyingNode = callExpression, file = file, connect = false),
+        setOfNotNull(
+            newFileDelete(underlyingNode = callExpression, file = file, connect = false)
         )
     }
-
     /**
      * Looks for the requested file in the [fileCache]. If none is found, a new [File] is created
      * and added to the cache.
@@ -393,45 +352,45 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
      *   ([File.underlyingNode]) if a new file has to be created.
      * @param argumentName The name of the argument to be used for the file name in the
      *   [callExpression].
-     * @param argumentIdx The index of the argument to be used for the file name in the
-     *   [callExpression].
      * @return The [File] found in the cache or the new file in case it had to be created.
+     *   Additionally, a flag whether the [File] was created (`true`) or already existed in the
+     *   cache (`false`) is returned, too.
+     *
+     *     TODO: update
      */
     internal fun getOrCreateFile(
         callExpression: CallExpression,
         argumentName: String,
-        argumentIdx: Int,
-        stateElement: NodeToOverlayStateElement,
-    ): Pair<File?, Boolean> {
-        val fileName =
-            getFileName(
-                call = callExpression,
-                argumentName = argumentName,
-                argumentIdx = argumentIdx,
-            )
-
-        if (fileName == null) {
-            return null to false // TODO
-        }
+        lattice: NodeToOverlayState,
+        state: NodeToOverlayStateElement,
+    ): File {
+        val fileName = getFileName(callExpression, argumentName) ?: TODO()
 
         val tempFileStatus =
-            if (fileName.startsWith("/tmp/")) {
+            if (fileName.result.startsWith("/tmp/")) {
                 FileTempFileStatus.TEMP_FILE
             } else {
-                getTempFileStatus(callExpression, argumentName, argumentIdx, stateElement)
+                getTempFileStatus(callExpression, argumentName,  state)
             }
 
         val currentMap = fileCache.computeIfAbsent(currentComponent) { mutableMapOf() }
-        val existingEntry = currentMap[fileName]
+        val existingEntry = currentMap[fileName.result]
         if (existingEntry != null) {
-            return existingEntry to false
+            return existingEntry
         }
-        val newEntry =
-            newFile(underlyingNode = callExpression, fileName = fileName, connect = false).apply {
-                this.isTempFile = tempFileStatus
-            }
-        currentMap[fileName] = newEntry
-        return newEntry to true
+        val un = fileName.path.lastOrNull() ?: TODO()
+        val newEntry = newFile(underlyingNode = un, fileName = fileName.result, connect = false).apply {
+            this.isTempFile = tempFileStatus
+        }
+
+        lattice.lub(
+            one = state,
+            two = NodeToOverlayStateElement(un to PowersetLattice.Element(newEntry)),
+            allowModify = true,
+        )
+
+        currentMap[fileName.result] = newEntry
+        return newEntry
     }
 
     /** TODO */
@@ -542,12 +501,13 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
      *
      * @param call The [CallExpression] (builtin-`open` or `os.open`) to be analyzed.
      * @param argumentName The name of the argument to be used for the file name in the [call].
-     * @param argumentIdx The index of the argument to be used for the file name in the [call].
      * @return The name or null if no name could be found.
      */
-    private fun getFileName(call: CallExpression, argumentName: String, argumentIdx: Int): String? {
-        val name =
-            call.argumentValueByNameOrPosition<String>(name = argumentName, position = argumentIdx)
+    private fun getFileName(
+        call: CallExpression,
+        argumentName: String,
+    ): ValueEvaluator.ResultWithPath<String>? {
+        val name = call.argumentValueByNameOrPosition<String>(name = argumentName, position = 0)
         return name
     }
 
@@ -563,7 +523,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
      * ```
      */
     internal fun getBuiltinOpenMode(call: CallExpression): String? {
-        return call.argumentValueByNameOrPosition<String>(name = "mode", position = 1)
+        return call.argumentValueByNameOrPosition<String>(name = "mode", position = 1)?.result
     }
 
     /**
@@ -580,7 +540,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
      * @return The `mode`
      */
     internal fun getOsOpenMode(call: CallExpression): Long? {
-        return call.argumentValueByNameOrPosition<Long>(name = "mode", position = 2)
+        return call.argumentValueByNameOrPosition<Long>(name = "mode", position = 2)?.result
     }
 
     /**
@@ -592,7 +552,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
      * ```
      */
     internal fun getOsOpenFlags(call: CallExpression): Long? {
-        return call.argumentValueByNameOrPosition<Long>(name = "flags", position = 1)
+        return call.argumentValueByNameOrPosition<Long>(name = "flags", position = 1)?.result
     }
 
     /**

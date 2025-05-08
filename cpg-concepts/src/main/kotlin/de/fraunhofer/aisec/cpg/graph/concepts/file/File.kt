@@ -224,3 +224,6 @@ abstract class FileOperation(underlyingNode: Node? = null, file: File) :
     val file: File
         get() = this.concept as File
 }
+
+/** TODO */
+class FileHandle(underlyingNode: Node? = null) : Concept(underlyingNode = underlyingNode), IsFile
