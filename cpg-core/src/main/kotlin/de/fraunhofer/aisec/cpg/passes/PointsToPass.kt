@@ -2242,8 +2242,8 @@ fun PointsToStateElement.updateValues(
     // Node and short FS yes or no
     lastWrites: IdentitySet<Pair<Node, EqualLinkedHashSet<Any>>>,
 ): PointsToStateElement {
-    val newDeclState = this.declarationsState
-    val newGenState = this.generalState
+    val newDeclState = this.declarationsState.duplicate()
+    val newGenState = this.generalState.duplicate()
 
     /* Update the declarationState for the addresses */
     destinationAddresses.forEach { destAddr ->
@@ -2333,5 +2333,5 @@ fun PointsToStateElement.updateValues(
         }
     }
 
-    return this
+    return PointsToStateElement(newGenState, newDeclState)
 }
