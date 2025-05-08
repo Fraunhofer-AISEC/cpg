@@ -23,30 +23,24 @@
  *                    \______/ \__|       \______/
  *
  */
+package de.fraunhofer.aisec.codyze.console
+
 import de.fraunhofer.aisec.codyze.AnalysisProject
 import de.fraunhofer.aisec.codyze.AnalysisResult
-import de.fraunhofer.aisec.codyze.console.*
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.TranslationResult
-import de.fraunhofer.aisec.cpg.graph.Component
-import de.fraunhofer.aisec.cpg.graph.Name
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.arch.Agnostic
+import de.fraunhofer.aisec.cpg.graph.concepts.file.File
 import de.fraunhofer.aisec.cpg.graph.concepts.flows.Main
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import io.github.detekt.sarif4k.ArtifactLocation
-import io.github.detekt.sarif4k.Location
-import io.github.detekt.sarif4k.Message
-import io.github.detekt.sarif4k.PhysicalLocation
-import io.github.detekt.sarif4k.Region
-import io.github.detekt.sarif4k.Run
-import io.github.detekt.sarif4k.SarifSchema210
-import io.github.detekt.sarif4k.Tool
-import io.github.detekt.sarif4k.ToolComponent
-import io.github.detekt.sarif4k.Version
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import io.github.detekt.sarif4k.*
 import io.ktor.client.call.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
@@ -54,15 +48,35 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.testing.*
-import java.io.File
-import kotlin.test.Test
-import kotlin.test.assertContains
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.uuid.Uuid
+import kotlin.test.*
 
 /** A mock configuration for the translation manager. */
-val mockConfig = TranslationConfiguration.builder().sourceLocations(File("some/path")).build()
+val mockConfig =
+    TranslationConfiguration.builder().sourceLocations(java.io.File("some/path")).build()
+
+/** A mock translation unit. */
+val mockTu =
+    TranslationUnitDeclaration().apply {
+        name = Name("tu1")
+        var func =
+            FunctionDeclaration().apply {
+                name = Name("main")
+                Main(this, os = Agnostic(this))
+                body =
+                    Block().apply {
+                        statements +=
+                            CallExpression().apply {
+                                callee = Reference().apply { name = Name("open") }
+                            }
+                    }
+            }
+        declarations += func
+        statements +=
+            CallExpression().apply {
+                name = Name("main")
+                prevDFG += func
+            }
+    }
 
 /**
  * A mock version of the [ConsoleService] that returns a mock analysis result containing of a few
@@ -81,22 +95,7 @@ val mockService =
                         components +=
                             Component().apply {
                                 name = Name("mock")
-                                translationUnits +=
-                                    TranslationUnitDeclaration().apply {
-                                        name = Name("tu1")
-                                        id = Uuid.parse("00000000-0000-0000-0000-000000000001")
-                                        var func =
-                                            FunctionDeclaration().apply {
-                                                name = Name("main")
-                                                Main(this, os = Agnostic(this))
-                                            }
-                                        declarations += func
-                                        statements +=
-                                            CallExpression().apply {
-                                                name = Name("main")
-                                                prevDFG += func
-                                            }
-                                    }
+                                translationUnits += mockTu
                             }
                     },
             project = AnalysisProject(name = "mock", projectDir = null, config = mockConfig),
@@ -109,7 +108,7 @@ val mockService =
                                 tool = Tool(driver = ToolComponent(name = "mock")),
                                 results =
                                     listOf(
-                                        io.github.detekt.sarif4k.Result(
+                                        Result(
                                             ruleID = "mock",
                                             message = Message(text = "mock"),
                                             locations =
@@ -119,7 +118,7 @@ val mockService =
                                                             PhysicalLocation(
                                                                 artifactLocation =
                                                                     ArtifactLocation(
-                                                                        uri = "file:mock.cpp"
+                                                                        uri = "file:/mock.cpp"
                                                                     ),
                                                                 region =
                                                                     Region(
@@ -218,8 +217,7 @@ class ApplicationTest {
     fun testGetTranslationUnit() = testApplication {
         application { configureWebconsole(mockService) }
         val client = createClient { install(ContentNegotiation) { json() } }
-        val response =
-            client.get("/api/component/mock/translation-unit/00000000-0000-0000-0000-000000000001")
+        val response = client.get("/api/component/mock/translation-unit/${mockTu.id}")
         assertEquals(HttpStatusCode.OK, response.status)
 
         val translationUnit = response.body<TranslationUnitJSON>()
@@ -239,10 +237,7 @@ class ApplicationTest {
     fun testGetAstNodes() = testApplication {
         application { configureWebconsole(mockService) }
         val client = createClient { install(ContentNegotiation) { json() } }
-        val response =
-            client.get(
-                "/api/component/mock/translation-unit/00000000-0000-0000-0000-000000000001/ast-nodes"
-            )
+        val response = client.get("/api/component/mock/translation-unit/${mockTu.id}/ast-nodes")
         assertEquals(HttpStatusCode.OK, response.status)
 
         val nodes = response.body<List<NodeJSON>>()
@@ -253,13 +248,80 @@ class ApplicationTest {
     fun testGetOverlayNodes() = testApplication {
         application { configureWebconsole(mockService) }
         val client = createClient { install(ContentNegotiation) { json() } }
-        val response =
-            client.get(
-                "/api/component/mock/translation-unit/00000000-0000-0000-0000-000000000001/overlay-nodes"
-            )
+        val response = client.get("/api/component/mock/translation-unit/${mockTu.id}/overlay-nodes")
         assertEquals(HttpStatusCode.OK, response.status)
 
         val nodes = response.body<List<NodeJSON>>()
         assertEquals(2, nodes.size)
+    }
+
+    @Test
+    fun testAddConcept() = testApplication {
+        val open = assertNotNull(mockTu.calls["open"])
+
+        application { configureWebconsole(mockService) }
+        val client = createClient { install(ContentNegotiation) { json() } }
+        var response =
+            client.post("/api/concepts") {
+                contentType(ContentType.Application.Json)
+                setBody(
+                    ConceptRequestJSON(
+                        nodeId = open.id,
+                        conceptName = File::class.java.name,
+                        addDFGToConcept = false,
+                        addDFGFromConcept = false,
+                        constructorArgs =
+                            listOf(
+                                ConstructorArguments(
+                                    argumentName = "fileName",
+                                    argumentValue = "path/to/file",
+                                )
+                            ),
+                    )
+                )
+            }
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertTrue(open.conceptNodes.any { it is File })
+
+        response = client.get("/api/export-concepts")
+        assertEquals(HttpStatusCode.OK, response.status)
+
+        val yaml = response.bodyAsText()
+        assertNotNull(yaml)
+    }
+
+    @Test
+    fun testAddConceptWrongConstructorKey() = testApplication {
+        val open = assertNotNull(mockTu.calls["open"])
+
+        application { configureWebconsole(mockService) }
+        val client = createClient { install(ContentNegotiation) { json() } }
+        var response =
+            client.post("/api/concepts") {
+                contentType(ContentType.Application.Json)
+                setBody(
+                    ConceptRequestJSON(
+                        nodeId = open.id,
+                        conceptName = File::class.java.name,
+                        addDFGToConcept = false,
+                        addDFGFromConcept = false,
+                        constructorArgs =
+                            listOf(
+                                ConstructorArguments(
+                                    argumentName = "path",
+                                    argumentValue = "path/to/file",
+                                )
+                            ),
+                    )
+                )
+            }
+        assertEquals(HttpStatusCode.InternalServerError, response.status)
+        val body = response.bodyAsText()
+        assertEquals(
+            "{\n" +
+                "    \"error\": \"There is no argument with name \\\"path\\\" which is specified to generate the concept File\"\n" +
+                "}",
+            body,
+        )
     }
 }

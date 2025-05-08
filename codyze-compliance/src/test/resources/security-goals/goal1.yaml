@@ -3,7 +3,7 @@ description: Make it very secure
 components:
   - auth
   - webserver
-assumptions:
+legacyAssumptions:
   - Third party code is very good
 objectives:
   - name: Good encryption

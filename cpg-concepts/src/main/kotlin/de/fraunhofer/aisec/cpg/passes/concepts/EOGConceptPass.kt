@@ -105,7 +105,8 @@ open class EOGConceptPass(ctx: TranslationContext) :
         val startState = intermediateState ?: getInitialState(lattice, node)
 
         val nextEog = node.nextEOGEdges.toList()
-        intermediateState = lattice.iterateEOG(nextEog, startState, ::transfer)
+        intermediateState =
+            lattice.lub(startState, lattice.iterateEOG(nextEog, startState, ::transfer), true)
     }
 
     /**
@@ -175,7 +176,7 @@ open class EOGConceptPass(ctx: TranslationContext) :
      * Note: see the class documentation for more information about creating [OverlayNode]s.
      */
     // TODO: Once we use tasks, we iterate over all tasks registered to this pass.
-    fun handleNode(
+    open fun handleNode(
         lattice: NodeToOverlayState,
         state: NodeToOverlayStateElement,
         node: Node,
@@ -231,43 +232,63 @@ open class EOGConceptPass(ctx: TranslationContext) :
                 currentNode to
                     PowersetLattice.Element<OverlayNode>(*filteredAddedOverlays.toTypedArray())
             ),
+            true,
         )
-    }
-
-    /**
-     * Returns a list of nodes of type [T] fulfilling the [predicate] that are reachable from this
-     * node via the backwards DFG.
-     */
-    inline fun <reified T : OverlayNode> Node.getOverlaysByPrevDFG(
-        stateElement: NodeToOverlayStateElement,
-        crossinline predicate: (T) -> Boolean = { true },
-    ): List<T> {
-        return this.followDFGEdgesUntilHit(
-                collectFailedPaths = false,
-                findAllPossiblePaths = false,
-                direction = Backward(GraphToFollow.DFG),
-            ) { node ->
-                // find all nodes on a prev DFG path which an overlay node matching the predicate
-                // either in the state, they are this node already or they have it in their
-                // overlays. We do these three things because nodes may be added to the DFG after
-                // running the pass (and are available only in the state) or they may have been
-                // added before (so they aren't in the state but connected by the DFG or the overlay
-                // edge).
-                stateElement[node]?.filterIsInstance<T>()?.any(predicate) == true ||
-                    node is T && predicate(node) ||
-                    node.overlays.filterIsInstance<T>().any(predicate)
-            }
-            .fulfilled
-            // The last nodes on the path are the ones we are interested in.
-            .map { it.last() }
-            .flatMap {
-                // collect all "overlay" nodes
-                stateElement[it] ?: setOf(it, *it.overlays.toTypedArray())
-            }
-            .filterIsInstance<T>() // discard not-relevant overlays
     }
 
     companion object {
         var intermediateState: NodeToOverlayStateElement? = null
     }
+}
+
+/**
+ * Returns a list of nodes of type [T] fulfilling the [predicate] that are reachable from this node
+ * via the backwards DFG.
+ */
+inline fun <reified T : OverlayNode> Node.getOverlaysByPrevDFG(
+    stateElement: NodeToOverlayStateElement,
+    crossinline predicate: (T) -> Boolean = { true },
+): List<T> {
+    return this.followDFGEdgesUntilHit(
+            collectFailedPaths = false,
+            findAllPossiblePaths = false,
+            direction = Backward(GraphToFollow.DFG),
+        ) { node ->
+            // find all nodes on a prev DFG path which an overlay node matching the predicate
+            // either in the state, they are this node already or they have it in their
+            // overlays. We do these three things because nodes may be added to the DFG after
+            // running the pass (and are available only in the state) or they may have been
+            // added before (so they aren't in the state but connected by the DFG or the overlay
+            // edge).
+            stateElement[node]?.filterIsInstance<T>()?.any(predicate) == true ||
+                node is T && predicate(node) ||
+                node.overlays.filterIsInstance<T>().any(predicate)
+        }
+        .fulfilled
+        // The last nodes on the path are the ones we are interested in.
+        .map { it.last() }
+        .flatMap {
+            // collect all "overlay" nodes
+            stateElement[it] ?: setOf(it, *it.overlays.toTypedArray())
+        }
+        .filterIsInstance<T>() // discard not-relevant overlays
+}
+
+/**
+ * This interfaces describes a generic structure that "collects" a list of [OverlayNode]s that
+ * should be pushed to the state based on the current node in the EOG iteration.
+ */
+interface OverlayCollector {
+    /**
+     * This function needs to return a list of [OverlayNode]s that are considered to be added to the
+     * [state], given the current [node] in the EOG iteration.
+     *
+     * In order to safe some memory, instead of an [emptyList], a null object can also be returned
+     * if no overlay nodes are suitable for the given [node].
+     */
+    fun collect(
+        lattice: NodeToOverlayState,
+        state: NodeToOverlayStateElement,
+        node: Node,
+    ): List<OverlayNode>?
 }

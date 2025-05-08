@@ -246,7 +246,7 @@ enum class Reachability {
 }
 
 class ReachabilityLattice() : Lattice<ReachabilityLattice.Element> {
-    class Element(val reachability: Reachability) : Lattice.Element {
+    class Element(var reachability: Reachability) : Lattice.Element {
         override fun equals(other: Any?): Boolean {
             return other is Element && this.compare(other) == Order.EQUAL
         }
@@ -283,8 +283,21 @@ class ReachabilityLattice() : Lattice<ReachabilityLattice.Element> {
     override val bottom: Element
         get() = Element(Reachability.BOTTOM)
 
-    override fun lub(one: Element, two: Element): Element {
-        return Element(maxOf(one.reachability, two.reachability))
+    override fun lub(one: Element, two: Element, allowModify: Boolean): Element {
+        return if (allowModify) {
+            when (compare(one, two)) {
+                Order.EQUAL -> one
+                Order.GREATER -> one
+                Order.LESSER -> {
+                    one.reachability = two.reachability
+                    one
+                }
+                Order.UNEQUAL -> {
+                    one.reachability = Reachability.REACHABLE
+                    one
+                } // Top of the lattice
+            }
+        } else Element(maxOf(one.reachability, two.reachability))
     }
 
     override fun glb(one: Element, two: Element): Element {
@@ -313,5 +326,6 @@ fun UnreachabilityState.push(
     return this.lub(
         currentState,
         UnreachabilityStateElement(newEdge to ReachabilityLattice.Element(newReachability)),
+        true,
     )
 }
