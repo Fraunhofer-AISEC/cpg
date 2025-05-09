@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.processing.strategy
 
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.Component
+import de.fraunhofer.aisec.cpg.graph.HasMemoryValue
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.ast.*
@@ -124,6 +125,15 @@ object Strategy {
      */
     fun AST_FORWARD(x: Node): Iterator<Node> {
         return x.astChildren.iterator()
+    }
+
+    fun MEMORY_VALUES_FORWARD(x: Node): Iterator<Dataflow> {
+        return if (x is HasMemoryValue) x.memoryValueEdges.iterator() else x.nextDFGEdges.iterator()
+    }
+
+    fun MEMORY_VALUES_BACKWARD(x: Node): Iterator<Dataflow> {
+        return if (x is HasMemoryValue) x.memoryValueUsageEdges.iterator()
+        else x.prevDFGEdges.iterator()
     }
 
     /**

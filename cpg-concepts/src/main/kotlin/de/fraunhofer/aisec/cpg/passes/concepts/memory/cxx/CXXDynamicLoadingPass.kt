@@ -133,7 +133,10 @@ class CXXDynamicLoadingPass(ctx: TranslationContext) : ConceptPass(ctx) {
             // We can help the dynamic invoke resolver by adding a DFG path from the declaration to
             // the "return value" of dlsym
             candidates?.forEach {
-                call.prevDFGEdges.addContextSensitive(it, callingContext = CallingContextOut(call))
+                call.prevDFGEdges.addContextSensitive(
+                    it,
+                    callingContext = CallingContextOut(mutableListOf(call)),
+                )
             }
         }
         return listOf()

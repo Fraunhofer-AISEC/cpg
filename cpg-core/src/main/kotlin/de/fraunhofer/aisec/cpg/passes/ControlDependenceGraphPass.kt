@@ -45,6 +45,7 @@ import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import kotlin.collections.component1
 import kotlin.collections.component2
+import kotlin.system.measureTimeMillis
 
 /** This pass builds the Control Dependence Graph (CDG) by iterating through the EOG. */
 @DependsOn(EvaluationOrderGraphPass::class)
@@ -88,6 +89,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
             )
             return
         }
+        log.info("[CDG] Analyzing function ${startNode.name}. Complexity: $c")
 
         val prevEOGState =
             PrevEOGState(innerLattice = PrevEOGLattice(innerLattice = PowersetLattice<Node>()))
@@ -103,8 +105,11 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
                 PrevEOGLatticeElement(startNode to PowersetLattice.Element(startNode)),
             )
         log.trace("Iterating EOG of {}", startNode)
-        val finalState = prevEOGState.iterateEOG(startNode.nextEOGEdges, startState, ::transfer)
-        log.trace("Done iterating EOG of {}", startNode)
+        var finalState: PrevEOGStateElement
+        val executionTime = measureTimeMillis {
+            finalState = prevEOGState.iterateEOG(startNode.nextEOGEdges, startState, ::transfer)
+        }
+        log.trace("CDG Done iterating EOG for ${startNode.name}. Time: $executionTime")
 
         val branchingNodeConditionals = getBranchingNodeConditions(startNode)
 
@@ -137,11 +142,13 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
                     }
                 }
             }
-            val alreadySeen = mutableSetOf<Pair<Node, Set<Node>>>()
+            val alreadySeen = mutableSetOf<Int>()
 
             while (dominatorsList.isNotEmpty()) {
                 val (k, v) = dominatorsList.removeFirst()
-                alreadySeen.add(Pair(k, v))
+                if (!alreadySeen.add(Pair(k, v).hashCode())) {
+                    continue
+                }
                 if (k != startNode && v.containsAll(branchingNodeConditionals[k] ?: setOf())) {
                     // We are reachable from all the branches of a branching node. Add this parent
                     // to the worklist or update an existing entry. Also consider already existing
@@ -161,16 +168,14 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
                                 val update = entry.second.addAll(newV)
                                 if (
                                     update &&
-                                        alreadySeen.none {
-                                            it.first == entry.first &&
-                                                it.second.containsAll(entry.second)
-                                        }
-                                )
+                                        Pair(entry.first, entry.second).hashCode() !in alreadySeen
+                                ) {
                                     dominatorsList.add(entry)
-                                else finalDominators.add(entry)
+                                } else finalDominators.add(entry)
                             }
                             alreadySeen.none {
-                                it.first == newK && it.second.containsAll(newV)
+                                // it.first == newK && it.second == newV
+                                it == Pair(newK, newV.toMutableSet()).hashCode()
                             } -> {
                                 // We don't have an entry yet => add a new one
                                 val newEntry = Pair(newK, newV.toIdentitySet())
@@ -193,6 +198,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
 
             // We have all the dominators of this node and potentially traversed the graph
             // "upwards". Add the CDG edges
+            // log.info("[CDG] iterating through the finalDomniators")
             finalDominators
                 .filter { (k, _) -> k != node }
                 .forEach { (k, v) ->
