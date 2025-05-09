@@ -45,7 +45,7 @@ object SemanticNodeGenerator {
 
         // IMPORTANT: Only OWL/XML and RDF/XML are supported
 
-        var owlInputPath = "cpg-concepts/src/main/resources/curr_onto.owx"
+        var owlInputPath = "cpg-concepts/src/main/resources/ontology.owx"
 
         val file = File(owlInputPath)
         if (!file.exists()) {

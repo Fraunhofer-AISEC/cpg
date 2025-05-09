@@ -1,11 +1,11 @@
 <?xml version="1.0"?>
 <Ontology xmlns="http://www.w3.org/2002/07/owl#"
-     xml:base="http://www.semanticweb.org/ang95681/ontologies/2025/3/untitled-ontology-30"
+     xml:base="http://www.semanticweb.org/ang95681/ontologies/2025/4/untitled-ontology-32"
      xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
      xmlns:xml="http://www.w3.org/XML/1998/namespace"
      xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
      xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
-     ontologyIRI="http://www.semanticweb.org/ang95681/ontologies/2025/3/untitled-ontology-30">
+     ontologyIRI="http://www.semanticweb.org/ang95681/ontologies/2025/4/untitled-ontology-32">
     <Prefix name="owl" IRI="http://www.w3.org/2002/07/owl#"/>
     <Prefix name="rdf" IRI="http://www.w3.org/1999/02/22-rdf-syntax-ns#"/>
     <Prefix name="xml" IRI="http://www.w3.org/XML/1998/namespace"/>
@@ -367,6 +367,9 @@
     </Declaration>
     <Declaration>
         <Class IRI="https://ontology.emerald-he.eu/classes/PolicyDocument"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="https://ontology.emerald-he.eu/classes/QPU"/>
     </Declaration>
     <Declaration>
         <Class IRI="https://ontology.emerald-he.eu/classes/RBAC"/>
@@ -1068,10 +1071,16 @@
         <DataProperty IRI="https://ontology.emerald-he.eu/classes/robustness"/>
     </Declaration>
     <Declaration>
+        <DataProperty IRI="https://ontology.emerald-he.eu/classes/OneQubitErrorRate"/>
+    </Declaration>
+    <Declaration>
         <DataProperty IRI="https://ontology.emerald-he.eu/classes/type"/>
     </Declaration>
     <Declaration>
         <DataProperty IRI="https://ontology.emerald-he.eu/classes/successfullyCompletedPercentage"/>
+    </Declaration>
+    <Declaration>
+        <DataProperty IRI="https://ontology.emerald-he.eu/classes/SpamErrorRate"/>
     </Declaration>
     <Declaration>
         <DataProperty IRI="https://ontology.emerald-he.eu/classes/size"/>
@@ -1083,7 +1092,13 @@
         <DataProperty IRI="https://ontology.emerald-he.eu/classes/poisonLevel"/>
     </Declaration>
     <Declaration>
+        <DataProperty IRI="https://ontology.emerald-he.eu/classes/errorCorrectionEnabled"/>
+    </Declaration>
+    <Declaration>
         <DataProperty IRI="https://ontology.emerald-he.eu/classes/annualUpdateCompleted"/>
+    </Declaration>
+    <Declaration>
+        <DataProperty IRI="https://ontology.emerald-he.eu/classes/TwoQubitErrorRate"/>
     </Declaration>
     <EquivalentClasses>
         <Class IRI="https://ontology.emerald-he.eu/classes/ResourceType"/>
@@ -2385,6 +2400,13 @@
     </SubClassOf>
     <SubClassOf>
         <Class IRI="https://ontology.emerald-he.eu/classes/MachineLearningModel"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="https://ontology.emerald-he.eu/properties/hasMultiple"/>
+            <Class IRI="https://ontology.emerald-he.eu/classes/Vulnerability"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="https://ontology.emerald-he.eu/classes/MachineLearningModel"/>
         <DataSomeValuesFrom>
             <DataProperty IRI="https://ontology.emerald-he.eu/classes/adv_robustness"/>
             <Datatype abbreviatedIRI="xsd:float"/>
@@ -2662,6 +2684,38 @@
     <SubClassOf>
         <Class IRI="https://ontology.emerald-he.eu/classes/PolicyDocument"/>
         <Class IRI="https://ontology.emerald-he.eu/classes/Document"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="https://ontology.emerald-he.eu/classes/QPU"/>
+        <Class IRI="https://ontology.emerald-he.eu/classes/Compute"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="https://ontology.emerald-he.eu/classes/QPU"/>
+        <DataSomeValuesFrom>
+            <DataProperty IRI="https://ontology.emerald-he.eu/classes/OneQubitErrorRate"/>
+            <Datatype abbreviatedIRI="xsd:float"/>
+        </DataSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="https://ontology.emerald-he.eu/classes/QPU"/>
+        <DataSomeValuesFrom>
+            <DataProperty IRI="https://ontology.emerald-he.eu/classes/SpamErrorRate"/>
+            <Datatype abbreviatedIRI="xsd:float"/>
+        </DataSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="https://ontology.emerald-he.eu/classes/QPU"/>
+        <DataSomeValuesFrom>
+            <DataProperty IRI="https://ontology.emerald-he.eu/classes/TwoQubitErrorRate"/>
+            <Datatype abbreviatedIRI="xsd:float"/>
+        </DataSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="https://ontology.emerald-he.eu/classes/QPU"/>
+        <DataSomeValuesFrom>
+            <DataProperty IRI="https://ontology.emerald-he.eu/classes/errorCorrectionEnabled"/>
+            <Datatype abbreviatedIRI="xsd:boolean"/>
+        </DataSomeValuesFrom>
     </SubClassOf>
     <SubClassOf>
         <Class IRI="https://ontology.emerald-he.eu/classes/RBAC"/>
