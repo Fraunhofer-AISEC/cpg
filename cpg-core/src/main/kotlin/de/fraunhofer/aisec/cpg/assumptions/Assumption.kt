@@ -209,7 +209,7 @@ enum class AssumptionType {
      */
     SyntaxAmbiguityAssumption,
     /**
-     * Used to declare assumptions related to concept placement, or concept behavior, e.g., Assuming the heuristic
+     * Used to declare assumptions related to concept placement, or concept behavior, e.g., assuming the heuristic
      * that a function name contains "open" and "file" results in the existence of a file concept.
      */
     ConceptAssumption,
