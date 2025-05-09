@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.helpers.functional
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice.Element
+import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import java.io.Serializable
 import java.util.*
@@ -225,6 +226,7 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
                     throw IllegalArgumentException(
                         "$other should be of type PowersetLattice.Element<T> but is of type ${other.javaClass}"
                     )
+                this === other -> Order.EQUAL
                 super<IdentitySet>.equals(other) -> Order.EQUAL
                 this.size > other.size && this.containsAll(other) -> Order.GREATER
                 other.size > this.size && other.containsAll(this) -> Order.LESSER
@@ -358,8 +360,10 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
             Order.LESSER,
             Order.UNEQUAL -> {
                 if (allowModify) {
-                    val newKeys = two.keys.filter { it !in one.keys }
-                    val existingKeys = two.keys.minus(newKeys)
+                    // Requires identitySet and toList to avoid accidentally removing equal but not
+                    // identical keys
+                    val newKeys = two.keys.filterTo(identitySetOf()) { it !in one.keys }
+                    val existingKeys = two.keys.toList().minus(newKeys)
                     newKeys.forEach { key -> one[key] = two[key] }
                     existingKeys.forEach { key ->
                         one[key]?.let { oneValue ->
