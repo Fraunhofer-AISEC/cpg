@@ -196,19 +196,9 @@ cp style/pre-commit .git/hooks
 
 ## Contributors
 
-The following authors have contributed to this project (in alphabetical order):
-* [fwendland](https://github.com/fwendland)
-* [JulianSchuette](https://github.com/JulianSchuette)
-* [konradweiss](https://github.com/konradweiss)
-* [KuechA](https://github.com/KuechA)
-* [Masrepus](https://github.com/Masrepus)
-* [maximiliankaul](https://github.com/maximiliankaul)
-* [maximilian-galanis](https://github.com/maximilian-galanis)
-* [obraunsdorf](https://github.com/obraunsdorf)
-* [oxisto](https://github.com/oxisto)
-* [peckto](https://github.com/peckto)
-* [titze](https://github.com/titze)
-* [vfsrfs](https://github.com/vfsrfs)
+The following authors have contributed to this project:
+
+<a href="https://github.com/Fraunhofer-AISEC/cpg/graphs/contributors"><img src="https://contrib.rocks/image?repo=Fraunhofer-AISEC/cpg" /></a>
 
 ## Contributing
 

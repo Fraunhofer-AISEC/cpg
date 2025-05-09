@@ -3344,7 +3344,8 @@ class PointsToPassTest {
                 .filter {
                     it is ContextSensitiveDataflow &&
                         it.callingContext.calls ==
-                            mutableListOf(veryInnerFuncCE, innerFuncCE, outerFuncCE)
+                            mutableListOf(veryInnerFuncCE, innerFuncCE, outerFuncCE) &&
+                        it.granularity is FullDataflowGranularity
                 }
                 .map { it.end }
                 .toSet(),

@@ -127,7 +127,7 @@ fun MetadataProvider.conceptBuildHelper(
                     .map { (key, value) ->
                         (constructor.parameters.singleOrNull { it.name == key }
                             ?: throw IllegalArgumentException(
-                                "There is no argument with name \"key\" which is specified to generate the concept ${conceptClass.simpleName}"
+                                "There is no argument with name \"$key\" which is specified to generate the concept ${conceptClass.simpleName}"
                             )) to value
                     }
                     .toTypedArray(),

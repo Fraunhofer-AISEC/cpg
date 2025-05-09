@@ -96,7 +96,7 @@ class BasicLatticesRedesignTest {
         assertEquals(emptyLattice1, emptyLubEmpty)
         assertNotSame(emptyLattice1, empty1LubBla1)
         assertNotEquals(emptyLattice1, empty1LubBla1)
-        assertSame(blaLattice1, empty1LubBla1)
+        assertNotSame(blaLattice1, empty1LubBla1)
         assertEquals(blaLattice1, empty1LubBla1)
         assertEquals(Order.LESSER, powersetLattice.compare(emptyLattice1, empty1LubBla1))
         assertEquals(Order.EQUAL, powersetLattice.compare(blaLattice1, empty1LubBla1))
@@ -106,7 +106,7 @@ class BasicLatticesRedesignTest {
         assertNotSame(emptyLattice3, emptyLubBla)
         assertNotEquals(emptyLattice3, emptyLubBla)
         assertEquals(Order.LESSER, powersetLattice.compare(emptyLattice3, emptyLubBla))
-        assertSame(blaLattice1, emptyLubBla)
+        assertNotSame(blaLattice1, emptyLubBla)
         assertEquals(blaLattice1, emptyLubBla)
         assertEquals(Order.EQUAL, powersetLattice.compare(blaLattice1, emptyLubBla))
 

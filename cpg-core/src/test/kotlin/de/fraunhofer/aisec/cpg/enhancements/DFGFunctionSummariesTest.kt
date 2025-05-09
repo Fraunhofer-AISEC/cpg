@@ -221,7 +221,9 @@ class DFGFunctionSummariesTest {
         assertEquals(
             setOf<Node>(
                 randomTypeAddAllTwoArgs.parameters[1],
+                randomTypeAddAllTwoArgs.parameters[1].memoryValues.single(),
                 randomTypeAddAllTwoArgs.parameters[0],
+                randomTypeAddAllTwoArgs.parameters[0].memoryValues.single(),
                 randomTypeAddAllTwoArgs.receiver!!,
             ),
             randomTypeAddAllTwoArgs.prevDFG,
