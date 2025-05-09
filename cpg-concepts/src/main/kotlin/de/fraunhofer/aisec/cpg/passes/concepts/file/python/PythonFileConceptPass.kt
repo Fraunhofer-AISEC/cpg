@@ -26,17 +26,23 @@
 package de.fraunhofer.aisec.cpg.passes.concepts.file.python
 
 import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
+import de.fraunhofer.aisec.cpg.graph.Component
+import de.fraunhofer.aisec.cpg.graph.OverlayNode
+import de.fraunhofer.aisec.cpg.graph.argumentValueByNameOrPosition
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.concepts.file.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.helpers.Util
+import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
 import de.fraunhofer.aisec.cpg.passes.DFGPass
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
 import de.fraunhofer.aisec.cpg.passes.concepts.EOGConceptPass
+import de.fraunhofer.aisec.cpg.passes.concepts.NodeToOverlayState
 import de.fraunhofer.aisec.cpg.passes.concepts.NodeToOverlayStateElement
+import de.fraunhofer.aisec.cpg.passes.concepts.file.python.PythonFileConceptPass.Companion.fileCache
 import de.fraunhofer.aisec.cpg.passes.concepts.getOverlaysByPrevDFG
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLate
@@ -69,13 +75,14 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
     }
 
     override fun handleMemberCallExpression(
+        lattice: NodeToOverlayState,
         state: NodeToOverlayStateElement,
         callExpression: MemberCallExpression,
     ): Collection<OverlayNode> {
         // Since we cannot directly depend on the Python frontend, we have to check the language
         // here based on the node's language.
         if (callExpression.language.name.localName != "PythonLanguage") {
-            return emptySet()
+            return emptyList()
         }
 
         return callExpression.base
@@ -100,6 +107,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
                             file = fileNode,
                             connect = false,
                         )
+
                     "write" -> {
                         val arg = callExpression.arguments.getOrNull(0)
                         if (callExpression.arguments.size != 1 || arg == null) {
@@ -108,7 +116,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
                                 log,
                                 "Failed to identify the write argument. Ignoring the `write` call.",
                             )
-                            return emptySet()
+                            return emptyList()
                         }
                         newFileWrite(
                             underlyingNode = callExpression,
@@ -129,17 +137,18 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
                         null
                     }
                 }
-            } ?: listOf()
+            } ?: emptyList()
     }
 
     override fun handleCallExpression(
+        lattice: NodeToOverlayState,
         state: NodeToOverlayStateElement,
         callExpression: CallExpression,
     ): Collection<OverlayNode> {
         // Since we cannot directly depend on the Python frontend, we have to check the language
         // here based on the node's language.
         if (callExpression.language.name.localName != "PythonLanguage") {
-            return emptySet()
+            return emptyList()
         }
 
         return when (callExpression.callee.name.toString()) {
@@ -155,52 +164,33 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
                  *
                  * TODO: opener https://docs.python.org/3/library/functions.html#open
                  */
-                val fileName = getFileName(callExpression, "file")
-                if (fileName == null) {
-                    Util.errorWithFileLocation(
-                        callExpression,
-                        log,
-                        "Failed to parse file name. Ignoring the `open` call.",
-                    )
-                    return emptySet()
-                }
-                val (newFileNode, isNewFile) = getOrCreateFile(fileName, callExpression)
+                val file = getOrCreateFile(callExpression, "file", lattice, state)
 
                 val mode = getBuiltinOpenMode(callExpression) ?: "r" // default is 'r'
                 val flags = translateBuiltinOpenMode(mode)
                 val setFlagsOp =
                     newFileSetFlags(
                         underlyingNode = callExpression,
-                        file = newFileNode,
+                        file = file,
                         flags = flags,
                         connect = false,
                     )
                 val open =
-                    newFileOpen(
-                        underlyingNode = callExpression,
-                        file = newFileNode,
-                        connect = false,
-                    )
+                    newFileOpen(underlyingNode = callExpression, file = file, connect = false)
 
-                setOfNotNull(setFlagsOp, open, if (isNewFile) newFileNode else null)
+                val fileHandle =
+                    newFileHandle(underlyingNode = callExpression, file = file, connect = false)
+
+                setOfNotNull(setFlagsOp, open, fileHandle)
             }
             "os.open" -> {
-                val fileName = getFileName(callExpression, "path")
-                if (fileName == null) {
-                    Util.errorWithFileLocation(
-                        callExpression,
-                        log,
-                        "Failed to parse file name. Ignoring the `os.open` call.",
-                    )
-                    return emptySet()
-                }
-                val (newFileNode, isNewFile) = getOrCreateFile(fileName, callExpression)
+                val file = getOrCreateFile(callExpression, "path", lattice, state)
 
                 val setFlags =
                     getOsOpenFlags(callExpression)?.let { flags ->
                         newFileSetFlags(
                             underlyingNode = callExpression,
-                            file = newFileNode,
+                            file = file,
                             flags = translateOsOpenFlags(flags),
                             connect = false,
                         )
@@ -211,36 +201,21 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
                 val setMask =
                     newFileSetMask(
                         underlyingNode = callExpression,
-                        file = newFileNode,
+                        file = file,
                         mask = mode,
                         connect = false,
                     )
 
                 val open =
-                    newFileOpen(
-                        underlyingNode = callExpression,
-                        file = newFileNode,
-                        connect = false,
-                    )
+                    newFileOpen(underlyingNode = callExpression, file = file, connect = false)
 
-                setOfNotNull(setFlags, setMask, open, if (isNewFile) newFileNode else null)
+                val fh =
+                    newFileHandle(underlyingNode = callExpression, file = file, connect = false)
+
+                setOfNotNull(setFlags, setMask, open, fh)
             }
             "os.chmod" -> {
-                val fileName =
-                    callExpression.argumentValueByNameOrPosition<String>(
-                        name = "path",
-                        position = 0,
-                    )
-                if (fileName == null) {
-                    Util.errorWithFileLocation(
-                        callExpression,
-                        log,
-                        "Failed to parse the `path` argument. Ignoring the entire `os.chmod` call.",
-                    )
-                    return emptySet()
-                }
-
-                val (file, isNewFile) = getOrCreateFile(fileName, callExpression)
+                val file = getOrCreateFile(callExpression, "path", lattice, state)
 
                 val mode =
                     callExpression.argumentValueByNameOrPosition<Long>(name = "mode", position = 1)
@@ -250,42 +225,26 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
                         log,
                         "Failed to find the corresponding mode. Ignoring the entire `os.chmod` call..",
                     )
-                    return setOfNotNull(if (isNewFile) file else null)
+                    return emptyList()
                 }
                 setOfNotNull(
-                    if (isNewFile) file else null,
                     newFileSetMask(
                         underlyingNode = callExpression,
                         file = file,
-                        mask = mode,
+                        mask = mode.result,
                         connect = false,
-                    ),
+                    )
                 )
             }
             "os.remove" -> {
-                val fileName =
-                    callExpression.argumentValueByNameOrPosition<String>(
-                        name = "path",
-                        position = 0,
-                    )
-                if (fileName == null) {
-                    Util.errorWithFileLocation(
-                        callExpression,
-                        log,
-                        "Failed to parse the `path` argument. Ignoring the entire `os.remove` call.",
-                    )
-                    return emptySet()
-                }
-
-                val (file, isNewFile) = getOrCreateFile(fileName, callExpression)
+                val file = getOrCreateFile(callExpression, "path", lattice, state)
 
                 setOfNotNull(
-                    if (isNewFile) file else null,
-                    newFileDelete(underlyingNode = callExpression, file = file, connect = false),
+                    newFileDelete(underlyingNode = callExpression, file = file, connect = false)
                 )
             }
             else -> {
-                setOf()
+                emptyList()
             }
         }
     }
@@ -298,20 +257,34 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
      * @param callExpression The [CallExpression] triggering the call lookup. It is used as a basis
      *   ([File.underlyingNode]) if a new file has to be created.
      * @return The [File] found in the cache or the new file in case it had to be created.
+     *   Additionally, a flag whether the [File] was created (`true`) or already existed in the
+     *   cache (`false`) is returned, too.
+     *
+     *     TODO: update
      */
     internal fun getOrCreateFile(
-        fileName: String,
         callExpression: CallExpression,
-    ): Pair<File, Boolean> {
+        argumentName: String,
+        lattice: NodeToOverlayState,
+        state: NodeToOverlayStateElement,
+    ): File {
+        val fileName = getFileName(callExpression, argumentName) ?: TODO()
         val currentMap = fileCache.computeIfAbsent(currentComponent) { mutableMapOf() }
-        val existingEntry = currentMap[fileName]
+        val existingEntry = currentMap[fileName.result]
         if (existingEntry != null) {
-            return existingEntry to false
+            return existingEntry
         }
-        val newEntry =
-            newFile(underlyingNode = callExpression, fileName = fileName, connect = false)
-        currentMap[fileName] = newEntry
-        return newEntry to true
+        val un = fileName.path.lastOrNull() ?: TODO()
+        val newEntry = newFile(underlyingNode = un, fileName = fileName.result, connect = false)
+
+        lattice.lub(
+            one = state,
+            two = NodeToOverlayStateElement(un to PowersetLattice.Element(newEntry)),
+            allowModify = true,
+        )
+
+        currentMap[fileName.result] = newEntry
+        return newEntry
     }
 
     /**
@@ -335,7 +308,10 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
      * @param call The [CallExpression] (builtin-`open` or `os.open`) to be analyzed.
      * @return The name or null if no name could be found.
      */
-    private fun getFileName(call: CallExpression, argumentName: String): String? {
+    private fun getFileName(
+        call: CallExpression,
+        argumentName: String,
+    ): ValueEvaluator.ResultWithPath<String>? {
         val name = call.argumentValueByNameOrPosition<String>(name = argumentName, position = 0)
         return name
     }
@@ -352,7 +328,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
      * ```
      */
     internal fun getBuiltinOpenMode(call: CallExpression): String? {
-        return call.argumentValueByNameOrPosition<String>(name = "mode", position = 1)
+        return call.argumentValueByNameOrPosition<String>(name = "mode", position = 1)?.result
     }
 
     /**
@@ -369,7 +345,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
      * @return The `mode`
      */
     internal fun getOsOpenMode(call: CallExpression): Long? {
-        return call.argumentValueByNameOrPosition<Long>(name = "mode", position = 2)
+        return call.argumentValueByNameOrPosition<Long>(name = "mode", position = 2)?.result
     }
 
     /**
@@ -381,7 +357,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
      * ```
      */
     internal fun getOsOpenFlags(call: CallExpression): Long? {
-        return call.argumentValueByNameOrPosition<Long>(name = "flags", position = 1)
+        return call.argumentValueByNameOrPosition<Long>(name = "flags", position = 1)?.result
     }
 
     /**
