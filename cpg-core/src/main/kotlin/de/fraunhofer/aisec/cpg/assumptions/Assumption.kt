@@ -172,7 +172,7 @@ enum class AssumptionType {
      */
     CompletenessAssumption,
     /**
-     * A subtype of [CompletenessAssumption]. Assuming that to handle a certain subject, we considered all possible cases,
+     * A subtype of [CompletenessAssumption]. Describes the assumption that we considered all possible cases when handling a certain subject.
      * e.g., assuming that an operation can be done by one of exactly four function calls specified in a list.
      */
     ExhaustiveEnumerationAssumption,
