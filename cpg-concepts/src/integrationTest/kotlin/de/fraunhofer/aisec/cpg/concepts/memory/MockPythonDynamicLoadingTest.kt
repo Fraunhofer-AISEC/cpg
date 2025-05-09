@@ -92,7 +92,9 @@ class MockPythonDynamicPass(ctx: TranslationContext) : ConceptPass(ctx) {
                         node = construct,
                         granularity = FullDataflowGranularity,
                         callingContext =
-                            CallingContextOut(dynamicLoading.underlyingNode as CallExpression),
+                            CallingContextOut(
+                                mutableListOf(dynamicLoading.underlyingNode as CallExpression)
+                            ),
                     )
 
                     // Mark it as "dirty" for symbol resolver
