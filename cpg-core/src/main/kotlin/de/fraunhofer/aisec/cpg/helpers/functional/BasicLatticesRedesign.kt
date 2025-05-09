@@ -430,6 +430,8 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
             Order.LESSER,
             Order.UNEQUAL -> {
                 if (allowModify) {
+                    // Requires identitySet and toList to avoid accidentally removing equal but not
+                    // identical keys
                     val newKeys = two.keys.filterTo(identitySetOf()) { it !in one.keys }
                     val existingKeys = two.keys.toList().minus(newKeys)
                     newKeys.forEach { key -> one[key] = two[key] }
