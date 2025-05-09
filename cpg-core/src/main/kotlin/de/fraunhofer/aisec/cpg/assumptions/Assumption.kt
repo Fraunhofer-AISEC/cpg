@@ -192,7 +192,7 @@ enum class AssumptionType {
     MacroAssumption,
     /**
      * Used when marking a subtree in the CPG that we could not translate due to the language not being supported, e.g.
-     * the contained code has no relevant influence on the execution of the surrounding translated and analyzed CPG.
+     * we assume that the contained code has no relevant influence on the execution of the surrounding translated and analyzed CPG.
      */
     UnsupportedLanguageAssumption,
     /**
