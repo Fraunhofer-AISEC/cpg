@@ -250,7 +250,7 @@ abstract class Node() :
         ProgramDependences<Node>(this, mirrorProperty = Node::nextPDGEdges, outgoing = false)
         protected set
 
-    var prevPDG by unwrapping(Node::prevDFGEdges)
+    var prevPDG by unwrapping(Node::prevPDGEdges)
 
     @DoNotPersist override val assumptions: MutableList<Assumption> = mutableListOf()
 
