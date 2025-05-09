@@ -3342,7 +3342,8 @@ class PointsToPassTest {
             setOf(pDerefLine483, iRefLine483),
             pDerefLine466Left.nextDFGEdges
                 .filter {
-                    it is ContextSensitiveDataflow &&
+                    it.granularity is FullDataflowGranularity &&
+                        it is ContextSensitiveDataflow &&
                         it.callingContext.calls ==
                             mutableListOf(veryInnerFuncCE, innerFuncCE, outerFuncCE) &&
                         it.granularity is FullDataflowGranularity
