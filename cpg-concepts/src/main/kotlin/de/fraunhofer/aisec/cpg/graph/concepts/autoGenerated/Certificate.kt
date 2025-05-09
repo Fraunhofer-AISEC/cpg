@@ -6,8 +6,8 @@ import kotlin.String
 import kotlin.collections.MutableMap
 
 public abstract class Certificate(
-  expirationDate: ZonedDateTime,
   notBeforeDate: ZonedDateTime,
+  expirationDate: ZonedDateTime,
   enabled: Boolean,
   isManaged: Boolean,
   usedByMultiple: Infrastructure,
@@ -23,6 +23,6 @@ public abstract class Certificate(
   description: String,
   id: String,
   parent: Resource,
-) : Credential(expirationDate, notBeforeDate, enabled, isManaged, usedByMultiple,
+) : Credential(notBeforeDate, expirationDate, enabled, isManaged, usedByMultiple,
     internetAccessibleEndpoint, redundancies, loggings, geoLocation, usageStatistics, raw,
     creation_time, labels, name, description, id, parent)

@@ -6,8 +6,8 @@ import kotlin.String
 import kotlin.collections.MutableMap
 
 public abstract class MachineLearningDataset(
-  type: String,
   size: Int,
+  type: String,
   dataLocation: DataLocation,
   raw: String,
   creation_time: ZonedDateTime,

@@ -12,6 +12,7 @@ public abstract class MachineLearningModel(
   robustness: Float,
   adv_robustness: Float,
   privacyLabel: Float,
+  vulnerabilities: Vulnerability,
   dataLocation: DataLocation,
   raw: String,
   creation_time: ZonedDateTime,
