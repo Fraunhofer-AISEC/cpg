@@ -157,7 +157,7 @@ enum class AssumptionStatus {
 }
 
 /**
- * The assumption types purpose is to define assumption types that group assumptions related to the defined semantics.
+ * The purpose of the assumption types is to group assumptions by their semantics.
  * These groupings can then be used to evaluate better what causes or impact an assumption can have.
  */
 @Suppress("unused")
