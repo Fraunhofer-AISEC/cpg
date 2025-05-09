@@ -157,97 +157,97 @@ enum class AssumptionStatus {
 }
 
 /**
- * The purpose of the assumption types is to group assumptions by their semantics.
- * These groupings can then be used to evaluate better what causes or impact an assumption can have.
+ * The purpose of the assumption types is to group assumptions by their semantics. These groupings
+ * can then be used to evaluate better what causes or impact an assumption can have.
  */
 @Suppress("unused")
 enum class AssumptionType {
     /**
-     * Used when an assumption is made regarding inferring the existence of code represented as nodes or edges.
+     * Used when an assumption is made regarding inferring the existence of code represented as
+     * nodes or edges.
      */
     InferenceAssumption,
     /**
-     * Assuming that the found solutions for a problem contains all possible solutions in the given system, e.g., the
-     * found nodes are a complete set of nodes that we had to find in our search.
+     * Assuming that the found solutions for a problem contains all possible solutions in the given
+     * system, e.g., the found nodes are a complete set of nodes that we had to find in our search.
      */
     CompletenessAssumption,
     /**
-     * A subtype of [CompletenessAssumption]. Describes the assumption that we considered all possible cases when handling a certain subject.
-     * e.g., assuming that an operation can be done by one of exactly four function calls specified in a list.
+     * A subtype of [CompletenessAssumption]. Describes the assumption that we considered all
+     * possible cases when handling a certain subject. e.g., assuming that an operation can be done
+     * by one of exactly four function calls specified in a list.
      */
     ExhaustiveEnumerationAssumption,
     /**
-     * Assuming that all solutions for a problem are correct, and no over-approximation happened, e.g., all nodes listed can be the target of a call during runtime.
+     * Assuming that all solutions for a problem are correct, and no over-approximation happened,
+     * e.g., all nodes listed can be the target of a call during runtime.
      */
     SoundnessAssumption,
     /**
-     * Used when making assumptions on preprocessing instructions that were not processed before CPG translation.
+     * Used when making assumptions on preprocessing instructions that were not processed before CPG
+     * translation.
      */
     PreprocessingAssumption,
     /**
-     * A subtype of [PreprocessingAssumption]. Assuming that a macro that was not resolved before CPG translation
-     * adheres to some constraint, e.g., a macro is a closed AST subtree and can be interpreted as an unknown block
-     * of code.
+     * A subtype of [PreprocessingAssumption]. Assuming that a macro that was not resolved before
+     * CPG translation adheres to some constraint, e.g., assuming a macro expands into complete
+     * syntactic unit.
      */
     MacroAssumption,
     /**
-     * Used when marking a subtree in the CPG that we could not translate due to the language not being supported, e.g.
-     * we assume that the contained code has no relevant influence on the execution of the surrounding translated and analyzed CPG.
+     * Used when marking a subtree in the CPG that we could not translate due to the language not
+     * being supported, e.g. we assume that the contained code has no relevant influence on the
+     * execution of the surrounding translated and analyzed CPG.
      */
     UnsupportedLanguageAssumption,
     /**
-     * Used to declare an assumption on missing code that could not be analyzed and its impact on CPG translation or the resulting analysis.
+     * Used to declare an assumption on missing code that could not be analyzed and its impact on
+     * CPG translation or the resulting analysis.
      */
     MissingCodeAssumption,
-    /**
-     * Used when having to decide between several potential program executions.
-     */
+    /** Used when having to decide between several potential program executions. */
     AmbiguityAssumption,
     /**
-     * A subtype of [AmbiguityAssumption]. Used when assuming that one of several interpretations of a syntactic
-     * ambiguity is correct.
+     * A subtype of [AmbiguityAssumption]. Used when assuming that one of several interpretations of
+     * a syntactic ambiguity is correct.
      */
     SyntaxAmbiguityAssumption,
     /**
-     * Used to declare assumptions related to concept placement, or concept behavior, e.g., assuming the heuristic
-     * that a function name contains "open" and "file" results in the existence of a file concept.
+     * Used to declare assumptions related to concept placement, or concept behavior, e.g., assuming
+     * the heuristic that a function name contains "open" and "file" results in the existence of a
+     * file concept.
      */
     ConceptAssumption,
-    /**
-     * A general type to declare an assumption on the control flow of a program.
-     */
+    /** A general type to declare an assumption on the control flow of a program. */
     ControlFlowAssumption,
     /**
-     * A subtype of [ControlFlowAssumption] when assuming that the entire program, or parts of the program, execute
-     * linearly without any unexpected or malicious changes in control flow.
+     * A subtype of [ControlFlowAssumption] when assuming that the entire program, or parts of the
+     * program, execute linearly without any unexpected or malicious changes in control flow.
      */
     CFIntegrityAssumption,
     /**
-     * A subtype of [ControlFlowAssumption]. Used to make assumptions about the uninterrupted execution of a code block
-     * that is either executed entirely or not at all.
+     * A subtype of [ControlFlowAssumption]. Used to make assumptions about the uninterrupted
+     * execution of a code block that is either executed entirely or not at all.
      */
     AtomicExecutionAssumption,
     /**
-     * A subtype of [ControlFlowAssumption]. Used to make assumptions about the exception-free execution, or on constraints
-     * what exceptions can be thrown.
+     * A subtype of [ControlFlowAssumption]. Used to make assumptions about the exception-free
+     * execution, or on constraints what exceptions can be thrown.
      */
     ExceptionsAssumption,
-    /**
-     * Assumptions on data flows that occur during program execution.
-     */
+    /** Assumptions on data flows that occur during program execution. */
     DataFlowAssumption,
-    /**
-     * Used to declare more general assumptions on input data.
-     */
+    /** Used to declare more general assumptions on input data. */
     InputAssumptions,
     /**
-     * An assumption on input data, that assumes an additional constraint on the data, which is not enforced through the
-     * type or implementation of the data type.
+     * An assumption on input data, that assumes an additional constraint on the data, which is not
+     * enforced through the type or implementation of the data type.
      */
     DataRangeAssumption,
     /**
-     * A Subtype of [InputAssumptions]. Used to declare assumptions on the trustworthiness of input data, e.g., can be used to see if the result of an
-     * analysis requires data to be from a trustworthy source.
+     * A Subtype of [InputAssumptions]. Used to declare assumptions on the trustworthiness of input
+     * data, e.g., can be used to see if the result of an analysis requires data to be from a
+     * trustworthy source.
      */
     TrustedInputAssumption,
     /**
@@ -255,25 +255,29 @@ enum class AssumptionType {
      */
     ConfigTrustAssumption,
     /**
-     * Used for assumptions on external data, that may not be from the user or trusted configurations, e.g., the
-     * format of this external data adheres to ... .
+     * Used for assumptions on external data, that may not be from the user or trusted
+     * configurations, e.g., the format of this external data adheres to some constraint.
      */
     ExternalDataAssumption,
     /**
-     * Used to declare assumptions on trust boundaries, e.g., that an endpoint establishes a trust boundary or that
-     * specific constraints have to hold for users or data within the trust boundary.
+     * Used to declare assumptions on trust boundaries, e.g., that an endpoint establishes a trust
+     * boundary or that specific constraints have to hold for users or data within the trust
+     * boundary.
      */
     TrustBoundaryAssumption,
     /**
-     * Assumptions on resources and their availability, e.g. , the file that is opened here exists or the database is available.
+     * Assumptions on resources and their availability, e.g. , the file that is opened here exists
+     * or the database is available.
      */
     ResourceAvailableAssumption,
     /**
-     * Used to declare assumptions on the network connection, e.g., availability, latency, or stability assumptions.
+     * Used to declare assumptions on the network connection, e.g., availability, latency, or
+     * stability assumptions.
      */
     NetworkAssumption,
     /**
-     * A subtype of [ResourceAvailableAssumption]. Used to make assumptions on specific services being available, e.g., over the network.
+     * A subtype of [ResourceAvailableAssumption]. Used to make assumptions on specific services
+     * being available, e.g., over the network.
      */
     ServiceReachableAssumption,
 }
