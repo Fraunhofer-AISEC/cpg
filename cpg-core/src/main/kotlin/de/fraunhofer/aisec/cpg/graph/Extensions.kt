@@ -243,9 +243,7 @@ enum class FailureReason {
  * This data class represents a path of nodes as some paths are not just lists of edges, but instead
  * can be traversed by a predicate.
  */
-data class NodePath(val nodes: List<Node>) : HasAssumptions {
-    override val assumptions: MutableList<Assumption> = mutableListOf()
-}
+data class NodePath(val nodes: List<Node>, override val assumptions: MutableList<Assumption> = mutableListOf()) : HasAssumptions
 
 class FulfilledAndFailedPaths(
     val fulfilled: List<NodePath>,
