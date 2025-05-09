@@ -168,7 +168,7 @@ enum class AssumptionType {
     InferenceAssumption,
     /**
      * Assuming that the found solutions for a problem contains all possible solutions in the given system, e.g., the
-     * found nodes are a complete set of nodes that we needed to find in our search.
+     * found nodes are a complete set of nodes that we had to find in our search.
      */
     CompletenessAssumption,
     /**
