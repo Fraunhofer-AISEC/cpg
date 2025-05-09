@@ -46,10 +46,10 @@ import org.neo4j.ogm.annotation.typeconversion.Convert
  *   assumptions and group similar assumptions.
  * @param message The message describing the assumption that was taken.
  * @param assumptionLocation The location where an assumption was made. The location can be reported
- *   to the developers as the location in the cpg code base that MADE the assumption.
- * @param node The node that cause the assumption to be necessary, even if the assumption has
- *   validity for the entire program, the node location can be reported to the user as the code
- *   piece that CAUSED the assumption.
+ *   to the developers as the location in the CPG's codebase that created the [Assumption] object.
+ * @param node The node that causes the assumption to be necessary. Even if the assumption has
+ *   validity for the entire program, the node location can be reported to the user as the piece of
+ *   code under analysis that CAUSED the assumption.
  * @param edge The edge that cause the assumption to be necessary, even if the assumption has
  *   validity for the entire program, the location of the start node can be reported to the user as
  *   the code piece that CAUSED the assumption.
@@ -62,7 +62,7 @@ import org.neo4j.ogm.annotation.typeconversion.Convert
  *   edges, paths are considered to exist and results are true or false, if based on a contradiction
  *   result. If it is [AssumptionStatus.Rejected], nodes and edges containing them are supposed to
  *   be considered nonexistent, or not existing with the same properties. Results with assumptions
- *   and status [AssumptionStatus.Rejected] should be considered false positives.
+ *   and status [AssumptionStatus.Rejected] should be considered false positives or false negatives.
  */
 class Assumption(
     val assumptionType: AssumptionType,
@@ -77,11 +77,19 @@ class Assumption(
 
     init {
         super.underlyingNode = node ?: edge?.start
-        // Currently this condition is always false due to id being initialized, however, this is
+        // Currently this condition is always false due to id being initialized, however, this
         // may change in the future
+        @Suppress("SENSELESS_COMPARISON")
         if (super.underlyingNode == null && id == null) {
             log.warn(
                 "Creating an assumption with no associated node or edge requires having a deterministic ID for identification."
+            )
+        }
+
+        @Suppress("SENSELESS_COMPARISON")
+        if (listOf(node != null, edge != null, id != null).filter { it }.size > 1) {
+            log.warn(
+                "An assumption should be created with only one of the following arguments/properties: id, node or edge. But multiple of those are provided"
             )
         }
 
@@ -99,10 +107,20 @@ class Assumption(
      * translations.
      */
     override fun hashCode(): Int {
-        // The underlying node is already in the hashCode of the super class implementation
-        // If the assumption is created from an edge, the edge is != null and therefore influences
-        // the hashCode
+        // The underlying node is already in the hashCode of the super class implementation.
+        // If the assumption is created from an edge, the edge is not null and therefore influences
+        // the hashCode.
         return Objects.hash(super.hashCode(), edge, assumptionType, message, assumptionLocation)
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is Assumption) return false
+        return super.equals(other) &&
+            edge == other.edge &&
+            assumptionType == other.assumptionType &&
+            message == other.message &&
+            assumptionLocation == other.assumptionLocation
     }
 }
 
@@ -138,6 +156,7 @@ enum class AssumptionStatus {
     Ignored,
 }
 
+@Suppress("unused")
 enum class AssumptionType {
     SyntaxAmbiguityAssumption,
     InferenceAssumption,
@@ -178,7 +197,7 @@ interface HasAssumptions {
     /**
      * This function adds a new assumption to the object it is called on. If the object is a node or
      * edge. The Assumption is added as an overlaying node for presentation in the graph. The
-     * assumption is also added to the [assumptions] list. In the future the [id] will be
+     * assumption is also added to the [assumptions] list. In the future the [Node.id] will be
      * deterministic across functions.
      *
      * @param assumptionType The type of assumption used to differentiate between assumptions and
@@ -207,7 +226,7 @@ interface HasAssumptions {
 
     /**
      * This function is supposed to be used when a new object is created after searching through the
-     * graph that can depend on assumptions made on other objects. On example is when creating
+     * graph that can depend on assumptions made on other objects. One example is when creating
      * concepts after following a DFG path. Concepts are added to the graph and then serve as nodes
      * for further queries, and therefore indirect assumptions would be lost if not copied over with
      * this function.
@@ -248,9 +267,7 @@ interface HasAssumptions {
         val interfaceImplementingFileName =
             stackTrace.firstOrNull { it.fileName != thisFileName }?.fileName
         // The first stack trace with the filename that is neither this, nor the interface
-        // implementing
-        // class
-        // is the caller of assumption creation
+        // implementing class is the caller of assumption creation
         val stackTraceElement =
             stackTrace.firstOrNull {
                 it.fileName !in listOf(thisFileName, interfaceImplementingFileName)
