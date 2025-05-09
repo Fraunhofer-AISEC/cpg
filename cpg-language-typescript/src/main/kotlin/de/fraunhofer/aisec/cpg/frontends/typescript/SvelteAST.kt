@@ -130,6 +130,9 @@ data class SvelteStyleContent(
     JsonSubTypes.Type(value = EsTreeVariableDeclarator::class, name = "VariableDeclarator"),
     JsonSubTypes.Type(value = EsTreeIdentifier::class, name = "Identifier"),
     JsonSubTypes.Type(value = EsTreeLiteral::class, name = "Literal"),
+    JsonSubTypes.Type(value = EsTreeFunctionDeclaration::class, name = "FunctionDeclaration"),
+    JsonSubTypes.Type(value = EsTreeBlockStatement::class, name = "BlockStatement"),
+    JsonSubTypes.Type(value = EsTreeExportNamedDeclaration::class, name = "ExportNamedDeclaration"),
     // Add other EsTreeNode types here as they are defined, e.g., ExpressionStatement
 )
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -186,6 +189,41 @@ data class EsTreeLiteral(
     override val start: Int?,
     override val end: Int?,
 ) : EsTreeNode, EsTreeExpression
+
+// New class definitions
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class EsTreeFunctionDeclaration(
+    val type: String, // Should be "FunctionDeclaration"
+    val id: EsTreeIdentifier?, // Function name, null for anonymous functions in some contexts
+    val params: List<EsTreeNode>, // List of EsTreeIdentifier or other patterns
+    val body: EsTreeBlockStatement,
+    val async: Boolean = false,
+    val generator: Boolean = false,
+    // 'expression' field is typically for ArrowFunctionExpression, not FunctionDeclaration
+    override val start: Int?,
+    override val end: Int?,
+) : EsTreeNode, EsTreeStatement
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class EsTreeBlockStatement(
+    val type: String, // Should be "BlockStatement"
+    val body: List<EsTreeNode>, // List of statements
+    override val start: Int?,
+    override val end: Int?,
+) : EsTreeNode, EsTreeStatement
+
+// New class definition for ExportNamedDeclaration
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class EsTreeExportNamedDeclaration(
+    val type: String, // Should be "ExportNamedDeclaration"
+    val declaration:
+        EsTreeNode?, // Can be VariableDeclaration, FunctionDeclaration, ClassDeclaration
+    val specifiers:
+        List<EsTreeNode>, // For re-exports like export { name }; List<EsTreeExportSpecifier>
+    val source: EsTreeLiteral?, // For re-exports like export * from 'module';
+    override val start: Int?,
+    override val end: Int?,
+) : EsTreeNode, EsTreeStatement
 
 // --- Placeholder Interfaces/Classes for nested structures ---
 

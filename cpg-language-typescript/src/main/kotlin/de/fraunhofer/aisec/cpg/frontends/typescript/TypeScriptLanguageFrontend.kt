@@ -140,7 +140,38 @@ class TypeScriptLanguageFrontend(
             )
         }
 
-        // Always use the typescript language flag for this frontend
+        // Check file extension for Svelte
+        if (file.extension == "svelte") {
+            log.info(
+                "Detected .svelte file, attempting to parse with SvelteLanguageFrontend: {}",
+                file.absolutePath,
+            )
+            val diagCtx: de.fraunhofer.aisec.cpg.TranslationContext = ctx // Keep this for typing
+            // Further diagnostic: try to access a *different* known member of TranslationContext
+            val configTest =
+                diagCtx.config // TranslationContext has a 'config: TranslationConfiguration'
+            log.debug("Accessed TranslationContext.config: {}", configTest.toString())
+
+            // Correct way to get the SvelteLanguage instance from TranslationContext
+            val svelteLanguage = diagCtx.availableLanguage<SvelteLanguage>()
+
+            if (svelteLanguage == null) {
+                log.error(
+                    "SvelteLanguage not registered/available in TranslationContext. Cannot parse .svelte file."
+                )
+                throw CpgTranslationException("SvelteLanguage not available.")
+            }
+            // No need for cast now, svelteLanguage is already SvelteLanguage?
+            // val svelteLanguage = svelteLanguageRaw as SvelteLanguage
+
+            // Create SvelteLanguageFrontend instance using its primary constructor
+            val svelteFrontend =
+                SvelteLanguageFrontend(ctx, svelteLanguage) // Pass the non-null svelteLanguage
+
+            return svelteFrontend.parse(file)
+        }
+
+        // Original TypeScript/JavaScript parsing logic
         val languageFlag = "--language=typescript"
 
         log.info(

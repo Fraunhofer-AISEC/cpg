@@ -152,6 +152,7 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
         parent: TranslationUnitDeclaration,
         currentFile: File,
     ) {
+        LOGGER.debug("Processing script statement of type: {}", stmtNode::class.simpleName)
         when (stmtNode) {
             is EsTreeVariableDeclaration -> {
                 val cpgDeclarations = handleVariableDeclaration(stmtNode, currentFile)
@@ -160,9 +161,48 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
                     scopeManager.addDeclaration(cpgDecl)
                 }
             }
+            is EsTreeFunctionDeclaration -> {
+                LOGGER.debug("Handling EsTreeFunctionDeclaration: {}", stmtNode.id?.name)
+                val funcName = stmtNode.id?.name?.let { parseName(it) } ?: parseName("anonymous")
+                val cpgFunction = newFunctionDeclaration(funcName, rawNode = stmtNode)
+                // TODO: Handle parameters, body, return type, etc.
+                parent.addDeclaration(cpgFunction)
+                scopeManager.addDeclaration(cpgFunction)
+            }
+            is EsTreeExportNamedDeclaration -> {
+                LOGGER.debug("Handling EsTreeExportNamedDeclaration")
+                stmtNode.declaration?.let { decl ->
+                    when (decl) {
+                        is EsTreeVariableDeclaration -> {
+                            val cpgDeclarations = handleVariableDeclaration(decl, currentFile)
+                            for (cpgDecl in cpgDeclarations) {
+                                parent.addDeclaration(cpgDecl)
+                                scopeManager.addDeclaration(cpgDecl)
+                                // TODO: Mark these as exported? CPG has ExportDeclaration node type
+                            }
+                        }
+                        is EsTreeFunctionDeclaration -> {
+                            val funcName =
+                                decl.id?.name?.let { parseName(it) } ?: parseName("anonymous")
+                            val cpgFunction = newFunctionDeclaration(funcName, rawNode = decl)
+                            // TODO: Handle parameters, body, return type, etc.
+                            parent.addDeclaration(cpgFunction)
+                            scopeManager.addDeclaration(cpgFunction)
+                            // TODO: Mark as exported?
+                        }
+                        else -> {
+                            LOGGER.warn(
+                                "Unsupported declaration type within ExportNamedDeclaration: {}",
+                                decl::class.simpleName,
+                            )
+                        }
+                    }
+                }
+                // TODO: Handle stmtNode.specifiers for re-exports like export { name1, name2 }
+            }
             else ->
                 LOGGER.warn(
-                    "Unsupported script statement type: {} at {}:{}",
+                    "Unsupported script statement type: {} at {}:{}\nFor Svelte, this frontend primarily focuses on script content. HTML and CSS are parsed but full CPG representation for them is a work in progress.",
                     stmtNode::class.simpleName,
                     locationOfEsTreeNode(stmtNode)?.region?.startLine,
                     locationOfEsTreeNode(stmtNode)?.region?.startColumn,
@@ -246,10 +286,26 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
         return reference
     }
 
-    override fun typeOf(typeNode: SvelteNode): Type = unknownType()
+    override fun typeOf(typeNode: SvelteNode, astNode: SvelteNode): Type {
+        // TODO: Implement proper type resolution for Svelte script content (EsTreeNodes)
+        // For now, always returning unknownType to satisfy the abstract method.
+        // This will need to be refined to look at 'typeNode' (if it represents a type annotation)
+        // or infer from 'astNode' (e.g. an expression).
+        LOGGER.debug(
+            "typeOf called for SvelteNode type: {}, astNode type: {}",
+            typeNode::class.simpleName,
+            astNode::class.simpleName,
+        )
+        return unknownType()
+    }
 
     override fun codeOf(astNode: SvelteNode): String? {
-        if (astNode.start != null && astNode.end != null && this.code != null) {
+        if (
+            astNode.start != null &&
+                astNode.end != null &&
+                this::code.isInitialized &&
+                this.code != null
+        ) {
             val start = astNode.start!!
             val end = astNode.end!!
             val codeLength = this.code!!.length
@@ -261,7 +317,12 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
     }
 
     override fun locationOf(astNode: SvelteNode): PhysicalLocation? {
-        if (this.currentFile == null || this.code == null) {
+        if (
+            !this::currentFile.isInitialized ||
+                currentFile == null ||
+                !this::code.isInitialized ||
+                this.code == null
+        ) {
             LOGGER.warn("currentFile or code is null for SvelteNode. Skipping location.")
             return null
         }
@@ -289,7 +350,12 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
     }
 
     private fun locationOfEsTreeNode(astNode: EsTreeNode): PhysicalLocation? {
-        if (this.currentFile == null || this.code == null) {
+        if (
+            !this::currentFile.isInitialized ||
+                currentFile == null ||
+                !this::code.isInitialized ||
+                this.code == null
+        ) {
             LOGGER.warn("currentFile or code is null for EsTreeNode. Skipping location.")
             return null
         }
@@ -319,6 +385,14 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
     private fun EsTreeNode.rawNode(): EsTreeNode = this
 
     override fun setComment(node: Node, astNode: SvelteNode) {
-        // Not implemented for Svelte yet
+        // TODO: Implement comment extraction and association for Svelte nodes if needed.
+        // The svelte/compiler provides comment nodes in the AST (SvelteComment).
+        // We would need to find corresponding comment nodes for 'astNode' and associate them with
+        // 'node'.
+        LOGGER.debug(
+            "setComment called for Node type: {}, SvelteNode type: {}",
+            node.javaClass.simpleName,
+            astNode::class.simpleName,
+        )
     }
 }

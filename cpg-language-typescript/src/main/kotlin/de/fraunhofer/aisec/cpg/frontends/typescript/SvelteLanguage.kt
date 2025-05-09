@@ -39,9 +39,56 @@ class SvelteLanguage : Language<SvelteLanguageFrontend>() {
     @Transient
     override val frontend: KClass<out SvelteLanguageFrontend> = SvelteLanguageFrontend::class
 
-    // TODO: Define built-in types relevant for Svelte if any, beyond JS/TS
-    @Transient override val builtInTypes: Map<String, Type> = mapOf()
+    @Transient
+    override val builtInTypes: Map<String, Type> =
+        mapOf(
+            "boolean" to BooleanType(typeName = "boolean", language = this),
+            "string" to StringType(typeName = "string", language = this),
+            "number" to NumericType(typeName = "number", language = this),
+            // TODO: "symbol" - not yet in TypeScriptLanguage from snippet, consider adding if TS
+            // has
+            // it
+            "any" to AutoType(language = this),
+            "unknown" to
+                ObjectType(
+                    typeName = "unknown",
+                    generics = listOf(),
+                    primitive = false,
+                    language = this,
+                ),
+            "void" to IncompleteType(language = this),
+            "never" to IncompleteType(language = this),
+            "null" to
+                ObjectType(
+                    typeName = "null",
+                    generics = listOf(),
+                    primitive = false,
+                    language = this,
+                ),
+            "undefined" to
+                ObjectType(
+                    typeName = "undefined",
+                    generics = listOf(),
+                    primitive = false,
+                    language = this,
+                ),
+            "bigint" to NumericType(typeName = "bigint", language = this),
+        )
 
-    // TODO: Define compound assignment operators if Svelte has specific ones
-    @Transient override val compoundAssignmentOperators = setOf<String>() // Inherit from JS/TS?
+    @Transient
+    override val compoundAssignmentOperators =
+        setOf(
+            "+=",
+            "-=",
+            "*=",
+            "/=",
+            "%=",
+            "<<=",
+            ">>=",
+            ">>>=",
+            "&=",
+            "^=",
+            "|=",
+            "**=",
+        ) // Match JS/TS
 }
