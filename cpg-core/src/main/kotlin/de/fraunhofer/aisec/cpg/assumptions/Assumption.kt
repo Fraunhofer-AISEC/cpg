@@ -177,7 +177,7 @@ enum class AssumptionType {
      */
     ExhaustiveEnumerationAssumption,
     /**
-     * Assuming that all solutions for a problem are correct, and no over approximation happened, e.g., all nodes listed can be the target of a call during runtime.
+     * Assuming that all solutions for a problem are correct, and no over-approximation happened, e.g., all nodes listed can be the target of a call during runtime.
      */
     SoundnessAssumption,
     /**
