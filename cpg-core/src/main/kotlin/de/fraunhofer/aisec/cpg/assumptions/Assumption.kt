@@ -251,7 +251,7 @@ enum class AssumptionType {
      */
     TrustedInputAssumption,
     /**
-     * Used for assumption on the trustworthiness of configurations that are used during runtime.
+     * Used for assumptions on the trustworthiness of configurations that are used during runtime.
      */
     ConfigTrustAssumption,
     /**
