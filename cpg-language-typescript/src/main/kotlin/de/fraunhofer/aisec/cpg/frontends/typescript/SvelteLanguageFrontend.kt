@@ -286,16 +286,8 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
         return reference
     }
 
-    override fun typeOf(typeNode: SvelteNode, astNode: SvelteNode): Type {
-        // TODO: Implement proper type resolution for Svelte script content (EsTreeNodes)
-        // For now, always returning unknownType to satisfy the abstract method.
-        // This will need to be refined to look at 'typeNode' (if it represents a type annotation)
-        // or infer from 'astNode' (e.g. an expression).
-        LOGGER.debug(
-            "typeOf called for SvelteNode type: {}, astNode type: {}",
-            typeNode::class.simpleName,
-            astNode::class.simpleName,
-        )
+    override fun typeOf(type: SvelteNode): Type {
+        // TODO: Implement type resolution for SvelteNode
         return unknownType()
     }
 
