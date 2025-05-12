@@ -37,13 +37,13 @@ class UnwrappedEdgeListTest {
     @Test
     fun testAdd() {
         with(TestLanguageFrontend()) {
-            var node1 = newLiteral(1)
-            var node2 = newLiteral(2)
-            var node3 = newLiteral(3)
+            val node1 = newLiteral(1)
+            val node2 = newLiteral(2)
+            val node3 = newLiteral(3)
 
             node1.nextEOGEdges += node2
 
-            // this should trigger add of the edge underneath (node1.nextEOGEdges += node3)
+            // this should trigger "add" of the edge underneath (node1.nextEOGEdges += node3)
             node1.nextEOG += node3
 
             // should contain 2 nodes now
@@ -62,12 +62,12 @@ class UnwrappedEdgeListTest {
     @Test
     fun testAddIndex() {
         with(TestLanguageFrontend()) {
-            var node1 = newLiteral(1)
-            var node2 = newLiteral(2)
-            var node3 = newLiteral(3)
-            var node4 = newLiteral(4)
+            val node1 = newLiteral(1)
+            val node2 = newLiteral(2)
+            val node3 = newLiteral(3)
+            val node4 = newLiteral(4)
 
-            var list = AstEdges<Node, AstEdge<Node>>(thisRef = node1)
+            val list = AstEdges<Node, AstEdge<Node>>(thisRef = node1)
             list += node2
             list += node3
 
@@ -78,7 +78,7 @@ class UnwrappedEdgeListTest {
 
             // insert something at position 1 (using the unwrapped list), this should shift the
             // existing entries (after the position) + 1
-            var unwrapped = list.unwrap()
+            val unwrapped = list.unwrap()
             unwrapped.add(1, node4)
             assertEquals(3, list.size)
 
@@ -93,31 +93,68 @@ class UnwrappedEdgeListTest {
     }
 
     @Test
+    fun testRemoveAt() {
+        with(TestLanguageFrontend()) {
+            val node1 = newLiteral(1)
+            val node2 = newLiteral(2)
+            val node3 = newLiteral(3)
+
+            node1.nextEOG += node2
+            node1.nextEOG += node3
+
+            assertEquals(2, node1.nextEOGEdges.size)
+
+            // remove the element at index 1 (node3)
+            node1.nextEOG.removeAt(1)
+
+            assertEquals(node2, node1.nextEOG.singleOrNull())
+        }
+    }
+
+    @Test
     fun testIterator() {
         with(TestLanguageFrontend()) {
-            var node1 = newLiteral(1)
-            var node2 = newLiteral(2)
-            var node3 = newLiteral(3)
+            val node1 = newLiteral(1)
+            val node2 = newLiteral(2)
+            val node3 = newLiteral(3)
 
             node1.nextEOGEdges += node2
 
             node1.nextEOG += node3
 
-            var list = node1.nextEOG.toList()
+            val list = node1.nextEOG.toList()
             assertEquals(2, list.size)
 
             // test our mutable iterator
-            var iter = node1.nextEOG.iterator()
+            val iter = node1.nextEOG.iterator()
             iter.next()
             iter.remove()
 
             assertEquals(1, node1.nextEOGEdges.size)
 
             // test our list iterator
-            var listIter = node1.nextEOG.listIterator()
+            val listIter = node1.nextEOG.listIterator()
             listIter.add(node2)
 
             assertEquals(2, node1.nextEOGEdges.size)
+        }
+    }
+
+    @Test
+    fun testEquals() {
+        with(TestLanguageFrontend()) {
+            val node1 = newLiteral(1)
+            val node2 = newLiteral(2)
+            val node3 = newLiteral(3)
+
+            node1.nextEOG += node2
+            node1.nextEOG += node3
+
+            val eogList = node1.nextEOG
+            val nodeList = listOf<Node>(node2, node3)
+
+            assertEquals(nodeList, eogList)
+            assertEquals(eogList, nodeList)
         }
     }
 }

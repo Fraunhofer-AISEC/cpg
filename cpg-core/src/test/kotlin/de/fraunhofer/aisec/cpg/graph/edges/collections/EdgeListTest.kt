@@ -37,12 +37,12 @@ class EdgeListTest {
     @Test
     fun testAddIndex() {
         with(TestLanguageFrontend()) {
-            var node1 = newLiteral(1)
-            var node2 = newLiteral(2)
-            var node3 = newLiteral(3)
-            var node4 = newLiteral(4)
+            val node1 = newLiteral(1)
+            val node2 = newLiteral(2)
+            val node3 = newLiteral(3)
+            val node4 = newLiteral(4)
 
-            var list = AstEdges<Node, AstEdge<Node>>(thisRef = node1)
+            val list = AstEdges<Node, AstEdge<Node>>(thisRef = node1)
             list += node2
             list += node3
 
@@ -62,7 +62,7 @@ class EdgeListTest {
             }
 
             // the order should be node2, node4, node3
-            var unwrapped = list.unwrap()
+            val unwrapped = list.unwrap()
             assertEquals<List<Node>>(listOf(node2, node4, node3), unwrapped)
         }
     }

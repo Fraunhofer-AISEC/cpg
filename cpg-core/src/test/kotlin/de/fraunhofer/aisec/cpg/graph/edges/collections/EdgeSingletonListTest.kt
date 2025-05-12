@@ -44,7 +44,7 @@ class EdgeSingletonListTest {
                 var unwrapped by unwrapping(MyNode::edge)
             }
 
-            var node = MyNode()
+            val node = MyNode()
             assertNull(node.unwrapped)
 
             node.unwrapped = newLiteral(1)

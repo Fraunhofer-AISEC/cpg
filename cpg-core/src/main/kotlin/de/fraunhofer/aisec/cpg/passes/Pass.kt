@@ -23,12 +23,16 @@
  *                    \______/ \__|       \______/
  *
  */
+@file:Suppress("CONTEXT_RECEIVERS_DEPRECATED")
+
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.*
+import de.fraunhofer.aisec.cpg.assumptions.AssumptionType
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.LanguageTrait
+import de.fraunhofer.aisec.cpg.frontends.NoLanguage.assume
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
@@ -325,6 +329,66 @@ fun executePassesInParallel(
 }
 
 /**
+ * Executes all passes in [TranslationConfiguration.registeredPasses] of [ctx] sequentially. This
+ * also takes care of re-running passes using the [markDirty] / [markClean] system.
+ */
+fun executePassesSequentially(
+    ctx: TranslationContext,
+    result: TranslationResult,
+    executedFrontends: Set<LanguageFrontend<*, *>>,
+) {
+    // Execute all passes in sequence. First convert the list of passes to a queue
+    val queue = ArrayDeque<KClass<out Pass<out Node>>>()
+    queue.addAll(ctx.config.registeredPasses.flatten())
+
+    // Keep a map of pass executions, in order to prevent loops
+    val executions = mutableMapOf<KClass<out Pass<out Node>>, Int>()
+
+    while (queue.isNotEmpty()) {
+        // Get the next pass from the queue
+        val pass = queue.removeFirst()
+
+        // Check, if we pass the max executions
+        val numExec = executions[pass] ?: 0
+        if (numExec >= ctx.config.maxPassExecutions) {
+            TranslationManager.Companion.log.warn(
+                "Pass {} reached max executions, skipping",
+                pass.simpleName,
+            )
+            result.assume(
+                AssumptionType.CompletenessAssumption,
+                "We assume that after $numExec repeated executions of the ${pass.simpleName} no new information is obtained and skip further executions.",
+            )
+            continue
+        }
+
+        // Execute it
+        executePass(pass, ctx, result, executedFrontends)
+
+        // Increment executions
+        executions[pass] = numExec + 1
+
+        // After each pass execution, identify "dirty" nodes and identify which passes
+        // should be run afterward
+        var scheduledPasses = result.dirtyNodes.values.flatten()
+        for (scheduledPass in scheduledPasses) {
+            // If the pass is already in the queue, ignore it
+            if (scheduledPass in queue) {
+                continue
+            }
+
+            // Otherwise, add it to the queue
+            queue.addFirst(scheduledPass)
+        }
+
+        if (result.isCancelled) {
+            TranslationManager.Companion.log.warn("Analysis interrupted, stopping Pass evaluation")
+            break
+        }
+    }
+}
+
+/**
  * Creates a new [Pass] (based on [cls]) and executes it sequentially on all target nodes of
  * [result].
  *
@@ -505,3 +569,20 @@ val KClass<out Pass<*>>.hardExecuteBefore: Set<KClass<out Pass<*>>>
             .map { it.other }
             .toSet()
     }
+
+/**
+ * Mark the node as dirty for the given pass. This is used to mark nodes that have been changed and
+ * need to be re-analyzed by a specific pass. The pass is specified by the type parameter [T].
+ */
+inline fun <reified T : Pass<*>> Node.markDirty() {
+    translationResult?.markDirty(this, T::class)
+}
+
+/**
+ * Mark the node as clean from the invoked pass. This is used to mark nodes that have been analyzed
+ * and do not need to be re-analyzed anymore. The pass is specified by the context parameter.
+ */
+context(Pass<*>)
+fun Node.markClean() {
+    translationResult?.markClean(this, this@Pass::class)
+}

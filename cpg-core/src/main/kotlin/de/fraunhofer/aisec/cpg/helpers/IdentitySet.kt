@@ -65,6 +65,7 @@ open class IdentitySet<T>(expectedMaxSize: Int = 16) : MutableSet<T> {
     }
 
     override fun equals(other: Any?): Boolean {
+        if (other === this) return true
         if (other !is Set<*>) return false
         return this.size == other.size && this.containsAll(other)
     }

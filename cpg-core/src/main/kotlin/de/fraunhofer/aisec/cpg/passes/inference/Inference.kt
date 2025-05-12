@@ -28,8 +28,10 @@ package de.fraunhofer.aisec.cpg.passes.inference
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.TypeManager
+import de.fraunhofer.aisec.cpg.assumptions.AssumptionType
 import de.fraunhofer.aisec.cpg.frontends.HasClasses
 import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.frontends.NoLanguage.assume
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
@@ -103,79 +105,84 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
         }
 
         return inferInScopeOf(start) {
-            val inferred: FunctionDeclaration =
-                if (record != null) {
-                    newMethodDeclaration(name ?: "", isStatic, record)
-                } else {
-                    newFunctionDeclaration(name ?: "")
+                val inferred: FunctionDeclaration =
+                    if (record != null) {
+                        newMethodDeclaration(name ?: "", isStatic, record)
+                    } else {
+                        newFunctionDeclaration(name ?: "")
+                    }
+                inferred.code = code
+
+                // Create parameter declarations and receiver (only for methods).
+                if (inferred is MethodDeclaration) {
+                    createInferredReceiver(inferred, record)
                 }
-            inferred.code = code
+                createInferredParameters(inferred, signature)
 
-            // Create parameter declarations and receiver (only for methods).
-            if (inferred is MethodDeclaration) {
-                createInferredReceiver(inferred, record)
-            }
-            createInferredParameters(inferred, signature)
+                // Set the type and return type(s)
+                var returnType =
+                    if (
+                        ctx.config.inferenceConfiguration.inferReturnTypes &&
+                            incomingReturnType is UnknownType &&
+                            hint != null
+                    ) {
+                        inferReturnType(hint) ?: unknownType()
+                    } else {
+                        incomingReturnType
+                    }
 
-            // Set the type and return type(s)
-            var returnType =
+                if (returnType is TupleType) {
+                    inferred.returnTypes = returnType.types
+                } else if (returnType != null) {
+                    inferred.returnTypes = listOf(returnType)
+                }
+
+                inferred.type = computeType(inferred)
+
+                debugWithFileLocation(
+                    hint,
+                    log,
+                    "Inferred a new {} declaration {} with parameter types {} and return types {} in {}",
+                    if (inferred is MethodDeclaration) "method" else "function",
+                    inferred.name,
+                    signature.map { it?.name },
+                    inferred.returnTypes.map { it.name },
+                    it,
+                )
+
+                // Add it to the scope
+                scopeManager.addDeclaration(inferred)
+                start.addDeclaration(inferred)
+
+                // Some magic that adds it to static imports. Not sure if this really needed
+                if (record != null && isStatic) {
+                    record.staticImports.add(inferred)
+                }
+
+                // Some more magic, that adds it to the AST. Note: this might not be 100 % compliant
+                // with the language, since in some languages the AST of a method declaration could
+                // be
+                // outside of a method, but this will do for now
+                if (record != null && inferred is MethodDeclaration) {
+                    record.addMethod(inferred)
+                }
+
+                // "upgrade" our struct to a class, if it was inferred by us, since we are calling
+                // methods on it. But only if the language supports classes in the first place.
                 if (
-                    ctx.config.inferenceConfiguration.inferReturnTypes &&
-                        incomingReturnType is UnknownType &&
-                        hint != null
+                    record?.isInferred == true &&
+                        record.kind == "struct" &&
+                        record.language is HasClasses
                 ) {
-                    inferReturnType(hint) ?: unknownType()
-                } else {
-                    incomingReturnType
+                    record.kind = "class"
                 }
 
-            if (returnType is TupleType) {
-                inferred.returnTypes = returnType.types
-            } else if (returnType != null) {
-                inferred.returnTypes = listOf(returnType)
+                inferred
             }
-
-            inferred.type = computeType(inferred)
-
-            debugWithFileLocation(
-                hint,
-                log,
-                "Inferred a new {} declaration {} with parameter types {} and return types {} in {}",
-                if (inferred is MethodDeclaration) "method" else "function",
-                inferred.name,
-                signature.map { it?.name },
-                inferred.returnTypes.map { it.name },
-                it,
+            .assume(
+                AssumptionType.InferenceAssumption,
+                "Assuming the start of inference is a record, namespace or translation unit",
             )
-
-            // Add it to the scope
-            scopeManager.addDeclaration(inferred)
-            start.addDeclaration(inferred)
-
-            // Some magic that adds it to static imports. Not sure if this really needed
-            if (record != null && isStatic) {
-                record.staticImports.add(inferred)
-            }
-
-            // Some more magic, that adds it to the AST. Note: this might not be 100 % compliant
-            // with the language, since in some languages the AST of a method declaration could be
-            // outside of a method, but this will do for now
-            if (record != null && inferred is MethodDeclaration) {
-                record.addMethod(inferred)
-            }
-
-            // "upgrade" our struct to a class, if it was inferred by us, since we are calling
-            // methods on it. But only if the language supports classes in the first place.
-            if (
-                record?.isInferred == true &&
-                    record.kind == "struct" &&
-                    record.language is HasClasses
-            ) {
-                record.kind = "class"
-            }
-
-            inferred
-        }
     }
 
     fun createInferredConstructor(signature: List<Type?>): ConstructorDeclaration {

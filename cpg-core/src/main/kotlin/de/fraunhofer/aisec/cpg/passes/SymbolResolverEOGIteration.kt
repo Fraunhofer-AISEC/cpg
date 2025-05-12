@@ -119,6 +119,7 @@ fun DeclarationStateElement.pushDeclarationToScope(
                     .toTypedArray()
             ),
         ),
+        true,
     )
 }
 
@@ -134,6 +135,7 @@ fun DeclarationStateElement.pushCandidate(
             NodeToDeclarationElement(scope to PowersetLatticeDeclarationElement(*elements)),
             NodeToTypeElement(),
         ),
+        true,
     )
 }
 
@@ -149,6 +151,7 @@ fun DeclarationStateElement.pushType(
             NodeToDeclarationElement(),
             NodeToTypeElement(node to PowersetLatticeTypeElement(*elements)),
         ),
+        true,
     )
 }
 
