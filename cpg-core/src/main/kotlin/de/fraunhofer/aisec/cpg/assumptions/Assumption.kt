@@ -290,7 +290,7 @@ enum class AssumptionType {
  * [HasAssumptions.addAssumptionDependences] or [HasAssumptions.addAssumptionDependence].
  */
 interface HasAssumptions {
-    val assumptions: MutableList<Assumption>
+    val assumptions: MutableSet<Assumption>
 
     /**
      * This function adds a new assumption to the object it is called on. If the object is a node or
@@ -323,6 +323,15 @@ interface HasAssumptions {
     }
 
     /**
+     * This is function is used to collect all assumptions stored in the [HasAssumptions] object and
+     * its contained objects that can have assumptions. While this default implementation is simple,
+     * composite [HasAssumptions] objects should return the assumptions of the contained objects.
+     */
+    fun collectAssumptions(): Set<Assumption> {
+        return assumptions.toSet()
+    }
+
+    /**
      * This function is supposed to be used when a new object is created after searching through the
      * graph that can depend on assumptions made on other objects. One example is when creating
      * concepts after following a DFG path. Concepts are added to the graph and then serve as nodes
@@ -337,7 +346,7 @@ interface HasAssumptions {
     fun <T : HasAssumptions> T.addAssumptionDependences(
         haveAssumptions: Collection<HasAssumptions>
     ): T {
-        this.assumptions.addAll(haveAssumptions.flatMap { it.assumptions })
+        this.assumptions.addAll(haveAssumptions.flatMap { it.collectAssumptions() })
         return this
     }
 

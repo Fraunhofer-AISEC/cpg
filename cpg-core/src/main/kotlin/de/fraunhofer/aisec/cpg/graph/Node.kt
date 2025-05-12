@@ -234,7 +234,7 @@ abstract class Node() :
 
     var prevPDG by unwrapping(Node::prevPDGEdges)
 
-    @DoNotPersist override val assumptions: MutableList<Assumption> = mutableListOf()
+    @DoNotPersist override val assumptions: MutableSet<Assumption> = mutableSetOf()
 
     /**
      * If a node is marked as being inferred, it means that it was created artificially and does not
