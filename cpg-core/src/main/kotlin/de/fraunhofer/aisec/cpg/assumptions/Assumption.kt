@@ -46,10 +46,10 @@ import org.neo4j.ogm.annotation.typeconversion.Convert
  *   assumptions and group similar assumptions.
  * @param message The message describing the assumption that was taken.
  * @param assumptionLocation The location where an assumption was made. The location can be reported
- *   to the developers as the location in the cpg code base that MADE the assumption.
- * @param node The node that cause the assumption to be necessary, even if the assumption has
- *   validity for the entire program, the node location can be reported to the user as the code
- *   piece that CAUSED the assumption.
+ *   to the developers as the location in the CPG's codebase that created the [Assumption] object.
+ * @param node The node that causes the assumption to be necessary. Even if the assumption has
+ *   validity for the entire program, the node location can be reported to the user as the piece of
+ *   code under analysis that CAUSED the assumption.
  * @param edge The edge that cause the assumption to be necessary, even if the assumption has
  *   validity for the entire program, the location of the start node can be reported to the user as
  *   the code piece that CAUSED the assumption.
@@ -62,7 +62,7 @@ import org.neo4j.ogm.annotation.typeconversion.Convert
  *   edges, paths are considered to exist and results are true or false, if based on a contradiction
  *   result. If it is [AssumptionStatus.Rejected], nodes and edges containing them are supposed to
  *   be considered nonexistent, or not existing with the same properties. Results with assumptions
- *   and status [AssumptionStatus.Rejected] should be considered false positives.
+ *   and status [AssumptionStatus.Rejected] should be considered false positives or false negatives.
  */
 class Assumption(
     val assumptionType: AssumptionType,
@@ -77,11 +77,19 @@ class Assumption(
 
     init {
         super.underlyingNode = node ?: edge?.start
-        // Currently this condition is always false due to id being initialized, however, this is
+        // Currently this condition is always false due to id being initialized, however, this
         // may change in the future
+        @Suppress("SENSELESS_COMPARISON")
         if (super.underlyingNode == null && id == null) {
             log.warn(
                 "Creating an assumption with no associated node or edge requires having a deterministic ID for identification."
+            )
+        }
+
+        @Suppress("SENSELESS_COMPARISON")
+        if (listOf(node != null, edge != null, id != null).filter { it }.size > 1) {
+            log.warn(
+                "An assumption should be created with only one of the following arguments/properties: id, node or edge. But multiple of those are provided"
             )
         }
 
@@ -99,10 +107,20 @@ class Assumption(
      * translations.
      */
     override fun hashCode(): Int {
-        // The underlying node is already in the hashCode of the super class implementation
-        // If the assumption is created from an edge, the edge is != null and therefore influences
-        // the hashCode
+        // The underlying node is already in the hashCode of the super class implementation.
+        // If the assumption is created from an edge, the edge is not null and therefore influences
+        // the hashCode.
         return Objects.hash(super.hashCode(), edge, assumptionType, message, assumptionLocation)
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is Assumption) return false
+        return super.equals(other) &&
+            edge == other.edge &&
+            assumptionType == other.assumptionType &&
+            message == other.message &&
+            assumptionLocation == other.assumptionLocation
     }
 }
 
@@ -138,31 +156,130 @@ enum class AssumptionStatus {
     Ignored,
 }
 
+/**
+ * The purpose of the assumption types is to group assumptions by their semantics. These groupings
+ * can then be used to evaluate better what causes or impact an assumption can have.
+ */
+@Suppress("unused")
 enum class AssumptionType {
-    SyntaxAmbiguityAssumption,
+    /**
+     * Used when an assumption is made regarding inferring the existence of code represented as
+     * nodes or edges.
+     */
     InferenceAssumption,
-    ClosedMacroAssumption,
-    UnsupportedLanguageProblem,
-    MissingCodeProblem,
-    AmbiguityAssumption,
-    ConceptAssumption,
-    ExhaustiveEnumerationAssumption,
+    /**
+     * Assuming that the found solutions for a problem contains all possible solutions in the given
+     * system, e.g., the found nodes are a complete set of nodes that we had to find in our search.
+     */
     CompletenessAssumption,
+    /**
+     * A subtype of [CompletenessAssumption]. Describes the assumption that we considered all
+     * possible cases when handling a certain subject. e.g., assuming that an operation can be done
+     * by one of exactly four function calls specified in a list.
+     */
+    ExhaustiveEnumerationAssumption,
+    /**
+     * Assuming that all solutions for a problem are correct, and no over-approximation happened,
+     * e.g., all nodes listed can be the target of a call during runtime.
+     */
     SoundnessAssumption,
+    /**
+     * Used when making assumptions on preprocessing instructions that were not processed before CPG
+     * translation.
+     */
+    PreprocessingAssumption,
+    /**
+     * A subtype of [PreprocessingAssumption]. Assuming that a macro that was not resolved before
+     * CPG translation adheres to some constraint, e.g., assuming a macro expands into complete
+     * syntactic unit.
+     */
+    MacroAssumption,
+    /**
+     * Used when marking a subtree in the CPG that we could not translate due to the language not
+     * being supported, e.g. we assume that the contained code has no relevant influence on the
+     * execution of the surrounding translated and analyzed CPG.
+     */
+    UnsupportedLanguageAssumption,
+    /**
+     * Used to declare an assumption on missing code that could not be analyzed and its impact on
+     * CPG translation or the resulting analysis.
+     */
+    MissingCodeAssumption,
+    /** Used when having to decide between several potential program executions. */
+    AmbiguityAssumption,
+    /**
+     * A subtype of [AmbiguityAssumption]. Used when assuming that one of several interpretations of
+     * a syntactic ambiguity is correct.
+     */
+    SyntaxAmbiguityAssumption,
+    /**
+     * Used to declare assumptions related to concept placement, or concept behavior, e.g., assuming
+     * the heuristic that a function name contains "open" and "file" results in the existence of a
+     * file concept.
+     */
+    ConceptAssumption,
+    /** A general type to declare an assumption on the control flow of a program. */
     ControlFlowAssumption,
+    /**
+     * A subtype of [ControlFlowAssumption] when assuming that the entire program, or parts of the
+     * program, execute linearly without any unexpected or malicious changes in control flow.
+     */
     CFIntegrityAssumption,
-    NoExceptionsAssumption,
-    CFAllOrNothingExecutesAssumption,
-    TrustedConfigAssumption,
-    DataFlowAssumption,
-    ExternalDataAssumption,
-    NetworkAvailableAssumption,
-    ResourceExistsAssumption,
-    ServiceReachableAssumption,
+    /**
+     * A subtype of [ControlFlowAssumption]. Used to make assumptions about the uninterrupted
+     * execution of a code block that is either executed entirely or not at all.
+     */
     AtomicExecutionAssumption,
-    TrustBoundaryAssumption,
+    /**
+     * A subtype of [ControlFlowAssumption]. Used to make assumptions about the exception-free
+     * execution, or on constraints what exceptions can be thrown.
+     */
+    ExceptionsAssumption,
+    /** Assumptions on data flows that occur during program execution. */
+    DataFlowAssumption,
+    /** Used to declare more general assumptions on input data. */
+    InputAssumptions,
+    /**
+     * An assumption on input data, that assumes an additional constraint on the data, which is not
+     * enforced through the type or implementation of the data type.
+     */
     DataRangeAssumption,
+    /**
+     * A Subtype of [InputAssumptions]. Used to declare assumptions on the trustworthiness of input
+     * data, e.g., can be used to see if the result of an analysis requires data to be from a
+     * trustworthy source.
+     */
     TrustedInputAssumption,
+    /**
+     * Used for assumptions on the trustworthiness of configurations that are used during runtime.
+     */
+    ConfigTrustAssumption,
+    /**
+     * Used for assumptions on external data, that may not be from the user or trusted
+     * configurations, e.g., the format of this external data adheres to some constraint.
+     */
+    ExternalDataAssumption,
+    /**
+     * Used to declare assumptions on trust boundaries, e.g., that an endpoint establishes a trust
+     * boundary or that specific constraints have to hold for users or data within the trust
+     * boundary.
+     */
+    TrustBoundaryAssumption,
+    /**
+     * Assumptions on resources and their availability, e.g. , the file that is opened here exists
+     * or the database is available.
+     */
+    ResourceAvailableAssumption,
+    /**
+     * Used to declare assumptions on the network connection, e.g., availability, latency, or
+     * stability assumptions.
+     */
+    NetworkAssumption,
+    /**
+     * A subtype of [ResourceAvailableAssumption]. Used to make assumptions on specific services
+     * being available, e.g., over the network.
+     */
+    ServiceReachableAssumption,
 }
 
 /**
@@ -173,12 +290,12 @@ enum class AssumptionType {
  * [HasAssumptions.addAssumptionDependences] or [HasAssumptions.addAssumptionDependence].
  */
 interface HasAssumptions {
-    val assumptions: MutableList<Assumption>
+    val assumptions: MutableSet<Assumption>
 
     /**
      * This function adds a new assumption to the object it is called on. If the object is a node or
      * edge. The Assumption is added as an overlaying node for presentation in the graph. The
-     * assumption is also added to the [assumptions] list. In the future the [id] will be
+     * assumption is also added to the [assumptions] list. In the future the [Node.id] will be
      * deterministic across functions.
      *
      * @param assumptionType The type of assumption used to differentiate between assumptions and
@@ -206,8 +323,17 @@ interface HasAssumptions {
     }
 
     /**
+     * This is function is used to collect all assumptions stored in the [HasAssumptions] object and
+     * its contained objects that can have assumptions. While this default implementation is simple,
+     * composite [HasAssumptions] objects should return the assumptions of the contained objects.
+     */
+    fun collectAssumptions(): Set<Assumption> {
+        return assumptions.toSet()
+    }
+
+    /**
      * This function is supposed to be used when a new object is created after searching through the
-     * graph that can depend on assumptions made on other objects. On example is when creating
+     * graph that can depend on assumptions made on other objects. One example is when creating
      * concepts after following a DFG path. Concepts are added to the graph and then serve as nodes
      * for further queries, and therefore indirect assumptions would be lost if not copied over with
      * this function.
@@ -220,7 +346,7 @@ interface HasAssumptions {
     fun <T : HasAssumptions> T.addAssumptionDependences(
         haveAssumptions: Collection<HasAssumptions>
     ): T {
-        this.assumptions.addAll(haveAssumptions.flatMap { it.assumptions })
+        this.assumptions.addAll(haveAssumptions.flatMap { it.collectAssumptions() })
         return this
     }
 
@@ -248,9 +374,7 @@ interface HasAssumptions {
         val interfaceImplementingFileName =
             stackTrace.firstOrNull { it.fileName != thisFileName }?.fileName
         // The first stack trace with the filename that is neither this, nor the interface
-        // implementing
-        // class
-        // is the caller of assumption creation
+        // implementing class is the caller of assumption creation
         val stackTraceElement =
             stackTrace.firstOrNull {
                 it.fileName !in listOf(thisFileName, interfaceImplementingFileName)

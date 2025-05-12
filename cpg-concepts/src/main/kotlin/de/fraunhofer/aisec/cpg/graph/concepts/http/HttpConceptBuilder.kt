@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.concepts.auth.Authentication
 import de.fraunhofer.aisec.cpg.graph.concepts.auth.Authorization
+import de.fraunhofer.aisec.cpg.graph.concepts.auth.RequestContext
 import de.fraunhofer.aisec.cpg.graph.concepts.newConcept
 import de.fraunhofer.aisec.cpg.graph.concepts.newOperation
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
@@ -87,6 +88,8 @@ fun MetadataProvider.newHttpRequestHandler(
  * @param path The path of the created [HttpEndpoint].
  * @param arguments A list of the [Node]s representing the arguments passed to the [HttpEndpoint].
  * @param authentication The [Authentication] method used by the [HttpEndpoint].
+ * @param authorization The [Authorization] mechanism defining access control.
+ * @param requestContext The [RequestContext] providing additional contextual metadata.
  * @param connect If `true`, the created [Concept] will be connected to the underlying node by
  *   setting its `underlyingNode`.
  * @return The created [HttpEndpoint] concept.
@@ -98,6 +101,7 @@ fun MetadataProvider.newHttpEndpoint(
     arguments: List<Node>,
     authentication: Authentication?,
     authorization: Authorization?,
+    requestContext: RequestContext?,
     connect: Boolean,
 ) =
     newConcept(
@@ -108,6 +112,7 @@ fun MetadataProvider.newHttpEndpoint(
                 arguments = arguments,
                 authentication = authentication,
                 authorization = authorization,
+                requestContext = requestContext,
             )
         },
         underlyingNode = underlyingNode,
