@@ -3,6 +3,9 @@ import { parse as svelteParse } from "svelte/compiler";
 // @ts-ignore: Deno-specific import
 import { parseArgs } from "https://deno.land/std@0.218.2/cli/parse_args.ts";
 import * as path from "node:path"; // Keep using node:path for consistency if needed elsewhere
+// Add this import to ensure TypeScript is available for Svelte
+// @ts-ignore: Deno npm import for TypeScript support in Svelte
+import typescript from "npm:typescript";
 
 // --- Argument Parsing ---
 // @ts-ignore: Deno-specific API
@@ -34,6 +37,10 @@ const file = path.resolve(filePathArg.toString()); // Ensure it's a string and r
 
         if (language === "svelte") {
             // --- Svelte Parsing ---
+            // Ensure TypeScript is available in the environment for Svelte
+            if (!typescript) {
+                console.warn("Warning: TypeScript module not found. Svelte <script lang=\"ts\"> may not parse correctly.");
+            }
             ast = svelteParse(fileContent, { filename: file });
             // Simple serialization for Svelte AST - might need refinement
             // based on what SvelteLanguageFrontend expects.
