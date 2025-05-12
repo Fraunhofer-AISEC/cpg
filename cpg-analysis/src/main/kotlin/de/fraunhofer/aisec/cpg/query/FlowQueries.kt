@@ -260,7 +260,11 @@ fun dataFlowWithValidator(
  * computing this node as the result of a function.
  */
 data class NodeWithAssumption(val node: Node) : HasAssumptions {
-    override val assumptions: MutableList<Assumption> = mutableListOf()
+    override val assumptions: MutableSet<Assumption> = mutableSetOf()
+
+    override fun collectAssumptions(): Set<Assumption> {
+        return super.collectAssumptions() + node.assumptions
+    }
 }
 
 /**
@@ -269,7 +273,11 @@ data class NodeWithAssumption(val node: Node) : HasAssumptions {
  * taken when computing this collection of nodes as the result of a function.
  */
 data class NodeCollectionWithAssumption(val nodes: Collection<Node>) : HasAssumptions {
-    override val assumptions: MutableList<Assumption> = mutableListOf()
+    override val assumptions: MutableSet<Assumption> = mutableSetOf()
+
+    override fun collectAssumptions(): Set<Assumption> {
+        return super.collectAssumptions() + nodes.flatMap { it.assumptions }
+    }
 }
 
 /**
@@ -492,7 +500,7 @@ fun Node.alwaysFlowsTo(
                 "Some EOG paths failed to fulfill the predicate"
             },
         node = this,
-        assumptions = nodesToTrack.flatMap { it.assumptions }.toMutableList(),
+        assumptions = nodesToTrack.flatMap { it.assumptions }.toMutableSet(),
     )
 }
 
