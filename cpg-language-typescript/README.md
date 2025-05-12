@@ -33,6 +33,12 @@ When developing the TypeScript or Svelte frontends within the main `cpg` project
 
 Make sure you are in the `cpg` project's root directory before running these commands.
 
+*   **Compile ONLY Kotlin code (faster feedback):**
+    ```bash
+    ./gradlew :cpg-language-typescript:compileKotlin
+    ```
+    This task compiles only the Kotlin source files in the module. It's useful for quickly checking Kotlin syntax and type errors during development, especially when working on stub files or resolving basic compilation issues, as it skips resource processing, formatting checks, and packaging.
+
 *   **Compile the `cpg-language-typescript` module (including Svelte frontend):**
     ```bash
     ./gradlew :cpg-language-typescript:assemble
@@ -74,3 +80,25 @@ Make sure you are in the `cpg` project's root directory before running these com
 *   **CPG API Usage:** As highlighted by project maintainers, ensure that your Kotlin code correctly uses the current CPG API. "Unresolved reference" errors are often due to missing imports or incorrect usage of CPG classes and builder functions, rather than classpath issues. Always refer to existing, working frontends or the CPG core codebase for examples of correct API usage. The `TypeManager` and other core components are typically accessed via the `LanguageFrontend`'s context or helper/extension functions provided by the CPG framework.
 *   **Deno Parser:** The Deno parser script (`src/main/typescript/src/parser.ts`) is a critical component. If you modify it, ensure it's correctly compiled into the frontend's resources by the Gradle build tasks (e.g., by running `./gradlew :cpg-language-typescript:processResources` or a full `assemble`).
 *   **Testing:** Add comprehensive tests for any new functionality. The existing test structure (e.g., `SvelteLanguageFrontendTest.kt`) provides a good starting point.
+
+### Testing the Deno Parser Directly
+
+Before running the full CPG tests via Gradle, it can be useful to test the Deno parser script (`src/main/typescript/src/parser.ts`) in isolation to ensure it correctly parses a specific file and uses the intended dependencies (like the Svelte compiler). This helps determine if a parsing issue lies within the Deno script/environment or the Kotlin frontend's handling of the AST.
+
+1.  **Navigate to the Module Directory:**
+    ```bash
+    cd cpg-language-typescript
+    ```
+2.  **Run the Parser Script:** Use `deno run` with appropriate permissions and flags. For example, to test Svelte parsing:
+    ```bash
+    # Make sure Deno can find dependencies (it might need to download/cache them)
+    # Adjust the input file path as necessary
+    deno run --allow-read --allow-env src/main/typescript/src/parser.ts --language=svelte ../test/resources/svelte/SimpleComponent.svelte
+    ```
+    For TypeScript:
+    ```bash
+    deno run --allow-read --allow-env src/main/typescript/src/parser.ts --language=typescript ../test/resources/typescript/component.ts
+    ```
+3.  **Check the Output:** Observe the JSON AST printed to the console. Compare it against the expected structure or the output from a known working version.
+
+This direct test bypasses the Kotlin frontend and Gradle, providing quick feedback on the parser's core functionality.
