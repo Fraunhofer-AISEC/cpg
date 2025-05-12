@@ -43,16 +43,17 @@ Make sure you are in the `cpg` project's root directory before running these com
     ```bash
     ./gradlew :cpg-language-typescript:assemble
     ```
-    This command will compile all Kotlin and Java code within the module and prepare its resources, including compiling the Deno parser.
+    This command will compile all Kotlin and Java code within the module and prepare its resources, including compiling the Deno parser. It packages the module into a JAR artifact but does not run tests.
+
+*   **Build the `cpg-language-typescript` module (Compile + Test):**
+    ```bash
+    ./gradlew :cpg-language-typescript:build
+    ```
+    This is a more comprehensive task that includes `:assemble` (compiling and packaging) and also runs all tests (`:test`) and potentially other verification tasks defined for the module. Use this to ensure the module not only compiles but also passes its tests.
 
 *   **Run all tests in the `cpg-language-typescript` module:**
     ```bash
     ./gradlew :cpg-language-typescript:test
-    ```
-
-*   **Run a specific test class (e.g., `SvelteLanguageFrontendTest`):**
-    ```bash
-    ./gradlew :cpg-language-typescript:test --tests "de.fraunhofer.aisec.cpg.frontends.typescript.SvelteLanguageFrontendTest"
     ```
 
 *   **Run a single specific test method (e.g., `test parsing a simple Svelte component` in `SvelteLanguageFrontendTest`):**
