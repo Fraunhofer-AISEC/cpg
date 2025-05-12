@@ -132,7 +132,19 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
             scriptNode.end,
         )
         for (statementNode in scriptNode.ast.body) {
+            val beforeCount = tu.declarations.size
             handleScriptStatement(statementNode, tu, currentFile)
+            val afterCount = tu.declarations.size
+            if (afterCount > beforeCount) {
+                val newDecls = tu.declarations.subList(beforeCount, afterCount)
+                newDecls.forEach { decl ->
+                    LOGGER.info(
+                        "Added declaration to TU: {} (type: {})",
+                        decl.name,
+                        decl.javaClass.simpleName,
+                    )
+                }
+            }
         }
     }
 
@@ -143,7 +155,19 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
     ) {
         LOGGER.debug("Handling module script. Start: {}, End: {}", scriptNode.start, scriptNode.end)
         for (statementNode in scriptNode.ast.body) {
+            val beforeCount = tu.declarations.size
             handleScriptStatement(statementNode, tu, currentFile)
+            val afterCount = tu.declarations.size
+            if (afterCount > beforeCount) {
+                val newDecls = tu.declarations.subList(beforeCount, afterCount)
+                newDecls.forEach { decl ->
+                    LOGGER.info(
+                        "Added declaration to TU: {} (type: {})",
+                        decl.name,
+                        decl.javaClass.simpleName,
+                    )
+                }
+            }
         }
     }
 
