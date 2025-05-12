@@ -23,9 +23,10 @@
  *                    \______/ \__|       \______/
  *
  */
+package de.fraunhofer.aisec.codyze.console
+
 import de.fraunhofer.aisec.codyze.AnalysisProject
 import de.fraunhofer.aisec.codyze.AnalysisResult
-import de.fraunhofer.aisec.codyze.console.*
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.TranslationManager
@@ -42,6 +43,7 @@ import io.github.detekt.sarif4k.Location
 import io.github.detekt.sarif4k.Message
 import io.github.detekt.sarif4k.PhysicalLocation
 import io.github.detekt.sarif4k.Region
+import io.github.detekt.sarif4k.Result
 import io.github.detekt.sarif4k.Run
 import io.github.detekt.sarif4k.SarifSchema210
 import io.github.detekt.sarif4k.Tool
@@ -109,7 +111,7 @@ val mockService =
                                 tool = Tool(driver = ToolComponent(name = "mock")),
                                 results =
                                     listOf(
-                                        io.github.detekt.sarif4k.Result(
+                                        Result(
                                             ruleID = "mock",
                                             message = Message(text = "mock"),
                                             locations =
@@ -119,7 +121,7 @@ val mockService =
                                                             PhysicalLocation(
                                                                 artifactLocation =
                                                                     ArtifactLocation(
-                                                                        uri = "file:mock.cpp"
+                                                                        uri = "file:/mock.cpp"
                                                                     ),
                                                                 region =
                                                                     Region(
