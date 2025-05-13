@@ -246,7 +246,11 @@ enum class FailureReason {
 data class NodePath(
     val nodes: List<Node>,
     override val assumptions: MutableSet<Assumption> = mutableSetOf(),
-) : HasAssumptions
+) : HasAssumptions {
+    override fun collectAssumptions(): Set<Assumption> {
+        return super.collectAssumptions() + nodes.flatMap { it.assumptions }
+    }
+}
 
 class FulfilledAndFailedPaths(
     val fulfilled: List<NodePath>,
