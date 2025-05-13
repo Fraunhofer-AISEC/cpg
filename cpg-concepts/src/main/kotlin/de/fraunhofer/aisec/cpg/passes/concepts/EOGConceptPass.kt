@@ -100,8 +100,7 @@ open class EOGConceptPass(ctx: TranslationContext) :
         ctx.currentComponent = node.component
 
         val lattice = NodeToOverlayState(PowersetLattice())
-        val intermediateInitial = intermediateState ?: lattice.bottom
-        val startState = getInitialState(intermediateInitial, lattice, node)
+        val startState = getInitialState(lattice, node)
 
         val nextEog = node.nextEOGEdges.toList()
         intermediateState =
@@ -181,22 +180,19 @@ open class EOGConceptPass(ctx: TranslationContext) :
     }
 
     /**
-     * Generates the initial [NodeToOverlayStateElement] state, either based on an
-     * [intermediateState] or bottom.
+     * Generates the initial [NodeToOverlayStateElement] state for the current execution of this
+     * pass, either based on a previous [intermediateState] or [MapLattice.bottom] if
+     * [intermediateState] is `null`.
      */
-    // TODO: Provide an interface for Tasks, so each one can modify the state as needed before
-    // starting with the iteration or make this method non-open.
-    open fun getInitialState(
-        veryInitial: NodeToOverlayStateElement,
-        lattice: NodeToOverlayState,
-        node: Node,
-    ): NodeToOverlayStateElement {
-        val initialConcepts = handleNode(lattice, NodeToOverlayStateElement(), node)
+    open fun getInitialState(lattice: NodeToOverlayState, node: Node): NodeToOverlayStateElement {
+        val intermediateOrBottom = intermediateState ?: lattice.bottom
+
+        val initialConcepts = overlaysForNode(lattice, NodeToOverlayStateElement(), node)
         return if (initialConcepts.isEmpty()) {
-            veryInitial
+            intermediateOrBottom
         } else {
             lattice.lub(
-                veryInitial,
+                intermediateOrBottom,
                 NodeToOverlayStateElement(
                     node to PowersetLattice.Element(*initialConcepts.toTypedArray())
                 ),
@@ -213,6 +209,32 @@ open class EOGConceptPass(ctx: TranslationContext) :
     ): NodeToOverlayStateElement {
         val lattice = lattice as? NodeToOverlayState ?: return currentState
         val currentNode = currentEdge.end
+        val filteredAddedOverlays = overlaysForNode(lattice, currentState, currentNode)
+
+        // If we do not add any new concepts, we can keep the state the same
+        if (filteredAddedOverlays.isEmpty()) {
+            return currentState
+        }
+
+        return lattice.lub(
+            currentState,
+            NodeToOverlayStateElement(
+                currentNode to PowersetLattice.Element(*filteredAddedOverlays.toTypedArray())
+            ),
+            true,
+        )
+    }
+
+    /**
+     * Returns the list of [OverlayNode]s that should be added to the state for the given
+     * [currentNode]. This is done by calling the [handleNode] method and filtering the result based
+     * on the current state.
+     */
+    private fun overlaysForNode(
+        lattice: NodeToOverlayState,
+        currentState: NodeToOverlayStateElement,
+        currentNode: Node,
+    ): List<OverlayNode> {
         val addedOverlays = handleNode(lattice, currentState, currentNode).toSet()
 
         // This is some magic to filter out overlays that are already in the state (equal but not
@@ -227,19 +249,7 @@ open class EOGConceptPass(ctx: TranslationContext) :
                     }
             }
 
-        // If we do not add any new concepts, we can keep the state the same
-        if (filteredAddedOverlays.isEmpty()) {
-            return currentState
-        }
-
-        return lattice.lub(
-            currentState,
-            NodeToOverlayStateElement(
-                currentNode to
-                    PowersetLattice.Element<OverlayNode>(*filteredAddedOverlays.toTypedArray())
-            ),
-            true,
-        )
+        return filteredAddedOverlays
     }
 
     companion object {
