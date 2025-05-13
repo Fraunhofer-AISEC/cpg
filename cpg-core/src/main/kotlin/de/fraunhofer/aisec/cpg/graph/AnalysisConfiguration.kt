@@ -185,6 +185,11 @@ sealed class AnalysisDirection(val graphToFollow: GraphToFollow) {
      */
     abstract fun unwrapNextStepFromEdge(edge: Edge<Node>): Node
 
+    /**
+     * Considering the [edge], it determines which node (start or end of the edge) will be used as
+     * next step. An adds all assumptions on the [edge] to the provided [hasAssumptions] object such that
+     * they are not lost.
+     */
     fun <T : HasAssumptions> unwrapNextStepFromEdge(
         edge: Edge<Node>,
         hasAssumptions: T,
