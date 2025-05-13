@@ -454,8 +454,17 @@ fun SubgraphWalker.ScopedWalker.replace(parent: Node?, old: Expression, new: Exp
         )
     } else {
         // Store any eventual EOG/DFG nodes and disconnect old node
-        val oldPrevEOG = old.prevEOG.toMutableList()
         val oldNextEOG = old.nextEOG.toMutableList()
+        val oldPrevEOG =
+            when (old) {
+                is BinaryOperator -> {
+                    val prev = old.lhs.prevEOG.toMutableList()
+                    old.lhs.disconnectFromGraph()
+                    old.rhs.disconnectFromGraph()
+                    prev
+                }
+                else -> old.prevEOG.toMutableList()
+            }
         old.disconnectFromGraph()
 
         // Put the stored EOG nodes to the new node
