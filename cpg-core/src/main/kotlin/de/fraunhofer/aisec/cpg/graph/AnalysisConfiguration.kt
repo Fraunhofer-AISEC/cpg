@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
+import de.fraunhofer.aisec.cpg.assumptions.HasAssumptions
 import de.fraunhofer.aisec.cpg.frontends.NoLanguage.addAssumptionDependence
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
@@ -184,6 +185,16 @@ sealed class AnalysisDirection(val graphToFollow: GraphToFollow) {
      */
     abstract fun unwrapNextStepFromEdge(edge: Edge<Node>): Node
 
+    fun <T : HasAssumptions> unwrapNextStepFromEdge(
+        edge: Edge<Node>,
+        hasAssumptions: T,
+    ): Pair<Node, T> {
+        return Pair(
+            unwrapNextStepFromEdge(edge),
+            hasAssumptions.addAssumptionDependence(hasAssumptions),
+        )
+    }
+
     /**
      * Determines if the [edge] starting at [currentNode] requires to push a [CallExpression] on the
      * stack.
@@ -261,9 +272,7 @@ sealed class AnalysisDirection(val graphToFollow: GraphToFollow) {
                     scope = scope,
                     sensitivities = sensitivities,
                 )
-                .map { (edge, moreNewCtx) ->
-                    this.unwrapNextStepFromEdge(edge) to moreNewCtx.addAssumptionDependence(edge)
-                }
+                .map { (edge, moreNewCtx) -> this.unwrapNextStepFromEdge(edge, moreNewCtx) }
         }
     }
 }
@@ -288,9 +297,7 @@ class Forward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) {
                         scope = scope,
                         sensitivities = sensitivities,
                     )
-                    .map { (edge, newCtx) ->
-                        this.unwrapNextStepFromEdge(edge) to newCtx.addAssumptionDependence(edge)
-                    }
+                    .map { (edge, newCtx) -> this.unwrapNextStepFromEdge(edge, newCtx) }
             }
             GraphToFollow.EOG -> {
                 val interprocedural =
@@ -305,10 +312,7 @@ class Forward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) {
                                 scope = scope,
                                 sensitivities = sensitivities,
                             )
-                            .map { (edge, newCtx) ->
-                                this.unwrapNextStepFromEdge(edge) to
-                                    newCtx.addAssumptionDependence(edge)
-                            }
+                            .map { (edge, newCtx) -> this.unwrapNextStepFromEdge(edge, newCtx) }
                     } else if (currentNode is ReturnStatement || currentNode.nextEOG.isEmpty()) {
                         // Return from the functions/methods which have been invoked.
                         val returnedTo =
@@ -335,10 +339,7 @@ class Forward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) {
                                 scope = scope,
                                 sensitivities = sensitivities,
                             )
-                            .map { (edge, newCtx) ->
-                                this.unwrapNextStepFromEdge(edge) to
-                                    newCtx.addAssumptionDependence(edge)
-                            }
+                            .map { (edge, newCtx) -> this.unwrapNextStepFromEdge(edge, newCtx) }
                     }
 
                 if (interprocedural.isNotEmpty()) {
@@ -351,10 +352,7 @@ class Forward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) {
                             scope = scope,
                             sensitivities = sensitivities,
                         )
-                        .map { (edge, newCtx) ->
-                            this.unwrapNextStepFromEdge(edge) to
-                                newCtx.addAssumptionDependence(edge)
-                        }
+                        .map { (edge, newCtx) -> this.unwrapNextStepFromEdge(edge, newCtx) }
                 }
             }
         }
@@ -407,9 +405,7 @@ class Backward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) 
                         scope = scope,
                         sensitivities = sensitivities,
                     )
-                    .map { (edge, newCtx) ->
-                        this.unwrapNextStepFromEdge(edge) to newCtx.addAssumptionDependence(edge)
-                    }
+                    .map { (edge, newCtx) -> this.unwrapNextStepFromEdge(edge, newCtx) }
             }
 
             GraphToFollow.EOG -> {
@@ -424,10 +420,7 @@ class Backward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) 
                                 scope,
                                 sensitivities = sensitivities,
                             )
-                            .map { (edge, newCtx) ->
-                                this.unwrapNextStepFromEdge(edge) to
-                                    newCtx.addAssumptionDependence(edge)
-                            }
+                            .map { (edge, newCtx) -> this.unwrapNextStepFromEdge(edge, newCtx) }
                     } else if (currentNode is FunctionDeclaration) {
                         val calledBy = currentNode.calledByEdges as Collection<Edge<Node>>
 
@@ -448,10 +441,7 @@ class Backward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) 
                                 scope = scope,
                                 sensitivities = sensitivities,
                             )
-                            .map { (edge, newCtx) ->
-                                this.unwrapNextStepFromEdge(edge) to
-                                    newCtx.addAssumptionDependence(edge)
-                            }
+                            .map { (edge, newCtx) -> this.unwrapNextStepFromEdge(edge, newCtx) }
                     }
 
                 if (interprocedural.isNotEmpty()) {
@@ -464,10 +454,7 @@ class Backward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) 
                             scope = scope,
                             sensitivities = sensitivities,
                         )
-                        .map { (edge, newCtx) ->
-                            this.unwrapNextStepFromEdge(edge) to
-                                newCtx.addAssumptionDependence(edge)
-                        }
+                        .map { (edge, newCtx) -> this.unwrapNextStepFromEdge(edge, newCtx) }
                 }
             }
         }
