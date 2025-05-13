@@ -99,8 +99,9 @@ open class EOGConceptPass(ctx: TranslationContext) :
 
         ctx.currentComponent = node.component
 
-        val lattice = NodeToOverlayState(PowersetLattice<OverlayNode>())
-        val startState = intermediateState ?: getInitialState(lattice, node)
+        val lattice = NodeToOverlayState(PowersetLattice())
+        val intermediateInitial = intermediateState ?: lattice.bottom
+        val startState = getInitialState(intermediateInitial, lattice, node)
 
         val nextEog = node.nextEOGEdges.toList()
         intermediateState =
@@ -179,11 +180,29 @@ open class EOGConceptPass(ctx: TranslationContext) :
         }
     }
 
-    /** Generates the initial [NodeToOverlayStateElement] state. */
+    /**
+     * Generates the initial [NodeToOverlayStateElement] state, either based on an
+     * [intermediateState] or bottom.
+     */
     // TODO: Provide an interface for Tasks, so each one can modify the state as needed before
     // starting with the iteration or make this method non-open.
-    open fun getInitialState(lattice: NodeToOverlayState, node: Node): NodeToOverlayStateElement {
-        return lattice.bottom
+    open fun getInitialState(
+        veryInitial: NodeToOverlayStateElement,
+        lattice: NodeToOverlayState,
+        node: Node,
+    ): NodeToOverlayStateElement {
+        val initialConcepts = handleNode(lattice, NodeToOverlayStateElement(), node)
+        return if (initialConcepts.isEmpty()) {
+            veryInitial
+        } else {
+            lattice.lub(
+                veryInitial,
+                NodeToOverlayStateElement(
+                    node to PowersetLattice.Element(*initialConcepts.toTypedArray())
+                ),
+                true,
+            )
+        }
     }
 
     /** This function is called for each edge in the EOG until the fixpoint is computed. */
@@ -199,8 +218,7 @@ open class EOGConceptPass(ctx: TranslationContext) :
         // This is some magic to filter out overlays that are already in the state (equal but not
         // identical) for the same Node. It also filters the nodes if they have already been created
         // by a previous iteration over the same code block. This happens if multiple EOG starters
-        // reach
-        // a certain piece of code (frequently happens with the code after catch clauses).
+        // reach a certain piece of code (frequently happens with the code after catch clauses).
         val filteredAddedOverlays =
             addedOverlays.filter { added ->
                 currentState[currentNode]?.none { existing -> added == existing } != false &&
