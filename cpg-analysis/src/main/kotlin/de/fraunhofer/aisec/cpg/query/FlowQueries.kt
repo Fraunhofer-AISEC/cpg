@@ -460,7 +460,8 @@ fun Node.alwaysFlowsTo(
             nextEOGEvaluation.failed.map { (failureReason, path) ->
                 SinglePathResult(
                     value = false,
-                    children = mutableListOf(QueryTree(value = path.nodes).addAssumptionDependence(path)),
+                    children =
+                        mutableListOf(QueryTree(value = path.nodes).addAssumptionDependence(path)),
                     stringRepresentation =
                         "The EOG path reached the end  " +
                             if (earlyTermination != null)
@@ -482,7 +483,8 @@ fun Node.alwaysFlowsTo(
                 nextEOGEvaluation.fulfilled.map {
                     SinglePathResult(
                         value = true,
-                        children = mutableListOf(QueryTree(value = it.nodes).addAssumptionDependence(it)),
+                        children =
+                            mutableListOf(QueryTree(value = it.nodes).addAssumptionDependence(it)),
                         stringRepresentation =
                             "The EOG path reached the node ${it.nodes.lastOrNull()} matching the required predicate" +
                                 if (earlyTermination != null)
