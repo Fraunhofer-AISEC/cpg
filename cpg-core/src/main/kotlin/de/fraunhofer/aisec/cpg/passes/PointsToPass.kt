@@ -37,6 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.types.NumericType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
+import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.functional.*
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
@@ -581,6 +582,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     ),
             )
 
+        println("+++$currentNode")
         doubleState =
             when (currentNode) {
                 is Declaration,
@@ -2046,7 +2048,22 @@ fun PointsToStateElement.getValues(node: Node): IdentitySet<Pair<Node, Boolean>>
                     retVals.addAll(
                         fetchElementFromDeclarationState(addr).map { Pair(it.value, false) }
                     )
-                else retVals.addAll(this.getValues(addr))
+                else {
+                    this.getValues(addr).forEach { v ->
+                        // We want to skip values that contain the node itself and therefore could
+                        // cause a loop
+                        // So we fetch parent AssignExpression of the value in the AST, and if the
+                        // node is any of its children, we skip that value
+                        var valueParentAssignExpression: Node? = v.first
+                        while (
+                            valueParentAssignExpression !is AssignExpression &&
+                                valueParentAssignExpression != null
+                        ) valueParentAssignExpression = valueParentAssignExpression.astParent
+                        if (node !in SubgraphWalker.flattenAST(valueParentAssignExpression))
+                            retVals.add(v)
+                    }
+                    //                   retVals.addAll(this.getValues(addr))
+                }
             }
             return retVals
         }
