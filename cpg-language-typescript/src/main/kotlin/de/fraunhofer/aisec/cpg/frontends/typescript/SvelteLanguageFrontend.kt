@@ -176,6 +176,7 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
         parent: TranslationUnitDeclaration,
         currentFile: File,
     ) {
+        LOGGER.debug("Processing script statement node: {}", mapper.writeValueAsString(stmtNode))
         LOGGER.debug("Processing script statement of type: {}", stmtNode::class.simpleName)
         when (stmtNode) {
             is EsTreeVariableDeclaration -> {
@@ -240,22 +241,57 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
     ): List<de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration> {
         val cpgVariableDeclarations =
             mutableListOf<de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration>()
+        LOGGER.debug(
+            "Handling VariableDeclaration node: {}",
+            mapper.writeValueAsString(varDeclNode),
+        )
 
         for (declarator in varDeclNode.declarations) {
-            val name = parseName(declarator.id.name)
-            val type = unknownType()
-            val cpgVarDecl = newVariableDeclaration(name, type, rawNode = declarator)
-            cpgVarDecl.isImplicit = false
+            LOGGER.debug("Handling VariableDeclarator: {}", mapper.writeValueAsString(declarator))
+            val variableName =
+                declarator.id.name?.let { parseName(it) } ?: parseName("anonymous_var")
+            // TODO: Determine actual type based on initializer or type hints if available
+            val variableType = unknownType()
+            // Create the CPG node
+            val cpgVariableDeclaration =
+                newVariableDeclaration(
+                    variableName,
+                    variableType,
+                    implicitInitializerAllowed = false,
+                    rawNode = declarator,
+                )
+            LOGGER.warn("Processing declarator with ID: {}", declarator.id.name) // WARN level
 
-            declarator.init?.let { initExprNode ->
-                val initializer = handleExpression(initExprNode, currentFile)
-                if (initializer != null) {
-                    cpgVarDecl.initializer = initializer
-                    cpgVarDecl.type = initializer.type
+            /* TEMPORARILY COMMENTING OUT ENTIRE INITIALIZER BLOCK DUE TO SPOTLESS ISSUES
+            declarator.init?.let {
+                LOGGER.warn("Declarator has initializer (raw): {}", mapper.writeValueAsString(it)) // WARN level
+                // val initializerExpression = handleExpression(it, currentFile) // TEMPORARILY COMMENTED OUT
+                // WARN level log for the result of handleExpression - TEMPORARILY COMMENTED OUT DUE TO SPOTLESS ISSUES
+                // LOGGER.warn("Result of handleExpression for initializer: {} (Type: {})", initializerExpression, initializerExpression?.javaClass?.simpleName ?: "null")
+
+                if (initializerExpression != null) {
+                    cpgVariableDeclaration.initializer = initializerExpression
+                } else {
+                    // Use ERROR level if initializer creation fails
+                    LOGGER.error("Failed to create initializer expression for variable {}", variableName)
                 }
+
+            } else {
+                LOGGER.warn("Declarator has no initializer.") // WARN level
             }
-            cpgVariableDeclarations.add(cpgVarDecl)
+            */
+
+            // WARN level log for the final CPG node before adding
+            LOGGER.warn(
+                "Created CPG VariableDeclaration: Name={}, Type={}, Initializer={}",
+                cpgVariableDeclaration.name,
+                cpgVariableDeclaration.type,
+                cpgVariableDeclaration.initializer?.javaClass?.simpleName ?: "null",
+            )
+
+            cpgVariableDeclarations.add(cpgVariableDeclaration)
         }
+
         return cpgVariableDeclarations
     }
 
