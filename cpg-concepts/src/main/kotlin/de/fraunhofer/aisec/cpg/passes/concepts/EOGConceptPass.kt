@@ -224,7 +224,6 @@ open class EOGConceptPass(ctx: TranslationContext) :
         )
     }
 
-
     companion object {
         var intermediateState: NodeToOverlayStateElement? = null
     }
