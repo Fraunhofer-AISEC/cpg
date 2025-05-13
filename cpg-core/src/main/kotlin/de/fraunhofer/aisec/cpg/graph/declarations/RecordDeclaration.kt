@@ -178,7 +178,6 @@ open class RecordDeclaration :
             list += fields
             list += methods
             list += constructors
-            list += this
 
             return list
         }
