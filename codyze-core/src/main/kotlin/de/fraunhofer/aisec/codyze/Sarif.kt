@@ -102,8 +102,6 @@ fun QueryTree<*>.getCodeflow(): List<List<Node>> {
         this.children.flatMap { it.getCodeflow() }
     } else if (this.value is List<*>) {
         listOf((this.value as Iterable<*>).filterIsInstance<Node>())
-    } else if (this.value is NodePath) {
-        listOf(((this.value as NodePath).nodes as Iterable<*>).filterIsInstance<Node>())
     } else if (this.value is Boolean) {
         this.children.flatMap { it.getCodeflow() }
     } else {

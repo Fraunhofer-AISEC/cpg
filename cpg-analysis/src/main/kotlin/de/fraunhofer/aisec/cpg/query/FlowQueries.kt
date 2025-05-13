@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.query
 import de.fraunhofer.aisec.cpg.assumptions.Assumption
 import de.fraunhofer.aisec.cpg.assumptions.AssumptionType
 import de.fraunhofer.aisec.cpg.assumptions.HasAssumptions
+import de.fraunhofer.aisec.cpg.frontends.NoLanguage.addAssumptionDependence
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.AnalysisSensitivity
@@ -57,27 +58,27 @@ fun FulfilledAndFailedPaths.toQueryTree(
     return this.fulfilled.map {
         SinglePathResult(
             true,
-            mutableListOf(QueryTree(it)),
+            mutableListOf(QueryTree(it.nodes)),
             "$queryType from $startNode to ${it.nodes.last()} fulfills the requirement",
             startNode,
             Success(it.nodes.last()),
         )
     } +
-        this.failed.map { (reason, nodes) ->
+        this.failed.map { (reason, nodePath) ->
             SinglePathResult(
                 false,
-                mutableListOf(QueryTree(nodes)),
-                "$queryType from $startNode to ${nodes.nodes.last()} fulfills the requirement",
+                mutableListOf(QueryTree(nodePath.nodes).addAssumptionDependence(nodePath)),
+                "$queryType from $startNode to ${nodePath.nodes.last()} fulfills the requirement",
                 startNode,
                 if (reason == FailureReason.PATH_ENDED) {
-                    PathEnded(nodes.nodes.last())
+                    PathEnded(nodePath.nodes.last())
                 } else if (reason == FailureReason.HIT_EARLY_TERMINATION) {
-                    HitEarlyTermination(nodes.nodes.last())
+                    HitEarlyTermination(nodePath.nodes.last())
                 } else {
                     // TODO: We cannot set this (yet) but it might be useful to differentiate
                     // between "path is really at the end" or "we just stopped". Requires adaptions
                     // in followXUntilHit and all of its callers
-                    StepsExceeded(nodes.nodes.last())
+                    StepsExceeded(nodePath.nodes.last())
                 },
             )
         }
@@ -459,7 +460,7 @@ fun Node.alwaysFlowsTo(
             nextEOGEvaluation.failed.map { (failureReason, path) ->
                 SinglePathResult(
                     value = false,
-                    children = mutableListOf(QueryTree(value = path)),
+                    children = mutableListOf(QueryTree(value = path.nodes).addAssumptionDependence(path)),
                     stringRepresentation =
                         "The EOG path reached the end  " +
                             if (earlyTermination != null)
@@ -481,7 +482,7 @@ fun Node.alwaysFlowsTo(
                 nextEOGEvaluation.fulfilled.map {
                     SinglePathResult(
                         value = true,
-                        children = mutableListOf(QueryTree(value = it)),
+                        children = mutableListOf(QueryTree(value = it.nodes).addAssumptionDependence(it)),
                         stringRepresentation =
                             "The EOG path reached the node ${it.nodes.lastOrNull()} matching the required predicate" +
                                 if (earlyTermination != null)
