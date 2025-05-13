@@ -106,12 +106,13 @@ val Node.allEOGStarters: List<Node>
  */
 val Node.allUniqueEOGStartersOrSingles: List<Node>
     get() {
-        return allEOGStarters.filter { it.prevEOGEdges.isEmpty() } +
-            if (prevEOGEdges.isEmpty() && nextEOGEdges.isEmpty()) {
-                listOf(this)
-            } else {
-                emptyList()
-            }
+        return (allEOGStarters.filter { it.prevEOGEdges.isEmpty() } +
+                if (prevEOGEdges.isEmpty() && nextEOGEdges.isEmpty()) {
+                    listOf(this)
+                } else {
+                    emptyList()
+                })
+            .distinct()
     }
 
 @JvmName("astNodes")
