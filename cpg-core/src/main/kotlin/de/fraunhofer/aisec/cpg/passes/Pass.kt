@@ -141,7 +141,15 @@ object LeastImportTranslationUnitSorter : Sorter<TranslationUnitDeclaration>() {
 object EOGStarterLeastTUImportSorter : Sorter<Node>() {
     override fun invoke(result: TranslationResult): List<Node> =
         LeastImportTranslationUnitSorter.invoke(result)
-            .flatMap { it.allEOGStarters.filter { it.prevEOGEdges.isEmpty() } }
+            .map {
+                it.allEOGStarters.filter { it.prevEOGEdges.isEmpty() } +
+                    if (it.prevEOGEdges.isEmpty() && it.nextEOGEdges.isEmpty()) {
+                        listOf(it)
+                    } else {
+                        emptyList()
+                    }
+            }
+            .flatten()
             .toList()
 }
 
