@@ -35,8 +35,31 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo
  * classes inheriting from this later.
  */
 @JsonIgnoreProperties(ignoreUnknown = true) // Ignore properties we haven't explicitly defined
+@JsonTypeInfo(
+    use = JsonTypeInfo.Id.NAME,
+    include = JsonTypeInfo.As.PROPERTY,
+    property = "type",
+    visible = true, // Make the 'type' property accessible if needed
+)
+@JsonSubTypes(
+    JsonSubTypes.Type(value = SvelteFragment::class, name = "Fragment"),
+    JsonSubTypes.Type(value = SvelteElement::class, name = "Element"),
+    JsonSubTypes.Type(value = SvelteText::class, name = "Text"),
+    JsonSubTypes.Type(value = SvelteMustacheTag::class, name = "MustacheTag"),
+    JsonSubTypes.Type(value = SvelteScript::class, name = "Script"),
+    JsonSubTypes.Type(value = SvelteStyleNode::class, name = "Style"),
+    JsonSubTypes.Type(value = SvelteEventHandler::class, name = "EventHandler"),
+    // CSS Nodes
+    JsonSubTypes.Type(value = SvelteRule::class, name = "Rule"),
+    JsonSubTypes.Type(value = SvelteSelectorList::class, name = "SelectorList"),
+    JsonSubTypes.Type(value = SvelteSelector::class, name = "Selector"),
+    JsonSubTypes.Type(value = SvelteTypeSelector::class, name = "TypeSelector"),
+    JsonSubTypes.Type(value = SvelteBlock::class, name = "Block"),
+    JsonSubTypes.Type(value = SvelteDeclaration::class, name = "Declaration"),
+    // TODO: Add other Svelte node types here as needed (e.g., Comment, Block, etc.)
+)
 interface SvelteNode {
-    val type: String
+    // 'type' property handled by Jackson
     val start: Int?
     val end: Int?
 }
@@ -44,27 +67,29 @@ interface SvelteNode {
 /** Represents the root of a parsed Svelte component. */
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class SvelteProgram(
-    override val type: String =
-        "Root", // svelte.parse() doesn't give a type for the root, make one up
-    val html:
-        SvelteElement, // Or a list of top-level SvelteNodes like SvelteElement, SvelteText etc.
-    // Assuming svelte.parse() returns a structure like this.
-    // Adjust based on actual svelte.parse() output.
-    val css: SvelteStyleNode? = null, // Assuming a potential CSS node
+    // 'type' is not present in the root of svelte.parse() output
+    val html: SvelteFragment, // Changed from SvelteElement to SvelteFragment
+    val css: SvelteStyleNode? = null,
     val instance: SvelteScript? = null,
     val module: SvelteScript? = null,
-    override val start: Int?, // Typically 0 for the root
-    override val end: Int?, // Typically the length of the file content
+    // Root itself doesn't have start/end in the svelte.parse output
+) // Removed SvelteNode implementation as root doesn't conform
+
+/** Represents the top-level Fragment wrapper for HTML content */
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class SvelteFragment(
+    override val start: Int?,
+    override val end: Int?,
+    val children: List<SvelteNode> = listOf(),
 ) : SvelteNode
 
 /** Represents an HTML element node in the template. */
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class SvelteElement(
-    override val type: String, // e.g., "Element", "Text", "MustacheTag"
     val name: String? = null, // For Element, e.g., "div", "p"
     val data: String? = null, // For Text node
     val children: List<SvelteNode>? = listOf(),
-    val attributes: List<SvelteAttributeOrBinding>? = listOf(),
+    val attributes: List<SvelteAttributeLike>? = listOf(),
     override val start: Int?,
     override val end: Int?,
     // Other properties depending on the type...
@@ -72,17 +97,12 @@ data class SvelteElement(
 
 /** Represents a plain text node in the template. */
 @JsonIgnoreProperties(ignoreUnknown = true)
-data class SvelteText(
-    override val type: String, // "Text"
-    val data: String,
-    override val start: Int?,
-    override val end: Int?,
-) : SvelteNode
+data class SvelteText(val data: String, override val start: Int?, override val end: Int?) :
+    SvelteNode
 
 /** Represents a Mustache tag (e.g., `{expression}`). */
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class SvelteMustacheTag(
-    override val type: String, // "MustacheTag"
     val expression: EsTreeNode, // The expression inside { }
     override val start: Int?,
     override val end: Int?,
@@ -91,7 +111,6 @@ data class SvelteMustacheTag(
 /** Represents a `<script>` block. */
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class SvelteScript(
-    override val type: String, // "Script"
     val context: String?, // "default", "module"
     @JsonProperty("content") val ast: EsTreeProgram, // Changed from content: String
     override val start: Int?,
@@ -102,12 +121,11 @@ data class SvelteScript(
 /** Represents a `<style>` block. */
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class SvelteStyleNode( // Placeholder for <style> blocks
-    override val type: String, // "Style"
-    val attributes: List<SvelteAttributeOrBinding>? = listOf(),
-    val children: List<SvelteNode>? = listOf(), // Style content, typically SvelteText with CSS
-    val content: SvelteStyleContent,
     override val start: Int?,
     override val end: Int?,
+    val attributes: List<SvelteAttributeLike>? = listOf(),
+    val children: List<SvelteNode>? = listOf(), // Changed to SvelteNode, contains SvelteRule
+    val content: SvelteStyleContent,
 ) : SvelteNode
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -134,6 +152,12 @@ data class SvelteStyleContent(
     JsonSubTypes.Type(value = EsTreeBlockStatement::class, name = "BlockStatement"),
     JsonSubTypes.Type(value = EsTreeExportNamedDeclaration::class, name = "ExportNamedDeclaration"),
     // Add other EsTreeNode types here as they are defined, e.g., ExpressionStatement
+    // Added types found in HTML mustache tags
+    JsonSubTypes.Type(value = EsTreeConditionalExpression::class, name = "ConditionalExpression"),
+    JsonSubTypes.Type(value = EsTreeBinaryExpression::class, name = "BinaryExpression"),
+    // Added types found in function bodies
+    JsonSubTypes.Type(value = EsTreeExpressionStatement::class, name = "ExpressionStatement"),
+    JsonSubTypes.Type(value = EsTreeAssignmentExpression::class, name = "AssignmentExpression"),
 )
 @JsonIgnoreProperties(ignoreUnknown = true)
 interface EsTreeNode {
@@ -148,7 +172,6 @@ interface EsTreeExpression : EsTreeNode
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class EsTreeProgram(
-    val type: String, // Should be "Program"
     val body: List<EsTreeNode>,
     val sourceType: String, // "script" or "module"
     override val start: Int?,
@@ -157,7 +180,6 @@ data class EsTreeProgram(
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class EsTreeVariableDeclaration(
-    val type: String, // Should be "VariableDeclaration"
     val declarations: List<EsTreeVariableDeclarator>,
     val kind: String, // "var", "let", or "const"
     override val start: Int?,
@@ -166,7 +188,6 @@ data class EsTreeVariableDeclaration(
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class EsTreeVariableDeclarator(
-    val type: String, // Should be "VariableDeclarator"
     val id: EsTreeIdentifier,
     val init: EsTreeNode?, // Actually an EsTreeExpression
     override val start: Int?,
@@ -174,16 +195,11 @@ data class EsTreeVariableDeclarator(
 ) : EsTreeNode
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-data class EsTreeIdentifier(
-    val type: String, // Should be "Identifier"
-    val name: String,
-    override val start: Int?,
-    override val end: Int?,
-) : EsTreeNode, EsTreeExpression
+data class EsTreeIdentifier(val name: String, override val start: Int?, override val end: Int?) :
+    EsTreeNode, EsTreeExpression
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class EsTreeLiteral(
-    val type: String, // Should be "Literal"
     val value: Any?,
     val raw: String,
     override val start: Int?,
@@ -193,7 +209,6 @@ data class EsTreeLiteral(
 // New class definitions
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class EsTreeFunctionDeclaration(
-    val type: String, // Should be "FunctionDeclaration"
     val id: EsTreeIdentifier?, // Function name, null for anonymous functions in some contexts
     val params: List<EsTreeNode>, // List of EsTreeIdentifier or other patterns
     val body: EsTreeBlockStatement,
@@ -206,7 +221,6 @@ data class EsTreeFunctionDeclaration(
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class EsTreeBlockStatement(
-    val type: String, // Should be "BlockStatement"
     val body: List<EsTreeNode>, // List of statements
     override val start: Int?,
     override val end: Int?,
@@ -215,7 +229,6 @@ data class EsTreeBlockStatement(
 // New class definition for ExportNamedDeclaration
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class EsTreeExportNamedDeclaration(
-    val type: String, // Should be "ExportNamedDeclaration"
     val declaration:
         EsTreeNode?, // Can be VariableDeclaration, FunctionDeclaration, ClassDeclaration
     val specifiers:
@@ -245,23 +258,21 @@ interface SvelteAttributeLike : SvelteNode
 /** Represents a standard HTML attribute. */
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class SvelteAttribute(
-    override val type: String, // Should be "Attribute"
     override val start: Int,
     override val end: Int,
     val name: String,
     val value: List<SvelteNode>? = null, // Attribute value can be complex
 ) : SvelteAttributeLike
 
-/** Represents an `on:` directive (event handler). */
+/** Represents an EventHandler attribute (e.g., on:click). */
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class SvelteEventHandler(
-    override val type: String, // Should be "EventHandler"
-    override val start: Int,
-    override val end: Int,
-    val name: String, // The event name (e.g., "click")
-    val expression: SvelteExpression? = null, // The handler expression/function
-    // Modifiers might be here too
-) : SvelteAttributeLike
+    override val start: Int?,
+    override val end: Int?,
+    val name: String, // e.g., "click"
+    val expression: EsTreeNode?, // Can be null for shorthand like on:click
+    val modifiers: List<String> = listOf(),
+) : SvelteNode, SvelteAttributeLike // Implement both
 
 /** Placeholder for different types of expressions within Svelte templates or scripts. */
 @JsonIgnoreProperties(ignoreUnknown = true) interface SvelteExpression : SvelteNode
@@ -272,7 +283,6 @@ data class SvelteEventHandler(
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class SvelteAttributeOrBinding(
-    override val type: String, // e.g., "Attribute", "Binding"
     val name: String,
     // Attributes can have complex values (Text, MustacheTag, etc.)
     // For simplicity, assuming value is a list of SvelteNodes or simple string for now.
@@ -282,3 +292,84 @@ data class SvelteAttributeOrBinding(
     override val start: Int?,
     override val end: Int?,
 ) : SvelteNode
+
+// --- New CSS Node Definitions ---
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class SvelteRule(
+    override val start: Int?,
+    override val end: Int?,
+    val prelude: SvelteSelectorList,
+    val block: SvelteBlock,
+) : SvelteNode
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class SvelteSelectorList(
+    override val start: Int?,
+    override val end: Int?,
+    val children: List<SvelteSelector> = listOf(),
+) : SvelteNode
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class SvelteSelector(
+    override val start: Int?,
+    override val end: Int?,
+    val children: List<SvelteNode> = listOf(), // Contains TypeSelector, etc.
+) : SvelteNode
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class SvelteTypeSelector(override val start: Int?, override val end: Int?, val name: String) :
+    SvelteNode
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class SvelteBlock(
+    override val start: Int?,
+    override val end: Int?,
+    val children: List<SvelteDeclaration> = listOf(),
+) : SvelteNode
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class SvelteDeclaration(
+    override val start: Int?,
+    override val end: Int?,
+    val property: String,
+    val value: String, // Simple string value based on AST
+) : SvelteNode
+
+// --- New classes for expressions found in template ---
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class EsTreeConditionalExpression(
+    val test: EsTreeNode, // The condition expression
+    val consequent: EsTreeNode, // Expression if true
+    val alternate: EsTreeNode, // Expression if false
+    override val start: Int?,
+    override val end: Int?,
+) : EsTreeNode, EsTreeExpression
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class EsTreeBinaryExpression(
+    val operator: String, // e.g., "===", "+", "-"
+    val left: EsTreeNode,
+    val right: EsTreeNode,
+    override val start: Int?,
+    override val end: Int?,
+) : EsTreeNode, EsTreeExpression
+
+// --- New classes for statements/expressions found in function body ---
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class EsTreeExpressionStatement(
+    val expression: EsTreeNode, // The actual expression being executed
+    override val start: Int?,
+    override val end: Int?,
+) : EsTreeNode, EsTreeStatement
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class EsTreeAssignmentExpression(
+    val operator: String, // e.g., "=", "+=", "-="
+    val left: EsTreeNode, // Usually an Identifier or MemberExpression
+    val right: EsTreeNode, // The value being assigned
+    override val start: Int?,
+    override val end: Int?,
+) : EsTreeNode, EsTreeExpression
