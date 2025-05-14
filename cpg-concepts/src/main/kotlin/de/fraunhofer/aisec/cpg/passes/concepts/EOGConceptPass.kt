@@ -267,7 +267,7 @@ inline fun <reified T : OverlayNode> Node.getOverlaysByPrevDFG(
         }
         .fulfilled
         // The last nodes on the path are the ones we are interested in.
-        .map { it.last() }
+        .map { it.nodes.last() }
         .flatMap {
             // collect all "overlay" nodes
             stateElement[it] ?: setOf(it, *it.overlays.toTypedArray())
