@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
+import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
@@ -57,5 +58,22 @@ class ExtensionTest {
 
         var single = func.bodyOrNull<Reference>(0)
         assertEquals(ref, single)
+    }
+
+    @Test
+    fun testAllUniqueEOGStartersOrSingles() {
+        with(TestLanguageFrontend()) {
+            val tu = newTranslationUnitDeclaration("file")
+            val record = newRecordDeclaration("MyClass", "class")
+            tu.declarations += record
+
+            val func = newFunctionDeclaration("myFunc")
+            val block = newBlock()
+            func.body = block
+            func.nextEOG += block
+            tu.declarations += func
+
+            assertEquals(listOf(record, func, tu), tu.allUniqueEOGStartersOrSingles)
+        }
     }
 }
