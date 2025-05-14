@@ -141,7 +141,7 @@ object LeastImportTranslationUnitSorter : Sorter<TranslationUnitDeclaration>() {
 object EOGStarterLeastTUImportSorter : Sorter<Node>() {
     override fun invoke(result: TranslationResult): List<Node> =
         LeastImportTranslationUnitSorter.invoke(result)
-            .flatMap { it.allEOGStarters.filter { it.prevEOGEdges.isEmpty() } }
+            .flatMap { it.allUniqueEOGStartersOrSingles }
             .toList()
 }
 
@@ -157,7 +157,7 @@ object EOGStarterLeastTUImportCatchLastSorter : Sorter<Node>() {
     override fun invoke(result: TranslationResult): List<Node> =
         LeastImportTranslationUnitSorter.invoke(result)
             .flatMap {
-                val allUniqueStarters = it.allEOGStarters.filter { it.prevEOGEdges.isEmpty() }
+                val allUniqueStarters = it.allUniqueEOGStartersOrSingles
                 val result = mutableListOf<Node>()
                 result.addAll(allUniqueStarters.filter { it !is CatchClause })
                 result.addAll(allUniqueStarters.filterIsInstance<CatchClause>())
