@@ -186,19 +186,7 @@ open class EOGConceptPass(ctx: TranslationContext) :
      */
     open fun getInitialState(lattice: NodeToOverlayState, node: Node): NodeToOverlayStateElement {
         val intermediateOrBottom = intermediateState ?: lattice.bottom
-
-        val initialConcepts = overlaysForNode(lattice, NodeToOverlayStateElement(), node)
-        return if (initialConcepts.isEmpty()) {
-            intermediateOrBottom
-        } else {
-            lattice.lub(
-                intermediateOrBottom,
-                NodeToOverlayStateElement(
-                    node to PowersetLattice.Element(*initialConcepts.toTypedArray())
-                ),
-                true,
-            )
-        }
+        return overlayStateForNode(lattice, intermediateOrBottom, node)
     }
 
     /** This function is called for each edge in the EOG until the fixpoint is computed. */
@@ -209,32 +197,19 @@ open class EOGConceptPass(ctx: TranslationContext) :
     ): NodeToOverlayStateElement {
         val lattice = lattice as? NodeToOverlayState ?: return currentState
         val currentNode = currentEdge.end
-        val filteredAddedOverlays = overlaysForNode(lattice, currentState, currentNode)
-
-        // If we do not add any new concepts, we can keep the state the same
-        if (filteredAddedOverlays.isEmpty()) {
-            return currentState
-        }
-
-        return lattice.lub(
-            currentState,
-            NodeToOverlayStateElement(
-                currentNode to PowersetLattice.Element(*filteredAddedOverlays.toTypedArray())
-            ),
-            true,
-        )
+        return overlayStateForNode(lattice, currentState, currentNode)
     }
 
     /**
-     * Returns the list of [OverlayNode]s that should be added to the state for the given
-     * [currentNode]. This is done by calling the [handleNode] method and filtering the result based
-     * on the current state.
+     * Returns and modifies the (new) state which contains all [OverlayNode]s that should be added
+     * for the given [currentNode]. This is done by calling the [handleNode] method and filtering
+     * the result based on the current state.
      */
-    private fun overlaysForNode(
+    private fun overlayStateForNode(
         lattice: NodeToOverlayState,
         currentState: NodeToOverlayStateElement,
         currentNode: Node,
-    ): List<OverlayNode> {
+    ): NodeToOverlayStateElement {
         val addedOverlays = handleNode(lattice, currentState, currentNode).toSet()
 
         // This is some magic to filter out overlays that are already in the state (equal but not
@@ -249,7 +224,17 @@ open class EOGConceptPass(ctx: TranslationContext) :
                     }
             }
 
-        return filteredAddedOverlays
+        return if (filteredAddedOverlays.isEmpty()) {
+            currentState
+        } else {
+            lattice.lub(
+                currentState,
+                NodeToOverlayStateElement(
+                    currentNode to PowersetLattice.Element(*filteredAddedOverlays.toTypedArray())
+                ),
+                true,
+            )
+        }
     }
 
     companion object {
