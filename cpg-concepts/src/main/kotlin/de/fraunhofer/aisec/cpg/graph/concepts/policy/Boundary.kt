@@ -27,18 +27,5 @@ package de.fraunhofer.aisec.cpg.graph.concepts.policy
 
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
-import de.fraunhofer.aisec.cpg.graph.concepts.Operation
-import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 
-class ProtectedAsset(underlyingNode: Node? = null, scope: Scope?) : Concept(underlyingNode)
-
-class ProtectedAssetOperation(underlyingNode: Node? = null, asset: ProtectedAsset) :
-    Operation(underlyingNode, asset)
-
-class CheckAccess(underlyingNode: Node?, asset: ProtectedAsset?) : Operation(underlyingNode, asset)
-
-open class Predicate()
-
-class Equals(var left: Predicate, var right: Predicate) : Predicate()
-
-class IsIn(var element: Predicate, var group: Predicate) : Predicate()
+class Boundary(underlyingNode: Node? = null) : Concept(underlyingNode)

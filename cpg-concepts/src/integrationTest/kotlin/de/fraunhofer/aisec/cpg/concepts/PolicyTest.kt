@@ -26,10 +26,20 @@
 package de.fraunhofer.aisec.cpg.concepts
 
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
-import de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.Secret
+import de.fraunhofer.aisec.cpg.graph.concepts.policy.Boundary
+import de.fraunhofer.aisec.cpg.graph.concepts.policy.CheckAccess
+import de.fraunhofer.aisec.cpg.graph.concepts.policy.Context
+import de.fraunhofer.aisec.cpg.graph.concepts.policy.Principal
+import de.fraunhofer.aisec.cpg.graph.concepts.policy.ProtectedAsset
+import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.returns
+import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.passes.concepts.TagOverlaysPass
 import de.fraunhofer.aisec.cpg.passes.concepts.each
+import de.fraunhofer.aisec.cpg.passes.concepts.getOverlaysByPrevDFG
 import de.fraunhofer.aisec.cpg.passes.concepts.tag
 import de.fraunhofer.aisec.cpg.passes.concepts.with
 import de.fraunhofer.aisec.cpg.test.analyze
@@ -48,7 +58,52 @@ class PolicyTest {
                 it.registerPass<TagOverlaysPass>()
                 it.configurePass<TagOverlaysPass>(
                     TagOverlaysPass.Configuration(
-                        tag = tag { each<RecordDeclaration>().with { Secret() } }
+                        tag =
+                            tag {
+                                each<RecordDeclaration>(
+                                        predicate = { node -> node.name.localName == "Team" }
+                                    )
+                                    .with { Boundary(underlyingNode = node) }
+                                each<FieldDeclaration>(
+                                        predicate = { node -> node.name.localName == "__members" }
+                                    )
+                                    .with {
+                                        ProtectedAsset(underlyingNode = node, scope = node.scope)
+                                    }
+                                each<FieldDeclaration>(
+                                        predicate = { node -> node.name.localName == "manager" }
+                                    )
+                                    .with { Principal(underlyingNode = node) }
+                                each<Reference>(
+                                        predicate = { node -> node.name.localName == "whoami" }
+                                    )
+                                    .with { Context(underlyingNode = node) }
+                                each<IfStatement>().with {
+                                    val condition = node.condition as? BinaryOperator
+                                    val lhs = condition?.lhs
+                                    val rhs = condition?.rhs
+                                    val context =
+                                        lhs?.getOverlaysByPrevDFG<Context>(state)?.singleOrNull()
+                                    val principal =
+                                        rhs?.getOverlaysByPrevDFG<Principal>(state)?.singleOrNull()
+                                    val returns = condition.returns
+                                    val protectedAsset =
+                                        returns
+                                            .map { r ->
+                                                r.returnValue?.getOverlaysByPrevDFG<ProtectedAsset>(
+                                                    state
+                                                )
+                                            }
+                                            .singleOrNull()
+                                    CheckAccess(
+                                        underlyingNode = condition,
+                                        asset = protectedAsset?.first(),
+                                    )
+                                    //                                    if (context != null &&
+                                    // principal != null && protectedAsset != null) {
+                                    //                                    }
+                                }
+                            }
                     )
                 )
             }
