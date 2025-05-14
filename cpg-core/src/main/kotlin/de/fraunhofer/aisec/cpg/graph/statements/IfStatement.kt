@@ -91,6 +91,10 @@ class IfStatement : Statement(), BranchingNode, ArgumentHolder {
         return this.condition == expression
     }
 
+    override fun getPrevEOGandElements(): Pair<MutableList<Node>, List<Node>> {
+        TODO("Not yet implemented")
+    }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is IfStatement) return false

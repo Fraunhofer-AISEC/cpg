@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.pointer
@@ -145,6 +146,12 @@ class UnaryOperator : Expression(), HasOverloadedOperation, ArgumentHolder, HasT
 
     override fun hasArgument(expression: Expression): Boolean {
         return this.input == expression
+    }
+
+    override fun getPrevEOGandElements(): Pair<MutableList<Node>, List<Node>> {
+        val prev = this.input.prevEOG
+        val elements = listOf(this.input, this)
+        return Pair(prev, elements)
     }
 
     override fun equals(other: Any?): Boolean {

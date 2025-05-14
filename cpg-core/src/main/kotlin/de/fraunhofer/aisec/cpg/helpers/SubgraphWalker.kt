@@ -457,10 +457,9 @@ fun SubgraphWalker.ScopedWalker.replace(parent: Node?, old: Expression, new: Exp
         val oldNextEOG = old.nextEOG.toMutableList()
         val oldPrevEOG =
             when (old) {
-                is BinaryOperator -> {
-                    val prev = old.lhs.prevEOG.toMutableList()
-                    old.lhs.disconnectFromGraph()
-                    old.rhs.disconnectFromGraph()
+                is ArgumentHolder -> {
+                    val (prev, elements) = old.getPrevEOGandElements()
+                    elements.forEach { it.disconnectFromGraph() }
                     prev
                 }
                 else -> old.prevEOG.toMutableList()
