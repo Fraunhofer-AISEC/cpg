@@ -100,6 +100,21 @@ val Node.allEOGStarters: List<Node>
         return this.allChildren<EOGStarterHolder>().flatMap { it.eogStarters }.distinct()
     }
 
+/**
+ * Returns all EOG starters of this node that have no predecessors in the EOG as well as the node
+ * itself if it is an EOG "single", in a way that is has neither a previous nor next EOG edge.
+ */
+val Node.allUniqueEOGStartersOrSingles: List<Node>
+    get() {
+        return (allEOGStarters.filter { it.prevEOGEdges.isEmpty() } +
+                if (prevEOGEdges.isEmpty() && nextEOGEdges.isEmpty()) {
+                    listOf(this)
+                } else {
+                    emptyList()
+                })
+            .distinct()
+    }
+
 @JvmName("astNodes")
 fun Node.ast(): List<Node> {
     return this.ast<Node>()

@@ -101,8 +101,8 @@ open class EOGConceptPass(ctx: TranslationContext) :
 
         ctx.currentComponent = node.component
 
-        val lattice = NodeToOverlayState(PowersetLattice<OverlayNode>())
-        val startState = intermediateState ?: getInitialState(lattice, node)
+        val lattice = NodeToOverlayState(PowersetLattice())
+        val startState = getInitialState(lattice, node)
 
         val nextEog = node.nextEOGEdges.toList()
         intermediateState =
@@ -191,11 +191,14 @@ open class EOGConceptPass(ctx: TranslationContext) :
         }
     }
 
-    /** Generates the initial [NodeToOverlayStateElement] state. */
-    // TODO: Provide an interface for Tasks, so each one can modify the state as needed before
-    // starting with the iteration or make this method non-open.
+    /**
+     * Generates the initial [NodeToOverlayStateElement] state for the current execution of this
+     * pass, either based on a previous [intermediateState] or [MapLattice.bottom] if
+     * [intermediateState] is `null`.
+     */
     open fun getInitialState(lattice: NodeToOverlayState, node: Node): NodeToOverlayStateElement {
-        return lattice.bottom
+        val intermediateOrBottom = intermediateState ?: lattice.bottom
+        return overlayStateForNode(lattice, intermediateOrBottom, node)
     }
 
     /** This function is called for each edge in the EOG until the fixpoint is computed. */
@@ -206,13 +209,25 @@ open class EOGConceptPass(ctx: TranslationContext) :
     ): NodeToOverlayStateElement {
         val lattice = lattice as? NodeToOverlayState ?: return currentState
         val currentNode = currentEdge.end
+        return overlayStateForNode(lattice, currentState, currentNode)
+    }
+
+    /**
+     * Returns and modifies the (new) state which contains all [OverlayNode]s that should be added
+     * for the given [currentNode]. This is done by calling the [handleNode] method and filtering
+     * the result based on the current state.
+     */
+    private fun overlayStateForNode(
+        lattice: NodeToOverlayState,
+        currentState: NodeToOverlayStateElement,
+        currentNode: Node,
+    ): NodeToOverlayStateElement {
         val addedOverlays = handleNode(lattice, currentState, currentNode).toSet()
 
         // This is some magic to filter out overlays that are already in the state (equal but not
         // identical) for the same Node. It also filters the nodes if they have already been created
         // by a previous iteration over the same code block. This happens if multiple EOG starters
-        // reach
-        // a certain piece of code (frequently happens with the code after catch clauses).
+        // reach a certain piece of code (frequently happens with the code after catch clauses).
         val filteredAddedOverlays =
             addedOverlays.filter { added ->
                 currentState[currentNode]?.none { existing -> added == existing } != false &&
@@ -221,19 +236,17 @@ open class EOGConceptPass(ctx: TranslationContext) :
                     }
             }
 
-        // If we do not add any new concepts, we can keep the state the same
-        if (filteredAddedOverlays.isEmpty()) {
-            return currentState
+        return if (filteredAddedOverlays.isEmpty()) {
+            currentState
+        } else {
+            lattice.lub(
+                currentState,
+                NodeToOverlayStateElement(
+                    currentNode to PowersetLattice.Element(*filteredAddedOverlays.toTypedArray())
+                ),
+                true,
+            )
         }
-
-        return lattice.lub(
-            currentState,
-            NodeToOverlayStateElement(
-                currentNode to
-                    PowersetLattice.Element<OverlayNode>(*filteredAddedOverlays.toTypedArray())
-            ),
-            true,
-        )
     }
 
     companion object {
