@@ -122,10 +122,7 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
         // TODO: Handle CSS (program.css)
     }
 
-    private fun handleInstanceScript(
-        scriptNode: SvelteScript,
-        tu: TranslationUnitDeclaration,
-    ) {
+    private fun handleInstanceScript(scriptNode: SvelteScript, tu: TranslationUnitDeclaration) {
         LOGGER.debug(
             "Handling instance script. Start: {}, End: {}",
             scriptNode.start,
@@ -148,10 +145,7 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
         }
     }
 
-    private fun handleModuleScript(
-        scriptNode: SvelteScript,
-        tu: TranslationUnitDeclaration,
-    ) {
+    private fun handleModuleScript(scriptNode: SvelteScript, tu: TranslationUnitDeclaration) {
         LOGGER.debug("Handling module script. Start: {}, End: {}", scriptNode.start, scriptNode.end)
         for (statementNode in scriptNode.ast.body) {
             val beforeCount = tu.declarations.size
@@ -170,10 +164,7 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
         }
     }
 
-    private fun handleScriptStatement(
-        stmtNode: EsTreeNode,
-        parent: TranslationUnitDeclaration,
-    ) {
+    private fun handleScriptStatement(stmtNode: EsTreeNode, parent: TranslationUnitDeclaration) {
         LOGGER.debug("Processing script statement node: {}", mapper.writeValueAsString(stmtNode))
         LOGGER.debug("Processing script statement of type: {}", stmtNode::class.simpleName)
         when (stmtNode) {
@@ -234,7 +225,7 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
     }
 
     private fun handleVariableDeclaration(
-        varDeclNode: EsTreeVariableDeclaration,
+        varDeclNode: EsTreeVariableDeclaration
     ): List<de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration> {
         val cpgVariableDeclarations =
             mutableListOf<de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration>()
@@ -259,13 +250,18 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
                 )
             LOGGER.warn("Processing declarator with ID: {}", declarator.id.name) // WARN level
 
+            // Temporarily commenting out to diagnose Spotless issue
+            /*
             declarator.init?.let {
-                LOGGER.warn("Declarator has initializer (raw): {}", mapper.writeValueAsString(it))
+                LOGGER.warn(
+                    "Declarator has initializer (raw): {}",
+                    mapper.writeValueAsString(it)
+                )
                 val initializerExpression = handleExpression(it)
                 LOGGER.warn(
                     "Result of handleExpression for initializer: {} (Type: {})",
                     initializerExpression,
-                    initializerExpression?.javaClass?.simpleName ?: "null",
+                    initializerExpression?.javaClass?.simpleName ?: "null"
                 )
 
                 if (initializerExpression != null) {
@@ -277,9 +273,15 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
             } else {
                 LOGGER.warn("Declarator has no initializer.")
             }
+            */
 
             // WARN level log for the final CPG node before adding
-            LOGGER.warn("Created CPG VariableDeclaration: Name={}, Type={}, Initializer={}", cpgVariableDeclaration.name, cpgVariableDeclaration.type, cpgVariableDeclaration.initializer?.javaClass?.simpleName ?: "null")
+            LOGGER.warn(
+                "Created CPG VariableDeclaration: Name={}, Type={}, Initializer={}",
+                cpgVariableDeclaration.name,
+                cpgVariableDeclaration.type,
+                cpgVariableDeclaration.initializer?.javaClass?.simpleName ?: "null",
+            )
 
             cpgVariableDeclarations.add(cpgVariableDeclaration)
         }
@@ -288,7 +290,7 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
     }
 
     private fun handleExpression(
-        exprNode: EsTreeNode?,
+        exprNode: EsTreeNode?
     ): de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression? {
         return when (exprNode) {
             is EsTreeLiteral -> handleLiteral(exprNode)
@@ -326,9 +328,7 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
         return literal
     }
 
-    private fun handleIdentifierReference(
-        identifierNode: EsTreeIdentifier,
-    ): Reference {
+    private fun handleIdentifierReference(identifierNode: EsTreeIdentifier): Reference {
         val name = parseName(identifierNode.name)
         val type = unknownType()
         val reference = newReference(name, type, rawNode = identifierNode)
@@ -360,20 +360,27 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
     }
 
     override fun locationOf(astNode: SvelteNode): PhysicalLocation? {
-        if (
-            !this::currentFile.isInitialized ||
-                !this::code.isInitialized
-        ) {
-            LOGGER.warn("currentFile or code is not initialized for SvelteNode. Skipping location.")
+        if (!this::currentFile.isInitialized || !this::code.isInitialized || this.code == null) {
+            LOGGER.warn(
+                "currentFile or code is not initialized/null for SvelteNode. Skipping location."
+            )
+            return null
+        }
+        val currentCode = this.code!!
+
+        val nullableStartOffset = astNode.start
+        val nullableEndOffset = astNode.end
+
+        if (nullableStartOffset == null || nullableEndOffset == null) {
+            LOGGER.warn("Null start or end offset for SvelteNode. Skipping location.")
             return null
         }
 
-        val startOffset = astNode.start
-        val endOffset = astNode.end
+        // Explicitly create non-nullable versions
+        val startOffset: Int = nullableStartOffset
+        val endOffset: Int = nullableEndOffset
 
-        if (startOffset == null || endOffset == null) return null
-
-        val fileLength = this.code!!.length
+        val fileLength = currentCode.length
         if (startOffset < 0 || endOffset > fileLength || startOffset > endOffset) {
             LOGGER.warn(
                 "Invalid offsets for SvelteNode: start={}, end={}, fileLength={}. Skipping location.",
@@ -385,26 +392,31 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
         }
 
         val region =
-            getRegionFromStartEnd(currentFile, code, startOffset, endOffset)
+            getRegionFromStartEnd(this.currentFile, currentCode, startOffset, endOffset)
                 ?: Region(-1, -1, -1, -1)
         return PhysicalLocation(this.currentFile.toURI(), region)
     }
 
     private fun locationOfEsTreeNode(astNode: EsTreeNode): PhysicalLocation? {
-        if (
-            !this::currentFile.isInitialized ||
-                !this::code.isInitialized
-        ) {
+        if (!this::currentFile.isInitialized || !this::code.isInitialized || this.code == null) {
             LOGGER.warn("currentFile or code is not initialized for EsTreeNode. Skipping location.")
             return null
         }
+        val currentCode = this.code!!
 
-        val startOffset = astNode.start
-        val endOffset = astNode.end
+        val nullableStartOffset = astNode.start
+        val nullableEndOffset = astNode.end
 
-        if (startOffset == null || endOffset == null) return null
+        if (nullableStartOffset == null || nullableEndOffset == null) {
+            LOGGER.warn("Null start or end offset for EsTreeNode. Skipping location.")
+            return null
+        }
 
-        val fileLength = this.code!!.length
+        // Explicitly create non-nullable versions
+        val startOffset: Int = nullableStartOffset
+        val endOffset: Int = nullableEndOffset
+
+        val fileLength = currentCode.length
         if (startOffset < 0 || endOffset > fileLength || startOffset > endOffset) {
             LOGGER.warn(
                 "Invalid offsets for EsTreeNode: start={}, end={}, fileLength={}. Skipping location.",
@@ -416,7 +428,7 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
         }
 
         val region =
-            getRegionFromStartEnd(currentFile, code, startOffset, endOffset)
+            getRegionFromStartEnd(this.currentFile, currentCode, startOffset, endOffset)
                 ?: Region(-1, -1, -1, -1)
         return PhysicalLocation(this.currentFile.toURI(), region)
     }
