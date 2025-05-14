@@ -267,7 +267,7 @@ class FileConceptTest : BaseTest() {
             }
         assertNotNull(fileSetFMask)
         assertEquals(fileWrite.file, fileSetFMask.file)
-        val fileWriteEOG = fileWrite.collectAllNextEOGPaths(true).flatten().toSet()
+        val fileWriteEOG = fileWrite.collectAllNextEOGPaths(true).map { it.nodes }.flatten().toSet()
         assertTrue(fileSetFMask in fileWriteEOG)
 
         assertEquals(1, result.allChildrenWithOverlays<File>().size)
