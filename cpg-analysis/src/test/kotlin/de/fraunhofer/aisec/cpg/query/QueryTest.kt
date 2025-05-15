@@ -458,7 +458,9 @@ class QueryTest {
                                     node is NewArrayExpression
                                 }
                                 .fulfilled
-                                .map { it2 -> (it2.last() as NewArrayExpression).dimensions[0] }
+                                .map { it2 ->
+                                    (it2.nodes.last() as NewArrayExpression).dimensions[0]
+                                }
                         ) && min(it.subscriptExpression) > 0
                 }
             )
@@ -474,7 +476,9 @@ class QueryTest {
                                     node is NewArrayExpression
                                 }
                                 .fulfilled
-                                .map { it2 -> (it2.last() as NewArrayExpression).dimensions[0] }
+                                .map { it2 ->
+                                    (it2.nodes.last() as NewArrayExpression).dimensions[0]
+                                }
                         )) and (min(it.subscriptExpression) ge 0)
                 }
             )

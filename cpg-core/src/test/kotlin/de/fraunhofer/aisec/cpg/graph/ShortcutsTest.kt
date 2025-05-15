@@ -332,7 +332,7 @@ class ShortcutsTest {
         assertEquals(1, paramPassed2.fulfilled.size)
         assertEquals(0, paramPassed2.failed.size)
 
-        val lastFulfilled2 = paramPassed2.fulfilled[0].last()
+        val lastFulfilled2 = paramPassed2.fulfilled[0].nodes.last()
         assertIs<Literal<*>>(lastFulfilled2)
         assertLiteralValue(5, lastFulfilled2)
 
@@ -353,7 +353,7 @@ class ShortcutsTest {
         assertEquals(1, paramPassed.fulfilled.size)
         assertEquals(0, paramPassed.failed.size)
 
-        val lastFulfilled = paramPassed.fulfilled[0].last()
+        val lastFulfilled = paramPassed.fulfilled[0].nodes.last()
         assertIs<Literal<*>>(lastFulfilled)
         assertLiteralValue(3, lastFulfilled)
     }
@@ -383,7 +383,7 @@ class ShortcutsTest {
             }
         assertEquals(1, paramPassed.fulfilled.size)
         assertEquals(0, paramPassed.failed.size)
-        val lastFulfilled = paramPassed.fulfilled[0].last()
+        val lastFulfilled = paramPassed.fulfilled[0].nodes.last()
         assertIs<Literal<*>>(lastFulfilled)
         assertLiteralValue(5, lastFulfilled) // It's the comparison
     }
@@ -458,7 +458,7 @@ class ShortcutsTest {
 
         val paramPassed = attrAssignment.followPrevFullDFG { it is Literal<*> }
         assertNotNull(paramPassed)
-        assertEquals(3, (paramPassed.last() as? Literal<*>)?.value)
+        assertEquals(3, (paramPassed.nodes.last() as? Literal<*>)?.value)
     }
 
     @Test

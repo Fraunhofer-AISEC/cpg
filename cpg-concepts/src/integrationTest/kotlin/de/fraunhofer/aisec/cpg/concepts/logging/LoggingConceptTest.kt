@@ -78,7 +78,7 @@ class LoggingConceptTest : BaseTest() {
             "Expected to find a dataflow from the literal \"WARN\" to a logging node.",
         )
 
-        val logOp = logDFG.fulfilled.lastOrNull()?.lastOrNull()
+        val logOp = logDFG.fulfilled.lastOrNull()?.nodes?.lastOrNull()
         assertIs<LogWrite>(logOp)
         assertEquals(LogLevel.WARN, logOp.logLevel)
 
