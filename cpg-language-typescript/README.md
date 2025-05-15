@@ -21,6 +21,7 @@ The behavior of the Deno parser (i.e., which language to parse) is controlled by
 ### 2. `SvelteLanguageFrontend.kt`
 -   **Handles**: `.svelte` files.
 -   **Mechanism**: Invokes the *same* unified Deno parser script (`parser.ts`) but with the `--language=svelte` flag. It receives a JSON AST (based on the structure output by `svelte.parse()`, which includes ESTree-compliant AST for `<script>` blocks). The `SvelteLanguageFrontend` then processes this Svelte-specific AST to construct the CPG, including handling the script content, HTML-like template, and style blocks.
+ESTree, is not a tool but a standard format for ASTs, specifically for JavaScript (ECMAScript). It defines a common structure and naming convention for the nodes in a JavaScript AST (e.g., how a function declaration, a variable, or an expression should be represented). Many JavaScript tools, parsers (like Acorn, Esprima), and even the TypeScript compiler (whose AST is very similar) adhere to or are compatible with the ESTree specification.
 
 This approach allows for a shared parsing infrastructure (the Deno script) while maintaining separate, specialized CPG construction logic within each Kotlin-based language frontend also located in this submodule. 
 
