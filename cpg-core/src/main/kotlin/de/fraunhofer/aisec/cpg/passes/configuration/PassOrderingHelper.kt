@@ -27,8 +27,6 @@ package de.fraunhofer.aisec.cpg.passes.configuration
 
 import de.fraunhofer.aisec.cpg.ConfigurationException
 import de.fraunhofer.aisec.cpg.passes.*
-import de.fraunhofer.aisec.cpg.passes.Pass
-import java.util.*
 import kotlin.reflect.KClass
 import kotlin.reflect.full.findAnnotations
 import org.slf4j.LoggerFactory
@@ -112,7 +110,7 @@ class PassOrderingHelper {
         for (pass in workingList) {
             pass.passClass.hardDependencies.forEach { pass.dependenciesRemaining += it }
             pass.passClass.softDependencies
-                .filter { workingList.map { it.passClass }.contains(it) }
+                .filter { softDep -> workingList.map { it.passClass }.contains(softDep) }
                 .forEach { pass.dependenciesRemaining += it }
         }
     }
@@ -125,11 +123,7 @@ class PassOrderingHelper {
      * * [ExecuteBefore] dependencies
      */
     private fun addToWorkingList(newElement: KClass<out Pass<*>>) {
-        if (
-            (workingList + firstPassesList + lastPassesList)
-                .filter { it.passClass == newElement }
-                .isNotEmpty()
-        ) {
+        if ((workingList + firstPassesList + lastPassesList).any { it.passClass == newElement }) {
             // we already know about this pass
             return
         }

@@ -29,6 +29,8 @@ import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.file.*
 import de.fraunhofer.aisec.cpg.passes.concepts.file.python.PythonFileConceptPass
+import de.fraunhofer.aisec.cpg.passes.concepts.file.python.PythonFileConceptPrePass
+import de.fraunhofer.aisec.cpg.passes.concepts.file.python.PythonFileJoinPass
 import de.fraunhofer.aisec.cpg.query.Must
 import de.fraunhofer.aisec.cpg.query.dataFlow
 import de.fraunhofer.aisec.cpg.query.executionPath
@@ -667,18 +669,33 @@ class FileConceptTest : BaseTest() {
             ) {
                 it.registerLanguage<PythonLanguage>()
                 it.registerPass<PythonFileConceptPass>()
-                // it.registerPass<PythonFileConceptPrePass>()
+                it.registerPass<PythonFileConceptPrePass>()
+                it.registerPass<PythonFileJoinPass>()
                 it.symbols(mapOf("PYTHON_PLATFORM" to "linux"))
             }
         assertNotNull(result)
 
-        val file = result.conceptNodes.filterIsInstance<File>().singleOrNull()
-        assertNotNull(file)
+        val file = result.conceptNodes.filterIsInstance<File>()
+        // assertEquals(2, file.size, "Expected to find 2 files. One for the tempfile and one for
+        // the normal file.")
 
-        assertEquals(
-            FileTempFileStatus.TEMP_OR_NOT_TEMP,
-            file.isTempFile,
-            "Expected the file to be marked as temp or not temp.",
+        val tempFile = file.singleOrNull { it.isTempFile == FileTempFileStatus.TEMP_FILE }
+        assertNotNull(tempFile)
+
+        val notTempFile = file.singleOrNull { it.isTempFile == FileTempFileStatus.NOT_A_TEMP_FILE }
+        assertNotNull(notTempFile)
+
+        val barLiteral = result.literals.singleOrNull { it.value is String && it.value == "bar" }
+        assertNotNull(barLiteral)
+
+        assertTrue(
+            dataFlow(startNode = barLiteral, predicate = { it === tempFile }).value,
+            "Expected to find a dataflow from the literal \"bar\" to the temp file.",
+        )
+
+        assertTrue(
+            dataFlow(startNode = barLiteral, predicate = { it === notTempFile }).value,
+            "Expected to find a dataflow from the literal \"bar\" to the non-temp file.",
         )
     }
 }

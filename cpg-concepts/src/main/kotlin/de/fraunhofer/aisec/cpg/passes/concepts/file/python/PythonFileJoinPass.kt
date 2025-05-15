@@ -28,9 +28,9 @@ package de.fraunhofer.aisec.cpg.passes.concepts.file.python
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.concepts.file.File
-import de.fraunhofer.aisec.cpg.graph.concepts.file.FileTempFileStatus
 import de.fraunhofer.aisec.cpg.graph.concepts.file.newFile
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.passes.DFGPass
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
@@ -40,7 +40,6 @@ import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLate
 import de.fraunhofer.aisec.cpg.passes.reconstructedImportName
-import java.util.*
 
 /**
  * TODO
@@ -51,9 +50,9 @@ import java.util.*
 @ExecuteLate
 @DependsOn(DFGPass::class, false)
 @DependsOn(EvaluationOrderGraphPass::class, false)
-@ExecuteBefore(PythonFileJoinPass::class, false)
+@DependsOn(PythonFileConceptPrePass::class, false)
 @ExecuteBefore(PythonFileConceptPass::class, false)
-class PythonFileConceptPrePass(ctx: TranslationContext) : EOGConceptPass(ctx) {
+class PythonFileJoinPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
     override fun handleCallExpression(
         state: NodeToOverlayStateElement,
         callExpression: CallExpression,
@@ -65,8 +64,8 @@ class PythonFileConceptPrePass(ctx: TranslationContext) : EOGConceptPass(ctx) {
         }
 
         return when (callExpression.callee.name.toString()) {
-            "tempfile.gettempdir" -> {
-                handleGetTempDir(callExpression)
+            "os.path.join" -> {
+                handlePathJoin(callExpression)
             }
             else -> {
                 emptyList()
@@ -84,8 +83,8 @@ class PythonFileConceptPrePass(ctx: TranslationContext) : EOGConceptPass(ctx) {
             return emptyList()
         }
         return when (callExpression.reconstructedImportName.toString()) {
-            "tempfile.gettempdir" -> {
-                handleGetTempDir(callExpression)
+            "os.path.join" -> {
+                handlePathJoin(callExpression)
             }
             else -> {
                 emptyList()
@@ -93,14 +92,28 @@ class PythonFileConceptPrePass(ctx: TranslationContext) : EOGConceptPass(ctx) {
         }
     }
 
-    private fun handleGetTempDir(callExpression: CallExpression): Collection<OverlayNode> {
+    private fun handlePathJoin(callExpression: CallExpression): Collection<OverlayNode> {
+        val combinedFileName = mutableListOf<String>()
+        callExpression.arguments.forEach { argument ->
+            if (argument.overlays.any { it is File }) {
+                combinedFileName +=
+                    argument.overlays.filterIsInstance<File>().joinToString { it.fileName }
+                argument.overlays.filterIsInstance<File>().forEach { file ->
+                    file.disconnectFromGraph()
+                }
+            } else if (argument is Literal<*>) {
+                combinedFileName += argument.value.toString()
+            } else {
+                // TODO()
+            }
+        }
+
         return listOf(
             newFile(
-                    underlyingNode = callExpression,
-                    fileName = "tempfile.gettempdir()" + UUID.randomUUID().toString(),
-                    connect = false,
-                )
-                .apply { this.isTempFile = FileTempFileStatus.TEMP_FILE }
+                underlyingNode = callExpression,
+                fileName = combinedFileName.joinToString("/"),
+                connect = false,
+            )
         )
     }
 }
