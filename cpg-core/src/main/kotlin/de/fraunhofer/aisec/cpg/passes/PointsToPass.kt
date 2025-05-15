@@ -527,7 +527,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                     },
                                 )
                                 .fulfilled
-                                .map { it.last() }
+                                .map { it.nodes.last() }
                                 .forEach { sourceParamValue ->
                                     val matchingDeclarations =
                                         node.parameters.filter {
