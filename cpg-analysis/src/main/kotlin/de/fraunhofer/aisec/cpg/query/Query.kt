@@ -46,8 +46,7 @@ inline fun <reified T> Node.allExtended(
     noinline sel: ((T) -> Boolean)? = null,
     noinline mustSatisfy: (T) -> QueryTree<Boolean>,
 ): QueryTree<Boolean> {
-    val queryChildren = evaluateExtended(sel, mustSatisfy)
-    return QueryTree(queryChildren.all { it.value }, queryChildren.toMutableList(), "all", this)
+    return evaluateExtended(sel, mustSatisfy).mergeWithAll(node = this)
 }
 
 /**
@@ -102,8 +101,7 @@ inline fun <reified T> Node.existsExtended(
     noinline sel: ((T) -> Boolean)? = null,
     noinline mustSatisfy: (T) -> QueryTree<Boolean>,
 ): QueryTree<Boolean> {
-    val queryChildren = evaluateExtended(sel, mustSatisfy)
-    return QueryTree(queryChildren.any { it.value }, queryChildren.toMutableList(), "exists", this)
+    return evaluateExtended(sel, mustSatisfy).mergeWithAny(node = this)
 }
 
 /**
