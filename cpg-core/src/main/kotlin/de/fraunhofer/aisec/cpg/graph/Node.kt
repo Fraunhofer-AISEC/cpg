@@ -202,6 +202,17 @@ abstract class Node() :
             return prevDFGEdges.filter { it.functionSummary }.map { it.start }
         }
 
+    /** Virtual property for accessing [prevDFGEdges] that are [currentDerefValue]-edges. */
+    val currentDerefValues: List<Node>
+        get() {
+            return prevDFGEdges
+                .filter {
+                    (it.granularity as? PointerDataflowGranularity)?.pointerTarget?.name ==
+                        "currentDerefValue"
+                }
+                .map { it.start }
+        }
+
     /** Outgoing data flow edges */
     @PopulatedByPass(DFGPass::class, PointsToPass::class)
     @Relationship(value = "DFG", direction = Relationship.Direction.OUTGOING)
