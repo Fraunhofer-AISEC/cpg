@@ -370,18 +370,47 @@ class SinglePathResult(
 
 class QueryException(override val message: String) : Exception(message)
 
-/** Merges a List<QueryTree<Boolean>> into a single QueryTree<Boolean> */
-fun List<QueryTree<Boolean>>.toQueryTree(
+/**
+ * Merges a `List<QueryTree<Boolean>>` into a single `QueryTree<Boolean>`. The [QueryTree.value] is
+ * `true` if all elements have value `true`.
+ */
+fun List<QueryTree<Boolean>>.mergeWithAll(
     node: Node? = null,
-    stringRepresentation: String = "",
     assumptions: MutableSet<Assumption> = mutableSetOf(),
 ): QueryTree<Boolean> {
     val value = this.all { it.value }
-    val children = this.toMutableList<QueryTree<*>>()
-    return QueryTree<Boolean>(
+    return QueryTree(
         value = value,
-        children = children,
-        stringRepresentation = stringRepresentation,
+        children = this.toMutableList(),
+        stringRepresentation =
+            if (value) {
+                "All elements has value true"
+            } else {
+                "At least one of the elements has false"
+            },
+        node = node,
+        assumptions = assumptions,
+    )
+}
+
+/**
+ * Merges a `List<QueryTree<Boolean>>` into a single `QueryTree<Boolean>`. The [QueryTree.value] is
+ * `true` if at least one element has value `true`.
+ */
+fun List<QueryTree<Boolean>>.mergeWithAny(
+    node: Node? = null,
+    assumptions: MutableSet<Assumption> = mutableSetOf(),
+): QueryTree<Boolean> {
+    val value = this.any { it.value }
+    return QueryTree(
+        value = value,
+        children = this.toMutableList(),
+        stringRepresentation =
+            if (value) {
+                "At least one of the elements has value true"
+            } else {
+                "All elements have value false"
+            },
         node = node,
         assumptions = assumptions,
     )
