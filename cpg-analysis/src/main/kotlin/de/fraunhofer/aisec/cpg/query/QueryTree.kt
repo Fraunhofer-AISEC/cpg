@@ -369,3 +369,20 @@ class SinglePathResult(
 ) : QueryTree<Boolean>(value, children, stringRepresentation, node)
 
 class QueryException(override val message: String) : Exception(message)
+
+/** Merges a List<QueryTree<Boolean>> into a single QueryTree<Boolean> */
+fun List<QueryTree<Boolean>>.toQueryTree(
+    node: Node? = null,
+    stringRepresentation: String = "",
+    assumptions: MutableSet<Assumption> = mutableSetOf(),
+): QueryTree<Boolean> {
+    val value = this.all { it.value }
+    val children = this.toMutableList<QueryTree<*>>()
+    return QueryTree<Boolean>(
+        value = value,
+        children = children,
+        stringRepresentation = stringRepresentation,
+        node = node,
+        assumptions = assumptions,
+    )
+}
