@@ -582,7 +582,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     ),
             )
 
-        println("+++$currentNode")
         doubleState =
             when (currentNode) {
                 is Declaration,
@@ -1755,6 +1754,11 @@ data class fetchElementFromDeclarationStateEntry(
     val lastWrites: IdentitySet<Pair<Node, EqualLinkedHashSet<Any>>>,
 )
 
+/** Fetch the entry for `node` from the GeneralState */
+fun PointsToStateElement.fetchElementFromGeneralState(node: Node): IdentitySet<Node> {
+    return this.generalState[node]?.second?.mapTo(IdentitySet()) { it.first } ?: identitySetOf()
+}
+
 /**
  * Fetch the entry for `addr` from the DeclarationState. If there isn't any, create an
  * UnknownMemoryValue
@@ -1970,17 +1974,13 @@ fun PointsToStateElement.getValues(node: Node): IdentitySet<Pair<Node, Boolean>>
             this.getAddresses(node.input).mapTo(IdentitySet()) { Pair(it, false) }
         }
         is PointerDereference -> {
-            /* To find the value for PointerDereferences, we first check what's the current value of the input, which is probably a MemoryAddress
+            /* To find the value for PointerDereferences, we first fetch the values form its input from the generalstate, which is probably a MemoryAddress
              * Then we look up the current value at this MemoryAddress
              */
-            val inputVal =
-                /*                        when (node.input) {
-                is Reference -> this.getValues(node.input)
-                else -> // TODO: How can we handle other cases?*/
-                this.getValues(node.input).map { it.first }
-            //                        }
+
+            val inputVals = this.fetchElementFromGeneralState(node.input)
             val retVal = identitySetOf<Pair<Node, Boolean>>()
-            inputVal.forEach { input ->
+            inputVals.forEach { input ->
                 retVal.addAll(
                     fetchElementFromDeclarationState(input, true).map { Pair(it.value, it.shortFS) }
                 )
