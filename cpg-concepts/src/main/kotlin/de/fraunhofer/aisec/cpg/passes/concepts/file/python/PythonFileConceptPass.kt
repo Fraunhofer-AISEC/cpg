@@ -27,12 +27,11 @@ package de.fraunhofer.aisec.cpg.passes.concepts.file.python
 
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
-import de.fraunhofer.aisec.cpg.graph.Component
-import de.fraunhofer.aisec.cpg.graph.OverlayNode
-import de.fraunhofer.aisec.cpg.graph.argumentValueByNameOrPosition
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.concepts.file.*
+import de.fraunhofer.aisec.cpg.graph.edges.get
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
@@ -373,8 +372,43 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
         lattice: NodeToOverlayState,
         state: NodeToOverlayStateElement,
     ): List<File> {
-        val fileName = getFileName(callExpression, argumentName) ?: TODO()
-        return handleInternal(fileName, callExpression, lattice, state)
+        val arg =
+            callExpression.argumentEdges[argumentName]?.end ?: callExpression.arguments.getOrNull(0)
+        if (arg == null) {
+            Util.errorWithFileLocation(
+                callExpression,
+                log,
+                "Failed to find the argument $argumentName in the call expression. Ignoring the entire `open` call.",
+            )
+            return emptyList()
+        }
+
+        val newPaths = arg.getOverlaysByPrevDFG<File>(state)
+        val oldPaths =
+            arg.followDFGEdgesUntilHit(
+                    collectFailedPaths = true,
+                    findAllPossiblePaths = true,
+                    direction = Backward(GraphToFollow.DFG),
+                ) {
+                    false
+                }
+                .failed
+                .map { it.second }
+
+        oldPaths.map { path ->
+            val existingFile =
+                path
+                    .firstOrNull { it.overlays.any { overlay -> overlay is File } }
+                    ?.overlays
+                    ?.filterIsInstance<File>()
+                    ?.firstOrNull()
+        }
+
+        // val name = call.argumentValueByNameOrPosition<String>(name = argumentName, position = 0)
+        return TODO()
+
+        // val fileName = getFileName(callExpression, argumentName) ?: TODO()
+        // return handleInternal(fileName, callExpression, lattice, state)
     }
 
     private fun handleInternal(
@@ -462,23 +496,6 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
         stateElement: NodeToOverlayStateElement,
     ): List<File> {
         return expression.getOverlaysByPrevDFG<OpenFile>(stateElement).map { it.file }
-    }
-
-    /**
-     * Parses the name of the file used in a builtin-`open` call or `os.open` call. The name of the
-     * parameter depends on the open function but, it's the first parameter if a call without named
-     * arguments is analyzed.
-     *
-     * @param call The [CallExpression] (builtin-`open` or `os.open`) to be analyzed.
-     * @param argumentName The name of the argument to be used for the file name in the [call].
-     * @return The name or null if no name could be found.
-     */
-    private fun getFileName(
-        call: CallExpression,
-        argumentName: String,
-    ): ValueEvaluator.ResultWithPath<String>? {
-        val name = call.argumentValueByNameOrPosition<String>(name = argumentName, position = 0)
-        return name
     }
 
     /**

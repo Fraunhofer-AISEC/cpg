@@ -249,21 +249,10 @@ inline fun <reified T : OverlayNode> Node.getOverlaysByPrevDFG(
     stateElement: NodeToOverlayStateElement,
     crossinline predicate: (T) -> Boolean = { true },
 ): List<T> {
-    return this.followDFGEdgesUntilHit(
-            collectFailedPaths = false,
-            findAllPossiblePaths = false,
-            direction = Backward(GraphToFollow.DFG),
-        ) { node ->
-            // find all nodes on a prev DFG path which an overlay node matching the predicate
-            // either in the state, they are this node already or they have it in their
-            // overlays. We do these three things because nodes may be added to the DFG after
-            // running the pass (and are available only in the state) or they may have been
-            // added before (so they aren't in the state but connected by the DFG or the overlay
-            // edge).
-            stateElement[node]?.filterIsInstance<T>()?.any(predicate) == true ||
-                node is T && predicate(node) ||
-                node.overlays.filterIsInstance<T>().any(predicate)
-        }
+    return this.followPrevDFGAndCollectStateAndOverlaysToo(
+            stateElement = stateElement,
+            predicate = predicate,
+        )
         .fulfilled
         // The last nodes on the path are the ones we are interested in.
         .map { it.last() }
@@ -272,6 +261,29 @@ inline fun <reified T : OverlayNode> Node.getOverlaysByPrevDFG(
             stateElement[it] ?: setOf(it, *it.overlays.toTypedArray())
         }
         .filterIsInstance<T>() // discard not-relevant overlays
+}
+
+/** TODO: document this */
+inline fun <reified T : OverlayNode> Node.followPrevDFGAndCollectStateAndOverlaysToo(
+    stateElement: NodeToOverlayStateElement,
+    collectFailedPaths: Boolean = false,
+    crossinline predicate: (T) -> Boolean,
+): FulfilledAndFailedPaths {
+    return this.followDFGEdgesUntilHit(
+        collectFailedPaths = collectFailedPaths,
+        findAllPossiblePaths = false,
+        direction = Backward(GraphToFollow.DFG),
+    ) { node ->
+        // find all nodes on a prev DFG path which an overlay node matching the predicate
+        // either in the state, they are this node already or they have it in their
+        // overlays. We do these three things because nodes may be added to the DFG after
+        // running the pass (and are available only in the state) or they may have been
+        // added before (so they aren't in the state but connected by the DFG or the overlay
+        // edge).
+        stateElement[node]?.filterIsInstance<T>()?.any(predicate) == true ||
+            node is T && predicate(node) ||
+            node.overlays.filterIsInstance<T>().any(predicate)
+    }
 }
 
 /**
