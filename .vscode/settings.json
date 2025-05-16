@@ -1,0 +1,4 @@
+{
+    "java.validate.enable": false,
+    "java.errors.incompleteClasspath.severity": "ignore"
+}
