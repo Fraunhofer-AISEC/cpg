@@ -1,95 +1,46 @@
-# Environment Setup for Developing the Project
 
-This document outlines the steps and tools required to set up a development environment for the Kotlin + Gradle multi-module project, using Cursor as the primary editor.
+# Environment Setup for Kotlin + Gradle Development in Cursor
 
----
-
-## 1. Required Tools and Installations
-
-### Homebrew (macOS)
-
-Install Homebrew if not already installed:
-
-```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-```
-
-### Kotlin CLI
-
-Install the Kotlin compiler via Homebrew:
-
-```bash
-brew install kotlin
-```
-
-Verify installation:
-
-```bash
-kotlin -version
-```
-
-### Gradle CLI
-
-Install Gradle via Homebrew:
-
-```bash
-brew install gradle
-```
-
-Verify installation:
-
-```bash
-gradle -v
-```
+This guide outlines the recommended environment setup to develop Kotlin and Gradle projects using Cursor (a VSCode-based editor).
 
 ---
 
-## 2. Recommended VS Code / Cursor Extensions
+## 🧰 Tooling Setup (macOS)
 
-| Extension Name                   | Purpose                                  |
-| -------------------------------- | ---------------------------------------- |
-| `Kotlin` (by JetBrains)          | Kotlin language support and IntelliSense |
-| `Kotlin Formatter`               | Formatting support for Kotlin            |
-| `Gradle for Java` (by Microsoft) | Support for Gradle tasks and navigation  |
-
-**Do Not Install:**
-
-* `Language Support for Java(TM) by Red Hat` – causes false positive linter errors in mixed Kotlin/Java projects. Disable or uninstall it if already installed.
-
----
-
-## 3. Project Structure Expectations
-
-Ensure each module follows the standard structure:
-
-```
-module-root/
-├── build.gradle.kts
-├── src/
-│   └── main/kotlin/com/your/package/...kt
-│   └── test/kotlin/com/your/package/...kt
+### 1. Install Kotlin & Gradle (via Homebrew)
+```bash
+brew install kotlin gradle
 ```
 
-If the module is part of a larger multi-module project, ensure it is included in `settings.gradle.kts` at the root level.
+This provides access to `kotlin` and `gradle` commands in the terminal.
 
----
-
-## 4. Gradle Build
-
-To build the project:
-
+### 2. Enable Project Build
+You should be able to build the project via:
 ```bash
 ./gradlew build
 ```
 
-This compiles the entire multi-module project and ensures the Kotlin Language Server picks up correct classpaths and types.
+This ensures Gradle is bootstrapped using the wrapper bundled with the project.
 
 ---
 
-## 5. Editor Configuration
+## ⚙️ Recommended Cursor Extensions
+Install the **"Kotlin on VSCode" extension pack by Seth Jones** which includes:
 
-Optionally, disable Java validation in `.vscode/settings.json` (recommended for consistency across teams):
+- ✅ `Kotlin Formatter` by **cstef** (used for `.kt` and `.kts` formatting)
+- ✅ `Gradle Language Support` by **Naco Siren** (for `build.gradle.kts` syntax and completions)
+- ✅ `Kotlin Language` by **mathiasfrohlich`** (basic syntax support)
 
+> ❌ Disabled: `Kotlin` by **fwcd** — caused excessive memory usage due to the Kotlin Language Server (KLS).
+> ❌ Disabled: `ktfmt` — unnecessary heavy formatter running via Java.
+> ❌ Removed: `Code Runner` — not used and can spawn redundant JVM instances.
+
+---
+
+## 🧠 Memory Optimization
+To prevent Java-based extensions (like the Kotlin Language Server) from slowing down your system:
+
+### 1. Disable Language Server in `.vscode/settings.json`
 ```json
 {
   "java.validate.enable": false,
@@ -97,20 +48,26 @@ Optionally, disable Java validation in `.vscode/settings.json` (recommended for 
 }
 ```
 
-Add this to the root project's `.vscode/` folder if needed.
+> ✅ It's safe to completely remove `kotlin.languageServer.jvmArgs` if you're no longer using the fwcd Kotlin extension.
+> ✅ Also remove `ktfmt.path-to-jar` if not using ktfmt.
+
+### 2. Monitor Activity Monitor
+Check for multiple `java` processes in Activity Monitor. If they persist after closing Cursor:
+- Kill them manually
+- Or reboot to clean up stuck background servers
 
 ---
 
-## 6. Kotlin Language Server
-
-The `Kotlin` extension from JetBrains automatically starts the Kotlin Language Server. No manual installation or setup is required.
+## 🧪 Troubleshooting
+- To detect actual Kotlin compile-time errors: use `./gradlew build`
+- The linter in Cursor may **not** show all semantic/compile errors unless a full compile is run.
 
 ---
 
-## 7. Summary
+## 📁 Project Structure Notes
+- Your subproject should contain its own `build.gradle.kts` using shared Gradle conventions.
+- Place this `environment.md` file under `docs/` folder for future reference.
 
-* ✅ Kotlin and Gradle should be installed via Homebrew.
-* ✅ Use the `Kotlin` and `Gradle for Java` extensions in Cursor.
-* ❌ Avoid using the Red Hat Java extension.
-* ✅ Ensure project compiles via `./gradlew build`.
-* ✅ Use optional `.vscode/settings.json` to suppress Java linting errors.
+---
+
+Feel free to update this doc as your dev workflow evolves.
