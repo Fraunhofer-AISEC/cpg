@@ -26,6 +26,8 @@
 package de.fraunhofer.aisec.cpg.concepts
 
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
+import de.fraunhofer.aisec.cpg.graph.Backward
+import de.fraunhofer.aisec.cpg.graph.GraphToFollow
 import de.fraunhofer.aisec.cpg.graph.concepts.policy.Boundary
 import de.fraunhofer.aisec.cpg.graph.concepts.policy.CheckAccess
 import de.fraunhofer.aisec.cpg.graph.concepts.policy.Context
@@ -33,20 +35,27 @@ import de.fraunhofer.aisec.cpg.graph.concepts.policy.Principal
 import de.fraunhofer.aisec.cpg.graph.concepts.policy.ProtectedAsset
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.followPrevCDGUntilHit
 import de.fraunhofer.aisec.cpg.graph.returns
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
+import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.passes.ControlDependenceGraphPass
 import de.fraunhofer.aisec.cpg.passes.concepts.TagOverlaysPass
 import de.fraunhofer.aisec.cpg.passes.concepts.each
 import de.fraunhofer.aisec.cpg.passes.concepts.getOverlaysByPrevDFG
 import de.fraunhofer.aisec.cpg.passes.concepts.tag
 import de.fraunhofer.aisec.cpg.passes.concepts.with
+import de.fraunhofer.aisec.cpg.query.QueryTree
+import de.fraunhofer.aisec.cpg.query.allExtended
+import de.fraunhofer.aisec.cpg.query.dataFlow
 import de.fraunhofer.aisec.cpg.test.analyze
 import kotlin.io.path.Path
 import kotlin.io.resolve
 import kotlin.test.Test
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 class PolicyTest {
     @Test
@@ -56,6 +65,7 @@ class PolicyTest {
             analyze(listOf(topLevel.resolve("policy.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
                 it.registerPass<TagOverlaysPass>()
+                it.registerPass<ControlDependenceGraphPass>()
                 it.configurePass<TagOverlaysPass>(
                     TagOverlaysPass.Configuration(
                         tag =
@@ -86,21 +96,55 @@ class PolicyTest {
                                         lhs?.getOverlaysByPrevDFG<Context>(state)?.singleOrNull()
                                     val principal =
                                         rhs?.getOverlaysByPrevDFG<Principal>(state)?.singleOrNull()
-                                    val returns = condition.returns
+                                    val thenReturns = node.thenStatement.returns
                                     val protectedAsset =
-                                        returns
+                                        thenReturns
                                             .mapNotNull { it.returnValue }
                                             .flatMap {
                                                 it.getOverlaysByPrevDFG<ProtectedAsset>(state)
                                             }
-                                            .singleOrNull()
-
-                                    CheckAccess(underlyingNode = condition, asset = protectedAsset)
+                                            .single()
+                                    if (context != null && principal != null) {
+                                        CheckAccess(
+                                            underlyingNode = condition,
+                                            asset = protectedAsset,
+                                        )
+                                    } else {
+                                        CheckAccess(null, ProtectedAsset(null, null))
+                                    }
                                 }
                             }
                     )
                 )
             }
         assertNotNull(result)
+        val q =
+            result.allExtended<ReturnStatement>(
+                sel = {
+                    it.returnValue?.let { returnValue ->
+                        dataFlow(
+                                startNode = returnValue,
+                                direction = Backward(GraphToFollow.DFG),
+                                predicate = { node ->
+                                    node.overlays.filterIsInstance<ProtectedAsset>().isNotEmpty()
+                                },
+                            )
+                            .value
+                    } == true
+                },
+                mustSatisfy = {
+                    val paths =
+                        it.followPrevCDGUntilHit(
+                            predicate = { node ->
+                                (node as? IfStatement)
+                                    ?.overlays
+                                    ?.filterIsInstance<CheckAccess>()
+                                    ?.isNotEmpty() ?: false
+                            }
+                        )
+                    QueryTree<Boolean>(paths.failed.isEmpty())
+                },
+            )
+        assertTrue(q.value)
     }
 }

@@ -35,7 +35,7 @@ class ProtectedAsset(underlyingNode: Node? = null, scope: Scope?) : Concept(unde
 class ProtectedAssetOperation(underlyingNode: Node? = null, asset: ProtectedAsset) :
     Operation(underlyingNode, asset)
 
-class CheckAccess(underlyingNode: Node?, asset: ProtectedAsset?) : Operation(underlyingNode, asset)
+class CheckAccess(underlyingNode: Node?, asset: ProtectedAsset) : Operation(underlyingNode, asset)
 
 open class Predicate()
 
