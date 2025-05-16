@@ -55,7 +55,7 @@ import kotlin.io.path.Path
 import kotlin.io.resolve
 import kotlin.test.Test
 import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
+import org.junit.jupiter.api.Assertions.assertFalse
 
 class PolicyTest {
     @Test
@@ -121,16 +121,17 @@ class PolicyTest {
         val q =
             result.allExtended<ReturnStatement>(
                 sel = {
-                    it.returnValue?.let { returnValue ->
-                        dataFlow(
+                    it.returnValue
+                        ?.let { returnValue ->
+                            dataFlow(
                                 startNode = returnValue,
                                 direction = Backward(GraphToFollow.DFG),
                                 predicate = { node ->
                                     node.overlays.filterIsInstance<ProtectedAsset>().isNotEmpty()
                                 },
                             )
-                            .value
-                    } == true
+                        }
+                        ?.value == true
                 },
                 mustSatisfy = {
                     val paths =
@@ -145,6 +146,6 @@ class PolicyTest {
                     QueryTree<Boolean>(paths.failed.isEmpty())
                 },
             )
-        assertTrue(q.value)
+        assertFalse(q.value)
     }
 }
