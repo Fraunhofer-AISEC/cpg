@@ -89,19 +89,13 @@ class PolicyTest {
                                     val returns = condition.returns
                                     val protectedAsset =
                                         returns
-                                            .map { r ->
-                                                r.returnValue?.getOverlaysByPrevDFG<ProtectedAsset>(
-                                                    state
-                                                )
+                                            .mapNotNull { it.returnValue }
+                                            .flatMap {
+                                                it.getOverlaysByPrevDFG<ProtectedAsset>(state)
                                             }
                                             .singleOrNull()
-                                    CheckAccess(
-                                        underlyingNode = condition,
-                                        asset = protectedAsset?.first(),
-                                    )
-                                    //                                    if (context != null &&
-                                    // principal != null && protectedAsset != null) {
-                                    //                                    }
+
+                                    CheckAccess(underlyingNode = condition, asset = protectedAsset)
                                 }
                             }
                     )
