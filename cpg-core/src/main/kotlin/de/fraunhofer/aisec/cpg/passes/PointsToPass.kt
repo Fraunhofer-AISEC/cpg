@@ -440,7 +440,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
             indexes.forEach { (index, dstValueDepth) ->
                 val stateEntries =
-                    doubleState.fetchElementFromDeclarationState(index, true, true).filterTo(
+                    doubleState.fetchValueFromDeclarationState(index, true, true).filterTo(
                         identitySetOf()
                     ) {
                         it.value.name != param.name
@@ -1427,15 +1427,15 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         // Let's see if we can deref once more
                         val derefValues =
                             doubleState
-                                .fetchElementFromDeclarationState(
-                                    addr = value,
+                                .fetchValueFromDeclarationState(
+                                    node = value,
                                     excludeShortFSValues = true,
                                 )
                                 .map { it.value }
                                 .forEach { derefValue ->
                                     if (doubleState.hasDeclarationStateEntry(derefValue)) {
                                         doubleState
-                                            .fetchElementFromDeclarationState(derefValue)
+                                            .fetchValueFromDeclarationState(derefValue)
                                             .forEach { (derefDerefValue, _, _) ->
                                                 doubleState
                                                     .getLastWrites(derefValue)
@@ -1494,6 +1494,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         currentNode: Node,
         doubleState: PointsToStateElement,
     ): PointsToStateElement {
+        var doubleState = doubleState
         /* No need to set the address, this already happens in the constructor */
         val addresses = doubleState.getAddresses(currentNode, currentNode)
 
@@ -1501,15 +1502,27 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
         (currentNode as? HasInitializer)?.initializer?.let { initializer ->
             if (initializer is Literal<*>) values.add(Pair(initializer, equalLinkedHashSetOf()))
-            else
+            else {
+                // The EOG of Declarations does not play in our favor: We will handle the
+                // Declaration before we handled the initializer. So we explicitly handle the
+                // initializer before continuing
+                var ini = initializer
+                while (ini is CastExpression) ini = ini.expression
+                doubleState =
+                    when (ini) {
+                        is PointerReference -> handleExpression(lattice, ini.input, doubleState)
+                        is PointerDereference -> handleExpression(lattice, ini.input, doubleState)
+                        else -> handleExpression(lattice, ini, doubleState)
+                    }
                 values.addAll(
-                    doubleState.getValues(initializer, initializer).mapTo(IdentitySet()) {
+                    doubleState.getValues(ini, ini).mapTo(IdentitySet()) {
                         Pair(it.first, equalLinkedHashSetOf())
                     }
                 )
+            }
         }
 
-        var doubleState =
+        doubleState =
             lattice.push(
                 doubleState,
                 currentNode,
@@ -1755,64 +1768,75 @@ data class fetchElementFromDeclarationStateEntry(
     val lastWrites: IdentitySet<Pair<Node, EqualLinkedHashSet<Any>>>,
 )
 
-/** Fetch the entry for `node` from the GeneralState */
+/** Fetch the address for `node` from the GeneralState */
+fun PointsToStateElement.fetchAddressFromGeneralState(node: Node): IdentitySet<Node> {
+    return this.generalState[node]?.first ?: identitySetOf()
+}
+
+/** Fetch the value for `node` from the GeneralState */
 fun PointsToStateElement.fetchValueFromGeneralState(
     node: Node
 ): IdentitySet<Pair<Node, EqualLinkedHashSet<Any>>> {
-    return this.generalState[node]?.second /*?.mapTo(IdentitySet()) { it.first }*/
-        ?: identitySetOf()
+    return this.generalState[node]?.second ?: identitySetOf()
+}
+
+/** Fetch the lastWrite for `node` from the GeneralState */
+fun PointsToStateElement.fetchLastWriteFromGeneralState(
+    node: Node
+): IdentitySet<Pair<Node, EqualLinkedHashSet<Any>>> {
+    return this.generalState[node]?.third ?: identitySetOf()
 }
 
 /**
- * Fetch the entry for `addr` from the DeclarationState. If there isn't any, create an
+ * Fetch the value entry for `node` from the DeclarationState. If there isn't any, create an
  * UnknownMemoryValue
  */
-fun PointsToStateElement.fetchElementFromDeclarationState(
-    addr: Node,
+fun PointsToStateElement.fetchValueFromDeclarationState(
+    node: Node,
     fetchFields: Boolean = false,
     excludeShortFSValues: Boolean = false,
 ): IdentitySet<fetchElementFromDeclarationStateEntry> {
     val ret = identitySetOf<fetchElementFromDeclarationStateEntry>()
 
     // For global nodes, we check the globalDerefs map
-    if (isGlobal(addr)) {
-        val element = globalDerefs[addr]
+    if (isGlobal(node)) {
+        val element = globalDerefs[node]
         if (element != null)
             element.map {
                 ret.add(fetchElementFromDeclarationStateEntry(it.first, false, "", identitySetOf()))
             }
         else {
-            val newName = getNodeName(addr)
+            val newName = getNodeName(node)
             val newEntry =
-                nodesCreatingUnknownValues.computeIfAbsent(Pair(addr, newName)) {
+                nodesCreatingUnknownValues.computeIfAbsent(Pair(node, newName)) {
                     UnknownMemoryValue(newName, true)
                 }
             // TODO: Check if the boolean should be true sometimes
-            globalDerefs[addr] = identitySetOf(Pair(newEntry, false))
+            globalDerefs[node] = identitySetOf(Pair(newEntry, false))
             ret.add(fetchElementFromDeclarationStateEntry(newEntry, false, "", identitySetOf()))
         }
     } else {
 
         // Otherwise, we read the declarationState.
         // Let's start with the main element
-        var elements = this.declarationsState[addr]?.second?.toList()
+        var elements = this.declarationsState[node]?.second?.toList()
         if (excludeShortFSValues) elements = elements?.filter { !it.second }
         if (elements.isNullOrEmpty()) {
-            val newName = getNodeName(addr)
+            val newName = getNodeName(node)
             val newEntry =
-                nodesCreatingUnknownValues.computeIfAbsent(Pair(addr, newName)) {
+                nodesCreatingUnknownValues.computeIfAbsent(Pair(node, newName)) {
                     UnknownMemoryValue(newName)
                 }
             val newPair = Pair(newEntry, false)
-            this.declarationsState.computeIfAbsent(addr) {
+            this.declarationsState.computeIfAbsent(node) {
                 TripleLattice.Element(
-                    PowersetLattice.Element(addr),
+                    PowersetLattice.Element(node),
                     PowersetLattice.Element(),
                     PowersetLattice.Element(),
                 )
             }
 
-            val newElements = this.declarationsState[addr]?.second
+            val newElements = this.declarationsState[node]?.second
             if (
                 newElements?.none { it.first === newPair.first && it.second == newPair.second } !=
                     false
@@ -1827,7 +1851,7 @@ fun PointsToStateElement.fetchElementFromDeclarationState(
                         it.first,
                         it.second,
                         "",
-                        this.declarationsState[addr]?.third ?: identitySetOf(),
+                        this.declarationsState[node]?.third ?: identitySetOf(),
                     )
                 )
             }
@@ -1836,8 +1860,8 @@ fun PointsToStateElement.fetchElementFromDeclarationState(
         // TODO: handle globals
         if (fetchFields) {
             val fields =
-                this.declarationsState[addr]?.first?.filterTo(identitySetOf()) {
-                    it != addr && !this.getAddresses(addr, addr).contains(it)
+                this.declarationsState[node]?.first?.filterTo(identitySetOf()) {
+                    it != node && !this.getAddresses(node, node).contains(it)
                 }
             fields?.forEach { field ->
                 this.declarationsState[field]
@@ -1975,18 +1999,19 @@ fun PointsToStateElement.getValues(node: Node, startNode: Node): IdentitySet<Pai
              * For PointerReferences, the value is the address of the input
              * For example, the value of `&i` is the address of `i`
              */
-            this.getAddresses(node.input, startNode).mapTo(IdentitySet()) { Pair(it, false) }
+            fetchAddressFromGeneralState(node.input).mapTo(IdentitySet()) { Pair(it, false) }
+            //            this.getAddresses(node.input, startNode).mapTo(IdentitySet()) { Pair(it,
+            // false) }
         }
         is PointerDereference -> {
             /* To find the value for PointerDereferences, we first fetch the values form its input from the generalstate, which is probably a MemoryAddress
              * Then we look up the current value at this MemoryAddress
              */
-
             val inputVals = this.fetchValueFromGeneralState(node.input).map { it.first }
             val retVal = identitySetOf<Pair<Node, Boolean>>()
             inputVals.forEach { input ->
                 retVal.addAll(
-                    fetchElementFromDeclarationState(input, true).map { Pair(it.value, it.shortFS) }
+                    fetchValueFromDeclarationState(input, true).map { Pair(it.value, it.shortFS) }
                 )
             }
             retVal
@@ -1998,16 +2023,14 @@ fun PointsToStateElement.getValues(node: Node, startNode: Node): IdentitySet<Pai
                 node.memoryAddresses += MemoryAddress(node.name, isGlobal(node))
             }
             node.memoryAddresses
-                .flatMap { fetchElementFromDeclarationState(it) }
+                .flatMap { fetchValueFromDeclarationState(it) }
                 .map { it.value }
                 //                .toIdentitySet()
                 .mapTo(IdentitySet()) { Pair(it, false) }
         }
         is MemoryAddress,
         is CallExpression -> {
-            fetchElementFromDeclarationState(node).mapTo(IdentitySet()) {
-                Pair(it.value, it.shortFS)
-            }
+            fetchValueFromDeclarationState(node).mapTo(IdentitySet()) { Pair(it.value, it.shortFS) }
         }
         is MemberExpression -> {
             val (base, fieldName) = resolveMemberExpression(node)
@@ -2017,14 +2040,14 @@ fun PointsToStateElement.getValues(node: Node, startNode: Node): IdentitySet<Pai
                 val retVal = identitySetOf<Pair<Node, Boolean>>()
                 fieldAddresses.forEach { fa ->
                     if (hasDeclarationStateEntry(fa)) {
-                        fetchElementFromDeclarationState(fa).map {
+                        fetchValueFromDeclarationState(fa).map {
                             retVal.add(Pair(it.value, it.shortFS))
                         }
                     } else {
                         // Let's overapproximate here: In case we find no known value for the field,
                         // we try again with the baseAddresses
                         baseAddresses.forEach { ba ->
-                            fetchElementFromDeclarationState(ba).map {
+                            fetchValueFromDeclarationState(ba).map {
                                 retVal.add(Pair(it.value, it.shortFS))
                             }
                         }
@@ -2056,7 +2079,7 @@ fun PointsToStateElement.getValues(node: Node, startNode: Node): IdentitySet<Pai
                 // For globals fetch the values from the globalDeref map
                 if (isGlobal(node))
                     retVals.addAll(
-                        fetchElementFromDeclarationState(addr).map { Pair(it.value, false) }
+                        fetchValueFromDeclarationState(addr).map { Pair(it.value, false) }
                     )
                 else {
                     this.getValues(addr, startNode).forEach { v ->
@@ -2219,11 +2242,7 @@ fun PointsToStateElement.getNestedValues(
                     else true
                 }
                 .flatMap {
-                    this.fetchElementFromDeclarationState(
-                        it.first,
-                        fetchFields,
-                        excludeShortFSValues,
-                    )
+                    this.fetchValueFromDeclarationState(it.first, fetchFields, excludeShortFSValues)
                 }
                 .mapTo(IdentitySet()) { Pair(it.value, it.shortFS) }
     }
