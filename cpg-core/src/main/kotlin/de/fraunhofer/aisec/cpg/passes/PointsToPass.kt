@@ -348,7 +348,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 )
                 // The prevDFG edges for the function Declaration
                 doubleState
-                    .getValues(param)
+                    .getValues(param, param)
                     .filter { it.first is ParameterMemoryValue }
                     .forEach { prevDFGs.add(Pair(it.first, equalLinkedHashSetOf<Any>())) }
             }
@@ -421,7 +421,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             // Collect all addresses of the parameter that we can use as index to look up possible
             // new values
             val indexes = mutableSetOf<Pair<Node, Int>>()
-            val values = doubleState.getValues(param).mapTo(IdentitySet()) { it.first }
+            val values = doubleState.getValues(param, param).mapTo(IdentitySet()) { it.first }
 
             // We look at the deref and the derefderef, hence for depth 2 and 3
             // We have to look up the index of the ParameterMemoryValue to check out
@@ -433,7 +433,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             // "derefdereferences"
             values
                 .filterTo(identitySetOf()) { doubleState.hasDeclarationStateEntry(it) }
-                .flatMap { doubleState.getValues(it).mapTo(IdentitySet()) { it.first } }
+                .flatMap { doubleState.getValues(it, it).mapTo(IdentitySet()) { it.first } }
                 .forEach { value ->
                     if (doubleState.hasDeclarationStateEntry(value)) indexes.add(Pair(value, 3))
                 }
@@ -612,7 +612,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     parentFD.functionSummary
                         .computeIfAbsent(currentNode) { mutableSetOf() }
                         .addAll(
-                            doubleState.getValues(retval).map {
+                            doubleState.getValues(retval, retval).map {
                                 FunctionDeclaration.FSEntry(
                                     0,
                                     it.first,
@@ -1246,7 +1246,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         val updatedAddresses =
             mapDstToSrc.entries
                 .filter {
-                    it.key in doubleState.getValues(argument).mapTo(IdentitySet()) { it.first }
+                    it.key in
+                        doubleState.getValues(argument, argument).mapTo(IdentitySet()) { it.first }
                 }
                 .flatMap { it.value }
                 .mapTo(IdentitySet()) { it.srcNode }
@@ -1294,7 +1295,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         if (currentNode.operatorCode in (listOf("++", "--")) && currentNode.input is Reference) {
             val newDeclState = doubleState.declarationsState
             /* Update the declarationState for the refersTo */
-            doubleState.getAddresses(currentNode.input).forEach { addr ->
+            doubleState.getAddresses(currentNode.input, currentNode.input).forEach { addr ->
                 var newValueEntry = Pair<Node, Boolean>(currentNode, false)
                 var newLastWriteEntry =
                     Pair<Node, EqualLinkedHashSet<Any>>(
@@ -1331,9 +1332,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 doubleState,
                 currentNode,
                 GeneralStateEntryElement(
-                    PowersetLattice.Element(doubleState.getAddresses(currentNode)),
+                    PowersetLattice.Element(doubleState.getAddresses(currentNode, currentNode)),
                     PowersetLattice.Element(
-                        doubleState.getValues(currentNode).mapTo(IdentitySet()) {
+                        doubleState.getValues(currentNode, currentNode).mapTo(IdentitySet()) {
                             Pair(it.first, equalLinkedHashSetOf())
                         }
                     ),
@@ -1356,11 +1357,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         if (currentNode.lhs.size == 1 && currentNode.rhs.size == 1) {
             val sources =
                 currentNode.rhs.flatMapTo(IdentitySet<Pair<Node?, Boolean>>()) {
-                    doubleState.getValues(it)
+                    doubleState.getValues(it, it)
                 }
             val destinations: IdentitySet<Node> = currentNode.lhs.toIdentitySet()
             val destinationsAddresses =
-                destinations.flatMapTo(IdentitySet()) { doubleState.getAddresses(it) }
+                destinations.flatMapTo(IdentitySet()) { doubleState.getAddresses(it, it) }
             val lastWrites =
                 destinations.mapTo(IdentitySet()) { Pair(it, equalLinkedHashSetOf<Any>(false)) }
             doubleState =
@@ -1383,17 +1384,17 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     ): PointsToStateElement {
         var doubleState = doubleState
 
-        /* If we have an Expression that is written to, we handle it later and ignore it now */
+        /* If we have an Expression that is written to, we handle it's values later and ignore it now */
         val access =
             if (currentNode is Reference || currentNode is BinaryOperator) currentNode.access
             else if (currentNode is SubscriptExpression && currentNode.arrayExpression is Reference)
                 (currentNode.arrayExpression as Reference).access
             else null
         if (access in setOf(AccessValues.READ, AccessValues.READWRITE)) {
-            val addresses = doubleState.getAddresses(currentNode)
+            val addresses = doubleState.getAddresses(currentNode, currentNode)
             val values =
                 doubleState
-                    .getValues(currentNode)
+                    .getValues(currentNode, currentNode)
                     // Filter only the values that are not stored for short FunctionSummaries (aka
                     // it.second set to true)
                     .filter { !it.second }
@@ -1479,7 +1480,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     doubleState,
                     currentNode,
                     GeneralStateEntryElement(
-                        PowersetLattice.Element(doubleState.getAddresses(currentNode)),
+                        PowersetLattice.Element(doubleState.getAddresses(currentNode, currentNode)),
                         PowersetLattice.Element(),
                         PowersetLattice.Element(),
                     ),
@@ -1494,7 +1495,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         doubleState: PointsToStateElement,
     ): PointsToStateElement {
         /* No need to set the address, this already happens in the constructor */
-        val addresses = doubleState.getAddresses(currentNode)
+        val addresses = doubleState.getAddresses(currentNode, currentNode)
 
         val values = PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>>()
 
@@ -1502,7 +1503,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             if (initializer is Literal<*>) values.add(Pair(initializer, equalLinkedHashSetOf()))
             else
                 values.addAll(
-                    doubleState.getValues(initializer).mapTo(IdentitySet()) {
+                    doubleState.getValues(initializer, initializer).mapTo(IdentitySet()) {
                         Pair(it.first, equalLinkedHashSetOf())
                     }
                 )
@@ -1556,7 +1557,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 // Therefore, the src and the addresses are different. For all other depths, we set
                 // both to the ParameterMemoryValue we create in the first step
                 var src: Node = param
-                var addresses = doubleState.getAddresses(src)
+                var addresses = doubleState.getAddresses(src, src)
                 var prevAddresses = identitySetOf<Node>()
                 // If we have a Pointer as param, we initialize all levels, otherwise, only the
                 // first one
@@ -1755,8 +1756,11 @@ data class fetchElementFromDeclarationStateEntry(
 )
 
 /** Fetch the entry for `node` from the GeneralState */
-fun PointsToStateElement.fetchElementFromGeneralState(node: Node): IdentitySet<Node> {
-    return this.generalState[node]?.second?.mapTo(IdentitySet()) { it.first } ?: identitySetOf()
+fun PointsToStateElement.fetchValueFromGeneralState(
+    node: Node
+): IdentitySet<Pair<Node, EqualLinkedHashSet<Any>>> {
+    return this.generalState[node]?.second /*?.mapTo(IdentitySet()) { it.first }*/
+        ?: identitySetOf()
 }
 
 /**
@@ -1833,7 +1837,7 @@ fun PointsToStateElement.fetchElementFromDeclarationState(
         if (fetchFields) {
             val fields =
                 this.declarationsState[addr]?.first?.filterTo(identitySetOf()) {
-                    it != addr && !this.getAddresses(addr).contains(it)
+                    it != addr && !this.getAddresses(addr, addr).contains(it)
                 }
             fields?.forEach { field ->
                 this.declarationsState[field]
@@ -1897,7 +1901,7 @@ fun PointsToStateElement.getLastWrites(
         }
         is PointerDereference -> {
             val ret = equalLinkedHashSetOf<Pair<Node, EqualLinkedHashSet<Any>>>()
-            this.getAddresses(node).forEach { addr ->
+            this.getAddresses(node, node).forEach { addr ->
                 val lastWrite = this.declarationsState[addr]?.third
                 // Usually, we should have a lastwrite, so we take that
                 if (lastWrite?.isNotEmpty() == true)
@@ -1921,7 +1925,7 @@ fun PointsToStateElement.getLastWrites(
         is SubscriptExpression -> {
             // For SubScriptExpressions, we additionally check if the partial write matches
             val partial = getNodeName(node.subscriptExpression)
-            this.getAddresses(node)
+            this.getAddresses(node, node)
                 .filterTo(equalLinkedHashSetOf()) {
                     this.declarationsState[it]?.third?.isNotEmpty() == true
                 }
@@ -1954,7 +1958,7 @@ fun PointsToStateElement.getLastWrites(
         else ->
             // For the rest, we read the declarationState to determine when the memoryAddress of the
             // node was last written to
-            this.getAddresses(node)
+            this.getAddresses(node, node)
                 .filterTo(equalLinkedHashSetOf()) {
                     this.declarationsState[it]?.third?.isNotEmpty() == true
                 }
@@ -1964,21 +1968,21 @@ fun PointsToStateElement.getLastWrites(
     }
 }
 
-fun PointsToStateElement.getValues(node: Node): IdentitySet<Pair<Node, Boolean>> {
+fun PointsToStateElement.getValues(node: Node, startNode: Node): IdentitySet<Pair<Node, Boolean>> {
     return when (node) {
         is PointerReference -> {
             /*
              * For PointerReferences, the value is the address of the input
              * For example, the value of `&i` is the address of `i`
              */
-            this.getAddresses(node.input).mapTo(IdentitySet()) { Pair(it, false) }
+            this.getAddresses(node.input, startNode).mapTo(IdentitySet()) { Pair(it, false) }
         }
         is PointerDereference -> {
             /* To find the value for PointerDereferences, we first fetch the values form its input from the generalstate, which is probably a MemoryAddress
              * Then we look up the current value at this MemoryAddress
              */
 
-            val inputVals = this.fetchElementFromGeneralState(node.input)
+            val inputVals = this.fetchValueFromGeneralState(node.input).map { it.first }
             val retVal = identitySetOf<Pair<Node, Boolean>>()
             inputVals.forEach { input ->
                 retVal.addAll(
@@ -2007,7 +2011,7 @@ fun PointsToStateElement.getValues(node: Node): IdentitySet<Pair<Node, Boolean>>
         }
         is MemberExpression -> {
             val (base, fieldName) = resolveMemberExpression(node)
-            val baseAddresses = getAddresses(base)
+            val baseAddresses = getAddresses(base, startNode)
             val fieldAddresses = fetchFieldAddresses(baseAddresses, fieldName)
             if (fieldAddresses.isNotEmpty()) {
                 val retVal = identitySetOf<Pair<Node, Boolean>>()
@@ -2040,16 +2044,22 @@ fun PointsToStateElement.getValues(node: Node): IdentitySet<Pair<Node, Boolean>>
             }
         }
         is Reference -> {
-            /* For References, we have to look up the last value written to its declaration. */
+            /* If the node is not the same as the startNode, we should have already assigned a value to the reference, so we fetch it from the generalstate */
+            if (node != startNode && node !in startNode.astChildren)
+                return fetchValueFromGeneralState(node).mapTo(IdentitySet()) {
+                    Pair(it.first, true in it.second)
+                }
+
+            /* Otherwise, we have to look up the last value written to the reference's declaration. */
             val retVals = identitySetOf<Pair<Node, Boolean>>()
-            this.getAddresses(node).forEach { addr ->
+            this.getAddresses(node, startNode).forEach { addr ->
                 // For globals fetch the values from the globalDeref map
                 if (isGlobal(node))
                     retVals.addAll(
                         fetchElementFromDeclarationState(addr).map { Pair(it.value, false) }
                     )
                 else {
-                    this.getValues(addr).forEach { v ->
+                    this.getValues(addr, startNode).forEach { v ->
                         // We want to skip values that contain the node itself and therefore could
                         // cause a loop
                         // So we fetch parent AssignExpression of the value in the AST, and if the
@@ -2068,16 +2078,16 @@ fun PointsToStateElement.getValues(node: Node): IdentitySet<Pair<Node, Boolean>>
             return retVals
         }
         is CastExpression -> {
-            this.getValues(node.expression)
+            this.getValues(node.expression, startNode)
         }
         is SubscriptExpression -> {
-            this.getAddresses(node).flatMap { this.getValues(it) }.toIdentitySet()
+            this.getAddresses(node, startNode).flatMap { this.getValues(it, it) }.toIdentitySet()
         }
         else -> identitySetOf(Pair(node, false))
     }
 }
 
-fun PointsToStateElement.getAddresses(node: Node): IdentitySet<Node> {
+fun PointsToStateElement.getAddresses(node: Node, startNode: Node): IdentitySet<Node> {
     return when (node) {
         is Declaration -> {
             /*
@@ -2111,7 +2121,7 @@ fun PointsToStateElement.getAddresses(node: Node): IdentitySet<Node> {
              * For example, the address of `*a` is the value of `a`
              */
             val ret = identitySetOf<Node>()
-            this.getValues(node.input).forEach { (value, _) ->
+            this.getValues(node.input, startNode).forEach { (value, _) ->
                 // In case the value is a BinaryOperator (like `*(ptr + 8)`), we treat this as a
                 // SubscriptExpression for now
                 // We assume that the rhs of the BinaryOperator is the pointer, and the rhs is a
@@ -2130,7 +2140,7 @@ fun PointsToStateElement.getAddresses(node: Node): IdentitySet<Node> {
                     val sub = SubscriptExpression()
                     sub.arrayExpression = lhs
                     sub.subscriptExpression = value.rhs
-                    ret.addAll(getAddresses(sub))
+                    ret.addAll(getAddresses(sub, startNode))
                 } else ret.add(value)
             }
             return ret
@@ -2140,7 +2150,7 @@ fun PointsToStateElement.getAddresses(node: Node): IdentitySet<Node> {
              * For MemberExpressions, the fieldAddresses in the MemoryAddress node of the base hold the information we are looking for
              */
             val (base, newName) = resolveMemberExpression(node)
-            fetchFieldAddresses(this.getAddresses(base), newName)
+            fetchFieldAddresses(this.getAddresses(base, startNode), newName)
         }
         is Reference -> {
             /*
@@ -2159,11 +2169,11 @@ fun PointsToStateElement.getAddresses(node: Node): IdentitySet<Node> {
             /*
              * For CastExpressions we take the expression as the cast itself does not have any impact on the address
              */
-            this.getAddresses(node.expression)
+            this.getAddresses(node.expression, startNode)
         }
         is SubscriptExpression -> {
             val localName = getNodeName(node.subscriptExpression)
-            this.getValues(node.base).flatMapTo(identitySetOf()) {
+            this.getValues(node.base, startNode).flatMapTo(identitySetOf()) {
                 fetchFieldAddresses(
                     identitySetOf(it.first),
                     Name(localName.localName, getNodeName(it.first)),
@@ -2186,18 +2196,19 @@ fun PointsToStateElement.getNestedValues(
     excludeShortFSValues: Boolean = false,
 ): IdentitySet<Pair<Node, Boolean>> {
     if (nestingDepth == -1) return identitySetOf(Pair(node, false))
-    if (nestingDepth == 0) return this.getAddresses(node).mapTo(IdentitySet()) { Pair(it, false) }
+    if (nestingDepth == 0)
+        return this.getAddresses(node, node).mapTo(IdentitySet()) { Pair(it, false) }
     var ret =
         if (
             node !is PointerReference &&
                 onlyFetchExistingEntries &&
-                this.getAddresses(node).none { addr ->
+                this.getAddresses(node, node).none { addr ->
                     this.hasDeclarationStateEntry(addr, excludeShortFSValues)
                 }
         )
             identitySetOf()
         else
-            getValues(node).filterTo(IdentitySet()) { /*it.second != excludeShortFSValues*/
+            getValues(node, node).filterTo(IdentitySet()) { /*it.second != excludeShortFSValues*/
                 if (excludeShortFSValues) !it.second else true
             }
     for (i in 1..<nestingDepth) {
