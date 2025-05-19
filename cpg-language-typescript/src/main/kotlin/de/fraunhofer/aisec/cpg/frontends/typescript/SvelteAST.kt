@@ -30,6 +30,13 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 
+/** Base interface for all Svelte and ESTree AST nodes, providing common properties. */
+@JsonIgnoreProperties(ignoreUnknown = true)
+interface GenericAstNode {
+    val start: Int?
+    val end: Int?
+}
+
 /**
  * Base interface for Svelte AST nodes parsed from the svelte parser. We will define concrete data
  * classes inheriting from this later.
@@ -58,10 +65,9 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo
     JsonSubTypes.Type(value = SvelteDeclaration::class, name = "Declaration"),
     // TODO: Add other Svelte node types here as needed (e.g., Comment, Block, etc.)
 )
-interface SvelteNode {
+interface SvelteNode : GenericAstNode {
     // 'type' property handled by Jackson
-    val start: Int?
-    val end: Int?
+    // start and end are now inherited from GenericAstNode
 }
 
 /** Represents the root of a parsed Svelte component. */
@@ -160,10 +166,9 @@ data class SvelteStyleContent(
     JsonSubTypes.Type(value = EsTreeAssignmentExpression::class, name = "AssignmentExpression"),
 )
 @JsonIgnoreProperties(ignoreUnknown = true)
-interface EsTreeNode {
+interface EsTreeNode : GenericAstNode {
     // The 'type' property is implicitly handled by Jackson due to @JsonTypeInfo
-    val start: Int?
-    val end: Int?
+    // start and end are now inherited from GenericAstNode
 }
 
 interface EsTreeStatement : EsTreeNode

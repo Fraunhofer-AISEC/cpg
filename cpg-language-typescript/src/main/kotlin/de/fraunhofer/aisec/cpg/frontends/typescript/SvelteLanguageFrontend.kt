@@ -56,7 +56,7 @@ import org.slf4j.LoggerFactory
  * nodes.
  */
 class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteLanguageFrontend>) :
-    LanguageFrontend<SvelteNode, SvelteNode>(ctx, language) {
+    LanguageFrontend<SvelteProgram, GenericAstNode>(ctx, language) {
 
     internal val mapper = jacksonObjectMapper()
     lateinit var currentFile: File
@@ -214,13 +214,18 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
                 }
                 // TODO: Handle stmtNode.specifiers for re-exports like export { name1, name2 }
             }
-            else ->
+            else -> {
+                val loc =
+                    this.locationOf(
+                        stmtNode as GenericAstNode
+                    ) // Explicit cast if needed by compiler, or direct call
                 LOGGER.warn(
-                    "Unsupported script statement type: {} at {}:{}\nFor Svelte, this frontend primarily focuses on script content. HTML and CSS are parsed but full CPG representation for them is a work in progress.",
+                    "Unsupported script statement type: {} at {}:{}. For Svelte, this frontend primarily focuses on script content. HTML and CSS are parsed but full CPG representation for them is a work in progress.",
                     stmtNode::class.simpleName,
-                    locationOfEsTreeNode(stmtNode)?.region?.startLine,
-                    locationOfEsTreeNode(stmtNode)?.region?.startColumn,
+                    loc?.region?.startLine,
+                    loc?.region?.startColumn,
                 )
+            }
         }
     }
 
@@ -245,13 +250,16 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
                 newVariableDeclaration(
                     variableName,
                     variableType,
-                    implicitInitializerAllowed = false,
-                    rawNode = declarator,
+                    this.codeOf(declarator as GenericAstNode),
+                    false
                 )
+            // Associate the raw AST node (declarator) with the CPG node.
+            // This will set cpgVariableDeclaration.rawNode, .code, .location, and handle comments.
+            this.process(cpgVariableDeclaration, declarator as GenericAstNode)
+
             LOGGER.warn("Processing declarator with ID: {}", declarator.id.name) // WARN level
 
-            // Temporarily commenting out to diagnose Spotless issue
-            /*
+            // Temporarily commenting out to diagnose Spotless issue // Now uncommenting
             declarator.init?.let {
                 LOGGER.warn(
                     "Declarator has initializer (raw): {}",
@@ -268,12 +276,14 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
                     cpgVariableDeclaration.initializer = initializerExpression
                 } else {
                     // Use ERROR level if initializer creation fails
-                    LOGGER.error("Failed to create initializer expression for variable {}", variableName)
+                    /* LOGGER.error(
+                        "Failed to create initializer expression for variable {}",
+                        variableName
+                    ) */
                 }
             } else {
                 LOGGER.warn("Declarator has no initializer.")
             }
-            */
 
             // WARN level log for the final CPG node before adding
             LOGGER.warn(
@@ -292,16 +302,21 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
     private fun handleExpression(
         exprNode: EsTreeNode?
     ): de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression? {
+        // Ensure exprNode is not null before processing
+        if (exprNode == null) return null
+
         return when (exprNode) {
             is EsTreeLiteral -> handleLiteral(exprNode)
             is EsTreeIdentifier -> handleIdentifierReference(exprNode)
-            null -> null
+            // null case already handled above
             else -> {
+                val loc =
+                    this.locationOf(exprNode as GenericAstNode) // Explicit cast or direct call
                 LOGGER.warn(
-                    "Unsupported expression type: {} at {}:{}",
+                    "Unsupported expression type: {} at {}:{}. Note: Full CPG representation for all Svelte HTML/CSS parts is a work in progress.",
                     exprNode::class.simpleName,
-                    locationOfEsTreeNode(exprNode)?.region?.startLine,
-                    locationOfEsTreeNode(exprNode)?.region?.startColumn,
+                    loc?.region?.startLine,
+                    loc?.region?.startColumn,
                 )
                 null
             }
@@ -336,114 +351,107 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
         return reference
     }
 
-    override fun typeOf(type: SvelteNode): Type {
-        // TODO: Implement type resolution for SvelteNode
+    // Corresponds to abstract fun typeOf(type: TypeNode): Type in LanguageFrontend
+    override fun typeOf(type: GenericAstNode): Type {
+        // TODO: Implement type resolution for GenericAstNode.
+        // Could dispatch based on actual type: if (type is SvelteNode) vs if (type is EsTreeNode)
+        LOGGER.debug("typeOf called for GenericAstNode: {}", type::class.simpleName)
         return unknownType()
     }
 
-    override fun codeOf(astNode: SvelteNode): String? {
-        if (
-            astNode.start != null &&
-                astNode.end != null &&
-                this::code.isInitialized &&
-                this.code != null
-        ) {
-            val start = astNode.start
-            val end = astNode.end
+    // Not overriding from LanguageFrontend directly, but needed by CPG framework for RawNodeType.
+    // LanguageFrontend.getCode(rawNode: RawNodeType) calls this if RawNodeType is not AstNodeType.
+    fun codeOf(astNode: GenericAstNode): String? { // No 'override'
+        val startOffset = astNode.start ?: return null
+        val endOffset = astNode.end ?: return null
+
+        if (this::code.isInitialized) {
             val codeText = this.code
             val codeLength = codeText.length
-            if (start >= 0 && end >= start && end <= codeLength) {
-                return codeText.substring(start, end)
+            if (startOffset >= 0 && endOffset >= startOffset && endOffset <= codeLength) {
+                return codeText.substring(startOffset, endOffset)
+            } else {
+                LOGGER.warn(
+                    "Invalid offsets for GenericAstNode in codeOf: start={}, end={}, codeLength={}",
+                    startOffset,
+                    endOffset,
+                    codeLength,
+                )
+                return null
             }
+        } else {
+            LOGGER.warn("Attempted to get codeOf GenericAstNode before code was initialized.")
+            return null
         }
-        return null
     }
 
-    override fun locationOf(astNode: SvelteNode): PhysicalLocation? {
-        if (!this::currentFile.isInitialized || !this::code.isInitialized || this.code == null) {
+    // Not overriding from LanguageFrontend directly, but needed for RawNodeType.
+    // LanguageFrontend.getLocation(rawNode: RawNodeType) calls this if RawNodeType is not
+    // AstNodeType.
+    fun locationOf(astNode: GenericAstNode): PhysicalLocation? { // No 'override'
+        if (!this::currentFile.isInitialized || !this::code.isInitialized) {
             LOGGER.warn(
-                "currentFile or code is not initialized/null for SvelteNode. Skipping location."
+                "currentFile or code is not initialized for GenericAstNode. Skipping location."
             )
             return null
         }
-        val currentCode = this.code!!
 
-        val nullableStartOffset = astNode.start
-        val nullableEndOffset = astNode.end
-
-        if (nullableStartOffset == null || nullableEndOffset == null) {
-            LOGGER.warn("Null start or end offset for SvelteNode. Skipping location.")
-            return null
-        }
-
-        // Explicitly create non-nullable versions
-        val startOffset: Int = nullableStartOffset
-        val endOffset: Int = nullableEndOffset
+        val startOffset = astNode.start ?: return null
+        val endOffset = astNode.end ?: return null
+        val currentCode = this.code
 
         val fileLength = currentCode.length
         if (startOffset < 0 || endOffset > fileLength || startOffset > endOffset) {
             LOGGER.warn(
-                "Invalid offsets for SvelteNode: start={}, end={}, fileLength={}. Skipping location.",
+                "Invalid offsets for GenericAstNode in locationOf: start={}, end={}, fileLength={}. Skipping location.",
                 startOffset,
                 endOffset,
                 fileLength,
             )
             return null
         }
-
-        val region =
-            getRegionFromStartEnd(this.currentFile, currentCode, startOffset, endOffset)
-                ?: Region(-1, -1, -1, -1)
-        return PhysicalLocation(this.currentFile.toURI(), region)
+        val region = getRegionFromStartEnd(this.currentFile, currentCode, startOffset, endOffset)
+        return PhysicalLocation(this.currentFile.toURI(), region ?: Region(-1, -1, -1, -1))
     }
 
-    private fun locationOfEsTreeNode(astNode: EsTreeNode): PhysicalLocation? {
-        if (!this::currentFile.isInitialized || !this::code.isInitialized || this.code == null) {
-            LOGGER.warn("currentFile or code is not initialized for EsTreeNode. Skipping location.")
-            return null
+    // This is the method for AstNodeType (SvelteProgram)
+    // Corresponds to abstract override fun codeOf(astNode: AstNode): String?
+    override fun codeOf(astNode: SvelteProgram): String? {
+        return if (this::code.isInitialized) {
+            this.code
+        } else {
+            LOGGER.warn("Attempted to get codeOf SvelteProgram before code was initialized.")
+            null
         }
-        val currentCode = this.code!!
+    }
 
-        val nullableStartOffset = astNode.start
-        val nullableEndOffset = astNode.end
-
-        if (nullableStartOffset == null || nullableEndOffset == null) {
-            LOGGER.warn("Null start or end offset for EsTreeNode. Skipping location.")
-            return null
-        }
-
-        // Explicitly create non-nullable versions
-        val startOffset: Int = nullableStartOffset
-        val endOffset: Int = nullableEndOffset
-
-        val fileLength = currentCode.length
-        if (startOffset < 0 || endOffset > fileLength || startOffset > endOffset) {
+    // This is the method for AstNodeType (SvelteProgram)
+    // Corresponds to abstract override fun locationOf(astNode: AstNode): PhysicalLocation?
+    override fun locationOf(astNode: SvelteProgram): PhysicalLocation? {
+        if (!this::currentFile.isInitialized || !this::code.isInitialized) {
             LOGGER.warn(
-                "Invalid offsets for EsTreeNode: start={}, end={}, fileLength={}. Skipping location.",
-                startOffset,
-                endOffset,
-                fileLength,
+                "currentFile or code is not initialized for SvelteProgram. Skipping location."
             )
             return null
         }
-
         val region =
-            getRegionFromStartEnd(this.currentFile, currentCode, startOffset, endOffset)
-                ?: Region(-1, -1, -1, -1)
-        return PhysicalLocation(this.currentFile.toURI(), region)
+            getRegionFromStartEnd(this.currentFile, this.code, 0, this.code.length.coerceAtLeast(0))
+        return PhysicalLocation(this.currentFile.toURI(), region ?: Region(-1, -1, -1, -1))
     }
 
-    private fun EsTreeNode.rawNode(): EsTreeNode = this
-
-    override fun setComment(node: Node, astNode: SvelteNode) {
-        // TODO: Implement comment extraction and association for Svelte nodes if needed.
-        // The svelte/compiler provides comment nodes in the AST (SvelteComment).
-        // We would need to find corresponding comment nodes for 'astNode' and associate them with
-        // 'node'.
+    // This is the method for AstNodeType (SvelteProgram)
+    // Corresponds to abstract fun setComment(node: Node, astNode: AstNode)
+    override fun setComment(node: Node, astNode: SvelteProgram) {
         LOGGER.debug(
-            "setComment called for Node type: {}, SvelteNode type: {}",
+            "setComment called for SvelteProgram (Node type: {})",
             node.javaClass.simpleName,
-            astNode::class.simpleName,
         )
+        // Typically, no specific comments for the entire program TU itself.
     }
+
+    // Note: A public `fun setComment(node: Node, astNode: GenericAstNode)` (no override) might be
+    // needed
+    // if the CPG framework attempts to call setComment with RawNodeType. The base LanguageFrontend
+    // does not have an abstract or open setComment for TypeNode.
+    // For now, we only provide the abstract override for SvelteProgram.
 }
