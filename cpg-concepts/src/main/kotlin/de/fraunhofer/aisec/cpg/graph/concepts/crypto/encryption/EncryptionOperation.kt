@@ -23,31 +23,12 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption
+package de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption
 
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.concepts.Concept
-import java.util.Objects
+import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 
-/** Represents a cipher suite. E.g. `AES-XTS-plain64` */
-open class Cipher(underlyingNode: Node? = null) :
-    Concept(underlyingNode = underlyingNode), IsDiskEncryption {
-    /** A string representing the cipher used, e.g. `AES-XTS-plain64`. */
-    var cipherName: String? = null
-
-    /** Cipher block size. */
-    var blockSize: Int? = null
-
-    /** Key size. */
-    var keySize: Int? = null
-
-    override fun equals(other: Any?): Boolean {
-        return other is Cipher &&
-            super.equals(other) &&
-            other.cipherName == this.cipherName &&
-            other.blockSize == this.blockSize &&
-            other.keySize == this.keySize
-    }
-
-    override fun hashCode() = Objects.hash(super.hashCode(), cipherName, blockSize, keySize)
-}
+abstract class EncryptionOperation<T : Node>(
+    underlyingNode: Node?,
+    override val concept: Encryption<T>,
+) : Operation(underlyingNode = underlyingNode, concept = concept), IsEncryption

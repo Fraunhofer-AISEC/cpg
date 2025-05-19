@@ -23,9 +23,8 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption
+package de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption
 
-import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.IsEncryption
+interface IsCryptography
 
-/** Indicates that a class belongs to the "disk encryption" or (closely a related) concept. */
-interface IsDiskEncryption : IsEncryption
+interface IsEncryption : IsCryptography

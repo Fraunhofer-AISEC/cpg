@@ -23,25 +23,31 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption
+package de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption
 
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.concepts.Operation
+import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import java.util.Objects
 
-abstract class CipherOperation(underlyingNode: Node?, override val concept: Cipher) :
-    Operation(underlyingNode = underlyingNode, concept = concept), IsDiskEncryption
+/** Represents a cipher suite. E.g. `AES-XTS-plain64` */
+open class Cipher(underlyingNode: Node? = null) :
+    Concept(underlyingNode = underlyingNode), IsEncryption {
+    /** A string representing the cipher used, e.g. `AES-XTS-plain64`. */
+    var cipherName: String? = null
 
-open class Encrypt(
-    underlyingNode: Node? = null,
-    concept: Cipher,
-    /** The key used for encryption */
-    val key: Secret,
-) : CipherOperation(underlyingNode = underlyingNode, concept = concept) {
+    /** Cipher block size. */
+    var blockSize: Int? = null
+
+    /** Key size. */
+    var keySize: Int? = null
 
     override fun equals(other: Any?): Boolean {
-        return other is Encrypt && super.equals(other) && other.key == this.key
+        return other is Cipher &&
+            super.equals(other) &&
+            other.cipherName == this.cipherName &&
+            other.blockSize == this.blockSize &&
+            other.keySize == this.keySize
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), key)
+    override fun hashCode() = Objects.hash(super.hashCode(), cipherName, blockSize, keySize)
 }

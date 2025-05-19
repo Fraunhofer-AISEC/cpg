@@ -23,9 +23,32 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption
+package de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption
 
-import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.IsEncryption
+import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.concepts.Concept
+import de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.Secret
+import java.util.Objects
 
-/** Indicates that a class belongs to the "disk encryption" or (closely a related) concept. */
-interface IsDiskEncryption : IsEncryption
+/** This concept represents an encryption. */
+open class Encryption<T>(underlyingNode: Node? = null) :
+    Concept(underlyingNode = underlyingNode), IsEncryption {
+    /** The encryption target */
+    var target: T? = null
+
+    /** The cipher suite used for disk encryption */
+    var cipher: Cipher? = null
+
+    /** The encryption key used for disk encryption */
+    var key: Secret? = null
+
+    override fun equals(other: Any?): Boolean {
+        return other is Encryption<T> &&
+            super.equals(other) &&
+            other.target == this.cipher &&
+            other.cipher == this.cipher &&
+            other.key == this.key
+    }
+
+    override fun hashCode() = Objects.hash(super.hashCode(), target, cipher, key)
+}
