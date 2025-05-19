@@ -32,7 +32,7 @@ import java.util.Objects
 abstract class CipherOperation(underlyingNode: Node?, override val concept: Cipher) :
     Operation(underlyingNode = underlyingNode, concept = concept), IsDiskEncryption
 
-class Encrypt(
+open class Encrypt(
     underlyingNode: Node? = null,
     concept: Cipher,
     /** The key used for encryption */
