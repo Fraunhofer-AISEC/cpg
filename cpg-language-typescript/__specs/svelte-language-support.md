@@ -67,6 +67,7 @@ Switching to Tree-sitter would be a substantial architectural change and a new 
 
 ## Progress Notes
 
+### 1. Add svelte support in current typescript modules
 *   **Strategy Shift:** Decided to integrate Svelte support directly into `cpg-language-typescript` instead of a separate module, based on maintainer feedback.
 *   **Kotlin Stubs:** Created initial Kotlin classes within `cpg-language-typescript`:
     *   `SvelteLanguage.kt`: Defines the language properties.
@@ -77,3 +78,22 @@ Switching to Tree-sitter would be a substantial architectural change and a new 
     *   The build process in `cpg-language-typescript/build.gradle.kts` will need to be adjusted to handle Deno execution for the combined parser (specific tasks to be defined).
 *   **Frontend Integration:** Modified `TypeScriptLanguageFrontend.kt`'s `parse` method to detect `.svelte` files and delegate to `SvelteLanguageFrontend` (when instantiated).
 *   **Build Status (Current):** Successfully added Kotlin stubs. Next step is to resolve Kotlin compilation errors in the new Svelte files and attempt a build (`./gradlew :cpg-language-typescript:build`).
+
+### 2. Refactor: Unified AST Handling with `GenericAstNode`
+
+**What changed:**  
+We introduced a new interface, `GenericAstNode`, as a base for all Svelte and ESTree AST node data classes in `SvelteAST.kt`. This interface provides common properties (`start`, `end`) and allows the Kotlin frontend to process all AST nodes in a unified way.
+
+**Why:**  
+Previously, Svelte-specific and ESTree nodes were handled separately, leading to code duplication and making it harder to extend support for new node types. By introducing `GenericAstNode`, we can write generic processing logic in `SvelteLanguageFrontend.kt` that works for both Svelte and ESTree nodes.
+
+**How it works:**  
+- All relevant AST node data classes now implement `GenericAstNode`.
+- The frontend logic (e.g., code extraction, location mapping) can operate on `GenericAstNode` without needing to know the specific node type.
+- This makes the codebase more maintainable and easier to extend as Svelte or ESTree evolve.
+
+**Impact:**  
+- Reduces code duplication in the frontend.
+- Simplifies future support for new Svelte/ESTree AST node types.
+- Prepares the codebase for more advanced Svelte features and better error handling.
+
