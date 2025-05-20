@@ -25,6 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.query
 
+import de.fraunhofer.aisec.cpg.assumptions.Assumption
+import de.fraunhofer.aisec.cpg.assumptions.AssumptionType
+import de.fraunhofer.aisec.cpg.assumptions.HasAssumptions
+import de.fraunhofer.aisec.cpg.frontends.NoLanguage.addAssumptionDependence
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.AnalysisSensitivity
@@ -54,27 +58,27 @@ fun FulfilledAndFailedPaths.toQueryTree(
     return this.fulfilled.map {
         SinglePathResult(
             true,
-            mutableListOf(QueryTree(it)),
-            "$queryType from $startNode to ${it.last()} fulfills the requirement",
+            mutableListOf(QueryTree(it.nodes)),
+            "$queryType from $startNode to ${it.nodes.last()} fulfills the requirement",
             startNode,
-            Success(it.last()),
+            Success(it.nodes.last()),
         )
     } +
-        this.failed.map { (reason, nodes) ->
+        this.failed.map { (reason, nodePath) ->
             SinglePathResult(
                 false,
-                mutableListOf(QueryTree(nodes)),
-                "$queryType from $startNode to ${nodes.last()} fulfills the requirement",
+                mutableListOf(QueryTree(nodePath.nodes).addAssumptionDependence(nodePath)),
+                "$queryType from $startNode to ${nodePath.nodes.last()} fulfills the requirement",
                 startNode,
                 if (reason == FailureReason.PATH_ENDED) {
-                    PathEnded(nodes.last())
+                    PathEnded(nodePath.nodes.last())
                 } else if (reason == FailureReason.HIT_EARLY_TERMINATION) {
-                    HitEarlyTermination(nodes.last())
+                    HitEarlyTermination(nodePath.nodes.last())
                 } else {
                     // TODO: We cannot set this (yet) but it might be useful to differentiate
                     // between "path is really at the end" or "we just stopped". Requires adaptions
                     // in followXUntilHit and all of its callers
-                    StepsExceeded(nodes.last())
+                    StepsExceeded(nodePath.nodes.last())
                 },
             )
         }
@@ -104,7 +108,7 @@ object Must : AnalysisType() {
         return QueryTree(
             evalRes.failed.isEmpty(),
             allPaths.toMutableList(),
-            "$queryType from $startNode to ${evalRes.fulfilled.map { it.last() }}",
+            "$queryType from $startNode to ${evalRes.fulfilled.map { it.nodes.last() }}",
             startNode,
         )
     }
@@ -124,7 +128,7 @@ object May : AnalysisType() {
         return QueryTree(
             evalRes.fulfilled.isNotEmpty(),
             allPaths.toMutableList(),
-            "$queryType from $startNode to ${evalRes.fulfilled.map { it.last() }}",
+            "$queryType from $startNode to ${evalRes.fulfilled.map { it.nodes.last() }}",
             startNode,
         )
     }
@@ -252,6 +256,32 @@ fun dataFlowWithValidator(
 }
 
 /**
+ * This data class serves as a wrapper for a [Node] that is returned as a result. The wrapper is
+ * needed to add additional information on the result, such as [assumptions] that were taken when
+ * computing this node as the result of a function.
+ */
+data class NodeWithAssumption(val node: Node) : HasAssumptions {
+    override val assumptions: MutableSet<Assumption> = mutableSetOf()
+
+    override fun collectAssumptions(): Set<Assumption> {
+        return super.collectAssumptions() + node.assumptions
+    }
+}
+
+/**
+ * This data class serves as a wrapper for a collection of [Node] that is returned as a result. The
+ * wrapper is needed to add additional information on the result, such as [assumptions] that were
+ * taken when computing this collection of nodes as the result of a function.
+ */
+data class NodeCollectionWithAssumption(val nodes: Collection<Node>) : HasAssumptions {
+    override val assumptions: MutableSet<Assumption> = mutableSetOf()
+
+    override fun collectAssumptions(): Set<Assumption> {
+        return super.collectAssumptions() + nodes.flatMap { it.assumptions }
+    }
+}
+
+/**
  * This function tries to identify if the data held in [this] node are copied to another memory
  * location. This could happen by:
  * - Constructing a new object where our data flow to: We should track this object and the target of
@@ -263,44 +293,65 @@ fun dataFlowWithValidator(
  * - Assigning an immutable object to a new variable: We should track this object and the target of
  *   the assignment separately.
  */
-fun Node.generatesNewData(): Collection<Node> {
-    return when {
-        this is BinaryOperator && !this.type.isMutable -> {
-            // If the type of the node is a primitive (more precisely immutable) type, we will
-            // create new "object" that we have to track. But we should find the first declaration
-            // this flows to and track that one. If it flows to a reference first, this will
-            // typically be identified by handling the assignments below which is why we explicitly
-            // exclude such a flow here.
-            this.followDFGEdgesUntilHit(earlyTermination = { node, _ -> node is Reference }) {
-                    it is Declaration
-                }
-                .fulfilled
-                .map { it.last() }
-                .toSet()
-        }
-        /* A new object is constructed and our data flow into this object -> track the new object. */
-        this is ConstructExpression ||
-            /* A collection comprehension (e.g. list, set, dict comprehension) generates a new object similar to calling the constructor. */
-            this is CollectionComprehension -> {
-            setOf(this)
-        }
-        this.astParent is AssignExpression &&
-            this in (this.astParent as AssignExpression).rhs &&
-            (this.astParent as AssignExpression).operatorCode in
-                this.language.compoundAssignmentOperators -> {
-            // If we're the rhs of an assignment with an operator like +=, we should track the lhs
-            // value separately.
-            (this as? HasType)?.let { (this.astParent as AssignExpression).findTargets(it) }
-                ?: setOf()
-        }
-        this is Expression &&
+fun Node.generatesNewData(): NodeCollectionWithAssumption {
+    val tempAssumptions = mutableSetOf<HasAssumptions>()
+    val splitNodes =
+        when {
+            this is BinaryOperator && !this.type.isMutable -> {
+                // If the type of the node is a primitive (more precisely immutable) type, we will
+                // create new "object" that we have to track. But we should find the first
+                // declaration
+                // this flows to and track that one. If it flows to a reference first, this will
+                // typically be identified by handling the assignments below which is why we
+                // explicitly exclude such a flow here.
+                val tmp =
+                    this.followDFGEdgesUntilHit(
+                        earlyTermination = { node, _ -> node is Reference }
+                    ) {
+                        it is Declaration
+                    }
+                tempAssumptions.addAll(tmp.fulfilled)
+
+                tmp.fulfilled.map { it.nodes.last() }.toSet()
+            }
+            /* A new object is constructed and our data flow into this object -> track the new object. */
+            this is ConstructExpression ||
+                /* A collection comprehension (e.g. list, set, dict comprehension) generates a new object similar to calling the constructor. */
+                this is CollectionComprehension -> {
+                setOf(this)
+            }
+
             this.astParent is AssignExpression &&
-            this in (this.astParent as AssignExpression).rhs &&
-            !this.type.isMutable -> {
-            (this.astParent as AssignExpression).findTargets(this)
+                this in (this.astParent as AssignExpression).rhs &&
+                (this.astParent as AssignExpression).operatorCode in
+                    this.language.compoundAssignmentOperators -> {
+                // If we're the rhs of an assignment with an operator like +=, we should track the
+                // lhs value separately.
+                (this as? HasType)?.let { (this.astParent as AssignExpression).findTargets(it) }
+                    ?: setOf()
+            }
+            this is Expression &&
+                this.astParent is AssignExpression &&
+                this in (this.astParent as AssignExpression).rhs &&
+                !this.type.isMutable -> {
+                (this.astParent as AssignExpression).findTargets(this)
+            }
+            else -> emptySet()
         }
-        else -> emptySet()
-    }
+    return NodeCollectionWithAssumption(splitNodes)
+        .addAssumptionDependences(tempAssumptions + splitNodes + this)
+        .assume(
+            AssumptionType.DataFlowAssumption,
+            "The node generates the following new \"objects\" which require separate handling as they represent copies/clones of the original \"object\": $splitNodes.\n\n" +
+                "We assume that this list is complete and does not contain additional elements.\n" +
+                "This assumption can be split up into the following (global) sub-assumptions, where all of them have to hold:\n" +
+                "1. The list of mutable and immutable types is complete and sound for each programming language used in the analyzed project.\n" +
+                "2. Copies of data happen exclusively by one of the following patterns:\n" +
+                "2.a) Constructing a new object where our data flow to by a constructor invocation or by a collection comprehension: We should track this object and the target of the operation separately." +
+                "2.b) Operating on immutable objects (via BinaryOperators): We should track this object and the target of the operation separately." +
+                "2.c) Modifying an object via an operator (e.g. `+=`) and the \"object\" is the rhs of the assignment: We should track both, this object and the target of the assignment." +
+                "2.d) Assigning an immutable object to a new variable: We should track this object and the target of the assignment separately.",
+        )
 }
 
 /**
@@ -316,7 +367,7 @@ fun Node.identifyInfoToTrack(
     scope: AnalysisScope,
     vararg sensitivities: AnalysisSensitivity =
         ContextSensitive + FieldSensitive + FilterUnreachableEOG,
-): Set<Node> {
+): Set<NodeWithAssumption> {
     // Get all next DFG nodes. These must include all relevant operations to make this work but that
     // should be the case with our current implementation.
     val reachableDFGNodes =
@@ -324,12 +375,14 @@ fun Node.identifyInfoToTrack(
                 interproceduralAnalysis = scope is Interprocedural,
                 contextSensitive = ContextSensitive in sensitivities,
             )
+            .map { it.nodes }
             .flatten()
             .toSet()
-    val result = mutableSetOf<Node>(this)
+    val result = mutableSetOf(NodeWithAssumption(this))
     for (node in reachableDFGNodes) {
         // Is this node a node copying the data? If so, add its targets to the list.
-        result.addAll(node.generatesNewData())
+        val targets = node.generatesNewData()
+        result.addAll(targets.nodes.map { NodeWithAssumption(it).addAssumptionDependence(targets) })
     }
     return result
 }
@@ -358,17 +411,18 @@ fun Node.alwaysFlowsTo(
         if (identifyCopies) {
             this.identifyInfoToTrack(scope = scope, sensitivities = sensitivities)
         } else {
-            setOf(this)
+            setOf(NodeWithAssumption(this))
         }
     var nothingFailed = true
     val allChildren = mutableListOf<QueryTree<Boolean>>()
     for (nodeToTrack in nodesToTrack) {
         val nextDFGPaths =
-            nodeToTrack
+            nodeToTrack.node
                 .collectAllNextDFGPaths(
                     interproceduralAnalysis = scope is Interprocedural,
                     contextSensitive = ContextSensitive in sensitivities,
                 )
+                .map { it.nodes }
                 .flatten()
                 .toSet()
         val earlyTerminationPredicate = { n: Node, ctx: Context ->
@@ -378,7 +432,7 @@ fun Node.alwaysFlowsTo(
                 (!allowOverwritingValue &&
                     // TODO: This should be replaced with some check if the memory location/whatever
                     // where the data is kept is (partially) written to.
-                    nodeToTrack in n.prevDFG &&
+                    nodeToTrack.node in n.prevDFG &&
                     (n as? Reference)?.access == AccessValues.WRITE)
         }
         val eogScope =
@@ -393,7 +447,7 @@ fun Node.alwaysFlowsTo(
                 )
             } else scope
         val nextEOGEvaluation =
-            nodeToTrack.followEOGEdgesUntilHit(
+            nodeToTrack.node.followEOGEdgesUntilHit(
                 collectFailedPaths = true,
                 findAllPossiblePaths = true,
                 scope = eogScope,
@@ -406,15 +460,16 @@ fun Node.alwaysFlowsTo(
             nextEOGEvaluation.failed.map { (failureReason, path) ->
                 SinglePathResult(
                     value = false,
-                    children = mutableListOf(QueryTree(value = path)),
+                    children =
+                        mutableListOf(QueryTree(value = path.nodes).addAssumptionDependence(path)),
                     stringRepresentation =
                         "The EOG path reached the end  " +
                             if (earlyTermination != null)
-                                "(or ${path.lastOrNull()} which a predicate marking the end) "
+                                "(or ${path.nodes.lastOrNull()} which a predicate marking the end) "
                             else
                                 "" +
                                     "before passing through a node matching the required predicate.",
-                    node = nodeToTrack,
+                    node = nodeToTrack.node,
                     terminationReason =
                         if (failureReason == FailureReason.PATH_ENDED) {
                             PathEnded(nodes.last())
@@ -428,14 +483,15 @@ fun Node.alwaysFlowsTo(
                 nextEOGEvaluation.fulfilled.map {
                     SinglePathResult(
                         value = true,
-                        children = mutableListOf(QueryTree(value = it)),
+                        children =
+                            mutableListOf(QueryTree(value = it.nodes).addAssumptionDependence(it)),
                         stringRepresentation =
-                            "The EOG path reached the node ${it.lastOrNull()} matching the required predicate" +
+                            "The EOG path reached the node ${it.nodes.lastOrNull()} matching the required predicate" +
                                 if (earlyTermination != null)
                                     " before reaching a node matching the early termination predicate"
                                 else "",
                         node = this,
-                        terminationReason = Success(it.last()),
+                        terminationReason = Success(it.nodes.last()),
                     )
                 }
         nothingFailed = nothingFailed && nextEOGEvaluation.failed.isEmpty()
@@ -450,6 +506,7 @@ fun Node.alwaysFlowsTo(
                 "Some EOG paths failed to fulfill the predicate"
             },
         node = this,
+        assumptions = nodesToTrack.flatMap { it.assumptions }.toMutableSet(),
     )
 }
 
