@@ -80,10 +80,19 @@ open class ValueEvaluator(
     }
 
     /**
+     * This class is used to return the result of the evaluation as well as the path that was taken
+     * to reach this result.
+     */
+    data class ResultWithPath<T>(val result: T, val path: List<Node>)
+
+    /**
      * Tries to evaluate this node and returns the result as the specified type [T]. If the
      * evaluation fails, the result is "null".
+     *
+     * @return The result of the evaluation as [ResultWithPath]. If the evaluation fails, the result
+     *   is null.
      */
-    inline fun <reified T> evaluateAs(node: Node?): T? {
+    inline fun <reified T> evaluateAs(node: Node?): ResultWithPath<T>? {
         val result = evaluateInternal(node, 0)
         return if (result !is T) {
             Util.errorWithFileLocation(
@@ -95,7 +104,7 @@ open class ValueEvaluator(
             )
             null
         } else {
-            result
+            ResultWithPath(result, path)
         }
     }
 

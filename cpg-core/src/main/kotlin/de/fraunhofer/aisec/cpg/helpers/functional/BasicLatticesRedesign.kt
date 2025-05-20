@@ -31,12 +31,7 @@ import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice.Element
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import java.io.Serializable
-import java.util.IdentityHashMap
-import kotlin.collections.component1
-import kotlin.collections.component2
-import kotlin.collections.fold
-import kotlin.collections.plusAssign
-import kotlin.collections.set
+import java.util.*
 
 /** Used to identify the order of elements */
 enum class Order {
@@ -97,7 +92,7 @@ interface Lattice<T : Lattice.Element> {
     }
 
     /** Allows storing all elements which are part of this lattice */
-    var elements: Set<T>
+    var elements: LinkedHashSet<T>
 
     /** The smallest possible element in the lattice */
     val bottom: T
@@ -208,7 +203,7 @@ interface Lattice<T : Lattice.Element> {
 
 /** Implements a [Lattice] whose elements are the powerset of a given set of values. */
 class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
-    override lateinit var elements: Set<Element<T>>
+    override lateinit var elements: LinkedHashSet<Element<T>>
 
     class Element<T>(expectedMaxSize: Int) : IdentitySet<T>(expectedMaxSize), Lattice.Element {
         constructor(set: Set<T>) : this(set.size) {
@@ -293,7 +288,7 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
  */
 open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
     Lattice<MapLattice.Element<K, V>> {
-    override lateinit var elements: Set<Element<K, V>>
+    override lateinit var elements: LinkedHashSet<Element<K, V>>
 
     class Element<K, V : Lattice.Element>(expectedMaxSize: Int) :
         IdentityHashMap<K, V>(expectedMaxSize), Lattice.Element {
@@ -431,7 +426,7 @@ class TupleLattice<S : Lattice.Element, T : Lattice.Element>(
     val innerLattice1: Lattice<S>,
     val innerLattice2: Lattice<T>,
 ) : Lattice<TupleLattice.Element<S, T>> {
-    override lateinit var elements: Set<Element<S, T>>
+    override lateinit var elements: LinkedHashSet<Element<S, T>>
 
     class Element<S : Lattice.Element, T : Lattice.Element>(val first: S, val second: T) :
         Serializable, Lattice.Element {
@@ -510,7 +505,7 @@ class TripleLattice<R : Lattice.Element, S : Lattice.Element, T : Lattice.Elemen
     val innerLattice2: Lattice<S>,
     val innerLattice3: Lattice<T>,
 ) : Lattice<TripleLattice.Element<R, S, T>> {
-    override lateinit var elements: Set<Element<R, S, T>>
+    override lateinit var elements: LinkedHashSet<Element<R, S, T>>
 
     class Element<R : Lattice.Element, S : Lattice.Element, T : Lattice.Element>(
         val first: R,
