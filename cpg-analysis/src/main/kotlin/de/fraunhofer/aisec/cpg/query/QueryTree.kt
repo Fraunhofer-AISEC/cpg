@@ -377,7 +377,6 @@ class SinglePathResult(
 
 class QueryException(override val message: String) : Exception(message)
 
-<<<<<<< HEAD
 /**
  * Merges a `List<QueryTree<Boolean>>` into a single `QueryTree<Boolean>`. The [QueryTree.value] is
  * `true` if all elements have value `true`.
