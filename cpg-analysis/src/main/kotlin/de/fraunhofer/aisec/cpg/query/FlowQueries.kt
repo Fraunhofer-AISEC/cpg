@@ -236,7 +236,8 @@ fun executionPath(
 /**
  * This function tracks if the data in [source] always flow through a node which fulfills
  * [validatorPredicate] before reaching a sink which is specified by [sinkPredicate]. The analysis
- * can be configured with [scope] and [sensitivities].
+ * can be configured with [scope] and [sensitivities]. If no matching sink is found, the path is
+ * considered as ok even if there's no validator on that path.
  */
 fun dataFlowWithValidator(
     source: Node,
