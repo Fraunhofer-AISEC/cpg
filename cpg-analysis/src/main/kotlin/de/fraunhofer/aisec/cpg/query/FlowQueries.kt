@@ -400,7 +400,7 @@ fun Node.identifyInfoToTrack(
  * none of the nodes reaching by the DFG is in the new scope or one of its parents (i.e., the
  * condition cannot be fulfilled anymore).
  */
-private fun Node.alwaysFlowsTo(
+fun Node.alwaysFlowsTo(
     allowOverwritingValue: Boolean = false,
     earlyTermination: ((Node) -> Boolean)? = null,
     identifyCopies: Boolean = true,
