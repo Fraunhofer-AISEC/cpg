@@ -105,11 +105,13 @@ class Interprocedural(val maxCallDepth: Int? = null, maxSteps: Int? = null) :
         val followShortFS = isShortFS && !maxDepthOk
         // If this is no shortFS and we did not yet reach the max depth, we follow it
         val followEverythingButShortFS = !isShortFS && maxDepthOk
-        // Is this even an interprocedural edge or an edge we are going to follow anyways (assuming that the maxSteps are still ok)?
+        // Is this even an interprocedural edge or an edge we are going to follow anyways (assuming
+        // that the maxSteps are still ok)?
         val isInterProcedural = (edge is ContextSensitiveDataflow) || isShortFS
-        // Summary: In case we did not yet exceed the maxSteps, we follow the edge either if it's no interprocedural edge or if we follow the shortFS edges or if we follow everything but the short FS edges
+        // Summary: In case we did not yet exceed the maxSteps, we follow the edge either if it's no
+        // interprocedural edge or if we follow the shortFS edges or if we follow everything but the
+        // short FS edges
         return maxStepsOk && (!isInterProcedural || followShortFS || followEverythingButShortFS)
-
     }
 }
 
@@ -579,9 +581,14 @@ object ContextSensitive : AnalysisSensitivity() {
         return if (analysisDirection.edgeRequiresCallPush(currentNode, edge)) {
             // Push the call of our calling context to the stack.
             // This is for following DFG edges.
-            (edge as? ContextSensitiveDataflow)?.callingContext?.calls?.forEach {
-                ctx.callStack.push(it)
-            }
+            val stack =
+                if (analysisDirection is Backward) {
+                    (edge as? ContextSensitiveDataflow)?.callingContext?.calls?.reversed()
+                } else {
+                    (edge as? ContextSensitiveDataflow)?.callingContext?.calls
+                }
+
+            stack?.forEach { ctx.callStack.push(it) }
                 ?:
                 // This is for following the EOG
                 (currentNode as? CallExpression)?.let { ctx.callStack.push(it) }
