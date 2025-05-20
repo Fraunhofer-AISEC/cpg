@@ -324,6 +324,24 @@ fun Node.collectAllPrevFullDFGPaths(): List<NodePath> {
 }
 
 /**
+ * Iterates the prev DFG edges until there are no more edges available (or until a loop is
+ * detected). Returns a list of possible paths (each path is represented by a list of nodes).
+ */
+fun Node.collectAllPrevDFGPaths(): List<NodePath> {
+    // We make everything fail to reach the end of the DFG. Then, we use the stuff collected in the
+    // failed paths (everything)
+    return this.followDFGEdgesUntilHit(
+            collectFailedPaths = true,
+            findAllPossiblePaths = true,
+            direction = Backward(GraphToFollow.DFG),
+        ) {
+            false
+        }
+        .failed
+        .map { it.second }
+}
+
+/**
  * Returns an instance of [FulfilledAndFailedPaths] where [FulfilledAndFailedPaths.fulfilled]
  * contains all possible shortest data flow paths between the starting node [this] and the end node
  * fulfilling [predicate]. The paths are represented as lists of nodes. Paths which do not end at
