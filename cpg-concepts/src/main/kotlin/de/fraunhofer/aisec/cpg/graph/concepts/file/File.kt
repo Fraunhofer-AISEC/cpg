@@ -68,7 +68,7 @@ const val O_ACCMODE_MODE_MASK = 3L
  * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
  * @param fileName The name of the file e.g. `foo/bar/example.txt`
  */
-class File(underlyingNode: Node? = null, val fileName: String) :
+open class File(underlyingNode: Node? = null, val fileName: String) :
     Concept(underlyingNode = underlyingNode), IsFile {
     override fun equals(other: Any?): Boolean {
         return other is File && super.equals(other) && other.fileName == this.fileName
@@ -84,7 +84,7 @@ class File(underlyingNode: Node? = null, val fileName: String) :
  * @param concept The corresponding [File] node.
  * @param flags A set of file flags (see [FileAccessModeFlags]).
  */
-class SetFileFlags(
+open class SetFileFlags(
     underlyingNode: Node? = null,
     concept: File,
     val flags: Set<FileAccessModeFlags>,
@@ -104,7 +104,7 @@ class SetFileFlags(
  * @param concept The corresponding [File] node.
  * @param mask The file mask in UNIX notation (i.e. 0o644)
  */
-class SetFileMask(underlyingNode: Node? = null, concept: File, val mask: Long) :
+open class SetFileMask(underlyingNode: Node? = null, concept: File, val mask: Long) :
     FileOperation(underlyingNode = underlyingNode, file = concept), IsFile {
     override fun equals(other: Any?): Boolean {
         return other is SetFileMask && super.equals(other) && other.mask == this.mask
@@ -119,7 +119,7 @@ class SetFileMask(underlyingNode: Node? = null, concept: File, val mask: Long) :
  * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
  * @param concept The corresponding [File] node.
  */
-class CloseFile(underlyingNode: Node? = null, concept: File) :
+open class CloseFile(underlyingNode: Node? = null, concept: File) :
     FileOperation(underlyingNode = underlyingNode, file = concept), IsFile {}
 
 /**
@@ -128,7 +128,7 @@ class CloseFile(underlyingNode: Node? = null, concept: File) :
  * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
  * @param concept The corresponding [File] node.
  */
-class DeleteFile(underlyingNode: Node? = null, concept: File) :
+open class DeleteFile(underlyingNode: Node? = null, concept: File) :
     FileOperation(underlyingNode = underlyingNode, file = concept), IsFile {}
 
 /**
@@ -138,7 +138,7 @@ class DeleteFile(underlyingNode: Node? = null, concept: File) :
  * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
  * @param concept The corresponding [File] node.
  */
-class OpenFile(underlyingNode: Node? = null, concept: File) :
+open class OpenFile(underlyingNode: Node? = null, concept: File) :
     FileOperation(underlyingNode = underlyingNode, file = concept), IsFile {}
 
 /**
@@ -147,7 +147,7 @@ class OpenFile(underlyingNode: Node? = null, concept: File) :
  * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
  * @param concept The corresponding [File] node.
  */
-class ReadFile(underlyingNode: Node? = null, concept: File) :
+open class ReadFile(underlyingNode: Node? = null, concept: File) :
     FileOperation(underlyingNode = underlyingNode, file = concept), IsFile {
     override fun setDFG() {
         this.file.nextDFG += this
@@ -162,7 +162,7 @@ class ReadFile(underlyingNode: Node? = null, concept: File) :
  * @param concept The corresponding [File] node.
  * @param what The node being written to the file.
  */
-class WriteFile(underlyingNode: Node? = null, concept: File, val what: Node) :
+open class WriteFile(underlyingNode: Node? = null, concept: File, val what: Node) :
     FileOperation(underlyingNode = underlyingNode, file = concept), IsFile {
     override fun equals(other: Any?): Boolean {
         return other is WriteFile && super.equals(other) && other.what == this.what

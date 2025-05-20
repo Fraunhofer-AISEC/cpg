@@ -32,7 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.concepts.auth.Authentication
 import java.util.Objects
 
 /** Represents an [HttpClient]. */
-class HttpClient(
+open class HttpClient(
     underlyingNode: Node? = null,
     val isTLS: Boolean? = false,
     val authentication: Authentication? = null,

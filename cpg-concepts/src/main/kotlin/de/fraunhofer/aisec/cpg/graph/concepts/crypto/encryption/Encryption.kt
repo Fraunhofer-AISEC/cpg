@@ -23,16 +23,32 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.concepts.logging
+package de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption
 
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.concepts.Operation
+import de.fraunhofer.aisec.cpg.graph.concepts.Concept
+import de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.Secret
+import java.util.Objects
 
-/**
- * A log get operation e.g. `logging.getLogger("...")`.
- *
- * @param underlyingNode The underlying CPG node.
- * @param concept The corresponding [Log] concept note, i.e. the log that is returned.
- */
-open class LogGet(underlyingNode: Node? = null, override val concept: Log) :
-    Operation(underlyingNode = underlyingNode, concept = concept), IsLogging
+/** This concept represents an encryption. */
+open class Encryption<T>(underlyingNode: Node? = null) :
+    Concept(underlyingNode = underlyingNode), IsEncryption {
+    /** The encryption target */
+    var target: T? = null
+
+    /** The cipher suite used for disk encryption */
+    var cipher: Cipher? = null
+
+    /** The encryption key used for disk encryption */
+    var key: Secret? = null
+
+    override fun equals(other: Any?): Boolean {
+        return other is Encryption<T> &&
+            super.equals(other) &&
+            other.target == this.cipher &&
+            other.cipher == this.cipher &&
+            other.key == this.key
+    }
+
+    override fun hashCode() = Objects.hash(super.hashCode(), target, cipher, key)
+}
