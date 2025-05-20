@@ -34,7 +34,7 @@ import java.util.Objects
  *
  * @param underlyingNode The underlying CPG node.
  */
-class Log(underlyingNode: Node? = null) : Concept(underlyingNode = underlyingNode), IsLogging {
+open class Log(underlyingNode: Node? = null) : Concept(underlyingNode = underlyingNode), IsLogging {
     var logName: String? = null
 
     override fun equals(other: Any?): Boolean {
