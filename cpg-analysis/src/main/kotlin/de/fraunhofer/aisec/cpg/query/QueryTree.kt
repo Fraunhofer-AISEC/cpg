@@ -180,12 +180,7 @@ infix fun <T, S> T.eq(other: S): QueryTree<Boolean> {
     val otherQt = other.toQueryTree()
 
     val result = thisQt.value == otherQt.value
-    return QueryTree(
-        result,
-        mutableListOf(thisQt, otherQt),
-        "${thisQt.value} == ${otherQt.value}",
-        thisQt.node,
-    )
+    return QueryTree(result, mutableListOf(thisQt, otherQt), "${thisQt.value} == ${otherQt.value}")
 }
 
 /**
@@ -197,12 +192,7 @@ infix fun <T, S> T.ne(other: S): QueryTree<Boolean> {
     val otherQt = other.toQueryTree()
 
     val result = thisQt.value != otherQt.value
-    return QueryTree(
-        result,
-        mutableListOf(thisQt, otherQt),
-        "${thisQt.value} != ${otherQt.value}",
-        thisQt.node,
-    )
+    return QueryTree(result, mutableListOf(thisQt, otherQt), "${thisQt.value} != ${otherQt.value}")
 }
 
 /** Performs a logical and (&&) operation between the values of two [QueryTree]s. */
