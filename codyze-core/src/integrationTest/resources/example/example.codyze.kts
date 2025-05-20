@@ -23,8 +23,6 @@
  *                    \______/ \__|       \______/
  *
  */
-@file:Import("test.main.kts")
-
 package example
 
 project {

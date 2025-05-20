@@ -43,6 +43,6 @@ fun goodArgumentSize(result: TranslationResult): QueryTree<Boolean> {
 class CodyzeExecutorTest {
     @Test
     fun testExecute() {
-        execute("src/integrationTest/resources/example/example.codyze.kts")
+        evaluateWithCodyze("src/integrationTest/resources/example/example.codyze.kts")
     }
 }

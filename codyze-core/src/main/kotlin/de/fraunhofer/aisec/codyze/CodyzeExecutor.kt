@@ -34,7 +34,7 @@ import kotlin.script.experimental.jvmhost.createJvmCompilationConfigurationFromT
 import kotlin.script.experimental.jvmhost.createJvmEvaluationConfigurationFromTemplate
 
 /** Execute as a Codyze script. */
-fun execute(scriptFile: String) {
+fun evaluateWithCodyze(scriptFile: String) {
     var b = Benchmark(TranslationResult::class.java, "Compiling query script $scriptFile")
     val compilationConfiguration = createJvmCompilationConfigurationFromTemplate<CodyzeScript>()
     val evaluationConfiguration = createJvmEvaluationConfigurationFromTemplate<CodyzeScript>()

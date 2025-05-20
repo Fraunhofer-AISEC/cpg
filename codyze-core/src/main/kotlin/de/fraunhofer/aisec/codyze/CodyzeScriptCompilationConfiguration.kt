@@ -81,7 +81,7 @@ class CodyzeScriptCompilationConfiguration :
             "de.fraunhofer.aisec.cpg.graph.*",
             "de.fraunhofer.aisec.cpg.query.*",
         )
-        jvm {
+        /*jvm {
             val keyResource =
                 CodyzeScriptCompilationConfiguration::class.java.name.replace('.', '/') + ".class"
             val thisJarFile =
@@ -102,6 +102,13 @@ class CodyzeScriptCompilationConfiguration :
                     wholeClasspath = true,
                 )
             }
+        }*/
+        jvm {
+            dependenciesFromClassContext(
+                CodyzeScript::class,
+                libraries = baseLibraries,
+                wholeClasspath = true,
+            )
         }
         refineConfiguration { onAnnotations(Import::class, handler = CodyzeScriptConfigurator()) }
         compilerOptions("-Xcontext-receivers", "-jvm-target=21")

@@ -40,6 +40,8 @@ class RequirementsBuilder {}
 
 class ToEBuilder {
     var name: String? = null
+    var description: String? = null
+    var version: String? = null
 }
 
 class ArchitectureBuilder {}
@@ -53,12 +55,23 @@ val ALL = listOf<String>()
 
 class ModuleBuilder(var name: String = "") {
     var directory: String = ""
-    var files: List<String> = ALL
+    private var include: List<String> = emptyList()
+    private var exclude: List<String> = emptyList()
+
+    fun include(vararg includes: String) {
+        include += includes
+    }
+
+    fun exclude(vararg excludes: String) {
+        exclude += excludes
+    }
 }
 
 class ProjectBuilder {}
 
 @CodyzeDsl fun CodyzeScript.project(block: ProjectBuilder.() -> Unit) {}
+
+@CodyzeDsl fun CodyzeScript.tagging(block: ProjectBuilder.() -> Unit) {}
 
 /** Describes a Target of Evaluation (ToE). */
 @CodyzeDsl fun ProjectBuilder.toe(block: ToEBuilder.() -> Unit) {}

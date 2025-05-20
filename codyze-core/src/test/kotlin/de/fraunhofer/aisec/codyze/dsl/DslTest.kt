@@ -54,7 +54,7 @@ class DslTest {
                         modules {
                             module("module1") {
                                 directory = "src/module1"
-                                files = ALL
+                                exclude("tests")
                             }
                         }
                     }
