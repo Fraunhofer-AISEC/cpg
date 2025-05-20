@@ -162,11 +162,12 @@ open class QueryTree<T>(
     }
 }
 
-fun <T> QueryTree<T>.toQueryTree(): QueryTree<T> {
-    return this
-}
-
 fun <T> T.toQueryTree(): QueryTree<T> {
+    if (this is QueryTree<*>) {
+        @Suppress("UNCHECKED_CAST")
+        return this as QueryTree<T>
+    }
+
     return QueryTree(this, stringRepresentation = this.toString())
 }
 
