@@ -245,10 +245,12 @@ fun dataFlowWithValidator(
     scope: AnalysisScope,
     vararg sensitivities: AnalysisSensitivity,
 ): QueryTree<Boolean> {
-    return source.alwaysFlowsTo(
+    return source.alwaysFlowsToPrivate(
         allowOverwritingValue = true,
+        noSinkIsGood = true,
         earlyTermination = sinkPredicate,
         identifyCopies = false,
+        stopIfImpossible = true,
         scope = scope,
         sensitivities = sensitivities,
         predicate = validatorPredicate,
@@ -397,8 +399,43 @@ fun Node.identifyInfoToTrack(
  * none of the nodes reaching by the DFG is in the new scope or one of its parents (i.e., the
  * condition cannot be fulfilled anymore).
  */
-fun Node.alwaysFlowsTo(
+private fun Node.alwaysFlowsTo(
     allowOverwritingValue: Boolean = false,
+    earlyTermination: ((Node) -> Boolean)? = null,
+    identifyCopies: Boolean = true,
+    stopIfImpossible: Boolean = true,
+    scope: AnalysisScope,
+    vararg sensitivities: AnalysisSensitivity =
+        ContextSensitive + FieldSensitive + FilterUnreachableEOG,
+    predicate: (Node) -> Boolean,
+): QueryTree<Boolean> {
+    return this.alwaysFlowsToPrivate(
+        allowOverwritingValue = allowOverwritingValue,
+        noSinkIsGood = false,
+        earlyTermination = earlyTermination,
+        identifyCopies = identifyCopies,
+        stopIfImpossible = stopIfImpossible,
+        scope = scope,
+        sensitivities = sensitivities,
+        predicate = predicate,
+    )
+}
+
+/**
+ * This function tracks if the data in [this] always flow through a node which fulfills [predicate].
+ * An early termination can be specified by the predicate [earlyTermination].
+ * [allowOverwritingValue] can be used to configure if overwriting the value (or part of it) results
+ * in a failure of the requirement (if `false`) or if it does not affect the evaluation. The
+ * analysis can be configured with [scope] and [sensitivities]. [stopIfImpossible] enables the
+ * option to stop iterating through the EOG if we already left the function where we started and
+ * none of the nodes reaching by the DFG is in the new scope or one of its parents (i.e., the
+ * condition cannot be fulfilled anymore).
+ *
+ * If [noSinkIsGood] is set to `true`, all results with "ended path" are considered as fulfilled.
+ */
+private fun Node.alwaysFlowsToPrivate(
+    allowOverwritingValue: Boolean = false,
+    noSinkIsGood: Boolean = false,
     earlyTermination: ((Node) -> Boolean)? = null,
     identifyCopies: Boolean = true,
     stopIfImpossible: Boolean = true,
@@ -494,7 +531,16 @@ fun Node.alwaysFlowsTo(
                         terminationReason = Success(it.nodes.last()),
                     )
                 }
-        nothingFailed = nothingFailed && nextEOGEvaluation.failed.isEmpty()
+        nothingFailed =
+            nothingFailed &&
+                nextEOGEvaluation.failed.none {
+                    // If we configure this function with "noSinkIsGood == true", then we only
+                    // consider paths which hit the early termination or which exceeded the steps
+                    // (though the latter is debatable).
+                    // If "noSinkIsGood == false", we consider all paths which are not fulfilled as
+                    // failed.
+                    !noSinkIsGood || it.first != FailureReason.PATH_ENDED
+                }
     }
     return QueryTree(
         value = nothingFailed,
