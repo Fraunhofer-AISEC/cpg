@@ -377,6 +377,7 @@ class SinglePathResult(
 
 class QueryException(override val message: String) : Exception(message)
 
+<<<<<<< HEAD
 /**
  * Merges a `List<QueryTree<Boolean>>` into a single `QueryTree<Boolean>`. The [QueryTree.value] is
  * `true` if all elements have value `true`.
@@ -421,4 +422,19 @@ fun List<QueryTree<Boolean>>.mergeWithAny(
         node = node,
         assumptions = assumptions,
     )
+}
+
+infix fun <T : Any> T.eq(other: T): QueryTree<Boolean> {
+    val thisQuery = this.toQueryTree()
+    val result = thisQuery.value == other
+    return QueryTree(
+        result,
+        mutableListOf(thisQuery, QueryTree(other)),
+        "${thisQuery.value} == $other",
+        thisQuery.node,
+    )
+}
+
+fun <T : Any> T.toQueryTree(): QueryTree<T> {
+    return QueryTree(this, stringRepresentation = this.toString())
 }

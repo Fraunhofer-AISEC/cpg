@@ -23,35 +23,27 @@
  *                    \______/ \__|       \______/
  *
  */
-package codyze
+@file:Import("test.main.kts")
 
-import de.fraunhofer.aisec.codyze.ConceptScriptPass
-import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
-import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.test.analyze
-import kotlin.io.path.Path
-import kotlin.test.Test
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
+package example
 
-class ConceptScriptPassTest {
-
-    @Test
-    fun testConceptScriptPass() {
-        val topLevel = Path("src/integrationTest/resources")
-        val result =
-            analyze(listOf(topLevel.resolve("encrypt.py").toFile()), topLevel, true) {
-                it.registerLanguage<PythonLanguage>()
-                it.registerPass<ConceptScriptPass>()
-                it.configurePass<ConceptScriptPass>(
-                    ConceptScriptPass.Configuration(
-                        scriptFile = topLevel.resolve("encryption.concept.kts").toFile()
-                    )
-                )
+project {
+    toe {
+        name = "My Mock TOE"
+        architecture {
+            modules {
+                module("module1") {
+                    directory = "src/module1"
+                    files = ALL
+                }
             }
-        assertNotNull(result)
+        }
 
-        val encrypt = result.calls("encrypt")
-        encrypt.forEach { assertTrue(it.operationNodes.isNotEmpty()) }
+        requirements {
+            requirement("Is Security Target Correctly specified") { byManualCheck() }
+            requirement("Good Encryption") {
+                byQuery { result -> goodCryptoFunc(result) and goodArgumentSize(result) }
+            }
+        }
     }
 }

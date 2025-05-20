@@ -66,7 +66,7 @@ object ConceptScriptConfiguration :
                     "kotlin-stdlib",
                     "kotlin-reflect",
                 )
-            val cp = classpathFromClassloader(QueryScript::class.java.classLoader)
+            val cp = classpathFromClassloader(ConceptScript::class.java.classLoader)
             checkNotNull(cp) { "Could not read classpath" }
             updateClasspath(cp.filter { element -> libraries.any { it in element.toString() } })
         }
