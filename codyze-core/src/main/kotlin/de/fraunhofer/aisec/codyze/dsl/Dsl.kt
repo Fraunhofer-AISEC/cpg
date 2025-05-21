@@ -208,12 +208,12 @@ fun AssumptionsBuilder.ignore(uuid: String) {
 }
 
 private fun parseUuidAndAnnotateAssumptions(uuid: String, status: AssumptionStatus) {
-    val uuid = Uuid.parse(uuid)
+    val parsedUuid = Uuid.parse(uuid)
     // TODO: Acutally get the TranslationResult
     val result: TranslationResult? = null
     // TODO: Do we find all assumptions like this (i.e., also those related to overlays of a node
     // and edges)?
     result
-        .allChildrenWithOverlays<Assumption> { it.id == uuid }
+        .allChildrenWithOverlays<Assumption> { it.id == parsedUuid }
         .forEach { assumption -> assumption.status = status }
 }
