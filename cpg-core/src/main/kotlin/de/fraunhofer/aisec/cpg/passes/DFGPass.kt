@@ -306,16 +306,15 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 }
             } else {
                 node.variable.variables.lastOrNull()?.prevDFGEdges += iterable
+                node.assume(
+                    AssumptionType.AmbiguityAssumption,
+                    "We assume that the last VariableDeclaration in the statement kept in \"variable\" is the variable we care about in the ForEachStatement if there is no DeclarationStatement related to $node.\n\n" +
+                        "To verify this assumption, we need to check if the last VariableDeclaration of the variable is indeed the one where we assign the iterable's elements to.",
+                )
             }
         }
 
-        node.variable?.let {
-            node.prevDFGEdges += it
-            node.assume(
-                AssumptionType.AmbiguityAssumption,
-                "If this is not the case, we assume that the last VariableDeclaration in the statement is the one we care about.",
-            )
-        }
+        node.variable?.let { node.prevDFGEdges += it }
     }
 
     /**

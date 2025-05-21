@@ -342,9 +342,9 @@ fun Node.generatesNewData(): NodeCollectionWithAssumption {
         .addAssumptionDependences(tempAssumptions + splitNodes + this)
         .assume(
             AssumptionType.DataFlowAssumption,
-            "The node generates the following new \"objects\" which require separate handling as they represent copies/clones of the original \"object\": $splitNodes.\n\n" +
+            "We assume that the node $this generates the following new \"objects\" which require separate handling as they represent copies/clones of the original \"object\": $splitNodes.\n\n" +
                 "We assume that this list is complete and does not contain additional elements.\n" +
-                "This assumption can be split up into the following (global) sub-assumptions, where all of them have to hold:\n" +
+                "To verify this assumption, we need to check if all of the following (global) sub-assumptions hold:\n" +
                 "1. The list of mutable and immutable types is complete and sound for each programming language used in the analyzed project.\n" +
                 "2. Copies of data happen exclusively by one of the following patterns:\n" +
                 "2.a) Constructing a new object where our data flow to by a constructor invocation or by a collection comprehension: We should track this object and the target of the operation separately." +
