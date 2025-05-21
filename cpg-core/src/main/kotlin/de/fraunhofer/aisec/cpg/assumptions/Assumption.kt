@@ -298,6 +298,13 @@ interface HasAssumptions {
      * assumption is also added to the [assumptions] list. In the future the [Node.id] will be
      * deterministic across functions.
      *
+     * Notes on writing the [message]: The message should specify what we assume, the condition, and
+     * ideally the reason why this assumption was necessary and how it can be verified. The text
+     * should start with a pattern such as "We assume that ... .", where "..." contains a
+     * description of the assumption with the reference to concrete nodes or edges affected by it.
+     * Afterward, it is beneficial to continue with a paragraph "To verify this assumption, we need
+     * to check ...".
+     *
      * @param assumptionType The type of assumption used to differentiate between assumptions and
      *   group similar assumptions.
      * @param scope The scope that the assumption has validity for, here the scope is a node,
