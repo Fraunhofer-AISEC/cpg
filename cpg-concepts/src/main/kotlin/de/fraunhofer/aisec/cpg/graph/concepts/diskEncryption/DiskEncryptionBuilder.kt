@@ -29,6 +29,8 @@ import de.fraunhofer.aisec.cpg.graph.MetadataProvider
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
+import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Cipher
+import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Encrypt
 import de.fraunhofer.aisec.cpg.graph.concepts.newConcept
 import de.fraunhofer.aisec.cpg.graph.concepts.newOperation
 

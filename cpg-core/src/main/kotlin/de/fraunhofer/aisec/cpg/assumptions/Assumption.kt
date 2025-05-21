@@ -42,6 +42,12 @@ import org.neo4j.ogm.annotation.typeconversion.Convert
  * The minimal properties to identify an assumption, is the assumption type and either node, edge,
  * or node [id] if deterministic. Only one of the three should be provided.
  *
+ * Notes on writing the [message]: The message should specify what we assume, the condition, and
+ * ideally the reason why this assumption was necessary and how it can be verified. The text should
+ * start with a pattern such as "We assume that ... .", where "..." contains a description of the
+ * assumption with the reference to concrete nodes or edges affected by it. Afterward, it is
+ * beneficial to continue with a paragraph "To verify this assumption, we need to check ...".
+ *
  * @param assumptionType One of many finite assumption types used to differentiate between
  *   assumptions and group similar assumptions.
  * @param message The message describing the assumption that was taken.
@@ -297,6 +303,13 @@ interface HasAssumptions {
      * edge. The Assumption is added as an overlaying node for presentation in the graph. The
      * assumption is also added to the [assumptions] list. In the future the [Node.id] will be
      * deterministic across functions.
+     *
+     * Notes on writing the [message]: The message should specify what we assume, the condition, and
+     * ideally the reason why this assumption was necessary and how it can be verified. The text
+     * should start with a pattern such as "We assume that ... .", where "..." contains a
+     * description of the assumption with the reference to concrete nodes or edges affected by it.
+     * Afterward, it is beneficial to continue with a paragraph "To verify this assumption, we need
+     * to check ...".
      *
      * @param assumptionType The type of assumption used to differentiate between assumptions and
      *   group similar assumptions.

@@ -26,28 +26,15 @@
 package de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption
 
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.concepts.Concept
-import java.util.Objects
+import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Encryption
 
 /** This concept represents an encrypted disk. */
-class DiskEncryption(underlyingNode: Node? = null) :
-    Concept(underlyingNode = underlyingNode), IsDiskEncryption {
-    /** The encryption target, i.e. the disk */
-    var target: BlockStorage? = null
-
-    /** The cipher suite used for disk encryption */
-    var cipher: Cipher? = null
-
-    /** The encryption key used for disk encryption */
-    var key: Secret? = null
+open class DiskEncryption(underlyingNode: Node? = null) :
+    Encryption<BlockStorage>(underlyingNode = underlyingNode), IsDiskEncryption {
 
     override fun equals(other: Any?): Boolean {
-        return other is DiskEncryption &&
-            super.equals(other) &&
-            other.target == this.cipher &&
-            other.cipher == this.cipher &&
-            other.key == this.key
+        return other is DiskEncryption && super.equals(other)
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), target, cipher, key)
+    override fun hashCode() = super.hashCode()
 }

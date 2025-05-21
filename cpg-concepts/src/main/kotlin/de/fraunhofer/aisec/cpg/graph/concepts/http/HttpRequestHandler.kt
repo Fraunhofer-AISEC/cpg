@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 
 /** Represents a group of [HttpEndpoint]'s, commonly known as a Controller in some frameworks. */
-class HttpRequestHandler(
+open class HttpRequestHandler(
     underlyingNode: Node? = null,
     val basePath: String,
     val endpoints: MutableList<HttpEndpoint>,

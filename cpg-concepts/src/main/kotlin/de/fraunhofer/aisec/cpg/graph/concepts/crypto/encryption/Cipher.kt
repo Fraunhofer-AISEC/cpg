@@ -23,15 +23,15 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption
+package de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption
 
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import java.util.Objects
 
 /** Represents a cipher suite. E.g. `AES-XTS-plain64` */
-class Cipher(underlyingNode: Node? = null) :
-    Concept(underlyingNode = underlyingNode), IsDiskEncryption {
+open class Cipher(underlyingNode: Node? = null) :
+    Concept(underlyingNode = underlyingNode), IsEncryption {
     /** A string representing the cipher used, e.g. `AES-XTS-plain64`. */
     var cipherName: String? = null
 
