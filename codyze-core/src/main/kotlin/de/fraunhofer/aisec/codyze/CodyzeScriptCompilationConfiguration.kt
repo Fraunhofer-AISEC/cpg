@@ -36,8 +36,9 @@ import kotlin.script.experimental.dependencies.ExternalDependenciesResolver
 import kotlin.script.experimental.dependencies.FileSystemDependenciesResolver
 import kotlin.script.experimental.host.FileBasedScriptSource
 import kotlin.script.experimental.host.FileScriptSource
-import kotlin.script.experimental.jvm.dependenciesFromClassContext
 import kotlin.script.experimental.jvm.jvm
+import kotlin.script.experimental.jvm.updateClasspath
+import kotlin.script.experimental.jvm.util.classpathFromClassloader
 import kotlin.script.experimental.util.filterByAnnotationType
 import kotlin.script.templates.ScriptTemplateDefinition
 
@@ -84,11 +85,9 @@ class CodyzeScriptCompilationConfiguration :
             "de.fraunhofer.aisec.cpg.query.*",
         )
         jvm {
-            dependenciesFromClassContext(
-                CodyzeScript::class,
-                libraries = baseLibraries,
-                wholeClasspath = true,
-            )
+            val cp = classpathFromClassloader(CodyzeScript::class.java.classLoader)
+            checkNotNull(cp) { "Could not read classpath" }
+            updateClasspath(cp)
         }
         refineConfiguration { onAnnotations(Import::class, handler = CodyzeScriptConfigurator()) }
         compilerOptions("-Xcontext-receivers", "-jvm-target=21")
