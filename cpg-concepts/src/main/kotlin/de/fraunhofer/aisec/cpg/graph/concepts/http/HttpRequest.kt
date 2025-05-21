@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import java.util.Objects
 
 /** Represents an [HttpRequest] from the [HttpClient]. */
-class HttpRequest(
+open class HttpRequest(
     underlyingNode: Node? = null,
     val url: String,
     val arguments: List<Node>,

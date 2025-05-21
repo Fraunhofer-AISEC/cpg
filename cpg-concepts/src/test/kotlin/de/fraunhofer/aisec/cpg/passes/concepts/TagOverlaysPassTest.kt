@@ -30,14 +30,16 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.*
-import de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.Cipher
-import de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.Encrypt
+import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Cipher
+import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Encrypt
 import de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.Secret
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import kotlin.test.Test
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
+import kotlin.test.assertSame
 
 class TagOverlaysPassTest {
 
@@ -55,18 +57,29 @@ class TagOverlaysPassTest {
                                         TagOverlaysPass.Configuration(
                                             tag =
                                                 tag {
+                                                    each<RecordDeclaration>("Encryption").with {
+                                                        Cipher()
+                                                    }
                                                     each<VariableDeclaration>("key").with {
                                                         Secret()
                                                     }
                                                     each<CallExpression>("encrypt").withMultiple {
                                                         val secrets =
                                                             node.getOverlaysByPrevDFG<Secret>(state)
-                                                        secrets.map { secret ->
-                                                            Encrypt(
-                                                                concept = Cipher(),
-                                                                key = secret,
-                                                            )
-                                                        }
+                                                        val encryptOps =
+                                                            secrets.flatMap { secret ->
+                                                                val ciphers =
+                                                                    state.values
+                                                                        .flatMap { it }
+                                                                        .filterIsInstance<Cipher>()
+                                                                ciphers.map { cipher ->
+                                                                    Encrypt(
+                                                                        concept = cipher,
+                                                                        key = secret,
+                                                                    )
+                                                                }
+                                                            }
+                                                        encryptOps
                                                     }
                                                 }
                                         )
@@ -77,22 +90,36 @@ class TagOverlaysPassTest {
             ) {
                 translationResult {
                     translationUnit {
+                        record("Encryption") {}
                         function("main") {
                             body {
                                 declare {
                                     variable("key", t("string"), init = { literal("secret") })
-                                    call("encrypt") { ref("key") }
                                 }
+                                call("encrypt") { ref("key") }
                             }
                         }
                     }
                 }
             }
 
+        val encryption = result.records["Encryption"]
+        assertNotNull(encryption)
+
+        val cipher = encryption.conceptNodes.singleOrNull()
+        assertIs<Cipher>(cipher)
+
         val key = result.variables["key"]
         assertNotNull(key)
 
         val secret = key.conceptNodes.singleOrNull()
         assertIs<Secret>(secret)
+
+        val encryptCall = result.calls["encrypt"]
+        assertNotNull(encryptCall)
+
+        val encrypt = encryptCall.operationNodes.singleOrNull()
+        assertIs<Encrypt>(encrypt)
+        assertSame(cipher, encrypt.concept)
     }
 }

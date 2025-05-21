@@ -95,32 +95,6 @@ open class QueryTree<T>(
         return stringRepresentation
     }
 
-    /** Checks for equality of two [QueryTree]s. */
-    infix fun eq(other: QueryTree<T>): QueryTree<Boolean> {
-        val result = this.value == other.value
-        return QueryTree(result, mutableListOf(this, other), "${this.value} == ${other.value}")
-    }
-
-    /**
-     * Checks for equality of a [QueryTree] with a value of the same type (e.g. useful to check for
-     * constants).
-     */
-    infix fun eq(other: T): QueryTree<Boolean> {
-        val result = this.value == other
-        return QueryTree(
-            result,
-            mutableListOf(this, QueryTree(other)),
-            "${this.value} == $value",
-            this.node,
-        )
-    }
-
-    /** Checks for inequality of two [QueryTree]s. */
-    infix fun ne(other: QueryTree<T>): QueryTree<Boolean> {
-        val result = this.value != other.value
-        return QueryTree(result, mutableListOf(this, other), "${this.value} != ${other.value}")
-    }
-
     /**
      * Checks for inequality of a [QueryTree] with a value of the same type (e.g. useful to check
      * for constants).
@@ -186,6 +160,39 @@ open class QueryTree<T>(
     override fun collectAssumptions(): Set<Assumption> {
         return super.collectAssumptions() + children.flatMap { it.collectAssumptions() }.toSet()
     }
+}
+
+fun <T> T.toQueryTree(): QueryTree<T> {
+    if (this is QueryTree<*>) {
+        @Suppress("UNCHECKED_CAST")
+        return this as QueryTree<T>
+    }
+
+    return QueryTree(this, stringRepresentation = this.toString())
+}
+
+/**
+ * Checks for equality of two objects and creates a [QueryTree] with a value `true` if they are
+ * equal.
+ */
+infix fun <T, S> T.eq(other: S): QueryTree<Boolean> {
+    val thisQt = this.toQueryTree()
+    val otherQt = other.toQueryTree()
+
+    val result = thisQt.value == otherQt.value
+    return QueryTree(result, mutableListOf(thisQt, otherQt), "${thisQt.value} == ${otherQt.value}")
+}
+
+/**
+ * Checks for unequality of two objects and creates a [QueryTree] with a value `true` if they are
+ * unequal.
+ */
+infix fun <T, S> T.ne(other: S): QueryTree<Boolean> {
+    val thisQt = this.toQueryTree()
+    val otherQt = other.toQueryTree()
+
+    val result = thisQt.value != otherQt.value
+    return QueryTree(result, mutableListOf(thisQt, otherQt), "${thisQt.value} != ${otherQt.value}")
 }
 
 /** Performs a logical and (&&) operation between the values of two [QueryTree]s. */
@@ -369,3 +376,49 @@ class SinglePathResult(
 ) : QueryTree<Boolean>(value, children, stringRepresentation, node)
 
 class QueryException(override val message: String) : Exception(message)
+
+/**
+ * Merges a `List<QueryTree<Boolean>>` into a single `QueryTree<Boolean>`. The [QueryTree.value] is
+ * `true` if all elements have value `true`.
+ */
+fun List<QueryTree<Boolean>>.mergeWithAll(
+    node: Node? = null,
+    assumptions: MutableSet<Assumption> = mutableSetOf(),
+): QueryTree<Boolean> {
+    val value = this.all { it.value }
+    return QueryTree(
+        value = value,
+        children = this.toMutableList(),
+        stringRepresentation =
+            if (value) {
+                "All elements has value true"
+            } else {
+                "At least one of the elements has false"
+            },
+        node = node,
+        assumptions = assumptions,
+    )
+}
+
+/**
+ * Merges a `List<QueryTree<Boolean>>` into a single `QueryTree<Boolean>`. The [QueryTree.value] is
+ * `true` if at least one element has value `true`.
+ */
+fun List<QueryTree<Boolean>>.mergeWithAny(
+    node: Node? = null,
+    assumptions: MutableSet<Assumption> = mutableSetOf(),
+): QueryTree<Boolean> {
+    val value = this.any { it.value }
+    return QueryTree(
+        value = value,
+        children = this.toMutableList(),
+        stringRepresentation =
+            if (value) {
+                "At least one of the elements has value true"
+            } else {
+                "All elements have value false"
+            },
+        node = node,
+        assumptions = assumptions,
+    )
+}
