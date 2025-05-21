@@ -151,6 +151,12 @@ fun RequirementBuilder.byManualCheck() {
 @CodyzeDsl fun ProjectBuilder.assumptions(block: AssumptionsBuilder.() -> Unit) {}
 
 /**
+ * Allows to explicitly list a custom assumption which has to hold and is always accepted for the
+ * current evaluation project.
+ */
+@CodyzeDsl fun AssumptionsBuilder.assume(message: Unit.() -> String) {}
+
+/**
  * Describes that the assumption with the given [uuid] was assessed and considered as
  * acceptable/valid.
  *

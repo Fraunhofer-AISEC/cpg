@@ -67,6 +67,7 @@ class DslTest {
                 }
 
                 assumptions {
+                    assume() { "We assume that everything is fine." }
                     accept("Assumption 1")
                     reject("Assumption 2")
                     undecided("Assumption 3")
