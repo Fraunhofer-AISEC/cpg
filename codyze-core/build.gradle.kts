@@ -45,6 +45,7 @@ dependencies {
 
     // Script definition
     api(libs.kotlin.scripting.common)
+    api(libs.kotlin.scripting.dependencies)
     api(libs.kotlin.scripting.jvm)
 
     // Scripting host

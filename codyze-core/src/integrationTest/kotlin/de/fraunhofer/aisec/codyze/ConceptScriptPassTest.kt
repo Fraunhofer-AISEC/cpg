@@ -23,11 +23,11 @@
  *                    \______/ \__|       \______/
  *
  */
-package codyze
+package de.fraunhofer.aisec.codyze
 
-import de.fraunhofer.aisec.codyze.ConceptScriptPass
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.invoke
 import de.fraunhofer.aisec.cpg.test.analyze
 import kotlin.io.path.Path
 import kotlin.test.Test
