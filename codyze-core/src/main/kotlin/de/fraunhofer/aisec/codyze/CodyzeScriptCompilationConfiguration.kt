@@ -56,8 +56,6 @@ import kotlin.script.templates.ScriptTemplateDefinition
     fileExtension = "codyze.kts",
     // Compilation configuration for the script type
     compilationConfiguration = CodyzeScriptCompilationConfiguration::class,
-    // Evaluation configuration for the script type
-    // evaluationConfiguration = CodyzeScriptEvaluationConfiguration::class,
 )
 abstract class CodyzeScript
 
@@ -85,28 +83,6 @@ class CodyzeScriptCompilationConfiguration :
             "de.fraunhofer.aisec.cpg.graph.*",
             "de.fraunhofer.aisec.cpg.query.*",
         )
-        /*jvm {
-            val keyResource =
-                CodyzeScriptCompilationConfiguration::class.java.name.replace('.', '/') + ".class"
-            val thisJarFile =
-                CodyzeScriptCompilationConfiguration::class
-                    .java
-                    .classLoader
-                    .getResource(keyResource)
-                    ?.toContainingJarOrNull()
-            if (thisJarFile != null) {
-                dependenciesFromClassContext(
-                    CodyzeScriptCompilationConfiguration::class,
-                    thisJarFile.name,
-                    *baseLibraries,
-                )
-            } else {
-                dependenciesFromClassContext(
-                    CodyzeScriptCompilationConfiguration::class,
-                    wholeClasspath = true,
-                )
-            }
-        }*/
         jvm {
             dependenciesFromClassContext(
                 CodyzeScript::class,
