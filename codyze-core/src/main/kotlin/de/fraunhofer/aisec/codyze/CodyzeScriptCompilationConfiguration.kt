@@ -71,6 +71,10 @@ val baseLibraries =
         "kotlin-reflect",
     )
 
+/**
+ * Contains the configuration for the compilation of Codyze scripts. This includes the imports that
+ * are required and some specifications of the compiler options.
+ */
 class CodyzeScriptCompilationConfiguration :
     ScriptCompilationConfiguration({
         defaultImports.append(
@@ -136,9 +140,6 @@ class CodyzeScriptConfigurator(
         val importedSources = linkedMapOf<String, Pair<File, String>>()
         var hasImportErrors = false
 
-        // Make some thing on the HDD to see when this is executed
-        File("/Users/banse/Downloads/something").writeText("hello I was executed: $context")
-
         annotations.filterByAnnotationType<Import>().forEach { scriptAnnotation ->
             scriptAnnotation.annotation.paths.forEach { sourceName ->
                 val file = (scriptBaseDir?.resolve(sourceName) ?: File(sourceName)).normalize()
@@ -185,8 +186,8 @@ internal fun URL.toContainingJarOrNull(): File? =
 internal fun URL.toFileOrNull() =
     try {
         File(toURI())
-    } catch (e: IllegalArgumentException) {
+    } catch (_: IllegalArgumentException) {
         null
-    } catch (e: java.net.URISyntaxException) {
+    } catch (_: java.net.URISyntaxException) {
         null
     } ?: run { if (protocol != "file") null else File(file) }

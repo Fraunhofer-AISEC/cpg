@@ -32,20 +32,30 @@ import de.fraunhofer.aisec.cpg.query.QueryTree
 
 @DslMarker annotation class CodyzeDsl
 
+/** Represents a single requirement of the TOE. */
 class RequirementBuilder(var name: String = "") {
     var query: ((result: TranslationResult) -> QueryTree<Boolean>)? = null
 }
 
-class RequirementsBuilder {}
+/** Contains a list of all requirements of the TOE. */
+class RequirementsBuilder
 
+/** Represents the TOE with its name, version and a description. */
 class ToEBuilder {
+    /** The (unique) name of the TOE. */
     var name: String? = null
+
+    /** The description of the TOE. */
     var description: String? = null
+
+    /** The version number of the TOE. */
     var version: String? = null
 }
 
+/** Contains the architecture (in terms of modules) of the TOE. */
 class ArchitectureBuilder {}
 
+/** Contains a list of modules of the TOE. */
 class ModulesBuilder {}
 
 /**
@@ -53,24 +63,41 @@ class ModulesBuilder {}
  */
 val ALL = listOf<String>()
 
-class ModuleBuilder(var name: String = "") {
+/**
+ * Represents a single module of the TOE. This more or less the same what is translated into a CPG
+ * [Component].
+ */
+class ModuleBuilder(
+    /** The name of the module/[Component]. */
+    var name: String = ""
+) {
+    /** The directory containing the code. */
     var directory: String = ""
+
+    /** The files (patterns) which should be included during the translation. */
     private var include: List<String> = emptyList()
+
+    /** The files (patterns) which should explicitly not be considered during the translation. */
     private var exclude: List<String> = emptyList()
 
+    /** Adds a file/pattern to include in the translation. */
     fun include(vararg includes: String) {
         include += includes
     }
 
+    /** Adds a file/pattern to exclude from the translation. */
     fun exclude(vararg excludes: String) {
         exclude += excludes
     }
 }
 
+/** A container for the whole analysis project. */
 class ProjectBuilder {}
 
+/** Spans the project-Block */
 @CodyzeDsl fun CodyzeScript.project(block: ProjectBuilder.() -> Unit) {}
 
+/** Spans the block for the tagging logic. */
 @CodyzeDsl fun CodyzeScript.tagging(block: ProjectBuilder.() -> Unit) {}
 
 /** Describes a Target of Evaluation (ToE). */
@@ -91,16 +118,24 @@ fun ModulesBuilder.module(name: String, block: ModuleBuilder.() -> Unit) {
     block(builder)
 }
 
+/** Describes a single requirement of the TOE. */
 @CodyzeDsl
 fun ToEBuilder.requirement(name: String, block: RequirementBuilder.() -> Unit) {
     val builder = RequirementBuilder(name)
     block(builder)
 }
 
+/**
+ * Determines that the requirement is fulfilled if the query returns a [QueryTree] with
+ * [QueryTree.value] set to `true`.
+ */
+@CodyzeDsl
 fun RequirementBuilder.byQuery(query: (result: TranslationResult) -> QueryTree<Boolean>) {
     this.query = query
 }
 
+/** Describes that the requirement had to be checked manually. */
+@CodyzeDsl
 fun RequirementBuilder.byManualCheck() {
     this.query = { result -> QueryTree(true) }
 }
