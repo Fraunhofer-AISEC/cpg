@@ -46,9 +46,10 @@ project {
     }
 
     assumptions {
-        accept("Assumption 1")
-        reject("Assumption 2")
-        undecided("Assumption 3")
-        ignore("Assumption 3")
+        assume() { "We assume that everything is fine." }
+        accept("00000000-0000-0000-0000-000000000000")
+        reject("00000000-0000-0000-0000-000000000001")
+        undecided("00000000-0000-0000-0000-000000000002")
+        ignore("00000000-0000-0000-0000-000000000003")
     }
 }
