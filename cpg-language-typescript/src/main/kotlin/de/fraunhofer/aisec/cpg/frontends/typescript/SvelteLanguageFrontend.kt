@@ -56,7 +56,7 @@ import org.slf4j.LoggerFactory
  * nodes.
  */
 class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteLanguageFrontend>) :
-    LanguageFrontend<SvelteProgram, GenericAstNode>(ctx, language) {
+    LanguageFrontend<GenericAstNode, GenericAstNode>(ctx, language) {
 
     internal val mapper = jacksonObjectMapper()
     lateinit var currentFile: File
@@ -108,6 +108,12 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
         val svelteProgram = mapper.readValue<SvelteProgram>(jsonResult)
         handleSvelteProgram(svelteProgram, tud, file)
 
+        // Log all declarations for debugging
+        LOGGER.info("Declarations in TU after Svelte parse:")
+        tud.declarations.forEach { decl ->
+            LOGGER.info("  - {} ({})", decl.name, decl.javaClass.simpleName)
+        }
+
         return tud
     }
 
@@ -123,50 +129,28 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
     }
 
     private fun handleInstanceScript(scriptNode: SvelteScript, tu: TranslationUnitDeclaration) {
-        LOGGER.debug(
-            "Handling instance script. Start: {}, End: {}",
-            scriptNode.start,
-            scriptNode.end,
-        )
         for (statementNode in scriptNode.ast.body) {
             val beforeCount = tu.declarations.size
             handleScriptStatement(statementNode, tu)
             val afterCount = tu.declarations.size
             if (afterCount > beforeCount) {
                 val newDecls = tu.declarations.subList(beforeCount, afterCount)
-                newDecls.forEach { decl ->
-                    LOGGER.info(
-                        "Added declaration to TU: {} (type: {})",
-                        decl.name,
-                        decl.javaClass.simpleName,
-                    )
-                }
             }
         }
     }
 
     private fun handleModuleScript(scriptNode: SvelteScript, tu: TranslationUnitDeclaration) {
-        LOGGER.debug("Handling module script. Start: {}, End: {}", scriptNode.start, scriptNode.end)
         for (statementNode in scriptNode.ast.body) {
             val beforeCount = tu.declarations.size
             handleScriptStatement(statementNode, tu)
             val afterCount = tu.declarations.size
             if (afterCount > beforeCount) {
                 val newDecls = tu.declarations.subList(beforeCount, afterCount)
-                newDecls.forEach { decl ->
-                    LOGGER.info(
-                        "Added declaration to TU: {} (type: {})",
-                        decl.name,
-                        decl.javaClass.simpleName,
-                    )
-                }
             }
         }
     }
 
     private fun handleScriptStatement(stmtNode: EsTreeNode, parent: TranslationUnitDeclaration) {
-        LOGGER.debug("Processing script statement node: {}", mapper.writeValueAsString(stmtNode))
-        LOGGER.debug("Processing script statement of type: {}", stmtNode::class.simpleName)
         when (stmtNode) {
             is EsTreeVariableDeclaration -> {
                 val cpgDeclarations = handleVariableDeclaration(stmtNode)
@@ -176,7 +160,6 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
                 }
             }
             is EsTreeFunctionDeclaration -> {
-                LOGGER.debug("Handling EsTreeFunctionDeclaration: {}", stmtNode.id?.name)
                 val funcName = stmtNode.id?.name?.let { parseName(it) } ?: parseName("anonymous")
                 val cpgFunction = newFunctionDeclaration(funcName, rawNode = stmtNode)
                 // TODO: Handle parameters, body, return type, etc.
@@ -184,7 +167,6 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
                 scopeManager.addDeclaration(cpgFunction)
             }
             is EsTreeExportNamedDeclaration -> {
-                LOGGER.debug("Handling EsTreeExportNamedDeclaration")
                 stmtNode.declaration?.let { decl ->
                     when (decl) {
                         is EsTreeVariableDeclaration -> {
@@ -205,10 +187,6 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
                             // TODO: Mark as exported?
                         }
                         else -> {
-                            LOGGER.warn(
-                                "Unsupported declaration type within ExportNamedDeclaration: {}",
-                                decl::class.simpleName,
-                            )
                         }
                     }
                 }
@@ -216,15 +194,7 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
             }
             else -> {
                 val loc =
-                    this.locationOf(
-                        stmtNode as GenericAstNode
-                    ) // Explicit cast if needed by compiler, or direct call
-                LOGGER.warn(
-                    "Unsupported script statement type: {} at {}:{}. For Svelte, this frontend primarily focuses on script content. HTML and CSS are parsed but full CPG representation for them is a work in progress.",
-                    stmtNode::class.simpleName,
-                    loc?.region?.startLine,
-                    loc?.region?.startColumn,
-                )
+                    this.locationOf(stmtNode)
             }
         }
     }
@@ -234,68 +204,30 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
     ): List<de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration> {
         val cpgVariableDeclarations =
             mutableListOf<de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration>()
-        LOGGER.debug(
-            "Handling VariableDeclaration node: {}",
-            mapper.writeValueAsString(varDeclNode),
-        )
 
         for (declarator in varDeclNode.declarations) {
-            LOGGER.debug("Handling VariableDeclarator: {}", mapper.writeValueAsString(declarator))
             val variableName =
                 declarator.id.name?.let { parseName(it) } ?: parseName("anonymous_var")
-            // TODO: Determine actual type based on initializer or type hints if available
             val variableType = unknownType()
-            // Create the CPG node
             val cpgVariableDeclaration =
                 newVariableDeclaration(
                     variableName,
                     variableType,
-                    this.codeOf(declarator as GenericAstNode),
-                    false
+                    false, // implicitInitializerAllowed
+                    declarator // rawNode
                 )
-            // Associate the raw AST node (declarator) with the CPG node.
-            // This will set cpgVariableDeclaration.rawNode, .code, .location, and handle comments.
-            this.process(cpgVariableDeclaration, declarator as GenericAstNode)
+            cpgVariableDeclaration.code = this.codeOf(declarator as GenericAstNode)
+            cpgVariableDeclaration.location = this.locationOf(declarator as GenericAstNode)
+            this.process(declarator, cpgVariableDeclaration)
 
-            LOGGER.warn("Processing declarator with ID: {}", declarator.id.name) // WARN level
-
-            // Temporarily commenting out to diagnose Spotless issue // Now uncommenting
             declarator.init?.let {
-                LOGGER.warn(
-                    "Declarator has initializer (raw): {}",
-                    mapper.writeValueAsString(it)
-                )
                 val initializerExpression = handleExpression(it)
-                LOGGER.warn(
-                    "Result of handleExpression for initializer: {} (Type: {})",
-                    initializerExpression,
-                    initializerExpression?.javaClass?.simpleName ?: "null"
-                )
-
                 if (initializerExpression != null) {
                     cpgVariableDeclaration.initializer = initializerExpression
-                } else {
-                    // Use ERROR level if initializer creation fails
-                    /* LOGGER.error(
-                        "Failed to create initializer expression for variable {}",
-                        variableName
-                    ) */
                 }
-            } else {
-                LOGGER.warn("Declarator has no initializer.")
             }
-
-            // WARN level log for the final CPG node before adding
-            LOGGER.warn(
-                "Created CPG VariableDeclaration: Name={}, Type={}, Initializer={}",
-                cpgVariableDeclaration.name,
-                cpgVariableDeclaration.type,
-                cpgVariableDeclaration.initializer?.javaClass?.simpleName ?: "null",
-            )
-
             cpgVariableDeclarations.add(cpgVariableDeclaration)
         }
-
         return cpgVariableDeclarations
     }
 
@@ -308,16 +240,9 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
         return when (exprNode) {
             is EsTreeLiteral -> handleLiteral(exprNode)
             is EsTreeIdentifier -> handleIdentifierReference(exprNode)
-            // null case already handled above
             else -> {
                 val loc =
-                    this.locationOf(exprNode as GenericAstNode) // Explicit cast or direct call
-                LOGGER.warn(
-                    "Unsupported expression type: {} at {}:{}. Note: Full CPG representation for all Svelte HTML/CSS parts is a work in progress.",
-                    exprNode::class.simpleName,
-                    loc?.region?.startLine,
-                    loc?.region?.startColumn,
-                )
+                    this.locationOf(exprNode)
                 null
             }
         }
@@ -353,15 +278,25 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
 
     // Corresponds to abstract fun typeOf(type: TypeNode): Type in LanguageFrontend
     override fun typeOf(type: GenericAstNode): Type {
-        // TODO: Implement type resolution for GenericAstNode.
-        // Could dispatch based on actual type: if (type is SvelteNode) vs if (type is EsTreeNode)
-        LOGGER.debug("typeOf called for GenericAstNode: {}", type::class.simpleName)
         return unknownType()
     }
 
-    // Not overriding from LanguageFrontend directly, but needed by CPG framework for RawNodeType.
-    // LanguageFrontend.getCode(rawNode: RawNodeType) calls this if RawNodeType is not AstNodeType.
-    fun codeOf(astNode: GenericAstNode): String? { // No 'override'
+    // Explicitly override codeOf and locationOf for RawNodeType (GenericAstNode)
+    // to ensure these are called by the CPG framework instead of trying to cast
+    // GenericAstNode to SvelteProgram (our AstNodeType).
+
+    // This is now the primary override for AstNode (which is GenericAstNode)
+    override fun codeOf(astNode: GenericAstNode): String? {
+        // Delegate to our existing helper that handles GenericAstNode
+        // Specific handling for SvelteProgram if needed
+        if (astNode is SvelteProgram) {
+            return if (this::code.isInitialized) {
+                this.code
+            } else {
+                return null
+            }
+        }
+
         val startOffset = astNode.start ?: return null
         val endOffset = astNode.end ?: return null
 
@@ -371,28 +306,27 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
             if (startOffset >= 0 && endOffset >= startOffset && endOffset <= codeLength) {
                 return codeText.substring(startOffset, endOffset)
             } else {
-                LOGGER.warn(
-                    "Invalid offsets for GenericAstNode in codeOf: start={}, end={}, codeLength={}",
-                    startOffset,
-                    endOffset,
-                    codeLength,
-                )
                 return null
             }
         } else {
-            LOGGER.warn("Attempted to get codeOf GenericAstNode before code was initialized.")
             return null
         }
     }
 
-    // Not overriding from LanguageFrontend directly, but needed for RawNodeType.
-    // LanguageFrontend.getLocation(rawNode: RawNodeType) calls this if RawNodeType is not
-    // AstNodeType.
-    fun locationOf(astNode: GenericAstNode): PhysicalLocation? { // No 'override'
+    // This is now the primary override for AstNode (which is GenericAstNode)
+    override fun locationOf(astNode: GenericAstNode): PhysicalLocation? {
+        // Delegate to our existing helper that handles GenericAstNode
+        // Specific handling for SvelteProgram if needed
+        if (astNode is SvelteProgram) {
+            if (!this::currentFile.isInitialized || !this::code.isInitialized) {
+                return null
+            }
+            val region =
+                getRegionFromStartEnd(this.currentFile, this.code, 0, this.code.length.coerceAtLeast(0))
+            return PhysicalLocation(this.currentFile.toURI(), region ?: Region(-1, -1, -1, -1))
+        }
+
         if (!this::currentFile.isInitialized || !this::code.isInitialized) {
-            LOGGER.warn(
-                "currentFile or code is not initialized for GenericAstNode. Skipping location."
-            )
             return null
         }
 
@@ -402,12 +336,6 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
 
         val fileLength = currentCode.length
         if (startOffset < 0 || endOffset > fileLength || startOffset > endOffset) {
-            LOGGER.warn(
-                "Invalid offsets for GenericAstNode in locationOf: start={}, end={}, fileLength={}. Skipping location.",
-                startOffset,
-                endOffset,
-                fileLength,
-            )
             return null
         }
         val region = getRegionFromStartEnd(this.currentFile, currentCode, startOffset, endOffset)
@@ -416,7 +344,13 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
 
     // This is the method for AstNodeType (SvelteProgram)
     // Corresponds to abstract override fun codeOf(astNode: AstNode): String?
+    // NO LONGER NEEDED AS SEPARATE OVERRIDE - Handled by `override fun codeOf(astNode: GenericAstNode)`
+    /*
     override fun codeOf(astNode: SvelteProgram): String? {
+        if (astNode !is SvelteProgram) {
+            LOGGER.error("codeOf(SvelteProgram) called with wrong type: {}", astNode::class.qualifiedName)
+            return null
+        }
         return if (this::code.isInitialized) {
             this.code
         } else {
@@ -424,29 +358,36 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
             null
         }
     }
+    */
 
     // This is the method for AstNodeType (SvelteProgram)
     // Corresponds to abstract override fun locationOf(astNode: AstNode): PhysicalLocation?
+    // NO LONGER NEEDED AS SEPARATE OVERRIDE - Handled by `override fun locationOf(astNode: GenericAstNode)`
+    /*
     override fun locationOf(astNode: SvelteProgram): PhysicalLocation? {
+        if (astNode !is SvelteProgram) {
+            LOGGER.error("locationOf(SvelteProgram) called with wrong type: {}", astNode::class.qualifiedName)
+            return null
+        }
         if (!this::currentFile.isInitialized || !this::code.isInitialized) {
-            LOGGER.warn(
-                "currentFile or code is not initialized for SvelteProgram. Skipping location."
-            )
+            LOGGER.warn("currentFile or code is not initialized for SvelteProgram. Skipping location.")
             return null
         }
         val region =
             getRegionFromStartEnd(this.currentFile, this.code, 0, this.code.length.coerceAtLeast(0))
         return PhysicalLocation(this.currentFile.toURI(), region ?: Region(-1, -1, -1, -1))
     }
+    */
 
     // This is the method for AstNodeType (SvelteProgram)
     // Corresponds to abstract fun setComment(node: Node, astNode: AstNode)
-    override fun setComment(node: Node, astNode: SvelteProgram) {
-        LOGGER.debug(
-            "setComment called for SvelteProgram (Node type: {})",
-            node.javaClass.simpleName,
-        )
-        // Typically, no specific comments for the entire program TU itself.
+    // Signature changes to match new AstNode type (GenericAstNode)
+    override fun setComment(node: Node, astNode: GenericAstNode) {
+        // Specific handling for SvelteProgram if astNode is one
+        if (astNode is SvelteProgram) {
+        } else {
+            // Generic handling for other GenericAstNodes if needed
+        }
     }
 
     // Note: A public `fun setComment(node: Node, astNode: GenericAstNode)` (no override) might be
@@ -455,3 +396,4 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
     // does not have an abstract or open setComment for TypeNode.
     // For now, we only provide the abstract override for SvelteProgram.
 }
+

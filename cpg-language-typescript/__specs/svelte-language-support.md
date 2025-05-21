@@ -97,3 +97,10 @@ Previously, Svelte-specific and ESTree nodes were handled separately, leading to
 - Simplifies future support for new Svelte/ESTree AST node types.
 - Prepares the codebase for more advanced Svelte features and better error handling.
 
+**Further Refinement & Progress (Post Initial `GenericAstNode` Introduction):**
+- **Problem Encountered:** Initial tests with `SvelteLanguageFrontendTest` failed to identify exported variables (e.g., `export let name...`). Debugging revealed a `ClassCastException` when the CPG core attempted to get code/location information for `EsTreeVariableDeclarator` nodes (which implement `GenericAstNode`). The core was trying to cast these to `SvelteProgram` (the frontend's original `AstNode` type).
+- **Solution:** The `SvelteLanguageFrontend` was refactored to use `GenericAstNode` as its primary `AstNode` type parameter (i.e., `LanguageFrontend<GenericAstNode, GenericAstNode>`).
+    - The `codeOf(astNode: AstNode)`, `locationOf(astNode: AstNode)`, and `setComment(node: Node, astNode: AstNode)` methods were updated to directly use `GenericAstNode` in their signatures.
+    - Specific logic for `SvelteProgram` instances (e.g., for getting the code of the entire file) was integrated within these overridden `GenericAstNode`-based methods.
+- **Outcome:** This refactoring resolved the `ClassCastException` and allowed the CPG node builders to correctly interact with the frontend for all `GenericAstNode` subtypes. The `SvelteLanguageFrontendTest` (testing `SimpleComponent.svelte`) now passes, confirming that top-level variable declarations (including exported ones like `name`) and function declarations (like `handleClick` and `count`) in `<script>` blocks are correctly parsed and represented as CPG nodes.
+
