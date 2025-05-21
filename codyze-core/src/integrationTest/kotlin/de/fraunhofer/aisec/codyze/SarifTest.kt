@@ -23,10 +23,8 @@
  *                    \______/ \__|       \______/
  *
  */
-package codyze
+package de.fraunhofer.aisec.codyze
 
-import de.fraunhofer.aisec.codyze.toSarif
-import de.fraunhofer.aisec.codyze.toSarifLocation
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.functions

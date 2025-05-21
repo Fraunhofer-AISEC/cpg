@@ -23,31 +23,26 @@
  *                    \______/ \__|       \______/
  *
  */
-package codyze
+package de.fraunhofer.aisec.codyze
 
-import de.fraunhofer.aisec.codyze.evalQuery
-import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
-import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.test.analyze
-import java.io.File
-import kotlin.io.path.Path
+import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.query.QueryTree
+import de.fraunhofer.aisec.cpg.query.allExtended
+import de.fraunhofer.aisec.cpg.query.eq
 import kotlin.test.Test
-import kotlin.test.assertEquals
 
-class QueryHostTest {
+fun goodCryptoFunc(result: TranslationResult): QueryTree<Boolean> {
+    return result.allExtended<CallExpression> { it.name eq "encrypt" }
+}
+
+fun goodArgumentSize(result: TranslationResult): QueryTree<Boolean> {
+    return result.allExtended<CallExpression> { it.arguments.size eq 2 }
+}
+
+class CodyzeExecutorTest {
     @Test
-    fun testQuery() {
-        val topLevel = Path("src/integrationTest/resources")
-        val result =
-            analyze(listOf(topLevel.resolve("simple.py").toFile()), topLevel, true) {
-                it.registerLanguage<PythonLanguage>()
-            }
-        val queryResult =
-            result.evalQuery(
-                File("src/integrationTest/resources/simple.query.kts"),
-                "statement1",
-                "statement1",
-            )
-        assertEquals(true, queryResult.tree.value)
+    fun testExecute() {
+        evaluateWithCodyze("src/integrationTest/resources/example/example.codyze.kts")
     }
 }
