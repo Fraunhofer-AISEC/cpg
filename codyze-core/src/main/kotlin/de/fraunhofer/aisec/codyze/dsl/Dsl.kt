@@ -27,20 +27,27 @@ package de.fraunhofer.aisec.codyze.dsl
 
 import de.fraunhofer.aisec.codyze.CodyzeScript
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.assumptions.Assumption
+import de.fraunhofer.aisec.cpg.assumptions.AssumptionStatus
 import de.fraunhofer.aisec.cpg.graph.Component
+import de.fraunhofer.aisec.cpg.graph.allChildrenWithOverlays
 import de.fraunhofer.aisec.cpg.query.QueryTree
+import kotlin.uuid.Uuid
 
 @DslMarker annotation class CodyzeDsl
 
-/** Represents a single requirement of the TOE. */
+/** Represents a Builder for a single requirement of the TOE. */
 class RequirementBuilder(var name: String = "") {
     var query: ((result: TranslationResult) -> QueryTree<Boolean>)? = null
 }
 
-/** Contains a list of all requirements of the TOE. */
+/** Represents a Builder for a list of all requirements of the TOE. */
 class RequirementsBuilder
 
-/** Represents the TOE with its name, version and a description. */
+/** Represents a Builder for a list of all assumptions of the evaluation project. */
+class AssumptionsBuilder
+
+/** Represents a Builder for the TOE with its name, version and a description. */
 class ToEBuilder {
     /** The (unique) name of the TOE. */
     var name: String? = null
@@ -52,10 +59,10 @@ class ToEBuilder {
     var version: String? = null
 }
 
-/** Contains the architecture (in terms of modules) of the TOE. */
+/** Represents a Builder for the architecture (in terms of modules) of the TOE. */
 class ArchitectureBuilder {}
 
-/** Contains a list of modules of the TOE. */
+/** Represents a Builder for a list of modules of the TOE. */
 class ModulesBuilder {}
 
 /**
@@ -64,8 +71,8 @@ class ModulesBuilder {}
 val ALL = listOf<String>()
 
 /**
- * Represents a single module of the TOE. This more or less the same what is translated into a CPG
- * [Component].
+ * Represents a Builder for a single module of the TOE. This more or less the same what is
+ * translated into a CPG [Component].
  */
 class ModuleBuilder(
     /** The name of the module/[Component]. */
@@ -91,7 +98,7 @@ class ModuleBuilder(
     }
 }
 
-/** A container for the whole analysis project. */
+/** Represents a Builder for the container for the whole analysis project. */
 class ProjectBuilder {}
 
 /** Spans the project-Block */
@@ -106,7 +113,7 @@ class ProjectBuilder {}
 /** Describes the architecture of the ToE. */
 @CodyzeDsl fun ToEBuilder.architecture(block: ArchitectureBuilder.() -> Unit) {}
 
-@CodyzeDsl fun ToEBuilder.requirements(block: RequirementsBuilder.() -> Unit) {}
+@CodyzeDsl fun ProjectBuilder.requirements(block: RequirementsBuilder.() -> Unit) {}
 
 /** Describes the different modules, such as (sub)-components, of the ToE. */
 @CodyzeDsl fun ArchitectureBuilder.modules(block: ModulesBuilder.() -> Unit) {}
@@ -120,7 +127,7 @@ fun ModulesBuilder.module(name: String, block: ModuleBuilder.() -> Unit) {
 
 /** Describes a single requirement of the TOE. */
 @CodyzeDsl
-fun ToEBuilder.requirement(name: String, block: RequirementBuilder.() -> Unit) {
+fun RequirementsBuilder.requirement(name: String, block: RequirementBuilder.() -> Unit) {
     val builder = RequirementBuilder(name)
     block(builder)
 }
@@ -138,4 +145,69 @@ fun RequirementBuilder.byQuery(query: (result: TranslationResult) -> QueryTree<B
 @CodyzeDsl
 fun RequirementBuilder.byManualCheck() {
     this.query = { result -> QueryTree(true) }
+}
+
+/** Describes the assumptions which have been handled and assessed. */
+@CodyzeDsl fun ProjectBuilder.assumptions(block: AssumptionsBuilder.() -> Unit) {}
+
+/**
+ * Describes that the assumption with the given [uuid] was assessed and considered as
+ * acceptable/valid.
+ *
+ * @param uuid The UUID of the assumption must be provided in string in the format
+ *   "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx", where each 'x' is a hexadecimal digit, either lowercase
+ *   or uppercase.
+ */
+@CodyzeDsl
+fun AssumptionsBuilder.accept(uuid: String) {
+    parseUuidAndAnnotateAssumptions(uuid, AssumptionStatus.Accepted)
+}
+
+/**
+ * Describes that the assumption with the given [uuid] was assessed and considered as
+ * rejected/invalid.
+ *
+ * @param uuid The UUID of the assumption must be provided in string in the format
+ *   "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx", where each 'x' is a hexadecimal digit, either lowercase
+ *   or uppercase.
+ */
+@CodyzeDsl
+fun AssumptionsBuilder.reject(uuid: String) {
+    parseUuidAndAnnotateAssumptions(uuid, AssumptionStatus.Rejected)
+}
+
+/**
+ * Describes that the assumption with the given [uuid] requires assessment.
+ *
+ * @param uuid The UUID of the assumption must be provided in string in the format
+ *   "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx", where each 'x' is a hexadecimal digit, either lowercase
+ *   or uppercase.
+ */
+@CodyzeDsl
+fun AssumptionsBuilder.undecided(uuid: String) {
+    parseUuidAndAnnotateAssumptions(uuid, AssumptionStatus.Undecided)
+}
+
+/**
+ * Describes that the assumption with the given [uuid] was assessed and can be ignored in this
+ * evaluation project.
+ *
+ * @param uuid The UUID of the assumption must be provided in string in the format
+ *   "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx", where each 'x' is a hexadecimal digit, either lowercase
+ *   or uppercase.
+ */
+@CodyzeDsl
+fun AssumptionsBuilder.ignore(uuid: String) {
+    parseUuidAndAnnotateAssumptions(uuid, AssumptionStatus.Ignored)
+}
+
+private fun parseUuidAndAnnotateAssumptions(uuid: String, status: AssumptionStatus) {
+    val uuid = Uuid.parse(uuid)
+    // TODO: Acutally get the TranslationResult
+    val result: TranslationResult? = null
+    // TODO: Do we find all assumptions like this (i.e., also those related to overlays of a node
+    // and edges)?
+    result
+        .allChildrenWithOverlays<Assumption> { it.id == uuid }
+        .forEach { assumption -> assumption.status = status }
 }

@@ -32,16 +32,23 @@ project {
             modules {
                 module("module1") {
                     directory = "src/module1"
-                    files = ALL
+                    include("*")
                 }
             }
         }
+    }
 
-        requirements {
-            requirement("Is Security Target Correctly specified") { byManualCheck() }
-            requirement("Good Encryption") {
-                byQuery { result -> goodCryptoFunc(result) and goodArgumentSize(result) }
-            }
+    requirements {
+        requirement("Is Security Target Correctly specified") { byManualCheck() }
+        requirement("Good Encryption") {
+            byQuery { result -> goodCryptoFunc(result) and goodArgumentSize(result) }
         }
+    }
+
+    assumptions {
+        accept("Assumption 1")
+        reject("Assumption 2")
+        undecided("Assumption 3")
+        ignore("Assumption 3")
     }
 }

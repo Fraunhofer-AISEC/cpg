@@ -58,12 +58,19 @@ class DslTest {
                             }
                         }
                     }
+                }
 
-                    requirements {
-                        requirement("Good Encryption") {
-                            byQuery { result -> query1(result) and query2(result) }
-                        }
+                requirements {
+                    requirement("Good Encryption") {
+                        byQuery { result -> query1(result) and query2(result) }
                     }
+                }
+
+                assumptions {
+                    accept("Assumption 1")
+                    reject("Assumption 2")
+                    undecided("Assumption 3")
+                    ignore("Assumption 4")
                 }
             }
         }
