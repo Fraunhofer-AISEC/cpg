@@ -422,18 +422,3 @@ fun List<QueryTree<Boolean>>.mergeWithAny(
         assumptions = assumptions,
     )
 }
-
-infix fun <T : Any> T.eq(other: T): QueryTree<Boolean> {
-    val thisQuery = this.toQueryTree()
-    val result = thisQuery.value == other
-    return QueryTree(
-        result,
-        mutableListOf(thisQuery, QueryTree(other)),
-        "${thisQuery.value} == $other",
-        thisQuery.node,
-    )
-}
-
-fun <T : Any> T.toQueryTree(): QueryTree<T> {
-    return QueryTree(this, stringRepresentation = this.toString())
-}
