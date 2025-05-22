@@ -26,12 +26,15 @@
 package de.fraunhofer.aisec.codyze.dsl
 
 import de.fraunhofer.aisec.codyze.CodyzeScript
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.assumptions.Assumption
 import de.fraunhofer.aisec.cpg.assumptions.AssumptionStatus
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.allChildrenWithOverlays
 import de.fraunhofer.aisec.cpg.query.QueryTree
+import java.io.File
 import kotlin.uuid.Uuid
 
 @DslMarker annotation class CodyzeDsl
@@ -52,18 +55,27 @@ class ToEBuilder {
     /** The (unique) name of the TOE. */
     var name: String? = null
 
+    var basePath: String? = null
+
     /** The description of the TOE. */
     var description: String? = null
 
     /** The version number of the TOE. */
     var version: String? = null
+
+    var architectureBuilder: ArchitectureBuilder? = null
 }
 
 /** Represents a Builder for the architecture (in terms of modules) of the TOE. */
-class ArchitectureBuilder {}
+class ArchitectureBuilder {
+    val modules: ModulesBuilder? = null
+}
 
 /** Represents a Builder for a list of modules of the TOE. */
-class ModulesBuilder {}
+class ModulesBuilder {
+    /** The list of modules of the TOE. */
+    val modules: MutableList<ModuleBuilder> = mutableListOf()
+}
 
 /**
  * Represents that all files of a module should be included. This is done by using an empty list.
@@ -87,6 +99,8 @@ class ModuleBuilder(
     /** The files (patterns) which should explicitly not be considered during the translation. */
     private var exclude: List<String> = emptyList()
 
+    fun getExcludes() = exclude
+
     /** Adds a file/pattern to include in the translation. */
     fun include(vararg includes: String) {
         include += includes
@@ -99,7 +113,9 @@ class ModuleBuilder(
 }
 
 /** Represents a Builder for the container for the whole analysis project. */
-class ProjectBuilder {}
+class ProjectBuilder {
+    var translationResult: TranslationResult? = null
+}
 
 /** Spans the project-Block */
 @CodyzeDsl fun CodyzeScript.project(block: ProjectBuilder.() -> Unit) {}
@@ -108,10 +124,49 @@ class ProjectBuilder {}
 @CodyzeDsl fun CodyzeScript.tagging(block: ProjectBuilder.() -> Unit) {}
 
 /** Describes a Target of Evaluation (ToE). */
-@CodyzeDsl fun ProjectBuilder.toe(block: ToEBuilder.() -> Unit) {}
+@CodyzeDsl
+fun ProjectBuilder.toe(block: ToEBuilder.() -> Unit) {
+    val toeBuilder = ToEBuilder().apply(block)
+
+    val translationConfiguration =
+        TranslationConfiguration.builder()
+            .defaultPasses()
+            .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage")
+            .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage")
+            .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage")
+            .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.golang.GoLanguage")
+            .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguage")
+            .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage")
+            .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguage")
+            .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.ruby.RubyLanguage")
+            .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.jvm.JVMLanguage")
+            .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.ini.IniFileLanguage")
+
+    translationConfiguration.softwareComponents(
+        toeBuilder.architectureBuilder
+            ?.modules
+            ?.modules
+            ?.associate { module -> module.name to listOf(File(module.directory)) }
+            ?.toMutableMap() ?: mutableMapOf()
+    )
+
+    toeBuilder.architectureBuilder?.modules?.modules?.forEach { module ->
+        module.getExcludes().forEach { translationConfiguration.exclusionPatterns(it) }
+    }
+
+    this.translationResult =
+        TranslationManager.builder()
+            .config(translationConfiguration.build())
+            .build()
+            .analyze()
+            .get()
+}
 
 /** Describes the architecture of the ToE. */
-@CodyzeDsl fun ToEBuilder.architecture(block: ArchitectureBuilder.() -> Unit) {}
+@CodyzeDsl
+fun ToEBuilder.architecture(block: ArchitectureBuilder.() -> Unit) {
+    this.architectureBuilder = ArchitectureBuilder().apply(block)
+}
 
 @CodyzeDsl fun ProjectBuilder.requirements(block: RequirementsBuilder.() -> Unit) {}
 
@@ -121,8 +176,7 @@ class ProjectBuilder {}
 /** Describes one module of the ToE. This is translated into a CPG [Component]. */
 @CodyzeDsl
 fun ModulesBuilder.module(name: String, block: ModuleBuilder.() -> Unit) {
-    val builder = ModuleBuilder(name)
-    block(builder)
+    this.modules.add(ModuleBuilder(name).apply(block))
 }
 
 /** Describes a single requirement of the TOE. */
