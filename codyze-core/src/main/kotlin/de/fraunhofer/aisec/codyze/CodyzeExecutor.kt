@@ -28,33 +28,21 @@ package de.fraunhofer.aisec.codyze
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import java.io.File
+import kotlin.io.path.Path
 import kotlin.script.experimental.api.ResultWithDiagnostics
+import kotlin.script.experimental.api.constructorArgs
 import kotlin.script.experimental.host.toScriptSource
 import kotlin.script.experimental.jvmhost.BasicJvmScriptingHost
 import kotlin.script.experimental.jvmhost.createJvmCompilationConfigurationFromTemplate
 import kotlin.script.experimental.jvmhost.createJvmEvaluationConfigurationFromTemplate
 
-/** Execute as a Codyze script. */
-fun evaluateWithCodyze(scriptFile: String) {
-    var b = Benchmark(TranslationResult::class.java, "Compiling query script $scriptFile")
-    val compilationConfiguration = createJvmCompilationConfigurationFromTemplate<CodyzeScript>()
-    val evaluationConfiguration = createJvmEvaluationConfigurationFromTemplate<CodyzeScript>()
-
-    val scriptResult =
-        BasicJvmScriptingHost()
-            .eval(
-                File(scriptFile).toScriptSource(),
-                compilationConfiguration,
-                evaluationConfiguration,
-            )
-
-    println(scriptResult)
-}
-
 fun executeScript(scriptFile: String): CodyzeScript? {
     var b = Benchmark(TranslationResult::class.java, "Compiling query script $scriptFile")
     val compilationConfiguration = createJvmCompilationConfigurationFromTemplate<CodyzeScript>()
-    val evaluationConfiguration = createJvmEvaluationConfigurationFromTemplate<CodyzeScript>()
+    val evaluationConfiguration =
+        createJvmEvaluationConfigurationFromTemplate<CodyzeScript>() {
+            constructorArgs(Path(scriptFile).parent)
+        }
 
     val scriptResult =
         BasicJvmScriptingHost()

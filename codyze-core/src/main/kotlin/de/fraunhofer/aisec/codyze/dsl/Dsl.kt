@@ -35,6 +35,8 @@ import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.allChildrenWithOverlays
 import de.fraunhofer.aisec.cpg.query.QueryTree
 import java.io.File
+import java.nio.file.Path
+import kotlin.io.path.Path
 import kotlin.uuid.Uuid
 
 @DslMarker annotation class CodyzeDsl
@@ -67,19 +69,12 @@ class ToEBuilder {
 /** Represents a builder for the architecture (in terms of modules) of the TOE. */
 class ArchitectureBuilder {
     val modulesBuilder = ModulesBuilder()
-    val requirementsBuilder = RequirementsBuilder()
-    val assumptionsBuilder = AssumptionsBuilder()
 }
 
 /** Represents a builder for a list of modules of the TOE. */
 class ModulesBuilder {
     val modules = mutableListOf<ModuleBuilder>()
 }
-
-/**
- * Represents that all files of a module should be included. This is done by using an empty list.
- */
-val ALL = listOf<String>()
 
 /**
  * Represents a builder for a single module of the TOE. This more or less the same what is
@@ -110,12 +105,15 @@ class ModuleBuilder(
 }
 
 /** Represents a builder for the container for the whole analysis project. */
-class ProjectBuilder {
+class ProjectBuilder(val projectDir: Path = Path(".")) {
     var name: String? = null
-    internal var toe: ToEBuilder? = null
+
+    internal var toEBuilder: ToEBuilder? = null
+    internal val requirementsBuilder = RequirementsBuilder()
+    internal val assumptionsBuilder = AssumptionsBuilder()
 
     fun build(): AnalysisProject {
-        var configBuilder =
+        val configBuilder =
             TranslationConfiguration.builder()
                 .defaultPasses()
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage")
@@ -135,17 +133,17 @@ class ProjectBuilder {
 
         val components = mutableMapOf<String, List<File>>()
         val topLevels = mutableMapOf<String, File>()
-        toe?.architectureBuilder?.modulesBuilder?.modules?.forEach { it ->
+        toEBuilder?.architectureBuilder?.modulesBuilder?.modules?.forEach { it ->
             it.exclude.forEach { exclude -> configBuilder.exclusionPatterns(exclude) }
 
-            components += it.name to listOf(File(it.directory))
-            topLevels += it.name to File(it.directory)
+            components += it.name to listOf(projectDir.resolve(it.directory).toFile())
+            topLevels += it.name to projectDir.resolve(it.directory).toFile()
         }
 
         configBuilder.softwareComponents(components)
         configBuilder.topLevels(topLevels)
 
-        return AnalysisProject(name!!, projectDir = null, config = configBuilder.build())
+        return AnalysisProject(name!!, projectDir = projectDir, config = configBuilder.build())
     }
 }
 
@@ -163,13 +161,19 @@ fun CodyzeScript.project(block: ProjectBuilder.() -> Unit) {
 fun ProjectBuilder.toe(block: ToEBuilder.() -> Unit) {
     val toe = ToEBuilder()
     block(toe)
-    this.toe = toe
+    this.toEBuilder = toe
 }
 
 /** Describes the architecture of the ToE. */
-@CodyzeDsl fun ToEBuilder.architecture(block: ArchitectureBuilder.() -> Unit) {}
+@CodyzeDsl
+fun ToEBuilder.architecture(block: ArchitectureBuilder.() -> Unit) {
+    architectureBuilder.apply(block)
+}
 
-@CodyzeDsl fun ProjectBuilder.requirements(block: RequirementsBuilder.() -> Unit) {}
+@CodyzeDsl
+fun ProjectBuilder.requirements(block: RequirementsBuilder.() -> Unit) {
+    requirementsBuilder.apply(block)
+}
 
 /** Describes the different modules, such as (sub)-components, of the ToE. */
 @CodyzeDsl
@@ -208,7 +212,10 @@ fun RequirementBuilder.byManualCheck() {
 }
 
 /** Describes the assumptions which have been handled and assessed. */
-@CodyzeDsl fun ProjectBuilder.assumptions(block: AssumptionsBuilder.() -> Unit) {}
+@CodyzeDsl
+fun ProjectBuilder.assumptions(block: AssumptionsBuilder.() -> Unit) {
+    assumptionsBuilder.apply(block)
+}
 
 /**
  * Allows to explicitly list a custom assumption which has to hold and is always accepted for the
