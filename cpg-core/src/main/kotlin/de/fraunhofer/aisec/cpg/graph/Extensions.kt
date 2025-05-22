@@ -39,6 +39,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.passes.reconstructedImportName
+import java.util.Objects
 import kotlin.collections.filter
 import kotlin.collections.firstOrNull
 import kotlin.math.absoluteValue
@@ -404,6 +405,16 @@ class Context(
     operator fun inc(): Context {
         this.steps++
         return this
+    }
+
+    override fun equals(other: Any?): Boolean {
+        return other is Context &&
+            this.indexStack == other.indexStack &&
+            this.callStack == other.callStack
+    }
+
+    override fun hashCode(): Int {
+        return Objects.hash(super.hashCode(), indexStack, callStack)
     }
 }
 

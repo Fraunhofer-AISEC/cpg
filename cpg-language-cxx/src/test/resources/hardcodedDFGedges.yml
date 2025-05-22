@@ -158,3 +158,11 @@
     - from: NewMemoryAddress0
       to: param1.deref
       dfgType: partial
+
+- functionDeclaration:
+    language: GhidraCPPLanguage
+    methodName: sgx_ocall
+  dataFlows:
+    - from: ocall
+      to: param1.deref
+      dfgType: full

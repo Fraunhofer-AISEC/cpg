@@ -498,9 +498,10 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             value
                                 .followDFGEdgesUntilHit(
                                     collectFailedPaths = false,
+                                    findAllPossiblePaths = false,
                                     direction = Backward(GraphToFollow.DFG),
                                     sensitivities = OnlyFullDFG + FieldSensitive + ContextSensitive,
-                                    scope = Interprocedural(),
+                                    scope = Intraprocedural(),
                                     predicate = {
                                         it is ParameterMemoryValue &&
                                             /* If it's a ParameterMemoryValue from the node's
@@ -1227,7 +1228,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         val destination: IdentitySet<Node> =
             if (argument is CallExpression) identitySetOf(argument)
             // if the argument is PointerReference for a global variable, the destination is it's
-            // referesTo
+            // refersTo
             // It might also be the case that argument is a Reference to an array, so then we treat
             // it like a PointerReference
             else if (
@@ -2009,10 +2010,23 @@ fun PointsToStateElement.getValues(node: Node, startNode: Node): IdentitySet<Pai
              */
             val inputVals = this.fetchValueFromGeneralState(node.input).map { it.first }
             val retVal = identitySetOf<Pair<Node, Boolean>>()
-            inputVals.forEach { input ->
-                retVal.addAll(
-                    fetchValueFromDeclarationState(input, true).map { Pair(it.value, it.shortFS) }
-                )
+            /* If the node is not the same as the startNode, we should have already assigned a value, so we fetch it from the generalstate */
+            if (node != startNode && node !in startNode.astChildren)
+                inputVals.forEach {
+                    retVal.addAll(
+                        fetchValueFromGeneralState(it).mapTo(IdentitySet()) {
+                            Pair(it.first, true in it.second)
+                        }
+                    )
+                }
+            else {
+                inputVals.forEach { input ->
+                    retVal.addAll(
+                        fetchValueFromDeclarationState(input, true).map {
+                            Pair(it.value, it.shortFS)
+                        }
+                    )
+                }
             }
             retVal
         }
