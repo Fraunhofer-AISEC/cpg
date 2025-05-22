@@ -25,8 +25,6 @@
  */
 package example
 
-import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
-
 project {
     name = "My Project"
 
@@ -39,7 +37,6 @@ project {
                     include("*")
                 }
             }
-            languages { language<PythonLanguage>() }
         }
     }
 

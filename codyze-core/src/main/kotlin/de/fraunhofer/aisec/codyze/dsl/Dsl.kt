@@ -31,12 +31,10 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.assumptions.Assumption
 import de.fraunhofer.aisec.cpg.assumptions.AssumptionStatus
-import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.allChildrenWithOverlays
 import de.fraunhofer.aisec.cpg.query.QueryTree
 import java.io.File
-import kotlin.reflect.KClass
 import kotlin.uuid.Uuid
 
 @DslMarker annotation class CodyzeDsl
@@ -69,7 +67,6 @@ class ToEBuilder {
 /** Represents a builder for the architecture (in terms of modules) of the TOE. */
 class ArchitectureBuilder {
     val modulesBuilder = ModulesBuilder()
-    val languagesBuilder = LanguagesBuilder()
     val requirementsBuilder = RequirementsBuilder()
     val assumptionsBuilder = AssumptionsBuilder()
 }
@@ -77,11 +74,6 @@ class ArchitectureBuilder {
 /** Represents a builder for a list of modules of the TOE. */
 class ModulesBuilder {
     val modules = mutableListOf<ModuleBuilder>()
-}
-
-/** Represents a builder for a list of programing languages of the TOE. */
-class LanguagesBuilder {
-    val languages: MutableList<KClass<out Language<*>>> = mutableListOf()
 }
 
 /**
@@ -123,22 +115,35 @@ class ProjectBuilder {
     internal var toe: ToEBuilder? = null
 
     fun build(): AnalysisProject {
-        val configBuilder = TranslationConfiguration.builder()
+        var configBuilder =
+            TranslationConfiguration.builder()
+                .defaultPasses()
+                .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage")
+                .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage")
+                .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage")
+                .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.golang.GoLanguage")
+                .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguage")
+                .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage")
+                .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguage")
+                .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.ruby.RubyLanguage")
+                .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.jvm.JVMLanguage")
+                .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.ini.IniFileLanguage")
 
         if (name == null) {
             throw IllegalArgumentException("Project name must be set")
         }
 
         val components = mutableMapOf<String, List<File>>()
+        val topLevels = mutableMapOf<String, File>()
         toe?.architectureBuilder?.modulesBuilder?.modules?.forEach { it ->
             it.exclude.forEach { exclude -> configBuilder.exclusionPatterns(exclude) }
 
             components += it.name to listOf(File(it.directory))
+            topLevels += it.name to File(it.directory)
         }
 
-        toe?.architectureBuilder?.languagesBuilder?.languages?.forEach { it ->
-            configBuilder.registerLanguage(it)
-        }
+        configBuilder.softwareComponents(components)
+        configBuilder.topLevels(topLevels)
 
         return AnalysisProject(name!!, projectDir = null, config = configBuilder.build())
     }
@@ -172,24 +177,12 @@ fun ArchitectureBuilder.modules(block: ModulesBuilder.() -> Unit) {
     block(modulesBuilder)
 }
 
-/** Describes the (programming) languages the ToE is written in. */
-@CodyzeDsl
-fun ArchitectureBuilder.languages(block: LanguagesBuilder.() -> Unit) {
-    block(languagesBuilder)
-}
-
 /** Describes one module of the ToE. This is translated into a CPG [Component]. */
 @CodyzeDsl
 fun ModulesBuilder.module(name: String, block: ModuleBuilder.() -> Unit) {
     val builder = ModuleBuilder(name)
     block(builder)
     modules += builder
-}
-
-/** Describes one (programming) language the ToE is written in. */
-@CodyzeDsl
-inline fun <reified T : Language<*>> LanguagesBuilder.language() {
-    languages += T::class
 }
 
 /** Describes a single requirement of the TOE. */

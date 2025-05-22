@@ -169,22 +169,6 @@ class AnalysisProject(
          * [CodyzeScript].
          */
         fun fromFile(file: String): AnalysisProject? {
-            var builder =
-                TranslationConfiguration.builder()
-                    .defaultPasses()
-                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage")
-                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage")
-                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage")
-                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.golang.GoLanguage")
-                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguage")
-                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage")
-                    .optionalLanguage(
-                        "de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguage"
-                    )
-                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.ruby.RubyLanguage")
-                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.jvm.JVMLanguage")
-                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.ini.IniFileLanguage")
-
             // We need to evaluate the script in order to invoke our project builder inside the
             // script
             val script = executeScript(file)

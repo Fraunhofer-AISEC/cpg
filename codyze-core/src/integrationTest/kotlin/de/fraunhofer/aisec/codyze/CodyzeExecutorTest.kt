@@ -47,6 +47,7 @@ class CodyzeExecutorTest {
         val project =
             AnalysisProject.fromFile("src/integrationTest/resources/example/project.codyze.kts")
         assertNotNull(project)
-        project.analyze()
+        val result = project.analyze()
+        assertNotNull(result)
     }
 }
