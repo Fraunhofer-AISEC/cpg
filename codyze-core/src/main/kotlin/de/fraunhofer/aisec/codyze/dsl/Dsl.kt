@@ -40,15 +40,15 @@ import kotlin.uuid.Uuid
 @DslMarker annotation class CodyzeDsl
 
 /** Represents a Builder for a single requirement of the TOE. */
-class RequirementBuilder(var name: String = "") {
+class RequirementBuilder(val translationResult: TranslationResult, var name: String = "") {
     var query: ((result: TranslationResult) -> QueryTree<Boolean>)? = null
 }
 
 /** Represents a Builder for a list of all requirements of the TOE. */
-class RequirementsBuilder
+class RequirementsBuilder(val translationResult: TranslationResult)
 
 /** Represents a Builder for a list of all assumptions of the evaluation project. */
-class AssumptionsBuilder
+class AssumptionsBuilder(val translationResult: TranslationResult)
 
 /** Represents a Builder for the TOE with its name, version and a description. */
 class ToEBuilder {
@@ -168,7 +168,11 @@ fun ToEBuilder.architecture(block: ArchitectureBuilder.() -> Unit) {
     this.architectureBuilder = ArchitectureBuilder().apply(block)
 }
 
-@CodyzeDsl fun ProjectBuilder.requirements(block: RequirementsBuilder.() -> Unit) {}
+@CodyzeDsl
+fun ProjectBuilder.requirements(block: RequirementsBuilder.() -> Unit) {
+    this.translationResult?.let { RequirementsBuilder(it).apply(block) }
+        ?: throw IllegalStateException("You need to call 'toe' before 'requirements'.")
+}
 
 /** Describes the different modules, such as (sub)-components, of the ToE. */
 @CodyzeDsl fun ArchitectureBuilder.modules(block: ModulesBuilder.() -> Unit) {}
@@ -182,8 +186,7 @@ fun ModulesBuilder.module(name: String, block: ModuleBuilder.() -> Unit) {
 /** Describes a single requirement of the TOE. */
 @CodyzeDsl
 fun RequirementsBuilder.requirement(name: String, block: RequirementBuilder.() -> Unit) {
-    val builder = RequirementBuilder(name)
-    block(builder)
+    RequirementBuilder(this.translationResult, name).apply(block)
 }
 
 /**
@@ -193,6 +196,7 @@ fun RequirementsBuilder.requirement(name: String, block: RequirementBuilder.() -
 @CodyzeDsl
 fun RequirementBuilder.byQuery(query: (result: TranslationResult) -> QueryTree<Boolean>) {
     this.query = query
+    query(this.translationResult)
 }
 
 /** Describes that the requirement had to be checked manually. */
@@ -202,7 +206,11 @@ fun RequirementBuilder.byManualCheck() {
 }
 
 /** Describes the assumptions which have been handled and assessed. */
-@CodyzeDsl fun ProjectBuilder.assumptions(block: AssumptionsBuilder.() -> Unit) {}
+@CodyzeDsl
+fun ProjectBuilder.assumptions(block: AssumptionsBuilder.() -> Unit) {
+    this.translationResult?.let { AssumptionsBuilder(it).apply(block) }
+        ?: throw IllegalStateException("You need to call 'toe' before 'assumptions'.")
+}
 
 /**
  * Allows to explicitly list a custom assumption which has to hold and is always accepted for the
@@ -220,7 +228,7 @@ fun RequirementBuilder.byManualCheck() {
  */
 @CodyzeDsl
 fun AssumptionsBuilder.accept(uuid: String) {
-    parseUuidAndAnnotateAssumptions(uuid, AssumptionStatus.Accepted)
+    this.translationResult.parseUuidAndAnnotateAssumptions(uuid, AssumptionStatus.Accepted)
 }
 
 /**
@@ -233,7 +241,7 @@ fun AssumptionsBuilder.accept(uuid: String) {
  */
 @CodyzeDsl
 fun AssumptionsBuilder.reject(uuid: String) {
-    parseUuidAndAnnotateAssumptions(uuid, AssumptionStatus.Rejected)
+    this.translationResult.parseUuidAndAnnotateAssumptions(uuid, AssumptionStatus.Rejected)
 }
 
 /**
@@ -245,7 +253,7 @@ fun AssumptionsBuilder.reject(uuid: String) {
  */
 @CodyzeDsl
 fun AssumptionsBuilder.undecided(uuid: String) {
-    parseUuidAndAnnotateAssumptions(uuid, AssumptionStatus.Undecided)
+    this.translationResult.parseUuidAndAnnotateAssumptions(uuid, AssumptionStatus.Undecided)
 }
 
 /**
@@ -258,16 +266,16 @@ fun AssumptionsBuilder.undecided(uuid: String) {
  */
 @CodyzeDsl
 fun AssumptionsBuilder.ignore(uuid: String) {
-    parseUuidAndAnnotateAssumptions(uuid, AssumptionStatus.Ignored)
+    this.translationResult.parseUuidAndAnnotateAssumptions(uuid, AssumptionStatus.Ignored)
 }
 
-private fun parseUuidAndAnnotateAssumptions(uuid: String, status: AssumptionStatus) {
+private fun TranslationResult.parseUuidAndAnnotateAssumptions(
+    uuid: String,
+    status: AssumptionStatus,
+) {
     val parsedUuid = Uuid.parse(uuid)
-    // TODO: Acutally get the TranslationResult
-    val result: TranslationResult? = null
     // TODO: Do we find all assumptions like this (i.e., also those related to overlays of a node
     // and edges)?
-    result
-        .allChildrenWithOverlays<Assumption> { it.id == parsedUuid }
+    this.allChildrenWithOverlays<Assumption> { it.id == parsedUuid }
         .forEach { assumption -> assumption.status = status }
 }
