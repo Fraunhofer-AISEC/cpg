@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.query.QueryTree
 import de.fraunhofer.aisec.cpg.query.allExtended
 import de.fraunhofer.aisec.cpg.query.eq
 import kotlin.test.Test
+import kotlin.test.assertNotNull
 
 fun goodCryptoFunc(result: TranslationResult): QueryTree<Boolean> {
     return result.allExtended<CallExpression> { it.name eq "encrypt" }
@@ -43,6 +44,9 @@ fun goodArgumentSize(result: TranslationResult): QueryTree<Boolean> {
 class CodyzeExecutorTest {
     @Test
     fun testExecute() {
-        evaluateWithCodyze("src/integrationTest/resources/example/example.codyze.kts")
+        val project =
+            AnalysisProject.fromFile("src/integrationTest/resources/example/project.codyze.kts")
+        assertNotNull(project)
+        project.analyze()
     }
 }

@@ -25,7 +25,11 @@
  */
 package example
 
+import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
+
 project {
+    name = "My Project"
+
     toe {
         name = "My Mock TOE"
         architecture {
@@ -35,6 +39,7 @@ project {
                     include("*")
                 }
             }
+            languages { language<PythonLanguage>() }
         }
     }
 

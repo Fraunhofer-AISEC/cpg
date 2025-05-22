@@ -25,29 +25,34 @@
  */
 package de.fraunhofer.aisec.codyze.dsl
 
+import de.fraunhofer.aisec.codyze.AnalysisProject
 import de.fraunhofer.aisec.codyze.CodyzeScript
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.assumptions.Assumption
 import de.fraunhofer.aisec.cpg.assumptions.AssumptionStatus
+import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.allChildrenWithOverlays
 import de.fraunhofer.aisec.cpg.query.QueryTree
+import java.io.File
+import kotlin.reflect.KClass
 import kotlin.uuid.Uuid
 
 @DslMarker annotation class CodyzeDsl
 
-/** Represents a Builder for a single requirement of the TOE. */
+/** Represents a builder for a single requirement of the TOE. */
 class RequirementBuilder(var name: String = "") {
     var query: ((result: TranslationResult) -> QueryTree<Boolean>)? = null
 }
 
-/** Represents a Builder for a list of all requirements of the TOE. */
+/** Represents a builder for a list of all requirements of the TOE. */
 class RequirementsBuilder
 
-/** Represents a Builder for a list of all assumptions of the evaluation project. */
+/** Represents a builder for a list of all assumptions of the evaluation project. */
 class AssumptionsBuilder
 
-/** Represents a Builder for the TOE with its name, version and a description. */
+/** Represents a builder for the TOE with its name, version and a description. */
 class ToEBuilder {
     /** The (unique) name of the TOE. */
     var name: String? = null
@@ -57,13 +62,27 @@ class ToEBuilder {
 
     /** The version number of the TOE. */
     var version: String? = null
+
+    val architectureBuilder = ArchitectureBuilder()
 }
 
-/** Represents a Builder for the architecture (in terms of modules) of the TOE. */
-class ArchitectureBuilder {}
+/** Represents a builder for the architecture (in terms of modules) of the TOE. */
+class ArchitectureBuilder {
+    val modulesBuilder = ModulesBuilder()
+    val languagesBuilder = LanguagesBuilder()
+    val requirementsBuilder = RequirementsBuilder()
+    val assumptionsBuilder = AssumptionsBuilder()
+}
 
-/** Represents a Builder for a list of modules of the TOE. */
-class ModulesBuilder {}
+/** Represents a builder for a list of modules of the TOE. */
+class ModulesBuilder {
+    val modules = mutableListOf<ModuleBuilder>()
+}
+
+/** Represents a builder for a list of programing languages of the TOE. */
+class LanguagesBuilder {
+    val languages: MutableList<KClass<out Language<*>>> = mutableListOf()
+}
 
 /**
  * Represents that all files of a module should be included. This is done by using an empty list.
@@ -71,7 +90,7 @@ class ModulesBuilder {}
 val ALL = listOf<String>()
 
 /**
- * Represents a Builder for a single module of the TOE. This more or less the same what is
+ * Represents a builder for a single module of the TOE. This more or less the same what is
  * translated into a CPG [Component].
  */
 class ModuleBuilder(
@@ -82,10 +101,10 @@ class ModuleBuilder(
     var directory: String = ""
 
     /** The files (patterns) which should be included during the translation. */
-    private var include: List<String> = emptyList()
+    internal var include: List<String> = emptyList()
 
     /** The files (patterns) which should explicitly not be considered during the translation. */
-    private var exclude: List<String> = emptyList()
+    internal var exclude: List<String> = emptyList()
 
     /** Adds a file/pattern to include in the translation. */
     fun include(vararg includes: String) {
@@ -98,17 +117,49 @@ class ModuleBuilder(
     }
 }
 
-/** Represents a Builder for the container for the whole analysis project. */
-class ProjectBuilder {}
+/** Represents a builder for the container for the whole analysis project. */
+class ProjectBuilder {
+    var name: String? = null
+    internal var toe: ToEBuilder? = null
+
+    fun build(): AnalysisProject {
+        val configBuilder = TranslationConfiguration.builder()
+
+        if (name == null) {
+            throw IllegalArgumentException("Project name must be set")
+        }
+
+        val components = mutableMapOf<String, List<File>>()
+        toe?.architectureBuilder?.modulesBuilder?.modules?.forEach { it ->
+            it.exclude.forEach { exclude -> configBuilder.exclusionPatterns(exclude) }
+
+            components += it.name to listOf(File(it.directory))
+        }
+
+        toe?.architectureBuilder?.languagesBuilder?.languages?.forEach { it ->
+            configBuilder.registerLanguage(it)
+        }
+
+        return AnalysisProject(name!!, projectDir = null, config = configBuilder.build())
+    }
+}
 
 /** Spans the project-Block */
-@CodyzeDsl fun CodyzeScript.project(block: ProjectBuilder.() -> Unit) {}
+@CodyzeDsl
+fun CodyzeScript.project(block: ProjectBuilder.() -> Unit) {
+    block(project)
+}
 
 /** Spans the block for the tagging logic. */
 @CodyzeDsl fun CodyzeScript.tagging(block: ProjectBuilder.() -> Unit) {}
 
 /** Describes a Target of Evaluation (ToE). */
-@CodyzeDsl fun ProjectBuilder.toe(block: ToEBuilder.() -> Unit) {}
+@CodyzeDsl
+fun ProjectBuilder.toe(block: ToEBuilder.() -> Unit) {
+    val toe = ToEBuilder()
+    block(toe)
+    this.toe = toe
+}
 
 /** Describes the architecture of the ToE. */
 @CodyzeDsl fun ToEBuilder.architecture(block: ArchitectureBuilder.() -> Unit) {}
@@ -116,13 +167,29 @@ class ProjectBuilder {}
 @CodyzeDsl fun ProjectBuilder.requirements(block: RequirementsBuilder.() -> Unit) {}
 
 /** Describes the different modules, such as (sub)-components, of the ToE. */
-@CodyzeDsl fun ArchitectureBuilder.modules(block: ModulesBuilder.() -> Unit) {}
+@CodyzeDsl
+fun ArchitectureBuilder.modules(block: ModulesBuilder.() -> Unit) {
+    block(modulesBuilder)
+}
+
+/** Describes the (programming) languages the ToE is written in. */
+@CodyzeDsl
+fun ArchitectureBuilder.languages(block: LanguagesBuilder.() -> Unit) {
+    block(languagesBuilder)
+}
 
 /** Describes one module of the ToE. This is translated into a CPG [Component]. */
 @CodyzeDsl
 fun ModulesBuilder.module(name: String, block: ModuleBuilder.() -> Unit) {
     val builder = ModuleBuilder(name)
     block(builder)
+    modules += builder
+}
+
+/** Describes one (programming) language the ToE is written in. */
+@CodyzeDsl
+inline fun <reified T : Language<*>> LanguagesBuilder.language() {
+    languages += T::class
 }
 
 /** Describes a single requirement of the TOE. */

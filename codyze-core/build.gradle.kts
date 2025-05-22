@@ -56,5 +56,5 @@ dependencies {
     // If it's not available, the integration tests fail (which is ok). But if we would directly
     // reference the project here, the build system would fail any task since it will not find a
     // non-enabled project.
-    findProject(":cpg-language-python")?.also { integrationTestImplementation(it) }
+    findProject(":cpg-language-python")?.also { integrationTestApi(it) }
 }
