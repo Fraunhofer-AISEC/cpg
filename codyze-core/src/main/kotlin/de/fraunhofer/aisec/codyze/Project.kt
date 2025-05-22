@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.ContextProvider
+import de.fraunhofer.aisec.cpg.query.QueryTree
 import io.github.detekt.sarif4k.*
 import java.io.File
 import java.nio.file.Path
@@ -83,6 +84,7 @@ class TranslationOptions : OptionGroup("CPG Translation Options") {
 data class AnalysisResult(
     val translationResult: TranslationResult,
     val sarif: SarifSchema210 = SarifSchema210(version = Version.The210, runs = listOf()),
+    val requirementsResults: Map<String, QueryTree<Boolean>> = mutableMapOf(),
     val project: AnalysisProject,
 ) : ContextProvider by translationResult {
     fun writeSarifJson(file: File) {
@@ -119,6 +121,8 @@ class AnalysisProject(
      * if the namespace starts with mylibrary.
      */
     var librariesPath: Path? = projectDir?.resolve("libraries"),
+    var requirementFunctions: MutableMap<String, (TranslationResult) -> QueryTree<Boolean>> =
+        mutableMapOf(),
     /** The translation configuration for the project. */
     var config: TranslationConfiguration,
     /**
@@ -134,6 +138,10 @@ class AnalysisProject(
     fun analyze(): AnalysisResult {
         val tr = TranslationManager.builder().config(config).build().analyze().get()
         val (rules, results) = postProcess?.invoke(this, tr) ?: Pair(emptyList(), emptyList())
+
+        // Run requirements
+        val requirementsResults =
+            requirementFunctions.map { (name, func) -> Pair(name, func(tr)) }.associate { it }
 
         // Create a new SARIF run, including a tool definition and rules corresponding to the
         // individual security statements
@@ -151,6 +159,7 @@ class AnalysisProject(
         return AnalysisResult(
             translationResult = tr,
             sarif = SarifSchema210(version = Version.The210, runs = listOf(run)),
+            requirementsResults = requirementsResults,
             project = this,
         )
     }

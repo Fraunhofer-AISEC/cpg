@@ -47,7 +47,9 @@ class RequirementBuilder(var name: String = "") {
 }
 
 /** Represents a builder for a list of all requirements of the TOE. */
-class RequirementsBuilder
+class RequirementsBuilder {
+    val requirements = mutableMapOf<String, (TranslationResult) -> QueryTree<Boolean>>()
+}
 
 /** Represents a builder for a list of all assumptions of the evaluation project. */
 class AssumptionsBuilder
@@ -143,7 +145,14 @@ class ProjectBuilder(val projectDir: Path = Path(".")) {
         configBuilder.softwareComponents(components)
         configBuilder.topLevels(topLevels)
 
-        return AnalysisProject(name!!, projectDir = projectDir, config = configBuilder.build())
+        val requirementsFunctions = requirementsBuilder.requirements
+
+        return AnalysisProject(
+            name!!,
+            projectDir = projectDir,
+            requirementFunctions = requirementsFunctions,
+            config = configBuilder.build(),
+        )
     }
 }
 
@@ -194,6 +203,7 @@ fun ModulesBuilder.module(name: String, block: ModuleBuilder.() -> Unit) {
 fun RequirementsBuilder.requirement(name: String, block: RequirementBuilder.() -> Unit) {
     val builder = RequirementBuilder(name)
     block(builder)
+    requirements[name] = builder.query ?: throw IllegalStateException("Requirement not set")
 }
 
 /**
