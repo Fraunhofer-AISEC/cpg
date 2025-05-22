@@ -40,7 +40,7 @@ import kotlin.uuid.Uuid
 @DslMarker annotation class CodyzeDsl
 
 /** Represents a Builder for a single requirement of the TOE. */
-class RequirementBuilder(val translationResult: TranslationResult, var name: String = "") {
+class RequirementBuilder(var name: String = "") {
     var query: ((result: TranslationResult) -> QueryTree<Boolean>)? = null
 }
 
@@ -118,7 +118,10 @@ class ProjectBuilder {
 }
 
 /** Spans the project-Block */
-@CodyzeDsl fun CodyzeScript.project(block: ProjectBuilder.() -> Unit) {}
+@CodyzeDsl
+fun CodyzeScript.project(block: ProjectBuilder.() -> Unit) {
+    ProjectBuilder().apply(block)
+}
 
 /** Spans the block for the tagging logic. */
 @CodyzeDsl fun CodyzeScript.tagging(block: ProjectBuilder.() -> Unit) {}
@@ -186,7 +189,10 @@ fun ModulesBuilder.module(name: String, block: ModuleBuilder.() -> Unit) {
 /** Describes a single requirement of the TOE. */
 @CodyzeDsl
 fun RequirementsBuilder.requirement(name: String, block: RequirementBuilder.() -> Unit) {
-    RequirementBuilder(this.translationResult, name).apply(block)
+    println("Evaluating requirement \"$name\":")
+    RequirementBuilder(name).apply(block).query?.let {
+        println(it(this.translationResult).printNicely())
+    }
 }
 
 /**
@@ -196,7 +202,6 @@ fun RequirementsBuilder.requirement(name: String, block: RequirementBuilder.() -
 @CodyzeDsl
 fun RequirementBuilder.byQuery(query: (result: TranslationResult) -> QueryTree<Boolean>) {
     this.query = query
-    query(this.translationResult)
 }
 
 /** Describes that the requirement had to be checked manually. */
