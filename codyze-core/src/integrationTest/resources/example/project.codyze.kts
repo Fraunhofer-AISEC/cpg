@@ -44,6 +44,10 @@ project {
                     includeAll()
                     exclude("tests")
                 }
+                module("module2") {
+                    directory = "src/module2"
+                    include("pkg")
+                }
             }
         }
     }
