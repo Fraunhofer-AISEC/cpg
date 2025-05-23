@@ -34,7 +34,8 @@ project {
             modules {
                 module("module1") {
                     directory = "src/module1"
-                    include("*")
+                    includeAll()
+                    exclude("tests")
                 }
             }
         }

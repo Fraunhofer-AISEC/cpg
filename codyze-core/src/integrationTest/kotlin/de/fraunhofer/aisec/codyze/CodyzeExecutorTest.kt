@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.codyze
 
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.query.QueryTree
 import de.fraunhofer.aisec.cpg.query.allExtended
@@ -47,7 +48,11 @@ class CodyzeExecutorTest {
         val project =
             AnalysisProject.fromFile("src/integrationTest/resources/example/project.codyze.kts")
         assertNotNull(project)
+
         val result = project.analyze()
         assertNotNull(result)
+
+        val encrypt = result.translationResult.functions["encrypt"]
+        assertNotNull(encrypt)
     }
 }

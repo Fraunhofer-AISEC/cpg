@@ -100,6 +100,11 @@ class ModuleBuilder(
         include += includes
     }
 
+    /** Includes all files in the [directory] in the translation. */
+    fun includeAll() {
+        include = emptyList()
+    }
+
     /** Adds a file/pattern to exclude from the translation. */
     fun exclude(vararg excludes: String) {
         exclude += excludes
@@ -110,11 +115,14 @@ class ModuleBuilder(
 class ProjectBuilder(val projectDir: Path = Path(".")) {
     var name: String? = null
 
-    internal var toEBuilder: ToEBuilder? = null
+    internal var toeBuilder = ToEBuilder()
     internal val requirementsBuilder = RequirementsBuilder()
     internal val assumptionsBuilder = AssumptionsBuilder()
 
+    /** Builds an [AnalysisProject] out of the current state of the builder. */
     fun build(): AnalysisProject {
+        val name = name
+
         val configBuilder =
             TranslationConfiguration.builder()
                 .defaultPasses()
@@ -135,10 +143,22 @@ class ProjectBuilder(val projectDir: Path = Path(".")) {
 
         val components = mutableMapOf<String, List<File>>()
         val topLevels = mutableMapOf<String, File>()
-        toEBuilder?.architectureBuilder?.modulesBuilder?.modules?.forEach { it ->
+
+        // Build software components and "top levels" from the specified architecture
+        toeBuilder.architectureBuilder.modulesBuilder.modules.forEach { it ->
+            // Exclude all files in the exclude list
             it.exclude.forEach { exclude -> configBuilder.exclusionPatterns(exclude) }
 
-            components += it.name to listOf(projectDir.resolve(it.directory).toFile())
+            // Build the file list from the includes list
+            val projectDirFile = projectDir.toFile()
+            var files = it.include.map { include -> projectDirFile.resolve(include) }
+
+            // If the include list is empty, we include the directory itself
+            if (files.isEmpty()) {
+                files = listOf(projectDirFile.resolve(it.directory))
+            }
+
+            components += it.name to files
             topLevels += it.name to projectDir.resolve(it.directory).toFile()
         }
 
@@ -148,7 +168,7 @@ class ProjectBuilder(val projectDir: Path = Path(".")) {
         val requirementsFunctions = requirementsBuilder.requirements
 
         return AnalysisProject(
-            name!!,
+            name,
             projectDir = projectDir,
             requirementFunctions = requirementsFunctions,
             config = configBuilder.build(),
@@ -168,9 +188,7 @@ fun CodyzeScript.project(block: ProjectBuilder.() -> Unit) {
 /** Describes a Target of Evaluation (ToE). */
 @CodyzeDsl
 fun ProjectBuilder.toe(block: ToEBuilder.() -> Unit) {
-    val toe = ToEBuilder()
-    block(toe)
-    this.toEBuilder = toe
+    toeBuilder.apply(block)
 }
 
 /** Describes the architecture of the ToE. */
