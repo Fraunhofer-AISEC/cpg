@@ -30,18 +30,22 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.*
+import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Cipher
 import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Encrypt
 import de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.Secret
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import kotlin.test.Test
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertSame
 
 class TagOverlaysPassTest {
+
+    class SecretKey(underlyingNode: Node? = null) : Concept(underlyingNode)
 
     @Test
     fun testTag() {
@@ -64,6 +68,11 @@ class TagOverlaysPassTest {
                                                         Secret()
                                                     }
                                                     each<CallExpression>("encrypt").withMultiple {
+                                                        propagateWith(
+                                                            transformation = { node.arguments[0] },
+                                                            with = { SecretKey() },
+                                                        )
+
                                                         val secrets =
                                                             node.getOverlaysByPrevDFG<Secret>(state)
                                                         val encryptOps =
@@ -121,5 +130,10 @@ class TagOverlaysPassTest {
         val encrypt = encryptCall.operationNodes.singleOrNull()
         assertIs<Encrypt>(encrypt)
         assertSame(cipher, encrypt.concept)
+
+        val arg0 = encryptCall.arguments[0]
+        assertIs<Reference>(arg0)
+        val arg0Overlay = arg0.overlays.singleOrNull()
+        assertIs<SecretKey>(arg0Overlay)
     }
 }

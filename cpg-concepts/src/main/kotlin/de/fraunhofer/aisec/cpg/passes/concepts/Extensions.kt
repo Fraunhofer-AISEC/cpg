@@ -30,6 +30,7 @@ package de.fraunhofer.aisec.cpg.passes.concepts
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
 import kotlin.reflect.KClass
 import kotlin.reflect.safeCast
 
@@ -73,6 +74,15 @@ inline fun <reified T : Node> TaggingContext.each(
     noinline predicate: ((T) -> Boolean)? = null,
 ): Selector<T> {
     return Selector(T::class, namePredicate = namePredicate, predicate = predicate)
+}
+
+inline fun <reified S : Node, reified T : Node> BuilderContext<S>.propagateWith(
+    noinline transformation: ((S) -> T),
+    noinline with: BuilderContext<T>.() -> OverlayNode,
+): Propagator<S, T> {
+    val propagator = Propagator(transformation = transformation, builder = with)
+    this.propagators += propagator
+    return propagator
 }
 
 /**
@@ -155,8 +165,12 @@ data class BuilderContext<T : Node>(
     var node: T,
     var builder: (BuilderContext<T>) -> List<OverlayNode>,
 ) {
+    val propagators: MutableList<Propagator<T, *>> = mutableListOf()
+
     fun build(): List<OverlayNode> {
-        return builder(this)
+        val overlayList = builder(this)
+        propagators.forEach { it.invoke(lattice, state, node) }
+        return overlayList
     }
 }
 
@@ -190,5 +204,29 @@ data class Selector<T : Node>(
         } else {
             null
         }
+    }
+}
+
+/**
+ * A selector that describes a possible selection of a CPG [Node] by the following properties:
+ * - its [KClass] (mandatory, see [klass]),
+ * - its [Node.name] (see [namePredicate]),
+ * - any other property (see [predicate])
+ */
+data class Propagator<S : Node, T : Node>(
+    val transformation: ((S) -> T),
+    val builder: (BuilderContext<T>) -> OverlayNode,
+) {
+    operator fun invoke(lattice: NodeToOverlayState, state: NodeToOverlayStateElement, node: S) {
+        val changedNode = transformation(node)
+        val newNodes = BuilderContext(lattice, state, changedNode, { listOf(builder(it)) }).build()
+        lattice.lub(
+            one = state,
+            two =
+                NodeToOverlayStateElement(
+                    changedNode to PowersetLattice.Element(*newNodes.toTypedArray())
+                ),
+            allowModify = true,
+        )
     }
 }
