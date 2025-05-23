@@ -23,6 +23,8 @@
  *                    \______/ \__|       \______/
  *
  */
+@file:Suppress("CONTEXT_RECEIVERS_DEPRECATED")
+
 package de.fraunhofer.aisec.codyze.dsl
 
 import de.fraunhofer.aisec.codyze.AnalysisProject
@@ -41,6 +43,17 @@ import kotlin.uuid.Uuid
 
 @DslMarker annotation class CodyzeDsl
 
+interface IncludeCategory
+
+object AssumptionDecisions : IncludeCategory
+
+object ManualAssessment : IncludeCategory
+
+/** Represents a builder to include other scripts. */
+class IncludeBuilder {
+    val includes: MutableMap<IncludeCategory, String> = mutableMapOf()
+}
+
 /** Represents a builder for a single requirement of the TOE. */
 class RequirementBuilder(var name: String = "") {
     var query: ((result: TranslationResult) -> QueryTree<Boolean>)? = null
@@ -52,7 +65,11 @@ class RequirementsBuilder {
 }
 
 /** Represents a builder for a list of all assumptions of the evaluation project. */
-class AssumptionsBuilder
+class AssumptionsBuilder {
+    internal val decisionBuilder = DecisionBuilder()
+
+    class DecisionBuilder
+}
 
 /** Represents a builder for tool metadata and configuration. */
 class ToolBuilder {
@@ -193,14 +210,20 @@ class ProjectBuilder(val projectDir: Path = Path(".")) {
 
 /** Includes other script files. */
 @CodyzeDsl
-fun CodyzeScript.include(vararg paths: String) {
-    // Nothing to do, will be handled by the script compilation
+fun CodyzeScript.include(block: IncludeBuilder.() -> Unit) {
+    includeBuilder.apply(block)
+}
+
+context(IncludeBuilder)
+@CodyzeDsl
+infix fun IncludeCategory.from(path: String) {
+    (this@IncludeBuilder).includes[this] = path
 }
 
 /** Spans the project-Block */
 @CodyzeDsl
 fun CodyzeScript.project(block: ProjectBuilder.() -> Unit) {
-    block(projectBuilder)
+    projectBuilder.apply(block)
 }
 
 /** Spans the block for the tagging logic. */
@@ -282,6 +305,12 @@ fun ProjectBuilder.assumptions(block: AssumptionsBuilder.() -> Unit) {
  */
 @CodyzeDsl fun AssumptionsBuilder.assume(message: () -> String) {}
 
+/** Allows specifying in a block whether assumptions are accepted, rejected or undecided. */
+@CodyzeDsl
+fun AssumptionsBuilder.decisions(block: AssumptionsBuilder.DecisionBuilder.() -> Unit) {
+    decisionBuilder.apply(block)
+}
+
 /**
  * Describes that the assumption with the given [uuid] was assessed and considered as
  * acceptable/valid.
@@ -291,7 +320,7 @@ fun ProjectBuilder.assumptions(block: AssumptionsBuilder.() -> Unit) {
  *   or uppercase.
  */
 @CodyzeDsl
-fun AssumptionsBuilder.accept(uuid: String) {
+fun AssumptionsBuilder.DecisionBuilder.accept(uuid: String) {
     parseUuidAndAnnotateAssumptions(uuid, AssumptionStatus.Accepted)
 }
 
@@ -304,7 +333,7 @@ fun AssumptionsBuilder.accept(uuid: String) {
  *   or uppercase.
  */
 @CodyzeDsl
-fun AssumptionsBuilder.reject(uuid: String) {
+fun AssumptionsBuilder.DecisionBuilder.reject(uuid: String) {
     parseUuidAndAnnotateAssumptions(uuid, AssumptionStatus.Rejected)
 }
 
@@ -316,7 +345,7 @@ fun AssumptionsBuilder.reject(uuid: String) {
  *   or uppercase.
  */
 @CodyzeDsl
-fun AssumptionsBuilder.undecided(uuid: String) {
+fun AssumptionsBuilder.DecisionBuilder.undecided(uuid: String) {
     parseUuidAndAnnotateAssumptions(uuid, AssumptionStatus.Undecided)
 }
 
@@ -329,7 +358,7 @@ fun AssumptionsBuilder.undecided(uuid: String) {
  *   or uppercase.
  */
 @CodyzeDsl
-fun AssumptionsBuilder.ignore(uuid: String) {
+fun AssumptionsBuilder.DecisionBuilder.ignore(uuid: String) {
     parseUuidAndAnnotateAssumptions(uuid, AssumptionStatus.Ignored)
 }
 
