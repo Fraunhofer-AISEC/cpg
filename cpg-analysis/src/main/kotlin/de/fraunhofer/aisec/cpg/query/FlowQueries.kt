@@ -246,7 +246,7 @@ fun dataFlowWithValidator(
     scope: AnalysisScope,
     vararg sensitivities: AnalysisSensitivity,
 ): QueryTree<Boolean> {
-    return source.alwaysFlowsToPrivate(
+    return source.alwaysFlowsToInternal(
         allowOverwritingValue = true,
         noSinkIsGood = true,
         earlyTermination = sinkPredicate,
@@ -410,7 +410,7 @@ fun Node.alwaysFlowsTo(
         ContextSensitive + FieldSensitive + FilterUnreachableEOG,
     predicate: (Node) -> Boolean,
 ): QueryTree<Boolean> {
-    return this.alwaysFlowsToPrivate(
+    return this.alwaysFlowsToInternal(
         allowOverwritingValue = allowOverwritingValue,
         noSinkIsGood = false,
         earlyTermination = earlyTermination,
@@ -434,7 +434,7 @@ fun Node.alwaysFlowsTo(
  *
  * If [noSinkIsGood] is set to `true`, all results with "ended path" are considered as fulfilled.
  */
-private fun Node.alwaysFlowsToPrivate(
+internal fun Node.alwaysFlowsToInternal(
     allowOverwritingValue: Boolean = false,
     noSinkIsGood: Boolean = false,
     earlyTermination: ((Node) -> Boolean)? = null,
@@ -534,13 +534,13 @@ private fun Node.alwaysFlowsToPrivate(
                 }
         nothingFailed =
             nothingFailed &&
-                nextEOGEvaluation.failed.none {
+                nextEOGEvaluation.failed.all {
                     // If we configure this function with "noSinkIsGood == true", then we only
                     // consider paths which hit the early termination or which exceeded the steps
                     // (though the latter is debatable).
                     // If "noSinkIsGood == false", we consider all paths which are not fulfilled as
                     // failed.
-                    !noSinkIsGood || it.first != FailureReason.PATH_ENDED
+                    noSinkIsGood && it.first == FailureReason.PATH_ENDED
                 }
     }
     return QueryTree(
