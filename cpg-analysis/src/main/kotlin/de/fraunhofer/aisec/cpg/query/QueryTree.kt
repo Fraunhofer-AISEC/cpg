@@ -315,6 +315,30 @@ infix fun QueryTree<Boolean>.implies(other: Lazy<QueryTree<Boolean>>): QueryTree
     )
 }
 
+/**
+ * Creates and compares the numeric values of two [QueryTree]s for this being "greater than" (>)
+ * [other].
+ */
+infix fun <T : Number, S : Number> S.gt(other: T): QueryTree<Boolean> {
+    return this.toQueryTree() gt other.toQueryTree()
+}
+
+/**
+ * Creates and compares the numeric values of two [QueryTree]s for this being "greater than" (>)
+ * [other].
+ */
+infix fun <T : Number, S : Number> QueryTree<S>.gt(other: T): QueryTree<Boolean> {
+    return this gt other.toQueryTree()
+}
+
+/**
+ * Creates and compares the numeric values of two [QueryTree]s for this being "greater than" (>)
+ * [other].
+ */
+infix fun <T : Number, S : Number> S.gt(other: QueryTree<T>): QueryTree<Boolean> {
+    return this.toQueryTree() gt other
+}
+
 /** Compares the numeric values of two [QueryTree]s for this being "greater than" (>) [other]. */
 infix fun <T : Number, S : Number> QueryTree<T>.gt(other: QueryTree<S>): QueryTree<Boolean> {
     val result = this.value.compareTo(other.value) > 0
@@ -322,12 +346,27 @@ infix fun <T : Number, S : Number> QueryTree<T>.gt(other: QueryTree<S>): QueryTr
 }
 
 /**
- * Compares the numeric values of a [QueryTree] and another number for this being "greater than" (>)
- * [other].
+ * Creates and compares the numeric values of two [QueryTree]s for this being "greater than or
+ * equal" (>=) [other].
  */
-infix fun <T : Number, S : Number> QueryTree<T>.gt(other: S): QueryTree<Boolean> {
-    val result = this.value.compareTo(other) > 0
-    return QueryTree(result, mutableListOf(this, QueryTree(other)), "${this.value} > $other")
+infix fun <T : Number, S : Number> S.ge(other: T): QueryTree<Boolean> {
+    return this.toQueryTree() ge other.toQueryTree()
+}
+
+/**
+ * Creates and compares the numeric values of two [QueryTree]s for this being "greater than or
+ * equal" (>=) [other].
+ */
+infix fun <T : Number, S : Number> QueryTree<S>.ge(other: T): QueryTree<Boolean> {
+    return this ge other.toQueryTree()
+}
+
+/**
+ * Creates and compares the numeric values of two [QueryTree]s for this being "greater than or
+ * equal" (>=) [other].
+ */
+infix fun <T : Number, S : Number> S.ge(other: QueryTree<T>): QueryTree<Boolean> {
+    return this.toQueryTree() ge other
 }
 
 /**
@@ -340,12 +379,27 @@ infix fun <T : Number, S : Number> QueryTree<T>.ge(other: QueryTree<S>): QueryTr
 }
 
 /**
- * Compares the numeric values of a [QueryTree] and another number for this being "greater than or
- * equal" (>=) [other].
+ * Creates and compares the numeric values of two [QueryTree]s for this being "less than" (<)
+ * [other].
  */
-infix fun <T : Number, S : Number> QueryTree<T>.ge(other: S): QueryTree<Boolean> {
-    val result = this.value.compareTo(other) >= 0
-    return QueryTree(result, mutableListOf(this, QueryTree(other)), "${this.value} >= $other")
+infix fun <T : Number, S : Number> S.lt(other: T): QueryTree<Boolean> {
+    return this.toQueryTree() lt other.toQueryTree()
+}
+
+/**
+ * Creates and compares the numeric values of two [QueryTree]s for this being "less than" (<)
+ * [other].
+ */
+infix fun <T : Number, S : Number> QueryTree<S>.lt(other: T): QueryTree<Boolean> {
+    return this lt other.toQueryTree()
+}
+
+/**
+ * Creates and compares the numeric values of two [QueryTree]s for this being "less than" (<)
+ * [other].
+ */
+infix fun <T : Number, S : Number> S.lt(other: QueryTree<T>): QueryTree<Boolean> {
+    return this.toQueryTree() lt other
 }
 
 /** Compares the numeric values of two [QueryTree]s for this being "less than" (<) [other]. */
@@ -355,12 +409,27 @@ infix fun <T : Number, S : Number> QueryTree<T>.lt(other: QueryTree<S>): QueryTr
 }
 
 /**
- * Compares the numeric values of a [QueryTree] and another number for this being "less than" (<)
- * [other].
+ * Creates and compares the numeric values of two [QueryTree]s for this being "less than or equal"
+ * (<=) [other].
  */
-infix fun <T : Number, S : Number> QueryTree<T>.lt(other: S): QueryTree<Boolean> {
-    val result = this.value.compareTo(other) < 0
-    return QueryTree(result, mutableListOf(this, QueryTree(other)), "${this.value} < $other")
+infix fun <T : Number, S : Number> S.le(other: T): QueryTree<Boolean> {
+    return this.toQueryTree() le other.toQueryTree()
+}
+
+/**
+ * Creates and compares the numeric values of two [QueryTree]s for this being "less than or equal"
+ * (<=) [other].
+ */
+infix fun <T : Number, S : Number> QueryTree<S>.le(other: T): QueryTree<Boolean> {
+    return this le other.toQueryTree()
+}
+
+/**
+ * Creates and compares the numeric values of two [QueryTree]s for this being "less than or equal"
+ * (<=) [other].
+ */
+infix fun <T : Number, S : Number> S.le(other: QueryTree<T>): QueryTree<Boolean> {
+    return this.toQueryTree() le other
 }
 
 /**
@@ -371,15 +440,6 @@ infix fun <T : Number, S : Number> QueryTree<T>.le(other: QueryTree<S>): QueryTr
     return QueryTree(result, mutableListOf(this, other), "${this.value} <= ${other.value}")
 }
 
-/**
- * Compares the numeric values of a [QueryTree] and another number for this being "less than or
- * equal" (<=) [other].
- */
-infix fun <T : Number, S : Number> QueryTree<T>.le(other: S): QueryTree<Boolean> {
-    val result = this.value.compareTo(other) <= 0
-    return QueryTree(result, mutableListOf(this, QueryTree(other)), "${this.value} <= $other")
-}
-
 /** Negates the value of [arg] and returns the resulting [QueryTree]. */
 fun not(arg: QueryTree<Boolean>): QueryTree<Boolean> {
     val result = !arg.value
@@ -388,24 +448,7 @@ fun not(arg: QueryTree<Boolean>): QueryTree<Boolean> {
 
 /** Negates the value of [arg] and returns the resulting [QueryTree]. */
 fun not(arg: Boolean): QueryTree<Boolean> {
-    val result = !arg.toQueryTree().value
-    return QueryTree(result, mutableListOf(QueryTree(arg)), "! $arg")
-}
-
-/**
- * This is a small wrapper to create a [QueryTree] containing a constant value, so that it can be
- * used to in comparison with other [QueryTree] objects.
- */
-fun <T : Comparable<T>> const(n: T): QueryTree<T> {
-    return QueryTree(n, stringRepresentation = "$n")
-}
-
-/**
- * This is a small wrapper to create a [QueryTree] containing a constant value, so that it can be
- * used to in comparison with other [QueryTree] objects.
- */
-fun <T> const(n: T): QueryTree<T> {
-    return QueryTree(n, stringRepresentation = "$n")
+    return not(arg.toQueryTree())
 }
 
 /**

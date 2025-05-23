@@ -90,7 +90,7 @@ class QueryTest {
         val queryTreeResult =
             result.allExtended<CallExpression>(
                 mustSatisfy = {
-                    (const("memcpy") eq it.name.localName) implies
+                    ("memcpy" eq it.name.localName) implies
                         (lazy { it.arguments[0].size gt it.arguments[1].size })
                 }
             )
@@ -168,7 +168,7 @@ class QueryTest {
 
         val queryTreeResult =
             result.all<CallExpression>({ it.name.localName == "memcpy" }) {
-                it.arguments[2].intValue!! >= const(11)
+                it.arguments[2].intValue!! >= 11
             }
         assertTrue(queryTreeResult.first)
 
@@ -183,7 +183,7 @@ class QueryTest {
         val queryTreeResult3 =
             result.allExtended<CallExpression>(
                 { it.name.localName == "memcpy" },
-                { it.arguments[2].intValue!! ge const(11) },
+                { it.arguments[2].intValue!! ge 11 },
             )
 
         assertTrue(queryTreeResult3.value)
@@ -195,7 +195,7 @@ class QueryTest {
 
         val queryTreeResult =
             result.all<CallExpression>({ it.name.localName == "memcpy" }) {
-                it.arguments[2].intValue!! > const(11)
+                it.arguments[2].intValue!! > 11
             }
         assertFalse(queryTreeResult.first)
 
@@ -210,7 +210,7 @@ class QueryTest {
         val queryTreeResult3 =
             result.allExtended<CallExpression>(
                 { it.name.localName == "memcpy" },
-                { it.arguments[2].intValue!! gt const(11) },
+                { it.arguments[2].intValue!! gt 11 },
             )
 
         assertFalse(queryTreeResult3.value)
@@ -222,7 +222,7 @@ class QueryTest {
 
         val queryTreeResult =
             result.all<CallExpression>({ it.name.localName == "memcpy" }) {
-                it.arguments[2].intValue!! <= const(11)
+                it.arguments[2].intValue!! <= 11
             }
         assertTrue(queryTreeResult.first)
 
@@ -237,7 +237,7 @@ class QueryTest {
         val queryTreeResult3 =
             result.allExtended<CallExpression>(
                 { it.name.localName == "memcpy" },
-                { it.arguments[2].intValue!! le const(11) },
+                { it.arguments[2].intValue!! le 11 },
             )
 
         assertTrue(queryTreeResult3.value)
@@ -249,7 +249,7 @@ class QueryTest {
 
         val queryTreeResult =
             result.all<CallExpression>({ it.name.localName == "memcpy" }) {
-                it.arguments[2].intValue!! == const(11)
+                it.arguments[2].intValue?.value == 11
             }
         assertTrue(queryTreeResult.first)
 
@@ -264,7 +264,7 @@ class QueryTest {
         val queryTreeResult3 =
             result.allExtended<CallExpression>(
                 { it.name.localName == "memcpy" },
-                { it.arguments[2].intValue!! eq const(11) },
+                { it.arguments[2].intValue!! eq 11 },
             )
 
         assertTrue(queryTreeResult3.value)
@@ -276,7 +276,7 @@ class QueryTest {
 
         val queryTreeResult =
             result.all<CallExpression>({ it.name.localName == "memcpy" }) {
-                it.arguments[2].intValue!! < const(11)
+                it.arguments[2].intValue!! < 11
             }
         assertFalse(queryTreeResult.first)
 
@@ -291,7 +291,7 @@ class QueryTest {
         val queryTreeResult3 =
             result.allExtended<CallExpression>(
                 { it.name.localName == "memcpy" },
-                { it.arguments[2].intValue!! lt const(11) },
+                { it.arguments[2].intValue!! lt 11 },
             )
 
         assertFalse(queryTreeResult3.value)
@@ -303,7 +303,7 @@ class QueryTest {
 
         val queryTreeResult =
             result.all<CallExpression>({ it.name.localName == "memcpy" }) {
-                it.arguments[2].intValue!! != const(11)
+                it.arguments[2].intValue?.value != 11
             }
         assertFalse(queryTreeResult.first)
 
@@ -318,7 +318,7 @@ class QueryTest {
         val queryTreeResult3 =
             result.allExtended<CallExpression>(
                 { it.name.localName == "memcpy" },
-                { it.arguments[2].intValue!! ne const(11) },
+                { it.arguments[2].intValue!! ne 11 },
             )
 
         assertFalse(queryTreeResult3.value)
@@ -345,7 +345,7 @@ class QueryTest {
         val queryTreeResult3 =
             result.allExtended<CallExpression>(
                 { it.name.localName == "memcpy" },
-                { it.arguments[2].intValue!! IN const(listOf(11, 2, 3)) },
+                { it.arguments[2].intValue!! IN listOf(11, 2, 3) },
             )
 
         assertTrue(queryTreeResult3.value)
