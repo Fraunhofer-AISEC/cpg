@@ -23,7 +23,8 @@
  *                    \______/ \__|       \______/
  *
  */
-package aa
+package example
+
 manualAssessment {
     of("ID-5") {
         /** Yes, I really checked this that 6 is greater than 5 */
