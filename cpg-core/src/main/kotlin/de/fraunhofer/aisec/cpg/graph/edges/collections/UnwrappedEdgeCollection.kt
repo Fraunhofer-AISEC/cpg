@@ -111,17 +111,13 @@ sealed class UnwrappedEdgeCollection<NodeType : Node, EdgeType : Edge<NodeType>>
         }
     }
 
-    /*override fun hashCode(): Int {
-        var hashCode = 1
+    override fun hashCode(): Int {
+        // Calculating a real hash code is very performance intensive, so we just return the
+        // collection size. This will lead to some hash collisions but its not a problem since equal
+        // will be used to differentiate between two collections then.
 
-        val it = iterator()
-        while (it.hasNext()) {
-            val element = it.next()
-            hashCode = 31 * hashCode + element.hashCode()
-        }
-
-        return hashCode
+        return collection.size
     }
 
-    abstract override fun equals(other: Any?): Boolean*/
+    abstract override fun equals(other: Any?): Boolean
 }
