@@ -235,7 +235,7 @@ fun RequirementBuilder.byQuery(query: (result: TranslationResult) -> QueryTree<B
 
 /** Describes that the requirement had to be checked manually. */
 @CodyzeDsl
-fun RequirementBuilder.byManualCheck() {
+fun RequirementBuilder.byManualAssessment(id: String) {
     this.query = { result -> QueryTree(true) }
 }
 

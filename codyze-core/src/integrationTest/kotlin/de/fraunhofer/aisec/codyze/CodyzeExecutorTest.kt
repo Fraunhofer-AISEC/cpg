@@ -32,7 +32,9 @@ import de.fraunhofer.aisec.cpg.query.QueryTree
 import de.fraunhofer.aisec.cpg.query.allExtended
 import de.fraunhofer.aisec.cpg.query.eq
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import org.junit.jupiter.api.Assertions.assertFalse
 
 fun goodCryptoFunc(result: TranslationResult): QueryTree<Boolean> {
     return result.allExtended<CallExpression> { it.name eq "encrypt" }
@@ -54,5 +56,8 @@ class CodyzeExecutorTest {
 
         val encrypt = result.translationResult.functions["encrypt"]
         assertNotNull(encrypt)
+
+        assertEquals(2, result.requirementsResults.size)
+        assertFalse(result.requirementsResults["Good Encryption"]?.value == true)
     }
 }
