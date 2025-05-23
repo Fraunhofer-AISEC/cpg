@@ -111,7 +111,7 @@ sealed class UnwrappedEdgeCollection<NodeType : Node, EdgeType : Edge<NodeType>>
         }
     }
 
-    override fun hashCode(): Int {
+    /*override fun hashCode(): Int {
         var hashCode = 1
 
         val it = iterator()
@@ -123,5 +123,5 @@ sealed class UnwrappedEdgeCollection<NodeType : Node, EdgeType : Edge<NodeType>>
         return hashCode
     }
 
-    abstract override fun equals(other: Any?): Boolean
+    abstract override fun equals(other: Any?): Boolean*/
 }
