@@ -159,17 +159,17 @@ class ProjectBuilder(val projectDir: Path = Path(".")) {
             // Exclude all files in the exclude list
             it.exclude.forEach { exclude -> configBuilder.exclusionPatterns(exclude) }
 
-            // Build the file list from the includes list
-            val projectDirFile = projectDir.toFile()
-            var files = it.include.map { include -> projectDirFile.resolve(include) }
+            // Build the file list from the include list
+            val componentTopLevel = projectDir.resolve(it.directory).toFile()
+            var files = it.include.map { include -> componentTopLevel.resolve(include) }
 
             // If the include list is empty, we include the directory itself
             if (files.isEmpty()) {
-                files = listOf(projectDirFile.resolve(it.directory))
+                files = listOf(componentTopLevel)
             }
 
             components += it.name to files
-            topLevels += it.name to projectDir.resolve(it.directory).toFile()
+            topLevels += it.name to componentTopLevel
         }
 
         configBuilder.softwareComponents(components)
