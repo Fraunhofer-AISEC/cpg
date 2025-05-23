@@ -26,8 +26,8 @@
 package example
 
 include {
-    assumptionDecision from "assumptions.codyze.kts"
-    manuelAssessments from "manual-assessments.codyze.kts"
+    AssumptionDecisions from "assumptions.codyze.kts"
+    ManualAssessment from "manual-assessments.codyze.kts"
 }
 
 project {
@@ -64,7 +64,5 @@ project {
         }
     }
 
-    assumptions {
-        assume { "We assume that everything is fine." }
-    }
+    assumptions { assume { "We assume that everything is fine." } }
 }

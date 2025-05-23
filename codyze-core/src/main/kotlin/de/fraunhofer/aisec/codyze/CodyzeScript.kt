@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.codyze
 
 import de.fraunhofer.aisec.codyze.dsl.Import
+import de.fraunhofer.aisec.codyze.dsl.IncludeBuilder
 import de.fraunhofer.aisec.codyze.dsl.ProjectBuilder
 import java.io.File
 import java.net.JarURLConnection
@@ -63,6 +64,8 @@ import kotlin.script.templates.ScriptTemplateDefinition
 abstract class CodyzeScript(projectDir: Path) {
 
     internal var projectBuilder: ProjectBuilder = ProjectBuilder(projectDir = projectDir)
+
+    internal var includeBuilder: IncludeBuilder = IncludeBuilder()
 }
 
 val baseLibraries =
