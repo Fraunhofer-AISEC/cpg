@@ -185,3 +185,7 @@ fun MetadataProvider.newFileWrite(underlyingNode: Node, file: File, what: Node, 
         concept = file,
         connect = connect,
     )
+
+/** TODO */
+fun MetadataProvider.newFileHandle(underlyingNode: Node, file: File, connect: Boolean) =
+    newConcept({ FileHandle() }, underlyingNode = underlyingNode, connect = connect)

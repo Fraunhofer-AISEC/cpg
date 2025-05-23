@@ -73,6 +73,17 @@ class FileConceptTest : BaseTest() {
             "Expected to find 5 operations (open, read, flags, 2 x close (one for normally exiting `with` and one for the `catch` exit)).",
         )
 
+        val fileNameLiteral = result.literals.singleOrNull { it.value == "example.txt" }
+        assertNotNull(fileNameLiteral, "Expected to find exactly one literal \"example.txt\".")
+        assertEquals(
+            fileNameLiteral,
+            file.underlyingNode,
+            "Expected the file to be connected to the string literal \"example.txt\".",
+        )
+
+        val fileHandle = fileNodes.filterIsInstance<FileHandle>().singleOrNull()
+        assertNotNull(fileHandle, "Expected to find exactly one `FileHandle` node")
+
         val setFileFlags = fileNodes.filterIsInstance<SetFileFlags>().singleOrNull()
         assertNotNull(setFileFlags)
         assertEquals(
@@ -370,6 +381,12 @@ class FileConceptTest : BaseTest() {
 
         val fileRead = conceptNodes.filterIsInstance<ReadFile>().singleOrNull()
         assertNotNull(fileRead, "Expected to find a single file read operation.")
+
+        assertEquals(
+            2,
+            conceptNodes.filterIsInstance<FileHandle>().size,
+            "Expected to find one `FileHandle` node for each `open`.",
+        )
 
         val fileDelete = conceptNodes.filterIsInstance<DeleteFile>().singleOrNull()
         assertNotNull(fileDelete, "Expected to find a file delete operation.")
