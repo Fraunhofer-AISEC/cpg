@@ -55,6 +55,9 @@ class CodyzeExecutorTest {
         val result = project.analyze()
         assertNotNull(result)
 
+        val foo = result.translationResult.functions["foo"]
+        assertNotNull(foo)
+
         val encrypt = result.translationResult.functions["encrypt"]
         assertNotNull(encrypt)
 
