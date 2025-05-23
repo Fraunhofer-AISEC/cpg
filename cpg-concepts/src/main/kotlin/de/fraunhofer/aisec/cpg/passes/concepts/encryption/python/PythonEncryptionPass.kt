@@ -27,8 +27,10 @@ package de.fraunhofer.aisec.cpg.passes.concepts.encryption.python
 
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.concepts.encryption.EncryptData
-import de.fraunhofer.aisec.cpg.graph.concepts.encryption.Encryption
+import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Encrypt
+import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Encryption
+import de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.Secret
+import de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.newSecret
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
@@ -52,24 +54,35 @@ class PythonEncryptionPass(ctx: TranslationContext) : ConceptPass(ctx) {
         }
     }
 
-    val map = mutableMapOf<Declaration, Encryption>()
+    val map = mutableMapOf<Declaration, Encryption<Node>>()
 
     private fun handleCall(callExpression: CallExpression) {
         val name = callExpression.name
 
         if (name.localName == "Fernet") {
-            val concept = Encryption(callExpression)
+            val concept = Encryption<Node>(callExpression)
             (callExpression.nextDFG.singleOrNull() as? Reference)?.refersTo?.let {
                 map[it] = concept
             }
         } else if (name.localName == "encrypt" && callExpression is MemberCallExpression) {
             val encryption = map[(callExpression.base as? Reference)?.refersTo]
-            encryption?.let {
-                val encryptDataOp = EncryptData(callExpression, encryption)
-                encryptDataOp.dataToEncrypt = callExpression.arguments.singleOrNull()
-                encryptDataOp.encryptedData = callExpression.nextDFG.singleOrNull()
-                encryptDataOp.nextDFG += callExpression.nextDFG
-                encryptDataOp.prevDFG += callExpression.arguments
+            encryption?.let { encryption ->
+                (encryption.underlyingNode as? CallExpression)?.arguments[0]?.let { keyArgument ->
+                    val keyConcept =
+                        (keyArgument.overlays.firstOrNull { it is Secret } as? Secret)
+                            ?: newSecret(keyArgument, true)
+
+                    val encryptDataOp =
+                        Encrypt(
+                            underlyingNode = callExpression,
+                            concept = encryption,
+                            plaintext = callExpression.arguments.singleOrNull(),
+                            ciphertext = callExpression.nextDFG.singleOrNull(),
+                            key = keyConcept,
+                        )
+                    encryptDataOp.nextDFG += callExpression.nextDFG
+                    encryptDataOp.prevDFG += callExpression.arguments
+                }
             }
         }
     }

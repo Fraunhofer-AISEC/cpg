@@ -23,19 +23,6 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.concepts.encryption
+package de.fraunhofer.aisec.cpg.graph.concepts.crypto
 
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.concepts.Concept
-
-/** Represents a cipher suite. E.g. `AES-XTS-plain64` */
-class Cipher(underlyingNode: Node) : Concept(underlyingNode = underlyingNode), Cryptography {
-    /** A string representing the cipher used, e.g. `AES-XTS-plain64`. */
-    var cipherName: String? = null
-
-    /** Cipher block size. */
-    var blockSize: Int? = null
-
-    /** Key size. */
-    var keySize: Int? = null
-}
+interface IsCryptography

@@ -26,11 +26,11 @@
 package de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption
 
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Encryption
+import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.SymmetricEncryption
 
 /** This concept represents an encrypted disk. */
 open class DiskEncryption(underlyingNode: Node? = null) :
-    Encryption<BlockStorage>(underlyingNode = underlyingNode), IsDiskEncryption {
+    SymmetricEncryption<BlockStorage>(underlyingNode = underlyingNode), IsDiskEncryption {
 
     override fun equals(other: Any?): Boolean {
         return other is DiskEncryption && super.equals(other)

@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Cipher
 import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Encrypt
+import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Encryption
 import de.fraunhofer.aisec.cpg.graph.concepts.newConcept
 import de.fraunhofer.aisec.cpg.graph.concepts.newOperation
 
@@ -53,7 +54,7 @@ fun MetadataProvider.newDiskEncryption(
     newConcept(
         {
             val node = DiskEncryption()
-            key?.let { node.key = it }
+            key?.let { node.secretKey = it }
             cipher?.let { node.cipher = it }
             node
         },
@@ -98,7 +99,7 @@ fun MetadataProvider.newBlockStorage(underlyingNode: Node, connect: Boolean) =
  * Creates a new [Encrypt] operation.
  *
  * @param underlyingNode The underlying node representing this operation.
- * @param concept The [Cipher] concept to which the operation belongs.
+ * @param concept The [Encryption] concept to which the operation belongs.
  * @param key The secret key used for encryption.
  * @param connect If `true`, the created [Operation] will be connected to the underlying node by
  *   setting its `underlyingNode` and inserting it in the EOG , to [concept] by its edge
@@ -107,7 +108,7 @@ fun MetadataProvider.newBlockStorage(underlyingNode: Node, connect: Boolean) =
  */
 fun MetadataProvider.newEncryptOperation(
     underlyingNode: Node,
-    concept: Cipher,
+    concept: Encryption<Node>,
     key: Secret,
     connect: Boolean,
 ) =

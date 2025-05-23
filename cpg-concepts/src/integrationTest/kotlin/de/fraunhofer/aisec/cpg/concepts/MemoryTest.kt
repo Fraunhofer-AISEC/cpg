@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Forward
 import de.fraunhofer.aisec.cpg.graph.Interprocedural
 import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Encrypt
+import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.SymmetricEncryption
 import de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.GetSecret
 import de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.Secret
 import de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.newCipher
@@ -251,9 +252,11 @@ class MemoryTest {
         cipher.blockSize = cipherAndSize?.get(1)?.toIntOrNull()
         assertEquals("AES", cipher.cipherName)
         assertEquals(256, cipher.blockSize)
+        val encryption = SymmetricEncryption<Node>(cipher.underlyingNode)
+        encryption.cipher = cipher
         result.newEncryptOperation(
             underlyingNode = assertNotNull(result.calls["encrypt"]),
-            concept = cipher,
+            concept = encryption,
             key = key,
             connect = true,
         )
