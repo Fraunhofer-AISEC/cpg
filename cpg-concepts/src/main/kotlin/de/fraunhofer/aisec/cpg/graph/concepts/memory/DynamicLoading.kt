@@ -41,7 +41,7 @@ import java.util.Objects
  * class loader in Java, loading shared library code in C++. Interpreters, such as Python can also
  * load code dynamically during runtime.
  */
-class DynamicLoading(underlyingNode: Node? = null) :
+open class DynamicLoading(underlyingNode: Node? = null) :
     Concept(underlyingNode = underlyingNode), IsMemory
 
 /** Represents an operation used by the [DynamicLoading] concept. */
@@ -74,7 +74,7 @@ abstract class DynamicLoadingOperation<T : Node>(
  * representing the library.
  */
 @Suppress("CONTEXT_RECEIVERS_DEPRECATED")
-class LoadLibrary(
+open class LoadLibrary(
     underlyingNode: Node? = null,
     concept: Concept,
     /** Represents the source code of library that we load in our graph. */
@@ -125,7 +125,7 @@ class LoadLibrary(
  * If we are loading a symbol from an external library, [loader] can point to the [LoadLibrary]
  * operation that loaded the library.
  */
-class LoadSymbol<T : Declaration>(
+open class LoadSymbol<T : Declaration>(
     underlyingNode: Node? = null,
     concept: Concept,
     /** Represents the symbol's [Declaration] that we load in our graph. */

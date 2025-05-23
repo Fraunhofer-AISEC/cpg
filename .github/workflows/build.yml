@@ -115,7 +115,7 @@ jobs:
           ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
           ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
       - name: Publish to Maven Central (snapshot)
-        if: github.ref == 'refs/heads/main' || contains(github.event.pull_request.labels.*.name, 'publish-to-github-packages')
+        if: github.ref == 'refs/heads/main' || (contains(github.event.pull_request.labels.*.name, 'publish-to-github-packages') && env.version != 'gh-readonly-queue-SNAPSHOT')
         run: |
           export ORG_GRADLE_PROJECT_signingInMemoryKey=`echo ${{ secrets.GPG_PRIVATE_KEY }} | base64 -d`
           ./gradlew --no-daemon --parallel publishAllPublicationsToMavenCentralRepository -x npmInstall

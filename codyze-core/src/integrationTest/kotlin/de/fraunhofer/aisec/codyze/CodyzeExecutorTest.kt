@@ -23,25 +23,26 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption
+package de.fraunhofer.aisec.codyze
 
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.concepts.Operation
-import java.util.Objects
+import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.query.QueryTree
+import de.fraunhofer.aisec.cpg.query.allExtended
+import de.fraunhofer.aisec.cpg.query.eq
+import kotlin.test.Test
 
-abstract class CipherOperation(underlyingNode: Node?, override val concept: Cipher) :
-    Operation(underlyingNode = underlyingNode, concept = concept), IsDiskEncryption
+fun goodCryptoFunc(result: TranslationResult): QueryTree<Boolean> {
+    return result.allExtended<CallExpression> { it.name eq "encrypt" }
+}
 
-class Encrypt(
-    underlyingNode: Node? = null,
-    concept: Cipher,
-    /** The key used for encryption */
-    val key: Secret,
-) : CipherOperation(underlyingNode = underlyingNode, concept = concept) {
+fun goodArgumentSize(result: TranslationResult): QueryTree<Boolean> {
+    return result.allExtended<CallExpression> { it.arguments.size eq 2 }
+}
 
-    override fun equals(other: Any?): Boolean {
-        return other is Encrypt && super.equals(other) && other.key == this.key
+class CodyzeExecutorTest {
+    @Test
+    fun testExecute() {
+        evaluateWithCodyze("src/integrationTest/resources/example/example.codyze.kts")
     }
-
-    override fun hashCode() = Objects.hash(super.hashCode(), key)
 }

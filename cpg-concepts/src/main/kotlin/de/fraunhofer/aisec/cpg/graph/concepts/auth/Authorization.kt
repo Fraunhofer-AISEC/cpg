@@ -33,4 +33,4 @@ import de.fraunhofer.aisec.cpg.graph.concepts.Concept
  *
  * @param underlyingNode The underlying CPG node.
  */
-class Authorization(underlyingNode: Node? = null) : Concept(underlyingNode = underlyingNode)
+open class Authorization(underlyingNode: Node? = null) : Concept(underlyingNode = underlyingNode)
