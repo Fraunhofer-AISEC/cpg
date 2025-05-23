@@ -199,7 +199,7 @@ class AnalysisProject(
                 return null
             }
 
-            return script.project.build(configModifier)
+            return script.projectBuilder.build(configModifier)
         }
 
         /** Builds a translation configuration from the given project directory. */
