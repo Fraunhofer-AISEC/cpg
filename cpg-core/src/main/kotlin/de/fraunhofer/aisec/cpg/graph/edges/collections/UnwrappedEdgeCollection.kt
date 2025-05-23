@@ -113,9 +113,14 @@ sealed class UnwrappedEdgeCollection<NodeType : Node, EdgeType : Edge<NodeType>>
 
     override fun hashCode(): Int {
         // Calculating a real hash code is very performance intensive, so we just return the
-        // collection size. This will lead to some hash collisions but its not a problem since equal
-        // will be used to differentiate between two collections then.
-
+        // collection size. This will lead to some hash collisions, but it's not a problem since
+        // equal will be used to differentiate between two collections then.
+        //
+        // The hash-code implementation of the underlying list would directly
+        // access the element array data (and then the hashcode of the edge at the element
+        // position), but we cannot access this raw array. And we cannot directly use the list's
+        // hash-code either since we are not interested in the full edge but only the start/end node
+        // (depending on outgoing).
         return collection.size
     }
 
