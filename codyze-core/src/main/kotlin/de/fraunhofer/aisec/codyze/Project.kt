@@ -169,15 +169,28 @@ class AnalysisProject(
          * Builds a new [AnalysisProject] from a directory that contains a `project.codyze.kts`
          * file.
          */
-        fun fromDirectory(directory: String): AnalysisProject? {
-            return fromFile(Path(directory).resolve("project.codyze.kts").pathString)
+        fun fromDirectory(
+            directory: String,
+            configModifier:
+                ((TranslationConfiguration.Builder) -> TranslationConfiguration.Builder)? =
+                null,
+        ): AnalysisProject? {
+            return fromScript(
+                Path(directory).resolve("project.codyze.kts").pathString,
+                configModifier = configModifier,
+            )
         }
 
         /**
          * Builds a new [AnalysisProject] from a `.codyze.kts` file, which represents a
          * [CodyzeScript].
          */
-        fun fromFile(file: String): AnalysisProject? {
+        fun fromScript(
+            file: String,
+            configModifier:
+                ((TranslationConfiguration.Builder) -> TranslationConfiguration.Builder)? =
+                null,
+        ): AnalysisProject? {
             // We need to evaluate the script in order to invoke our project builder inside the
             // script
             val script = executeScript(file)
@@ -186,7 +199,7 @@ class AnalysisProject(
                 return null
             }
 
-            return script.project.build()
+            return script.project.build(configModifier)
         }
 
         /** Builds a translation configuration from the given project directory. */
@@ -202,7 +215,7 @@ class AnalysisProject(
                         List<Result>,
                     >)? =
                 null,
-            configBuilder:
+            configModifier:
                 ((TranslationConfiguration.Builder) -> TranslationConfiguration.Builder)? =
                 null,
         ): AnalysisProject {
@@ -268,7 +281,7 @@ class AnalysisProject(
             }
 
             exclusionPatterns?.forEach { builder = builder.exclusionPatterns(it) }
-            configBuilder?.invoke(builder)
+            configModifier?.invoke(builder)
 
             return AnalysisProject(
                 config = builder.build(),
@@ -298,7 +311,7 @@ class AnalysisProject(
                 translationOptions.sources,
                 translationOptions.components,
                 translationOptions.exclusionPatterns,
-                configBuilder = configModifier,
+                configModifier = configModifier,
                 postProcess = postProcess,
             )
         }

@@ -54,6 +54,12 @@ class RequirementsBuilder {
 /** Represents a builder for a list of all assumptions of the evaluation project. */
 class AssumptionsBuilder
 
+/** Represents a builder for tool metadata and configuration. */
+class ToolBuilder {
+    internal var translationConfigurationBuilder: ((TranslationConfiguration.Builder) -> (Unit))? =
+        null
+}
+
 /** Represents a builder for the TOE with its name, version and a description. */
 class ToEBuilder {
     /** The (unique) name of the TOE. */
@@ -115,12 +121,16 @@ class ModuleBuilder(
 class ProjectBuilder(val projectDir: Path = Path(".")) {
     var name: String? = null
 
+    internal val toolBuilder = ToolBuilder()
     internal var toeBuilder = ToEBuilder()
     internal val requirementsBuilder = RequirementsBuilder()
     internal val assumptionsBuilder = AssumptionsBuilder()
 
     /** Builds an [AnalysisProject] out of the current state of the builder. */
-    fun build(): AnalysisProject {
+    fun build(
+        configModifier: ((TranslationConfiguration.Builder) -> TranslationConfiguration.Builder)? =
+            null
+    ): AnalysisProject {
         val name = name
 
         val configBuilder =
@@ -165,6 +175,11 @@ class ProjectBuilder(val projectDir: Path = Path(".")) {
         configBuilder.softwareComponents(components)
         configBuilder.topLevels(topLevels)
 
+        // Adjust config from the "external" config modifier as well as from any configuration
+        // builder inside the script
+        configModifier?.invoke(configBuilder)
+        toolBuilder.translationConfigurationBuilder?.invoke(configBuilder)
+
         val requirementsFunctions = requirementsBuilder.requirements
 
         return AnalysisProject(
@@ -184,6 +199,16 @@ fun CodyzeScript.project(block: ProjectBuilder.() -> Unit) {
 
 /** Spans the block for the tagging logic. */
 @CodyzeDsl fun CodyzeScript.tagging(block: ProjectBuilder.() -> Unit) {}
+
+/** Describes some configuration and metadata about the evaluation tool */
+fun ProjectBuilder.tool(block: ToolBuilder.() -> Unit) {
+    toolBuilder.apply(block)
+}
+
+/** Can be used to modify the tool configuration, specifically the [TranslationConfiguration]. */
+fun ToolBuilder.configuration(block: (TranslationConfiguration.Builder).() -> Unit) {
+    translationConfigurationBuilder = block
+}
 
 /** Describes a Target of Evaluation (ToE). */
 @CodyzeDsl
@@ -235,7 +260,7 @@ fun RequirementBuilder.byQuery(query: (result: TranslationResult) -> QueryTree<B
 
 /** Describes that the requirement had to be checked manually. */
 @CodyzeDsl
-fun RequirementBuilder.byManualAssessment(id: String) {
+fun RequirementBuilder.byManualAssessment(id: String): Unit {
     this.query = { result -> QueryTree(true) }
 }
 

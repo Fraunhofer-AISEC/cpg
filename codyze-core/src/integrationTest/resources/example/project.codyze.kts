@@ -28,6 +28,13 @@ package example
 project {
     name = "My Project"
 
+    tool {
+        configuration {
+            includePath("src/integrationTest/resources/example/src/third-party/mylib")
+            loadIncludes(true)
+        }
+    }
+
     toe {
         name = "My Mock TOE"
         architecture {
@@ -42,7 +49,7 @@ project {
     }
 
     requirements {
-        requirement("Is Security Target Correctly specified") { byManualCheck() }
+        requirement("Is Security Target Correctly specified") { byManualAssessment("SEC-TARGET") }
         requirement("Good Encryption") {
             byQuery { result -> goodCryptoFunc(result) and goodArgumentSize(result) }
         }

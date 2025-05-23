@@ -31,10 +31,11 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.query.QueryTree
 import de.fraunhofer.aisec.cpg.query.allExtended
 import de.fraunhofer.aisec.cpg.query.eq
+import de.fraunhofer.aisec.cpg.test.assertInvokes
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
-import org.junit.jupiter.api.Assertions.assertFalse
 
 fun goodCryptoFunc(result: TranslationResult): QueryTree<Boolean> {
     return result.allExtended<CallExpression> { it.name eq "encrypt" }
@@ -48,7 +49,7 @@ class CodyzeExecutorTest {
     @Test
     fun testExecute() {
         val project =
-            AnalysisProject.fromFile("src/integrationTest/resources/example/project.codyze.kts")
+            AnalysisProject.fromScript("src/integrationTest/resources/example/project.codyze.kts")
         assertNotNull(project)
 
         val result = project.analyze()
@@ -57,7 +58,15 @@ class CodyzeExecutorTest {
         val encrypt = result.translationResult.functions["encrypt"]
         assertNotNull(encrypt)
 
+        val myFunc = result.translationResult.functions["my_func"]
+        assertNotNull(myFunc)
+        assertFalse(myFunc.isInferred)
+
         assertEquals(2, result.requirementsResults.size)
         assertFalse(result.requirementsResults["Good Encryption"]?.value == true)
+
+        val myFuncCall = result.translationResult.calls["my_func"]
+        assertNotNull(myFuncCall)
+        assertInvokes(myFuncCall, myFunc)
     }
 }
