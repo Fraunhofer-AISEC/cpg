@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.assumptions
 
+import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
@@ -83,19 +84,9 @@ class Assumption(
 
     init {
         super.underlyingNode = node ?: edge?.start
-        // Currently this condition is always false due to id being initialized, however, this
-        // may change in the future
-        @Suppress("SENSELESS_COMPARISON")
-        if (super.underlyingNode == null && id == null) {
-            log.warn(
-                "Creating an assumption with no associated node or edge requires having a deterministic ID for identification."
-            )
-        }
-
-        @Suppress("SENSELESS_COMPARISON")
-        if (listOf(node != null, edge != null, id != null).filter { it }.size > 1) {
-            log.warn(
-                "An assumption should be created with only one of the following arguments/properties: id, node or edge. But multiple of those are provided"
+        if (listOf(node != null, edge != null).filter { it }.size > 1) {
+            throw TranslationException(
+                "An assumption should be created with only one of the following arguments/properties: node or edge. But multiple of those are provided"
             )
         }
 
