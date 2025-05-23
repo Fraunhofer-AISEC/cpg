@@ -26,9 +26,11 @@
 package de.fraunhofer.aisec.codyze
 
 import de.fraunhofer.aisec.codyze.dsl.Import
+import de.fraunhofer.aisec.codyze.dsl.ProjectBuilder
 import java.io.File
 import java.net.JarURLConnection
 import java.net.URL
+import java.nio.file.Path
 import kotlin.script.experimental.annotations.KotlinScript
 import kotlin.script.experimental.api.*
 import kotlin.script.experimental.dependencies.CompoundDependenciesResolver
@@ -58,7 +60,10 @@ import kotlin.script.templates.ScriptTemplateDefinition
     // Compilation configuration for the script type
     compilationConfiguration = CodyzeScriptCompilationConfiguration::class,
 )
-abstract class CodyzeScript
+abstract class CodyzeScript(projectDir: Path) {
+
+    var project: ProjectBuilder = ProjectBuilder(projectDir = projectDir)
+}
 
 val baseLibraries =
     arrayOf(
