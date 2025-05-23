@@ -68,10 +68,8 @@ class TagOverlaysPassTest {
                                                         Secret()
                                                     }
                                                     each<CallExpression>("encrypt").withMultiple {
-                                                        propagateWith(
-                                                            transformation = { node.arguments[0] },
-                                                            with = { SecretKey() },
-                                                        )
+                                                        propagate { node.arguments[0] }
+                                                            .with { SecretKey() }
 
                                                         val secrets =
                                                             node.getOverlaysByPrevDFG<Secret>(state)

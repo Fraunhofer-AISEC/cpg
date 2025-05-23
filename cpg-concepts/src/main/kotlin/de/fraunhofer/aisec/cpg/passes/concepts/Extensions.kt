@@ -76,13 +76,32 @@ inline fun <reified T : Node> TaggingContext.each(
     return Selector(T::class, namePredicate = namePredicate, predicate = predicate)
 }
 
-inline fun <reified S : Node, reified T : Node> BuilderContext<S>.propagateWith(
-    noinline transformation: ((S) -> T),
-    noinline with: BuilderContext<T>.() -> OverlayNode,
+inline fun <reified S : Node, reified T : Node> BuilderContext<S>.propagate(
+    noinline transformation: ((S) -> T)
 ): Propagator<S, T> {
-    val propagator = Propagator(transformation = transformation, builder = with)
+    val propagator = Propagator(transformation = transformation)
     this.propagators += propagator
     return propagator
+}
+
+/**
+ * Specifies a [builder] that creates the actual overlay node. It is used to assign a single overlay
+ * node to a single selected "underlying" node.
+ */
+context(TaggingContext)
+fun <S : Node, T : Node> Propagator<S, T>.with(builder: BuilderContext<T>.() -> OverlayNode) {
+    this.builders += { listOf(builder(it)) }
+}
+
+/**
+ * Specifies a [builder] that creates the actual overlay nodes. It is used to assign multiple
+ * overlay nodes to a single selected "underlying" node.
+ */
+context(TaggingContext)
+fun <S : Node, T : Node> Propagator<S, T>.withMultiple(
+    builder: BuilderContext<T>.() -> List<OverlayNode>
+) {
+    this.builders += builder
 }
 
 /**
@@ -213,20 +232,21 @@ data class Selector<T : Node>(
  * - its [Node.name] (see [namePredicate]),
  * - any other property (see [predicate])
  */
-data class Propagator<S : Node, T : Node>(
-    val transformation: ((S) -> T),
-    val builder: (BuilderContext<T>) -> OverlayNode,
-) {
+data class Propagator<S : Node, T : Node>(val transformation: ((S) -> T)) {
+    var builders = mutableListOf<(BuilderContext<T>) -> List<OverlayNode>>()
+
     operator fun invoke(lattice: NodeToOverlayState, state: NodeToOverlayStateElement, node: S) {
         val changedNode = transformation(node)
-        val newNodes = BuilderContext(lattice, state, changedNode, { listOf(builder(it)) }).build()
-        lattice.lub(
-            one = state,
-            two =
-                NodeToOverlayStateElement(
-                    changedNode to PowersetLattice.Element(*newNodes.toTypedArray())
-                ),
-            allowModify = true,
-        )
+        builders.forEach { builder ->
+            val newNodes = BuilderContext(lattice, state, changedNode, builder).build()
+            lattice.lub(
+                one = state,
+                two =
+                    NodeToOverlayStateElement(
+                        changedNode to PowersetLattice.Element(*newNodes.toTypedArray())
+                    ),
+                allowModify = true,
+            )
+        }
     }
 }
