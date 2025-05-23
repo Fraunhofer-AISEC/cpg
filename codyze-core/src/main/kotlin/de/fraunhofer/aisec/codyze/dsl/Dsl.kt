@@ -25,29 +25,42 @@
  */
 package de.fraunhofer.aisec.codyze.dsl
 
+import de.fraunhofer.aisec.codyze.AnalysisProject
 import de.fraunhofer.aisec.codyze.CodyzeScript
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.assumptions.Assumption
 import de.fraunhofer.aisec.cpg.assumptions.AssumptionStatus
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.allChildrenWithOverlays
 import de.fraunhofer.aisec.cpg.query.QueryTree
+import java.io.File
+import java.nio.file.Path
+import kotlin.io.path.Path
 import kotlin.uuid.Uuid
 
 @DslMarker annotation class CodyzeDsl
 
-/** Represents a Builder for a single requirement of the TOE. */
+/** Represents a builder for a single requirement of the TOE. */
 class RequirementBuilder(var name: String = "") {
     var query: ((result: TranslationResult) -> QueryTree<Boolean>)? = null
 }
 
-/** Represents a Builder for a list of all requirements of the TOE. */
-class RequirementsBuilder
+/** Represents a builder for a list of all requirements of the TOE. */
+class RequirementsBuilder {
+    val requirements = mutableMapOf<String, (TranslationResult) -> QueryTree<Boolean>>()
+}
 
-/** Represents a Builder for a list of all assumptions of the evaluation project. */
+/** Represents a builder for a list of all assumptions of the evaluation project. */
 class AssumptionsBuilder
 
-/** Represents a Builder for the TOE with its name, version and a description. */
+/** Represents a builder for tool metadata and configuration. */
+class ToolBuilder {
+    internal var translationConfigurationBuilder: ((TranslationConfiguration.Builder) -> (Unit))? =
+        null
+}
+
+/** Represents a builder for the TOE with its name, version and a description. */
 class ToEBuilder {
     /** The (unique) name of the TOE. */
     var name: String? = null
@@ -57,21 +70,22 @@ class ToEBuilder {
 
     /** The version number of the TOE. */
     var version: String? = null
+
+    val architectureBuilder = ArchitectureBuilder()
 }
 
-/** Represents a Builder for the architecture (in terms of modules) of the TOE. */
-class ArchitectureBuilder {}
+/** Represents a builder for the architecture (in terms of modules) of the TOE. */
+class ArchitectureBuilder {
+    val modulesBuilder = ModulesBuilder()
+}
 
-/** Represents a Builder for a list of modules of the TOE. */
-class ModulesBuilder {}
+/** Represents a builder for a list of modules of the TOE. */
+class ModulesBuilder {
+    val modules = mutableListOf<ModuleBuilder>()
+}
 
 /**
- * Represents that all files of a module should be included. This is done by using an empty list.
- */
-val ALL = listOf<String>()
-
-/**
- * Represents a Builder for a single module of the TOE. This more or less the same what is
+ * Represents a builder for a single module of the TOE. This more or less the same what is
  * translated into a CPG [Component].
  */
 class ModuleBuilder(
@@ -82,14 +96,19 @@ class ModuleBuilder(
     var directory: String = ""
 
     /** The files (patterns) which should be included during the translation. */
-    private var include: List<String> = emptyList()
+    internal var include: List<String> = emptyList()
 
     /** The files (patterns) which should explicitly not be considered during the translation. */
-    private var exclude: List<String> = emptyList()
+    internal var exclude: List<String> = emptyList()
 
     /** Adds a file/pattern to include in the translation. */
     fun include(vararg includes: String) {
         include += includes
+    }
+
+    /** Includes all files in the [directory] in the translation. */
+    fun includeAll() {
+        include = emptyList()
     }
 
     /** Adds a file/pattern to exclude from the translation. */
@@ -98,31 +117,128 @@ class ModuleBuilder(
     }
 }
 
-/** Represents a Builder for the container for the whole analysis project. */
-class ProjectBuilder {}
+/** Represents a builder for the container for the whole analysis project. */
+class ProjectBuilder(val projectDir: Path = Path(".")) {
+    var name: String? = null
+
+    internal val toolBuilder = ToolBuilder()
+    internal var toeBuilder = ToEBuilder()
+    internal val requirementsBuilder = RequirementsBuilder()
+    internal val assumptionsBuilder = AssumptionsBuilder()
+
+    /** Builds an [AnalysisProject] out of the current state of the builder. */
+    fun build(
+        configModifier: ((TranslationConfiguration.Builder) -> TranslationConfiguration.Builder)? =
+            null
+    ): AnalysisProject {
+        val name = name
+
+        val configBuilder =
+            TranslationConfiguration.builder()
+                .defaultPasses()
+                .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage")
+                .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage")
+                .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage")
+                .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.golang.GoLanguage")
+                .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguage")
+                .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage")
+                .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguage")
+                .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.ruby.RubyLanguage")
+                .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.jvm.JVMLanguage")
+                .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.ini.IniFileLanguage")
+
+        if (name == null) {
+            throw IllegalArgumentException("Project name must be set")
+        }
+
+        val components = mutableMapOf<String, List<File>>()
+        val topLevels = mutableMapOf<String, File>()
+
+        // Build software components and "top levels" from the specified architecture
+        toeBuilder.architectureBuilder.modulesBuilder.modules.forEach { it ->
+            // Exclude all files in the exclude list
+            it.exclude.forEach { exclude -> configBuilder.exclusionPatterns(exclude) }
+
+            // Build the file list from the includes list
+            val projectDirFile = projectDir.toFile()
+            var files = it.include.map { include -> projectDirFile.resolve(include) }
+
+            // If the include list is empty, we include the directory itself
+            if (files.isEmpty()) {
+                files = listOf(projectDirFile.resolve(it.directory))
+            }
+
+            components += it.name to files
+            topLevels += it.name to projectDir.resolve(it.directory).toFile()
+        }
+
+        configBuilder.softwareComponents(components)
+        configBuilder.topLevels(topLevels)
+
+        // Adjust config from the "external" config modifier as well as from any configuration
+        // builder inside the script
+        configModifier?.invoke(configBuilder)
+        toolBuilder.translationConfigurationBuilder?.invoke(configBuilder)
+
+        val requirementsFunctions = requirementsBuilder.requirements
+
+        return AnalysisProject(
+            name,
+            projectDir = projectDir,
+            requirementFunctions = requirementsFunctions,
+            config = configBuilder.build(),
+        )
+    }
+}
 
 /** Spans the project-Block */
-@CodyzeDsl fun CodyzeScript.project(block: ProjectBuilder.() -> Unit) {}
+@CodyzeDsl
+fun CodyzeScript.project(block: ProjectBuilder.() -> Unit) {
+    block(project)
+}
 
 /** Spans the block for the tagging logic. */
 @CodyzeDsl fun CodyzeScript.tagging(block: ProjectBuilder.() -> Unit) {}
 
+/** Describes some configuration and metadata about the evaluation tool */
+fun ProjectBuilder.tool(block: ToolBuilder.() -> Unit) {
+    toolBuilder.apply(block)
+}
+
+/** Can be used to modify the tool configuration, specifically the [TranslationConfiguration]. */
+fun ToolBuilder.configuration(block: (TranslationConfiguration.Builder).() -> Unit) {
+    translationConfigurationBuilder = block
+}
+
 /** Describes a Target of Evaluation (ToE). */
-@CodyzeDsl fun ProjectBuilder.toe(block: ToEBuilder.() -> Unit) {}
+@CodyzeDsl
+fun ProjectBuilder.toe(block: ToEBuilder.() -> Unit) {
+    toeBuilder.apply(block)
+}
 
 /** Describes the architecture of the ToE. */
-@CodyzeDsl fun ToEBuilder.architecture(block: ArchitectureBuilder.() -> Unit) {}
+@CodyzeDsl
+fun ToEBuilder.architecture(block: ArchitectureBuilder.() -> Unit) {
+    architectureBuilder.apply(block)
+}
 
-@CodyzeDsl fun ProjectBuilder.requirements(block: RequirementsBuilder.() -> Unit) {}
+@CodyzeDsl
+fun ProjectBuilder.requirements(block: RequirementsBuilder.() -> Unit) {
+    requirementsBuilder.apply(block)
+}
 
 /** Describes the different modules, such as (sub)-components, of the ToE. */
-@CodyzeDsl fun ArchitectureBuilder.modules(block: ModulesBuilder.() -> Unit) {}
+@CodyzeDsl
+fun ArchitectureBuilder.modules(block: ModulesBuilder.() -> Unit) {
+    block(modulesBuilder)
+}
 
 /** Describes one module of the ToE. This is translated into a CPG [Component]. */
 @CodyzeDsl
 fun ModulesBuilder.module(name: String, block: ModuleBuilder.() -> Unit) {
     val builder = ModuleBuilder(name)
     block(builder)
+    modules += builder
 }
 
 /** Describes a single requirement of the TOE. */
@@ -130,6 +246,7 @@ fun ModulesBuilder.module(name: String, block: ModuleBuilder.() -> Unit) {
 fun RequirementsBuilder.requirement(name: String, block: RequirementBuilder.() -> Unit) {
     val builder = RequirementBuilder(name)
     block(builder)
+    requirements[name] = builder.query ?: throw IllegalStateException("Requirement not set")
 }
 
 /**
@@ -143,12 +260,15 @@ fun RequirementBuilder.byQuery(query: (result: TranslationResult) -> QueryTree<B
 
 /** Describes that the requirement had to be checked manually. */
 @CodyzeDsl
-fun RequirementBuilder.byManualCheck() {
+fun RequirementBuilder.byManualAssessment(id: String): Unit {
     this.query = { result -> QueryTree(true) }
 }
 
 /** Describes the assumptions which have been handled and assessed. */
-@CodyzeDsl fun ProjectBuilder.assumptions(block: AssumptionsBuilder.() -> Unit) {}
+@CodyzeDsl
+fun ProjectBuilder.assumptions(block: AssumptionsBuilder.() -> Unit) {
+    assumptionsBuilder.apply(block)
+}
 
 /**
  * Allows to explicitly list a custom assumption which has to hold and is always accepted for the

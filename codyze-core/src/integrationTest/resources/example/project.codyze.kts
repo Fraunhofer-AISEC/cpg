@@ -26,27 +26,37 @@
 package example
 
 project {
+    name = "My Project"
+
+    tool {
+        configuration {
+            includePath("src/integrationTest/resources/example/src/third-party/mylib")
+            loadIncludes(true)
+        }
+    }
+
     toe {
         name = "My Mock TOE"
         architecture {
             modules {
                 module("module1") {
                     directory = "src/module1"
-                    include("*")
+                    includeAll()
+                    exclude("tests")
                 }
             }
         }
     }
 
     requirements {
-        requirement("Is Security Target Correctly specified") { byManualCheck() }
+        requirement("Is Security Target Correctly specified") { byManualAssessment("SEC-TARGET") }
         requirement("Good Encryption") {
             byQuery { result -> goodCryptoFunc(result) and goodArgumentSize(result) }
         }
     }
 
     assumptions {
-        assume() { "We assume that everything is fine." }
+        assume { "We assume that everything is fine." }
         accept("00000000-0000-0000-0000-000000000000")
         reject("00000000-0000-0000-0000-000000000001")
         undecided("00000000-0000-0000-0000-000000000002")

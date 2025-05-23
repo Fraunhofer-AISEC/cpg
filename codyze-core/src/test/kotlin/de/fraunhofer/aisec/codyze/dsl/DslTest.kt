@@ -31,10 +31,11 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.query.*
 import de.fraunhofer.aisec.cpg.query.QueryTree
 import de.fraunhofer.aisec.cpg.query.allExtended
+import kotlin.io.path.Path
 import kotlin.test.Test
 
 class DslTest {
-    object Mock : CodyzeScript()
+    object Mock : CodyzeScript(projectDir = Path("."))
 
     @Test
     fun testDsl() {
