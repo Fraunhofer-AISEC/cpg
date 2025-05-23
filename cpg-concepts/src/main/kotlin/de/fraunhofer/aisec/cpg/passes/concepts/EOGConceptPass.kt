@@ -38,6 +38,7 @@ import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
 import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
+import kotlin.collections.none
 
 typealias NodeToOverlayStateElement = MapLattice.Element<Node, PowersetLattice.Element<OverlayNode>>
 
@@ -228,13 +229,7 @@ open class EOGConceptPass(ctx: TranslationContext) :
         // identical) for the same Node. It also filters the nodes if they have already been created
         // by a previous iteration over the same code block. This happens if multiple EOG starters
         // reach a certain piece of code (frequently happens with the code after catch clauses).
-        val filteredAddedOverlays =
-            addedOverlays.filter { added ->
-                currentState[currentNode]?.none { existing -> added == existing } != false &&
-                    currentNode.overlays.none { existing ->
-                        (existing as? OverlayNode)?.equals(added) == true
-                    }
-            }
+        val filteredAddedOverlays = filterDuplicates(currentState, currentNode, addedOverlays)
 
         return if (filteredAddedOverlays.isEmpty()) {
             currentState
@@ -251,6 +246,27 @@ open class EOGConceptPass(ctx: TranslationContext) :
 
     companion object {
         var intermediateState: NodeToOverlayStateElement? = null
+
+        /**
+         * This is some magic to filter out overlays from [newOverlays] that are already in the
+         * [currentState] (equal but not identical) for the same [node]. It also filters the
+         * [OverlayNode]s if they have already been created by a previous iteration over the same
+         * code block. This happens if multiple EOG starters reach a certain piece of code
+         * (frequently happens with the code after catch clauses). Returns a new list of the
+         * remaining [OverlayNode]s and does not modify [newOverlays].
+         */
+        fun filterDuplicates(
+            currentState: NodeToOverlayStateElement,
+            node: Node,
+            newOverlays: Collection<OverlayNode>,
+        ): Collection<OverlayNode> {
+            return newOverlays.filter { new ->
+                currentState[node]?.none { existing -> new == existing } != false &&
+                    node.overlays.none { existing ->
+                        (existing as? OverlayNode)?.equals(new) == true
+                    }
+            }
+        }
     }
 }
 
