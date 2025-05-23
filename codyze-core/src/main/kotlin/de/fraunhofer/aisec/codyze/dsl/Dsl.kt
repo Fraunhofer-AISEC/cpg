@@ -191,10 +191,16 @@ class ProjectBuilder(val projectDir: Path = Path(".")) {
     }
 }
 
+/** Includes other script files. */
+@CodyzeDsl
+fun CodyzeScript.include(vararg paths: String) {
+    // Nothing to do, will be handled by the script compilation
+}
+
 /** Spans the project-Block */
 @CodyzeDsl
 fun CodyzeScript.project(block: ProjectBuilder.() -> Unit) {
-    block(project)
+    block(projectBuilder)
 }
 
 /** Spans the block for the tagging logic. */

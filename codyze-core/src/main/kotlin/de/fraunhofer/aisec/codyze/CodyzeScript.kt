@@ -62,7 +62,7 @@ import kotlin.script.templates.ScriptTemplateDefinition
 )
 abstract class CodyzeScript(projectDir: Path) {
 
-    var project: ProjectBuilder = ProjectBuilder(projectDir = projectDir)
+    internal var projectBuilder: ProjectBuilder = ProjectBuilder(projectDir = projectDir)
 }
 
 val baseLibraries =
@@ -94,7 +94,13 @@ class CodyzeScriptCompilationConfiguration :
             checkNotNull(cp) { "Could not read classpath" }
             updateClasspath(cp)
         }
-        refineConfiguration { onAnnotations(Import::class, handler = CodyzeScriptConfigurator()) }
+        refineConfiguration {
+            onAnnotations(Import::class, handler = CodyzeScriptConfigurator())
+            beforeCompiling {
+                val includes = it.script.text.lines().filter { it.startsWith("include(\"") }
+                it.compilationConfiguration.with {}.asSuccess()
+            }
+        }
         compilerOptions("-Xcontext-receivers", "-jvm-target=21")
         ide { acceptedLocations(ScriptAcceptedLocation.Everywhere) }
     })
