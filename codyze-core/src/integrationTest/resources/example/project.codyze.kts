@@ -25,6 +25,11 @@
  */
 package example
 
+include {
+    AssumptionDecisions from "assumptions.codyze.kts"
+    ManualAssessment from "manual-assessments.codyze.kts"
+}
+
 project {
     name = "My Project"
 
@@ -59,11 +64,5 @@ project {
         }
     }
 
-    assumptions {
-        assume { "We assume that everything is fine." }
-        accept("00000000-0000-0000-0000-000000000000")
-        reject("00000000-0000-0000-0000-000000000001")
-        undecided("00000000-0000-0000-0000-000000000002")
-        ignore("00000000-0000-0000-0000-000000000003")
-    }
+    assumptions { assume { "We assume that everything is fine." } }
 }
