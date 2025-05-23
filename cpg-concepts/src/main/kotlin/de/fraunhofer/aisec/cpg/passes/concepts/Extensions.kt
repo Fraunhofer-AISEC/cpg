@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
+import de.fraunhofer.aisec.cpg.passes.concepts.EOGConceptPass.Companion.filterDuplicates
 import kotlin.reflect.KClass
 import kotlin.reflect.safeCast
 
@@ -238,12 +239,17 @@ data class Propagator<S : Node, T : Node>(val transformation: ((S) -> T)) {
     operator fun invoke(lattice: NodeToOverlayState, state: NodeToOverlayStateElement, node: S) {
         val changedNode = transformation(node)
         builders.forEach { builder ->
+            // We compute the new overlay nodes and discard those which are already present in the
+            // state or in the node's overlay nodes.
             val newNodes = BuilderContext(lattice, state, changedNode, builder).build()
+            val filteredNewNodes = filterDuplicates(state, changedNode, newNodes)
+            // We directly add the new overlay nodes to the state, so that they are available for
+            // the next computations.
             lattice.lub(
                 one = state,
                 two =
                     NodeToOverlayStateElement(
-                        changedNode to PowersetLattice.Element(*newNodes.toTypedArray())
+                        changedNode to PowersetLattice.Element(*filteredNewNodes.toTypedArray())
                     ),
                 allowModify = true,
             )

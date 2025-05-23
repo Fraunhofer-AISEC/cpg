@@ -38,6 +38,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import java.util.Objects
 import kotlin.test.Test
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
@@ -45,7 +46,21 @@ import kotlin.test.assertSame
 
 class TagOverlaysPassTest {
 
-    class SecretKey(underlyingNode: Node? = null) : Concept(underlyingNode)
+    class CryptoArgument(underlyingNode: Node? = null) : Concept(underlyingNode) {
+        override fun equals(other: Any?): Boolean {
+            return other is CryptoArgument && super.equals(other)
+        }
+
+        override fun hashCode() = Objects.hash(super.hashCode())
+    }
+
+    class SecretKey(underlyingNode: Node? = null) : Concept(underlyingNode) {
+        override fun equals(other: Any?): Boolean {
+            return other is SecretKey && super.equals(other)
+        }
+
+        override fun hashCode() = Objects.hash(super.hashCode())
+    }
 
     @Test
     fun testTag() {
@@ -70,6 +85,14 @@ class TagOverlaysPassTest {
                                                     each<CallExpression>("encrypt").withMultiple {
                                                         propagate { node.arguments[0] }
                                                             .with { SecretKey() }
+
+                                                        propagate { node.arguments[0] }
+                                                            .with { CryptoArgument() }
+
+                                                        // "By accident", we assign the same overlay
+                                                        // twice. This should be filtered out.
+                                                        propagate { node.arguments[0] }
+                                                            .with { CryptoArgument() }
 
                                                         val secrets =
                                                             node.getOverlaysByPrevDFG<Secret>(state)
@@ -131,7 +154,11 @@ class TagOverlaysPassTest {
 
         val arg0 = encryptCall.arguments[0]
         assertIs<Reference>(arg0)
-        val arg0Overlay = arg0.overlays.singleOrNull()
-        assertIs<SecretKey>(arg0Overlay)
+        val arg0OverlaySecretKey = arg0.overlays.filterIsInstance<SecretKey>().singleOrNull()
+        assertNotNull(arg0OverlaySecretKey)
+        // TODO: We have two elements here because the implementation of equals is useless in the
+        // class `Node`.
+        val arg0OverlayCryptoArgument = arg0.overlays.filterIsInstance<CryptoArgument>().first()
+        assertNotNull(arg0OverlayCryptoArgument)
     }
 }
