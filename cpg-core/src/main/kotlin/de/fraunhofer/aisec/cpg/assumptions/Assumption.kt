@@ -86,7 +86,7 @@ class Assumption(
         super.underlyingNode = node ?: edge?.start
         if (listOf(node != null, edge != null).filter { it }.size > 1) {
             throw TranslationException(
-                "An assumption should be created with only one of the following arguments/properties: node or edge. But multiple of those are provided"
+                "An assumption must be created with only one of the following arguments/properties: node or edge. But multiple of those are provided"
             )
         }
 
