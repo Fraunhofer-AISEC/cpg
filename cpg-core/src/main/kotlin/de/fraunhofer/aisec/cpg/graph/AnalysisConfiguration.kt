@@ -95,10 +95,23 @@ class Interprocedural(val maxCallDepth: Int? = null, maxSteps: Int? = null) :
         ctx: Context,
         analysisDirection: AnalysisDirection,
     ): Boolean {
-        // Follow the edge if we're still in the maxSteps range and (if maxCallDepth is null or the
-        // call stack is not deeper yet)
-        return (this.maxSteps == null || ctx.steps < maxSteps) &&
-            (maxCallDepth == null || ctx.callStack.depth < maxCallDepth)
+        // is this a short Function Summary Edge?
+        val isShortFS = ((edge as? Dataflow)?.functionSummary) == true
+        // Are we still in the range of the max steps?
+        val maxStepsOk = (this.maxSteps == null || ctx.steps < maxSteps)
+        // Are we still in the range of the max depth?
+        val maxDepthOk = (maxCallDepth == null || ctx.callStack.depth < maxCallDepth)
+        // If we have a shortFS and we exceeded the max depth, we follow it. Otherwise, we ignore it
+        val followShortFS = isShortFS && !maxDepthOk
+        // If this is no shortFS and we did not yet reach the max depth, we follow it
+        val followEverythingButShortFS = !isShortFS && maxDepthOk
+        // Is this even an interprocedural edge or an edge we are going to follow anyways (assuming
+        // that the maxSteps are still ok)?
+        val isInterProcedural = (edge is ContextSensitiveDataflow) || isShortFS
+        // Summary: In case we did not yet exceed the maxSteps, we follow the edge either if it's no
+        // interprocedural edge or if we follow the shortFS edges or if we follow everything but the
+        // short FS edges
+        return maxStepsOk && (!isInterProcedural || followShortFS || followEverythingButShortFS)
     }
 }
 
@@ -568,9 +581,14 @@ object ContextSensitive : AnalysisSensitivity() {
         return if (analysisDirection.edgeRequiresCallPush(currentNode, edge)) {
             // Push the call of our calling context to the stack.
             // This is for following DFG edges.
-            (edge as? ContextSensitiveDataflow)?.callingContext?.call?.let {
-                ctx.callStack.push(it)
-            }
+            val stack =
+                if (analysisDirection is Backward) {
+                    (edge as? ContextSensitiveDataflow)?.callingContext?.calls?.reversed()
+                } else {
+                    (edge as? ContextSensitiveDataflow)?.callingContext?.calls
+                }
+
+            stack?.forEach { ctx.callStack.push(it) }
                 ?:
                 // This is for following the EOG
                 (currentNode as? CallExpression)?.let { ctx.callStack.push(it) }
@@ -579,7 +597,7 @@ object ContextSensitive : AnalysisSensitivity() {
             // We are only interested in outgoing edges from our current
             // "call-in", i.e., the call expression that is on the stack.
             ctx.callStack.isEmpty() ||
-                (edge as? ContextSensitiveDataflow)?.callingContext?.call?.let {
+                (edge as? ContextSensitiveDataflow)?.callingContext?.calls?.all {
                     ctx.callStack.popIfOnTop(it)
                 } == true ||
                 ((edge as? Invoke)?.start as? CallExpression)?.let {

@@ -38,6 +38,24 @@ import kotlin.collections.fold
 import kotlin.collections.plusAssign
 import kotlin.collections.set
 
+class EqualLinkedHashSet<T> : LinkedHashSet<T>() {
+    override fun equals(other: Any?): Boolean {
+        return other is LinkedHashSet<*> &&
+            this.size == other.size &&
+            this.all { t -> other.any { it == t } }
+    }
+
+    override fun hashCode(): Int {
+        return super.hashCode()
+    }
+}
+
+fun <T> equalLinkedHashSetOf(vararg elements: T): EqualLinkedHashSet<T> {
+    val set = EqualLinkedHashSet<T>()
+    set.addAll(elements)
+    return set
+}
+
 /** Used to identify the order of elements */
 enum class Order {
     LESSER,
@@ -162,7 +180,7 @@ interface Lattice<T : Lattice.Element> {
                     nextEdge.end.prevEOGEdges.size == 1 &&
                     nextEdge.start.nextEOGEdges.size == 1 &&
                     nextEdge.start.prevEOGEdges.size == 1
-            //  Either before or after this edge, there's a branching node within two steps (start,
+            // Either before or after this edge, there's a branching node within two steps (start,
             // end and the nodes before/after these). We have to ensure that we copy the state for
             // all these nodes to enable the update checks conducted ib the branching edges. We need
             // one more step for this, otherwise we will fail recognizing the updates for a node "x"
@@ -186,12 +204,15 @@ interface Lattice<T : Lattice.Element> {
 
                 val oldGlobalIt = globalState[it]
                 val newGlobalIt =
-                    (oldGlobalIt?.let { this.lub(newState, it, isNotNearStartOrEndOfBasicBlock) }
-                        ?: newState)
+                    (oldGlobalIt?.let { old ->
+                        this.lub(newState, old, isNotNearStartOrEndOfBasicBlock)
+                    } ?: newState)
                 globalState[it] = newGlobalIt
                 if (
                     it !in edgesList &&
-                        (isNoBranchingPoint || oldGlobalIt == null || newGlobalIt != oldGlobalIt)
+                        (isNoBranchingPoint ||
+                            oldGlobalIt == null ||
+                            newGlobalIt.compare(oldGlobalIt) == Order.GREATER)
                 ) {
                     edgesList.add(0, it)
                 }
@@ -222,7 +243,16 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
         }
 
         override fun equals(other: Any?): Boolean {
-            return other is Element<T> && super<IdentitySet>.equals(other)
+            return this === other ||
+                (other is Element<T> &&
+                    this.size == other.size &&
+                    this.all { t ->
+                        if (t is Pair<*, *>)
+                            other.any {
+                                it is Pair<*, *> && it.first === t.first && it.second == t.second
+                            }
+                        else t in other
+                    })
         }
 
         override fun compare(other: Lattice.Element): Order {
@@ -232,9 +262,30 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
                         "$other should be of type PowersetLattice.Element<T> but is of type ${other.javaClass}"
                     )
                 this === other -> Order.EQUAL
-                super<IdentitySet>.equals(other) -> Order.EQUAL
-                this.size > other.size && this.containsAll(other) -> Order.GREATER
-                other.size > this.size && other.containsAll(this) -> Order.LESSER
+                this.size == other.size &&
+                    this.all { t ->
+                        if (t is Pair<*, *>)
+                            other.any {
+                                it is Pair<*, *> && it.first === t.first && it.second == t.second
+                            }
+                        else t in other
+                    } -> Order.EQUAL
+                this.size > other.size &&
+                    other.all { t ->
+                        if (t is Pair<*, *>)
+                            this.any {
+                                it is Pair<*, *> && it.first === t.first && it.second == t.second
+                            }
+                        else t in this
+                    } -> Order.GREATER
+                other.size > this.size &&
+                    this.all { t ->
+                        if (t is Pair<*, *>)
+                            other.any {
+                                it is Pair<*, *> && it.first === t.first && it.second == t.second
+                            }
+                        else t in other
+                    } -> Order.LESSER
                 else -> Order.UNEQUAL
             }
         }
@@ -245,6 +296,20 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
 
         override fun hashCode(): Int {
             return super.hashCode()
+        }
+
+        override fun add(element: T): Boolean {
+            if (
+                element is Pair<*, *> &&
+                    this.any {
+                        it is Pair<*, *> &&
+                            it.first === element.first &&
+                            it.second == element.second
+                    }
+            ) {
+                return false
+            }
+            return super.add(element)
         }
     }
 
@@ -330,7 +395,7 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
         }
 
         override fun duplicate(): Element<K, V> {
-            return Element(this.map { (k, v) -> Pair<K, V>(k, v.duplicate() as V) }.toMap())
+            return Element(*this.map { (k, v) -> Pair<K, V>(k, v.duplicate() as V) }.toTypedArray())
         }
 
         override fun hashCode(): Int {
