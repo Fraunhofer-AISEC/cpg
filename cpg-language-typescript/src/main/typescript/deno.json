@@ -1,5 +1,6 @@
 {
   "imports": {
-    "typescript": "npm:typescript@^5.8.3"
+    "typescript": "npm:typescript@^5.8.3",
+    "svelte/compiler": "npm:svelte@^5.0.0/compiler"
   }
 }

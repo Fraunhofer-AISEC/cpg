@@ -1,15 +1,107 @@
 import { SyntaxKind, SourceFile, Node, createProgram, forEachChild } from 'typescript';
-import * as path from 'node:path';
+import { parse as svelteParse } from "svelte/compiler";
+// @ts-ignore: Deno-specific import
+import { parseArgs } from "https://deno.land/std@0.218.2/cli/parse_args.ts";
+import * as path from "node:path"; // Keep using node:path for consistency if needed elsewhere
+// Add this import to ensure TypeScript is available for Svelte
+// @ts-ignore: Deno npm import for TypeScript support in Svelte
+import typescript from "npm:typescript";
 
-const file = path.normalize(process.argv[2]);
-
-const program = createProgram([file], {
-    allowJs: true,
+// --- Argument Parsing ---
+// @ts-ignore: Deno-specific API
+const flags = parseArgs(Deno.args, {
+    string: ["language"],
+    default: { language: "typescript" },
 });
 
-var sources = program.getSourceFiles()
-let indent = 0;
+const language = flags.language.toLowerCase();
+const filePathArg = flags._[0];
 
+if (!filePathArg) {
+    console.error("Error: File path argument is missing.");
+    // @ts-ignore: Deno-specific API
+    Deno.exit(1);
+}
+
+// Resolve the file path similar to how it was done before
+const file = path.resolve(filePathArg.toString()); // Ensure it's a string and resolve
+
+// --- Main Logic ---
+// Use an async IIFE (Immediately Invoked Function Expression) to allow top-level await
+// while satisfying older TypeScript/module targets.
+(async () => {
+    try {
+        // @ts-ignore: Deno-specific API
+        const fileContent = await Deno.readTextFile(file);
+        let ast: any; // To hold the final AST object
+
+        if (language === "svelte") {
+            // --- Svelte Parsing ---
+            // Ensure TypeScript is available in the environment for Svelte
+            if (!typescript) {
+                console.warn("Warning: TypeScript module not found. Svelte <script lang=\"ts\"> may not parse correctly.");
+            }
+            ast = svelteParse(fileContent, { filename: file });
+            // Simple serialization for Svelte AST - might need refinement
+            // based on what SvelteLanguageFrontend expects.
+            // We can potentially add a `type` field at the root for consistency?
+            // ast.type = "SvelteProgram"; // Example
+
+        } else if (language === "typescript") {
+            // --- TypeScript Parsing ---
+            const program = createProgram([file], {
+                allowJs: true,
+            });
+
+            const sf = program.getSourceFile(file);
+            if (!sf) {
+                throw new Error(`Could not get source file: ${file}`);
+            }
+            ast = buildTsAstObject(sf, sf); // Build the TS AST object
+
+        } else {
+            throw new Error(`Unsupported language: ${language}`);
+        }
+
+        // --- Output ---
+        // Use JSON.stringify for consistent output
+        // Note: JSON.stringify might fail on circular structures if they exist
+        // in either AST. The simple TS structure shouldn't have them.
+        // Svelte AST might need custom replacer if it has cycles or complex objects.
+        console.log(JSON.stringify(ast, null, 0)); // Use 0 for compact output
+
+    } catch (error) {
+        console.error(`Error processing file ${file}:`, error);
+        // @ts-ignore: Deno-specific API
+        Deno.exit(1);
+    }
+})();
+
+// --- TypeScript AST Building Function ---
+// Refactored from printTree to return an object
+function buildTsAstObject(sf: SourceFile, node: Node): any {
+    const output: any = {
+        type: SyntaxKind[node.kind],
+        code: node.getText(sf),
+        location: { file: file, pos: node.pos, end: node.end },
+        children: [] // Initialize children array
+    };
+
+    // Use forEachChild to iterate over significant children
+    forEachChild(node, child => {
+        output.children.push(buildTsAstObject(sf, child));
+    });
+
+    // If no children were added, remove the empty array for cleaner output
+    if (output.children.length === 0) {
+        delete output.children;
+    }
+
+    return output;
+}
+
+/* // Original printTree - kept for reference
+let indent = 0;
 sources.filter(sf => sf.fileName.endsWith(file)).forEach(sf => {
     console.log(printTree(sf, sf, false));
 })
@@ -17,7 +109,7 @@ sources.filter(sf => sf.fileName.endsWith(file)).forEach(sf => {
 function printTree(sf: SourceFile, node: Node, needsComma: boolean): string {
     var output = " ".repeat(indent) + `{ "type": "${SyntaxKind[node.kind]}"`
 
-    //output += `, "code": "${node.getText(sf).replace(/"/g, "\\\"").replace(/\n/g, "\\n")}"`
+    //output += `, "code": "${node.getText(sf).replace(/"/g, "\"").replace(/\n/g, "\\n")}"`
     output += `, "code": ${JSON.stringify(node.getText(sf))}`
 
     indent++;
@@ -59,3 +151,4 @@ function printTree(sf: SourceFile, node: Node, needsComma: boolean): string {
 
     return output
 }
+*/
