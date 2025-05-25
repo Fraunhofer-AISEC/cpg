@@ -58,9 +58,15 @@ project {
     }
 
     requirements {
-        requirement("Is Security Target Correctly specified") { byManualAssessment("SEC-TARGET") }
+        requirement("Is Security Target Correctly specified") {
+            by { manualAssessmentOf("SEC-TARGET") }
+        }
         requirement("Good Encryption") {
-            byQuery { result -> goodCryptoFunc(result) and goodArgumentSize(result) }
+            by { result ->
+                goodCryptoFunc(result) and
+                    goodArgumentSize(result) and
+                    manualAssessmentOf("THIRD-PARTY-LIBRARY")
+            }
         }
     }
 

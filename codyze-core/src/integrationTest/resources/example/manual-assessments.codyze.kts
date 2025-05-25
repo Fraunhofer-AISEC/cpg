@@ -25,16 +25,18 @@
  */
 package example
 
-manualAssessment {
-    of("SOME-KPI") {
-        /** Yes, I really checked this that 6 is greater than 5 */
-        val expectedValue = 5
-        val actualValue = 6
-        actualValue > 5
-    }
+project {
+    manualAssessment {
+        of("TARGET") {
+            /** Yes, I really checked this that 6 is greater than 5 */
+            val expectedValue = 5
+            val actualValue = 6
+            actualValue gt expectedValue
+        }
 
-    of("SEC-TARGET") {
-        /** Yes, the rumors are true. */
-        true
+        of("THIRD-PARTY-LIBRARY") {
+            /** Yes, the rumors are true. */
+            true.toQueryTree()
+        }
     }
 }

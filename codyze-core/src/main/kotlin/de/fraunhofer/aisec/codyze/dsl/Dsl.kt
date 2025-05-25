@@ -71,6 +71,11 @@ class AssumptionsBuilder {
     class DecisionBuilder
 }
 
+/** Represents a builder for manual assessments of requirements. */
+class ManualAssessmentBuild {
+    internal val assessments = mutableMapOf<String, () -> QueryTree<Boolean>>()
+}
+
 /** Represents a builder for tool metadata and configuration. */
 class ToolBuilder {
     internal var translationConfigurationBuilder: ((TranslationConfiguration.Builder) -> (Unit))? =
@@ -142,6 +147,7 @@ class ProjectBuilder(val projectDir: Path = Path(".")) {
     internal var toeBuilder = ToEBuilder()
     internal val requirementsBuilder = RequirementsBuilder()
     internal val assumptionsBuilder = AssumptionsBuilder()
+    internal val manualAssessmentBuilder = ManualAssessmentBuild()
 
     /** Builds an [AnalysisProject] out of the current state of the builder. */
     fun build(
@@ -283,14 +289,19 @@ fun RequirementsBuilder.requirement(name: String, block: RequirementBuilder.() -
  * [QueryTree.value] set to `true`.
  */
 @CodyzeDsl
-fun RequirementBuilder.byQuery(query: (result: TranslationResult) -> QueryTree<Boolean>) {
+fun RequirementBuilder.by(query: (result: TranslationResult) -> QueryTree<Boolean>) {
     this.query = query
 }
 
 /** Describes that the requirement had to be checked manually. */
+context(ProjectBuilder)
 @CodyzeDsl
-fun RequirementBuilder.byManualAssessment(id: String): Unit {
-    this.query = { result -> QueryTree(true) }
+fun RequirementBuilder.manualAssessmentOf(id: String): QueryTree<Boolean> {
+    val manualAssessment = this@ProjectBuilder.manualAssessmentBuilder.assessments[id]
+    if (manualAssessment == null) {
+        throw IllegalStateException("No manual assessment found for requirement '$id'")
+    }
+    return manualAssessment()
 }
 
 /** Describes the assumptions which have been handled and assessed. */
@@ -360,6 +371,21 @@ fun AssumptionsBuilder.DecisionBuilder.undecided(uuid: String) {
 @CodyzeDsl
 fun AssumptionsBuilder.DecisionBuilder.ignore(uuid: String) {
     parseUuidAndAnnotateAssumptions(uuid, AssumptionStatus.Ignored)
+}
+
+/** Describes the manual assessments. */
+@CodyzeDsl
+fun ProjectBuilder.manualAssessment(block: ManualAssessmentBuild.() -> Unit) {
+    manualAssessmentBuilder.apply(block)
+}
+
+/**
+ * Describes a manual assessment of a requirement with the given [id]. The [block] is expected to
+ * return a [QueryTree] that evaluates to `true` if the requirement is fulfilled.
+ */
+@CodyzeDsl
+fun ManualAssessmentBuild.of(id: String, block: () -> QueryTree<Boolean>) {
+    assessments[id] = block
 }
 
 private fun parseUuidAndAnnotateAssumptions(uuid: String, status: AssumptionStatus) {

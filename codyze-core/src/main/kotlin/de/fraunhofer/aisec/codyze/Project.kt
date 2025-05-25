@@ -193,7 +193,7 @@ class AnalysisProject(
         ): AnalysisProject? {
             // We need to evaluate the script in order to invoke our project builder inside the
             // script
-            val script = executeScript(file)
+            val script = evaluateScript(file)
 
             if (script == null) {
                 return null

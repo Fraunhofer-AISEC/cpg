@@ -63,7 +63,7 @@ class DslTest {
 
                 requirements {
                     requirement("Good Encryption") {
-                        byQuery { result -> query1(result) and query2(result) }
+                        by { result -> query1(result) and query2(result) }
                     }
                 }
 

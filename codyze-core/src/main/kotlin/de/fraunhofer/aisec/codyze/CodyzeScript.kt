@@ -99,10 +99,7 @@ class CodyzeScriptCompilationConfiguration :
         }
         refineConfiguration {
             onAnnotations(Import::class, handler = CodyzeScriptConfigurator())
-            beforeCompiling {
-                val includes = it.script.text.lines().filter { it.startsWith("include(\"") }
-                it.compilationConfiguration.with {}.asSuccess()
-            }
+            beforeCompiling(handler = CodyzeScriptIncludeHandler)
         }
         compilerOptions("-Xcontext-receivers", "-jvm-target=21")
         ide { acceptedLocations(ScriptAcceptedLocation.Everywhere) }

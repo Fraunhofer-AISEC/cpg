@@ -47,7 +47,7 @@ fun goodArgumentSize(result: TranslationResult): QueryTree<Boolean> {
 
 class CodyzeExecutorTest {
     @Test
-    fun testExecute() {
+    fun testEvaluate() {
         val project =
             AnalysisProject.fromScript("src/integrationTest/resources/example/project.codyze.kts")
         assertNotNull(project)
