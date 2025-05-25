@@ -156,9 +156,8 @@ class TagOverlaysPassTest {
         assertIs<Reference>(arg0)
         val arg0OverlaySecretKey = arg0.overlays.filterIsInstance<SecretKey>().singleOrNull()
         assertNotNull(arg0OverlaySecretKey)
-        // TODO: We have two elements here because the implementation of equals is useless in the
-        // class `Node`.
-        val arg0OverlayCryptoArgument = arg0.overlays.filterIsInstance<CryptoArgument>().first()
+        val arg0OverlayCryptoArgument =
+            arg0.overlays.filterIsInstance<CryptoArgument>().singleOrNull()
         assertNotNull(arg0OverlayCryptoArgument)
     }
 }
