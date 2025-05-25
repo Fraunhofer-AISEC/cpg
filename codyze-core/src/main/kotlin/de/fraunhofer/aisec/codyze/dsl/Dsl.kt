@@ -72,7 +72,7 @@ class AssumptionsBuilder {
 }
 
 /** Represents a builder for manual assessments of requirements. */
-class ManualAssessmentBuild {
+class ManualAssessmentBuilder {
     internal val assessments = mutableMapOf<String, () -> QueryTree<Boolean>>()
 }
 
@@ -147,7 +147,7 @@ class ProjectBuilder(val projectDir: Path = Path(".")) {
     internal var toeBuilder = ToEBuilder()
     internal val requirementsBuilder = RequirementsBuilder()
     internal val assumptionsBuilder = AssumptionsBuilder()
-    internal val manualAssessmentBuilder = ManualAssessmentBuild()
+    internal val manualAssessmentBuilder = ManualAssessmentBuilder()
 
     /** Builds an [AnalysisProject] out of the current state of the builder. */
     fun build(
@@ -375,7 +375,7 @@ fun AssumptionsBuilder.DecisionBuilder.ignore(uuid: String) {
 
 /** Describes the manual assessments. */
 @CodyzeDsl
-fun ProjectBuilder.manualAssessment(block: ManualAssessmentBuild.() -> Unit) {
+fun ProjectBuilder.manualAssessment(block: ManualAssessmentBuilder.() -> Unit) {
     manualAssessmentBuilder.apply(block)
 }
 
@@ -384,7 +384,7 @@ fun ProjectBuilder.manualAssessment(block: ManualAssessmentBuild.() -> Unit) {
  * return a [QueryTree] that evaluates to `true` if the requirement is fulfilled.
  */
 @CodyzeDsl
-fun ManualAssessmentBuild.of(id: String, block: () -> QueryTree<Boolean>) {
+fun ManualAssessmentBuilder.of(id: String, block: () -> QueryTree<Boolean>) {
     assessments[id] = block
 }
 

@@ -35,7 +35,7 @@ import kotlin.io.path.Path
 import kotlin.test.Test
 
 class DslTest {
-    object Mock : CodyzeScript(projectDir = Path("."))
+    object Mock : CodyzeScript(projectBuilder = ProjectBuilder(projectDir = Path(".")))
 
     @Test
     fun testDsl() {

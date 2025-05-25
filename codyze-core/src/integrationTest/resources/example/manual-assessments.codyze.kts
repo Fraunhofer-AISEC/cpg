@@ -27,7 +27,7 @@ package example
 
 project {
     manualAssessment {
-        of("TARGET") {
+        of("SEC-TARGET") {
             /** Yes, I really checked this that 6 is greater than 5 */
             val expectedValue = 5
             val actualValue = 6

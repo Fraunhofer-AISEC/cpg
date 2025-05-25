@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.codyze.dsl.ProjectBuilder
 import java.io.File
 import java.net.JarURLConnection
 import java.net.URL
-import java.nio.file.Path
 import kotlin.script.experimental.annotations.KotlinScript
 import kotlin.script.experimental.api.*
 import kotlin.script.experimental.dependencies.CompoundDependenciesResolver
@@ -61,9 +60,7 @@ import kotlin.script.templates.ScriptTemplateDefinition
     // Compilation configuration for the script type
     compilationConfiguration = CodyzeScriptCompilationConfiguration::class,
 )
-abstract class CodyzeScript(projectDir: Path) {
-
-    internal var projectBuilder: ProjectBuilder = ProjectBuilder(projectDir = projectDir)
+abstract class CodyzeScript(internal var projectBuilder: ProjectBuilder) {
 
     internal var includeBuilder: IncludeBuilder = IncludeBuilder()
 }
@@ -97,10 +94,7 @@ class CodyzeScriptCompilationConfiguration :
             checkNotNull(cp) { "Could not read classpath" }
             updateClasspath(cp)
         }
-        refineConfiguration {
-            onAnnotations(Import::class, handler = CodyzeScriptConfigurator())
-            beforeCompiling(handler = CodyzeScriptIncludeHandler)
-        }
+        refineConfiguration { onAnnotations(Import::class, handler = CodyzeScriptConfigurator()) }
         compilerOptions("-Xcontext-receivers", "-jvm-target=21")
         ide { acceptedLocations(ScriptAcceptedLocation.Everywhere) }
     })
