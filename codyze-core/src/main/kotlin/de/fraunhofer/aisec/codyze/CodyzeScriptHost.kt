@@ -25,26 +25,16 @@
  */
 package de.fraunhofer.aisec.codyze
 
-import de.fraunhofer.aisec.codyze.dsl.AssumptionDecisions
 import de.fraunhofer.aisec.codyze.dsl.IncludeBuilder
-import de.fraunhofer.aisec.codyze.dsl.IncludeCategory
-import de.fraunhofer.aisec.codyze.dsl.ManualAssessment
 import de.fraunhofer.aisec.codyze.dsl.ProjectBuilder
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import java.io.File
 import kotlin.io.path.Path
 import kotlin.io.path.pathString
-import kotlin.script.experimental.api.RefineScriptCompilationConfigurationHandler
 import kotlin.script.experimental.api.ResultWithDiagnostics
-import kotlin.script.experimental.api.ScriptCompilationConfiguration
-import kotlin.script.experimental.api.ScriptConfigurationRefinementContext
-import kotlin.script.experimental.api.asSuccess
 import kotlin.script.experimental.api.constructorArgs
-import kotlin.script.experimental.api.importScripts
 import kotlin.script.experimental.api.scriptsInstancesSharing
-import kotlin.script.experimental.host.FileBasedScriptSource
-import kotlin.script.experimental.host.FileScriptSource
 import kotlin.script.experimental.host.toScriptSource
 import kotlin.script.experimental.jvmhost.BasicJvmScriptingHost
 import kotlin.script.experimental.jvmhost.createJvmCompilationConfigurationFromTemplate
@@ -116,54 +106,4 @@ fun evaluateScript(
             return scriptResult.value.returnValue.scriptInstance as? CodyzeScript
         }
     }
-}
-
-/**
- * A [RefineScriptCompilationConfigurationHandler] that handles the `include` block in Codyze
- * scripts.
- *
- * It extracts the included files and adds them to the script's compilation configuration using
- * [importScripts].
- */
-object CodyzeScriptIncludeHandler : RefineScriptCompilationConfigurationHandler {
-    override fun invoke(
-        context: ScriptConfigurationRefinementContext
-    ): ResultWithDiagnostics<ScriptCompilationConfiguration> {
-        val includes = extractIncludes(context.script.text).values
-        val scriptBaseDir = (context.script as? FileBasedScriptSource)?.file?.parentFile
-        val importedSources =
-            includes.filterNotNull().map {
-                val file = (scriptBaseDir?.resolve(it) ?: File(it)).normalize()
-                file
-            }
-
-        return if (includes.isEmpty()) {
-            return context.compilationConfiguration.asSuccess()
-        } else {
-            ScriptCompilationConfiguration(context.compilationConfiguration) {
-                    if (importedSources.isNotEmpty())
-                        importScripts.append(importedSources.map { FileScriptSource(it) })
-                }
-                .asSuccess()
-        }
-    }
-}
-
-/** Extracts the included files from a given script content. */
-fun extractIncludes(scriptText: String): Map<IncludeCategory, String?> {
-    val includeBlockRegex = """include\s*\{([^}]*)}""".toRegex()
-    val assumptionDecisionsRegex = """AssumptionDecisions from "([^"]+)"""".toRegex()
-    val manualAssessmentRegex = """ManualAssessment from "([^"]+)"""".toRegex()
-
-    val includeBlockContent = includeBlockRegex.find(scriptText)?.groups?.get(1)?.value ?: ""
-
-    val assumptionDecisionsFile =
-        assumptionDecisionsRegex.find(includeBlockContent)?.groups?.get(1)?.value
-    val manualAssessmentFile =
-        manualAssessmentRegex.find(includeBlockContent)?.groups?.get(1)?.value
-
-    return mapOf(
-        AssumptionDecisions to assumptionDecisionsFile,
-        ManualAssessment to manualAssessmentFile,
-    )
 }
