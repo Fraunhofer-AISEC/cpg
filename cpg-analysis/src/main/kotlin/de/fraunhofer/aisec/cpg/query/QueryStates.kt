@@ -30,7 +30,7 @@ package de.fraunhofer.aisec.cpg.query
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.assumptions.AssumptionStatus
 
-typealias RequirementEvaluation = QueryTree<RequirementState>
+typealias Decision = QueryTree<DecisionState>
 
 typealias Decision = QueryTree<DecisionState>
 
