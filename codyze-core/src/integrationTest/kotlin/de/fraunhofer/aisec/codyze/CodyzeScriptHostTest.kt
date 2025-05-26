@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.codyze
 
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.Secret
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.query.QueryTree
 import de.fraunhofer.aisec.cpg.query.allExtended
@@ -47,7 +48,7 @@ fun goodArgumentSize(result: TranslationResult): QueryTree<Boolean> {
 
 class CodyzeExecutorTest {
     @Test
-    fun testExecute() {
+    fun testEvaluate() {
         val project =
             AnalysisProject.fromScript("src/integrationTest/resources/example/project.codyze.kts")
         assertNotNull(project)
@@ -71,5 +72,11 @@ class CodyzeExecutorTest {
         val myFuncCall = result.translationResult.calls["my_func"]
         assertNotNull(myFuncCall)
         assertInvokes(myFuncCall, myFunc)
+
+        val getSecretCall = result.translationResult.calls["get_secret_from_server"]
+        assertNotNull(getSecretCall)
+
+        val secret = getSecretCall.conceptNodes.filterIsInstance<Secret>().singleOrNull()
+        assertNotNull(secret)
     }
 }

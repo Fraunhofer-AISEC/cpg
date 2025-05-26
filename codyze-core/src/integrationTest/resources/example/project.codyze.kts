@@ -25,6 +25,12 @@
  */
 package example
 
+include {
+    AssumptionDecisions from "assumptions.codyze.kts"
+    ManualAssessment from "manual.codyze.kts"
+    Tagging from "tagging.codyze.kts"
+}
+
 project {
     name = "My Project"
 
@@ -53,17 +59,17 @@ project {
     }
 
     requirements {
-        requirement("Is Security Target Correctly specified") { byManualAssessment("SEC-TARGET") }
+        requirement("Is Security Target Correctly specified") {
+            by { manualAssessmentOf("SEC-TARGET") }
+        }
         requirement("Good Encryption") {
-            byQuery { result -> goodCryptoFunc(result) and goodArgumentSize(result) }
+            by { result ->
+                goodCryptoFunc(result) and
+                    goodArgumentSize(result) and
+                    manualAssessmentOf("THIRD-PARTY-LIBRARY")
+            }
         }
     }
 
-    assumptions {
-        assume { "We assume that everything is fine." }
-        accept("00000000-0000-0000-0000-000000000000")
-        reject("00000000-0000-0000-0000-000000000001")
-        undecided("00000000-0000-0000-0000-000000000002")
-        ignore("00000000-0000-0000-0000-000000000003")
-    }
+    assumptions { assume { "We assume that everything is fine." } }
 }

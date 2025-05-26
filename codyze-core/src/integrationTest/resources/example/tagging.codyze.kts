@@ -25,16 +25,8 @@
  */
 package example
 
-manualAssessment {
-    of("SOME-KPI") {
-        /** Yes, I really checked this that 6 is greater than 5 */
-        val expectedValue = 5
-        val actualValue = 6
-        actualValue > 5
-    }
+import de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.Secret
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.passes.concepts.*
 
-    of("SEC-TARGET") {
-        /** Yes, the rumors are true. */
-        true
-    }
-}
+project { tagging { tag { each<CallExpression>("get_secret_from_server").with { Secret() } } } }
