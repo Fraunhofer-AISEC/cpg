@@ -31,12 +31,12 @@ project {
             /** Yes, I really checked that 6 is greater than 5 */
             val expectedValue = 5
             val actualValue = 6
-            actualValue gt expectedValue
+            (actualValue gt expectedValue).decide()
         }
 
         of("THIRD-PARTY-LIBRARY") {
             /** Yes, the rumors are true. */
-            true.toQueryTree()
+            true.toQueryTree().decide()
         }
     }
 }

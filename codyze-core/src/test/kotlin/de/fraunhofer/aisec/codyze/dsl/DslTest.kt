@@ -62,8 +62,11 @@ class DslTest {
                 }
 
                 requirements {
-                    requirement("Good Encryption") {
-                        by { result -> query1(result) and query2(result) }
+                    requirement("Is Security Target Correctly specified") {
+                        manualAssessmentOf("SEC-TARGET")
+                    }
+                    requirement("Good Encryption") { result ->
+                        query1(result).decide() and query2(result).decide()
                     }
                 }
 
