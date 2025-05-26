@@ -27,7 +27,8 @@ package example
 
 include {
     AssumptionDecisions from "assumptions.codyze.kts"
-    ManualAssessment from "manual-assessments.codyze.kts"
+    ManualAssessment from "manual.codyze.kts"
+    Tagging from "tagging.codyze.kts"
 }
 
 project {

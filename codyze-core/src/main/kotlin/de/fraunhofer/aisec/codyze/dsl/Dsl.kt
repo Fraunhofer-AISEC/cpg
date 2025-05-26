@@ -35,6 +35,8 @@ import de.fraunhofer.aisec.cpg.assumptions.Assumption
 import de.fraunhofer.aisec.cpg.assumptions.AssumptionStatus
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.allChildrenWithOverlays
+import de.fraunhofer.aisec.cpg.passes.concepts.TagOverlaysPass
+import de.fraunhofer.aisec.cpg.passes.concepts.TaggingContext
 import de.fraunhofer.aisec.cpg.query.QueryTree
 import java.io.File
 import java.nio.file.Path
@@ -48,6 +50,8 @@ interface IncludeCategory
 object AssumptionDecisions : IncludeCategory
 
 object ManualAssessment : IncludeCategory
+
+object Tagging : IncludeCategory
 
 /** Represents a builder to include other scripts. */
 class IncludeBuilder {
@@ -148,6 +152,7 @@ class ProjectBuilder(val projectDir: Path = Path(".")) {
     internal val requirementsBuilder = RequirementsBuilder()
     internal val assumptionsBuilder = AssumptionsBuilder()
     internal val manualAssessmentBuilder = ManualAssessmentBuilder()
+    internal var taggingCtx = TaggingContext()
 
     /** Builds an [AnalysisProject] out of the current state of the builder. */
     fun build(
@@ -159,6 +164,7 @@ class ProjectBuilder(val projectDir: Path = Path(".")) {
         val configBuilder =
             TranslationConfiguration.builder()
                 .defaultPasses()
+                .registerPass<TagOverlaysPass>()
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage")
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage")
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage")
@@ -205,6 +211,11 @@ class ProjectBuilder(val projectDir: Path = Path(".")) {
 
         val requirementsFunctions = requirementsBuilder.requirements
 
+        // Configure tagging from tagging builder
+        configBuilder.configurePass<TagOverlaysPass>(
+            TagOverlaysPass.Configuration(tag = taggingCtx)
+        )
+
         return AnalysisProject(
             name,
             projectDir = projectDir,
@@ -233,7 +244,10 @@ fun CodyzeScript.project(block: ProjectBuilder.() -> Unit) {
 }
 
 /** Spans the block for the tagging logic. */
-@CodyzeDsl fun CodyzeScript.tagging(block: ProjectBuilder.() -> Unit) {}
+@CodyzeDsl
+fun ProjectBuilder.tagging(block: () -> TaggingContext) {
+    taggingCtx = block()
+}
 
 /** Describes some configuration and metadata about the evaluation tool */
 fun ProjectBuilder.tool(block: ToolBuilder.() -> Unit) {

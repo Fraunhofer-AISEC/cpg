@@ -91,18 +91,6 @@ fun evaluateScript(
             return null
         }
         is ResultWithDiagnostics.Success -> {
-            val retValue = scriptResult.value.returnValue
-            val rootInstance = retValue.scriptInstance
-            val rootClass =
-                retValue.scriptClass
-                    ?: throw IllegalStateException(
-                        "Script $scriptFile did not return a script class"
-                    )
-
-            // Really stupid and dangerous workaround to "inject" the properties of imported scripts
-            // into the root instance
-            val imported = rootClass.members.filter { it.name.startsWith("$\$imported") }
-
             return scriptResult.value.returnValue.scriptInstance as? CodyzeScript
         }
     }

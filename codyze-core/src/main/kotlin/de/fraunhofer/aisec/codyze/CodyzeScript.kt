@@ -78,6 +78,7 @@ class CodyzeScriptCompilationConfiguration :
             "de.fraunhofer.aisec.cpg.*",
             "de.fraunhofer.aisec.cpg.graph.*",
             "de.fraunhofer.aisec.cpg.query.*",
+            "de.fraunhofer.aisec.cpg.passes.concepts.*",
         )
         jvm {
             val cp = classpathFromClassloader(CodyzeScript::class.java.classLoader)
