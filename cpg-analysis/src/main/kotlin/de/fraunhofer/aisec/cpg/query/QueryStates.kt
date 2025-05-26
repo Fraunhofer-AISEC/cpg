@@ -27,38 +27,38 @@ package de.fraunhofer.aisec.cpg.query
 
 import de.fraunhofer.aisec.cpg.assumptions.AssumptionStatus
 
-typealias RequirementEvaluation = QueryTree<RequirementState>
+typealias Decision = QueryTree<DecisionState>
 
-sealed class RequirementState
+sealed class DecisionState
 
 /**
  * Represents a query that has been evaluated and the result is known to be `false` or some
  * [QueryTree.assumptions] have [de.fraunhofer.aisec.cpg.assumptions.Assumption.status]
  * [AssumptionStatus.Rejected].
  */
-data object Failed : RequirementState()
+data object Failed : DecisionState()
 
 /**
  * Represents a query that has been evaluated and the result is known to be `true` and all
  * [QueryTree.assumptions] have [de.fraunhofer.aisec.cpg.assumptions.Assumption.status]
  * [AssumptionStatus.Accepted] or [AssumptionStatus.Ignored].
  */
-data object Succeeded : RequirementState()
+data object Succeeded : DecisionState()
 
 /**
  * Represents a query that has been evaluated but the result is not yet known because some
  * [QueryTree.assumptions] have [de.fraunhofer.aisec.cpg.assumptions.Assumption.status]
  * [AssumptionStatus.Undecided].
  */
-data object Undecided : RequirementState()
+data object Undecided : DecisionState()
 
 /**
  * Represents a query that has not yet been evaluated. Will be most likely used in the context of
  * manual assessments which have to be conducted.
  */
-data object NotYetEvaluated : RequirementState()
+data object NotYetEvaluated : DecisionState()
 
-fun QueryTree<Boolean>.toQueryState(): RequirementEvaluation {
+fun QueryTree<Boolean>.decide(): Decision {
     val (newValue, stringInfo) =
         when {
             !this.value || this.assumptions.any { it.status == AssumptionStatus.Rejected } ->
@@ -87,26 +87,26 @@ fun QueryTree<Boolean>.toQueryState(): RequirementEvaluation {
 /**
  * Performs a logical and (&&) operation between the values and creates and returns [QueryTree]s.
  */
-infix fun RequirementState.and(other: RequirementState): RequirementEvaluation {
+infix fun DecisionState.and(other: DecisionState): Decision {
     return this.toQueryTree() and other.toQueryTree()
 }
 
 /**
  * Performs a logical and (&&) operation between the values and creates and returns [QueryTree]s.
  */
-infix fun RequirementState.and(other: RequirementEvaluation): RequirementEvaluation {
+infix fun DecisionState.and(other: Decision): Decision {
     return this.toQueryTree() and other
 }
 
 /**
  * Performs a logical and (&&) operation between the values and creates and returns [QueryTree]s.
  */
-infix fun RequirementEvaluation.and(other: RequirementState): RequirementEvaluation {
+infix fun Decision.and(other: DecisionState): Decision {
     return this and other.toQueryTree()
 }
 
 /** Performs a logical and (&&) operation between the values of two [QueryTree]s. */
-infix fun RequirementEvaluation.and(other: RequirementEvaluation): RequirementEvaluation {
+infix fun Decision.and(other: Decision): Decision {
     return QueryTree(
         if (this.value == Succeeded && other.value == Succeeded) Succeeded
         else if (this.value == Failed || other.value == Failed) Failed
@@ -118,22 +118,22 @@ infix fun RequirementEvaluation.and(other: RequirementEvaluation): RequirementEv
 }
 
 /** Performs a logical or (||) operation between the values and creates and returns [QueryTree]s. */
-infix fun RequirementState.or(other: RequirementState): RequirementEvaluation {
+infix fun DecisionState.or(other: DecisionState): Decision {
     return this.toQueryTree() or other.toQueryTree()
 }
 
 /** Performs a logical or (||) operation between the values and creates and returns [QueryTree]s. */
-infix fun RequirementState.or(other: RequirementEvaluation): RequirementEvaluation {
+infix fun DecisionState.or(other: Decision): Decision {
     return this.toQueryTree() or other
 }
 
 /** Performs a logical or (||) operation between the values and creates and returns [QueryTree]s. */
-infix fun RequirementEvaluation.or(other: RequirementState): RequirementEvaluation {
+infix fun Decision.or(other: DecisionState): Decision {
     return this or other.toQueryTree()
 }
 
 /** Performs a logical or (||) operation between the values of two [QueryTree]s. */
-infix fun RequirementEvaluation.or(other: RequirementEvaluation): RequirementEvaluation {
+infix fun Decision.or(other: Decision): Decision {
     return QueryTree(
         if (this.value == Succeeded || other.value == Succeeded) Succeeded
         else if (this.value == Failed && other.value == Failed) Failed
@@ -145,22 +145,22 @@ infix fun RequirementEvaluation.or(other: RequirementEvaluation): RequirementEva
 }
 
 /** Performs a logical xor operation between the values and creates and returns [QueryTree]s. */
-infix fun RequirementState.xor(other: RequirementState): RequirementEvaluation {
+infix fun DecisionState.xor(other: DecisionState): Decision {
     return this.toQueryTree() xor other.toQueryTree()
 }
 
 /** Performs a logical xor operation between the values and creates and returns [QueryTree]s. */
-infix fun RequirementState.xor(other: RequirementEvaluation): RequirementEvaluation {
+infix fun DecisionState.xor(other: Decision): Decision {
     return this.toQueryTree() xor other
 }
 
 /** Performs a logical xor operation between the values and creates and returns [QueryTree]s. */
-infix fun RequirementEvaluation.xor(other: RequirementState): RequirementEvaluation {
+infix fun Decision.xor(other: DecisionState): Decision {
     return this xor other.toQueryTree()
 }
 
 /** Performs a logical xor operation between the values of two [QueryTree]s. */
-infix fun RequirementEvaluation.xor(other: RequirementEvaluation): RequirementEvaluation {
+infix fun Decision.xor(other: Decision): Decision {
     return QueryTree(
         if (this.value == Succeeded && other.value == Failed) Succeeded
         else if (this.value == Failed && other.value == Succeeded) Succeeded
@@ -177,7 +177,7 @@ infix fun RequirementEvaluation.xor(other: RequirementEvaluation): RequirementEv
  * Performs a logical implication (->) operation between the values and creates and returns
  * [QueryTree]s.
  */
-infix fun RequirementState.implies(other: RequirementState): RequirementEvaluation {
+infix fun DecisionState.implies(other: DecisionState): Decision {
     return this.toQueryTree() implies other.toQueryTree()
 }
 
@@ -185,7 +185,7 @@ infix fun RequirementState.implies(other: RequirementState): RequirementEvaluati
  * Performs a logical implication (->) operation between the values and creates and returns
  * [QueryTree]s.
  */
-infix fun RequirementState.implies(other: RequirementEvaluation): RequirementEvaluation {
+infix fun DecisionState.implies(other: Decision): Decision {
     return this.toQueryTree() implies other
 }
 
@@ -193,12 +193,12 @@ infix fun RequirementState.implies(other: RequirementEvaluation): RequirementEva
  * Performs a logical implication (->) operation between the values and creates and returns
  * [QueryTree]s.
  */
-infix fun RequirementEvaluation.implies(other: RequirementState): RequirementEvaluation {
+infix fun Decision.implies(other: DecisionState): Decision {
     return this implies other.toQueryTree()
 }
 
 /** Evaluates a logical implication (->) operation between the values of two [QueryTree]s. */
-infix fun RequirementEvaluation.implies(other: RequirementEvaluation): RequirementEvaluation {
+infix fun Decision.implies(other: Decision): Decision {
     return QueryTree(
         if (this.value == Succeeded && other.value == Succeeded) Succeeded
         else if (this.value == Failed) Succeeded
@@ -211,7 +211,7 @@ infix fun RequirementEvaluation.implies(other: RequirementEvaluation): Requireme
 }
 
 /** Negates the value of [arg] and returns the resulting [QueryTree]. */
-fun not(arg: RequirementEvaluation): RequirementEvaluation {
+fun not(arg: Decision): Decision {
     val result =
         if (arg.value == Succeeded) Failed
         else if (arg.value == Failed) Succeeded
@@ -220,6 +220,6 @@ fun not(arg: RequirementEvaluation): RequirementEvaluation {
 }
 
 /** Negates the value of [arg] and returns the resulting [QueryTree]. */
-fun not(arg: RequirementState): RequirementEvaluation {
+fun not(arg: DecisionState): Decision {
     return not(arg.toQueryTree())
 }
